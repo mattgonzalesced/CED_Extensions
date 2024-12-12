@@ -1,0 +1,32 @@
+{
+    "extensions": [
+      {
+        "builtin": "True",
+        "enable": "True",
+        "type": "extension",
+        "name": "AE PyTools",
+        "description": "Company wide Tools for pyRevit",
+        "author": "Ehsan Iran-Nejad",
+        "author-url": "https://keybase.io/ein",
+        "url": "https://github.com/eirannejad/pyRevit.git",
+        "website": "http://eirannejad.github.io/pyRevit/",
+        "image": "",
+        "dependencies": []
+      },
+      {
+        "builtin": "False",
+        "enable": "False",
+        "type": "extension",
+        "authusers": ["Matthew Gonzales", "m.gonzalesX9QFV", "m.gonzales@coolsys.com", "Matthew", "m.gonzalesX9QFV", "m.gonzalesX9..."],
+        "name": "MG PyTools",
+        "description": "Development Tools",
+        "author": "Me",
+        "author-url": "https://keybase.io/ein",
+        "url": "https://bitbucket.org/eirannejad/mypublictools.git",
+        "website": "",
+        "image": "",
+        "dependencies": []
+      }
+    ]
+  }
+  
