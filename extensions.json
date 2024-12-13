@@ -1,0 +1,47 @@
+{
+    "extensions": [
+      {
+        "builtin": "True",
+        "enable": "True",
+        "type": "extension",
+        "name": "TEST NAME",
+        "description": "Company wide Tools for pyRevit",
+        "author": "Ehsan Iran-Nejad",
+        "author-url": "https://keybase.io/ein",
+        "url": "https://github.com/eirannejad/pyRevit.git",
+        "website": "",
+        "image": "",
+        "dependencies": []
+      },
+      {
+        "builtin": "False",
+        "enable": "False",
+        "type": "extension",
+        "name": "TEST NAME",
+        "description": "Development Tools",
+        "author": "Me",
+        "author-url": "https://keybase.io/ein",
+        "url": "https://bitbucket.org/eirannejad/mypublictools.git",
+        "website": "",
+        "image": "",
+        "dependencies": []
+        
+      },
+      {
+        "builtin": "False",
+        "enable": "False",
+        "disabled": "true",
+        "type": "extension",
+        "name": "TEST NAME",
+        "description": "Development Tools",
+        "author": "Me",
+        "author-url": "https://keybase.io/ein",
+        "url": "https://bitbucket.org/eirannejad/mypublictools.git",
+        "website": "",
+        "image": "",
+        "dependencies": []
+        
+      }
+    ]
+  }
+  
