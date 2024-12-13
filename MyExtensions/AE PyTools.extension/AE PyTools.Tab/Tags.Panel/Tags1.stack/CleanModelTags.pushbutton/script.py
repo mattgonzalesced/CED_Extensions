@@ -1,5 +1,18 @@
 # -*- coding: utf-8 -*-
+__title__   = "Clean Model Tags"
+__doc__     = """Version = 1.0
+Date    = 18.09.2024
+________________________________________________________________
+Description:
 
+This script generates a detailed report for the selected revisions.
+
+________________________________________________________________
+How-To:
+
+
+________________________________________________________________
+Author: Your Name"""
 import clr
 import math
 from pyrevit import script, forms

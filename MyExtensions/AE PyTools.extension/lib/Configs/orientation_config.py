@@ -4,18 +4,17 @@
 from pyrevit import script, forms, revit
 
 # Create a configuration object for the Orientation Panel tools
-config = script.get_config("orientation_config")
+config = script.get_config("orientation_panel")
 
 # Default Settings
-DEFAULT_INCLUDE_TAG_POSITION = True
-DEFAULT_INCLUDE_TAG_ANGLE = False
-
+DEFAULT_INCLUDE_TAGS = True
+DEFAULT_ADJUST_TAG_ANGLE = False
 
 def load_configs():
     """Load user settings or apply defaults if not set."""
     # Check if SHIFT+click was used to trigger configuration change
-    include_tags = config.get_option('Tag Position', DEFAULT_INCLUDE_TAG_POSITION)
-    adjust_tag_angle = config.get_option('Tag Rotation', DEFAULT_INCLUDE_TAG_ANGLE)
+    include_tags = config.get_option("include_tags", DEFAULT_INCLUDE_TAGS)
+    adjust_tag_angle = config.get_option("adjust_tag_angle", DEFAULT_ADJUST_TAG_ANGLE)
     return include_tags, adjust_tag_angle
 
 def save_configs(include_tags, adjust_tag_angle):
@@ -26,22 +25,22 @@ def save_configs(include_tags, adjust_tag_angle):
 
 def reset_to_defaults():
     """Reset settings to default values."""
-    config.include_tags = DEFAULT_INCLUDE_TAG_POSITION
-    config.adjust_tag_angle = DEFAULT_INCLUDE_TAG_ANGLE
+    config.include_tags = DEFAULT_INCLUDE_TAGS
+    config.adjust_tag_angle = DEFAULT_ADJUST_TAG_ANGLE
     config.write()
 
 def change_settings_ui():
     """Display UI for users to change configuration settings."""
     selected_option, switches = forms.CommandSwitchWindow.show(
-        ['finish'],
-        switches = ['Tag Position', 'Tag Rotation'],
-        message='Select Tag Options:',
+        ['Run Script'],
+        switches=['Include Tags', 'Adjust Tag Angle'],
+        message='Select options for Better Orient Up:',
         recognize_access_key=True
     )
 
     if selected_option:
         # Update configuration based on user choice
-        include_tags = switches['Tag Position']
+        include_tags = switches['Include Tags']
         adjust_tag_angle = switches['Adjust Tag Angle']
 
         # Save the settings for future runs

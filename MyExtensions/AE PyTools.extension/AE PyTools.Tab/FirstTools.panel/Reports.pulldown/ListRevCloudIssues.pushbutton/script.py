@@ -60,22 +60,22 @@ def get_revision_cloud_issues(clouds):
         if not sheet_info:
             sheet_info = [(None, None)]
 
-        if missing_comment or cloud_in_view or view_not_on_sheet:
-            for sheet_number, sheet_name in sheet_info:
-                issues.append({
-                    "Revision Cloud": cloud.Id,
-                    "Revision Number": revision_number or "N/A",
-                    "Sequence Number": sequence_number,
-                    "Sheet Number": sheet_number or "N/A",
-                    "Sheet Name": sheet_name or "N/A",
-                    "View Name": view_name if view_not_on_sheet or cloud_in_view else None,
-                    "Missing Comment": "X" if missing_comment else "",
-                    "Cloud in View": "X" if cloud_in_view else "",
-                    "Not on Sheet": "X" if view_not_on_sheet else ""
-                })
+        for sheet_number, sheet_name in sheet_info:
+            issues.append({
+                "Revision Cloud": cloud.Id,
+                "Revision Number": revision_number or "N/A",
+                "Sequence Number": sequence_number,
+                "Sheet Number": sheet_number or "N/A",
+                "Sheet Name": sheet_name or "N/A",
+                "View Name": view_name if view_not_on_sheet or cloud_in_view else None,
+                "Missing Comment": "X" if missing_comment else "",
+                "Cloud in View": "X" if cloud_in_view else "",
+                "Not on Sheet": "X" if view_not_on_sheet else ""
+            })
 
     # Sort issues by sequence number and then by sheet number
     return sorted(issues, key=lambda x: (x["Sequence Number"], x["Sheet Number"]))
+
 
 def print_issues_report(issues):
     """Print the report with structured columns for revision cloud issues."""

@@ -41,8 +41,6 @@ fixtures_with_mep_model = [elem for elem in selection if hasattr(elem, 'MEPModel
 if not fixtures_with_mep_model:
     forms.alert("No valid electrical fixtures selected. Please select fixtures with MEP models.", exitscript=True)
 
-
-
 # Step 2: Prompt the user to select a panel using pyRevit forms
 # Use pyRevit's query to filter for electrical equipment
 panels = query.get_elements_by_categories([DB.BuiltInCategory.OST_ElectricalEquipment])

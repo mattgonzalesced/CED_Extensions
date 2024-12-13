@@ -37,12 +37,12 @@ def rotate_vector_around_z(vector, angle):
     y = vector.X * math.sin(angle) + vector.Y * math.cos(angle)
     return XYZ(x, y, vector.Z)
 
-def collect_data_for_rotation_or_orientation(doc, elements, adjust_tag_position=True):
+def collect_data_for_rotation_or_orientation(doc, elements, adjust_tags=True):
     """Collects and organizes all necessary data before starting the transaction."""
     element_data = defaultdict(list)
 
     # If tags should be adjusted, prepare to collect them
-    if adjust_tag_position:
+    if adjust_tags:
         tag_collector = FilteredElementCollector(doc, doc.ActiveView.Id).OfClass(IndependentTag)
         element_ids = {element.Id for element in elements}
         tag_iterator = tag_collector.GetElementIdIterator()
@@ -72,7 +72,7 @@ def collect_data_for_rotation_or_orientation(doc, elements, adjust_tag_position=
         element_location = loc.Point if hasattr(loc, 'Point') else None
 
         # Collect data, optionally including tags
-        hosted_tags = tag_map.get(element.Id, []) if adjust_tag_position else []
+        hosted_tags = tag_map.get(element.Id, []) if adjust_tags else []
         tag_positions = [tag.TagHeadPosition for tag in hosted_tags if tag.TagHeadPosition]
 
         # Store all collected data
@@ -105,7 +105,7 @@ def adjust_tags_to_match_rotation(tags, element_location, angle):
         # Update the tag position
         tag.TagHeadPosition = new_tag_position
 
-def rotate_elements_group(doc, grouped_data, angle, adjust_tag_position=True):
+def rotate_elements_group(doc, grouped_data, angle, adjust_tags=True):
     """Rotate a group of elements by the specified angle around their local Z-axis."""
     for data in grouped_data:
         element = data["element"]
@@ -118,16 +118,15 @@ def rotate_elements_group(doc, grouped_data, angle, adjust_tag_position=True):
         ElementTransformUtils.RotateElement(doc, element.Id, rotation_axis_line, angle)
 
         # Adjust tags after element rotation, if enabled
-        if adjust_tag_position:
+        if adjust_tags:
             adjust_tags_to_match_rotation(data["hosted_tags"], loc_point, angle)
 
-def orient_elements_group(doc, grouped_data, target_orientation, adjust_tag_position=True):
+def orient_elements_group(doc, grouped_data, target_orientation, adjust_tags=True):
     """Orient a group of elements to the target orientation."""
     for data in grouped_data:
         element = data["element"]
         loc_point = data["element_location"]
         current_orientation = data["current_orientation"]
-
 
         if not loc_point:
             continue
@@ -140,5 +139,5 @@ def orient_elements_group(doc, grouped_data, target_orientation, adjust_tag_posi
         ElementTransformUtils.RotateElement(doc, element.Id, rotation_axis_line, angle)
 
         # Adjust tags after element orientation, if enabled
-        if adjust_tag_position:
+        if adjust_tags:
             adjust_tags_to_match_rotation(data["hosted_tags"], loc_point, angle)

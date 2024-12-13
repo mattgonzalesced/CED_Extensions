@@ -40,25 +40,6 @@ def format_panel_display(panel, doc):
     return "{} - {} (ID: {})".format(panel.Name,dist_system_name, panel.Id)
 
 
-def prompt_for_starting_panel(doc, all_panels):
-    """Prompts the user to select a starting panel."""
-    sorted_panels = get_sorted_filtered_panels(all_panels, doc)
-    panel_options = [format_panel_display(panel, doc) for panel in sorted_panels]
-
-    selected_panel_display = forms.SelectFromList.show(
-        panel_options,
-        title="Select Starting Panel",
-        prompt="Choose the panel that contains the circuits to move:",
-        multiselect=False
-    )
-
-    if not selected_panel_display:
-        script.exit()  # Exit if the user cancels
-
-    selected_panel_id_str = selected_panel_display.split("(ID: ")[-1].rstrip(")")
-    selected_panel_id = ElementId(int(selected_panel_id_str))
-    return doc.GetElement(selected_panel_id)
-
 
 # Function to sort and filter the panels by distribution system name and panel name
 def get_sorted_filtered_panels(all_panels, doc):
@@ -85,34 +66,39 @@ def main():
     # Get all panels in the project
     all_panels = get_all_panels(doc)
 
-    # If auto-detection fails, prompt the user
-    if not starting_panel:
-        starting_panel = prompt_for_starting_panel(doc, all_panels)
+    # If a starting panel wasn't auto-detected, prompt the user to select one
+    if starting_panel:
+        starting_panel_name = starting_panel.Name
+    else:
+        # Sort and filter panels
+        sorted_panels = get_sorted_filtered_panels(all_panels, doc)
+        panel_options = [format_panel_display(panel, doc) for panel in sorted_panels]
 
-    while True:  # Keep asking for a panel until circuits are found or user cancels
-        # Step 2: Get the circuits from the starting panel
-        circuits = get_circuits_from_panel(starting_panel, doc)
-
-        if circuits:
-            break  # Exit the loop if circuits are found
-
-        # Show alert with Retry and Cancel options
-        retry = forms.alert(
-            "No circuits found in the selected panel. Would you like to retry or cancel?",
-            title="No Circuits Found",
-            retry=True,
-            cancel=True,
-            exitscript=False
+        # Prompt user to select the starting panel
+        selected_panel_display = forms.SelectFromList.show(
+            panel_options,
+            title="Select Starting Panel",
+            prompt="Choose the panel that contains the circuits to move:",
+            multiselect=False
         )
 
-        if not retry:
-            script.exit()  # Exit the script if user cancels
+        if not selected_panel_display:
+            script.exit()
 
-        # If Retry is selected, prompt for a new starting panel
-        starting_panel = prompt_for_starting_panel(doc, all_panels)
+        # Extract the Element ID from the selected display option
+        selected_panel_id_str = selected_panel_display.split("(ID: ")[-1].rstrip(")")
+        selected_panel_id = ElementId(int(selected_panel_id_str))
 
-    # Step 3 and onwards...
+        # Find the selected starting panel by its ElementId
+        starting_panel = doc.GetElement(selected_panel_id)
 
+    if not starting_panel:
+        script.exit()
+
+    # Step 2: Get the circuits from the starting panel
+    circuits = get_circuits_from_panel(starting_panel, doc)
+    if not circuits:
+        script.exit()
 
     # Step 3: Display circuits in checkboxes and get user selection
     circuit_options = ["{} - {}".format(info['circuit_number'], info['load_name']) for _, info in circuits.items()]

@@ -46,6 +46,9 @@ def pick_parameters(elements):
         multiselect=True
     )
 
+
+
+
     if not selected_params:
         script.exit()
     return selected_params

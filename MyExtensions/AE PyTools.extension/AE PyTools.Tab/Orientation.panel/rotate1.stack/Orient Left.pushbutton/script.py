@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-__title__ = "Orient Left"
-__doc__ = """Version = 1.0
+__title__   = "Orient Left"
+__doc__     = """Version = 1.0
 Date    = 09.04.2024
 ________________________________________________________________
 Description:
@@ -29,32 +29,29 @@ Last Updates:
 ________________________________________________________________
 Author: AEvelina"""
 
+
 # ╦╔╦╗╔═╗╔═╗╦═╗╔╦╗╔═╗
 # ║║║║╠═╝║ ║╠╦╝ ║ ╚═╗
 # ╩╩ ╩╩  ╚═╝╩╚═ ╩ ╚═╝
-# ==================================================
+#==================================================
 
 import clr
-
 clr.AddReference('System')
 
 from Snippets._rotateutils import collect_data_for_rotation_or_orientation, orient_elements_group
-from pyrevit import revit, DB, script
+from pyrevit import revit, DB
 
 # Get the active document
 doc = revit.doc
 
-config = script.get_config("orientation_config")
-
-adjust_tag_position = getattr(config, "tag_position", True)
-adjust_tag_angle = getattr(config, "tag_angle", False)
+adjust_tags = True
 
 # Step 1: Get the selected elements and filter out pinned ones
 selection = revit.get_selection()
 filtered_selection = [el for el in selection if isinstance(el, DB.FamilyInstance) and not el.Pinned]
 
 # Step 2: Pre-collect all necessary data before starting the transaction
-element_data = collect_data_for_rotation_or_orientation(doc, filtered_selection, adjust_tag_position)
+element_data = collect_data_for_rotation_or_orientation(doc, filtered_selection,adjust_tags)
 
 # Step 3: Define the target orientation (Y-axis for 0 degrees)
 target_orientation = DB.XYZ(-1, 0, 0)
@@ -64,6 +61,6 @@ with DB.Transaction(doc, "Orient Elements and Adjust Tags") as trans:
     trans.Start()
 
     for orientation_key, grouped_data in element_data.items():
-        orient_elements_group(doc, grouped_data, target_orientation, adjust_tag_position)
+        orient_elements_group(doc, grouped_data, target_orientation,adjust_tags)
 
     trans.Commit()

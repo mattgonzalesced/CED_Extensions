@@ -14,7 +14,7 @@ import os.path
 
 import inspect
 
-import unicodedata
+import unicodedata 
 
 clr.AddReference("RevitServices")
 import RevitServices
@@ -23,7 +23,7 @@ from RevitServices.Transactions import TransactionManager
 from System.Collections.Generic import*
 
 clr.AddReference("RevitAPIUI")
-import Autodesk
+import Autodesk 
 from Autodesk.Revit.UI import TaskDialog, IExternalEventHandler, ExternalEvent
 
 clr.AddReference('RevitAPI')
@@ -62,7 +62,7 @@ class subscribeView(IExternalEventHandler):
                 uiapp.ViewActivated -= self.viewChanged
         except Exception as e:
             pass
-
+            
     def viewChanged(self, sender, e):
         if wndw.IsOpen == 1:
             if self.registered == 0:
@@ -86,7 +86,7 @@ class subscribeView(IExternalEventHandler):
                     names = [x._name for x in categ_inf_used_up]
                     wndw._tableData.Rows.Add("Select a Category Here!", 0)
                     [wndw._tableData.Rows.Add(key_, value_ ) for key_, value_ in zip(names, categ_inf_used_up)]
-                    wndw._categories.DataSource = wndw._tableData
+                    wndw._categories.DataSource = wndw._tableData 
                     wndw._categories.DisplayMember = "Key"
                     #Vaciar range of values
                     wndw._tableData3 = DataTable("Data")
@@ -94,14 +94,14 @@ class subscribeView(IExternalEventHandler):
                     wndw._tableData3.Columns.Add("Value", System.Object)
                     wndw._listBox2.DataSource = wndw._tableData3
                     wndw._listBox2.DisplayMember = "Key"
-
+            
     def GetName(self):
         return "Subscribe View Changed Event"
 
 class applyColors(IExternalEventHandler):
     def __init__(self):
         pass
-
+        
     def Execute(self, uiapp):
         try:
             new_doc = uiapp.ActiveUIDocument.Document
@@ -131,7 +131,7 @@ class applyColors(IExternalEventHandler):
                         wndw._txtBlock5.Visible = True
                 else:
                     wndw._txtBlock5.Visible = False
-
+                    
                 for indx in range(wndw._listBox2.Items.Count):
                     ogs = OverrideGraphicSettings().Dispose()
                     ogs = OverrideGraphicSettings()
@@ -148,14 +148,14 @@ class applyColors(IExternalEventHandler):
                 t.Commit()
         except Exception as e:
             pass
-
+            
     def GetName(self):
         return "Set colors to elements"
-
+        
 class resetColors(IExternalEventHandler):
     def __init__(self):
         pass
-
+        
     def Execute(self, uiapp):
         try:
             new_doc = uiapp.ActiveUIDocument.Document
@@ -189,14 +189,14 @@ class resetColors(IExternalEventHandler):
                 t.Commit()
         except Exception as e:
             pass
-
+            
     def GetName(self):
         return "Reset colors in elements"
 
 class createLegend(IExternalEventHandler):
     def __init__(self):
         pass
-
+        
     def Execute(self, uiapp):
         try:
             new_doc = uiapp.ActiveUIDocument.Document
@@ -237,7 +237,7 @@ class createLegend(IExternalEventHandler):
                     all_text_notes = FilteredElementCollector(new_doc).OfClass(TextNoteType).ToElements()
                     for ele in all_text_notes:
                         ele_id_type = ele.Id
-                        break
+                        break                  
                 sel_cat = wndw._categories.SelectedItem['Value']
                 sel_par = wndw._listBox1.SelectedItem['Value']
                 list_max_X = []
@@ -264,7 +264,7 @@ class createLegend(IExternalEventHandler):
                             it +=1
                             if it == 100:
                                 break
-                    #Create pattern
+                    #Create pattern        
                     it = 1
                     while True:
                         try:
@@ -316,7 +316,7 @@ class createLegend(IExternalEventHandler):
                     curveLoops.Append(line30)
                     list_curveLoops.Add(curveLoops)
                     reg = FilledRegion.Create(new_doc, filled_type[0].Id, newLegend.Id, list_curveLoops)
-                    #Assign color filled region
+                    #Assign color filled region                    
                     color = Autodesk.Revit.DB.Color(item._n1, item._n2, item._n3)
                     ogs.SetProjectionLineColor(color)
                     ogs.SetSurfaceForegroundPatternColor(color);
@@ -337,7 +337,7 @@ class createLegend(IExternalEventHandler):
 class createFilters(IExternalEventHandler):
     def __init__(self):
         pass
-
+        
     def Execute(self, uiapp):
         try:
             new_doc = uiapp.ActiveUIDocument.Document
@@ -589,7 +589,7 @@ def getRangeOfValues(category, param, new_view):
                 break
     copy = [x for x in list_values if x._value == "None"]
     if len(copy) > 0:
-        list_values.Remove(copy[0])
+        list_values.Remove(copy[0])    
     #Ordenar
     list_values = sorted(list_values, key=lambda x: x._value, reverse=False)
     #list_values.sort(key=lambda x: x._value, reverse=False)
@@ -657,7 +657,7 @@ class Form_cats(Form):
         [self._tableData.Rows.Add(key_, value_ ) for key_, value_ in zip(names, self.categs)]
         self.out = []
         self.InitializeComponent()
-
+    
     def InitializeComponent(self):
         self._categories = System.Windows.Forms.ComboBox()
         self._listBox1 = System.Windows.Forms.CheckedListBox()
@@ -674,40 +674,40 @@ class Form_cats(Form):
         self._txtBlock5 = System.Windows.Forms.Label()
         self.toolTip1 =  System.Windows.Forms.ToolTip()
         self.SuspendLayout()
-        #
+        # 
         # TextBlock2
-        #
+        # 
         self._txtBlock2.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left
         self._txtBlock2.Location = System.Drawing.Point(12, 2)
         self._txtBlock2.Name = "txtBlock2"
         self._txtBlock2.Size = System.Drawing.Size(120, 25)
         self._txtBlock2.Text = "Category:"
         self.toolTip1.SetToolTip(self._txtBlock2, "Select a category to start coloring.")
-        #
+        # 
         # comboBox1 Cat
-        #
+        # 
         self._categories.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right
         self._categories.Location = System.Drawing.Point(12, 27)
         self._categories.Name = "dropDown"
-        self._categories.DataSource = self._tableData
+        self._categories.DataSource = self._tableData 
         self._categories.DisplayMember = "Key"
         self._categories.Size = System.Drawing.Size(310, 244)
         self._categories.DropDownWidth = 150
         self._categories.DropDownStyle = ComboBoxStyle.DropDownList
         self._categories.SelectedIndexChanged += self.UpdateFilter
         self.toolTip1.SetToolTip(self._categories, "Select a category to start coloring.")
-        #
+        # 
         # TextBlock3
-        #
+        # 
         self._txtBlock3.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left
         self._txtBlock3.Location = System.Drawing.Point(12, 57)
         self._txtBlock3.Name = "txtBlock3"
         self._txtBlock3.Size = System.Drawing.Size(120, 20)
         self._txtBlock3.Text = "Parameters:"
         self.toolTip1.SetToolTip(self._txtBlock3, "Select a parameter to color elements based on its value.")
-        #
+        # 
         # checkedListBox1
-        #
+        # 
         self._listBox1.Anchor = System.Windows.Forms.AnchorStyles.Top |  System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right
         self._listBox1.FormattingEnabled = True
         self._listBox1.CheckOnClick = True
@@ -718,18 +718,18 @@ class Form_cats(Form):
         self._listBox1.Size = System.Drawing.Size(310, 158)
         self._listBox1.ItemCheck += self.checkItem
         self.toolTip1.SetToolTip(self._listBox1, "Select a parameter to color elements based on its value.")
-        #
+        # 
         # TextBlock4
-        #
+        # 
         self._txtBlock4.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left
         self._txtBlock4.Location = System.Drawing.Point(12, 238)
         self._txtBlock4.Name = "txtBlock4"
         self._txtBlock4.Size = System.Drawing.Size(120, 23)
         self._txtBlock4.Text = "Values:"
         self.toolTip1.SetToolTip(self._txtBlock4, "Reassign colors by clicking on their value.")
-        #
+        # 
         # TextBlock5
-        #
+        # 
         self._txtBlock5.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left
         self._txtBlock5.Location = System.Drawing.Point(12, 585)
         self._txtBlock5.Name = "txtBlock5"
@@ -738,9 +738,9 @@ class Form_cats(Form):
         self._txtBlock5.ForeColor = Color.Red
         self._txtBlock5.Font = Font("Arial", 8, FontStyle.Underline)
         self._txtBlock5.Visible = False
-        #
+        # 
         # checkedListBox2
-        #
+        # 
         self._listBox2.Anchor = System.Windows.Forms.AnchorStyles.Top |  System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right
         self._listBox2.FormattingEnabled = True
         self._listBox2.HorizontalScrollbar = True
@@ -749,14 +749,14 @@ class Form_cats(Form):
         self._listBox2.DisplayMember = "Key"
         self._listBox2.DrawMode = DrawMode.OwnerDrawFixed
         self._listBox2.DrawItem += self.ColourItem
-        self.new_fnt = Font(self.Font.FontFamily, self.Font.Size-4, FontStyle.Bold)
+        self.new_fnt = Font(self.Font.FontFamily, self.Font.Size-4, FontStyle.Bold)    
         g = self._listBox2.CreateGraphics()
         self._listBox2.ItemHeight = int(g.MeasureString("Sample", self.new_fnt).Height)
         self._listBox2.Size = System.Drawing.Size(310, 280)
         self.toolTip1.SetToolTip(self._listBox2, "Reassign colors by clicking on their value.")
-        #
+        # 
         # button1
-        #
+        # 
         self._button1.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right
         self._button1.Location = System.Drawing.Point(222, 602)
         self._button1.Name = "button1"
@@ -765,9 +765,9 @@ class Form_cats(Form):
         self._button1.UseVisualStyleBackColor = True
         self._button1.Click += self.Button1Click
         self.toolTip1.SetToolTip(self._button1, "Apply the colors from each value in your Revit view.")
-        #
+        # 
         # button2
-        #
+        # 
         self._button2.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left
         self._button2.Location = System.Drawing.Point(12, 602)
         self._button2.Name = "button2"
@@ -776,9 +776,9 @@ class Form_cats(Form):
         self._button2.UseVisualStyleBackColor = True
         self._button2.Click += self.Button2Click
         self.toolTip1.SetToolTip(self._button2, "Reset the colors in your Revit view to its initial stage.")
-        #
+        # 
         # button3
-        #
+        # 
         self._button3.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right
         self._button3.Location = System.Drawing.Point(167, 538)
         self._button3.Name = "button3"
@@ -787,9 +787,9 @@ class Form_cats(Form):
         self._button3.UseVisualStyleBackColor = True
         self._button3.Click += self.Button3Click
         self.toolTip1.SetToolTip(self._button3, "Reassign new random colors to all values.")
-        #
+        # 
         # button4
-        #
+        # 
         self._button4.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left
         self._button4.Location = System.Drawing.Point(11, 538)
         self._button4.Name = "button4"
@@ -798,9 +798,9 @@ class Form_cats(Form):
         self._button4.UseVisualStyleBackColor = True
         self._button4.Click += self.Button4Click
         self.toolTip1.SetToolTip(self._button4, "Based on the color of the first and last value,\nreassign gradients colors to all values.")
-        #
+        # 
         # button5
-        #
+        # 
         self._button5.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left
         #self._button5.Location = System.Drawing.Point(167, 243)
         self._button5.Location = System.Drawing.Point(11, 563)
@@ -810,9 +810,9 @@ class Form_cats(Form):
         self._button5.UseVisualStyleBackColor = True
         self._button5.Click += self.Button5Click
         self.toolTip1.SetToolTip(self._button5, "Create a new legend view for all the values and their colors.")
-        #
+        # 
         # button6
-        #
+        # 
         self._button6.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right
         #self._button5.Location = System.Drawing.Point(167, 243)
         self._button6.Location = System.Drawing.Point(167, 563)
@@ -822,9 +822,9 @@ class Form_cats(Form):
         self._button6.UseVisualStyleBackColor = True
         self._button6.Click += self.Button6Click
         self.toolTip1.SetToolTip(self._button6, "Create view filters and rules for all the values and their colors.")
-        #
+        # 
         # Form24
-        #
+        # 
         self.TopMost = True
         self.ShowInTaskbar = False
         self.ClientSize = System.Drawing.Size(334, 642)
@@ -835,7 +835,7 @@ class Form_cats(Form):
         self.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Show
         self.ShowInTaskbar = True
         self.MaximizeBox = True
-        self.MinimizeBox = True
+        self.MinimizeBox = True            
         self.Controls.Add(self._button1)
         self.Controls.Add(self._button2)
         self.Controls.Add(self._button3)
@@ -853,24 +853,24 @@ class Form_cats(Form):
         self.Text = "Color Elements By Parameter"
         self.Closing += self.closingEvent
         self.ResumeLayout(False)
-
+        
     def Button1Click(self, sender, e):
         if self._listBox2.Items.Count > 0:
             self.event.Raise()
-
+    
     def Button2Click(self, sender, e):
         self.reset_ev.Raise()
-
+    
     def Button3Click(self, sender, e):
         #Reassign Random colors
         try:
-            checkindex = self._listBox1.CheckedIndices
+            checkindex = self._listBox1.CheckedIndices 
             for indx in checkindex:
                 self._listBox1.SetItemChecked(indx, False)
                 self._listBox1.SetItemChecked(indx, True)
         except:
-            pass
-
+            pass        
+    
     def Button4Click(self, sender, e):
         self._listBox2.SelectedIndexChanged -= self.lstselectedIndexChanged
         try:
@@ -891,23 +891,23 @@ class Form_cats(Form):
                 self._tableData3.Columns.Add("Key", System.String)
                 self._tableData3.Columns.Add("Value", System.Object)
                 vl_par = [x._value for x in list_values]
-                [self._tableData3.Rows.Add(key_, value_ ) for key_, value_ in zip(vl_par, list_values)]
+                [self._tableData3.Rows.Add(key_, value_ ) for key_, value_ in zip(vl_par, list_values)]    
                 self._listBox2.DataSource = self._tableData3
                 self._listBox2.DisplayMember = "Key"
                 self._listBox2.SelectedIndex = -1
         except Exception as e:
             pass
         self._listBox2.SelectedIndexChanged += self.lstselectedIndexChanged
-
+    
     def Button5Click(self, sender, e):
         if self._listBox2.Items.Count > 0:
             self.legend_ev.Raise()
-
+            
     def Button6Click(self, sender, e):
         if self._listBox2.Items.Count > 0:
             self.reset_ev.Raise()
             self.filter_ev.Raise()
-
+    
     def getGradientColors(self, startColor, endColor, steps):
         aStep = float((endColor.A - startColor.A) / steps)
         rStep = float((endColor.R - startColor.R) / steps)
@@ -929,11 +929,11 @@ class Form_cats(Form):
                 b=0
             colorList.Add([a,r,g,b])
         return colorList
-
+    
     def closingEvent(self, sender, e):
         self.IsOpen = 0
         self.uns_event.Raise()
-
+    
     def lstselectedIndexChanged(self, sender, e):
         #Ask colour
         if sender.SelectedIndex != -1:
@@ -945,7 +945,7 @@ class Form_cats(Form):
                 sender.SelectedItem['Value']._n3 = clr_dlg.Color.B
                 sender.SelectedItem['Value']._colour = Color.FromArgb(clr_dlg.Color.R, clr_dlg.Color.G, clr_dlg.Color.B)
             self._listBox2.SelectedIndex = -1
-
+        
     def ColourItem(self, sender, e):
         try:
             cnt = e.Index
@@ -966,7 +966,7 @@ class Form_cats(Form):
             e.DrawFocusRectangle()
         except:
             pass
-
+                
     def checkItem(self, sender, e):
         #Only one element can be selected
         for indx in range(self._listBox1.Items.Count):
@@ -992,12 +992,12 @@ class Form_cats(Form):
                 if len(vl_par) != 0:
                     width = [int(g.MeasureString(x,self._listBox2.Font).Width) for x in vl_par]
                     self._listBox2.HorizontalExtent = max(width) + 50;
-                [self._tableData3.Rows.Add(key_, value_ ) for key_, value_ in zip(vl_par, rng_val)]
+                [self._tableData3.Rows.Add(key_, value_ ) for key_, value_ in zip(vl_par, rng_val)]    
                 self._listBox2.DataSource = self._tableData3
                 self._listBox2.DisplayMember = "Key"
                 self._listBox2.SelectedIndex = -1
                 self._listBox2.SelectedIndexChanged += self.lstselectedIndexChanged
-
+        
     def UpdateFilter(self, sender, e):
         #Update param listbox
         sel_cat = sender.SelectedItem['Value']
@@ -1009,7 +1009,7 @@ class Form_cats(Form):
         self._tableData3.Columns.Add("Value", System.Object)
         if sel_cat != 0 and sender.SelectedIndex != 0:
             names_par = [x._name for x in sel_cat._par]
-            [self._tableData2.Rows.Add(key_, value_ ) for key_, value_ in zip(names_par, sel_cat._par)]
+            [self._tableData2.Rows.Add(key_, value_ ) for key_, value_ in zip(names_par, sel_cat._par)]    
             self._listBox1.DataSource = self._tableData2
             self._listBox1.DisplayMember = "Key"
             for indx in range(self._listBox1.Items.Count):
@@ -1040,19 +1040,19 @@ if sel_View !=0:
     #Window
     event_handler = applyColors()
     ext_event = ExternalEvent.Create(event_handler)
-
+    
     event_handler_uns = subscribeView()
     ext_event_uns = ExternalEvent.Create(event_handler_uns)
-
+    
     event_handler_filters = createFilters()
     ext_event_filters = ExternalEvent.Create(event_handler_filters)
-
+    
     event_handler_reset = resetColors()
     ext_event_reset = ExternalEvent.Create(event_handler_reset)
-
+    
     event_handler_Legend = createLegend()
     ext_event_legend = ExternalEvent.Create(event_handler_Legend)
-
+    
     wndw = Form_cats(categ_inf_used, ext_event, ext_event_uns, sel_View, ext_event_reset, ext_event_legend, ext_event_filters)
     wndw._categories.SelectedIndex = -1
     wndw.Show()
