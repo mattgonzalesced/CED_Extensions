@@ -1,6 +1,6 @@
 from pyrevit import script
 from Autodesk.Revit import DB
-
+##TEST
 # Access the current document and application
 uidoc = __revit__.ActiveUIDocument
 doc = uidoc.Document
