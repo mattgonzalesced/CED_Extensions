@@ -1,0 +1,4 @@
+layout:
+  - SuperCircuit
+  - SyncCktDataToElements
+  - Pick Point and Print Coordinates

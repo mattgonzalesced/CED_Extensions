@@ -1,0 +1,6 @@
+layout:
+  - PanelBreakerList
+  - ElectricalSystemCheck
+  - CheckPanelCompatibility
+  - RevisionReport
+  - ListRevCloudIssues
