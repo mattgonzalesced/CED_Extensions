@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-__title__   = "Select Hosted Tags"
-__doc__     = """Version = 1.0
+__title__ = "Select Hosted Tags"
+__doc__ = """Version = 1.0
 Date    = 15.06.2024
 ________________________________________________________________
 Description:
@@ -26,27 +26,70 @@ Last Updates:
 - [05.06.2024] v0.1 Change Description 
 ________________________________________________________________
 Author: Erik Frits"""
+
 import clr
+
 clr.AddReference('System')
 
 from Autodesk.Revit.DB import IndependentTag, FilteredElementCollector, ElementId, BuiltInCategory, Transaction
 from Autodesk.Revit.UI import TaskDialog
+from pyrevit import revit, DB, UI, HOST_APP, script, output, forms
 from System.Collections.Generic import List
-
 
 # Get the active Revit application and document
 doc = __revit__.ActiveUIDocument.Document
 uidoc = __revit__.ActiveUIDocument
 
 
-# Get the current selection of element IDs from the user
-selection = uidoc.Selection.GetElementIds()
 
-# Check if there are selected elements
-if not selection:
-    TaskDialog.Show("Error", "No elements selected. Please select elements.")
-else:
-    # List to hold the tag ElementIds
+
+def get_host_from_tags(selection):
+    tagged_elements = []
+    for el in selection:
+        if isinstance(el, DB.IndependentTag):
+            tagged_elements.append(List[DB.ElementId](el.GetTaggedLocalElementIds())[0])
+        elif isinstance(el, DB.Architecture.RoomTag):
+            tagged_elements.append(el.TaggedLocalRoomId)
+        elif isinstance(el, DB.Mechanical.SpaceTag):
+            tagged_elements.append(el.Space.Id)
+        elif isinstance(el, DB.AreaTag):
+            tagged_elements.append(el.Area.Id)
+
+    return tagged_elements
+
+def get_tags_from_host(selection):
+    selection_ids = selection.get_element_ids
+    tag_collector = FilteredElementCollector(doc, doc.ActiveView.Id).OfClass(IndependentTag)
+    tag_iterator = tag_collector.GetElementIterator()
+    tags = []
+    while tag_iterator.MoveNext():
+        tag = tag_iterator.Current
+        tag_host_ids = tag.GetTaggedLocalElementIds()
+        for sel_id in selection_ids:
+            if sel_id in tag_host_ids:
+                tags.append(tag.Id)
+            break
+    return tags
+
+
+def main():
+    # Get the current selection of element IDs from the user
+    selection = revit.get_selection()
+
+    model_elements = []
+    hosted_tags = []
+    # Check if there are selected elements
+    if not selection:
+        TaskDialog.Show("Error", "No elements selected. Please select elements.")
+        script.exit()
+
+    elif __shiftclick__:
+
+        tag_hosts = get_host_from_tags(selection)
+        tags = get_tags_from_host(selection)
+
+
+
     tag_ids = List[ElementId]()
     # Find all tags in the active view
     tag_collector = FilteredElementCollector(doc, doc.ActiveView.Id).OfClass(IndependentTag)
@@ -54,8 +97,6 @@ else:
     # Loop through each selected element
     for sel_id in selection:
         element = doc.GetElement(sel_id)
-
-
 
         # Iterate through all the tags and find those referencing the selected element
         for tag in tag_collector:
@@ -81,4 +122,3 @@ else:
             uidoc.Selection.SetElementIds(List[ElementId](tag_ids))
     else:
         TaskDialog.Show("Error", "No tags found for the selected elements in the active view.")
-
