@@ -1,0 +1,18 @@
+{
+    "extensions": [
+      {
+        "builtin": "False",
+        "enable": "True",
+        "type": "extension",
+        "name": "AE PyTools",
+        "description": "Company wide Tools for pyRevit",
+        "author": "Ehsan Iran-Nejad",
+        "author-url": "https://keybase.io/ein",
+        "url": "https://github.com/eirannejad/pyRevit.git",
+        "website": "",
+        "image": "",
+        "dependencies": []
+      }
+    ]
+  }
+  
