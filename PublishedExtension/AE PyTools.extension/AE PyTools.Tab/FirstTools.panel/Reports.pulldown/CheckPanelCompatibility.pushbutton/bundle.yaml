@@ -1,0 +1,17 @@
+title: 
+  en_us: Batch Swap Circuits
+tooltip: 
+  en_us: >-
+    Batch Swap Circuits automates transferring electrical circuits between 
+    panels in Revit. Select a starting panel or circuit, filter compatible 
+    target panels, and move circuits in batches. The tool provides intuitive 
+    prompts for user input and generates a detailed summary of the transfers.
+
+    To use: Select a panel or circuit, choose circuits to move, and assign 
+    them to a compatible target panel from the provided options.
+
+    Author: Anthony Evelina - CoolSys (2025)
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: true
+  full_frame: true
