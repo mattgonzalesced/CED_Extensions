@@ -82,49 +82,12 @@ def main():
         TaskDialog.Show("Error", "No elements selected. Please select elements.")
         script.exit()
 
-
-
-    elif __shiftclick__:
-        if len(tag_hosts)>0:
+    if not len(tag_hosts) > 0:
+        script.exit()
+    else:
+        if __shiftclick__:
             selection.append(tag_hosts)
         else:
-            script.exit()
-
-    else:
-        if len(tag_hosts) > 0:
-            selection
+            selection.set_to(tag_hosts)
 
 
-
-    tag_ids = List[ElementId]()
-    # Find all tags in the active view
-    tag_collector = FilteredElementCollector(doc, doc.ActiveView.Id).OfClass(IndependentTag)
-
-    # Loop through each selected element
-    for sel_id in selection:
-        element = doc.GetElement(sel_id)
-
-        # Iterate through all the tags and find those referencing the selected element
-        for tag in tag_collector:
-            # Get the element IDs referenced by the tag
-            tag_referenced_ids = tag.GetTaggedLocalElementIds()
-
-            # If the tag is associated with the current selected element, add the tag's ID to the list
-            if sel_id in tag_referenced_ids:
-                tag_ids.Add(tag.Id)
-
-    # Check if we found any tags
-    if tag_ids:
-        if __shiftclick__:
-            # Update the user's selection with the tags + elements
-            current_selection = uidoc.Selection.GetElementIds()
-            for tag in tag_ids:
-                current_selection.Add(tag)
-
-            uidoc.Selection.SetElementIds(current_selection)
-
-        else:
-            # Update the user's selection with the tags ONLY
-            uidoc.Selection.SetElementIds(List[ElementId](tag_ids))
-    else:
-        TaskDialog.Show("Error", "No tags found for the selected elements in the active view.")
