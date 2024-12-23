@@ -1,0 +1,10 @@
+title: Get Tags From Hosts
+
+tooltip: |
+  Retrieve the host elements of selected tags. 
+  **Click Modes:**
+  - **Regular Click**: Replaces the current selection with the hosts of the selected tags.
+  - **Shift-Click**: Appends the hosts of the selected tags to the current selection.
+
+author: >-
+  AEvelina
