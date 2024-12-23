@@ -1,0 +1,4 @@
+layout:
+  - CleanModelTags
+  - GetHostFromTags
+  - SelectHostedTags
