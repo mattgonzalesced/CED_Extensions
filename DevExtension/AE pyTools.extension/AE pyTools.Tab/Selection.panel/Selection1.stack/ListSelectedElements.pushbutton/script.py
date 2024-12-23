@@ -52,18 +52,26 @@ def pick_parameters(elements):
 
 
 def retrieve_parameter_value(element, param_name):
-    """Retrieve the value of a parameter, handling different cases for 'n/a' and empty strings."""
+    """Retrieve the value of a parameter, handling type and instance separately."""
+    # First, check if the parameter exists in the instance
     param = element.LookupParameter(param_name)
-
+    cross = str(":cross_mark:")
     if not param:
-        # Parameter does not exist on this element
-        return "n/a"
+        # If not found, check type parameters
+        element_type = revit.doc.GetElement(element.GetTypeId())
+        if element_type:
+            param = element_type.LookupParameter(param_name)
 
-    if param.HasValue:
-        return format_parameter_value(param)
+    # If the parameter still does not exist, return "n/a"
+    if not param:
+        return cross
 
-    # If parameter exists but has no value, return an empty string
-    return ""
+    # If the parameter exists but has no value, return an empty string
+    if not param.HasValue:
+        return ""
+
+    # If the parameter exists and has a value, format and return it
+    return format_parameter_value(param)
 
 
 def format_parameter_value(param):
@@ -105,7 +113,7 @@ def print_report(element_data, columns):
     # Print title and legend
     output.print_md("## Element Parameter Report")
     output.print_md("**Legend**")
-    output.print_md("- `n/a`: Parameter does not exist for this element.")
+    output.print_md("- :cross_mark:: Parameter does not exist for this element.")
 
     output.insert_divider()
 
