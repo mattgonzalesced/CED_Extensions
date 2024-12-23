@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-__title__ = "Place All Family Types"
+
 
 from pyrevit import forms, revit, DB
 from pyrevit.revit import Transaction

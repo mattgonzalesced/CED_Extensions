@@ -1,4 +1,4 @@
 layout:
-  - Clean Model Tags
-  - Get Hosts From Tags
-  - Get Tags From Hosts
+  - CleanModelTags
+  - GetHostFromTags
+  - SelectHostedTags

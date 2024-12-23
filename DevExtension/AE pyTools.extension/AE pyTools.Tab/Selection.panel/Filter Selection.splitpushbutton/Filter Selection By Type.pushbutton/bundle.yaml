@@ -1,0 +1,14 @@
+title:
+
+  en_us: >-
+    Filter Selection 
+  
+    By Type
+
+tooltip:
+
+  en_us: >-
+    Refine the current selection by desired family types.
+    Use the filter to view element counts by family type and remove undesired types from selection.
+
+context: Selection

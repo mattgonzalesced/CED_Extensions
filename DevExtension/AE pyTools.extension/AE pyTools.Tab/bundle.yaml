@@ -1,8 +1,9 @@
 layout:
   - FirstTools
   - Orientation
+  - Selection
   - Tags
-  - Family Editor
   - Circuits
+  - Miscellaneous
   - Test Buttons
   - One Line

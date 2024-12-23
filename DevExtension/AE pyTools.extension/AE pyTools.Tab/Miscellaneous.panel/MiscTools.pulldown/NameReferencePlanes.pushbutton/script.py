@@ -1,20 +1,4 @@
 # -*- coding: utf-8 -*-
-__title__ = "Reference Plane Namer"
-__doc__ = """Version = 1.0
-Date    = 18.09.2024
-________________________________________________________________
-Description:
-
-This script assigns subcategories to reference planes in the family 
-environment based on specific rules and creates missing subcategories 
-with the specified styles if they don't exist.
-
-________________________________________________________________
-How-To:
-
-Run this script in the Family Editor to apply reference plane subcategories.
-________________________________________________________________
-Author: Your Name"""
 
 from pyrevit import revit, DB
 
