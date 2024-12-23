@@ -26,68 +26,46 @@ Last Updates:
 - [05.06.2024] v0.1 Change Description 
 ________________________________________________________________
 Author: Erik Frits"""
-
-import clr
-
-clr.AddReference('System')
-
-from Autodesk.Revit.DB import IndependentTag, FilteredElementCollector, ElementId, BuiltInCategory, Transaction
-from Autodesk.Revit.UI import TaskDialog
-from pyrevit import revit, DB, UI, HOST_APP, script, output, forms
+from pyrevit import revit, DB, HOST_APP, forms
 from System.Collections.Generic import List
 
-# Get the active Revit application and document
-doc = __revit__.ActiveUIDocument.Document
-uidoc = __revit__.ActiveUIDocument
+# Get current selection
+selection = revit.get_selection()
 
+# List to store tagged elements
+tagged_elements = []
 
-
-
-def get_host_from_tags(selection):
-    tagged_elements = []
-    for el in selection:
-        if HOST_APP.is_newer_than(2022, or_equal=True):
-            if isinstance(el, DB.IndependentTag):
-                if el.GetTaggedLocalElementIds() is not None:
-                    tagged_elements.append(List[DB.ElementId](el.GetTaggedLocalElementIds())[0])
-            elif isinstance(el, DB.Architecture.RoomTag):
-                tagged_elements.append(el.TaggedLocalRoomId)
-            elif isinstance(el, DB.Mechanical.SpaceTag):
-                tagged_elements.append(el.Space.Id)
-            elif isinstance(el, DB.AreaTag):
-                tagged_elements.append(el.Area.Id)
-        else:
-
-            if isinstance(el, DB.IndependentTag):
-                if el.GetTaggedLocalElementIds() is not None:
-                    tagged_elements.append(List[DB.ElementId](el.GetTaggedLocalElementIds())[0])
-            elif isinstance(el, DB.Architecture.RoomTag):
-                tagged_elements.append(el.TaggedLocalRoomId)
-            elif isinstance(el, DB.Mechanical.SpaceTag):
-                tagged_elements.append(el.Space.Id)
-            elif isinstance(el, DB.AreaTag):
-                tagged_elements.append(el.Area.Id)
-
-    return tagged_elements
-
-
-
-def main():
-    # Get the current selection of element IDs from the user
-    selection = revit.get_selection()
-    tag_hosts = get_host_from_tags(selection)
-
-    # Check if there are selected elements
-    if not selection:
-        TaskDialog.Show("Error", "No elements selected. Please select elements.")
-        script.exit()
-
-    if not len(tag_hosts) > 0:
-        script.exit()
+# Process each selected element
+for el in selection:
+    if HOST_APP.is_newer_than(2022, or_equal=True):
+        if isinstance(el, DB.IndependentTag):
+            element_ids = el.GetTaggedLocalElementIds()
+            if element_ids:
+                tagged_elements.append(List[DB.ElementId](element_ids)[0])
+        elif isinstance(el, DB.Architecture.RoomTag):
+            tagged_elements.append(el.TaggedLocalRoomId)
+        elif isinstance(el, DB.Mechanical.SpaceTag):
+            tagged_elements.append(el.Space.Id)
+        elif isinstance(el, DB.AreaTag):
+            tagged_elements.append(el.Area.Id)
     else:
-        if __shiftclick__:
-            selection.append(tag_hosts)
-        else:
-            selection.set_to(tag_hosts)
+        if isinstance(el, DB.IndependentTag):
+            tagged_elements.append(el.TaggedLocalElementId)
+        elif isinstance(el, DB.Architecture.RoomTag):
+            tagged_elements.append(el.TaggedLocalRoomId)
+        elif isinstance(el, DB.Mechanical.SpaceTag):
+            tagged_elements.append(el.Space.Id)
+        elif isinstance(el, DB.AreaTag):
+            tagged_elements.append(el.Area.Id)
 
-
+# If tagged elements found
+if tagged_elements:
+    if __shiftclick__:
+        # Append hosts to the current selection
+        selection.append(tagged_elements)
+    else:
+        # Replace selection with only the hosts
+        selection.set_to(tagged_elements)
+else:
+    # Notify user if no tags are selected
+    forms.alert("Please select at least one tag to get its host.")
