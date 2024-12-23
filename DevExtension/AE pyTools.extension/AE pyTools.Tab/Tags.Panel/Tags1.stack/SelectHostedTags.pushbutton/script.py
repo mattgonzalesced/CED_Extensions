@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-__title__ = "Select Hosted Tags"
+__title__ = "Get Tags From Hosts"
 __doc__ = """Version = 1.0
 Date    = 15.06.2024
 ________________________________________________________________
@@ -42,20 +42,6 @@ uidoc = __revit__.ActiveUIDocument
 
 
 
-
-def get_host_from_tags(selection):
-    tagged_elements = []
-    for el in selection:
-        if isinstance(el, DB.IndependentTag):
-            tagged_elements.append(List[DB.ElementId](el.GetTaggedLocalElementIds())[0])
-        elif isinstance(el, DB.Architecture.RoomTag):
-            tagged_elements.append(el.TaggedLocalRoomId)
-        elif isinstance(el, DB.Mechanical.SpaceTag):
-            tagged_elements.append(el.Space.Id)
-        elif isinstance(el, DB.AreaTag):
-            tagged_elements.append(el.Area.Id)
-
-    return tagged_elements
 
 def get_tags_from_host(selection):
     selection_ids = selection.get_element_ids

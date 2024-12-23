@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-__title__ = "Select Hosted Tags"
+__title__ = "Get Hosts From Tags"
 __doc__ = """Version = 1.0
 Date    = 15.06.2024
 ________________________________________________________________
