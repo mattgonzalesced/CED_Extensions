@@ -1,6 +1,12 @@
 title: "Panel Report"
 
-tooltip: TESTING
+tooltip: >-
+  Generatate a detailed report on all panels and associated circuit breakers
+  within the project.
+  
+  The report format is similar to submittals we receive from manufacturers,
+  and is intended to aid the submittal review process.
+  
 
 author: >-
   AEvelina

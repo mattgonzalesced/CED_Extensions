@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-__title__ = "Set System Calculation Levels"
+
 
 from Autodesk.Revit.DB import FilteredElementCollector, Transaction, BuiltInParameter
 from Autodesk.Revit.DB.Mechanical import MechanicalSystemType
