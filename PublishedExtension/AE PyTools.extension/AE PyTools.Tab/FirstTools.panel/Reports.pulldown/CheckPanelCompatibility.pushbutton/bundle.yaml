@@ -1,0 +1,18 @@
+title: 
+  en_us: Panel Compatibility Report
+tooltip: 
+  en_us: >-
+
+    Description:
+
+    Panel Compatibility Report generates a detailed analysis of all electrical panels in the project. It evaluates the distribution system, phase, voltage ratings, and compatible circuit configurations, providing clear compatibility information for each panel.
+
+    
+    To use:
+
+    Run the tool to analyze all panels in the project. The tool retrieves panel data, checks distribution system compatibility, and displays the results in a structured report for review.
+
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: true
+  full_frame: true

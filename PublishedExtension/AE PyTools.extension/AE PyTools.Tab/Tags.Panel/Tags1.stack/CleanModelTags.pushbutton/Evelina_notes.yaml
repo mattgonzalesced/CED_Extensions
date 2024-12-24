@@ -1,0 +1,7 @@
+title: Clean Model Tags 
+
+tooltip: If a tag is set to 'Model' orientation at an orthogonal angle (0,90,180,270), this will convert them to horizontal or vertical. Shift+Cick will output a report of affected tags.
+
+author: >-
+  AEvelina
+

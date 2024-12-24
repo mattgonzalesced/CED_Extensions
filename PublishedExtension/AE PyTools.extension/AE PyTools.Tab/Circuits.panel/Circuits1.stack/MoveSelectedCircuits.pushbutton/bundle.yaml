@@ -1,0 +1,18 @@
+title: 
+  en_us: Move Selected Circuits
+tooltip: 
+  en_us: >-
+
+    Description:
+
+    Move Selected Circuits transfers selected electrical circuits from one panel to another in Revit. It filters compatible target panels based on voltage and pole requirements and ensures proper reassignment to available slots in the target panel.
+
+    
+    To use:
+
+    Select circuits or elements connected to circuits in the model. Run the tool and choose a compatible target panel from the provided list. The tool moves the circuits to the selected panel while verifying compatibility.
+
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: true
+  full_frame: true

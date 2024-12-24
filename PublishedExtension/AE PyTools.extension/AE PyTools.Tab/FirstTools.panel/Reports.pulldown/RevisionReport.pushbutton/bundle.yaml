@@ -1,0 +1,18 @@
+title: 
+  en_us: Revision Report
+tooltip: 
+  en_us: >-
+
+    Description:
+
+    Revision Report generates a detailed summary of revisions in the project, grouping associated revision clouds by sheets and providing additional parameter data when configured. It supports different Revit versions and adapts functionality accordingly.
+
+    
+    To use:
+
+    Select the desired revisions when prompted. The tool will analyze revision clouds associated with those revisions, group them by sheets, and generate a structured report displaying comments and any additional selected parameters.
+
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: true
+  full_frame: true

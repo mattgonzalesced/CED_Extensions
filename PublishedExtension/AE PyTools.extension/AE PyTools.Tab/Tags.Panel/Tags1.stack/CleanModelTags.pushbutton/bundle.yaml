@@ -1,7 +1,18 @@
-title: Clean Model Tags 
+title: 
+  en_us: Clean Model Tags
+tooltip: 
+  en_us: >-
 
-tooltip: If a tag is set to 'Model' orientation at an orthogonal angle (0,90,180,270), this will convert them to horizontal or vertical. Shift+Cick will output a report of affected tags.
+    Description:
 
-author: >-
-  AEvelina
+    Clean Model Tags identifies and updates tags in the Revit model with incorrect orientations, specifically focusing on tags with "Model" orientation. It adjusts their alignment (horizontal or vertical) based on their rotation angle.
 
+    
+    To use:
+
+    Run the script in a Revit project. Tags with incorrect orientation will be automatically corrected. Shift-click the tool to generate a detailed report of all affected tags and their updated orientations.
+
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: true
+  full_frame: true

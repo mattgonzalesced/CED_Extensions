@@ -1,7 +1,18 @@
-title: "Panel Report"
+title: 
+  en_us: Panel Breaker Report
+tooltip: 
+  en_us: >-
 
-tooltip: TESTING
+    Description:
 
-author: >-
-  AEvelina
+    Panel Breaker Report generates a detailed summary of electrical panels, including circuits, spares, and spaces. It also provides key panel parameters such as breaker ratings, maximum circuits, and short circuit ratings, formatted in a structured table.
 
+    
+    To use:
+
+    Run the tool to analyze all electrical panels in the project. The tool collects data on circuits and associated panel properties, displaying the results in a report organized by panel.
+
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: true
+  full_frame: true
