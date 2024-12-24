@@ -3,9 +3,10 @@ from pyrevit import script, forms, revit, DB
 
 # Constants
 PART_TYPE_MAPPING = {
-    16: ("DME-EQU-Switchboard-Top_CED", "Solid"),
     14: ("DME-EQU-Panel-Top_CED", "Solid"),
     15: ("DME-EQU-Transformer-Box-Ground-Top_CED", "Solid"),
+    16: ("DME-EQU-Switchboard-Top_CED", "Solid"),
+    17: ("DME-EQU-Panel-Top_CED", "Solid"),
     18: ("DME-EQU-Disconnect-Top_CED", "Fused Disconnect")
 }
 

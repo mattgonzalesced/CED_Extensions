@@ -1,0 +1,24 @@
+title: 
+  en_us: Batch Swap Circuits
+tooltip: 
+  en_us: >-
+
+    Description:
+
+    Transfer multiple circuits between panels. 
+
+    
+    To use:
+
+    Start by selecting a panel or circuit, or let the tool auto-detect a starting panel. 
+    Choose the circuits to move from the list associated with the starting panel. 
+    Then, select a compatible target panel to complete the transfer.
+    
+    
+    Notes:
+    - Target panel must have enough open slots to accommodate the additional circuits
+
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: true
+  full_frame: true

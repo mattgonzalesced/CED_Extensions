@@ -1,0 +1,21 @@
+title: 
+  en_us: List Circuits by Panel
+tooltip: 
+  en_us: >-
+
+    Description:
+
+    Generate a detailed report of electrical circuits associated with selected panels. Circuit elements are selectable
+    from the report, so it is a quick way to review and edit circuit information as needed.
+    
+    
+    SHIFT+Click: add or modify the default parameters that are reported in the output table.
+  
+
+    
+    
+
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: true
+  full_frame: true

@@ -1,8 +1,25 @@
-title: Create Dedicated Circuits
+title: 
+  en_us: Create Dedicated Circuits
+tooltip: 
+  en_us: >-
 
-tooltip: Test
+    Description:
 
-author: >-
-  AEvelina
+    Quickly create dedicated electrical circuits for each selected element and assign to chosen panel.
+    
+    Output table can be used to view and edit information for the new circuits.
+    
+    
+    Notes: 
+    
+    - Selected Elements must all be compatible with the same 3-phase Voltage level. All elements must either be 120/208,
+    or 277/480V
+    
+    - Selected panel must have enough open slots in the panel schedule to accommodate the number of circuits.
 
-min_revit_version: 2024
+    
+
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: true
+  full_frame: true

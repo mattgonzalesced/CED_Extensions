@@ -1,0 +1,25 @@
+title: 
+  en_us: Wire Circuited Elements
+tooltip: 
+  en_us: >-
+
+    Description:
+
+    Connect selected electrical elements with wires based on circuit assignments. After all elements of a given circuit are connected,
+    the tool will generate a home run wire on the final element.
+
+
+    SHIFT+Click: Select the default Wire Type to be used by the tool. 
+    
+    
+    Notes:
+    
+    - If Wire Type used by the tool is not available in the active document, SHIFT+Click to pick a new wire type.
+    
+    - Currently the tool uses Chamfered wiring to connect elements, and Arc wiring for the homeruns.
+
+
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: true
+  full_frame: true

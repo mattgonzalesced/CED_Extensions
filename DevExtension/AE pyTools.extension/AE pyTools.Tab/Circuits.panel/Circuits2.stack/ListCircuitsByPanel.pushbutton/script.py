@@ -2,21 +2,25 @@
 __title__ = "List Circuits by Panel"
 
 from pyrevit import script, revit, DB, forms
+from collections import OrderedDict
 
 output = script.get_output()
 doc = revit.doc
 
 # Dictionary to map parameter names to BuiltInParameter enums
-PARAMETER_MAP = {
-    "PANEL NAME": DB.BuiltInParameter.RBS_ELEC_PANEL_NAME,
-    "CIRCUIT NUMBER": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER,
-    "LOAD NAME": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME,
-    "VOLTAGE": DB.BuiltInParameter.RBS_ELEC_VOLTAGE,
-    "POLES": DB.BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES,
-    "APPARENT CURRENT": DB.BuiltInParameter.RBS_ELEC_APPARENT_CURRENT_PARAM,
-    "RATING": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM,
-    "FRAME": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_FRAME_PARAM
-}
+
+PARAMETER_MAP = OrderedDict([
+    ("SLOT NUMBER", DB.BuiltInParameter.RBS_ELEC_CIRCUIT_START_SLOT),
+    ("PANEL NAME", DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM),
+    ("CIRCUIT NUMBER", DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER),
+    ("LOAD NAME", DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME),
+    ("VOLTAGE", DB.BuiltInParameter.RBS_ELEC_VOLTAGE),
+    ("POLES", DB.BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES),
+    ("APPARENT CURRENT", DB.BuiltInParameter.RBS_ELEC_APPARENT_CURRENT_PARAM),
+    ("RATING", DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM),
+    ("FRAME", DB.BuiltInParameter.RBS_ELEC_CIRCUIT_FRAME_PARAM)
+])
+
 
 def format_panel_display(panel):
     """Returns a string with panel name and element ID for display."""
@@ -64,11 +68,13 @@ def collect_circuit_data(circuits):
     circuit_data = []
     for circuit in circuits:
         row = []
-        for param_name, param_enum in PARAMETER_MAP.items():
+        for param_name in PARAMETER_MAP.keys():  # Iterates in defined order
+            param_enum = PARAMETER_MAP[param_name]
             value = retrieve_parameter_value(circuit, param_enum)
             row.append(value)
         circuit_data.append(row)
     return circuit_data
+
 
 def sort_circuit_data(data):
     """Sort circuit data by panel name and circuit number."""

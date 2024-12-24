@@ -55,7 +55,7 @@ for elem in elements:
                     # Check if the owner is an ElectricalSystem
                     if isinstance(owner, Electrical.ElectricalSystem):
                         circuit = owner
-                        circuit_poles = circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_PHASE)
+                        circuit_poles = circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES)
 
                         # Get custom parameters (instance and type)
                         poles_ced = get_parameter_value(elem, "Number of Poles_CED")
