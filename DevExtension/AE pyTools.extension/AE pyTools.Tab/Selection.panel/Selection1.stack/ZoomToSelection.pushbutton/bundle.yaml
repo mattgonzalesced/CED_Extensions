@@ -1,0 +1,22 @@
+title:  Zoom To Selection
+
+tooltip: >-
+  Version = 1.0
+  Date    = 18.09.2024
+  ________________________________________________________________
+  Description:
+  Adjusts the visible area of the active view based on the user's
+  current selection. 
+  
+  SHIFT+Click: [Beta]
+  Modify the 'zoom factor' to adjust magnification level. 
+  (zoom factor of 1 to 3 is recommended) 
+  ________________________________________________________________
+  ________________________________________________________________
+  
+
+author: >-
+  AEvelina
+
+
+context: doc-project
