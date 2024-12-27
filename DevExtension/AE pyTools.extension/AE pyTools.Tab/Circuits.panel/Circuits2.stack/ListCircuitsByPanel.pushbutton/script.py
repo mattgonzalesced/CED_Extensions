@@ -7,8 +7,9 @@ from collections import OrderedDict
 output = script.get_output()
 doc = revit.doc
 
-# Dictionary to map parameter names to BuiltInParameter enums
+# TODO need to refactor this to achieve correct param order, and more robust custom param selection.
 
+# Dictionary to map parameter names to BuiltInParameter enums
 PARAMETER_MAP = OrderedDict([
     ("SLOT NUMBER", DB.BuiltInParameter.RBS_ELEC_CIRCUIT_START_SLOT),
     ("PANEL NAME", DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM),

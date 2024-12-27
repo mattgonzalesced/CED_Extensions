@@ -16,8 +16,10 @@ tooltip: >-
 
   
 
-author: >-
-  AEvelina
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: true
+  full_frame: true
 
 
 context: doc-project

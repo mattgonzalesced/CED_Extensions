@@ -24,6 +24,8 @@ home_run_length = 6
 # Initialize config to retrieve default wire type
 config = script.get_config("wire_type_config")
 
+#TODO need to adjust so that if the wire_type_config does not have an existing wire, then the config.py script runs, avoiding errors.
+
 # Retrieve all wire types in the document
 wire_types = FilteredElementCollector(doc).OfClass(Electrical.WireType).ToElements()
 wire_type_options = {wire_type.get_Parameter(DB.BuiltInParameter.ALL_MODEL_TYPE_NAME).AsString(): wire_type.Id

@@ -24,7 +24,8 @@ def pick_categories(elements):
         return [el for el in elements if el.Category and el.Category.Name in selected_categories]
     return elements
 
-
+#TODO should probably limit the amount of parameters that a user can select to avoid excessive run time.
+#   perhaps we include a warning alert if parameters exceeds 10 so use can decide what to do.
 def pick_parameters(elements):
     """Gather unique parameters from both instance and type elements, then prompt the user to select parameters."""
     parameters = set()
