@@ -4,15 +4,29 @@
         "builtin": "False",
         "enable": "True",
         "type": "extension",
-        "name": "AePyTools",
+        "name": "AE PyDev",
         "description": "Development Tools",
-        "author": "Me",
+        "author": "Anthony Evelina",
         "author-url": "https://keybase.io/ein",
         "url": "https://bitbucket.org/eirannejad/mypublictools.git",
         "website": "",
         "image": "",
         "dependencies": []
         
+      },
+       {
+        "builtin": "False",
+        "enable": "True",
+        "type": "extension",
+        "name": "AE pyTools",
+        "description": "Development Tools",
+        "author": "Anthony Evelina",
+        "author-url": "https://keybase.io/ein",
+        "url": "https://bitbucket.org/eirannejad/mypublictools.git",
+        "website": "",
+        "image": "",
+        "dependencies": []
+
       },
       {
         "builtin": "False",
