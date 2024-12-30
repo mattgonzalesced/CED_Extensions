@@ -1,33 +1,4 @@
 # -*- coding: utf-8 -*-
-__title__   = "Rotate CCW"
-__doc__     = """Version = 1.0
-Date    = 09.04.2024
-________________________________________________________________
-Description:
-Rotates selected model elements 90 degrees counter-clockwise 
-while maintaining their position. It is Similar to pressing the
-spacebar, but works on elements connected with wires!
-
-Note: 
-This ignores Annotations, Pinned Elements, System Families, 
-and Face-Based Elements hosted to vertical walls. 
-________________________________________________________________
-How-To:
-Select Elements & push the button :)
-
-________________________________________________________________
-TODO:
-[FEATURE] - 
-________________________________________________________________
-Last Updates:
-- [09.04.2024] v1.0 
-________________________________________________________________
-Author: AEvelina"""
-
-# ╦╔╦╗╔═╗╔═╗╦═╗╔╦╗╔═╗
-# ║║║║╠═╝║ ║╠╦╝ ║ ╚═╗
-# ╩╩ ╩╩  ╚═╝╩╚═ ╩ ╚═╝
-#==================================================
 
 import clr
 clr.AddReference('System')

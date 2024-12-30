@@ -2,17 +2,19 @@ title: Get Hosts From Tags
 
 tooltip: >-
   Version = 1.0
+  
   Date    = 01.01.2025
   ________________________________________________________________
   Description:
+  
   Retrieve the host elements of selected tags. 
   
   
-  **Click Modes:**
+  Click Modes:
   
-  - **Regular Click**: Replaces the current selection with the hosts of the selected tags.
+    Regular Click: Replaces the current selection with the hosts of the selected tags.
   
-  - **Shift-Click**: Appends the hosts of the selected tags to the current selection.
+    SHIFT+Click: Appends the hosts of the selected tags to the current selection.
   ________________________________________________________________
 
 author: Anthony Evelina - CoolSys (2025)

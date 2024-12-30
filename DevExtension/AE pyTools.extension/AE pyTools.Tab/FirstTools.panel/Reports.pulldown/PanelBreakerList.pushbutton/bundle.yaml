@@ -2,9 +2,11 @@ title: "Panel Report"
 
 tooltip: >-
   Version = 1.0
+  
   Date    = 01.01.2025
   ________________________________________________________________
   Description:
+  
   Generate a detailed report on all panels and associated circuit breakers
   within the project.
   

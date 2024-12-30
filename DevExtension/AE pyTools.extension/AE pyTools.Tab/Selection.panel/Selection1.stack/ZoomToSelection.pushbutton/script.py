@@ -1,7 +1,5 @@
 from pyrevit import revit, DB, script
 
-# Initialize configuration
-config = script.get_config("zoom_selection_config")
 
 # TODO test aspec ratio functionality. potentially scale down the zoom_factor by some constant
 def expand_bounding_box(min_point, max_point, zoom_factor):
@@ -62,7 +60,6 @@ def main():
     """
     Main function to handle zooming to selection with configurable zoom factors.
     """
-    # Get the document, UI document, and selection
     doc = revit.doc
     uidoc = revit.uidoc
     selection = revit.get_selection()
@@ -70,7 +67,7 @@ def main():
     if not selection:
         return
 
-    # Retrieve the zoom factor from configuration
+    config = script.get_config("zoom_selection_config")
     zoom_factor = config.get_option("zoom_factor", 1.0)  # Default to 1.0 if not set
 
     # Calculate bounding box
@@ -83,8 +80,8 @@ def main():
             expanded_min, expanded_max = expand_bounding_box(
                 min_point,
                 max_point,
-                zoom_factor)
-#TODO adjust script to work correctly with sheets as the open view.
+                zoom_factor/2)
+        # TODO adjust script to work correctly with sheets as the open view.
         # Get the active UIView
         active_ui_view = None
         for ui_view in uidoc.GetOpenUIViews():

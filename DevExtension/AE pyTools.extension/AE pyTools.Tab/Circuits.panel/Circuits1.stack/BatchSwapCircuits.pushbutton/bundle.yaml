@@ -1,10 +1,13 @@
-title: 
+title:
   en_us: Batch Swap Circuits
 tooltip: 
   en_us: >-
+    Version = 1.0
 
+    Date    = 01.01.2025
+    ________________________________________________________________
     Description:
-
+    
     Transfer multiple circuits between panels. 
 
     
@@ -16,7 +19,10 @@ tooltip:
     
     
     Notes:
+    
     - Target panel must have enough open slots to accommodate the additional circuits
+    
+    ________________________________________________________________
 
 author: Anthony Evelina - CoolSys (2025)
 engine:

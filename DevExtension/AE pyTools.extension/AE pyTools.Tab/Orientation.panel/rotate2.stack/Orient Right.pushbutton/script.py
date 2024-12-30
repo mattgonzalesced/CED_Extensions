@@ -1,38 +1,4 @@
 # -*- coding: utf-8 -*-
-__title__   = "Orient Right"
-__doc__     = """Version = 1.0
-Date    = 09.04.2024
-________________________________________________________________
-Description:
-Orients selected model elements to face 'plan east' while 
-maintaining their position. Useful if many elements need to
-face the same direction. 
-Also works on elements connected with wires! 
-
-Note: 
-This ignores Annotations, Pinned Elements, System Families, 
-and Face-Based Elements hosted to vertical walls. 
-
-Another Note: 
-"Orientation" depends on how the family is built.
-This assumes 'front' of the family points 'plan north'.
-________________________________________________________________
-How-To:
-Select Elements & push the button :)
-
-________________________________________________________________
-TODO:
-[FEATURE] - 
-________________________________________________________________
-Last Updates:
-- [09.04.2024] v1.0 
-________________________________________________________________
-Author: AEvelina"""
-
-# ╦╔╦╗╔═╗╔═╗╦═╗╔╦╗╔═╗
-# ║║║║╠═╝║ ║╠╦╝ ║ ╚═╗
-# ╩╩ ╩╩  ╚═╝╩╚═ ╩ ╚═╝
-#==================================================
 
 import clr
 clr.AddReference('System')

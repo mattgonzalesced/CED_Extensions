@@ -3,6 +3,7 @@ title:
 tooltip: 
   en_us: >-
     Version = 1.0
+
     Date    = 01.01.2025
     ________________________________________________________________
     Description:
@@ -12,6 +13,7 @@ tooltip:
     
 
     SHIFT+Click:
+    
     Choose additional parameters to include in the report. These parameters will be saved to the users config file for future use.
     
     

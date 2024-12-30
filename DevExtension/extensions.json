@@ -18,6 +18,7 @@
         "builtin": "False",
         "enable": "True",
         "type": "extension",
+        "rocket_mode_compatible": "True",
         "name": "AE pyTools",
         "description": "Development Tools",
         "author": "Anthony Evelina",

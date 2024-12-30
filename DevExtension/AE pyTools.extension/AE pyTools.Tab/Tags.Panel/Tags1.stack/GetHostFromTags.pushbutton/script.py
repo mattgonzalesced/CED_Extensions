@@ -10,27 +10,28 @@ selection = revit.get_selection()
 tagged_elements = []
 
 # Process each selected element
-for el in selection:
-    if HOST_APP.is_newer_than(2022, or_equal=True):
-        if isinstance(el, DB.IndependentTag):
-            element_ids = el.GetTaggedLocalElementIds()
-            if element_ids:
-                tagged_elements.append(List[DB.ElementId](element_ids)[0])
-        elif isinstance(el, DB.Architecture.RoomTag):
-            tagged_elements.append(el.TaggedLocalRoomId)
-        elif isinstance(el, DB.Mechanical.SpaceTag):
-            tagged_elements.append(el.Space.Id)
-        elif isinstance(el, DB.AreaTag):
-            tagged_elements.append(el.Area.Id)
-    else:
-        if isinstance(el, DB.IndependentTag):
-            tagged_elements.append(el.TaggedLocalElementId)
-        elif isinstance(el, DB.Architecture.RoomTag):
-            tagged_elements.append(el.TaggedLocalRoomId)
-        elif isinstance(el, DB.Mechanical.SpaceTag):
-            tagged_elements.append(el.Space.Id)
-        elif isinstance(el, DB.AreaTag):
-            tagged_elements.append(el.Area.Id)
+if HOST_APP.is_newer_than(2022, or_equal=True):
+    for el in selection:
+            if isinstance(el, DB.IndependentTag):
+                element_ids = el.GetTaggedLocalElementIds()
+                if element_ids:
+                    tagged_elements.append(List[DB.ElementId](element_ids)[0])
+            elif isinstance(el, DB.Architecture.RoomTag):
+                tagged_elements.append(el.TaggedLocalRoomId)
+            elif isinstance(el, DB.Mechanical.SpaceTag):
+                tagged_elements.append(el.Space.Id)
+            elif isinstance(el, DB.AreaTag):
+                tagged_elements.append(el.Area.Id)
+else:
+    for el in selection:
+            if isinstance(el, DB.IndependentTag):
+                tagged_elements.append(el.TaggedLocalElementId)
+            elif isinstance(el, DB.Architecture.RoomTag):
+                tagged_elements.append(el.TaggedLocalRoomId)
+            elif isinstance(el, DB.Mechanical.SpaceTag):
+                tagged_elements.append(el.Space.Id)
+            elif isinstance(el, DB.AreaTag):
+                tagged_elements.append(el.Area.Id)
 
 # If tagged elements found
 if tagged_elements:

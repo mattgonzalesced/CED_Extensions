@@ -1,4 +1,4 @@
-from pyrevit import DB, script
+from pyrevit import DB, script,forms
 import re
 
 logger = script.get_logger()
@@ -11,6 +11,8 @@ doc = __revit__.ActiveUIDocument.Document
 device_critical = []
 circuit_critical = []
 equipment_critical = []
+
+
 
 # Regular expression to extract the VA value from the RBS_ELECTRICAL_DATA parameter
 va_regex = re.compile(r'-(\d+)\s*VA')
@@ -25,6 +27,29 @@ category_enum = {
     "Fire Alarm Devices": DB.BuiltInCategory.OST_FireAlarmDevices,
     "Security Devices": DB.BuiltInCategory.OST_SecurityDevices
 }
+
+
+# --- Function to Check Thresholds ---
+def check_thresholds(device_count, circuit_count, equipment_count):
+    # Thresholds for alerts
+    TOTAL_THRESHOLD = 300
+    INDIVIDUAL_THRESHOLD = 100
+
+    total_issues = device_count + circuit_count + equipment_count
+    if total_issues > TOTAL_THRESHOLD or \
+       device_count > INDIVIDUAL_THRESHOLD or \
+       circuit_count > INDIVIDUAL_THRESHOLD or \
+       equipment_count > INDIVIDUAL_THRESHOLD:
+        message = (
+            "Critical Issue Counts:\n"
+            "Devices: {}\n"
+            "Circuits: {}\n"
+            "Equipment: {}\n\n"
+            "The form may take a while to print. Do you wish to continue?"
+        ).format(device_count, circuit_count, equipment_count)
+        return forms.alert(message, title="Large Report", yes=True, no=True, exitscript=True)
+    return True
+
 
 # Step 1: Collect Electrical Equipment
 elec_equipment_collector = DB.FilteredElementCollector(doc) \
@@ -153,6 +178,12 @@ for circuit in circuits_collector:
 
     except Exception as e:
         logger.error("Error checking circuit %s: %s" % (circuit.Id, str(e)))
+
+
+critical_count = check_thresholds(len(device_critical),
+                                  len(circuit_critical),
+                                  len(equipment_critical))
+
 
 # --- Print Critical Issues ---
 output.print_md("# Electrical System Check")
