@@ -8,7 +8,7 @@ config = script.get_config("orientation_config")
 
 # Default Settings
 DEFAULT_INCLUDE_TAG_POSITION = True
-DEFAULT_INCLUDE_TAG_ANGLE = False
+DEFAULT_INCLUDE_TAG_ANGLE = True
 
 
 def load_configs():

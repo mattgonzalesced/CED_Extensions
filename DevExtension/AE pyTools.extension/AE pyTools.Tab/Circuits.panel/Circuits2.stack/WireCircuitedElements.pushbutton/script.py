@@ -18,7 +18,7 @@ uidoc = __revit__.ActiveUIDocument
 
 # Get selected elements
 selected_ids = uidoc.Selection.GetElementIds()
-home_run_length = 6
+home_run_length = 4
 
 
 # Initialize config to retrieve default wire type

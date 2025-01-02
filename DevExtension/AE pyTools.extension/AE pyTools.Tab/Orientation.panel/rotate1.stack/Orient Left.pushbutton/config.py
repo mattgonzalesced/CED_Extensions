@@ -5,7 +5,7 @@ config = script.get_config("orientation_config")
 
 # Default Settings
 DEFAULT_INCLUDE_TAG_POSITION = True
-DEFAULT_INCLUDE_TAG_ANGLE = False
+DEFAULT_INCLUDE_TAG_ANGLE = True
 
 # Ensure config attributes exist and set defaults if not present
 if not hasattr(config, 'tag_position'):

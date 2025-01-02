@@ -13,7 +13,7 @@ doc = revit.doc
 config = script.get_config("orientation_config")
 
 adjust_tag_position = getattr(config, "tag_position", True)
-adjust_tag_angle = getattr(config, "tag_angle", False)
+adjust_tag_angle = getattr(config, "tag_angle", True)
 
 # Step 1: Get the selected elements and filter out pinned ones
 selection = revit.get_selection()
@@ -30,6 +30,6 @@ with DB.Transaction(doc, "Rotate Elements and Adjust Tags") as trans:
     trans.Start()
 
     for orientation_key, grouped_data in element_data.items():
-        rotate_elements_group(doc, grouped_data, fixed_angle,adjust_tag_position)
+        rotate_elements_group(doc, grouped_data, fixed_angle,adjust_tag_position,adjust_tag_angle)
 
     trans.Commit()

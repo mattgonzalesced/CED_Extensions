@@ -4,12 +4,12 @@ __title__ = "Pick Point and Print Coordinates"
 from pyrevit import revit, DB, forms, script
 
 # Define the room prompts
-prompts = [
-    "BACK OFFICE", "BREAK ROOM", "DAIRY/ PRODUCE COOLER", "EQUIPMENT PLATFORM",
-    "FREEZER", "FRONT OFFICE", "HALLWAY", "MEAT COOLER", "RECEIVING AREA"
-]
+# prompts = [
+#     "BACK OFFICE", "BREAK ROOM", "DAIRY/ PRODUCE COOLER", "EQUIPMENT PLATFORM",
+#     "FREEZER", "FRONT OFFICE", "HALLWAY", "MEAT COOLER", "RECEIVING AREA"
+# ]
 
-
+prompts = ["point"]
 def pick_points_with_prompts():
     picked_points = []
     output = script.get_output()
