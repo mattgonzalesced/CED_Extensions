@@ -35,14 +35,14 @@ def group_elements_by_types(selection):
 # Function to prompt user for filtering selection
 def prompt_user_for_selection(types_by_category):
     # Prepare options for user prompt
-    grouped_options = {'All': []}
+    grouped_options = {' All': []}
     for category, groups in types_by_category.items():
         if category not in grouped_options:
             grouped_options[category] = []
         for (cat, family_name, type_name), elements in groups.items():
             count = len(elements)
             option_text = "{} | {} | {} ({})".format(cat, family_name, type_name, count)
-            grouped_options['All'].append(option_text)
+            grouped_options[' All'].append(option_text)
             grouped_options[category].append(option_text)
 
     # Sort options for consistent display
