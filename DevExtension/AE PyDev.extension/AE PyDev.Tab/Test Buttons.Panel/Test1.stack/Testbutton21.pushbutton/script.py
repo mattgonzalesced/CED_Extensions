@@ -155,7 +155,11 @@ class ChildElement:
         ]
 
         # Determine the Level ID
-        level_id = parent.level_id
+        if view_specific:
+            level_id = None
+        else:
+            level_id = parent.level_id
+
         if level_id is None and not view_specific:
             # Fallback to the level of the active view if the parent lacks a LevelID
             active_view = doc.ActiveView
@@ -165,7 +169,7 @@ class ChildElement:
                 raise ValueError("Unable to determine a valid level for 3D child placement.")
 
         # For view-specific elements, use the active view ID
-        owner_view_id = doc.ActiveView.Id if view_specific else parent.owner_view_id
+        owner_view_id = doc.ActiveView.Id if view_specific else None
 
         return cls(
             family_name=family_name,
@@ -247,7 +251,11 @@ def pick_reference_elements():
     return valid_selection
 
 def pick_family():
-    """Prompt user to pick a family grouped by FamilyCategory."""
+    """
+    Prompt user to pick a family grouped by FamilyCategory.
+    Returns:
+        The selected Revit Family object.
+    """
     # Collect all families in the document
     fam_collector = DB.FilteredElementCollector(doc).OfClass(DB.Family)
     logger.debug("Total families in document: {}".format(fam_collector.GetElementCount()))
@@ -257,38 +265,33 @@ def pick_family():
     for fam in fam_collector:
         fam_category = fam.FamilyCategory
 
-        if not fam_category:
-            logger.debug("Skipped family with no category: {}".format(fam.Name))
+        # Skip families without a category or those classified as tags
+        if not fam_category or fam_category.IsTagCategory:
+            logger.debug("Skipped family: {}, Category: {}".format(
+                fam.Name, fam_category.Name if fam_category else "None"
+            ))
             continue
 
-        if fam_category.IsTagCategory:
-            logger.debug("Skipped tag family: {}".format(fam.Name))
-            continue
-
-        fam_name = fam.Name
-        fam_cat_name = fam_category.Name
-
-        # Add family to the " All" group
+        # Add family to the "All" group
         fam_options[" All"].append(fam)
 
         # Add family to its category group
+        fam_cat_name = fam_category.Name
         if fam_cat_name not in fam_options:
             fam_options[fam_cat_name] = []
         fam_options[fam_cat_name].append(fam)
 
-        logger.debug("Added family: {} to category: {}".format(fam_name, fam_cat_name))
-
-    grouped_options = {group: [] for group in fam_options}
+    # Prepare grouped options for display
+    grouped_options = {}
     for group, families in fam_options.items():
-        for fam in families:
-            option_text = "{} | {}".format(fam.FamilyCategory.Name, fam.Name)
-            grouped_options[group].append(option_text)
+        grouped_options[group] = [
+            "{} | {}".format(fam.FamilyCategory.Name, fam.Name) for fam in families
+        ]
+        grouped_options[group].sort()
 
     logger.debug("Grouped Options for Selection: {}".format(grouped_options))
 
-    for key in grouped_options:
-        grouped_options[key].sort()
-
+    # Show selection dialog
     selected_option = forms.SelectFromList.show(
         grouped_options,
         title="Select a Family",
@@ -298,14 +301,20 @@ def pick_family():
 
     if not selected_option:
         logger.info("No family selected. Exiting script.")
-        return None
+        script.exit()
 
+    # Find and return the selected family
     for group, families in fam_options.items():
         for fam in families:
             if "{} | {}".format(fam.FamilyCategory.Name, fam.Name) == selected_option:
+                logger.debug("Selected Family: {}, Category: {}".format(fam.Name, fam.FamilyCategory.Name))
                 return fam
 
-    return None
+    logger.error("Failed to match the selected option to a family.")
+    script.exit()
+
+
+
 
 def pick_family_type(family):
     """Prompt user to pick a type from the selected family."""
@@ -327,7 +336,8 @@ def pick_family_type(family):
 
     # Return the selected family type and its name
     if not selected_type_name:
-        return None, None
+        script.exit()
+
     selected_type = next(ft for ft in family_types if query.get_name(ft) == selected_type_name)
     return selected_type, selected_type_name
 
@@ -336,8 +346,11 @@ def main():
     selected_elements = pick_reference_elements()
     parent_instances = [ParentElement.from_element_id(el.Id) for el in selected_elements]
 
-    # Use hardcoded FamilySymbol ID for testing
-    family_symbol_id = DB.ElementId(129689)
+    family = pick_family()
+    family_type = pick_family_type(family)
+
+    # Use hardcoded FamilySymbol ID for testing 129689
+    family_symbol_id = family_type[0].Id
     family_symbol = doc.GetElement(family_symbol_id)
     family_name = query.get_name(family_symbol.Family)
     symbol_name = query.get_name(family_symbol)
