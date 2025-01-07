@@ -47,8 +47,8 @@ layout = """
     </Grid>
 </Window>
 """
-EMOCP = 13
-MMOCP = 13
+EMOCP = 80
+MMOCP = 80
 # Python code to handle data and dropdown
 class ParameterSetSelector(forms.WPFWindow):
     def __init__(self):
@@ -83,15 +83,6 @@ class ParameterSetSelector(forms.WPFWindow):
 
         # Initialize DataGrid
         self.detailsGrid.ItemsSource = ObservableCollection[ExpandoObject]()
-
-        # Style DataGrid Rows
-        self.style_rows()
-
-    def style_rows(self):
-        if "Voltage Mech" in self.data_sets:
-            for row in self.data_sets["Voltage Mech"]:
-                if MMOCP == EMOCP:
-                    row["RowBackground"] = "Red"
 
     def on_selection_changed(self, sender, args):
         # Get selected value from the dropdown
