@@ -25,6 +25,7 @@ Last Updates:
 - [10.10.2024] v1.5
 ________________________________________________________________
 Author: AEvelina"""
+#TODO fix issue with selecting circuits instead of families.
 
 # Import required modules
 from pyrevit import script, revit, forms, output
@@ -61,23 +62,23 @@ def get_circuits_from_selection(include_electrical_equipment=True):
         if element.ViewSpecific:
             logger.info("removing annotation %s", element_id)
             discarded_elements.append(element_id)
-        else:
-            # Check if the element is an electrical system
-            if isinstance(element, Electrical.ElectricalSystem):
+
+        # Check if the element is an electrical system
+        elif isinstance(element, Electrical.ElectricalSystem):
                 logger.info("Found electrical system: %s", element_id)
                 circuits.append(element)
 
             # If the element is a FamilyInstance
-            elif isinstance(element, FamilyInstance):
-                # Check if the family is in the electrical equipment category and the toggle is off
-                if element.Category.Id == ElementId(
-                        BuiltInCategory.OST_ElectricalEquipment) and not include_electrical_equipment:
-                    logger.info("Skipping electrical equipment: %s", element_id)
-                    discarded_elements.append(element_id)
-                    continue  # Skip this electrical equipment family
+        elif isinstance(element, FamilyInstance):
+            # Check if the family is in the electrical equipment category and the toggle is off
+            if element.Category.Id == ElementId(
+                    BuiltInCategory.OST_ElectricalEquipment) and not include_electrical_equipment:
+                logger.info("Skipping electrical equipment: %s", element_id)
+                discarded_elements.append(element_id)
+                continue  # Skip this electrical equipment family
 
             mep_model = element.MEPModel
-            if mep_model:
+            if element.MEPModel:
                 # Check if the MEP model has a valid ConnectorManager and connectors
                 connector_manager = mep_model.ConnectorManager
                 if connector_manager is None:
@@ -86,6 +87,7 @@ def get_circuits_from_selection(include_electrical_equipment=True):
                 else:
                     # Handle connectors for primary circuits first
                     connector_iterator = connector_manager.Connectors.ForwardIterator()
+                    connector_iterator.Reset()
                     found_primary_circuit = False
                     while connector_iterator.MoveNext():
                         connector = connector_iterator.Current

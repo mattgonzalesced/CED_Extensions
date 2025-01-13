@@ -217,7 +217,7 @@ def find_open_slots(target_panel):
 
 def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
     """Get circuits from a selected panel with sorting and inclusion of spare/space circuits."""
-    circuits = {}
+    circuits = []
     panel_circuits = FilteredElementCollector(doc).OfClass(Electrical.ElectricalSystem).ToElements()
 
     for circuit in panel_circuits:
@@ -234,27 +234,29 @@ def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
             # Retrieve wire size as string if available
             wire_size = wire_size_param.AsString() if wire_size_param and wire_size_param.HasValue else "N/A"
 
-            # Retrieve the start slot if available
-            start_slot = start_slot_param.AsInteger() if start_slot_param and start_slot_param.HasValue else None
+            # Retrieve the start slot value
+            start_slot = start_slot_param.AsInteger() if start_slot_param and start_slot_param.HasValue else 0
 
             # Retrieve the panel name
             panel_name = circuit.BaseEquipment.Name if circuit.BaseEquipment else "N/A"
 
-            # Store data in a dictionary with element ID as the key
-            circuits[circuit.Id] = {
+            # Store data in a list of dictionaries
+            circuits.append({
+                'element_id': circuit.Id.IntegerValue,
                 'circuit_number': circuit_number,
                 'load_name': load_name,
                 'start_slot': start_slot,
                 'wire_size': wire_size,
                 'panel': panel_name,
                 'circuit': circuit
-            }
+            })
 
     # Sort circuits based on the selected method
     if sort_method == 1:
-        circuits_sorted = dict(sorted(circuits.items(), key=lambda item: item[1]['start_slot']))
+        circuits_sorted = sorted(circuits, key=lambda item: item['start_slot'])
     else:
-        circuits_sorted = dict(sorted(circuits.items(), key=lambda item: (item[1]['start_slot'] % 2 == 0, item[1]['start_slot'])))
+        circuits_sorted = sorted(circuits, key=lambda item: (item['start_slot'] % 2 == 0, item['start_slot']))
 
     return circuits_sorted
+
 

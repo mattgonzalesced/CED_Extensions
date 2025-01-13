@@ -170,8 +170,8 @@ class PanelProcessor:
 
         # Get phase and voltages
         panel_data['phase'] = getattr(dist_system_type, "ElectricalPhase", None)
-        panel_data['lg_voltage'] = getattr(dist_system_type, "VoltageLineToGround", None)
-        panel_data['ll_voltage'] = getattr(dist_system_type, "VoltageLineToLine", None)
+        panel_data['lg_voltage'] = getattr(dist_system_type, "VoltageLineToGround", None).AsDouble()
+        panel_data['ll_voltage'] = getattr(dist_system_type, "VoltageLineToLine", None).AsDouble()
 
         return panel_data
 

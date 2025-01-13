@@ -96,6 +96,27 @@ class ParentElement:
             is_view_specific=is_view_specific
         )
 
+    def get_parameter_value(self, parameter_name):
+        """
+        Retrieve the value of a parameter from the parent element.
+
+        Args:
+            parameter_name (str): The name of the parameter to retrieve.
+
+        Returns:
+            The value of the parameter, or None if not found.
+        """
+        # Use the Revit API to fetch the parameter value
+        param = doc.GetElement(self.element_id).LookupParameter(parameter_name)
+        if param and param.HasValue:
+            if param.StorageType == DB.StorageType.String:
+                return param.AsString()
+            elif param.StorageType == DB.StorageType.Double:
+                return param.AsDouble()
+            elif param.StorageType == DB.StorageType.Integer:
+                return param.AsInteger()
+        return None
+
     def __repr__(self):
         return "ParentElement(ID={}, Point={}, Orientation={}, ViewSpecific={})".format(
             self.element_id,
@@ -113,7 +134,7 @@ class ChildElement:
         family_name,
         symbol_name,
         family_symbol=None,
-        parent_id=None,
+        parent_element=None,
         view_specific=None,
         location_point=None,
         facing_orientation=None,
@@ -124,7 +145,7 @@ class ChildElement:
         self.family_name = family_name
         self.symbol_name = symbol_name
         self.family_symbol = family_symbol
-        self.parent_id = parent_id
+        self.parent_element = parent_element
         self.view_specific = view_specific  # Determined from the FamilySymbol
         self.location_point = location_point
         self.facing_orientation = facing_orientation
@@ -148,7 +169,6 @@ class ChildElement:
             A ChildElement instance.
         """
         # Determine if the FamilySymbol is view-specific
-
         view_specific = family_symbol.Category.Id in [
             DB.ElementId(DB.BuiltInCategory.OST_GenericAnnotation),
             DB.ElementId(DB.BuiltInCategory.OST_DetailComponents),
@@ -175,7 +195,7 @@ class ChildElement:
             family_name=family_name,
             symbol_name=symbol_name,
             family_symbol=family_symbol,
-            parent_id=parent.element_id,
+            parent_element=parent,
             view_specific=view_specific,
             location_point=parent.location_point,
             facing_orientation=parent.facing_orientation,
@@ -220,11 +240,64 @@ class ChildElement:
             logger.error("Failed to place element: {}".format(e))
             raise
 
+    def copy_parameters(self, parameter_mapping):
+        """
+        Copy parameter values from the associated parent to the child.
+
+        Args:
+            parameter_mapping (dict): A dictionary mapping parent parameters to child parameters.
+        """
+        if not self.parent_element:
+            logger.warning("No parent associated with this child element.")
+            return
+
+        for parent_param, child_param in parameter_mapping.items():
+            # Get the parameter value from the parent
+            parent_value = self.parent_element.get_parameter_value(parent_param)
+            if parent_value is None:
+                logger.warning("Parent parameter '{}' not found or has no value.".format(parent_param))
+                continue
+
+            # Set the parameter value on the child
+            if not self.set_parameter_value(child_param, parent_value):
+                logger.warning("Child parameter '{}' not found or could not be set.".format(child_param))
+
+    def set_parameter_value(self, parameter_name, value):
+        """
+        Set a parameter value on the placed child element.
+
+        Args:
+            parameter_name (str): The name of the parameter to set.
+            value: The value to set for the parameter.
+        """
+        element = doc.GetElement(self.child_id)  # Retrieve the placed element
+        if element is None:
+            logger.warning("Child element with ID {} not found.".format(self.child_id))
+            return False
+
+        param = element.LookupParameter(parameter_name)
+        if param and not param.IsReadOnly:
+            try:
+                if param.StorageType == DB.StorageType.String:
+                    param.Set(str(value))
+                elif param.StorageType == DB.StorageType.Double:
+                    param.Set(float(value))
+                elif param.StorageType == DB.StorageType.Integer:
+                    param.Set(int(value))
+                elif param.StorageType == DB.StorageType.ElementId:
+                    param.Set(value)
+                return True
+            except Exception as e:
+                logger.error("Failed to set parameter '{}': {}".format(parameter_name, e))
+        else:
+            logger.warning("Parameter '{}' is read-only or not found on child.".format(parameter_name))
+        return False
+
     def __repr__(self):
         return "ChildElement(Family={}, Symbol={}, ParentID={}, ViewSpecific={}, Point={}, Orientation={}, LevelID={}, OwnerViewID={}, StructuralType={}, PlacedElementID={})".format(
             self.family_name,
             self.symbol_name,
-            self.parent_id,
+            self.parent_element,
             self.view_specific,
             self.location_point,
             self.facing_orientation,
@@ -342,31 +415,41 @@ def pick_family_type(family):
     return selected_type, selected_type_name
 
 def main():
+    # Define parameter mapping
+    parameter_mapping = {
+        "Mark": "Equipment ID_CEDT",
+        "Family and Type": "Equipment Remarks_CEDT",
+    }
+
     # Pick reference elements
     selected_elements = pick_reference_elements()
     parent_instances = [ParentElement.from_element_id(el.Id) for el in selected_elements]
 
+    # Prompt user to pick a family and type
     family = pick_family()
     family_type = pick_family_type(family)
 
-    # Use hardcoded FamilySymbol ID for testing 129689
-    family_symbol_id = family_type[0].Id
-    family_symbol = doc.GetElement(family_symbol_id)
+    # Use the FamilySymbol from pick_family_type
+    family_symbol = family_type[0]
     family_name = query.get_name(family_symbol.Family)
     symbol_name = query.get_name(family_symbol)
 
     # Create ChildElement instances for each ParentElement
     child_instances = []
     for parent in parent_instances:
+        # Create a child element and associate it with its parent
         child = ChildElement.from_parent_and_symbol(parent, family_symbol, family_name, symbol_name)
         child_instances.append(child)
 
-    # Place ChildElement instances
-    with DB.Transaction(doc, "Place Child Elements") as trans:
+    # Place and set parameters in a transaction
+    with DB.Transaction(doc, "Place and Set Parameters") as trans:
         trans.Start()
         for child in child_instances:
+            # Place the child element
             placed_instance = child.place()
-            logger.info("Placed: {}".format(repr(placed_instance)))
+
+            # Copy parameters from parent to child
+            child.copy_parameters(parameter_mapping)
         trans.Commit()
 
     # Print results
@@ -380,4 +463,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

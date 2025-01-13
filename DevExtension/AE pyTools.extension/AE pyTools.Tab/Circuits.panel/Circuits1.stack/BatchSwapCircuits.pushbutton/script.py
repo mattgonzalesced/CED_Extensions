@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 __title__ = "Batch Swap Circuits"
 __doc__ = """Version = 1.1"""
-
+#TODO FIX SORTING ISSUE
 from pyrevit import script, forms
 from Snippets._elecutils import get_panel_dist_system, get_compatible_panels, move_circuits_to_panel, \
     get_circuits_from_panel, get_all_panels
@@ -91,7 +91,7 @@ def main():
 
     while True:  # Keep asking for a panel until circuits are found or user cancels
         # Step 2: Get the circuits from the starting panel
-        circuits = get_circuits_from_panel(starting_panel, doc,0)
+        circuits = get_circuits_from_panel(starting_panel, doc, 0)
 
         if circuits:
             break  # Exit the loop if circuits are found
@@ -114,12 +114,15 @@ def main():
 
     # Step 3: Sort circuits by odd and even start slots
     circuit_options = sorted(
-        circuits.items(),
-        key=lambda item: (item[1]['start_slot'] % 2 == 0, item[1]['start_slot'])  # Odd first, then sort by start slot
+        circuits,
+        key=lambda circuit: ((circuit['start_slot'] or 0) % 2 == 0, circuit['start_slot'])
+        # Odd first, then sort by start slot
     )
 
     # Format sorted circuits for display
-    circuit_options = ["{} - {}".format(info['circuit_number'], info['load_name']) for _, info in circuit_options]
+    circuit_options = [
+        "{} - {}".format(circuit['circuit_number'], circuit['load_name']) for circuit in circuit_options
+    ]
 
     # Display circuits in checkboxes and get user selection
     selected_circuits = forms.SelectFromList.show(
@@ -131,10 +134,10 @@ def main():
     if selected_circuits is None:
         script.exit()  # User closed the window
 
-    # Step 4: Map selected descriptions back to circuit objects using the dictionary
+    # Step 4: Map selected descriptions back to circuit objects using the circuit data
     selected_circuit_objects = [
-        info['circuit'] for key, info in circuits.items()
-        if "{} - {}".format(info['circuit_number'], info['load_name']) in selected_circuits
+        circuit['circuit'] for circuit in circuits
+        if "{} - {}".format(circuit['circuit_number'], circuit['load_name']) in selected_circuits
     ]
 
     # Step 4: Get compatible panels based on the selected circuits
