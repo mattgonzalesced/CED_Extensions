@@ -1,0 +1,27 @@
+title: Get Tags From Hosts
+
+tooltip: >-
+  Version = 1.0
+  
+  Date    = 01.01.2025
+  ________________________________________________________________
+  Description:
+  
+  Retrieve tags hosted to selected elements in the active view. 
+  
+  
+  Click Modes:
+  
+    Regular Click: Replaces the current selection with the tags hosted to selected elements.
+  
+    SHIFT+Click: Appends any hosted tags to the current selection.
+  ________________________________________________________________
+
+author: Anthony Evelina - CoolSys (2025)
+
+engine:
+  persistent: true
+  full_frame: true
+
+
+context: doc-project

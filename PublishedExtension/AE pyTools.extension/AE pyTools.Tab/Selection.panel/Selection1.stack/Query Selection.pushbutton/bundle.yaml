@@ -1,0 +1,25 @@
+title:  Query Selection
+
+tooltip: >-
+  Version = 1.0
+  Date    = 01.01.2025
+  ________________________________________________________________
+  Description:
+  
+  Quickly generate a table of selectable elements and parameters
+  values.
+
+
+  How-To:
+  
+  After selecting elements, user is prompted to choose parameters
+  they wish to query. The output provides a table of selectable
+  elements and the parameter values for each element. 
+  ________________________________________________________________
+  
+
+author: >-
+  AEvelina
+
+
+context: doc-project
