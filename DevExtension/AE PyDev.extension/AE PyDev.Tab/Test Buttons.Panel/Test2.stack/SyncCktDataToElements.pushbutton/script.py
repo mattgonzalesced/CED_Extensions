@@ -1,164 +1,222 @@
 # -*- coding: utf-8 -*-
-__title__ = "Sync Ckt Data to Elements"
+from pyrevit import revit, UI, DB
 
-from pyrevit import DB, revit, script,forms
-from pyrevit.revit.db import query
-from Snippets._elecutils import get_all_light_devices, get_all_panels, get_all_elec_fixtures
+from Autodesk.Revit.DB import Electrical
+from pyrevit import forms
+from pyrevit import script
+from pyrevit.revit import query
+from pyrevit import HOST_APP
+from pyrevit import EXEC_PARAMS
+import System
 
+# Set up the output window
+output = script.get_output()
+output.close_others()
+output.set_width(800)
+
+logger = script.get_logger()
 doc = revit.doc
 
-# Get the output window to log messages
-output = script.get_output()
 
-def collect_circuit_data():
-    """
-    Collect circuit data and determine which elements need to be updated.
+class CircuitParameterSync:
+    def __init__(self, parameter_mapping):
+        """
+        Initialize the CircuitParameterSync class.
 
-    Returns:
-        List of dictionaries with elements and their new parameter values.
-    """
-    # Get all circuits in the project
-    circuit_collector = DB.FilteredElementCollector(doc).OfClass(DB.Electrical.ElectricalSystem).ToElements()
+        Args:
+            parameter_mapping (dict): A dictionary mapping circuit parameters to element parameters.
+        """
+        self.parameter_mapping = parameter_mapping
+        self.missing_params = []
 
-    # Prepare data for updating
-    elements_to_update = []
+    def get_param_value(self, element, param):
+        """
+        Get the parameter value from an element, handling BuiltInParameter, GUID, and name-based parameters.
 
-    # Loop through each circuit and get connected elements
-    for circuit in circuit_collector:
-        # Retrieve necessary circuit parameters using BuiltInParameters
-        rating_param = circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM)
-        load_name_param = circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME)
-        ckt_notes_param = circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NOTES_PARAM)
-        panel_param = circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM)
-        circuit_number_param = circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER)
-        wire_size_param = circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_WIRE_SIZE_PARAM)
+        Args:
+            element: The Revit element to query.
+            param: Either a BuiltInParameter, a GUID (string), or a string representing a parameter name.
+        Returns:
+            The value of the parameter or None if not found.
+        """
+        param_obj = None
 
-        # Get the parameter values
-        rating = query.get_param_value(rating_param) if rating_param else None
-        load_name = query.get_param_value(load_name_param) if load_name_param else None
-        circuit_notes = query.get_param_value(ckt_notes_param) if ckt_notes_param else None
-        panel = query.get_param_value(panel_param) if panel_param else None
-        circuit_number = query.get_param_value(circuit_number_param) if circuit_number_param else None
-        wire_size = query.get_param_value(wire_size_param) if wire_size_param else None
+        # Check if it's a BuiltInParameter
+        if isinstance(param, DB.BuiltInParameter):
+            param_obj = element.get_Parameter(param)
 
-        # Get the elements connected to the circuit
-        connected_elements = circuit.Elements
-        if not connected_elements:
-            continue
+        # Check if it's a GUID
+        elif isinstance(param, str) and self.is_guid(param):
+            guid = System.Guid(param)
+            shared_param = DB.SharedParameterElement.Lookup(doc, guid)
+            if shared_param:
+                param_obj = element.get_Parameter(shared_param.Id)
 
-        # Check if connected elements need to be updated
-        for element in connected_elements:
-            # Define the parameters to be set on the elements
-            element_rating = query.get_param_value(query.get_param(element, "CKT_Rating_CED"))
-            element_load_name = query.get_param_value(query.get_param(element, "CKT_Load Name_CEDT"))
-            element_notes = query.get_param_value(query.get_param(element, "CKT_Schedule Notes_CEDT"))
-            element_panel = query.get_param_value(query.get_param(element, "CKT_Panel_CEDT"))
-            element_circuit_number = query.get_param_value(query.get_param(element, "CKT_Circuit Number_CEDT"))
-            element_wire_size   =   query.get_param_value((query.get_param(element, "CKT_Wire Size_CEDT")))
-            # Prepare data for elements that need to be updated
-            updates_needed = {
-                'element': element,
-                'new_rating': None,
-                'new_load_name': None,
-                'new_notes': None,
-                'new_panel': None,
-                'new_circuit_number': None,
-                'new_wire_size' : None,
-                'update': False
-            }
+        # Finally, try a name-based lookup
+        elif isinstance(param, str):
+            params = element.GetParameters(param)
+            if params:
+                param_obj = params[0]  # Take the first matching parameter
 
-            # Determine if updates are needed based on parameter differences
-            if rating and element_rating != rating:
-                updates_needed['new_rating'] = rating
-                updates_needed['update'] = True
+        # Return the parameter value, or None if not found
+        return query.get_param_value(param_obj) if param_obj else None
 
-            if load_name and element_load_name != load_name:
-                updates_needed['new_load_name'] = load_name
-                updates_needed['update'] = True
+    def is_guid(self, value):
+        """
+        Check if a given string is a valid GUID.
 
-            if circuit_notes and element_notes != circuit_notes:
-                updates_needed['new_notes'] = circuit_notes
-                updates_needed['update'] = True
+        Args:
+            value (str): The string to check.
+        Returns:
+            bool: True if the string is a valid GUID, False otherwise.
+        """
+        try:
+            # Convert string to System.Guid
+            _ = System.Guid(value)
+            return True
+        except Exception:
+            return False
 
-            if panel and element_panel != panel:
-                updates_needed['new_panel'] = panel
-                updates_needed['update'] = True
+    def collect_circuit_data(self):
+        """
+        Collect data from circuits and determine which elements need to be updated.
 
-            if circuit_number and element_circuit_number != circuit_number:
-                updates_needed['new_circuit_number'] = circuit_number
-                updates_needed['update'] = True
+        Returns:
+            List of dictionaries containing elements to update and their new parameter values.
+        Raises:
+            Exception if any parameters are not found.
+        """
+        circuit_collector = DB.FilteredElementCollector(doc).OfClass(DB.Electrical.ElectricalSystem).ToElements()
+        elements_to_update = {}
 
-            if wire_size and element_wire_size != circuit_number:
-                updates_needed['new_wire_size'] = wire_size
-                updates_needed['update'] = True
+        for circuit in circuit_collector:
+            # Collect circuit parameter values
+            circuit_data = {}
+            for element_param, circuit_param in self.parameter_mapping.items():
+                value = self.get_param_value(circuit, circuit_param)
+                if value is None:
+                    self.missing_params.append(circuit_param)
+                circuit_data[element_param] = value
 
-            # Add to the list if an update is required
-            if updates_needed['update']:
-                elements_to_update.append(updates_needed)
+            for element in circuit.Elements:
+                element_id = str(element.Id)
 
-    return elements_to_update
+                # Initialize or update the dictionary for this element
+                if element_id not in elements_to_update:
+                    elements_to_update[element_id] = {"element": element, "update": False}
 
-def apply_circuit_data_updates(elements_to_update):
-    """
-    Apply the collected circuit data to elements using a transaction.
+                updates_needed = elements_to_update[element_id]
 
-    Args:
-        elements_to_update (list): List of dictionaries with elements and new parameter values.
-    """
-    # Execute updates within a transaction
-    with revit.Transaction("Sync Circuit Data with Connected Elements"):
-        for update in elements_to_update:
-            element = update['element']
+                # Check if any parameters need updating
+                for element_param, circuit_value in circuit_data.items():
+                    element_value = self.get_param_value(element, element_param)
 
-            # Update the element parameters if new values are present
-            if update['new_rating']:
-                element_rating_param = query.get_param(element, "CKT_Rating_CED")
-                element_rating_param.Set(update['new_rating'])
+                    # Only update if values differ
+                    if circuit_value != element_value:
+                        updates_needed[element_param] = circuit_value
+                        updates_needed["update"] = True
 
-            if update['new_load_name']:
-                element_load_name_param = query.get_param(element, "CKT_Load Name_CEDT")
-                element_load_name_param.Set(update['new_load_name'])
+                # Remove the element if no updates are required
+                if not updates_needed["update"]:
+                    del elements_to_update[element_id]
 
-            if update['new_notes']:
-                element_notes_param = query.get_param(element, "CKT_Schedule Notes_CEDT")
-                element_notes_param.Set(update['new_notes'])
+        # If missing parameters, raise an exception
+        if self.missing_params:
+            raise Exception(
+                "The following parameters could not be found and syncing was stopped:\n{}".format(
+                    "\n".join(self.missing_params)
+                )
+            )
 
-            if update['new_panel']:
-                element_panel_param = query.get_param(element, "CKT_Panel_CEDT")
-                element_panel_param.Set(update['new_panel'])
+        # Return the dictionary values as a list
+        return list(elements_to_update.values())
 
-            if update['new_circuit_number']:
-                element_circuit_number_param = query.get_param(element, "CKT_Circuit Number_CEDT")
-                element_circuit_number_param.Set(update['new_circuit_number'])
+    def apply_updates(self, elements_to_update):
+        """
+        Apply updates to elements.
 
-            if update['new_wire_size']:
-                element_circuit_number_param = query.get_param(element, "CKT_Wire Size_CEDT")
-                element_circuit_number_param.Set(update['new_wire_size'])
+        Args:
+            elements_to_update (list): List of dictionaries with elements and new parameter values.
+        """
+        with revit.Transaction("Sync Circuit Data with Connected Elements"):
+            for update in elements_to_update:
+                element = update["element"]
+                for element_param, new_value in update.items():
+                    if element_param in ["element", "update"]:
+                        continue
+                    param_obj = query.get_param(element, element_param)
+                    if param_obj:
+                        param_obj.Set(new_value)
 
-def main():
-    # Collect data that needs to be updated outside of the transaction
-    elements_to_update = collect_circuit_data()
-    apply_circuit_data_updates(elements_to_update)
+    def output_results(self, elements_to_update):
+        """
+        Dynamically print results based on the number of elements to update.
 
-    if __shiftclick__:  # Shift-click to display table
-        output.print_table(
-            table_data=[
-                [
-                    output.linkify(update['element'].Id),
-                    update['new_rating'] if update['new_rating'] else "No Change",
-                    update['new_load_name'] if update['new_load_name'] else "No Change",
-                    update['new_notes'] if update['new_notes'] else "No Change",
-                    update['new_panel'] if update['new_panel'] else "No Change",
-                    update['new_circuit_number'] if update['new_circuit_number'] else "No Change"
-                ] for update in elements_to_update
-            ],
-            title="Circuit Data Sync: Updates Summary",
-            columns=["Element ID", "New Rating", "New Load Name", "New Notes", "New Panel", "New Circuit Number"]
-        )
-    else:  # Standard click to show alert
-        forms.alert("{} elements updated.".format(len(elements_to_update)), title="Sync Complete")
+        Args:
+            elements_to_update: List of dictionaries containing updated elements and parameter values.
+        """
+        count = len(elements_to_update)
+
+        if count > 200:
+            # Simplified output for large updates
+            print("More than 200 elements to update. Simplified output:")
+            for update in elements_to_update:
+                element_id = update["element"].Id
+                updated_params = [
+                    "{}: {}".format(param, update.get(param, "No Change"))
+                    for param in self.parameter_mapping.keys()
+                    if param in update
+                ]
+                print("Element ID: {}, Updates: {}".format(element_id, ", ".join(updated_params)))
+        else:
+            # Detailed table for smaller updates
+            columns = ["Element ID"] + list(self.parameter_mapping.keys())
+            table_data = []
+            for update in elements_to_update:
+                row = [output.linkify(update["element"].Id)]
+                for param in self.parameter_mapping.keys():
+                    row.append(update.get(param, "No Change"))
+                table_data.append(row)
+
+            output.print_table(
+                table_data=table_data,
+                title="Circuit Data Sync: Updates Summary",
+                columns=columns
+            )
+
+        # Print summary
+        print("Total elements updated: {}".format(count))
+
+    def sync(self):
+        """
+        Main function to collect data, apply updates, and output results.
+        """
+        try:
+            elements_to_update = self.collect_circuit_data()
+            if not elements_to_update:
+                print("No elements require updates. Sync process is complete.")
+                return
+
+            self.apply_updates(elements_to_update)
+            print("Sync Complete: {} elements updated.".format(len(elements_to_update)))
+            self.output_results(elements_to_update)
+
+        except Exception as e:
+            logger.warning(str(e))
 
 
+# Define the parameter mapping
+PARAMETER_MAPPING = {
+    "CKT_Rating_CED": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM,
+    "CKT_Load Name_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME,
+    "CKT_Schedule Notes_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NOTES_PARAM,
+    "CKT_Panel_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
+    "CKT_Circuit Number_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER,
+    "CKT_Wire Size_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_WIRE_SIZE_PARAM,
 
+}
+
+# Instantiate and run the sync class
 if __name__ == "__main__":
-    main()
+    sync_tool = CircuitParameterSync(PARAMETER_MAPPING)
+    sync_tool.sync()
