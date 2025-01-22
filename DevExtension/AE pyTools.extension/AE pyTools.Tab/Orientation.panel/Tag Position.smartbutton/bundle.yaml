@@ -1,0 +1,23 @@
+title: "Tag Position"
+
+tooltip: >-
+  Version = 1.0
+  
+  Date    = 01.21.2025
+  ________________________________________________________________
+  Description:
+  
+  Modify the behavior of the orient tools. When 'ON', the tag head
+  location is translated to maintain relative position to its host.
+
+
+  For example: Tag head is plan north of the host and you click 
+  'Rotate CCW', tag head will move plan west of the host at the same
+  relative distance.
+
+  ________________________________________________________________
+  
+
+author: >-
+  AEvelina
+

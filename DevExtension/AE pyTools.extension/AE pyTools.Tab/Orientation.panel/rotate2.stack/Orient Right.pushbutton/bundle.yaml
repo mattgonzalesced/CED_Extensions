@@ -2,9 +2,9 @@ title:
   en_us: Orient Right
 tooltip: 
   en_us: >-
-    Version = 1.0
+    Version = 1.1
 
-    Date    = 01.01.2025
+    Date    = 01.21.2025
     ________________________________________________________________
     Description:
     
@@ -15,8 +15,7 @@ tooltip:
     
     SHIFT+Click: 
     
-    Configure how the tool handles tag position and rotation. By default, tags are repositioned 
-    to maintain their relative distance from their host. Tag Rotation is not yet available.
+    Force tags to remain in place on execution, ignoring the current tag configurations.
     
     Note: 
     This ignores Annotations, Pinned Elements, System Families, 

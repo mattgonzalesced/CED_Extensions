@@ -12,8 +12,13 @@ doc = revit.doc
 
 config = script.get_config("orientation_config")
 
-adjust_tag_position = getattr(config, "tag_position", True)
-adjust_tag_angle = getattr(config, "tag_angle", True)
+# Determine if shift-click is being used
+if __shiftclick__:
+    adjust_tag_position = False  # Temporary override
+    adjust_tag_angle = False    # Temporary override
+else:
+    adjust_tag_position = getattr(config, "tag_position", True)
+    adjust_tag_angle = getattr(config, "tag_angle", True)
 
 # Step 1: Get the selected elements and filter out pinned ones
 selection = revit.get_selection()
