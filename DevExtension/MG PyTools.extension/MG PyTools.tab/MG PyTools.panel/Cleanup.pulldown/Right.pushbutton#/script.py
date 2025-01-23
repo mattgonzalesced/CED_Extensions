@@ -36,9 +36,9 @@ with DB.Transaction(doc, "Hide Right Bubbles on All Horizontal Grids in Current 
         if horizontal_grid:
             # Hide the right bubble in the current view using the correct parameter
             horizontal_grid.HideBubbleInView(right_bubble, active_view)
-            script.get_logger().info("Right bubble hidden successfully on the first horizontal grid in the current view.")
+            #script.get_logger().info("Right bubble hidden successfully on the first horizontal grid in the current view.")
         else:
-            script.get_logger().warning("No more horizontal grids with visible right bubbles found in the current view.")
+            #script.get_logger().warning("No more horizontal grids with visible right bubbles found in the current view.")
             break
     
     t.Commit()

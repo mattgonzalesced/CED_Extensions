@@ -1,8 +1,10 @@
-from pyrevit import forms
+# -*- coding: utf-8 -*-
+__title__ = "Parameter Linker"
+from pyrevit import revit, DB, forms
 from System.Collections.ObjectModel import ObservableCollection
 from System.Dynamic import ExpandoObject
 
-# WPF layout with a single dropdown and a DataGrid
+# WPF layout with a dropdown and DataGrid
 layout = """
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -47,8 +49,7 @@ layout = """
     </Grid>
 </Window>
 """
-EMOCP = 80
-MMOCP = 80
+
 # Python code to handle data and dropdown
 class ParameterSetSelector(forms.WPFWindow):
     def __init__(self):
@@ -71,7 +72,7 @@ class ParameterSetSelector(forms.WPFWindow):
                 {"Element1": "Demand", "Element2": "Total Load"},
             ],
             "Voltage Mech": [
-                {"Element1": "MOCP: " + str(MMOCP), "Element2": "MOCP: " + str(EMOCP)}
+                {"Element1": "MOCP", "Element2": "EMOCP"}
             ]
         }
 
@@ -110,3 +111,35 @@ try:
 except Exception as e:
     # In case of critical error, show the error message
     forms.alert("Critical error: {0}".format(str(e)), title="Error")
+
+# Function to apply mappings in Revit
+def apply_parameter_mappings():
+    """Apply mappings to elements in the Revit document."""
+    elements = DB.FilteredElementCollector(revit.doc).WhereElementIsNotElementType()
+    for elem in elements:
+        for param_a, param_b in parameter_set.get_mappings():
+            param_a_obj = elem.LookupParameter(param_a.name)
+            param_b_obj = elem.LookupParameter(param_b.name)
+
+            if param_a_obj and param_b_obj:
+                if not param_a.is_read_only and not param_b.is_read_only:
+                    try:
+                        # Example: Copy value from param_a to param_b
+                        if param_a.storage_type == "Double":
+                            param_b_obj.Set(param_a_obj.AsDouble())
+                        elif param_a.storage_type == "Integer":
+                            param_b_obj.Set(param_a_obj.AsInteger())
+                        elif param_a.storage_type == "String":
+                            param_b_obj.Set(param_a_obj.AsString())
+                        print("Mapped {0} to {1} for element {2}".format(param_a.name, param_b.name, elem.Id))
+                    except Exception as e:
+                        print("Error mapping {0} to {1}: {2}".format(param_a.name, param_b.name, e))
+
+# Apply parameter mappings
+apply_parameter_mappings()
+
+# Display mappings in the console
+for param_a, param_b in parameter_set.get_mappings():
+    print("Mapping:")
+    print("  Element A - Parameter:", param_a.to_dict())
+    print("  Element B - Parameter:", param_b.to_dict())

@@ -1,0 +1,46 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Parameter Set Selector"
+        Height="600" Width="400"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize">
+    <Window.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#FF1E88E5" Offset="0.0" />
+            <GradientStop Color="#FF64B5F6" Offset="1.0" />
+        </LinearGradientBrush>
+    </Window.Background>
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Title -->
+        <TextBlock Grid.Row="0" Text="Select a Parameter Set" FontSize="20" FontWeight="Bold" Foreground="White" 
+                   HorizontalAlignment="Center" Margin="0,0,0,10" />
+
+        <!-- Dropdown -->
+        <StackPanel Grid.Row="1" VerticalAlignment="Top" Margin="20">
+            <TextBlock Text="Parameter Sets:" FontSize="16" Foreground="White" Margin="0,0,0,10" />
+            <ComboBox Name="dropdown" Width="200" Margin="0,0,0,10" />
+            <TextBlock Text="Details in Set:" FontSize="16" Foreground="White" Margin="0,10,0,5" />
+            <DataGrid Name="detailsGrid" AutoGenerateColumns="False" Height="300" Background="White" IsReadOnly="True"
+                      AllowDrop="True" 
+                      PreviewMouseLeftButtonDown="detailsGrid_mouse_down" 
+                      DragEnter="detailsGrid_drag_enter" 
+                      Drop="detailsGrid_drop">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Element 1" Binding="{Binding Element1}" Width="*" />
+                    <DataGridTextColumn Header="Element 2" Binding="{Binding Element2}" Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </StackPanel>
+
+        <!-- Confirm Button -->
+        <Button Grid.Row="2" Content="Confirm" FontSize="16" FontWeight="Bold"
+                HorizontalAlignment="Center" Width="120" Background="#FF64B5F6" Foreground="White"
+                Margin="0,10" />
+    </Grid>
+</Window>

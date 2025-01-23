@@ -22,17 +22,24 @@ with DB.Transaction(doc, "Hide Top and Left Bubbles on All Grids in Current View
                 direction = grid.Curve.Direction
                 # Check if the grid is vertical (direction close to the Y-axis)
                 if abs(direction.X) < 0.01 and abs(direction.Y) > 0.99:
-                    # If the top bubble is still visible, select this grid
-                    if grid.IsBubbleVisibleInView(DB.DatumEnds.End0, active_view):
-                        vertical_grid = grid
-                        break
+                    if direction.Y > 0:
+                        # If the bottom bubble is still visible, select this grid
+                        if grid.IsBubbleVisibleInView(DB.DatumEnds.End0, active_view):
+                            vertical_grid = (grid, DB.DatumEnds.End0)
+                            break
+                    elif direction.Y < 0:
+                        # If the top bubble is still visible, select this grid
+                        if grid.IsBubbleVisibleInView(DB.DatumEnds.End1, active_view):
+                            vertical_grid = (grid, DB.DatumEnds.End1)
+                            break
         
         if vertical_grid:
-            # Hide the top bubble in the current view using the correct parameter
-            vertical_grid.HideBubbleInView(DB.DatumEnds.End0, active_view)
-            script.get_logger().info("Top bubble hidden successfully on the first vertical grid in the current view.")
+            grid, bubble_end = vertical_grid
+            # Hide the appropriate bubble in the current view
+            grid.HideBubbleInView(bubble_end, active_view)
+            #script.get_logger().info("Bubble hidden successfully on a vertical grid in the current view.")
         else:
-            script.get_logger().warning("No more vertical grids with visible top bubbles found in the current view.")
+            #script.get_logger().warning("No more vertical grids with visible bubbles found in the current view.")
             break
     
     # Hide left bubbles on all horizontal grids
@@ -58,9 +65,9 @@ with DB.Transaction(doc, "Hide Top and Left Bubbles on All Grids in Current View
         if horizontal_grid:
             # Hide the left bubble in the current view using the correct parameter
             horizontal_grid.HideBubbleInView(left_bubble, active_view)
-            script.get_logger().info("Left bubble hidden successfully on the first horizontal grid in the current view.")
+            #script.get_logger().info("Left bubble hidden successfully on the first horizontal grid in the current view.")
         else:
-            script.get_logger().warning("No more horizontal grids with visible left bubbles found in the current view.")
+            #script.get_logger().warning("No more horizontal grids with visible left bubbles found in the current view.")
             break
     
     t.Commit()
