@@ -12,6 +12,41 @@ from System.Collections.Generic import List  # Import .NET List for IList compat
 doc = revit.doc
 uidoc = revit.uidoc
 
+
+def add_placeholder_family(doc, voltage, poles):
+    family_name = "Elfx_Existing Ckt Placeholder_Unhosted"
+    family_types = {
+        (1292, 1): "120V/1P",
+        (2239, 2): "208V/2P",
+        (2239, 3): "208V/3P"
+    }
+
+    voltage=round(voltage)
+    placeholder_type = family_types.get((voltage, poles))
+
+    if not placeholder_type:
+        raise ValueError("Invalid voltage/pole combination: Voltage={}, Poles={}".format(voltage, poles))
+
+    family_symbols = query.get_family_symbol(family_name,placeholder_type,doc)
+    family_symbol=family_symbols[0]
+    family_symbol.Activate()
+
+    location = DB.XYZ(0, 0, 0)  # Default placement location
+    return doc.Create.NewFamilyInstance(location, family_symbol, DB.Structure.StructuralType.NonStructural)
+
+# Helper function to create electrical systems
+def create_electrical_system(doc, element_ids, system_type, panel_element):
+    if not element_ids or len(element_ids) == 0:
+        return None
+
+    element_id_list = List[DB.ElementId](element_ids)
+    new_system = DB.Electrical.ElectricalSystem.Create(doc, element_id_list, system_type)
+    if new_system and panel_element:
+        new_system.SelectPanel(panel_element)
+        doc.Regenerate()
+    return new_system
+
+
 # Helper function to extract the first number from a circuit string
 def get_first_number_from_circuit(circuit_str):
     if not circuit_str:
@@ -43,11 +78,11 @@ def group_elements_by_circuit(elements, panel_elements):
 
     for element in elements:
         # Retrieve parameters using query functions
-        panel_param = query.get_param(element, "ckt-Panel")
-        circuit_param = query.get_param(element, "ckt-Circuit Number")
-        rating_param = query.get_param(element, "ckt-Rating")
-        load_name_param = query.get_param(element, "ckt-Load Name")
-        ckt_notes_param = query.get_param(element, "ckt-Schedule Notes")
+        panel_param = query.get_param(element, "CKT_Panel_CEDT")
+        circuit_param = query.get_param(element, "CKT_Circuit Number_CEDT")
+        rating_param = query.get_param(element, "CKT_Rating_CED")
+        load_name_param = query.get_param(element, "CKT_Load Name_CEDT")
+        ckt_notes_param = query.get_param(element, "CKT_Schedule Notes_CEDT")
 
         # Get actual parameter values
         panel_name = query.get_param_value(panel_param)
@@ -111,8 +146,8 @@ def group_elements_by_circuit(elements, panel_elements):
 
     # Return sorted list of groups and unnamed group separately for easier processing
     return [(key, grouped_dict[key]) for key in sorted_keys], unnamed_group
-
 def main():
+    doc = revit.doc
 
     # Collectors for the elements
     ee_collector = list(get_all_panels(doc))  # Panels
@@ -142,6 +177,14 @@ def main():
 
         with revit.Transaction("Create Circuits and Assign Panels"):
             for key, data in grouped_elements:
+                sample_element = data['elements'][0]
+                voltage = query.get_param_value(query.get_param(sample_element, "Voltage_CED"))
+                poles = query.get_param_value(query.get_param(sample_element, "Number of Poles_CED"))
+                # Place placeholder
+                placeholder = add_placeholder_family(doc, voltage, poles)
+                doc.Regenerate()
+                data['element_ids'].append(placeholder.Id)
+
                 if data["panel_element"] and data["element_ids"]:
                     created_system = create_electrical_system(doc, data["element_ids"], system_type, data["panel_element"])
                     if created_system:
@@ -194,26 +237,5 @@ def main():
         print("Error occurred: {}. Rolling back all changes.".format(e))
         tg.RollBack()
 
-
-
-    # Commented Output Section (for reference and future use)
-    """
-    output = script.get_output()
-    output.print_md("## Grouped Elements by Panel and Circuit:")
-    for key, data in grouped_elements:
-        output.print_md("**Panel: {} | Circuit: {}**".format(data["panel_name"], data["circuit_number"]))
-        if data["panel_element"]:
-            output.print_md("Panel Element ID: {}".format(data["panel_element"].Id))
-            output.print_md("Rating: {}, Load Name: {}".format(data["rating"], data["load_name"]))
-            output.print_md("Elements: {}".format(len(data["elements"])))
-            output.print_md("Element IDs for Create method: {}".format([str(eid) for eid in data["element_ids"]]))
-    
-    output.print_md("## Unnamed Circuit Elements:")
-    for key, data in unnamed_elements.items():
-        output.print_md("**Key: {} | Element ID: {}**".format(key, data["element_ids"][0]))
-        output.print_md("Rating: {}, Load Name: {}".format(data["rating"], data["load_name"]))
-    
-    """
-
 if __name__ == "__main__":
-        main()
+    main()

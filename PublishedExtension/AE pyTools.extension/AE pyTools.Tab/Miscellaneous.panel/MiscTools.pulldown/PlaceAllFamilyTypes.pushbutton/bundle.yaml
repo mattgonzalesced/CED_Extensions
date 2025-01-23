@@ -1,0 +1,17 @@
+title: Place All Family Types
+
+tooltip: >-
+  Version = 1.0
+  Date    = 01.01.2025
+  ________________________________________________________________
+  Description:
+  Select multiple families and place all their types in the current view. 
+  The tool organizes family types in a grid pattern for easy visualization and comparison.
+
+  ________________________________________________________________
+  
+
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: true
+  full_frame: true
