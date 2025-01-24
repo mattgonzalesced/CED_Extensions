@@ -5,7 +5,7 @@ from pyrevit import DB, revit
 from pyrevit.revit.db import transaction, query
 from pyrevit import script
 import re
-from Snippets._elecutils import get_all_light_devices, get_all_panels, get_all_elec_fixtures
+from Snippets._elecutils import get_all_light_devices, get_all_panels, get_all_elec_fixtures, get_all_light_fixtures
 from System.Collections.Generic import List  # Import .NET List for IList compatibility
 
 
@@ -13,22 +13,23 @@ doc = revit.doc
 uidoc = revit.uidoc
 
 
+# Helper function to add a placeholder family
 def add_placeholder_family(doc, voltage, poles):
-    family_name = "Elfx_Existing Ckt Placeholder_Unhosted"
+    family_name = "EF-U_Existing Ckt Placeholder_CED"
     family_types = {
         (1292, 1): "120V/1P",
         (2239, 2): "208V/2P",
         (2239, 3): "208V/3P"
     }
 
-    voltage=round(voltage)
+    voltage = round(voltage)
     placeholder_type = family_types.get((voltage, poles))
 
     if not placeholder_type:
-        raise ValueError("Invalid voltage/pole combination: Voltage={}, Poles={}".format(voltage, poles))
+        raise ValueError("Invalid placeholder type. voltage/pole combination: Voltage={}, Poles={}".format(voltage, poles))
 
-    family_symbols = query.get_family_symbol(family_name,placeholder_type,doc)
-    family_symbol=family_symbols[0]
+    family_symbols = query.get_family_symbol(family_name, placeholder_type, doc)
+    family_symbol = family_symbols[0]
     family_symbol.Activate()
 
     location = DB.XYZ(0, 0, 0)  # Default placement location
@@ -46,7 +47,6 @@ def create_electrical_system(doc, element_ids, system_type, panel_element):
         doc.Regenerate()
     return new_system
 
-
 # Helper function to extract the first number from a circuit string
 def get_first_number_from_circuit(circuit_str):
     if not circuit_str:
@@ -54,18 +54,6 @@ def get_first_number_from_circuit(circuit_str):
     first_part = circuit_str.split(",")[0]
     match = re.search(r'\d+', first_part)
     return int(match.group()) if match else float('inf')
-
-# Function to create an electrical system and select a panel
-def create_electrical_system(doc, element_ids, system_type, panel_element):
-    if not element_ids or len(element_ids) == 0:
-        return None
-
-    element_id_list = List[DB.ElementId](element_ids)
-    new_system = DB.Electrical.ElectricalSystem.Create(doc, element_id_list, system_type)
-    if new_system and panel_element:
-        new_system.SelectPanel(panel_element)
-        doc.Regenerate()
-    return new_system
 
 # Function to organize elements by Panel and Circuit Number
 def group_elements_by_circuit(elements, panel_elements):
@@ -146,6 +134,7 @@ def group_elements_by_circuit(elements, panel_elements):
 
     # Return sorted list of groups and unnamed group separately for easier processing
     return [(key, grouped_dict[key]) for key in sorted_keys], unnamed_group
+
 def main():
     doc = revit.doc
 
@@ -153,11 +142,11 @@ def main():
     ee_collector = list(get_all_panels(doc))  # Panels
     ef_collector = list(get_all_elec_fixtures(doc))  # Electrical Fixtures
     ld_collector = list(get_all_light_devices(doc))  # Lighting Devices
-
+    lf_collector = list(get_all_light_fixtures(doc))
     selection = revit.get_selection()
     # Combine all elements that need circuiting
     if not selection:
-        elements_to_circuit = ef_collector + ld_collector + ee_collector
+        elements_to_circuit = ef_collector + ld_collector + ee_collector + lf_collector
     else:
         elements_to_circuit = selection
 
@@ -177,9 +166,17 @@ def main():
 
         with revit.Transaction("Create Circuits and Assign Panels"):
             for key, data in grouped_elements:
+                print("Processing Panel: {} | Circuit: {}".format(key[0], key[1]))
                 sample_element = data['elements'][0]
                 voltage = query.get_param_value(query.get_param(sample_element, "Voltage_CED"))
                 poles = query.get_param_value(query.get_param(sample_element, "Number of Poles_CED"))
+                rating = query.get_param_value(query.get_param(sample_element, "CKT_Rating_CED"))
+
+                # Debugging: Check for missing rating parameter
+                if rating is None:
+                    print("Skipping group {}: Missing or invalid rating parameter.".format(key))
+                    continue
+
                 # Place placeholder
                 placeholder = add_placeholder_family(doc, voltage, poles)
                 doc.Regenerate()

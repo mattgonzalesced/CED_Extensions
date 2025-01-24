@@ -240,6 +240,53 @@ class ChildElement:
             logger.error("Failed to place element: {}".format(e))
             raise
 
+    def rotate_to_match_parent(self):
+        """
+        Rotate the child element to match the orientation of the parent element.
+        """
+        if not self.child_id:
+            logger.warning("No placed child element to rotate.")
+            return False
+
+        # Retrieve the placed child element
+        child_element = doc.GetElement(self.child_id)
+        if child_element is None:
+            logger.warning("Child element with ID {} not found.".format(self.child_id))
+            return False
+
+        if not self.parent_element or not self.parent_element.facing_orientation:
+            logger.warning("Parent facing orientation is not defined or missing.")
+            return False
+
+        # Default orientation for the child element
+        default_orientation = DB.XYZ(0, 1, 0)
+
+        # Parent's orientation
+        parent_orientation = self.parent_element.facing_orientation
+
+        # Calculate the angle between the default and parent orientation
+        angle = default_orientation.AngleTo(parent_orientation)
+
+        # Determine the rotation direction using the cross product
+        cross_product = default_orientation.CrossProduct(parent_orientation)
+        if cross_product.Z < 0:
+            angle = -angle
+
+        # Define the rotation axis (Z-axis through the location point)
+        rotation_axis = DB.Line.CreateBound(
+            self.location_point,
+            DB.XYZ(self.location_point.X, self.location_point.Y, self.location_point.Z + 1)
+        )
+
+        # Rotate the child element
+        try:
+            child_element.Location.Rotate(rotation_axis, angle)
+            logger.info("Successfully rotated child element ID {} by {} radians.".format(self.child_id, angle))
+            return True
+        except Exception as e:
+            logger.error("Failed to rotate child element ID {}: {}".format(self.child_id, e))
+            return False
+
     def copy_parameters(self, parameter_mapping):
         """
         Copy parameter values from the associated parent to the child.
@@ -442,11 +489,15 @@ def main():
         child_instances.append(child)
 
     # Place and set parameters in a transaction
-    with DB.Transaction(doc, "Place and Set Parameters") as trans:
+    with DB.Transaction(doc, "Place and Rotate Child Elements") as trans:
         trans.Start()
         for child in child_instances:
             # Place the child element
             placed_instance = child.place()
+
+            # Rotate the child to match the parent's orientation
+            if not child.rotate_to_match_parent():
+                logger.warning("Failed to rotate child element ID {}.".format(child.child_id))
 
             # Copy parameters from parent to child
             child.copy_parameters(parameter_mapping)
