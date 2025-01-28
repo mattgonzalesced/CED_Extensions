@@ -3,6 +3,7 @@ from Autodesk.Revit.DB import XYZ, Line, ElementTransformUtils, IndependentTag, 
 import math
 from collections import defaultdict
 from pyrevit import script
+from pyrevit import DB
 
 # Initialize logger
 logger = script.get_logger()
@@ -203,13 +204,17 @@ def adjust_tag_rotations(grouped_data, angle):
 
         for tag, original_angle in zip(hosted_tags, tag_angles):
             if original_angle is None:
+                logger.debug("Original Angle is None: {}".format(original_angle))
                 continue
 
             # Calculate the new angle and normalize it
             new_angle = normalize_angle(original_angle + angle)
 
             # Determine the new orientation based on radians
-            if abs(new_angle % (2 * math.pi)) < tolerance or abs(new_angle % (2 * math.pi) - math.pi) < tolerance:
+            logger.debug("Adjusting Tag of Category {}".format(tag.Category))
+            if tag.Category.Id.IntegerValue == int(DB.BuiltInCategory.OST_KeynoteTags):
+                logger.debug("Tag is Keynote. Make Horizontal")
+            elif abs(new_angle % (2 * math.pi)) < tolerance or abs(new_angle % (2 * math.pi) - math.pi) < tolerance:
                 tag.TagOrientation = TagOrientation.Horizontal
             elif abs(new_angle % (2 * math.pi) - math.pi / 2) < tolerance or abs(new_angle % (2 * math.pi) - 3 * math.pi / 2) < tolerance:
                 tag.TagOrientation = TagOrientation.Vertical
