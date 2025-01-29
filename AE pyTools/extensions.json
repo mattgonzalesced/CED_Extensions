@@ -1,12 +1,13 @@
 {
     "extensions": [
+
        {
         "builtin": "False",
         "enable": "True",
         "type": "extension",
         "rocket_mode_compatible": "True",
         "name": "AE pyTools",
-        "description": "Development Tools",
+        "description": "Custom tool bar focused on MEP design workflows.",
         "author": "Anthony Evelina",
         "author-url": "https://keybase.io/ein",
         "url": "https://bitbucket.org/eirannejad/mypublictools.git",
