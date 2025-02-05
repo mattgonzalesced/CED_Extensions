@@ -1,18 +1,24 @@
 Pair Count,Mech Element Id,Mech Type Name,Mech Category,Mech CED-E-MCA,Mech CED-E-MOCP,Elec Element Id,Elec Type Name,Elec Category,Elec MCA_CED,Elec MOCP_CED,Distance,Unique Identifier,Match
-1,5274030,ZJ150 - 12.5 Ton,Mechanical Equipment,34.4,40.0,5659418,Equip Connection - 480/3ph,Electrical Fixture,,,2.2977182903674347,52740305659418,False
-2,5325908,25.0 ton,Mechanical Equipment,67.1,80.0,6290210,Equip Connection - 480/3ph,Electrical Fixture,,,3.144880582049997,53259086290210,False
-3,5111509,25.0 ton,Mechanical Equipment,67.1,80.0,5653417,Equip Connection - 480/3ph,Electrical Fixture,,,3.223681555285636,51115095653417,False
-4,5111495,25.0 ton,Mechanical Equipment,67.1,80.0,5653429,Equip Connection - 480/3ph,Electrical Fixture,,,3.324094807274402,51114955653429,False
-5,5278061,ZJ150 - 12.5 Ton,Mechanical Equipment,34.4,40.0,5659414,Equip Connection - 480/3ph,Electrical Fixture,,,3.6237011857004693,52780615659414,False
-6,5111502,25.0 ton,Mechanical Equipment,67.1,80.0,5653425,Equip Connection - 480/3ph,Electrical Fixture,,,3.84484872645368,51115025653425,False
-7,5269989,25.0 ton,Mechanical Equipment,67.1,80.0,6257190,Equip Connection - 480/3ph,Electrical Fixture,,,3.9986927725207835,52699896257190,False
-8,5174813,25.0 ton,Mechanical Equipment,67.1,80.0,5654127,Equip Connection - 480/3ph,Electrical Fixture,,,4.631754256466661,51748135654127,False
-9,5111516,ZJ150 - 12.5 Ton,Mechanical Equipment,34.4,40.0,5654091,Equip Connection - 480/3ph,Electrical Fixture,,,5.65351916358204,51115165654091,False
-10,5269188,25.0 ton,Mechanical Equipment,67.1,80.0,5652500,Equip Connection - 480/3ph,Electrical Fixture,,,5.6818993315406585,52691885652500,False
-11,6293221,CED-M-4-6 TON AC_Condenser,Mechanical Equipment,31.0,50.0,6472781,Equip Connection - 208/1ph,Electrical Fixture,,,5.696484297154598,62932216472781,False
-12,5278084,HCUc8040 S71074-070,Mechanical Equipment,200.0,300.0,6267404,Equip Connection - 480/3ph,Electrical Fixture,,,6.347428063939706,52780846267404,False
-13,6715306,CED-M-4-6 TON AC_Condenser,Mechanical Equipment,28.0,45.0,6861167,Equip Connection - 208/1ph,Electrical Fixture,,,6.640471992518112,67153066861167,False
-14,5634717,HCUc8040 S71074-070,Mechanical Equipment,140.9,150.0,5666082,Equip Connection - 480/3ph,Electrical Fixture,,,6.723926355011389,56347175666082,False
-15,6714693,CED-M-4-6 TON AC_Condenser,Mechanical Equipment,28.0,45.0,6861775,Equip Connection - 208/1ph,Electrical Fixture,,,8.401572865320428,67146936861775,False
-16,6715852,CED-M-4-6 TON AC_Condenser,Mechanical Equipment,28.0,45.0,6861019,Equip Connection - 208/1ph,Electrical Fixture,,,9.302600849112926,67158526861019,False
-17,5111481,25.0 ton,Mechanical Equipment,67.1,80.0,5654131,Equip Connection - 480/3ph,Electrical Fixture,,,28.133864220408505,51114815654131,False
+1,5274030,ZJ150 - 12.5 Ton,Mechanical Equipment,34.4,40.0,5659418,Equip Connection - 480/3ph,Electrical Fixture,,,2.442746270468759,52740305659418,False
+2,5111509,25.0 ton,Mechanical Equipment,67.1,80.0,5653417,Equip Connection - 480/3ph,Electrical Fixture,,,3.198497909027796,51115095653417,False
+3,5278061,ZJ150 - 12.5 Ton,Mechanical Equipment,34.4,40.0,5659414,Equip Connection - 480/3ph,Electrical Fixture,,,3.392118261899092,52780615659414,False
+4,5634717,HCUc8040 S71074-070,Mechanical Equipment,140.9,150.0,5666082,Equip Connection - 480/3ph,Electrical Fixture,,,3.581180658779458,56347175666082,False
+5,5269989,25.0 ton,Mechanical Equipment,67.1,80.0,6257190,Equip Connection - 480/3ph,Electrical Fixture,,,3.588113382824484,52699896257190,False
+6,5278084,HCUc8040 S71074-070,Mechanical Equipment,140.9,150.0,6267404,Equip Connection - 480/3ph,Electrical Fixture,,,3.7343362701610436,52780846267404,False
+7,5269188,25.0 ton,Mechanical Equipment,67.1,80.0,5652500,Equip Connection - 480/3ph,Electrical Fixture,,,4.024161605996024,52691885652500,False
+8,5325908,25.0 ton,Mechanical Equipment,67.1,80.0,6290210,Equip Connection - 480/3ph,Electrical Fixture,,,4.14008935593524,53259086290210,False
+9,5111495,25.0 ton,Mechanical Equipment,67.1,80.0,5653429,Equip Connection - 480/3ph,Electrical Fixture,,,4.436615661317755,51114955653429,False
+10,5111516,ZJ150 - 12.5 Ton,Mechanical Equipment,34.4,40.0,5654091,Equip Connection - 480/3ph,Electrical Fixture,,,4.542021376119597,51115165654091,False
+11,5174813,25.0 ton,Mechanical Equipment,67.1,80.0,5654127,Equip Connection - 480/3ph,Electrical Fixture,,,4.774331132826006,51748135654127,False
+12,5111481,25.0 ton,Mechanical Equipment,67.1,80.0,6290491,Equip Connection - 480/3ph,Electrical Fixture,,,5.35463819332259,51114816290491,False
+13,6293223,30000 Btu/h ACCU-01,Mechanical Equipment,17,25,6861775,Equip Connection - 208/1ph,Electrical Fixture,,,5.35952245109241,62932236861775,False
+14,5111502,25.0 ton,Mechanical Equipment,67.1,80.0,5653425,Equip Connection - 480/3ph,Electrical Fixture,,,5.56524333183924,51115025653425,False
+15,6293221,CED-M-4-6 TON AC_Condenser,Mechanical Equipment,31,50,6861019,Equip Connection - 208/1ph,Electrical Fixture,,,5.583251374113459,62932216861019,False
+16,6715852,CED-M-4-6 TON AC_Condenser,Mechanical Equipment,28,45,6472289,Equip Connection - 208/1ph,Electrical Fixture,,,6.502768993968419,67158526472289,False
+17,6714693,CED-M-4-6 TON AC_Condenser,Mechanical Equipment,28,45,6472781,Equip Connection - 208/1ph,Electrical Fixture,,,6.740012477156698,67146936472781,False
+18,6715306,CED-M-4-6 TON AC_Condenser,Mechanical Equipment,28,45,5704572,Equip Connection - 208/1ph,Electrical Fixture,,,10.064972833668367,67153065704572,False
+19,5694945,CED-M-EQPM Generic (R019) ELECTRIC HEATER,Mechanical Equipment,5,,5717890,Equip Connection - 480/3ph,Electrical Fixture,,,12.316290463146254,56949455717890,False
+20,6293222,30000 Btu/h ACCU-01,Mechanical Equipment,17,25,6861167,Equip Connection - 208/1ph,Electrical Fixture,,,16.461133418834876,62932226861167,False
+21,5694944,CED-M-EQPM Generic (R019) ELECTRIC HEATER,Mechanical Equipment,5,,6878537,Equip Connection - 208/1ph,Electrical Fixture,,,37.10097374875319,56949446878537,False
+22,5694159,CED-M-EQPM Generic (R019) ELECTRIC HEATER,Mechanical Equipment,5,,6878536,Equip Connection - 208/1ph,Electrical Fixture,,,51.9215274335055,56941596878536,False
+23,5694946,CED-M-EQPM Generic (R019) ELECTRIC HEATER,Mechanical Equipment,5,,6117743,Equip Connection - 208/1ph,Electrical Fixture,,,60.49147043179725,56949466117743,False
