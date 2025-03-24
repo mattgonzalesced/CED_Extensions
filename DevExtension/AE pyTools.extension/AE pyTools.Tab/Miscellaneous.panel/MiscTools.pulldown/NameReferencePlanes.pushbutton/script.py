@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 
 from pyrevit import revit, DB
+from pyrevit import script
+
+
 
 # Get the current document
 doc = revit.doc
-
+logger = script.get_logger()
 # Define reference subcategory names and their specifications (without line pattern)
 subcategory_specs = {
     "Weak Reference": {
@@ -34,11 +37,13 @@ def get_or_create_line_pattern(line_pattern_name="Aligning Line"):
     line_patterns = DB.FilteredElementCollector(doc).OfClass(DB.LinePatternElement)
     for pattern in line_patterns:
         if "Aligning Line" in pattern.Name:
+            logger.info("Line pattern found. Name: {}, ID: {}".format(pattern.Name,pattern.Id))
             return pattern.Id
 
     # If no matching pattern is found, create a new one with the specified name
     # Here, we're creating a simple dashed pattern; you can customize as needed
     new_line_pattern = DB.LinePattern(line_pattern_name)
+    logger.info("Line pattern NOT found. Creating New Pattern")
     return DB.LinePatternElement.Create(doc, new_line_pattern).Id
 
 

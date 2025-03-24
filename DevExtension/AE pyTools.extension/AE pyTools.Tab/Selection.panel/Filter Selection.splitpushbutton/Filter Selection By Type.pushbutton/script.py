@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 from pyrevit import revit, DB
-from pyrevit import forms
+from pyrevit import forms,script
 
 doc = revit.doc
 uidoc = revit.uidoc
 
-
+logger = script.get_logger()
 # Function to group elements by category and family types
 def group_elements_by_types(selection):
     types_by_category = {}
@@ -60,8 +60,8 @@ def prompt_user_for_selection(types_by_category):
     )
 
     if not selected_options:
-        forms.alert("No types selected. Operation cancelled.", exitscript=True)
-
+        logger.info("No types selected. Operation cancelled.")
+        script.exit()
     # Collect elements matching selected types
     filtered_elements = set()
     for category, groups in types_by_category.items():
