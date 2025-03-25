@@ -17,7 +17,8 @@ from Autodesk.Revit.DB import (
     BuiltInCategory,
     BuiltInParameter,
     ElementTransformUtils,
-    Line
+    Line,
+    Level  # For collecting Level elements.
 )
 from Autodesk.Revit.Exceptions import InvalidOperationException
 
@@ -254,84 +255,4 @@ def ok_clicked(sender, args):
         if cmb.SelectedItem is None:
             continue
         selections[name] = cmb.SelectedItem
-    result["selections"] = selections
-    result["divisor"] = divisor_textbox.Text
-    window.DialogResult = True
-    window.Close()
-
-def cancel_clicked(sender, args):
-    window.DialogResult = False
-    window.Close()
-
-ok_button.Click += ok_clicked
-cancel_button.Click += cancel_clicked
-
-#------------------------------------------------------------------------------
-# Show the window as a dialog.
-dialog_result = window.ShowDialog()
-
-if not dialog_result:
-    print("User canceled fixture mapping.")
-else:
-    try:
-        divisor = float(result["divisor"])
-    except ValueError:
-        print("Invalid divisor value entered.")
-    else:
-        # Build a mapping only for fixtures where the user made a selection.
-        name_to_symbol_map = {name: symbol_label_map[label]
-                              for name, label in result["selections"].items()}
-        t = Transaction(doc, "Place CSV Lighting Fixtures")
-        t.Start()
-        try:
-            for row in fixture_rows:
-                fixture_name = row.get("Name", "").strip()
-                if not fixture_name:
-                    continue
-
-                x_str = row.get("Position X", "").strip()
-                y_str = row.get("Position Y", "").strip()
-                z_str = row.get("Position Z", "").strip()
-
-                if not x_str or not y_str or not z_str:
-                    print("Skipping row due to missing coordinate:", row)
-                    continue
-
-                x_inches = feet_inch_to_inches(x_str)
-                y_inches = feet_inch_to_inches(y_str)
-                z_inches = feet_inch_to_inches(z_str)
-                if x_inches is None or y_inches is None or z_inches is None:
-                    print("Skipping row due to conversion error:", row)
-                    continue
-
-                try:
-                    rot_deg = float(row.get("Rotation", 0.0))
-                except ValueError:
-                    print("Skipping row with invalid rotation:", row)
-                    continue
-
-                x = x_inches / divisor
-                y = y_inches / divisor
-                z = z_inches / divisor
-
-                symbol = name_to_symbol_map.get(fixture_name)
-                if not symbol:
-                    print("No FamilySymbol mapped for '{}'. Skipping row.".format(fixture_name))
-                    continue
-
-                if not symbol.IsActive:
-                    symbol.Activate()
-                    doc.Regenerate()
-
-                loc = XYZ(x, y, z)
-                inst = doc.Create.NewFamilyInstance(loc, symbol, Structure.StructuralType.NonStructural)
-
-                if abs(rot_deg) > 1e-6:
-                    angle_radians = math.radians(rot_deg)
-                    axis = Line.CreateBound(loc, loc + XYZ(0, 0, 1))
-                    ElementTransformUtils.RotateElement(doc, inst.Id, axis, angle_radians)
-            t.Commit()
-            print("Finished placing fixtures from CSV.")
-        except InvalidOperationException as ex:
-            t.RollBack()
-            print("Transaction rolled back. Error:", ex)
+    result["

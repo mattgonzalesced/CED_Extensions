@@ -1,6 +1,6 @@
 from pyrevit import revit, DB
 from pyrevit import script
-from pyrevit.forms import ask_for_string
+from pyrevit.forms import ask_for_string, alert  # added alert import
 
 # Initialize output manager
 output = script.get_output()
@@ -49,15 +49,8 @@ if element:
         clickable_element_id = "(Error creating link)"
         script.get_logger().warning("Error creating link for element ID {0}: {1}".format(input_id, str(e)))
 
-    # Output element details
-    print("Element located!")
-    print("ID: {0}".format(clickable_element_id))
-    print("Name: {0}".format(element_name))
-    print("Category: {0}".format(category_name))
-
-    if parent_view:
-        print("Located on view: {0}".format(parent_view.Name))
-    else:
-        print("This element is not associated with a specific view.")
+    # Automatically navigate to the element by passing the element itself.
+    revit.uidoc.ShowElements(element)
 else:
-    print("Element with ID {0} not found in the model.".format(input_id))
+    # If the element is not found, show a popup alert.
+    alert("Element with ID {0} not found in the model.".format(input_id))

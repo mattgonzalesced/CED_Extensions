@@ -4,5 +4,5 @@ First script completed.
 Running second script (Python)...
 Second script completed.
 Running third script (IronPython)...
-Third script completed.
+Error running third script: CSV file does not have the required columns.
 All scripts executed successfully.
