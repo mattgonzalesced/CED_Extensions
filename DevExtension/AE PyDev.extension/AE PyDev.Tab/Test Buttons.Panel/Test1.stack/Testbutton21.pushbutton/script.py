@@ -3,7 +3,6 @@
 from pyrevit import DB, script, forms, revit, output
 from pyrevit.revit import query
 import clr
-from System.Collections.Generic import List
 from Snippets import _elecutils as eu
 from Autodesk.Revit.DB.Electrical import *
 
@@ -145,7 +144,9 @@ def print_nested_dict(nested_dict, title="Data"):
         print("")  # blank line between circuits
 
 
-def get_voltage_drop(voltage,current,wire_qty,wire_impedance)
+def get_voltage_drop(voltage,current,wire_qty,wire_impedance):
+    return
+
 
 test_condition = 0
 
