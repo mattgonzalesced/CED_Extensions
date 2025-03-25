@@ -181,6 +181,11 @@ def get_panel_data(panel):
 
     return panel_data
 
+def format_panel_display(panel, doc):
+    """Returns a string with the distribution system name, panel name, and element ID for display."""
+    panel_data = get_panel_dist_system(panel, doc)
+    dist_system_name = panel_data['dist_system_name'] if panel_data['dist_system_name'] else "Unknown Dist. System"
+    return "{} - {} (ID: {})".format(panel.Name,dist_system_name, panel.Id)
 
 # Get a list of panels compatible with the selected circuit's poles and voltage requirements
 def get_compatible_panels(selected_circuit):
@@ -246,14 +251,23 @@ def main():
     if not compatible_panels:
         forms.alert("No compatible panels found.", exitscript=True)
 
-    panel_names = [panel.Name for panel in compatible_panels]
-    target_panel_name = forms.ask_for_one_item(panel_names, title="Select Target Panel",
-                                               prompt="Choose a panel to move the circuits to:")
+    panel_options = [format_panel_display(panel,doc) for panel in compatible_panels]
+
+    target_panel_name = forms.SelectFromList.show(
+        panel_options,
+        title="Select Target Panel",
+        prompt="Choose a panel to move the circuits to:",
+        multiselect=False
+    )
 
     if not target_panel_name:
         script.exit()
 
-    target_panel = next((panel for panel in compatible_panels if panel.Name == target_panel_name), None)
+    target_panel_id_str = target_panel_name.split("(ID: ")[-1].rstrip(")")
+    target_panel_id = DB.ElementId(int(target_panel_id_str))
+
+    # Find the selected target panel by its ElementId
+    target_panel = doc.GetElement(target_panel_id)
 
     if not target_panel:
         forms.alert("Panel not found.", exitscript=True)
