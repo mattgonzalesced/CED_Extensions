@@ -12,7 +12,7 @@ def clean_schedule_headers(view_schedules):
     """
     Cleans headers in all provided schedules under a single transaction.
     - Converts to uppercase.
-    - Removes _CED, _CEDT, _CEDR.
+    - Removes _CED, _CEDT, _CEDR,CKT_.
     """
     if not view_schedules:
         print("⚠️ No schedules provided to clean.")
@@ -32,7 +32,7 @@ def clean_schedule_headers(view_schedules):
                 old_heading = schedule_field.ColumnHeading
 
                 new_heading = old_heading.upper()
-                new_heading = re.sub(r'(_CEDT|_CEDR|_CED)', '', new_heading).strip()
+                new_heading = re.sub(r'(_CEDT|_CEDR|_CED|CKT_)', '', new_heading).strip()
 
                 if old_heading != new_heading:
                     schedule_field.ColumnHeading = new_heading
@@ -86,29 +86,34 @@ def prompt_user_for_schedules():
     return selected_schedules
 
 
+
+def schedule_header_format():
+    schedules_to_process = []
+
+    # Case 1: If active view is a ViewSchedule, use it
+    active_view = uidoc.ActiveView
+    if isinstance(active_view, DB.ViewSchedule):
+        print("🔹 Active view is a schedule: {}".format(active_view.Name))
+        schedules_to_process.append(active_view)
+
+    else:
+        # Case 2: Check selected elements
+        selection = revit.get_selection()
+        if selection:
+            print("🔹 Evaluating selected elements...")
+            schedules_to_process.extend(get_view_schedules_from_selection(selection.elements))
+
+        # Case 3: Nothing selected + not in schedule view → prompt user
+        if not schedules_to_process:
+            print("🔹 No valid schedules selected. Prompting user to choose from list...")
+            schedules_to_process = prompt_user_for_schedules()
+
+    # Process all schedules at once
+    clean_schedule_headers(schedules_to_process)
+
+    print("\n✅ Done. {} schedule(s) processed.".format(len(schedules_to_process)))
+    return None
+
 # --- MAIN LOGIC ---
+schedule_header_format()
 
-schedules_to_process = []
-
-# Case 1: If active view is a ViewSchedule, use it
-active_view = uidoc.ActiveView
-if isinstance(active_view, DB.ViewSchedule):
-    print("🔹 Active view is a schedule: {}".format(active_view.Name))
-    schedules_to_process.append(active_view)
-
-else:
-    # Case 2: Check selected elements
-    selection = revit.get_selection()
-    if selection:
-        print("🔹 Evaluating selected elements...")
-        schedules_to_process.extend(get_view_schedules_from_selection(selection.elements))
-
-    # Case 3: Nothing selected + not in schedule view → prompt user
-    if not schedules_to_process:
-        print("🔹 No valid schedules selected. Prompting user to choose from list...")
-        schedules_to_process = prompt_user_for_schedules()
-
-# Process all schedules at once
-clean_schedule_headers(schedules_to_process)
-
-print("\n✅ Done. {} schedule(s) processed.".format(len(schedules_to_process)))

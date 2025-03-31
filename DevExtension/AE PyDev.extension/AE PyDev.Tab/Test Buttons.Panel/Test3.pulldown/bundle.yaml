@@ -1,7 +1,7 @@
 layout:
   - GetDistSysType
   - Elements Outside of Crop
-  - Better Move Selected Circuits
+  - Add Spares and Spaces
   - Check Phase And Poles
   - Place Pipe Types
   - Edit Schedule Headers

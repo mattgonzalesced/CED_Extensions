@@ -127,12 +127,28 @@ class ComponentSymbol:
         except:
             return None
 
+def format_panel_display(panel):
+    """Returns a string with panel name and element ID for display."""
+    return "{} (ID: {})".format(panel.Name, panel.Id)
+
 def collect_electrical_equipment(doc):
     """Collect all Electrical Equipment elements in the project."""
-    return DB.FilteredElementCollector(doc) \
+    panel_collector = DB.FilteredElementCollector(doc) \
         .OfCategory(DB.BuiltInCategory.OST_ElectricalEquipment) \
-        .WhereElementIsNotElementType() \
-        .ToElements()
+        .WhereElementIsNotElementType()
+    panel_options = [format_panel_display(panel) for panel in panel_collector]
+
+    selected_panel_options = forms.SelectFromList.show(
+        panel_options,
+        title="Select Panels",
+        multiselect=True
+    )
+    if not selected_panel_options:
+        script.exit()
+
+    # Map selected panel display names back to panel objects
+    selected_panels = [panel for panel in panel_collector if format_panel_display(panel) in selected_panel_options]
+    return selected_panels
 
 def collect_circuits(doc):
     """Collect all Electrical Circuits in the project."""
@@ -154,7 +170,7 @@ def main():
 
     start_point = DB.XYZ(0, 0, 0)
     vertical_offset = DB.XYZ(0, -10, 0)
-    circuit_horizontal_spacing = 0.666667
+    circuit_horizontal_spacing = 1.5
     circuit_vertical_offset = DB.XYZ(0, -1.35, 0)
     circuit_base_offset = DB.XYZ(0.55, 0, 0)
 
