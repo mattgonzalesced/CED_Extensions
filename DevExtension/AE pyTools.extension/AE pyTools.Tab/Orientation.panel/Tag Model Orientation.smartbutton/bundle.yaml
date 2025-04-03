@@ -1,4 +1,4 @@
-title: "Tag Model Orientation"
+title: "Model Orientation"
 
 tooltip: >-
   Version = 1.0
@@ -12,7 +12,7 @@ tooltip: >-
   
   
   This behavior can help maintain uniformity when tags rotate around an
-  element, specifically when the tags are left/right justified or are not 
+  element, specifically when the tags are left/right justified or are not
   centered on their origin.
   
   
