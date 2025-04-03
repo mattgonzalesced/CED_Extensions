@@ -1,0 +1,20 @@
+title:
+  en_us: List Selected Family Sizes
+
+tooltip:
+  en_us:
+    >-
+    Version = 1.0
+    
+    Date    = 03.31.2025
+    ________________________________________________________________
+    Description:
+    
+    List the sizes of selected families in the project.
+    
+    Note:
+    
+    Script needs to open and temporarily save a copy of the family. Running this script on all families will be slow
+    and is not recommended.
+
+author: Anthony Evelina - CoolSys (2025)

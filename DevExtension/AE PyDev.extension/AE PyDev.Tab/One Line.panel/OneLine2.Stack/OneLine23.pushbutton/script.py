@@ -37,7 +37,6 @@ CIRCUIT_VALUE_MAP = {
 # Panel built-in param -> detail param name map
 PANEL_VALUE_MAP = {
     "Panel Name_CEDT": DB.BuiltInParameter.RBS_ELEC_PANEL_NAME,
-    "Mains Rating_CED": "Mains Rating_CED",
     "Main Breaker Rating_CED": DB.BuiltInParameter.RBS_ELEC_PANEL_MCB_RATING_PARAM,
     "Short Circuit Rating_CEDT": DB.BuiltInParameter.RBS_ELEC_SHORT_CIRCUIT_RATING,
     "Mounting_CEDT": DB.BuiltInParameter.RBS_ELEC_MOUNTING,
@@ -55,20 +54,20 @@ def get_bip_value(elem, bip):
     Read the given built-in parameter bip from elem. Return the
     appropriate typed value (str,int,double) or None if not found.
     """
-    p = elem.get_Parameter(bip)
-    if not p:
+    param = elem.get_Parameter(bip)
+    if not param:
         logger.debug("    get_bip_value: Param " + str(bip) + " not found on element " + str(elem.Id))
         return None
 
-    st = p.StorageType
-    if st == DB.StorageType.String:
-        return p.AsString()
-    elif st == DB.StorageType.Integer:
-        return p.AsInteger()
-    elif st == DB.StorageType.Double:
-        return p.AsDouble()
-    elif st == DB.StorageType.ElementId:
-        return p.AsValueString()
+    param_storage_type = param.StorageType
+    if param_storage_type == DB.StorageType.String:
+        return param.AsString()
+    elif param_storage_type == DB.StorageType.Integer:
+        return param.AsInteger()
+    elif param_storage_type == DB.StorageType.Double:
+        return param.AsDouble()
+    elif param_storage_type == DB.StorageType.ElementId:
+        return param.AsValueString()
     return None
 
 

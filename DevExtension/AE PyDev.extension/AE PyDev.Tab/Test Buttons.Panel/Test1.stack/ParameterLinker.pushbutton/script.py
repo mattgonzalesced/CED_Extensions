@@ -25,6 +25,7 @@ class ParameterMetadata:
         self.is_read_only = is_read_only  # Whether the parameter is read-only
         self.built_in_param = built_in_param  # BuiltInParameter enum (if applicable)
 
+
     def to_dict(self):
         """Returns a dictionary representation of the metadata."""
         return {

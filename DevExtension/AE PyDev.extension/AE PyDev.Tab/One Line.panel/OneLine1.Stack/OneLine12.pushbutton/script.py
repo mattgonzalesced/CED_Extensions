@@ -33,10 +33,23 @@ PARAMETER_MAP = {
 }
 
 
+class PropKeyValue(object):
+    """Storage class for matched property info and value."""
+
+    def __init__(self, name, datatype, value, istype):
+        self.name = name
+        self.datatype = datatype
+        self.value = value
+        self.istype = istype
+
+    def __repr__(self):
+        return str(self.__dict__)
+
 class ElectricalComponent:
     """Base class for electrical components."""
     def __init__(self, element):
         self.element = element
+        self.ComponentSymbol = ComponentSymbol
 
     def get_param_value(self, param):
         """Retrieve the value of a parameter."""
@@ -65,6 +78,7 @@ class ElectricalComponent:
         self._set_id(detail_item, "SLD_Symbol ID_CED", symbol_id)
         self._set_id(self.element, "SLD_Component ID_CED", component_id)
         self._set_id(self.element, "SLD_Symbol ID_CED", symbol_id)
+
 
     @staticmethod
     def _set_id(target, param_name, value):

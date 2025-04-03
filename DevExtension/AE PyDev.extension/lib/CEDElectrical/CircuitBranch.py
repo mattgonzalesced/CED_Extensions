@@ -125,7 +125,6 @@ BREAKER_FRAME_SWITCH_TABLE = {
 }
 
 
-
 def pick_circuits_from_list():
     ckts = DB.FilteredElementCollector(doc) \
         .OfClass(ElectricalSystem) \
@@ -185,7 +184,6 @@ class CircuitSettings(object):
         self.max_wire_size = '600'
         self.min_breaker_size = 20
         self.max_parallel_size = '500'  # largest wire allowed before parallel
-        self.excluded_wire_sizes = []
 
     def to_dict(self):
         return {
@@ -498,7 +496,7 @@ class CircuitBranch(object):
 
 
 def main():
-    test_condition = 1
+    test_condition = 0
 
     if test_condition == 0:
         test_circuit = revit.get_selection()

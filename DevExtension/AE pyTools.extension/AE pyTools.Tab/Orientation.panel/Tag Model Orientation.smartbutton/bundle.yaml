@@ -1,0 +1,25 @@
+title: "Tag Model Orientation"
+
+tooltip: >-
+  Version = 1.0
+  
+  Date    = 01.21.2025
+  ________________________________________________________________
+  Description:
+  
+  Modify the behavior of the orient tools. When 'ON', the tag orientation
+  will be kept to "Model" after rotation.
+  
+  
+  This behavior can help maintain uniformity when tags rotate around an
+  element, specifically when the tags are left/right justified or are not 
+  centered on their origin.
+  
+  
+  Note: if 'Tag Position' is 'OFF', this button will have no effect.
+  ________________________________________________________________
+  
+
+author: >-
+  AEvelina
+

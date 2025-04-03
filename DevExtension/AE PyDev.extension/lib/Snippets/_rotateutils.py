@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
-from Autodesk.Revit.DB import XYZ, Line, ElementTransformUtils, IndependentTag, FilteredElementCollector, TagOrientation
+from Autodesk.Revit.DB import XYZ, Line, ElementTransformUtils, IndependentTag, FilteredElementCollector, TagOrientation, LeaderEndCondition
 import math
 from collections import defaultdict
+from pyrevit import script
+from pyrevit import DB
 
+# Initialize logger
+logger = script.get_logger()
 
 # ---------------------- Helper Functions ----------------------
 
@@ -48,6 +52,8 @@ def rotate_vector_around_z(vector, angle):
 
 def collect_data_for_rotation_or_orientation(doc, elements, adjust_tag_position=True):
     """Collects and organizes all necessary data before starting the transaction."""
+    logger.info(
+        "Collecting data for {} elements with adjust_tag_position={}".format(len(elements), adjust_tag_position))
     element_data = defaultdict(list)
 
     # If tags should be adjusted, prepare to collect them
@@ -72,6 +78,7 @@ def collect_data_for_rotation_or_orientation(doc, elements, adjust_tag_position=
     # Collect element data grouped by orientation or for rotation
     for element in elements:
         if not hasattr(element, 'FacingOrientation'):
+            logger.debug("Element {} does not have FacingOrientation.".format(element.Id))
             continue
 
         # Get element orientation and location
@@ -82,8 +89,46 @@ def collect_data_for_rotation_or_orientation(doc, elements, adjust_tag_position=
 
         # Collect data, optionally including tags
         hosted_tags = tag_map.get(element.Id, []) if adjust_tag_position else []
-        tag_positions = [tag.TagHeadPosition for tag in hosted_tags if tag.TagHeadPosition]
-        tag_angles = [tag.RotationAngle for tag in hosted_tags if tag.RotationAngle is not None]
+
+        tag_positions = []
+        tag_angles = []
+        leader_data = []
+
+        for tag in hosted_tags:
+            # Collect TagHeadPosition if available
+            if tag.TagHeadPosition:
+                tag_positions.append(tag.TagHeadPosition)
+
+            # Collect RotationAngle if not None
+            if tag.RotationAngle is not None:
+                tag_angles.append(tag.RotationAngle)
+
+            # Collect leader-related data if applicable, handling exceptions
+            leader_info = {"tag": tag, "leader_elbow": None, "leader_end": None}
+
+            # Check and collect LeaderEnd if condition is Free
+            try:
+                if tag.HasLeader and tag.LeaderEndCondition == LeaderEndCondition.Free:
+                    leader_info["leader_end"] = tag.LeaderEnd
+                    logger.debug("leader end info: {}, {}".format(tag.HasLeader,tag.LeaderEndCondition))
+                    logger.debug("Collected LeaderEnd for Tag {}: {}".format(tag.Id, leader_info["leader_end"]))
+            except Exception as e:
+                logger.debug("Tag {} threw an exception when accessing LeaderEnd: {}".format(tag.Id, e))
+
+            # Check and collect LeaderElbow if HasElbow is True
+            try:
+                if tag.HasElbow:
+                    leader_info["leader_elbow"] = tag.LeaderElbow
+            except Exception as e:
+                logger.debug("Tag {} threw an exception when accessing LeaderElbow: {}".format(tag.Id, e))
+
+            # Add leader information if any is present
+            if leader_info["leader_elbow"] or leader_info["leader_end"]:
+                leader_data.append(leader_info)
+
+        logger.debug("Element {}: Orientation={}, Location={}, Tags={}, Positions={}, Angles={}, Leaders={}".format(
+            element.Id, orientation_key, element_location, len(hosted_tags), tag_positions, tag_angles,
+            len(leader_data)))
 
         # Store all collected data
         element_data[orientation_key].append({
@@ -92,18 +137,22 @@ def collect_data_for_rotation_or_orientation(doc, elements, adjust_tag_position=
             "hosted_tags": hosted_tags,
             "tag_positions": tag_positions,
             "tag_angles": tag_angles,
+            "leader_data": leader_data,
             "current_orientation": current_orientation
         })
 
     return element_data
 
 
+# Adjust tag locations, including leader positions and elbows
 def adjust_tag_locations(grouped_data, angle):
     """Adjusts the positions of tags based on the grouped data structure and specified rotation angle."""
+    logger.info("Adjusting tag locations for grouped data with rotation angle {:.4f}".format(angle))
     for data in grouped_data:
         element_location = data["element_location"]
         hosted_tags = data["hosted_tags"]
         original_tag_positions = data["tag_positions"]
+        leader_data = data.get("leader_data", [])
 
         for tag, original_tag_position in zip(hosted_tags, original_tag_positions):
             if not original_tag_position:
@@ -115,17 +164,38 @@ def adjust_tag_locations(grouped_data, angle):
             new_tag_position = element_location + rotated_offset_vector
             tag.TagHeadPosition = new_tag_position
 
-            # Debugging output
-            # print("element_location: {}".format(element_location))
-            # print("original_tag_position: {}".format(original_tag_position))
-            # print("tag_offset_vector: {}".format(tag_offset_vector))
-            # print("rotated_offset_vector: {}".format(rotated_offset_vector))
-            # print("new_tag_position: {}".format(new_tag_position))
+            logger.debug("Tag {}: Offset={}, Rotated Offset={}, New Position={}".format(
+                tag.Id, tag_offset_vector, rotated_offset_vector, new_tag_position))
+
+        # Adjust leader positions and elbows, if applicable
+        for leader_info in leader_data:
+            leader_tag = leader_info["tag"]
+            leader_elbow = leader_info["leader_elbow"]
+            leader_end = leader_info["leader_end"]
+
+            if leader_elbow:
+                leader_elbow_offset = leader_elbow - element_location
+                rotated_leader_elbow_offset = rotate_vector_around_z(leader_elbow_offset, angle)
+                new_leader_elbow = element_location + rotated_leader_elbow_offset
+                leader_tag.LeaderElbow = new_leader_elbow
+
+                logger.debug("Leader Elbow for Tag {}: Offset={}, Rotated Offset={}, New Elbow Position={}".format(
+                    leader_tag.Id, leader_elbow_offset, rotated_leader_elbow_offset, new_leader_elbow))
+
+            if leader_end:
+                leader_end_offset = leader_end - element_location
+                rotated_leader_end_offset = rotate_vector_around_z(leader_end_offset, angle)
+                new_leader_end = element_location + rotated_leader_end_offset
+                leader_tag.LeaderEnd = new_leader_end
+
+                logger.debug("Leader End for Tag {}: Offset={}, Rotated Offset={}, New End Position={}".format(
+                    leader_tag.Id, leader_end_offset, rotated_leader_end_offset, new_leader_end))
 
 
+# Adjust tag rotations
 def adjust_tag_rotations(grouped_data, angle):
     """Adjusts the rotations of tags based on the grouped data structure and specified rotation angle."""
-
+    logger.info("Adjusting tag rotations for grouped data with rotation angle {:.4f}".format(angle))
     tolerance = math.radians(5)
 
     for data in grouped_data:
@@ -134,13 +204,17 @@ def adjust_tag_rotations(grouped_data, angle):
 
         for tag, original_angle in zip(hosted_tags, tag_angles):
             if original_angle is None:
+                logger.debug("Original Angle is None: {}".format(original_angle))
                 continue
 
             # Calculate the new angle and normalize it
             new_angle = normalize_angle(original_angle + angle)
 
             # Determine the new orientation based on radians
-            if abs(new_angle % (2 * math.pi)) < tolerance or abs(new_angle % (2 * math.pi) - math.pi) < tolerance:
+            logger.debug("Adjusting Tag of Category {}".format(tag.Category))
+            if tag.Category.Id.IntegerValue == int(DB.BuiltInCategory.OST_KeynoteTags):
+                logger.debug("Tag is Keynote. Make Horizontal")
+            elif abs(new_angle % (2 * math.pi)) < tolerance or abs(new_angle % (2 * math.pi) - math.pi) < tolerance:
                 tag.TagOrientation = TagOrientation.Horizontal
             elif abs(new_angle % (2 * math.pi) - math.pi / 2) < tolerance or abs(new_angle % (2 * math.pi) - 3 * math.pi / 2) < tolerance:
                 tag.TagOrientation = TagOrientation.Vertical
@@ -148,13 +222,10 @@ def adjust_tag_rotations(grouped_data, angle):
                 tag.TagOrientation = TagOrientation.AnyModelDirection
                 tag.RotationAngle = new_angle
 
-            # # Debugging output
-            # print("Tag: {}".format(tag.Id))
-            # print("Original Angle (deg): {:.2f}".format(math.degrees(original_angle)))
-            # print("New Angle (deg): {:.2f}".format(new_angle))
-            # print("New Orientation: {}".format(tag.TagOrientation))
+            logger.debug("Tag {}: Original Angle={}, New Angle={}, Orientation={}".format(
+                tag.Id, math.degrees(original_angle), math.degrees(new_angle), tag.TagOrientation))
 
-
+# Rotate elements group with leader data handling
 def rotate_elements_group(doc, grouped_data, angle, adjust_tag_position=True, adjust_tag_rotation=True):
     """Rotate a group of elements by the specified angle around their local Z-axis."""
     for data in grouped_data:
@@ -173,7 +244,7 @@ def rotate_elements_group(doc, grouped_data, angle, adjust_tag_position=True, ad
             if adjust_tag_rotation:
                 adjust_tag_rotations(grouped_data, angle)
 
-
+# Orient elements group with leader data handling
 def orient_elements_group(doc, grouped_data, target_orientation, adjust_tag_position=True, adjust_tag_rotation=True):
     """Orient a group of elements to the target orientation."""
     for data in grouped_data:
