@@ -243,3 +243,4 @@ if __name__ == "__main__":
         tree.add_node(node)
 
     tree.walk_all()
+    tree.export_to_csv(forms.save_file('csv'))

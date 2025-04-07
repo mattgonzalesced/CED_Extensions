@@ -1,7 +1,9 @@
 from Autodesk.Revit.DB import FilteredElementCollector, Electrical, Transaction, BuiltInCategory, BuiltInParameter, \
     ElementId
-from pyrevit import script, forms, output
+from pyrevit import script, forms, output, DB
+from Autodesk.Revit.DB.Electrical import *
 
+logger = script.get_logger()
 
 def get_all_panels(doc, el_id=False):
     collector = FilteredElementCollector(doc).OfCategory(
@@ -259,4 +261,93 @@ def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
 
     return circuits_sorted
 
+
+def pick_circuits_from_list(doc,select_multiple=False):
+    ckts = DB.FilteredElementCollector(doc) \
+        .OfClass(ElectricalSystem) \
+        .WhereElementIsNotElementType()
+
+
+
+    ckt_options = {" All": []}
+
+    for ckt in ckts:
+        ckt_supply = DB.Element.Name.__get__(ckt.BaseEquipment)
+        ckt_number = ckt.CircuitNumber
+        ckt_load_name = ckt.LoadName
+        if ckt.SystemType == ElectricalSystemType.PowerCircuit:
+            ckt_rating = ckt.Rating
+            ckt_wireType = ckt.WireType
+        # print("{}/{} ({}) - {}".format(ckt_supply, ckt_number, ckt_rating, ckt_load_name))
+
+        ckt_options[" All"].append(ckt)
+
+        if ckt_supply not in ckt_options:
+            ckt_options[ckt_supply] = []
+        ckt_options[ckt_supply].append(ckt)
+
+    ckt_lookup = {}
+    grouped_options = {}
+    for group, circuits in ckt_options.items():
+        option_strings = []
+        for ckt in circuits:
+            ckt_string = "{} | {} - {}".format(DB.Element.Name.__get__(ckt.BaseEquipment), ckt.CircuitNumber,
+                                               ckt.LoadName)
+            option_strings.append(ckt_string)
+            ckt_lookup[ckt_string] = ckt  # Map string to circuit
+        option_strings.sort()
+        grouped_options[group] = option_strings
+
+    selected_option = forms.SelectFromList.show(
+        grouped_options,
+        title="Select a CKT",
+        group_selector_title="Panel:",
+        multiselect=select_multiple
+    )
+
+    if not selected_option:
+        logger.info("No circuit selected. Exiting script.")
+        script.exit()
+
+    selected_ckt = ckt_lookup[selected_option]
+    logger.info("Selected Circuit Element ID: {}".format(selected_ckt.Id))
+    return selected_ckt
+
+
+
+def pick_panel_from_list(doc, select_multiple=False):
+    panels = FilteredElementCollector(doc).OfCategory(
+        BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType()
+
+    panel_lookup = {}
+    grouped_options = {" All": []}
+
+    for panel in panels:
+        panel_name = DB.Element.Name.__get__(panel)
+        panel_data = get_panel_dist_system(panel, doc)
+        dist_system = panel_data.get('dist_system_name', 'Unspecified')
+        grouped_options[' All'].append(panel_name)
+        if dist_system not in grouped_options:
+            grouped_options[dist_system] = []
+
+        grouped_options[dist_system].append(panel_name)
+        panel_lookup[panel_name] = panel
+
+    # Sort each group
+    for group in grouped_options:
+        grouped_options[group].sort()
+
+    selected_names = forms.SelectFromList.show(
+        grouped_options,
+        title="Select Panel(s)",
+        group_selector_title="Distribution System:",
+        multiselect=select_multiple
+    )
+
+    if not selected_names:
+        logger.info("No panel selected. Exiting script.")
+        script.exit()
+
+    selected_panels = [panel_lookup[name] for name in selected_names] if select_multiple else panel_lookup[selected_names]
+    return selected_panels
 

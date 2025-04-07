@@ -1,259 +1,193 @@
 # -*- coding: utf-8 -*-
-
-
 import clr
-from pyrevit import script
-from pyrevit import revit, DB
-import re
-from pyrevit.revit import query
+import csv
+from pyrevit import script, revit, DB
+from pyrevit.revit.db import query
+from Autodesk.Revit.UI.Selection import ObjectType
+from System.Collections.Generic import List
 from collections import defaultdict
-
-# Access the current Revit document
-doc = revit.doc
-
-# Set up the output window
-output = script.get_output()
-output.close_others()
-output.set_width(800)
-
-# -*- coding: utf-8 -*-
-__title__ = "SUPER CIRCUIT"
-
-from pyrevit import DB, revit
-from pyrevit.revit.db import transaction, query
-from pyrevit import script
-import re
-from Snippets._elecutils import get_all_light_devices, get_all_panels, get_all_elec_fixtures
-from System.Collections.Generic import List  # Import .NET List for IList compatibility
-
 
 doc = revit.doc
 uidoc = revit.uidoc
+output = script.get_output()
+output.close_others()
+output.set_width(800)
+logger = script.get_logger()
+# === Load CSV ===
+def load_csv_table(filepath):
+    with open(filepath, 'r') as file:
+        return list(csv.DictReader(file))
 
+# === Pick face ===
+def pick_face_with_reference():
+    ref = uidoc.Selection.PickObject(ObjectType.Face, "Pick a face")
+    face = doc.GetElement(ref.ElementId).GetGeometryObjectFromReference(ref)
+    face_norm = face.FaceNormal
+    location = doc.GetElement(ref.ElementId).Location
+    normal = face.ComputeNormal(DB.UV(0.5, 0.5)).Normalize()
+    bbox = face.GetBoundingBox()
+    logger.debug("ref:{}, Face: {}, face_norm:{}, norm:{}, loc:{} ".format(ref.ElementId,face,face_norm,normal,location))
+    return face, ref, normal, bbox
 
-def add_placeholder_family(doc, voltage, poles):
-    family_name = "Elfx_Existing Ckt Placeholder_Unhosted"
-    family_types = {
-        (1292, 1): "120V/1P",
-        (2239, 2): "208V/2P",
-        (2239, 3): "208V/3P"
-    }
+# === Get direction in plane of face ===
+def get_reference_direction(normal):
+    return DB.XYZ(1, 0, 0) if abs(normal.Z) > 0.9 else DB.XYZ(0, 0, 1)
 
-    voltage=round(voltage)
-    placeholder_type = family_types.get((voltage, poles))
+# === Generate placement points ===
+def generate_face_split_points(face, bbox, data_rows):
+    odds = [r for r in data_rows if int(r['CKT_Circuit Number_CEDT']) % 2 == 1]
+    evens = [r for r in data_rows if int(r['CKT_Circuit Number_CEDT']) % 2 == 0]
 
-    if not placeholder_type:
-        raise ValueError("Invalid voltage/pole combination: Voltage={}, Poles={}".format(voltage, poles))
+    min_u, max_u = bbox.Min.U, bbox.Max.U
+    min_v, max_v = bbox.Min.V, bbox.Max.V
+    mid_u = (min_u + max_u) / 2.0
 
-    family_symbols = query.get_family_symbol(family_name,placeholder_type,doc)
-    family_symbol=family_symbols[0]
-    family_symbol.Activate()
+    def create_uvs(start_u, count):
+        return [DB.UV(start_u, max_v - i * ((max_v - min_v) / max(1, count - 1))) for i in range(count)]
 
-    location = DB.XYZ(0, 0, 0)  # Default placement location
-    return doc.Create.NewFamilyInstance(location, family_symbol, DB.Structure.StructuralType.NonStructural)
+    left = [face.Evaluate(uv) for uv in create_uvs(min_u + 0.05, len(odds))]
+    right = [face.Evaluate(uv) for uv in create_uvs(mid_u + 0.05, len(evens))]
 
-# Helper function to create electrical systems
-def create_electrical_system(doc, element_ids, system_type, panel_element):
-    if not element_ids or len(element_ids) == 0:
-        return None
+    return {"odds": odds, "evens": evens, "left_points": left, "right_points": right}
 
-    element_id_list = List[DB.ElementId](element_ids)
-    new_system = DB.Electrical.ElectricalSystem.Create(doc, element_id_list, system_type)
-    if new_system and panel_element:
-        new_system.SelectPanel(panel_element)
-        doc.Regenerate()
-    return new_system
+# === Family + Param utils ===
+def get_family_symbol(row):
+    fam, typ = row['Family'].strip(), row['Type'].strip()
+    symbols = query.get_family_symbol(fam, typ, doc)
+    return symbols[0] if symbols else None
 
-
-# Helper function to extract the first number from a circuit string
-def get_first_number_from_circuit(circuit_str):
-    if not circuit_str:
-        return float('inf')  # Return a high value to sort None or empty circuit numbers last
-    first_part = circuit_str.split(",")[0]
-    match = re.search(r'\d+', first_part)
-    return int(match.group()) if match else float('inf')
-
-# Function to create an electrical system and select a panel
-def create_electrical_system(doc, element_ids, system_type, panel_element):
-    if not element_ids or len(element_ids) == 0:
-        return None
-
-    element_id_list = List[DB.ElementId](element_ids)
-    new_system = DB.Electrical.ElectricalSystem.Create(doc, element_id_list, system_type)
-    if new_system and panel_element:
-        new_system.SelectPanel(panel_element)
-        doc.Regenerate()
-    return new_system
-
-# Function to organize elements by Panel and Circuit Number
-def group_elements_by_circuit(elements, panel_elements):
-    grouped_dict = {}
-    unnamed_group = {}
-    unnamed_counter = 1
-
-    # Create a lookup dictionary for quick panel name to element mapping
-    panel_lookup = {query.get_param_value(query.get_param(panel, "Panel Name")): panel for panel in panel_elements}
-
-    for element in elements:
-        # Retrieve parameters using query functions
-        panel_param = query.get_param(element, "CKT_Panel_CEDT")
-        circuit_param = query.get_param(element, "CKT_Circuit Number_CEDT")
-        rating_param = query.get_param(element, "CKT_Rating_CED")
-        load_name_param = query.get_param(element, "CKT_Load Name_CEDT")
-        ckt_notes_param = query.get_param(element, "CKT_Schedule Notes_CEDT")
-
-        # Get actual parameter values
-        panel_name = query.get_param_value(panel_param)
-        circuit_number = query.get_param_value(circuit_param)
-        rating = query.get_param_value(rating_param)
-        load_name = query.get_param_value(load_name_param)
-        ckt_notes = query.get_param_value(ckt_notes_param)
-
-        # Skip elements without valid `ckt-Panel` and `ckt-Circuit Number` entirely
-        if not panel_name and not circuit_number:
+def set_instance_parameters(inst, row):
+    skip = ['Family', 'Type', 'INCLUDE CIRCUIT', 'CIRCUIT SORT']
+    for key, val in row.items():
+        if key in skip or not val:
             continue
+        param = inst.LookupParameter(key)
+        if param and not param.IsReadOnly:
+            try:
+                if param.StorageType == DB.StorageType.String:
+                    param.Set(str(val))
+                elif param.StorageType == DB.StorageType.Integer:
+                    param.Set(int(float(val)))
+                elif param.StorageType == DB.StorageType.Double:
+                    # Special handling for Apparent Load keys
+                    if key in ["Apparent Load Ph 1_CED", "Apparent Load Ph 2_CED", "Apparent Load Ph 3_CED"]:
+                        logger.debug("Setting Apparent Load Units")
+                        forge_type_va = DB.ForgeTypeId("autodesk.unit.unit:voltAmperes-1.0.1")
+                        converted = DB.UnitUtils.ConvertToInternalUnits(float(val), forge_type_va)
+                        param.Set(converted)
+                        logger.debug("Original Val: {}, Converted: {}".format(val,converted))
+                    else:
+                        logger.debug("No unit conversion, regular double")
+                        param.Set(float(val))
+            except Exception as e:
+                output.print_md("⚠️ Failed to set {}: {}".format(key, e))
 
-        # Handle elements with "<unnamed>" circuit numbers individually
-        if circuit_number == "<unnamed>" and not panel_name:
-            key = "<unnamed>{}".format(unnamed_counter)
-            unnamed_group[key] = {
-                "elements": [element],
-                "element_ids": [element.Id],
-                "panel_name": panel_name,
-                "panel_element": None,
-                "circuit_number": circuit_number,
-                "rating": rating,
-                "load_name": load_name,
-                "ckt_notes": ckt_notes
-            }
-            unnamed_counter += 1
-            continue
 
-        # Find the corresponding panel element using the lookup dictionary
-        panel_element = panel_lookup.get(panel_name)
+def create_electrical_system(doc, element_ids, panel_element):
+    if not element_ids or not panel_element:
+        return None
+    elist = List[DB.ElementId](element_ids)
+    system = DB.Electrical.ElectricalSystem.Create(doc, elist, DB.Electrical.ElectricalSystemType.PowerCircuit)
+    if system:
+        system.SelectPanel(panel_element)
+        doc.Regenerate()
+    return system
 
-        # Create a unique key using panel and circuit number
-        key = (panel_name, circuit_number)
+# === MAIN EXECUTION ===
+csv_path = r"C:\Users\Aevelina\OneDrive - CoolSys Inc\Documents\FilteredDataExport2.csv"
+table = load_csv_table(csv_path)
 
-        # Group elements by key
-        if key not in grouped_dict:
-            grouped_dict[key] = {
-                "elements": [],
-                "element_ids": [],
-                "panel_name": panel_name,
-                "panel_element": panel_element,
-                "circuit_number": circuit_number,
-                "rating": rating,
-                "load_name": load_name,
-                "ckt_notes": ckt_notes
-            }
+face, ref, normal, bbox = pick_face_with_reference()
+ref_dir = get_reference_direction(normal)
+placement = generate_face_split_points(face, bbox, table)
 
-        # Ensure ElementId is collected
-        grouped_dict[key]["elements"].append(element)
-        grouped_dict[key]["element_ids"].append(element.Id)
+# Collect panels and build panel name lookup
+panel_lookup = {
+    query.get_param_value(query.get_param(p, "Panel Name")): p
+    for p in DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType()
+}
 
-    # Sort the keys by panel name, then by the first number in the circuit number
-    sorted_keys = sorted(
-        grouped_dict.keys(),
-        key=lambda k: (
-            k[0],  # Panel Name
-            get_first_number_from_circuit(k[1]) % 2 == 0,  # True for even, False for odd (prioritizes odd)
-            get_first_number_from_circuit(k[1])  # Sort numerically after odd/even is prioritized
-        )
-    )
+# === PLACEMENT & GROUPING ===
+instance_row_pairs = []
+circuit_groups = {}
+circuit_group_keys_in_order = []
 
-    # Return sorted list of groups and unnamed group separately for easier processing
-    return [(key, grouped_dict[key]) for key in sorted_keys], unnamed_group
-def main():
-    doc = revit.doc
-
-    # Collectors for the elements
-    ee_collector = list(get_all_panels(doc))  # Panels
-    ef_collector = list(get_all_elec_fixtures(doc))  # Electrical Fixtures
-    ld_collector = list(get_all_light_devices(doc))  # Lighting Devices
-
-    selection = revit.get_selection()
-    # Combine all elements that need circuiting
-    if not selection:
-        elements_to_circuit = ef_collector + ld_collector + ee_collector
-    else:
-        elements_to_circuit = selection
-
-    # Group elements by panel and circuit
-    grouped_elements, unnamed_elements = group_elements_by_circuit(elements_to_circuit, ee_collector)
-
-    # Define the electrical system type
-    system_type = DB.Electrical.ElectricalSystemType.PowerCircuit
-
-    # Use a Transaction Group to handle multiple transactions together
-    tg = DB.TransactionGroup(doc, "Create and Update Circuits")
+with DB.TransactionGroup(doc, "Place + Wire + Param Families") as tg:
     tg.Start()
 
-    try:
-        # First Transaction: Create circuits and assign to panels
-        created_systems = {}  # To store created systems and associate them with original groupings
+    with revit.Transaction("Activate Symbols", doc):
+        activated = set()
+        for row in table:
+            sym = get_family_symbol(row)
+            if sym and not sym.IsActive and sym.Id.IntegerValue not in activated:
+                sym.Activate()
+                activated.add(sym.Id.IntegerValue)
 
-        with revit.Transaction("Create Circuits and Assign Panels"):
-            for key, data in grouped_elements:
-                sample_element = data['elements'][0]
-                voltage = query.get_param_value(query.get_param(sample_element, "Voltage_CED"))
-                poles = query.get_param_value(query.get_param(sample_element, "Number of Poles_CED"))
-                # Place placeholder
-                placeholder = add_placeholder_family(doc, voltage, poles)
-                doc.Regenerate()
-                data['element_ids'].append(placeholder.Id)
+    # Map circuit number to face points (still needed)
+    odds_map = {r['CKT_Circuit Number_CEDT']: pt for r, pt in zip(placement['odds'], placement['left_points'])}
+    evens_map = {r['CKT_Circuit Number_CEDT']: pt for r, pt in zip(placement['evens'], placement['right_points'])}
 
-                if data["panel_element"] and data["element_ids"]:
-                    created_system = create_electrical_system(doc, data["element_ids"], system_type, data["panel_element"])
-                    if created_system:
-                        created_systems[created_system.Id] = key  # Link to the group key
-                    else:
-                        print("Skipped creating system for: {}".format(key))
+    with revit.Transaction("Place and Parameterize", doc):
+        for row in table:
+            circuit_number = row['CKT_Circuit Number_CEDT'].strip()
+            panel = row['CKT_Panel_CEDT'].strip()
+            pt = odds_map.get(circuit_number) or evens_map.get(circuit_number)
+            output.print_md("ckt: {}, Point: {}".format(circuit_number,pt))
+            if not pt:
+                output.print_md("⚠️ No point found for circuit {}".format(circuit_number))
+                continue
 
-            for key, data in unnamed_elements.items():
-                if data["element_ids"]:
-                    created_system = create_electrical_system(doc, data["element_ids"], system_type, data["panel_element"])
-                    if created_system:
-                        created_systems[created_system.Id] = key
-                    else:
-                        print("Skipped creating system for unnamed group: {}".format(key))
+            symbol = get_family_symbol(row)
+            if not symbol:
+                output.print_md("❌ Missing symbol for {} / {}".format(row['Family'], row['Type']))
+                continue
 
-        # Collect all electrical systems created in the project
-        all_systems = DB.FilteredElementCollector(doc).OfClass(DB.Electrical.ElectricalSystem).ToElements()
+            instance = doc.Create.NewFamilyInstance(ref, pt, ref_dir, symbol)
+            set_instance_parameters(instance, row)
+            instance_row_pairs.append((instance, row))
 
-        # Second Transaction: Update circuit parameters based on original group data
-        with revit.Transaction("Update Circuit Parameters"):
-            for system in all_systems:
-                if system.Id in created_systems:
-                    key = created_systems[system.Id]
-                    # Check if it's a grouped element or unnamed
-                    if key in dict(grouped_elements):
-                        data = dict(grouped_elements)[key]
-                    else:
-                        data = unnamed_elements.get(key)
+            key = (panel, circuit_number)
+            if key not in circuit_groups:
+                circuit_groups[key] = {
+                    "elements": [],
+                    "panel": panel_lookup.get(panel),
+                    "rating": row.get("CKT_Rating_CED", "").strip(),
+                    "load_name": row.get("CKT_Load Name_CEDT", "").strip(),
+                    "notes": row.get("CKT_Schedule Notes_CEDT", "").strip()
+                }
+                circuit_group_keys_in_order.append(key)
 
-                    # Update parameters
-                    if data:
-                        # Example of updating circuit parameters: "ckt-Rating" and "ckt-Load Name"
-                        rating_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM)
-                        load_name_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME)
-                        ckt_notes_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NOTES_PARAM)
+            circuit_groups[key]["elements"].append(instance)
 
-                        if rating_param and data["rating"]:
-                            rating_param.Set(data["rating"])
+    created_systems = {}
 
-                        if load_name_param and data["load_name"]:
-                            load_name_param.Set(data["load_name"])
+    with revit.Transaction("Create Circuits", doc):
+        for key in circuit_group_keys_in_order:  # maintain CSV order
+            data = circuit_groups[key]
+            ids = [e.Id for e in data["elements"]]
+            panel = data["panel"]
+            if not panel or not ids:
+                output.print_md("⚠️ Skipping circuit {} — missing panel or elements".format(key))
+                continue
+            system = create_electrical_system(doc, ids, panel)
+            if system:
+                created_systems[system.Id] = data
 
-                        if ckt_notes_param and data["ckt_notes"]:
-                            ckt_notes_param.Set(data["ckt_notes"])
+    with revit.Transaction("Set Circuit Parameters", doc):
+        for sys_id, data in created_systems.items():
+            sys = doc.GetElement(sys_id)
+            if not sys:
+                continue
 
-        # Commit the transaction group to save all changes
-        tg.Assimilate()
+            if data["load_name"]:
+                sys.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME).Set(data["load_name"])
+            if data["rating"]:
+                sys.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM).Set(data["rating"])
+            if data["notes"]:
+                sys.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NOTES_PARAM).Set(data["notes"])
 
-    except Exception as e:
-        print("Error occurred: {}. Rolling back all changes.".format(e))
-        tg.RollBack()
+    tg.Assimilate()
 
-if __name__ == "__main__":
-    main()
+output.print_md("### ✅ Placement & Circuiting Complete")
+output.print_md("**Odds:** {}".format([r['CKT_Circuit Number_CEDT'] for r in placement['odds']]))
+output.print_md("**Evens:** {}".format([r['CKT_Circuit Number_CEDT'] for r in placement['evens']]))
