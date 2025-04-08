@@ -179,6 +179,8 @@ headerText1.Text = "CSV Fixture Name"
 headerText1.FontSize = 16
 headerText1.FontWeight = FontWeights.Bold
 headerText1.HorizontalAlignment = HorizontalAlignment.Stretch
+
+
 from System.Windows.Controls import Grid as WpfGrid
 WpfGrid.SetColumn(headerText1, 0)
 headerGrid.Children.Add(headerText1)
@@ -268,6 +270,8 @@ cancel_button.Click += cancel_clicked
 
 #------------------------------------------------------------------------------
 # Show the window as a dialog.
+
+selected_level = forms.select_levels(multiple=False)
 dialog_result = window.ShowDialog()
 
 if not dialog_result:
@@ -282,7 +286,7 @@ else:
         name_to_symbol_map = {name: symbol_label_map[label]
                               for name, label in result["selections"].items()}
         t = Transaction(doc, "Place CSV Lighting Fixtures")
-        t.Start()
+        t.Start()        
         try:
             for row in fixture_rows:
                 fixture_name = row.get("Name", "").strip()
@@ -324,7 +328,7 @@ else:
                     doc.Regenerate()
 
                 loc = XYZ(x, y, z)
-                inst = doc.Create.NewFamilyInstance(loc, symbol, Structure.StructuralType.NonStructural)
+                inst = doc.Create.NewFamilyInstance(loc, symbol, selected_level, Structure.StructuralType.NonStructural)
 
                 if abs(rot_deg) > 1e-6:
                     angle_radians = math.radians(rot_deg)
