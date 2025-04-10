@@ -2,7 +2,7 @@
     "extensions": [
       {
         "builtin": "False",
-        "enable": "True",
+        "enable": "False",
         "type": "extension",
         "name": "AE PyDev",
         "description": "Development Tools",
@@ -31,7 +31,7 @@
       },
       {
         "builtin": "False",
-        "enable": "True",
+        "enable": "False",
         "disabled": "true",
         "type": "extension",
         "name": "MG PyTools",
