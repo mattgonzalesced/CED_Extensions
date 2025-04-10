@@ -122,6 +122,18 @@ with codecs.open(csv_path, 'r', encoding='utf-8-sig') as f:
 if not unique_names:
     script.exit("No valid 'Name' column found or CSV is empty.")
 
+def extract_fixture_type(csv_name):
+    # Look for the substring between 'LUMINAIRE-' and '_Symbol'
+    start_marker = "LUMINAIRE-"
+    end_marker = "_Symbol"
+    start_index = csv_name.find(start_marker)
+    end_index = csv_name.find(end_marker, start_index)
+    if start_index != -1 and end_index != -1:
+        # Extract the substring after the start marker and before the end marker.
+        # This automatically trims out any extra parts.
+        return csv_name[start_index+len(start_marker):end_index].strip()
+    return None
+
 #------------------------------------------------------------------------------
 # 3. Collect lighting fixture FamilySymbols from the project.
 fixture_symbols = FilteredElementCollector(doc) \
@@ -228,13 +240,35 @@ for name in sorted(unique_names):
     cmb.IsTextSearchEnabled = True
     cmb.HorizontalAlignment = HorizontalAlignment.Stretch
     cmb.Margin = Thickness(5, 0, 0, 0)
+    
+    # Populate the ComboBox with available symbol labels.
     for item in symbol_labels_sorted:
         cmb.Items.Add(item)
-    cmb.SelectedIndex = 0
+    
+    # Extract the fixture type code from the CSV fixture name.
+    fixture_type_code = extract_fixture_type(name)
+    preselected = False
+    if fixture_type_code:
+        # Try to match this code with the Fixture Type_CEDT parameter for each symbol.
+        for index, label in enumerate(symbol_labels_sorted):
+            symbol = symbol_label_map[label]
+            # Use LookupParameter to get the type parameter "Fixture Type_CEDT"
+            param = symbol.LookupParameter("Fixture Type_CEDT")
+            if param:
+                symbol_type_value = param.AsString()  # or param.AsValueString() if needed
+                # Compare case-insensitively
+                if symbol_type_value and symbol_type_value.strip().lower() == fixture_type_code.lower():
+                    cmb.SelectedIndex = index  # preselect this matching item
+                    preselected = True
+                    break
+    # If no match was found, do not set any default, leaving the ComboBox blank.
+    if not preselected:
+        cmb.SelectedIndex = -1  # Ensure it's blank; alternatively, just do nothing if default is None.
+    
     WpfGrid.SetColumn(cmb, 1)
     rowGrid.Children.Add(cmb)
     
-    # Wrap the rowGrid in a Border to add a divider line.
+    # Wrap the rowGrid in a Border to add a divider.
     border = Border()
     border.BorderBrush = Brushes.Gray
     border.BorderThickness = Thickness(0, 0, 0, 1)
@@ -243,6 +277,7 @@ for name in sorted(unique_names):
     
     mapping_dict[name] = cmb
     mapping_stack_panel.Children.Add(border)
+
 
 #------------------------------------------------------------------------------
 # Prepare a result container.
