@@ -1,0 +1,19 @@
+title:
+  en_us: Unhide All Elements in Active View
+
+tooltip: 
+  en_us: >-
+    Version = 1.0
+    
+    Date    = 04.10.2025
+    ________________________________________________________________
+    Description:
+    
+    Unhide and Select all manually hidden elements in the active view.
+    
+    ________________________________________________________________
+
+context:
+  not_any:
+    - active-legend
+    - active-schedule

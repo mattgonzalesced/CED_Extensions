@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import clr
 import csv
-from pyrevit import script, revit, DB
+from pyrevit import script, revit, DB, forms
 from pyrevit.revit.db import query
 from Autodesk.Revit.UI.Selection import ObjectType
 from System.Collections.Generic import List
 from collections import defaultdict
+from Snippets.family_utils import FamilyLoader
 
 doc = revit.doc
 uidoc = revit.uidoc
@@ -13,10 +14,13 @@ output = script.get_output()
 output.close_others()
 output.set_width(800)
 logger = script.get_logger()
+
+
 # === Load CSV ===
 def load_csv_table(filepath):
     with open(filepath, 'r') as file:
         return list(csv.DictReader(file))
+
 
 # === Pick face ===
 def pick_face_with_reference():
@@ -26,12 +30,15 @@ def pick_face_with_reference():
     location = doc.GetElement(ref.ElementId).Location
     normal = face.ComputeNormal(DB.UV(0.5, 0.5)).Normalize()
     bbox = face.GetBoundingBox()
-    logger.debug("ref:{}, Face: {}, face_norm:{}, norm:{}, loc:{} ".format(ref.ElementId,face,face_norm,normal,location))
+    logger.debug(
+        "ref:{}, Face: {}, face_norm:{}, norm:{}, loc:{} ".format(ref.ElementId, face, face_norm, normal, location))
     return face, ref, normal, bbox
+
 
 # === Get direction in plane of face ===
 def get_reference_direction(normal):
     return DB.XYZ(1, 0, 0) if abs(normal.Z) > 0.9 else DB.XYZ(0, 0, 1)
+
 
 # === Generate placement points ===
 def generate_face_split_points(face, bbox, data_rows):
@@ -50,11 +57,13 @@ def generate_face_split_points(face, bbox, data_rows):
 
     return {"odds": odds, "evens": evens, "left_points": left, "right_points": right}
 
+
 # === Family + Param utils ===
 def get_family_symbol(row):
     fam, typ = row['Family'].strip(), row['Type'].strip()
     symbols = query.get_family_symbol(fam, typ, doc)
     return symbols[0] if symbols else None
+
 
 def set_instance_parameters(inst, row):
     skip = ['Family', 'Type', 'INCLUDE CIRCUIT', 'CIRCUIT SORT']
@@ -75,7 +84,7 @@ def set_instance_parameters(inst, row):
                         forge_type_va = DB.ForgeTypeId("autodesk.unit.unit:voltAmperes-1.0.1")
                         converted = DB.UnitUtils.ConvertToInternalUnits(float(val), forge_type_va)
                         param.Set(converted)
-                        logger.debug("Original Val: {}, Converted: {}".format(val,converted))
+                        logger.debug("Original Val: {}, Converted: {}".format(val, converted))
                     else:
                         logger.debug("No unit conversion, regular double")
                         param.Set(float(val))
@@ -93,8 +102,10 @@ def create_electrical_system(doc, element_ids, panel_element):
         doc.Regenerate()
     return system
 
+
 # === MAIN EXECUTION ===
 csv_path = r"C:\Users\Aevelina\OneDrive - CoolSys Inc\Documents\FilteredDataExport2.csv"
+filepath = forms.pick_file(file_ext="csv", multi_file=False, title="Pick CSV File")
 table = load_csv_table(csv_path)
 
 face, ref, normal, bbox = pick_face_with_reference()
@@ -104,7 +115,8 @@ placement = generate_face_split_points(face, bbox, table)
 # Collect panels and build panel name lookup
 panel_lookup = {
     query.get_param_value(query.get_param(p, "Panel Name")): p
-    for p in DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType()
+    for p in DB.FilteredElementCollector(doc).OfCategory(
+        DB.BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType()
 }
 
 # === PLACEMENT & GROUPING ===
@@ -132,7 +144,7 @@ with DB.TransactionGroup(doc, "Place + Wire + Param Families") as tg:
             circuit_number = row['CKT_Circuit Number_CEDT'].strip()
             panel = row['CKT_Panel_CEDT'].strip()
             pt = odds_map.get(circuit_number) or evens_map.get(circuit_number)
-            output.print_md("ckt: {}, Point: {}".format(circuit_number,pt))
+            output.print_md("ckt: {}, Point: {}".format(circuit_number, pt))
             if not pt:
                 output.print_md("⚠️ No point found for circuit {}".format(circuit_number))
                 continue
