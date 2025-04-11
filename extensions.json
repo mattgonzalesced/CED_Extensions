@@ -2,14 +2,14 @@
     "extensions": [
       {
         "builtin": "False",
-        "enable": "False",
+        "enable": "True",
         "type": "extension",
         "name": "AE PyDev",
         "description": "Development Tools",
         "author": "Anthony Evelina",
         "author-url": "https://keybase.io/ein",
-        "url": "https://bitbucket.org/eirannejad/mypublictools.git",
-        "website": "",
+        "url": "https://github.com/mattgonzalesced/CED_Extensions.git",
+        "website": "https://github.com/mattgonzalesced/CED_Extensions",
         "image": "",
         "dependencies": []
         
@@ -23,23 +23,23 @@
         "description": "Development Tools",
         "author": "Anthony Evelina",
         "author-url": "https://keybase.io/ein",
-        "url": "https://bitbucket.org/eirannejad/mypublictools.git",
-        "website": "",
+        "url": "https://github.com/mattgonzalesced/CED_Extensions.git",
+        "website": "https://github.com/mattgonzalesced/CED_Extensions",
         "image": "",
         "dependencies": []
 
       },
       {
         "builtin": "False",
-        "enable": "False",
+        "enable": "True",
         "disabled": "true",
         "type": "extension",
         "name": "MG PyTools",
         "description": "Development Tools",
-        "author": "Me",
+        "author": "M Gonzales",
         "author-url": "https://keybase.io/ein",
-        "url": "https://bitbucket.org/eirannejad/mypublictools.git",
-        "website": "",
+        "url": "https://github.com/mattgonzalesced/CED_Extensions.git",
+        "website": "https://github.com/mattgonzalesced/CED_Extensions",
         "image": "",
         "dependencies": []
    
