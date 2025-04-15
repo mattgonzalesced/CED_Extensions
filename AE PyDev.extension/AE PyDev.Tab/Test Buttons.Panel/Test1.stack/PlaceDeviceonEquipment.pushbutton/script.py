@@ -228,8 +228,14 @@ class ChildElement:
                 level = doc.GetElement(self.level_id)
                 if level is None:
                     raise ValueError("LevelId is invalid for placing 3D elements.")
+
+                level_elevation = level.Elevation  # internal units (feet)
+                absolute_point = self.location_point
+                relative_z = absolute_point.Z - level_elevation  # offset above level
+                adjusted_loc_point = DB.XYZ(absolute_point.X, absolute_point.Y, relative_z)
+
                 placed_element = doc.Create.NewFamilyInstance(
-                    self.location_point, self.family_symbol, level, self.structural_type
+                    adjusted_loc_point, self.family_symbol, level, self.structural_type
                 )
 
             if placed_element:
@@ -387,6 +393,15 @@ def pick_family():
 
         # Skip families without a category or those classified as tags
         if not fam_category or fam_category.IsTagCategory:
+            logger.debug("Skipped family: {}, Category: {}".format(
+                fam.Name, fam_category.Name if fam_category else "None"
+            ))
+            continue
+
+        if fam_category.Id.IntegerValue in [
+            int(DB.BuiltInCategory.OST_MultiCategoryTags),
+            int(DB.BuiltInCategory.OST_KeynoteTags)
+        ]:
             logger.debug("Skipped family: {}, Category: {}".format(
                 fam.Name, fam_category.Name if fam_category else "None"
             ))
