@@ -4,28 +4,30 @@
         "builtin": "False",
         "enable": "True",
         "type": "extension",
-        "name": "AE PyTools",
-        "description": "Company wide Tools for pyRevit",
-        "author": "Ehsan Iran-Nejad",
-        "author-url": "https://keybase.io/ein",
-        "url": "https://github.com/eirannejad/pyRevit.git",
-        "website": "",
-        "image": "",
-        "dependencies": []
-      },
-      {
-        "builtin": "False",
-        "enable": "True",
-        "type": "extension",
-        "name": "AePyTools",
+        "name": "AE PyDev",
         "description": "Development Tools",
-        "author": "Me",
+        "author": "Anthony Evelina",
         "author-url": "https://keybase.io/ein",
-        "url": "https://bitbucket.org/eirannejad/mypublictools.git",
-        "website": "",
+        "url": "https://github.com/mattgonzalesced/CED_Extensions.git",
+        "website": "https://github.com/mattgonzalesced/CED_Extensions",
         "image": "",
         "dependencies": []
         
+      },
+       {
+        "builtin": "False",
+        "enable": "True",
+        "type": "extension",
+        "rocket_mode_compatible": "True",
+        "name": "AE pyTools",
+        "description": "Development Tools",
+        "author": "Anthony Evelina",
+        "author-url": "https://keybase.io/ein",
+        "url": "https://github.com/mattgonzalesced/CED_Extensions.git",
+        "website": "https://github.com/mattgonzalesced/CED_Extensions",
+        "image": "",
+        "dependencies": []
+
       },
       {
         "builtin": "False",
@@ -34,27 +36,13 @@
         "type": "extension",
         "name": "MG PyTools",
         "description": "Development Tools",
-        "author": "Me",
+        "author": "M Gonzales",
         "author-url": "https://keybase.io/ein",
-        "url": "https://bitbucket.org/eirannejad/mypublictools.git",
-        "website": "",
+        "url": "https://github.com/mattgonzalesced/CED_Extensions.git",
+        "website": "https://github.com/mattgonzalesced/CED_Extensions",
         "image": "",
         "dependencies": []
    
-      },
-      {
-        "builtin": "False",
-        "enable": "True",
-        "disabled": "true",
-        "type": "extension",
-        "name": "TEST NAME",
-        "description": "Development Tools",
-        "author": "Me",
-        "author-url": "https://keybase.io/ein",
-        "url": "https://bitbucket.org/eirannejad/mypublictools.git",
-        "website": "",
-        "image": "",
-        "dependencies": []
       }
     ]
   }
