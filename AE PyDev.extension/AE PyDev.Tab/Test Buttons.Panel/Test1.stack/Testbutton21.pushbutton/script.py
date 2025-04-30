@@ -126,56 +126,56 @@ BREAKER_FRAME_SWITCH_TABLE = {
 
 
 
-def pick_circuits_from_list():
-    ckts = DB.FilteredElementCollector(doc) \
-        .OfClass(ElectricalSystem) \
-        .WhereElementIsNotElementType()
-
-    print("Total Circuits in Doc: {}".format(ckts.GetElementCount()))
-
-    ckt_options = {" All": []}
-
-    for ckt in ckts:
-        ckt_supply = DB.Element.Name.__get__(ckt.BaseEquipment)
-        ckt_number = ckt.CircuitNumber
-        ckt_load_name = ckt.LoadName
-        if ckt.SystemType == ElectricalSystemType.PowerCircuit:
-            ckt_rating = ckt.Rating
-            ckt_wireType = ckt.WireType
-        # print("{}/{} ({}) - {}".format(ckt_supply, ckt_number, ckt_rating, ckt_load_name))
-
-        ckt_options[" All"].append(ckt)
-
-        if ckt_supply not in ckt_options:
-            ckt_options[ckt_supply] = []
-        ckt_options[ckt_supply].append(ckt)
-
-    ckt_lookup = {}
-    grouped_options = {}
-    for group, circuits in ckt_options.items():
-        option_strings = []
-        for ckt in circuits:
-            ckt_string = "{} | {} - {}".format(DB.Element.Name.__get__(ckt.BaseEquipment), ckt.CircuitNumber,
-                                               ckt.LoadName)
-            option_strings.append(ckt_string)
-            ckt_lookup[ckt_string] = ckt  # Map string to circuit
-        option_strings.sort()
-        grouped_options[group] = option_strings
-
-    selected_option = forms.SelectFromList.show(
-        grouped_options,
-        title="Select a CKT",
-        group_selector_title="Panel:",
-        multiselect=False
-    )
-
-    if not selected_option:
-        logger.info("No circuit selected. Exiting script.")
-        script.exit()
-
-    selected_ckt = ckt_lookup[selected_option]
-    print("Selected Circuit Element ID: {}".format(selected_ckt.Id))
-    return selected_ckt
+# def pick_circuits_from_list():
+#     ckts = DB.FilteredElementCollector(doc) \
+#         .OfClass(ElectricalSystem) \
+#         .WhereElementIsNotElementType()
+#
+#     print("Total Circuits in Doc: {}".format(ckts.GetElementCount()))
+#
+#     ckt_options = {" All": []}
+#
+#     for ckt in ckts:
+#         ckt_supply = DB.Element.Name.__get__(ckt.BaseEquipment)
+#         ckt_number = ckt.CircuitNumber
+#         ckt_load_name = ckt.LoadName
+#         if ckt.SystemType == ElectricalSystemType.PowerCircuit:
+#             ckt_rating = ckt.Rating
+#             ckt_wireType = ckt.WireType
+#         # print("{}/{} ({}) - {}".format(ckt_supply, ckt_number, ckt_rating, ckt_load_name))
+#
+#         ckt_options[" All"].append(ckt)
+#
+#         if ckt_supply not in ckt_options:
+#             ckt_options[ckt_supply] = []
+#         ckt_options[ckt_supply].append(ckt)
+#
+#     ckt_lookup = {}
+#     grouped_options = {}
+#     for group, circuits in ckt_options.items():
+#         option_strings = []
+#         for ckt in circuits:
+#             ckt_string = "{} | {} - {}".format(DB.Element.Name.__get__(ckt.BaseEquipment), ckt.CircuitNumber,
+#                                                ckt.LoadName)
+#             option_strings.append(ckt_string)
+#             ckt_lookup[ckt_string] = ckt  # Map string to circuit
+#         option_strings.sort()
+#         grouped_options[group] = option_strings
+#
+#     selected_option = forms.SelectFromList.show(
+#         grouped_options,
+#         title="Select a CKT",
+#         group_selector_title="Panel:",
+#         multiselect=False
+#     )
+#
+#     if not selected_option:
+#         logger.info("No circuit selected. Exiting script.")
+#         script.exit()
+#
+#     selected_ckt = ckt_lookup[selected_option]
+#     print("Selected Circuit Element ID: {}".format(selected_ckt.Id))
+#     return selected_ckt
 
 
 class CircuitSettings(object):
@@ -351,7 +351,7 @@ class CircuitBranch(object):
     def calculate_breaker_size(self):
         try:
             amps = self.apparent_current
-            if amps:
+            if amps is not None:
                 amps *= 1.25
                 if amps < self.settings.min_breaker_size:
                     amps = self.settings.min_breaker_size
@@ -502,8 +502,9 @@ def main():
 
     if test_condition == 0:
         test_circuit = revit.get_selection()
+
     else:
-        test_circuit = pick_circuits_from_list()
+        test_circuit = eu.pick_circuits_from_list(doc, select_multiple=True)
 
     for circuit in test_circuit:
         branch = CircuitBranch(circuit)
@@ -513,6 +514,7 @@ def main():
 
         branch.print_info()
         # branch.debug("Post Calculation")
+
 
 
 if __name__ == "__main__":

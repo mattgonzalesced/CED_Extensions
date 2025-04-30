@@ -5,6 +5,7 @@ from Autodesk.Revit.DB.Electrical import *
 
 logger = script.get_logger()
 
+
 def get_all_panels(doc, el_id=False):
     collector = FilteredElementCollector(doc).OfCategory(
         BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType()
@@ -224,7 +225,8 @@ def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
 
     for circuit in panel_circuits:
         if circuit.BaseEquipment and circuit.BaseEquipment.Id == panel.Id:
-            if not include_spares and circuit.CircuitType in [Electrical.CircuitType.Spare, Electrical.CircuitType.Space]:
+            if not include_spares and circuit.CircuitType in [Electrical.CircuitType.Spare,
+                                                              Electrical.CircuitType.Space]:
                 continue
 
             # Get circuit parameters
@@ -261,12 +263,11 @@ def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
 
     return circuits_sorted
 
-def pick_circuits_from_list(doc,select_multiple=False):
+
+def pick_circuits_from_list(doc, select_multiple=False):
     ckts = DB.FilteredElementCollector(doc) \
         .OfClass(ElectricalSystem) \
         .WhereElementIsNotElementType()
-
-
 
     ckt_options = {" All": []}
 
@@ -276,7 +277,6 @@ def pick_circuits_from_list(doc,select_multiple=False):
         ckt_load_name = ckt.LoadName
         if ckt.SystemType == ElectricalSystemType.PowerCircuit:
             ckt_rating = ckt.Rating
-            ckt_wireType = ckt.WireType
         # print("{}/{} ({}) - {}".format(ckt_supply, ckt_number, ckt_rating, ckt_load_name))
 
         ckt_options[" All"].append(ckt)
@@ -308,13 +308,16 @@ def pick_circuits_from_list(doc,select_multiple=False):
         logger.info("No circuit selected. Exiting script.")
         script.exit()
 
-    selected_ckt = ckt_lookup[selected_option]
-    logger.info("Selected Circuit Element ID: {}".format(selected_ckt.Id))
-    return selected_ckt
+    # Always return a list
+    if not isinstance(selected_option, list):
+        selected_option = [selected_option]
+
+    selected_ckts = [ckt_lookup[name] for name in selected_option]
+    logger.info("Selected {} Circuit(s).".format(len(selected_ckts)))
+    return selected_ckts
 
 
 def pick_panel_from_list(doc, select_multiple=False):
-
     panels = DB.FilteredElementCollector(doc) \
         .OfClass(ElectricalEquipment) \
         .WhereElementIsNotElementType()
@@ -348,5 +351,6 @@ def pick_panel_from_list(doc, select_multiple=False):
         logger.info("No panel selected. Exiting script.")
         script.exit()
 
-    selected_panels = [panel_lookup[name] for name in selected_names] if select_multiple else panel_lookup[selected_names]
+    selected_panels = [panel_lookup[name] for name in selected_names] if select_multiple else panel_lookup[
+        selected_names]
     return selected_panels

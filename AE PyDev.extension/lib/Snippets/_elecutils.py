@@ -276,7 +276,6 @@ def pick_circuits_from_list(doc,select_multiple=False):
         ckt_number = ckt.CircuitNumber
         ckt_load_name = ckt.LoadName
         if ckt.SystemType == ElectricalSystemType.PowerCircuit:
-            ckt_rating = ckt.Rating
             ckt_wireType = ckt.WireType
         # print("{}/{} ({}) - {}".format(ckt_supply, ckt_number, ckt_rating, ckt_load_name))
 
@@ -309,9 +308,13 @@ def pick_circuits_from_list(doc,select_multiple=False):
         logger.info("No circuit selected. Exiting script.")
         script.exit()
 
-    selected_ckt = ckt_lookup[selected_option]
-    logger.info("Selected Circuit Element ID: {}".format(selected_ckt.Id))
-    return selected_ckt
+    # Always return a list
+    if not isinstance(selected_option, list):
+        selected_option = [selected_option]
+
+    selected_ckts = [ckt_lookup[name] for name in selected_option]
+    logger.info("Selected {} Circuit(s).".format(len(selected_ckts)))
+    return selected_ckts
 
 
 
