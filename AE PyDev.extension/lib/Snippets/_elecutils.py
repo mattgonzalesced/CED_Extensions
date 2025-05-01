@@ -262,44 +262,50 @@ def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
     return circuits_sorted
 
 
-def pick_circuits_from_list(doc,select_multiple=False):
+def pick_circuits_from_list(doc, select_multiple=False):
     ckts = DB.FilteredElementCollector(doc) \
         .OfClass(ElectricalSystem) \
         .WhereElementIsNotElementType()
 
+    grouped_options = {" All": []}
+    ckt_lookup = {}
 
-
-    ckt_options = {" All": []}
+    panel_groups = {}  # key: panel name, value: list of (sort_key, label)
+    all_labels = []  # list of (sort_key, label)
 
     for ckt in ckts:
-        ckt_supply = DB.Element.Name.__get__(ckt.BaseEquipment)
-        ckt_number = ckt.CircuitNumber
-        ckt_load_name = ckt.LoadName
-        if ckt.SystemType == ElectricalSystemType.PowerCircuit:
-            ckt_wireType = ckt.WireType
-        # print("{}/{} ({}) - {}".format(ckt_supply, ckt_number, ckt_rating, ckt_load_name))
+        ckt_id = ckt.Id.IntegerValue
+        base_equipment = ckt.BaseEquipment
 
-        ckt_options[" All"].append(ckt)
+        panel_name = getattr(base_equipment, 'Name', None) if base_equipment else None
+        panel_name = panel_name or "<unassigned>"
+        load_name = ckt.LoadName or ""
+        circuit_number = ckt.CircuitNumber
+        start_slot = ckt.StartSlot if hasattr(ckt, 'StartSlot') else 0
+        sort_key = (panel_name, start_slot, load_name.strip())
 
-        if ckt_supply not in ckt_options:
-            ckt_options[ckt_supply] = []
-        ckt_options[ckt_supply].append(ckt)
+        if panel_name == "<unassigned>":
+            label = "({})| {} - {}".format(ckt_id, panel_name, load_name.strip())
+        else:
+            label = "({})| {} / {} - {}".format(ckt_id, panel_name, circuit_number, load_name.strip())
 
-    ckt_lookup = {}
-    grouped_options = {}
-    for group, circuits in ckt_options.items():
-        option_strings = []
-        for ckt in circuits:
-            ckt_string = "{} | {} - {}".format(DB.Element.Name.__get__(ckt.BaseEquipment), ckt.CircuitNumber,
-                                               ckt.LoadName)
-            option_strings.append(ckt_string)
-            ckt_lookup[ckt_string] = ckt  # Map string to circuit
-        option_strings.sort()
-        grouped_options[group] = option_strings
+        all_labels.append((sort_key, label))
+
+        if panel_name not in panel_groups:
+            panel_groups[panel_name] = []
+        panel_groups[panel_name].append((sort_key, label))
+
+        ckt_lookup[label] = ckt
+
+    # Build grouped options sorted by panel/circuit number
+    grouped_options[" All"] = [label for _, label in sorted(all_labels)]
+
+    for panel_name, label_list in panel_groups.items():
+        grouped_options[panel_name] = [label for _, label in sorted(label_list)]
 
     selected_option = forms.SelectFromList.show(
         grouped_options,
-        title="Select a CKT",
+        title="Select a Circuit",
         group_selector_title="Panel:",
         multiselect=select_multiple
     )
@@ -308,11 +314,10 @@ def pick_circuits_from_list(doc,select_multiple=False):
         logger.info("No circuit selected. Exiting script.")
         script.exit()
 
-    # Always return a list
     if not isinstance(selected_option, list):
         selected_option = [selected_option]
 
-    selected_ckts = [ckt_lookup[name] for name in selected_option]
+    selected_ckts = [ckt_lookup[label] for label in selected_option]
     logger.info("Selected {} Circuit(s).".format(len(selected_ckts)))
     return selected_ckts
 

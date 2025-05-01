@@ -229,6 +229,23 @@ class CircuitBranch(object):
         return self.circuit.SystemType == ElectricalSystemType.PowerCircuit
 
     @property
+    def is_feeder(self):
+        try:
+            # Get elements this circuit supplies
+            elements = list(self.circuit.Elements)
+            for el in elements:
+                if isinstance(el, DB.FamilyInstance):
+                    family = el.Symbol.Family
+                    part_type = family.get_Parameter(DB.BuiltInParameter.FAMILY_CONTENT_PART_TYPE)
+                    if part_type and part_type.StorageType == DB.StorageType.Integer:
+                        part_value = part_type.AsInteger()
+                        if part_value in [14, 15, 16, 17]:
+                            return True
+        except Exception as e:
+            logger.debug("Error in is_feeder: {}".format(str(e)))
+        return False
+
+    @property
     def is_spare(self):
         return self.circuit.CircuitType == CircuitType.Spare
 
