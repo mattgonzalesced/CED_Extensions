@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 from pyrevit import DB, revit, script
 from pyrevit.revit import query
-
+import re
+from collections import defaultdict
 
 doc = revit.doc
 logger = script.get_logger()
 uidoc = revit.uidoc
-
+PARAM_NAME = "Refrigeration Circuit Number_CEDT"
+GROUP_TYPE_NAME = "Case Power - 1 Case, 3 Ckts"
 
 class ParentElement:
     """Store details about a parent (reference) element."""
@@ -47,8 +49,7 @@ class ParentElement:
 
 
 class ChildGroup:
-    """Place, rotate, copy parameters & attach a specific detail group to a Group instance."""
-    DETAIL_NAME = "Case Power Tags - 1 Case, No Tags"
+    DETAIL_NAME = "Case Power Tags - BOX ONLY"
 
     def __init__(self, parent, group_type):
         self.parent = parent
@@ -103,35 +104,111 @@ class ChildGroup:
                     except Exception as e:
                         logger.error("Setting {} failed: {}".format(c_name, e))
 
-    def attach_detail_group(self):
-        """
-        Attach only the specified detail-group type to this group in the active view.
-        """
-        view = doc.ActiveView
-        inst = doc.GetElement(self.child_id)
-        for dt_id in self.group_type.GetAvailableAttachedDetailGroupTypeIds():
-            dt = doc.GetElement(dt_id)
-            if query.get_name(dt) == ChildGroup.DETAIL_NAME:
-                try:
-                    inst.ShowAttachedDetailGroups(view, dt_id)
-                    logger.info(
-                        "Attached detail-group '{}' to model-group {}".format(ChildGroup.DETAIL_NAME, self.child_id))
-                    return True
-                except Exception as e:
-                    logger.error("Failed to attach detail-group '{}': {}".format(ChildGroup.DETAIL_NAME, e))
-                    return False
-        logger.warning("Detail-group '{}' not available for this model-group".format(ChildGroup.DETAIL_NAME))
-        return False
+    def attach_detail_group_by_type(self, detail_group_type):
+        if not self.child_id:
+            logger.warning("Model group not placed yet.")
+            return False
+        try:
+            group = doc.GetElement(self.child_id)
+            group.ShowAttachedDetailGroups(doc.ActiveView, detail_group_type.Id)
+            logger.info("Attached detail group '{}' to group {}".format(query.get_name(detail_group_type), self.child_id))
+            return True
+        except Exception as e:
+            logger.error("Failed to attach detail group '{}': {}".format(query.get_name(detail_group_type), e))
+            return False
+
+    @classmethod
+    def from_existing_group(cls, group):
+        if not isinstance(group, DB.Group):
+            logger.error("Provided element is not a Group: {}".format(group.Id))
+            return None
+        loc = group.Location
+        if not isinstance(loc, DB.LocationPoint):
+            logger.warning("Group {} has no LocationPoint".format(group.Id))
+            return None
+
+        dummy_parent = type('Dummy', (), {
+            'location_point': loc.Point,
+            'facing_orientation': DB.XYZ(0, 1, 0),
+            'circuit_number': group.LookupParameter(PARAM_NAME).AsString() if group.LookupParameter(PARAM_NAME) else None
+        })()
+
+        instance = cls(dummy_parent, group.GroupType)
+        instance.child_id = group.Id
+        return instance
+
+    def ungroup_and_propagate(self):
+        group = doc.GetElement(self.child_id)
+        if not isinstance(group, DB.Group):
+            logger.warning("Element is not a group: {}".format(self.child_id))
+            return []
+
+        circuit_number = None
+        param = group.LookupParameter(PARAM_NAME)
+        if param and param.HasValue:
+            circuit_number = param.AsString()
+
+        if not circuit_number:
+            logger.warning("Group {} has no circuit number.".format(group.Id))
+            return
+
+        try:
+            doc.Regenerate()
+        except Exception as e:
+            logger.error("Failed to show attached detail groups: {}".format(e))
+            return
+
+        ungrouped_ids = []
+
+        def is_attached_to_group(x):
+            return hasattr(x, "AttachedParentId") and x.AttachedParentId == group.Id
+
+        detail_groups = DB.FilteredElementCollector(doc, doc.ActiveView.Id) \
+            .OfCategory(DB.BuiltInCategory.OST_IOSAttachedDetailGroups) \
+            .WhereElementIsNotElementType().ToElements()
+
+        for dg in filter(is_attached_to_group, detail_groups):
+            try:
+                ids = dg.UngroupMembers()
+                ungrouped_ids.extend(ids)
+                logger.info("Ungrouped detail group {}".format(dg.Id))
+            except Exception as e:
+                logger.error("Failed to ungroup detail group {}: {}".format(dg.Id, e))
+
+        try:
+            model_ids = group.UngroupMembers()
+            ungrouped_ids.extend(model_ids)
+            logger.info("Ungrouped model group {}".format(group.Id))
+        except Exception as e:
+            logger.error("Failed to ungroup model group {}: {}".format(group.Id, e))
+
+        for eid in ungrouped_ids:
+            el = doc.GetElement(eid)
+            if isinstance(el, DB.FamilyInstance):
+                if el.Category and el.Category.Id.IntegerValue == int(DB.BuiltInCategory.OST_ElectricalFixtures):
+                    param = el.LookupParameter(PARAM_NAME)
+                    if param and not param.IsReadOnly:
+                        try:
+                            param.Set(str(circuit_number))
+                            logger.info("Wrote circuit number to fixture ID {}".format(eid))
+                        except Exception as e:
+                            logger.error("Failed to set circuit number on ID {}: {}".format(eid, e))
 
 
-# UNGROUPING methods preserved but will be moved to another script for future use
+    @classmethod
+    def collect_target_groups(cls):
+        provider = DB.ParameterValueProvider(DB.ElementId(DB.BuiltInParameter.SYMBOL_NAME_PARAM))
+        evaluator = DB.FilterStringEquals()  # no fourth param
+        rule = DB.FilterStringRule(provider, evaluator, GROUP_TYPE_NAME)
+        filter_ = DB.ElementParameterFilter(rule)
+
+        return DB.FilteredElementCollector(doc) \
+            .OfClass(DB.Group) \
+            .WherePasses(filter_) \
+            .ToElements()
 
 
 def collect_reference_tags():
-    """Collect matching Refrigeration Case Tag – EMS / EMS Circuit Label tags.
-
-    If selection contains valid tags, use those. Otherwise, collect from active view.
-    """
     selected_ids = revit.get_selection().element_ids
     if selected_ids:
         selected_elements = [doc.GetElement(eid) for eid in selected_ids]
@@ -147,7 +224,6 @@ def collect_reference_tags():
         else:
             logger.warning("Selection has no matching EMS tags; falling back to view scan.")
 
-    # Fallback: scan all valid tags in view
     view_id = doc.ActiveView.Id
     collector = DB.FilteredElementCollector(doc, view_id).OfClass(DB.FamilyInstance)
     tags = [
@@ -162,9 +238,6 @@ def collect_reference_tags():
 
 
 def get_model_group_type(name):
-    """
-    Finds a loaded model GroupType by its exact name, using query.get_name to avoid .Name errors.
-    """
     for gt in DB.FilteredElementCollector(doc).OfClass(DB.GroupType):
         if query.get_name(gt) == name:
             return gt
@@ -172,25 +245,19 @@ def get_model_group_type(name):
     script.exit()
 
 
-def main():
-    parameter_mapping = {
-        "Circuit #": "Refrigeration Circuit Number_CEDT"
-    }
-
-    tags = collect_reference_tags()
-    parents = [ParentElement.from_family_instance(t) for t in tags]
-    model_type = get_model_group_type("Case Power - 1 Case, 3 Ckts")
-    children = [ChildGroup(p, model_type) for p in parents if p]
-
-    with DB.Transaction(doc, "Place Case Power Groups & Write Circuit Info") as trans:
-        trans.Start()
-        for c in children:
-            c.place()
-            c.rotate_to_match_parent()
-            c.attach_detail_group()
-            c.copy_parameters(parameter_mapping)
-        trans.Commit()
+def get_attached_detail_types(group_type):
+    detail_types = []
+    for dt_id in group_type.GetAvailableAttachedDetailGroupTypeIds():
+        dt = doc.GetElement(dt_id)
+        detail_types.append(dt)
+    return detail_types
 
 
-if __name__ == "__main__":
-    main()
+def extract_system_id(circuit_number):
+    if not circuit_number:
+        return None
+    match = re.match(r"^([A-Z]+\d+)", circuit_number)
+    if match:
+        return match.group(1)
+    return None
+

@@ -21,23 +21,21 @@ console = script.get_output()
 
 
 def get_view_schedules_from_selection(elements):
-    """
-    Filters selection for ScheduleSheetInstances and returns their associated ViewSchedules.
-    Prints discarded non-schedule element info.
-    """
     valid_schedules = []
     discard_counter = defaultdict(int)
 
     for el in elements:
         if isinstance(el, DBE.PanelScheduleSheetInstance):
-            vs = doc.GetElement(el.ScheduleId)
-            if isinstance(vs, DB.ViewSchedule):
+            vs = doc.GetElement(el.ScheduleId)   # <- this is a PanelScheduleView
+            # accept ANY view or be specific:
+            # if isinstance(vs, DBE.PanelScheduleView):
+            if isinstance(vs, DB.View):
                 valid_schedules.append(vs)
         else:
             discard_counter[el.Category.Name if el.Category else "Unknown"] += 1
 
     for cat, count in discard_counter.items():
-        print("⚠️  {} {} element(s) discarded.".format(count, cat))
+        print(u"⚠️  {} {} element(s) discarded.".format(count, cat))
 
     return valid_schedules
 

@@ -25,50 +25,88 @@ DETAIL_PARAM_PANEL_NAME = "Panel Name_CEDT"
 # Then we map them to detail param names that we’ll set.
 # Key here is "DetailParamName" : "BuiltInParamOnCircuit"
 CIRCUIT_VALUE_MAP = {
+    "x VD Schedule": "x VD Schedule",
+    "Circuit Tree Sort_CED":"Circuit Tree Sort_CED",
     "CKT_Rating_CED": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM,
     "CKT_Frame_CED": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_FRAME_PARAM,
     "CKT_Load Name_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME,
     "CKT_Schedule Notes_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NOTES_PARAM,
     "CKT_Panel_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
     "CKT_Circuit Number_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER,
-    "CKT_Wire Size_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_WIRE_SIZE_PARAM
+    "CKT_Wire Size_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_WIRE_SIZE_PARAM,
+    "CKT_Length_CED": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_LENGTH_PARAM
 }
 
 # Panel built-in param -> detail param name map
 PANEL_VALUE_MAP = {
     "Panel Name_CEDT": DB.BuiltInParameter.RBS_ELEC_PANEL_NAME,
+    "Mains Rating_CED": "Mains Rating_CED",
+    "Mains Type_CEDT" : "Mains Type_CEDT",
+    "Phase_CED":"Phase_CED",
     "Main Breaker Rating_CED": DB.BuiltInParameter.RBS_ELEC_PANEL_MCB_RATING_PARAM,
     "Short Circuit Rating_CEDT": DB.BuiltInParameter.RBS_ELEC_SHORT_CIRCUIT_RATING,
     "Mounting_CEDT": DB.BuiltInParameter.RBS_ELEC_MOUNTING,
     "Panel Modifications_CEDT": DB.BuiltInParameter.RBS_ELEC_MODIFICATIONS,
     "Distribution System_CEDR": DB.BuiltInParameter.RBS_FAMILY_CONTENT_DISTRIBUTION_SYSTEM,
+    "Secondary Distribution System_CEDR": DB.BuiltInParameter.RBS_FAMILY_CONTENT_SECONDARY_DISTRIBSYS,
     "Total Connected Load_CEDR": DB.BuiltInParameter.RBS_ELEC_PANEL_TOTALLOAD_PARAM,
     "Total Demand Load_CEDR": DB.BuiltInParameter.RBS_ELEC_PANEL_TOTAL_DEMAND_CURRENT_PARAM,
     "Total Connected Current_CEDR": DB.BuiltInParameter.RBS_ELEC_PANEL_TOTAL_CONNECTED_CURRENT_PARAM,
-    "Total Demand Current_CEDR": DB.BuiltInParameter.RBS_ELEC_PANEL_TOTAL_DEMAND_CURRENT_PARAM
+    "Total Demand Current_CEDR": DB.BuiltInParameter.RBS_ELEC_PANEL_TOTAL_DEMAND_CURRENT_PARAM,
+    "Max Number of Single Pole Breakers_CED": DB.BuiltInParameter.RBS_ELEC_MAX_POLE_BREAKERS,
+    "Max Number of Circuits_CED":DB.BuiltInParameter.RBS_ELEC_NUMBER_OF_CIRCUITS,
+    "Transformer Rating_CEDT": "Transformer Rating_CEDT",
+    "Transformer Rating_CED": "Transformer Rating_CEDT",
+    "Transformer %Z_CED": "Transformer %Z_CED",
 }
 
 
-def get_bip_value(elem, bip):
+def get_model_param_value(elem, param_key, allow_type_fallback=True):
     """
-    Read the given built-in parameter bip from elem. Return the
-    appropriate typed value (str,int,double) or None if not found.
+    Reads either a BuiltInParameter or a shared parameter (by name).
+    Checks instance first, then type if not found and allowed.
+    Returns string/int/double or None.
     """
-    param = elem.get_Parameter(bip)
-    if not param:
-        logger.debug("    get_bip_value: Param " + str(bip) + " not found on element " + str(elem.Id))
+    param = None
+
+    # Try instance-level parameter
+    if isinstance(param_key, DB.BuiltInParameter):
+        param = elem.get_Parameter(param_key)
+    elif isinstance(param_key, str):
+        param = elem.LookupParameter(param_key)
+    else:
+        logger.debug("get_model_param_value: Invalid param key type: " + str(param_key))
         return None
 
-    param_storage_type = param.StorageType
-    if param_storage_type == DB.StorageType.String:
+    # Try type-level parameter if instance param is missing and fallback is allowed
+    if not param and allow_type_fallback:
+        try:
+            type_elem = elem.Document.GetElement(elem.GetTypeId())
+            if type_elem:
+                if isinstance(param_key, DB.BuiltInParameter):
+                    param = type_elem.get_Parameter(param_key)
+                elif isinstance(param_key, str):
+                    param = type_elem.LookupParameter(param_key)
+        except Exception as e:
+            logger.debug("get_model_param_value: Error accessing type element for " + str(elem.Id) + ": " + str(e))
+
+    # Final check
+    if not param:
+        logger.debug("get_model_param_value: Param '{}' not found on element {}".format(param_key, elem.Id))
+        return None
+
+    st = param.StorageType
+    if st == DB.StorageType.String:
         return param.AsString()
-    elif param_storage_type == DB.StorageType.Integer:
+    elif st == DB.StorageType.Integer:
         return param.AsInteger()
-    elif param_storage_type == DB.StorageType.Double:
+    elif st == DB.StorageType.Double:
         return param.AsDouble()
-    elif param_storage_type == DB.StorageType.ElementId:
+    elif st == DB.StorageType.ElementId:
         return param.AsValueString()
+
     return None
+
 
 
 def get_detail_param_value(elem, param_name):
@@ -106,7 +144,7 @@ def set_detail_param_value(elem, param_name, new_value):
     try:
         if new_value is None:
             new_value = ""
-        p.Set(str(new_value))
+        p.Set(new_value)
         logger.debug("      set_detail_param_value: Set '" + param_name + "' to '" + str(new_value) + "' on " + str(elem.Id))
     except:
         logger.debug("      set_detail_param_value: FAILED setting '" + param_name + "' on " + str(elem.Id))
@@ -125,14 +163,14 @@ def main():
                       .ToElements()
 
     for ckt in ckt_collector:
-        pval = get_bip_value(ckt, DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM)
-        cnum = get_bip_value(ckt, DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER)
+        pval = get_model_param_value(ckt, DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM)
+        cnum = get_model_param_value(ckt, DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER)
         if pval and cnum:
             key = (str(pval), str(cnum))
             # gather all relevant param values into a sub-dict
             cdata = {}
             for detail_param_name, bip in CIRCUIT_VALUE_MAP.items():
-                cdata[detail_param_name] = get_bip_value(ckt, bip)
+                cdata[detail_param_name] = get_model_param_value(ckt, bip)
             circuit_map[key] = cdata
             logger.debug("  Circuit " + str(ckt.Id) + " => key " + str(key) + " stored")
         else:
@@ -148,11 +186,11 @@ def main():
                       .ToElements()
 
     for pnl in pnl_collector:
-        pname = get_bip_value(pnl, DB.BuiltInParameter.RBS_ELEC_PANEL_NAME)
+        pname = get_model_param_value(pnl, DB.BuiltInParameter.RBS_ELEC_PANEL_NAME)
         if pname:
             pdata = {}
             for detail_param_name, bip in PANEL_VALUE_MAP.items():
-                pdata[detail_param_name] = get_bip_value(pnl, bip)
+                pdata[detail_param_name] = get_model_param_value(pnl, bip)
             panel_map[str(pname)] = pdata
             logger.debug("  Panel " + str(pnl.Id) + " => name '" + pname + "' stored")
         else:
