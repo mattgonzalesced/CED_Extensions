@@ -1,0 +1,18 @@
+# -*- coding: utf-8 -*-
+from Autodesk.Revit.DB.Electrical import ElectricalSetting
+
+# Get the active Revit document from PyRevit
+doc = __revit__.ActiveUIDocument.Document
+
+try:
+    # Access electrical settings
+    electrical_settings = ElectricalSetting.GetElectricalSettings(doc)
+
+    # Get the current circuit sequence value
+    circuit_sequence = electrical_settings.CircuitSequence
+
+    # Convert enum to string safely using .ToString()
+    print("Current circuit sequence setting: {}".format(circuit_sequence.ToString()))
+
+except Exception as e:
+    print("Failed to read electrical settings:\n{}".format(str(e)))
