@@ -6,8 +6,6 @@ from wmlib import extract_system_id, ChildGroup
 doc = revit.doc
 logger = script.get_logger()
 
-CIRCUIT_PARAM = "Refrigeration Circuit Number_CEDT"
-SYSTEM_PARAM = "System Number_CEDT"
 
 def collect_groups_with_circuit_param():
     selected_ids = revit.get_selection().element_ids
@@ -35,23 +33,6 @@ def collect_groups_with_circuit_param():
     return valid_groups
 
 def main():
-    target_groups = collect_groups_with_circuit_param()
-    if not target_groups:
-        logger.warning("No model groups with '{}' parameter found.".format(CIRCUIT_PARAM))
-        return
-
-    with DB.Transaction(doc, "Ungroup Power Groups & Propagate Circuit Info") as t:
-        t.Start()
-        for group in target_groups:
-            try:
-                instance = ChildGroup.from_existing_group(group, CIRCUIT_PARAM)
-                if not instance:
-                    logger.warning("Could not create ChildGroup from group ID {}".format(group.Id))
-                    continue
-                instance.ungroup_and_propagate(CIRCUIT_PARAM, SYSTEM_PARAM)
-            except Exception as e:
-                logger.error("Error ungrouping group ID {}: {}".format(group.Id, e))
-        t.Commit()
 
 if __name__ == "__main__":
     main()

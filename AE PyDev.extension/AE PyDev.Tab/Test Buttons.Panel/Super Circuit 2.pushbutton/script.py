@@ -15,6 +15,29 @@ output.close_others()
 output.set_width(800)
 logger = script.get_logger()
 
+class SupressWarnings(DB.IFailuresPreprocessor):
+    def PreprocessFailures(self, failuresAccessor):
+        ignored_fails = [
+            DB.BuiltInFailures.ElectricalFailures.CircuitOverload,
+            DB.BuiltInFailures.OverlapFailures.DuplicateInstances
+        ]
+
+        try:
+            failures = failuresAccessor.GetFailureMessages()
+
+            for fail in failures:  # type: DB.FailureMessageAccessor
+                severity = fail.GetSeverity()
+                description = fail.GetDescriptionText()
+                fail_id = fail.GetFailureDefinitionId()
+
+                if severity == DB.FailureSeverity.Warning and fail_id in ignored_fails:
+                    print('✅ Suppressed Warning: {}'.format(description))
+                    failuresAccessor.DeleteWarning(fail)
+
+        except Exception as e:
+            print('⚠️ Exception in SuppressWarnings: {}'.format(e))
+
+        return DB.FailureProcessingResult.Continue
 
 # === Load CSV ===
 def load_csv_table(filepath):
@@ -28,11 +51,12 @@ def pick_face_with_reference():
     face = doc.GetElement(ref.ElementId).GetGeometryObjectFromReference(ref)
     face_norm = face.FaceNormal
     location = doc.GetElement(ref.ElementId).Location.Point
+    orientation = doc.GetElement(ref.ElementId).FacingOrientation
     normal = face.ComputeNormal(DB.UV(0.5, 0.5)).Normalize()
     bbox = face.GetBoundingBox()
     logger.debug(
         "ref:{}, Face: {}, face_norm:{}, norm:{}, loc:{} ".format(ref.ElementId, face, face_norm, normal, location))
-    return face, ref, normal, bbox, location
+    return face, ref, normal, bbox, location, orientation
 
 
 # === Get direction in plane of face ===
@@ -118,7 +142,7 @@ csv_path = r"C:\Users\Aevelina\OneDrive - CoolSys Inc\Documents\FilteredDataExpo
 filepath = forms.pick_file(file_ext="csv", multi_file=False, title="Pick CSV File")
 table = load_csv_table(csv_path)
 
-face, ref, normal, bbox, location = pick_face_with_reference()
+face, ref, normal, bbox, location, orientation = pick_face_with_reference()
 ref_dir = get_reference_direction(normal)
 
 
@@ -143,7 +167,7 @@ with DB.TransactionGroup(doc, "Place + Wire + Param Families") as tg:
                 symbol.Activate()
                 activated.add(symbol.Id.IntegerValue)
 
-    with revit.Transaction("Place and Parameterize", doc):
+    with revit.Transaction("Place and Parameterize", doc,swallow_errors=True) as t:
         for row in table:
             circuit_number = row['CKT_Circuit Number_CEDT'].strip()
             panel_name = row['CKT_Panel_CEDT'].strip()
@@ -153,8 +177,9 @@ with DB.TransactionGroup(doc, "Place + Wire + Param Families") as tg:
             if not symbol:
                 output.print_md("❌ Missing symbol for {} / {}".format(row['Family'], row['Type']))
                 continue
+            point = location + .25*orientation
+            instance = doc.Create.NewFamilyInstance(ref, point, ref_dir, symbol)
 
-            instance = doc.Create.NewFamilyInstance(ref, location, ref_dir, symbol)
             set_instance_parameters(instance, row)
 
             circuit_rows.append({
@@ -168,7 +193,7 @@ with DB.TransactionGroup(doc, "Place + Wire + Param Families") as tg:
 
     created_systems = {}
 
-    with revit.Transaction("Create Circuits", doc):
+    with revit.Transaction("Create Circuits", doc, swallow_errors=True):
         for row_data in circuit_rows:
             instance = row_data["instance"]
             panel = row_data["panel"]
@@ -177,6 +202,8 @@ with DB.TransactionGroup(doc, "Place + Wire + Param Families") as tg:
                 continue
 
             system = create_electrical_system(doc, [instance.Id], panel)
+
+
             if system:
                 created_systems[system.Id] = row_data
 
