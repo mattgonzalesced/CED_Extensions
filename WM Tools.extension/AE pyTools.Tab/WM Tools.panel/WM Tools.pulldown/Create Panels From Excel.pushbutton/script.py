@@ -11,7 +11,7 @@ out = output.get_output()
 out.set_title("Panel Placement Report")
 
 HEADERS = [
-    "Column1", "Family", "Type", "Distribution System", "Panel Name_CEDT",
+    "#", "Family", "Type", "Distribution System", "Panel Name_CEDT",
     "Max Number of Circuits_CED", "Max Number of Single Pole Breakers_CED",
     "Mains Rating_CED", "Mains Type_CEDT", "Main Breaker Rating_CED",
     "Short Circuit Rating_CEDT", "Comments"
@@ -20,7 +20,7 @@ HEADERS = [
 FAMILY_COL = "Family"
 TYPE_COL = "Type"
 DIST_SYS_COL = "Distribution System"
-PARAM_EXCLUDE = [FAMILY_COL, TYPE_COL, "Column1"]
+PARAM_EXCLUDE = [FAMILY_COL, TYPE_COL, "#"]
 DELTA_X = 5
 
 
@@ -58,135 +58,44 @@ def get_dist_system_data(ds):
 
 
 def resolve_missing_distribution_systems(rows, dist_lookup):
-    dist_names = sorted(set(r.get(DIST_SYS_COL, '').strip() for r in rows if r.get(DIST_SYS_COL)))
+    dist_names = sorted(set(str(r.get(DIST_SYS_COL, '')).strip() for r in rows))
     unresolved = [name for name in dist_names if name not in dist_lookup]
+
     if not unresolved:
         return dist_lookup
 
-    logger.info("Prompting user to resolve missing distribution systems:")
-    updated = {}
+    logger.info("Prompting user to resolve missing distribution systems...")
 
     all_dist_elements = DB.FilteredElementCollector(doc) \
         .OfCategory(DB.BuiltInCategory.OST_ElecDistributionSys) \
         .WhereElementIsElementType().ToElements()
 
-    display_map = {}
-    for ds in all_dist_elements:
-        name = query.get_name(ds)
-        phase = str(ds.ElectricalPhase)
-        wires = str(ds.NumWires)
-        config = str(ds.ElectricalPhaseConfiguration)
-        label = "{} | {} | {} wires | {}".format(name, phase, wires, config)
-        display_map[label] = ds
+    def describe(ds):
+        return "{} | {} | {} wires | {}".format(
+            query.get_name(ds),
+            ds.ElectricalPhase,
+            ds.NumWires,
+            ds.ElectricalPhaseConfiguration
+        )
+
+    display_map = {describe(ds): ds for ds in all_dist_elements}
+    updated = {}
 
     for name in unresolved:
-        choices = sorted(display_map.keys())
+        display_label = name if name else "<blank>"
         selected = forms.SelectFromList.show(
-            choices,
-            title="Select replacement for missing distribution system '{}':".format(name),
+            sorted(display_map.keys()),
+            title="Select replacement for distribution system '{}':".format(display_label),
             multiselect=False
         )
         if selected:
             updated[name] = display_map[selected].Id
         else:
-            logger.warning("No replacement selected for '{}'. It will be skipped.".format(name))
+            logger.warning("No replacement selected for '{}'. It will be skipped.".format(display_label))
 
     dist_lookup.update(updated)
     return dist_lookup
 
-    logger.info("Prompting user to resolve missing distribution systems:")
-    updated = {}
-
-    all_dist_elements = DB.FilteredElementCollector(doc) \
-        .OfCategory(DB.BuiltInCategory.OST_ElecDistributionSys) \
-        .WhereElementIsElementType().ToElements()
-
-    display_map = {}
-    for ds in all_dist_elements:
-        data = get_dist_system_data(ds)
-        label = "{name} | {phase} | {num_wires} wires | LG:{lg_voltage} | LL:{ll_voltage}".format(**data)
-        display_map[label] = ds
-
-    for name in unresolved:
-        choices = sorted(display_map.keys())
-        selected = forms.SelectFromList.show(
-            choices,
-            title="Select replacement for missing distribution system '{}':".format(name),
-            multiselect=False
-        )
-        if selected:
-            updated[name] = display_map[selected].Id
-        else:
-            logger.warning("No replacement selected for '{}'. It will be skipped.".format(name))
-
-    dist_lookup.update(updated)
-    return dist_lookup
-
-    logger.info("Prompting user to resolve missing distribution systems:")
-    updated = {}
-
-    all_dist_elements = DB.FilteredElementCollector(doc) \
-        .OfCategory(DB.BuiltInCategory.OST_ElectricalDistributionSystems) \
-        .WhereElementIsElementType().ToElements()
-
-    def describe_dist_system(ds):
-        try:
-            phase = str(ds.ElectricalPhase)
-            wires = str(ds.NumWires)
-            config = str(ds.ElectricalPhaseConfiguration)
-            lg = ds.VoltageLineToGround
-            ll = ds.VoltageLineToLine
-
-            def get_voltage(v):
-                if not v:
-                    return "-"
-                p = v.get_Parameter(DB.BuiltInParameter.RBS_VOLTAGETYPE_VOLTAGE_PARAM)
-                return round(p.AsDouble(), 2) if p else "-"
-
-            lg_v = get_voltage(lg)
-            ll_v = get_voltage(ll)
-            return "{} | {}Φ | {} wires | LG:{} | LL:{}".format(query.get_name(ds), phase, wires, lg_v, ll_v)
-        except:
-            return query.get_name(ds)
-
-    name_map = {describe_dist_system(d): d for d in all_dist_elements}
-
-    for name in unresolved:
-        choices = sorted(name_map.keys())
-        selected = forms.SelectFromList.show(
-            choices,
-            title="Select replacement for missing distribution system '{}':".format(name),
-            multiselect=False
-        )
-        if selected:
-            updated[name] = name_map[selected].Id
-        else:
-            logger.warning("No replacement selected for '{}'. It will be skipped.".format(name))
-
-    dist_lookup.update(updated)
-    return dist_lookup  # Nothing missing
-
-    logger.info("Prompting user to resolve missing distribution systems:")
-    updated = {}
-    all_dist_elements = DB.FilteredElementCollector(doc) \
-        .OfCategory(DB.BuiltInCategory.OST_ElectricalDistributionSystems) \
-        .WhereElementIsElementType().ToElements()
-    all_options = {query.get_name(e): e for e in all_dist_elements}
-
-    for name in unresolved:
-        choices = sorted(all_options.keys())
-        selected = forms.SelectFromList.show(
-            choices,
-            title="Select distribution system to use for: '{}'".format(name),
-            multiselect=False
-        )
-        if selected:
-            updated[name] = all_options[selected].Id
-        else:
-            logger.warning("No replacement selected for '{}'. It will be skipped.".format(name))
-
-    dist_lookup.update(updated)
-    return dist_lookup
 
 
 

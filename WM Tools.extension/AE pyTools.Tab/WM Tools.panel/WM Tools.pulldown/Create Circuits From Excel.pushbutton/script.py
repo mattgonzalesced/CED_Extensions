@@ -101,7 +101,7 @@ def main():
     system_data = []
     activated_symbols = set()
 
-    with DB.TransactionGroup(doc, "Place + Wire + Param Families") as tg:
+    with DB.TransactionGroup(doc, "Create Circuits From Excel") as tg:
         tg.Start()
 
         with revit.Transaction("Activate Symbols", doc):
@@ -110,7 +110,7 @@ def main():
                 if symbol and not symbol.IsActive and symbol.Id.IntegerValue not in activated_symbols:
                     symbol.Activate()
                     activated_symbols.add(symbol.Id.IntegerValue)
-            output.print_md("✅ Activated {} symbols.".format(len(activated_symbols)))
+
 
         with revit.Transaction("Place and Parameterize", doc, swallow_errors=True):
             for row in ordered_rows:
@@ -132,6 +132,10 @@ def main():
                 instance = doc.Create.NewFamilyInstance(ref, point, DB.XYZ(1, 0, 0), symbol)
 
                 set_instance_parameters(instance, row)
+                # Force set default circuit notes
+                param = instance.LookupParameter("CKT_Schedule Notes_CEDT")
+                if param and not param.IsReadOnly:
+                    param.Set("EX")
 
                 all_instances.append(instance)
                 system_data.append({
@@ -153,11 +157,20 @@ def main():
                     system.SelectPanel(data["panel"])
                     created_systems[system.Id] = data
 
-        with revit.Transaction("Set Circuit Parameters", doc):
+        with revit.Transaction("Set Circuit Parameters", doc, swallow_errors=True):
             for sys_id, data in created_systems.items():
                 sys = doc.GetElement(sys_id)
                 if not sys:
                     continue
+
+                # Transfer 'EX' note from instance to circuit-level parameter
+                notes_param = data["instance"].LookupParameter("CKT_Schedule Notes_CEDT")
+                if notes_param and notes_param.HasValue:
+                    val = notes_param.AsString()
+                    target_param = sys.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NOTES_PARAM)
+                    if target_param and not target_param.IsReadOnly:
+                        target_param.Set(val)
+
                 if data["load_name"]:
                     sys.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME).Set(data["load_name"])
                 if data["rating"]:
@@ -170,11 +183,30 @@ def main():
                     if param and not param.IsReadOnly:
                         param.Set(data["frame"])
 
+        deleted_count = 0
+        with revit.Transaction("Remove Space Circuits", doc, swallow_errors=True):
+            for data in system_data:
+                load_name = data.get("load_name", "").lower()
+                rating = data.get("rating", "")
+                try:
+                    rating_val = float(rating)
+                except:
+                    rating_val = -1  # fallback
+
+                if "space" in load_name and rating_val == 0:
+                    try:
+                        doc.Delete(data["instance"].Id)
+                        deleted_count += 1
+                    except Exception as e:
+                        logger.warning("Failed to delete instance: {}".format(e))
+
+
         tg.Assimilate()
 
     output.print_md("### ✅ Placement & Circuiting Complete")
     output.print_md("🧱 Total placed: {}".format(len(all_instances)))
     output.print_md("🔌 Total circuits: {}".format(len(created_systems)))
+    output.print_md("🧹 Removed {} space circuits (load name contains 'space' and rating = 0)".format(deleted_count))
 
 
 
