@@ -3,13 +3,14 @@ title: "Create Panels From Excel"
 tooltip: >-
   Version = 1.0
   
-  Date    = 01.01.2025
+  Date    = 05.10.2025
   ________________________________________________________________
   Description:
   
-  DESCRIPTION TEXT
+  Creates Panel and Switchboard instances in revit from excel.
   
-  MORE TEXT HERE
+  ALT+CLICK this button to find a copy of the Panel Creation Workbook.
+  
   ________________________________________________________________
   
 

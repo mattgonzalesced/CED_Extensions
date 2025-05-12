@@ -3,13 +3,12 @@ title: "Ungroup Power Groups"
 tooltip: >-
   Version = 1.0
   
-  Date    = 01.01.2025
+  Date    = 05.10.2025
   ________________________________________________________________
   Description:
   
-  DESCRIPTION TEXT
-  
-  MORE TEXT HERE
+  Ungroups selected power groups and passes the Refrigeration
+  Circuit Number value to the elements in the group.
   ________________________________________________________________
   
 

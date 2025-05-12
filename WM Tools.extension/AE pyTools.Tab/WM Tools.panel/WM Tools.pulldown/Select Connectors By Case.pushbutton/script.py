@@ -9,7 +9,7 @@ logger = script.get_logger()
 output = script.get_output()
 FAMILY_NAME = "EF-U_Refrig Power Connector-Balanced_CED-WM"
 CIRCUIT_PARAM = "Refrigeration Circuit Number_CEDT"
-TYPE_PARAM = "Type Name"  # Assuming query.get_name(instance.Symbol) gets the type name
+
 
 def collect_connectors():
     collector = DB.FilteredElementCollector(doc) \

@@ -7,3 +7,8 @@ layout:
   - -----
   - Select Connectors By Case
   - Replace Existing Circuit
+  - -----
+  - Toggle Connector Symbols
+
+background:
+  title: '#f39c12'

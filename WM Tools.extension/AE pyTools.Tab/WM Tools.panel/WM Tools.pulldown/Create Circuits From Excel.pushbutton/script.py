@@ -5,7 +5,7 @@ from pyrevit import script, revit, DB, forms
 from pyrevit.revit.db import query
 from pyrevit.interop import xl as pyxl
 from wmlib import *
-from Autodesk.Revit.UI.Selection import ObjectType
+import Autodesk.Revit.DB.Electrical as DBE
 from System.Collections.Generic import List
 from collections import defaultdict
 
@@ -16,6 +16,8 @@ output = script.get_output()
 output.close_others()
 output.set_width(800)
 logger = script.get_logger()
+
+
 
 
 
@@ -103,6 +105,26 @@ def main():
 
     with DB.TransactionGroup(doc, "Create Circuits From Excel") as tg:
         tg.Start()
+
+        with revit.Transaction("Set Ckt Sequence", doc):
+            try:
+                electrical_settings = DBE.ElectricalSetting.GetElectricalSettings(doc)
+
+                current_sequence = electrical_settings.CircuitSequence
+                current_value = current_sequence.ToString()
+
+                logger.info("Current circuit sequence setting: {}".format(current_value))
+
+                # Only update if not already OddThenEven
+                if current_value != "OddThenEven":
+                    electrical_settings.CircuitSequence = current_sequence.__class__.OddThenEven
+
+                    logger.info("Circuit sequence was updated to 'OddThenEven'.")
+                else:
+                    logger.info("No changes needed. Already set to 'OddThenEven'.")
+
+            except Exception as e:
+                logger.info("Failed to read or update electrical settings:\n{}".format(str(e)))
 
         with revit.Transaction("Activate Symbols", doc):
             for row in ordered_rows:

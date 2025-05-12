@@ -1,0 +1,19 @@
+title: "Toggle Connector Symbols"
+
+tooltip: >-
+  Version = 1.0
+  
+  Date    = 05.10.2025
+  ________________________________________________________________
+  Description:
+  
+  Toggles the Symbol Visible_CED type parameter 
+  on all types of the connector family EF-U_Refrig Power Connector-Balanced_CED-WM.
+
+  Automatically updates the ribbon icon based on the current state.
+  ________________________________________________________________
+  
+
+author: >-
+  AEvelina
+
