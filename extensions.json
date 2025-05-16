@@ -31,7 +31,7 @@
       },
       {
         "builtin": "False",
-        "enable": "True",
+        "enable": "False",
         "disabled": "true",
         "type": "extension",
         "name": "MG PyTools",
