@@ -59,8 +59,9 @@ def safely_load_shared_parameter_file(app, shared_param_txt):
 
     if not original_file:
         logger.info("No shared parameter file currently set. Setting shared param path to project file.")
-        app.SharedParametersFilename = shared_param_txt
 
+
+    app.SharedParametersFilename = shared_param_txt
     shared_param_file = app.OpenSharedParameterFile()
 
     if not shared_param_file:
@@ -451,8 +452,11 @@ def main():
         copy_elements_from_document(starter_doc, all_ids, "Import Schedules, Templates, Filters")
         tg.Assimilate()
 
-    app.SharedParametersFilename = original_param_file
-    logger.info("🔄 Restored shared parameter file: {}".format(original_param_file))
+    if original_param_file:
+        app.SharedParametersFilename = original_param_file
+        logger.info("🔄 Restored shared parameter file: {}".format(original_param_file))
+    else:
+        logger.info("🔄No original parameter file. keeping new one set: {}".format(new_param_file))
 
     try:
         uiapp.OpenAndActivateDocument(starter_path)

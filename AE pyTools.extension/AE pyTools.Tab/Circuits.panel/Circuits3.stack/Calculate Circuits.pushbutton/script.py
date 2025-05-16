@@ -18,6 +18,7 @@ def collect_shared_param_values(branch):
         'CKT_Load Name_CEDT': branch.load_name,
         'CKT_Rating_CED': branch.rating,
         'CKT_Frame_CED': branch.frame,
+        'CKT_Length_CED': branch.length,
         'CKT_Schedule Notes_CEDT': branch.circuit_notes,
         'Voltage Drop Percentage_CED': branch.voltage_drop_percentage,
         'CKT_Wire Hot Size_CEDT': branch.hot_wire_size,
@@ -115,10 +116,9 @@ def main():
     test_circuits = eu.pick_circuits_from_list(doc, select_multiple=True)
     count = len(test_circuits)
 
-    if count > 100:
+    if count > 300:
         proceed = forms.alert(
-            "{} circuits selected.\n\nThis may take a while.\n\n".format(count) +
-            "It is recommended to run this tool on no more than 50–100 circuits at once.",
+            "{} circuits selected.\n\nThis may take a while.\n\n".format(count),
             title="⚠️ Large Selection Warning",
             options=["Continue", "Cancel"]
         )
