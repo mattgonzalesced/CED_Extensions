@@ -5,6 +5,7 @@ from Autodesk.Revit.DB.Electrical import *
 
 logger = script.get_logger()
 
+
 def get_all_panels(doc, el_id=False):
     collector = FilteredElementCollector(doc).OfCategory(
         BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType()
@@ -224,7 +225,8 @@ def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
 
     for circuit in panel_circuits:
         if circuit.BaseEquipment and circuit.BaseEquipment.Id == panel.Id:
-            if not include_spares and circuit.CircuitType in [Electrical.CircuitType.Spare, Electrical.CircuitType.Space]:
+            if not include_spares and circuit.CircuitType in [Electrical.CircuitType.Spare,
+                                                              Electrical.CircuitType.Space]:
                 continue
 
             # Get circuit parameters
@@ -261,45 +263,78 @@ def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
 
     return circuits_sorted
 
-def pick_circuits_from_list(doc,select_multiple=False):
+
+def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_spaces=False):
     ckts = DB.FilteredElementCollector(doc) \
         .OfClass(ElectricalSystem) \
         .WhereElementIsNotElementType()
 
+    grouped_options = {" All": []}
+    ckt_lookup = {}
+    panel_groups = {}  # key: panel name, value: list of (sort_key, label)
+    all_labels = []  # list of (sort_key, label)
 
-
-    ckt_options = {" All": []}
 
     for ckt in ckts:
-        ckt_supply = DB.Element.Name.__get__(ckt.BaseEquipment)
-        ckt_number = ckt.CircuitNumber
-        ckt_load_name = ckt.LoadName
+        # Skip spares/spaces if not included
+        if not include_spares_and_spaces and ckt.CircuitType in [CircuitType.Spare, CircuitType.Space]:
+            continue
+
+        # Safely get rating and poles if circuit is a PowerCircuit
         if ckt.SystemType == ElectricalSystemType.PowerCircuit:
-            ckt_rating = ckt.Rating
-            ckt_wireType = ckt.WireType
-        # print("{}/{} ({}) - {}".format(ckt_supply, ckt_number, ckt_rating, ckt_load_name))
+            try:
+                rating = int(round(ckt.Rating,0))
+            except:
+                rating = "N/A"
 
-        ckt_options[" All"].append(ckt)
+            try:
+                pole = ckt.PolesNumber
+            except:
+                pole = "?"
+        else:
+            rating = "N/A"
+            pole = "?"
 
-        if ckt_supply not in ckt_options:
-            ckt_options[ckt_supply] = []
-        ckt_options[ckt_supply].append(ckt)
+        ckt_id = ckt.Id.IntegerValue
+        base_equipment = ckt.BaseEquipment
+        panel_name = getattr(base_equipment, 'Name', None) if base_equipment else None
+        panel_name = panel_name or " No Panel"
+        load_name = ckt.LoadName or ""
+        circuit_number = ckt.CircuitNumber
+        start_slot = ckt.StartSlot if hasattr(ckt, 'StartSlot') else 0
+        sort_key = (panel_name, start_slot, load_name.strip())
 
-    ckt_lookup = {}
-    grouped_options = {}
-    for group, circuits in ckt_options.items():
-        option_strings = []
-        for ckt in circuits:
-            ckt_string = "{} | {} - {}".format(DB.Element.Name.__get__(ckt.BaseEquipment), ckt.CircuitNumber,
-                                               ckt.LoadName)
-            option_strings.append(ckt_string)
-            ckt_lookup[ckt_string] = ckt  # Map string to circuit
-        option_strings.sort()
-        grouped_options[group] = option_strings
+
+        if ckt.CircuitType == CircuitType.Space:
+            # Space: no rating/poles, just panel and label
+            label = "[{}]  {}/{} - {}({}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(),pole)
+
+        elif ckt.CircuitType == CircuitType.Spare:
+            # Spare: show circuit number and panel, label as [SPARE]
+            label = "[{}]  {}/{} - {}  ({} A/{}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(), rating, pole)
+
+        else:
+            # Normal circuit
+            label = "[{}]  {}/{} - {}  ({} A/{}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(), rating,
+                                                       pole)
+
+        all_labels.append((sort_key, label))
+
+        if panel_name not in panel_groups:
+            panel_groups[panel_name] = []
+        panel_groups[panel_name].append((sort_key, label))
+
+        ckt_lookup[label] = ckt
+
+    # Build grouped options sorted by panel/circuit number
+    grouped_options[" All"] = [label for _, label in sorted(all_labels)]
+
+    for panel_name, label_list in panel_groups.items():
+        grouped_options[panel_name] = [label for _, label in sorted(label_list)]
 
     selected_option = forms.SelectFromList.show(
         grouped_options,
-        title="Select a CKT",
+        title="Select a Circuit",
         group_selector_title="Panel:",
         multiselect=select_multiple
     )
@@ -308,13 +343,15 @@ def pick_circuits_from_list(doc,select_multiple=False):
         logger.info("No circuit selected. Exiting script.")
         script.exit()
 
-    selected_ckt = ckt_lookup[selected_option]
-    logger.info("Selected Circuit Element ID: {}".format(selected_ckt.Id))
-    return selected_ckt
+    if not isinstance(selected_option, list):
+        selected_option = [selected_option]
+
+    selected_ckts = [ckt_lookup[label] for label in selected_option]
+    logger.info("Selected {} Circuit(s).".format(len(selected_ckts)))
+    return selected_ckts
 
 
 def pick_panel_from_list(doc, select_multiple=False):
-
     panels = DB.FilteredElementCollector(doc) \
         .OfClass(ElectricalEquipment) \
         .WhereElementIsNotElementType()
@@ -348,5 +385,6 @@ def pick_panel_from_list(doc, select_multiple=False):
         logger.info("No panel selected. Exiting script.")
         script.exit()
 
-    selected_panels = [panel_lookup[name] for name in selected_names] if select_multiple else panel_lookup[selected_names]
+    selected_panels = [panel_lookup[name] for name in selected_names] if select_multiple else panel_lookup[
+        selected_names]
     return selected_panels

@@ -1,0 +1,16 @@
+layout:
+  - Place Power Groups
+  - Ungroup Power Groups
+  - -----
+  - Create Panels From Excel
+  - Create Circuits From Excel
+  - -----
+  - Select Connectors By Case
+  - Replace Existing Circuit
+  - -----
+  - Toggle Connector Symbols
+  - ">>>>>"
+  - Load Electrical Content
+
+background:
+  title: '#c07b0e'

@@ -15,6 +15,29 @@ output.close_others()
 output.set_width(800)
 logger = script.get_logger()
 
+class SupressWarnings(DB.IFailuresPreprocessor):
+    def PreprocessFailures(self, failuresAccessor):
+        ignored_fails = [
+            DB.BuiltInFailures.ElectricalFailures.CircuitOverload,
+            DB.BuiltInFailures.OverlapFailures.DuplicateInstances
+        ]
+
+        try:
+            failures = failuresAccessor.GetFailureMessages()
+
+            for fail in failures:  # type: DB.FailureMessageAccessor
+                severity = fail.GetSeverity()
+                description = fail.GetDescriptionText()
+                fail_id = fail.GetFailureDefinitionId()
+
+                if severity == DB.FailureSeverity.Warning and fail_id in ignored_fails:
+                    print('✅ Suppressed Warning: {}'.format(description))
+                    failuresAccessor.DeleteWarning(fail)
+
+        except Exception as e:
+            print('⚠️ Exception in SuppressWarnings: {}'.format(e))
+
+        return DB.FailureProcessingResult.Continue
 
 # === Load CSV ===
 def load_csv_table(filepath):
@@ -27,12 +50,13 @@ def pick_face_with_reference():
     ref = uidoc.Selection.PickObject(ObjectType.Face, "Pick a face")
     face = doc.GetElement(ref.ElementId).GetGeometryObjectFromReference(ref)
     face_norm = face.FaceNormal
-    location = doc.GetElement(ref.ElementId).Location
+    location = doc.GetElement(ref.ElementId).Location.Point
+    orientation = doc.GetElement(ref.ElementId).FacingOrientation
     normal = face.ComputeNormal(DB.UV(0.5, 0.5)).Normalize()
     bbox = face.GetBoundingBox()
     logger.debug(
         "ref:{}, Face: {}, face_norm:{}, norm:{}, loc:{} ".format(ref.ElementId, face, face_norm, normal, location))
-    return face, ref, normal, bbox
+    return face, ref, normal, bbox, location, orientation
 
 
 # === Get direction in plane of face ===
@@ -57,6 +81,16 @@ def generate_face_split_points(face, bbox, data_rows):
 
     return {"odds": odds, "evens": evens, "left_points": left, "right_points": right}
 
+def get_element_location_point_from_face_ref(face_ref):
+    element = doc.GetElement(face_ref.ElementId)
+    location = element.Location
+
+    if isinstance(location, DB.LocationPoint):
+        return location.Point
+    elif isinstance(location, DB.LocationCurve):
+        return location.Curve.Evaluate(0.5, True)
+    else:
+        raise Exception("Cannot extract placement point from selected element.")
 
 # === Family + Param utils ===
 def get_family_symbol(row):
@@ -108,9 +142,9 @@ csv_path = r"C:\Users\Aevelina\OneDrive - CoolSys Inc\Documents\FilteredDataExpo
 filepath = forms.pick_file(file_ext="csv", multi_file=False, title="Pick CSV File")
 table = load_csv_table(csv_path)
 
-face, ref, normal, bbox = pick_face_with_reference()
+face, ref, normal, bbox, location, orientation = pick_face_with_reference()
 ref_dir = get_reference_direction(normal)
-placement = generate_face_split_points(face, bbox, table)
+
 
 # Collect panels and build panel name lookup
 panel_lookup = {
@@ -119,10 +153,8 @@ panel_lookup = {
         DB.BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType()
 }
 
-# === PLACEMENT & GROUPING ===
-instance_row_pairs = []
-circuit_groups = {}
-circuit_group_keys_in_order = []
+# === PLACEMENT & WIRING ===
+circuit_rows = []
 
 with DB.TransactionGroup(doc, "Place + Wire + Param Families") as tg:
     tg.Start()
@@ -130,60 +162,50 @@ with DB.TransactionGroup(doc, "Place + Wire + Param Families") as tg:
     with revit.Transaction("Activate Symbols", doc):
         activated = set()
         for row in table:
-            sym = get_family_symbol(row)
-            if sym and not sym.IsActive and sym.Id.IntegerValue not in activated:
-                sym.Activate()
-                activated.add(sym.Id.IntegerValue)
+            symbol = get_family_symbol(row)
+            if symbol and not symbol.IsActive and symbol.Id.IntegerValue not in activated:
+                symbol.Activate()
+                activated.add(symbol.Id.IntegerValue)
 
-    # Map circuit number to face points (still needed)
-    odds_map = {r['CKT_Circuit Number_CEDT']: pt for r, pt in zip(placement['odds'], placement['left_points'])}
-    evens_map = {r['CKT_Circuit Number_CEDT']: pt for r, pt in zip(placement['evens'], placement['right_points'])}
-
-    with revit.Transaction("Place and Parameterize", doc):
+    with revit.Transaction("Place and Parameterize", doc,swallow_errors=True) as t:
         for row in table:
             circuit_number = row['CKT_Circuit Number_CEDT'].strip()
-            panel = row['CKT_Panel_CEDT'].strip()
-            pt = odds_map.get(circuit_number) or evens_map.get(circuit_number)
-            output.print_md("ckt: {}, Point: {}".format(circuit_number, pt))
-            if not pt:
-                output.print_md("⚠️ No point found for circuit {}".format(circuit_number))
-                continue
+            panel_name = row['CKT_Panel_CEDT'].strip()
+            panel = panel_lookup.get(panel_name)
 
             symbol = get_family_symbol(row)
             if not symbol:
                 output.print_md("❌ Missing symbol for {} / {}".format(row['Family'], row['Type']))
                 continue
+            point = location + .25*orientation
+            instance = doc.Create.NewFamilyInstance(ref, point, ref_dir, symbol)
 
-            instance = doc.Create.NewFamilyInstance(ref, pt, ref_dir, symbol)
             set_instance_parameters(instance, row)
-            instance_row_pairs.append((instance, row))
 
-            key = (panel, circuit_number)
-            if key not in circuit_groups:
-                circuit_groups[key] = {
-                    "elements": [],
-                    "panel": panel_lookup.get(panel),
-                    "rating": row.get("CKT_Rating_CED", "").strip(),
-                    "load_name": row.get("CKT_Load Name_CEDT", "").strip(),
-                    "notes": row.get("CKT_Schedule Notes_CEDT", "").strip()
-                }
-                circuit_group_keys_in_order.append(key)
-
-            circuit_groups[key]["elements"].append(instance)
+            circuit_rows.append({
+                "instance": instance,
+                "panel": panel,
+                "rating": row.get("CKT_Rating_CED", "").strip(),
+                "load_name": row.get("CKT_Load Name_CEDT", "").strip(),
+                "notes": row.get("CKT_Schedule Notes_CEDT", "").strip(),
+                "row_id": circuit_number
+            })
 
     created_systems = {}
 
-    with revit.Transaction("Create Circuits", doc):
-        for key in circuit_group_keys_in_order:  # maintain CSV order
-            data = circuit_groups[key]
-            ids = [e.Id for e in data["elements"]]
-            panel = data["panel"]
-            if not panel or not ids:
-                output.print_md("⚠️ Skipping circuit {} — missing panel or elements".format(key))
+    with revit.Transaction("Create Circuits", doc, swallow_errors=True):
+        for row_data in circuit_rows:
+            instance = row_data["instance"]
+            panel = row_data["panel"]
+            if not panel:
+                output.print_md("⚠️ Skipping {} — missing panel".format(row_data["row_id"]))
                 continue
-            system = create_electrical_system(doc, ids, panel)
+
+            system = create_electrical_system(doc, [instance.Id], panel)
+
+
             if system:
-                created_systems[system.Id] = data
+                created_systems[system.Id] = row_data
 
     with revit.Transaction("Set Circuit Parameters", doc):
         for sys_id, data in created_systems.items():
@@ -194,12 +216,16 @@ with DB.TransactionGroup(doc, "Place + Wire + Param Families") as tg:
             if data["load_name"]:
                 sys.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME).Set(data["load_name"])
             if data["rating"]:
-                sys.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM).Set(data["rating"])
+                try:
+                    rating_val = float(data["rating"])
+                    sys.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM).Set(rating_val)
+                    val = sys.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM).AsDouble()
+                    output.print_md("✅ Rating set for {}: {}".format(data["row_id"], val))
+                except Exception as e:
+                    output.print_md("⚠️ Failed to set rating for {}: {}".format(data["row_id"], e))
             if data["notes"]:
                 sys.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NOTES_PARAM).Set(data["notes"])
 
     tg.Assimilate()
 
 output.print_md("### ✅ Placement & Circuiting Complete")
-output.print_md("**Odds:** {}".format([r['CKT_Circuit Number_CEDT'] for r in placement['odds']]))
-output.print_md("**Evens:** {}".format([r['CKT_Circuit Number_CEDT'] for r in placement['evens']]))

@@ -1,0 +1,21 @@
+title: "Select Connectors By Case"
+
+tooltip: >-
+  Version = 1.0
+  
+  Date    = 05.10.2025
+  ________________________________________________________________
+  Description:
+  
+  Selects connector elements for refrigeration cases based on 
+  Refrigeration Circuit Number_CEDT and type (e.g., FANS, LIGHTS).
+
+  Highlights matching connectors in the model.
+  
+  Use this tool to set data or create circuits for multiple cases.
+  ________________________________________________________________
+  
+
+author: >-
+  AEvelina
+

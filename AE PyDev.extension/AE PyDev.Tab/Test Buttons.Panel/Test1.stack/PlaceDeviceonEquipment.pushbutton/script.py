@@ -127,198 +127,172 @@ class ParentElement:
 
 
 class ChildElement:
-    """Class to store details about a child (to-be-placed) element."""
+    """Class to place a child Revit element (FamilyInstance or Group) relative to a parent."""
 
     def __init__(
-            self,
-            family_name,
-            symbol_name,
-            family_symbol=None,
-            parent_element=None,
-            view_specific=None,
-            location_point=None,
-            facing_orientation=None,
-            level_id=None,
-            owner_view_id=None,
-            structural_type=None,
+        self,
+        element_type,            # "FamilyInstance" or "Group"
+        family_name,
+        symbol_name,
+        symbol_or_type=None,     # FamilySymbol or GroupType
+        parent_element=None,
+        placement_info=None,     # PlacementInfo object
+        view_specific=False,
+        structural_type=None
     ):
+        self.element_type = element_type
         self.family_name = family_name
         self.symbol_name = symbol_name
-        self.family_symbol = family_symbol
+        self.symbol_or_type = symbol_or_type
         self.parent_element = parent_element
-        self.view_specific = view_specific  # Determined from the FamilySymbol
-        self.location_point = location_point
-        self.facing_orientation = facing_orientation
-        self.level_id = level_id  # Inherited or active view's level
-        self.owner_view_id = owner_view_id
+        self.placement_info = placement_info
+        self.view_specific = view_specific
         self.structural_type = structural_type
-        self.child_id = None  # To store the ID of the placed instance
+        self.child_id = None
 
     @classmethod
-    def from_parent_and_symbol(cls, parent, family_symbol, family_name, symbol_name):
+    def from_parent_and_symbol(cls, parent, symbol, family_name, symbol_name, element_type="FamilyInstance"):
         """
-        Create a ChildElement instance using data from a ParentElement and a FamilySymbol.
-
-        Args:
-            parent: A ParentElement instance.
-            family_symbol: A Revit FamilySymbol object.
-            family_name: The name of the family.
-            symbol_name: The name of the symbol.
-
-        Returns:
-            A ChildElement instance.
+        Create a ChildElement from a ParentElement and Revit symbol/type.
+        Supports FamilyInstance or Group.
         """
-        # Determine if the FamilySymbol is view-specific
-        view_specific = family_symbol.Category.Id in [
+        view_specific = symbol.Category.Id in [
             DB.ElementId(DB.BuiltInCategory.OST_GenericAnnotation),
             DB.ElementId(DB.BuiltInCategory.OST_DetailComponents),
-        ]
+        ] if isinstance(symbol, DB.FamilySymbol) else False
 
-        # Determine the Level ID
-        if view_specific:
-            level_id = None
-        else:
-            level_id = parent.level_id
+        level_id = parent.level_id if not view_specific else None
+        owner_view_id = parent.owner_view_id if view_specific else None
 
-        if level_id is None and not view_specific:
-            # Fallback to the level of the active view if the parent lacks a LevelID
+        if not view_specific and level_id is None:
             active_view = doc.ActiveView
             if hasattr(active_view, "GenLevel") and active_view.GenLevel:
                 level_id = active_view.GenLevel.Id
             else:
                 raise ValueError("Unable to determine a valid level for 3D child placement.")
 
-        # For view-specific elements, use the active view ID
-        owner_view_id = doc.ActiveView.Id if view_specific else None
-
-        return cls(
-            family_name=family_name,
-            symbol_name=symbol_name,
-            family_symbol=family_symbol,
-            parent_element=parent,
-            view_specific=view_specific,
+        placement_info = PlacementInfo(
             location_point=parent.location_point,
             facing_orientation=parent.facing_orientation,
             level_id=level_id,
-            owner_view_id=owner_view_id,
-            structural_type=DB.Structure.StructuralType.NonStructural
-            if not view_specific
-            else None,
+            owner_view_id=owner_view_id
+        )
+
+        return cls(
+            element_type=element_type,
+            family_name=family_name,
+            symbol_name=symbol_name,
+            symbol_or_type=symbol,
+            parent_element=parent,
+            placement_info=placement_info,
+            view_specific=view_specific,
+            structural_type=DB.Structure.StructuralType.NonStructural if not view_specific else None
         )
 
     def place(self):
-        """
-        Place the child element in the Revit model based on its properties.
-        """
-        try:
-            if not self.family_symbol.IsActive:
-                self.family_symbol.Activate()
-                doc.Regenerate()
+        """Place the element in Revit based on its type."""
+        if self.element_type == "FamilyInstance":
+            return self._place_family_instance()
+        elif self.element_type == "Group":
+            return self._place_group()
+        else:
+            raise ValueError("Unsupported element type: {}".format(self.element_type))
 
-            if self.view_specific:
-                # Place as a 2D element
-                owner_view = doc.GetElement(self.owner_view_id)
-                if owner_view is None:
-                    raise ValueError("OwnerViewId is invalid for placing 2D elements.")
-                placed_element = doc.Create.NewFamilyInstance(
-                    self.location_point, self.family_symbol, owner_view
-                )
-            else:
-                # Place as a 3D element
-                level = doc.GetElement(self.level_id)
-                if level is None:
-                    raise ValueError("LevelId is invalid for placing 3D elements.")
-                placed_element = doc.Create.NewFamilyInstance(
-                    self.location_point, self.family_symbol, level, self.structural_type
-                )
+    def _place_family_instance(self):
+        if not self.symbol_or_type.IsActive:
+            self.symbol_or_type.Activate()
+            doc.Regenerate()
 
-            if placed_element:
-                self.child_id = placed_element.Id  # Store the placed element ID
-                logger.info("Successfully placed element with ID: {}".format(self.child_id))
-            return placed_element
-        except Exception as e:
-            logger.error("Failed to place element: {}".format(e))
-            raise
+        if self.view_specific:
+            view = doc.GetElement(self.placement_info.owner_view_id)
+            if not view:
+                raise ValueError("Invalid view for 2D placement.")
+            placed = doc.Create.NewFamilyInstance(
+                self.placement_info.location_point, self.symbol_or_type, view
+            )
+        else:
+            level = doc.GetElement(self.placement_info.level_id)
+            if not level:
+                raise ValueError("Invalid level for 3D placement.")
+
+            # Adjust Z relative to level
+            offset_z = self.placement_info.location_point.Z - level.Elevation
+            point = DB.XYZ(
+                self.placement_info.location_point.X,
+                self.placement_info.location_point.Y,
+                offset_z
+            )
+            placed = doc.Create.NewFamilyInstance(
+                point, self.symbol_or_type, level, self.structural_type
+            )
+
+        self.child_id = placed.Id
+        return placed
+
+    def _place_group(self):
+        if not isinstance(self.symbol_or_type, DB.GroupType):
+            raise TypeError("Expected GroupType for group placement.")
+        placed = doc.Create.PlaceGroup(self.placement_info.location_point, self.symbol_or_type)
+        self.child_id = placed.Id
+        return placed
 
     def rotate_to_match_parent(self):
-        """
-        Rotate the child element to match the orientation of the parent element.
-        """
+        """Rotate the child element to match its parent's facing orientation."""
         if not self.child_id:
             logger.warning("No placed child element to rotate.")
             return False
 
-        # Retrieve the placed child element
         child_element = doc.GetElement(self.child_id)
         if child_element is None:
             logger.warning("Child element with ID {} not found.".format(self.child_id))
             return False
 
-        if not self.parent_element or not self.parent_element.facing_orientation:
-            logger.warning("Parent facing orientation is not defined or missing.")
+        parent_orientation = self.placement_info.facing_orientation
+        if not parent_orientation:
+            logger.warning("Parent orientation is missing.")
             return False
 
-        # Default orientation for the child element
         default_orientation = DB.XYZ(0, 1, 0)
-
-        # Parent's orientation
-        parent_orientation = self.parent_element.facing_orientation
-
-        # Calculate the angle between the default and parent orientation
         angle = default_orientation.AngleTo(parent_orientation)
 
-        # Determine the rotation direction using the cross product
-        cross_product = default_orientation.CrossProduct(parent_orientation)
-        if cross_product.Z < 0:
+        cross = default_orientation.CrossProduct(parent_orientation)
+        if cross.Z < 0:
             angle = -angle
 
-        # Define the rotation axis (Z-axis through the location point)
-        rotation_axis = DB.Line.CreateBound(
-            self.location_point,
-            DB.XYZ(self.location_point.X, self.location_point.Y, self.location_point.Z + 1)
+        axis = DB.Line.CreateBound(
+            self.placement_info.location_point,
+            DB.XYZ(self.placement_info.location_point.X,
+                   self.placement_info.location_point.Y,
+                   self.placement_info.location_point.Z + 1)
         )
 
-        # Rotate the child element
         try:
-            child_element.Location.Rotate(rotation_axis, angle)
-            logger.info("Successfully rotated child element ID {} by {} radians.".format(self.child_id, angle))
+            child_element.Location.Rotate(axis, angle)
+            logger.info("Rotated element {} by {:.2f} radians.".format(self.child_id, angle))
             return True
         except Exception as e:
-            logger.error("Failed to rotate child element ID {}: {}".format(self.child_id, e))
+            logger.error("Rotation failed: {}".format(e))
             return False
 
     def copy_parameters(self, parameter_mapping):
-        """
-        Copy parameter values from the associated parent to the child.
-
-        Args:
-            parameter_mapping (dict): A dictionary mapping parent parameters to child parameters.
-        """
+        """Copy parameters from the parent element to the child element."""
         if not self.parent_element:
             logger.warning("No parent associated with this child element.")
             return
 
         for parent_param, child_param in parameter_mapping.items():
-            # Get the parameter value from the parent
             parent_value = self.parent_element.get_parameter_value(parent_param)
             if parent_value is None:
                 logger.warning("Parent parameter '{}' not found or has no value.".format(parent_param))
                 continue
 
-            # Set the parameter value on the child
             if not self.set_parameter_value(child_param, parent_value):
-                logger.warning("Child parameter '{}' not found or could not be set.".format(child_param))
+                logger.warning("Failed to set child parameter '{}'.".format(child_param))
 
     def set_parameter_value(self, parameter_name, value):
-        """
-        Set a parameter value on the placed child element.
-
-        Args:
-            parameter_name (str): The name of the parameter to set.
-            value: The value to set for the parameter.
-        """
-        element = doc.GetElement(self.child_id)  # Retrieve the placed element
-        if element is None:
+        """Set a parameter value on the placed child element."""
+        element = doc.GetElement(self.child_id)
+        if not element:
             logger.warning("Child element with ID {} not found.".format(self.child_id))
             return False
 
@@ -337,23 +311,30 @@ class ChildElement:
             except Exception as e:
                 logger.error("Failed to set parameter '{}': {}".format(parameter_name, e))
         else:
-            logger.warning("Parameter '{}' is read-only or not found on child.".format(parameter_name))
+            logger.warning("Parameter '{}' is read-only or not found.".format(parameter_name))
         return False
 
     def __repr__(self):
-        return "ChildElement(Family={}, Symbol={}, ParentID={}, ViewSpecific={}, Point={}, Orientation={}, LevelID={}, OwnerViewID={}, StructuralType={}, PlacedElementID={})".format(
+        return "ChildElement(Type={}, Family={}, Symbol={}, PlacedID={}, Placement={})".format(
+            self.element_type,
             self.family_name,
             self.symbol_name,
-            self.parent_element,
-            self.view_specific,
-            self.location_point,
-            self.facing_orientation,
-            self.level_id,
-            self.owner_view_id,
-            self.structural_type,
             self.child_id,
+            self.placement_info
         )
 
+
+class PlacementInfo(object):
+    def __init__(self, location_point, level_id=None, owner_view_id=None, facing_orientation=None):
+        self.location_point = location_point
+        self.level_id = level_id
+        self.owner_view_id = owner_view_id
+        self.facing_orientation = facing_orientation
+
+    def __repr__(self):
+        return "PlacementInfo(Point={}, LevelID={}, ViewID={}, Orientation={})".format(
+            self.location_point, self.level_id, self.owner_view_id, self.facing_orientation
+        )
 
 def pick_reference_elements():
     """Prompt user to select reference elements if none are selected."""
@@ -370,68 +351,89 @@ def pick_reference_elements():
     return valid_selection
 
 
-def pick_family():
+def pick_family_or_group():
     """
-    Prompt user to pick a family grouped by FamilyCategory.
+    Prompt user to pick a Family or GroupType, grouped by category.
     Returns:
-        The selected Revit Family object.
+        A DB.Family or DB.GroupType object.
     """
-    # Collect all families in the document
+    # Collect families
     fam_collector = DB.FilteredElementCollector(doc).OfClass(DB.Family)
-    logger.debug("Total families in document: {}".format(fam_collector.GetElementCount()))
+    group_collector = DB.FilteredElementCollector(doc).OfClass(DB.GroupType)
 
-    fam_options = {" All": []}  # " All" with a space to ensure it appears first
+    logger.debug("Total families: {}, Total group types: {}".format(
+        fam_collector.GetElementCount(), group_collector.GetElementCount()))
 
+    fam_options = {" All Families": []}
+    group_options = {}
+
+    # -- Handle Families --
     for fam in fam_collector:
-        fam_category = fam.FamilyCategory
+        fam_cat = fam.FamilyCategory
 
-        # Skip families without a category or those classified as tags
-        if not fam_category or fam_category.IsTagCategory:
-            logger.debug("Skipped family: {}, Category: {}".format(
-                fam.Name, fam_category.Name if fam_category else "None"
-            ))
+        if not fam_cat or fam_cat.IsTagCategory:
+            continue
+        if fam_cat.Id.IntegerValue in [
+            int(DB.BuiltInCategory.OST_MultiCategoryTags),
+            int(DB.BuiltInCategory.OST_KeynoteTags)
+        ]:
             continue
 
-        # Add family to the "All" group
-        fam_options[" All"].append(fam)
+        fam_options[" All Families"].append(fam)
+        cat_name = fam_cat.Name
+        if cat_name not in fam_options:
+            fam_options[cat_name] = []
+        fam_options[cat_name].append(fam)
 
-        # Add family to its category group
-        fam_cat_name = fam_category.Name
-        if fam_cat_name not in fam_options:
-            fam_options[fam_cat_name] = []
-        fam_options[fam_cat_name].append(fam)
+    # -- Handle GroupTypes --
+    for group_type in group_collector:
+        if "Model Groups" not in group_options:
+            group_options["Model Groups"] = []
+        group_options["Model Groups"].append(group_type)
 
-    # Prepare grouped options for display
+    # Combine families and groups into one UI structure
     grouped_options = {}
-    for group, families in fam_options.items():
+
+    for group, fams in fam_options.items():
+        grouped_options[group] = ["[Family] {} | {}".format(f.FamilyCategory.Name, f.Name) for f in fams]
+
+    for group, groups in group_options.items():
         grouped_options[group] = [
-            "{} | {}".format(fam.FamilyCategory.Name, fam.Name) for fam in families
+            "[Group] {}".format(DB.Element.Name.__get__(g)) for g in groups
         ]
-        grouped_options[group].sort()
 
-    logger.debug("Grouped Options for Selection: {}".format(grouped_options))
+    # Sort entries for each group
+    for key in grouped_options:
+        grouped_options[key].sort()
 
-    # Show selection dialog
-    selected_option = forms.SelectFromList.show(
+    # Show UI
+    selected = forms.SelectFromList.show(
         grouped_options,
-        title="Select a Family",
+        title="Select a Family or Group",
         group_selector_title="Category:",
         multiselect=False
     )
 
-    if not selected_option:
-        logger.info("No family selected. Exiting script.")
+    if not selected:
+        logger.info("No selection made. Exiting.")
         script.exit()
 
-    # Find and return the selected family
-    for group, families in fam_options.items():
-        for fam in families:
-            if "{} | {}".format(fam.FamilyCategory.Name, fam.Name) == selected_option:
-                logger.debug("Selected Family: {}, Category: {}".format(fam.Name, fam.FamilyCategory.Name))
-                return fam
+    # Match the selection back to the element
+    for fams in fam_options.values():
+        for f in fams:
+            label = "[Family] {} | {}".format(f.FamilyCategory.Name, f.Name)
+            if selected == label:
+                return f
 
-    logger.error("Failed to match the selected option to a family.")
+    for groups in group_options.values():
+        for g in groups:
+            label = "[Group] {}".format(DB.Element.Name.__get__(g))
+            if selected == label:
+                return g
+
+    logger.error("Selected item not matched to any element.")
     script.exit()
+
 
 
 def pick_family_type(family):
@@ -461,50 +463,65 @@ def pick_family_type(family):
 
 
 def main():
-    # Define parameter mapping
     parameter_mapping = {
         "Mark": "Equipment ID_CEDT",
         "Family and Type": "Equipment Remarks_CEDT",
     }
 
-    # Pick reference elements
+    # Select parents
     selected_elements = pick_reference_elements()
     parent_instances = [ParentElement.from_element_id(el.Id) for el in selected_elements]
 
-    # Prompt user to pick a family and type
-    family = pick_family()
-    family_type = pick_family_type(family)
+    # Prompt user to select Family or Group
+    selected_child = pick_family_or_group()
 
-    # Use the FamilySymbol from pick_family_type
-    family_symbol = family_type[0]
-    family_name = query.get_name(family_symbol.Family)
-    symbol_name = query.get_name(family_symbol)
-
-    # Create ChildElement instances for each ParentElement
     child_instances = []
 
-    for parent in parent_instances:
-        # Create a child element and associate it with its parent
-        child = ChildElement.from_parent_and_symbol(parent, family_symbol, family_name, symbol_name)
-        child_instances.append(child)
+    if isinstance(selected_child, DB.Family):
+        family_type = pick_family_type(selected_child)
+        family_symbol = family_type[0]
+        family_name = query.get_name(family_symbol.Family)
+        symbol_name = query.get_name(family_symbol)
 
-    # Place and set parameters in a transaction
+        for parent in parent_instances:
+            child = ChildElement.from_parent_and_symbol(
+                parent,
+                symbol=family_symbol,
+                family_name=family_name,
+                symbol_name=symbol_name,
+                element_type="FamilyInstance"
+            )
+            child_instances.append(child)
+
+    elif isinstance(selected_child, DB.GroupType):
+        group_type = selected_child
+        group_name = query.get_name(group_type)
+
+        for parent in parent_instances:
+            child = ChildElement.from_parent_and_symbol(
+                parent,
+                symbol=group_type,
+                family_name="Model Group",
+                symbol_name=group_name,
+                element_type="Group"
+            )
+            child_instances.append(child)
+
+    else:
+        logger.error("Unsupported selection type: {}".format(type(selected_child)))
+        script.exit()
+
+    # Place elements
     with DB.Transaction(doc, "Place and Rotate Child Elements") as trans:
         trans.Start()
         for child in child_instances:
-            # Place the child element
-            placed_instance = child.place()
-
-            # Rotate the child to match the parent's orientation
-            if not child.rotate_to_match_parent():
-                logger.warning("Failed to rotate child element ID {}.".format(child.child_id))
-
-            # Copy parameters from parent to child
-            # child.copy_parameters(parameter_mapping)
-
+            child.place()
+            if child.element_type == "FamilyInstance":
+                child.rotate_to_match_parent()
+                # child.copy_parameters(parameter_mapping)
         trans.Commit()
 
-    # Print results
+    # Log results
     logger.info("Parent Elements:")
     for parent in parent_instances:
         logger.info("{}".format(repr(parent)))

@@ -1,0 +1,18 @@
+title: "Place Power Groups"
+
+tooltip: >-
+  Version = 1.0
+  
+  Date    = 05.10.2025
+  ________________________________________________________________
+  Description:
+  
+  Places Groups on top of other selected elements. If no elements
+  are selected, it will target all instances of the EMS case tag in
+  the active view.
+  ________________________________________________________________
+  
+
+author: >-
+  AEvelina
+

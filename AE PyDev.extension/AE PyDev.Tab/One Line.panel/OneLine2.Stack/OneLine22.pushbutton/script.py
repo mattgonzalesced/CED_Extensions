@@ -2,8 +2,11 @@
 from Autodesk.Revit.DB.Electrical import *
 from pyrevit import script, revit, forms, DB
 from Snippets import _elecutils as eu
+
 logger = script.get_logger()
 import csv
+
+
 # -------------------------------
 # Data Classes
 # -------------------------------
@@ -34,6 +37,7 @@ class TreeBranch(object):
             "From Panel": self.base_eq_name,
             "Feeder": self.is_feeder
         }
+
 
 class TreeNode(object):
     PART_TYPE_MAP = {
@@ -100,10 +104,11 @@ class TreeNode(object):
         # Leaf check
         self.is_leaf = not assigned or len(assigned) == 0
 
+
 class SystemTree(object):
     def __init__(self):
-        self.nodes = {}      # {element_id: EquipmentNode}
-        self.root_nodes = [] # list of EquipmentNode
+        self.nodes = {}  # {element_id: EquipmentNode}
+        self.root_nodes = []  # list of EquipmentNode
 
     def add_node(self, node):
         self.nodes[node.element_id] = node
@@ -174,7 +179,8 @@ class SystemTree(object):
 
             if hasattr(system, "Elements"):
                 for e in list(system.Elements):
-                    if e.Category and int(e.Category.Id.IntegerValue) == int(DB.BuiltInCategory.OST_ElectricalEquipment):
+                    if e.Category and int(e.Category.Id.IntegerValue) == int(
+                            DB.BuiltInCategory.OST_ElectricalEquipment):
                         if e.Id not in visited:
                             branch.is_feeder = True
                             child_node = self.nodes.get(e.Id)
@@ -199,6 +205,7 @@ class SystemTree(object):
                     count
                 ))
 
+
 # ----------------------------
 # Build the Equipment Map
 # ----------------------------
@@ -221,7 +228,6 @@ def get_all_equipment_nodes(doc):
 # ----------------------------
 
 
-
 # -------------------------------
 # Main Execution
 # -------------------------------
@@ -231,8 +237,6 @@ if __name__ == "__main__":
     output = script.get_output()
     logger = script.get_logger()
     output.close_others()
-
-
 
     # Build node map
     equipment_map = get_all_equipment_nodes(doc)

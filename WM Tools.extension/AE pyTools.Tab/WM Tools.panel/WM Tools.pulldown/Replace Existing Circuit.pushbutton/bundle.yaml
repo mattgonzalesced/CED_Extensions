@@ -1,0 +1,21 @@
+title: "Replace Existing Circuit"
+
+tooltip: >-
+  Version = 1.0
+  
+  Date    = 05.10.2025
+  ________________________________________________________________
+  Description:
+
+  Replaces an existing circuit placeholder with real connector elements.
+
+
+  Select a placeholder circuit in a panel schedule, choose matching connector types,
+  and they will be added to the circuit. The placeholder will be deleted.
+  ________________________________________________________________
+
+  
+
+author: >-
+  AEvelina
+
