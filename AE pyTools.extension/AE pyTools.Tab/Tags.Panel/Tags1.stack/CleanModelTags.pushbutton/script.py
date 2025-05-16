@@ -4,7 +4,7 @@ import clr
 import math
 from pyrevit import script, forms
 from pyrevit import revit, DB
-
+from System.Collections.Generic import List
 # Access the current Revit document
 doc = revit.doc
 output = script.get_output()
@@ -29,12 +29,26 @@ category_enum = {
 category_counts = {}
 model_orientation_counts = {}
 
-# Collect all elements from the specified categories and count them
+selection = revit.get_selection()
+if selection:
+    selected_ids = List[DB.ElementId](selection.element_ids)
+
 elements = []
+
 for name, cat in category_enum.items():
-    collector = DB.FilteredElementCollector(doc).OfCategory(cat).WhereElementIsNotElementType().ToElements()
+    if selection:
+        collector = DB.FilteredElementCollector(doc, selected_ids) \
+            .OfCategory(cat) \
+            .WhereElementIsNotElementType() \
+            .ToElements()
+    else:
+        collector = DB.FilteredElementCollector(doc) \
+            .OfCategory(cat) \
+            .WhereElementIsNotElementType() \
+            .ToElements()
+
     count = len(collector)
-    category_counts[name] = count  # Store the count
+    category_counts[name] = count
     elements.extend(collector)
 
 # Pre-filter elements based on their orientation value before committing a transaction
@@ -68,7 +82,7 @@ if filtered_elements:
                 angle_degrees = math.degrees(angle_radians)  # Convert radians to degrees
 
                 # Determine the new orientation
-                if round(angle_degrees) in [0, 180]:
+                if round(angle_degrees) in [0, 180, 360]:
                     new_orientation = "Horizontal"
                     orientation_param.Set(0)  # Set to horizontal (e.g., 0)
                 elif round(angle_degrees) in [90, 270]:
@@ -82,7 +96,8 @@ if filtered_elements:
                 try:
                     element_type_element = doc.GetElement(element.GetTypeId())
                     if element_type_element:
-                        element_type = element_type_element.get_Parameter(DB.BuiltInParameter.SYMBOL_FAMILY_AND_TYPE_NAMES_PARAM).AsString()
+                        element_type = element_type_element.get_Parameter(
+                            DB.BuiltInParameter.SYMBOL_FAMILY_AND_TYPE_NAMES_PARAM).AsString()
                 except Exception as e:
                     output.print_md("Error retrieving type for Element ID {}: {}".format(element.Id, str(e)))
 

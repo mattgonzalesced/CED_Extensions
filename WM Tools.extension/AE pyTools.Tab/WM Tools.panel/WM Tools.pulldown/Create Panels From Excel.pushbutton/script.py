@@ -91,7 +91,8 @@ def resolve_missing_distribution_systems(rows, dist_lookup):
         if selected:
             updated[name] = display_map[selected].Id
         else:
-            logger.warning("No replacement selected for '{}'. It will be skipped.".format(display_label))
+            logger.warning("No replacement selected for '{}'. canceling script.".format(display_label))
+            script.exit()
 
     dist_lookup.update(updated)
     return dist_lookup

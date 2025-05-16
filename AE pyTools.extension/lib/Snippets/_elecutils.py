@@ -264,32 +264,59 @@ def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
     return circuits_sorted
 
 
-def pick_circuits_from_list(doc, select_multiple=False):
+def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_spaces=False):
     ckts = DB.FilteredElementCollector(doc) \
         .OfClass(ElectricalSystem) \
         .WhereElementIsNotElementType()
 
     grouped_options = {" All": []}
     ckt_lookup = {}
-
     panel_groups = {}  # key: panel name, value: list of (sort_key, label)
     all_labels = []  # list of (sort_key, label)
 
+
     for ckt in ckts:
+        # Skip spares/spaces if not included
+        if not include_spares_and_spaces and ckt.CircuitType in [CircuitType.Spare, CircuitType.Space]:
+            continue
+
+        # Safely get rating and poles if circuit is a PowerCircuit
+        if ckt.SystemType == ElectricalSystemType.PowerCircuit:
+            try:
+                rating = int(round(ckt.Rating,0))
+            except:
+                rating = "N/A"
+
+            try:
+                pole = ckt.PolesNumber
+            except:
+                pole = "?"
+        else:
+            rating = "N/A"
+            pole = "?"
+
         ckt_id = ckt.Id.IntegerValue
         base_equipment = ckt.BaseEquipment
-
         panel_name = getattr(base_equipment, 'Name', None) if base_equipment else None
-        panel_name = panel_name or "<unassigned>"
+        panel_name = panel_name or " No Panel"
         load_name = ckt.LoadName or ""
         circuit_number = ckt.CircuitNumber
         start_slot = ckt.StartSlot if hasattr(ckt, 'StartSlot') else 0
         sort_key = (panel_name, start_slot, load_name.strip())
 
-        if panel_name == "<unassigned>":
-            label = "({})| {} - {}".format(ckt_id, panel_name, load_name.strip())
+
+        if ckt.CircuitType == CircuitType.Space:
+            # Space: no rating/poles, just panel and label
+            label = "[{}]  {}/{} - {}({}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(),pole)
+
+        elif ckt.CircuitType == CircuitType.Spare:
+            # Spare: show circuit number and panel, label as [SPARE]
+            label = "[{}]  {}/{} - {}  ({} A/{}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(), rating, pole)
+
         else:
-            label = "({})| {} / {} - {}".format(ckt_id, panel_name, circuit_number, load_name.strip())
+            # Normal circuit
+            label = "[{}]  {}/{} - {}  ({} A/{}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(), rating,
+                                                       pole)
 
         all_labels.append((sort_key, label))
 

@@ -2,7 +2,14 @@
 class CableSet(object):
     def __init__(self, cableset_type, wire_size, sets=1):
         self.type = cableset_type            # CableSetType instance
-        self.wire_size = wire_size           # e.g. '3/0'
+        self.wire_hot_qty = wire_hot_qty
+        self.wire_hot_size = wire_hot_size
+        self.wire_neutral_qty = wire_neutral_qty
+        self.wire_neutral_size = wire_neutral_size
+        self.wire_ground_qty = wire_ground_qty
+        self.wire_ground_size = wire_ground_size
+        self.wire_isoground_qty= wire_isoground_qty
+        self.wire_isoground_size = wire_isoground_size
         self.sets = sets                     # number of parallel sets
         self._ampacity = None
         self._voltage_drop = None

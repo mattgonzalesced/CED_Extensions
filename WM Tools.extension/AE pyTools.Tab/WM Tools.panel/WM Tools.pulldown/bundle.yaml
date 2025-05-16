@@ -9,6 +9,8 @@ layout:
   - Replace Existing Circuit
   - -----
   - Toggle Connector Symbols
+  - ">>>>>"
+  - Load Electrical Content
 
 background:
-  title: '#f39c12'
+  title: '#c07b0e'

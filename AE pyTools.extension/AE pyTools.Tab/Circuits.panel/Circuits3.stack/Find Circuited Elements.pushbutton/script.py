@@ -22,7 +22,7 @@ logger = script.get_logger()
 
 
 # Step 1: Pick circuits
-selected_circuits = pick_circuits_from_list(doc, select_multiple=True)
+selected_circuits = pick_circuits_from_list(doc, select_multiple=True,include_spares_and_spaces=True)
 if not selected_circuits:
     forms.alert("No circuits selected.", exitscript=True)
 
