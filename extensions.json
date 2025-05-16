@@ -2,7 +2,7 @@
     "extensions": [
       {
         "builtin": "False",
-        "enable": "True",
+        "enable": "False",
         "type": "extension",
         "name": "AE PyDev",
         "description": "Development Tools",
