@@ -465,8 +465,47 @@ def main():
         logger.error("❌ Failed to open starter file interactively: {}".format(e))
 
     output.show()
+def main2():
+
+    content_dir = resolve_content_folder()
+
+    shared_param_txt = os.path.join(content_dir, 'WM ELEC SHARED PARAMS.txt')
+    config_excel_path = os.path.join(content_dir, 'WM ELEC SHARED PARAM TABLE.xlsx')
+
+    new_param_file, original_param_file = safely_load_shared_parameter_file(app,shared_param_txt)
+
+
+    starter_path = os.path.join(content_dir, "WM ELEC STARTER.rvt")
+    output.close_others()
+    output.show()
+
+    if not os.path.exists(starter_path):
+        output.print_md("❌ Could not find **WM ELEC STARTER.rvt** in content folder.")
+        return
+
+    sheetdata = load_excel(config_excel_path)
+
+    with DB.TransactionGroup(doc, "Load Shared Parameters and Content") as tg:
+        tg.Start()
+
+        for row in sheetdata:
+            process_param_row(row,new_param_file)
+
+        tg.Assimilate()
+
+    if original_param_file:
+        app.SharedParametersFilename = original_param_file
+        logger.info("🔄 Restored shared parameter file: {}".format(original_param_file))
+    else:
+        logger.info("🔄No original parameter file. keeping new one set: {}".format(new_param_file))
+
+    output.show()
 
 
 # === Entry Point ===
 if __name__ == '__main__':
-    main()
+    param_only = 0
+    if param_only == 1:
+        main2()
+    else:
+        main()

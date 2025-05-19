@@ -6,6 +6,26 @@ SHARED_PARAMS = {
         'Categories': 'Electrical Circuits, Electrical Equipment, Electrical Fixtures',
         'Groups': 'Values are aligned per group type'
     },
+    'CKT_Circuit Ampacity_CED': {
+        'GUID': '704bf8fb-021e-4625-8aad-2563dc13bca6',
+        'Discipline': 'Electrical',
+        'Type of Parameter': 'Current',
+        'Group Under': 'Electrical - Circuiting',
+        'Instance/Type': 'Instance',
+        'Categories': 'Electrical Circuits, Electrical Equipment, Electrical Fixtures',
+        'Groups': 'Values can vary by group instance'
+    },
+
+    'CKT_Circuit Load Current_CED': {
+        'GUID': 'e202b73d-518e-4564-ab19-17ac48bff5d4',
+        'Discipline': 'Electrical',
+        'Type of Parameter': 'Current',
+        'Group Under': 'Electrical - Circuiting',
+        'Instance/Type': 'Instance',
+        'Categories': 'Electrical Circuits, Electrical Equipment, Electrical Fixtures',
+        'Groups': 'Values can vary by group instance'
+    },
+
     'CKT_User Override_CED': {
         'GUID': '0550b447-7df8-4188-8718-38212b29e591', 'Discipline': 'Common',
         'Type of Parameter': 'Yes/No',
@@ -87,7 +107,7 @@ SHARED_PARAMS = {
         'Categories': 'Electrical Circuits, Electrical Equipment, Electrical Fixtures',
         'Groups': 'Values are aligned per group type'
     },
-    'Wire Temparature Rating_CEDT': {
+    'Wire Temperature Rating_CEDT': {
         'GUID': 'd56f2166-4031-4e91-a954-b3fba24f55af',
         'Discipline': 'Common', 'Type of Parameter': 'Text',
         'Group Under': 'Electrical - Circuiting',

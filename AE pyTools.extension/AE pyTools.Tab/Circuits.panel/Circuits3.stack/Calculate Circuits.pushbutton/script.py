@@ -13,6 +13,7 @@ logger = script.get_logger()
 # -------------------------------------------------------------------------
 def collect_shared_param_values(branch):
     return {
+        'CKT_Circuit Type_CEDT': branch.branch_type,
         'CKT_Panel_CEDT': branch.panel,
         'CKT_Circuit Number_CEDT': branch.circuit_number,
         'CKT_Load Name_CEDT': branch.load_name,
@@ -31,14 +32,16 @@ def collect_shared_param_values(branch):
         'CKT_Wire Neutral Quantity_CED': branch.neutral_wire_quantity,
         'CKT_Wire Isolated Ground Size_CEDT': branch.isolated_ground_wire_size,
         'CKT_Wire Isolated Ground Quantity_CED': branch.isolated_ground_wire_quantity,
-        'Wire Material_CEDT': branch.wire_info.get('wire_material', 'CU'),
+        'Wire Material_CEDT': branch.wire_material,
         'Wire Temparature Rating_CEDT': branch.wire_info.get('wire_temperature_rating', '75'),
         'Wire Insulation_CEDT': branch.wire_info.get('wire_insulation', 'THWN'),
         'Conduit Size_CEDT': branch.conduit_size,
         'Conduit Type_CEDT': branch.conduit_type,
         'Conduit Fill Percentage_CED': branch.conduit_fill_percentage,
         'Wire Size_CEDT': branch.get_wire_size_callout(),
-        'Conduit and Wire Size_CEDT': branch.get_conduit_and_wire_size()
+        'Conduit and Wire Size_CEDT': branch.get_conduit_and_wire_size(),
+        'Circuit Load Current_CED': branch.circuit_load_current,
+        'Circuit Ampacity_CED': branch.circuit_base_ampacity,
     }
 
 # -------------------------------------------------------------------------
@@ -136,6 +139,7 @@ def main():
         branch.calculate_hot_wire_size()
         branch.calculate_ground_wire_size()
         branch.calculate_conduit_size()
+        branch.calculate_conduit_fill_percentage()
         branches.append(branch)
 
     # Write all parameters in a single transaction
