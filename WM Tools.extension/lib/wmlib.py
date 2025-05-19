@@ -9,7 +9,6 @@ from pyrevit import script, revit, DB, forms
 output = script.get_output()
 doc = revit.doc
 logger = script.get_logger()
-uidoc = revit.uidoc
 
 
 class ParentElement:
@@ -19,6 +18,7 @@ class ParentElement:
         self.element_id = element_id
         self.location_point = location_point
         self.facing_orientation = facing_orientation
+        self.doc = doc
 
     @property
     def circuit_number(self):
@@ -37,6 +37,7 @@ class ParentElement:
         return cls(element.Id, loc.Point, orientation)
 
     def get_parameter_value(self, name):
+
         param = doc.GetElement(self.element_id).LookupParameter(name)
         if not param or not param.HasValue:
             return None
@@ -57,9 +58,10 @@ class ChildGroup:
         self.location = parent.location_point
         self.orientation = parent.facing_orientation
         self.child_id = None
+        self.doc = doc
 
     def place(self):
-        inst = doc.Create.PlaceGroup(self.location, self.group_type)
+        inst = self.doc.Create.PlaceGroup(self.location, self.group_type)
         self.child_id = inst.Id
         logger.info("Placed model-group ID {}".format(self.child_id))
         return inst
@@ -76,7 +78,7 @@ class ChildGroup:
             self.location + DB.XYZ(0, 0, 1)
         )
         try:
-            grp = doc.GetElement(self.child_id)
+            grp = self.doc.GetElement(self.child_id)
             grp.Location.Rotate(axis, angle)
             logger.info("Rotated model-group ID {} by {}".format(self.child_id, angle))
             return True
@@ -85,7 +87,7 @@ class ChildGroup:
             return False
 
     def copy_parameters(self, mapping):
-        grp = doc.GetElement(self.child_id)
+        grp = self.doc.GetElement(self.child_id)
         for p_name, c_name in mapping.items():
             val = self.parent.get_parameter_value(p_name)
             if val is not None:
@@ -109,8 +111,8 @@ class ChildGroup:
             logger.warning("Model group not placed yet.")
             return False
         try:
-            group = doc.GetElement(self.child_id)
-            group.ShowAttachedDetailGroups(doc.ActiveView, detail_group_type.Id)
+            group = self.doc.GetElement(self.child_id)
+            group.ShowAttachedDetailGroups(self.doc.ActiveView, detail_group_type.Id)
             logger.info(
                 "Attached detail group '{}' to group {}".format(query.get_name(detail_group_type), self.child_id))
             return True
@@ -140,7 +142,7 @@ class ChildGroup:
         return instance
 
     def ungroup_and_propagate(self, circuit_param, system_param):
-        group = doc.GetElement(self.child_id)
+        group = self.doc.GetElement(self.child_id)
         if not isinstance(group, DB.Group):
             logger.warning("Element is not a group: {}".format(self.child_id))
             return []
@@ -157,7 +159,7 @@ class ChildGroup:
         system_number = extract_system_number(circuit_number)
 
         try:
-            doc.Regenerate()
+            self.doc.Regenerate()
         except Exception as e:
             logger.error("Failed to regenerate before ungrouping: {}".format(e))
 
@@ -166,7 +168,7 @@ class ChildGroup:
         def is_attached_to_group(x):
             return hasattr(x, "AttachedParentId") and x.AttachedParentId == group.Id
 
-        detail_groups = DB.FilteredElementCollector(doc, doc.ActiveView.Id) \
+        detail_groups = DB.FilteredElementCollector(self.doc, self.doc.ActiveView.Id) \
             .OfCategory(DB.BuiltInCategory.OST_IOSAttachedDetailGroups) \
             .WhereElementIsNotElementType().ToElements()
 
@@ -186,7 +188,7 @@ class ChildGroup:
             logger.error("Failed to ungroup model group {}: {}".format(group.Id, e))
 
         for eid in ungrouped_ids:
-            el = doc.GetElement(eid)
+            el = self.doc.GetElement(eid)
             if isinstance(el, DB.FamilyInstance):
                 if el.Category and el.Category.Id.IntegerValue == int(DB.BuiltInCategory.OST_ElectricalFixtures):
                     p1 = el.LookupParameter(circuit_param)
@@ -212,7 +214,7 @@ class ChildGroup:
         rule = DB.FilterStringRule(provider, evaluator, group_type_name)
         filter_ = DB.ElementParameterFilter(rule)
 
-        return DB.FilteredElementCollector(doc) \
+        return DB.FilteredElementCollector(revit.doc) \
             .OfClass(DB.Group) \
             .WherePasses(filter_) \
             .ToElements()
@@ -221,7 +223,7 @@ class ChildGroup:
 def collect_reference_tags():
     selected_ids = revit.get_selection().element_ids
     if selected_ids:
-        selected_elements = [doc.GetElement(eid) for eid in selected_ids]
+        selected_elements = [revit.doc.GetElement(eid) for eid in selected_ids]
         tags = [
             inst for inst in selected_elements
             if isinstance(inst, DB.FamilyInstance)
@@ -235,7 +237,7 @@ def collect_reference_tags():
             logger.warning("Selection has no matching EMS tags; falling back to view scan.")
 
     view_id = doc.ActiveView.Id
-    collector = DB.FilteredElementCollector(doc, view_id).OfClass(DB.FamilyInstance)
+    collector = DB.FilteredElementCollector(revit.doc, view_id).OfClass(DB.FamilyInstance)
     tags = [
         inst for inst in collector
         if inst.Symbol.Family.Name == "Refrigeration Case Tag - EMS"
@@ -248,7 +250,7 @@ def collect_reference_tags():
 
 
 def get_model_group_type(name):
-    for gt in DB.FilteredElementCollector(doc).OfClass(DB.GroupType):
+    for gt in DB.FilteredElementCollector(revit.doc).OfClass(DB.GroupType):
         if query.get_name(gt) == name:
             return gt
     logger.error("GroupType not found: {!r}".format(name))
@@ -258,7 +260,7 @@ def get_model_group_type(name):
 def get_attached_detail_types(group_type):
     detail_types = []
     for dt_id in group_type.GetAvailableAttachedDetailGroupTypeIds():
-        dt = doc.GetElement(dt_id)
+        dt = revit.doc.GetElement(dt_id)
         detail_types.append(dt)
     return detail_types
 
