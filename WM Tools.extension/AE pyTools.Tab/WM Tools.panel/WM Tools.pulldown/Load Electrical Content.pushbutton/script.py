@@ -509,3 +509,4 @@ if __name__ == '__main__':
         main2()
     else:
         main()
+        script.exit()
