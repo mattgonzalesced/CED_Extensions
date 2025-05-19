@@ -12,9 +12,8 @@ from CEDElectrical.refdata.ocp_cable_defaults import OCP_CABLE_DEFAULTS
 from CEDElectrical.refdata.standard_ocp_table import BREAKER_FRAME_SWITCH_TABLE
 from Autodesk.Revit.DB.Electrical import *
 
-app = __revit__.Application
-uidoc = __revit__.ActiveUIDocument
-doc = revit.doc
+
+
 
 console = script.get_output()
 logger = script.get_logger()
@@ -381,6 +380,7 @@ class CircuitBranch(object):
 
         # Case 3: Automatic check if it's a feeder with L-N voltage
         if self.is_feeder:
+            doc = revit.doc
             try:
                 for el in self.circuit.Elements:
                     if isinstance(el, DB.FamilyInstance):
