@@ -13,7 +13,7 @@ def pick_model_group():
     group_collector = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_IOSModelGroups).WhereElementIsElementType()
     group_options = group_collector
 
-    sorted_labels = sorted(["{} (ID: {})".format(DB.Element.Name.__get__(g), g.Id.IntegerValue) for g in group_options])
+    sorted_labels = sorted(["{} (ID: {})".format(DB.Element.Name.__get__(g), g.Id.Value) for g in group_options])
 
     selected = forms.SelectFromList.show(
         sorted_labels,
@@ -26,7 +26,7 @@ def pick_model_group():
         script.exit()
 
     for g in group_options:
-        label = "{} (ID: {})".format(DB.Element.Name.__get__(g), g.Id.IntegerValue)
+        label = "{} (ID: {})".format(DB.Element.Name.__get__(g), g.Id.Value)
         if selected == label:
             return g
 
@@ -38,7 +38,7 @@ def pick_detail_group(attached_detail_types):
         logger.warning("No attached detail groups available. Will place model group without detail..")
         return None
 
-    labels = ["{} (ID: {})".format(query.get_name(dt), dt.Id.IntegerValue) for dt in attached_detail_types]
+    labels = ["{} (ID: {})".format(query.get_name(dt), dt.Id.Value) for dt in attached_detail_types]
     selected = forms.SelectFromList.show(
         sorted(labels),
         title="Select a Detail Group to Attach",

@@ -71,7 +71,7 @@ def main():
     revit.get_selection().set_to(ids)
     logger.info("✅ Found {} matching connectors:".format(len(ids)))
     for i in ids:
-        logger.info(" - ElementId: `{}`".format(i.IntegerValue))
+        logger.info(" - ElementId: `{}`".format(i.Value))
 
 
 if __name__ == "__main__":
