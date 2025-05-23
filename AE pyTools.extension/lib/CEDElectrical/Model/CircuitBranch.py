@@ -64,7 +64,7 @@ class CircuitBranch(object):
 
         self.circuit = circuit
         self.settings = settings if settings else CircuitSettings()
-        self.circuit_id = circuit.Id.IntegerValue
+        self.circuit_id = circuit.Id.Value
         self.panel = getattr(circuit.BaseEquipment, 'Name', None) if circuit.BaseEquipment else ""
         self.circuit_number = circuit.CircuitNumber
         self.name = "{}-{}".format(self.panel, self.circuit_number)
@@ -536,6 +536,7 @@ class CircuitBranch(object):
                 break
 
         while sets <= max_sets:
+            reached_max_size = False
             for wire, ampacity in wire_set[start_index:]:
                 total_ampacity = ampacity * sets
 
@@ -555,7 +556,15 @@ class CircuitBranch(object):
                     self._calculated_hot_ampacity = total_ampacity
                     return
 
-            if wire == max_size:
+                if wire == max_size:
+                    self._calculated_hot_wire = wire
+                    self._calculated_wire_sets = sets
+                    self._calculated_hot_ampacity = total_ampacity
+                    reached_max_size = True
+                    break
+
+            if reached_max_size:
+                logger.warning("{}: wire reached max size for breaker rating.".format(self.name))
                 break
             sets += 1
 
@@ -586,7 +595,7 @@ class CircuitBranch(object):
             calc_hot = self._calculated_hot_wire
             calc_sets = self._calculated_wire_sets
             material = self.wire_material
-
+            logger.debug("hot: {}, gnd: {}, calc hot: {}".format(base_hot,base_ground,calc_hot))
             # If base_ground is missing, fallback to EGC lookup
             if not base_ground:
                 egc_list = EGC_TABLE.get(material)
@@ -599,7 +608,7 @@ class CircuitBranch(object):
                     # amps > all table entries
                     fallback = egc_list[-1][1]
                     logger.warning(
-                        "Breaker rating {}A exceeds EGC table. Using max ground size: {}".format(amps, fallback))
+                        "{}: Breaker rating {}A exceeds EGC table. Using max ground size: {}".format(self.name,amps, fallback))
                     self._calculated_ground_wire = fallback
                     return
                 else:
@@ -681,13 +690,13 @@ class CircuitBranch(object):
 
             impedance = WIRE_IMPEDANCE_TABLE.get(wire_size)
             if not impedance:
-                print('no impedance')
+                logger.debug("{}: no impedance found for wire size {}".format(self.name,wire_size))
                 return None
 
             R = impedance['R'].get(material, {}).get(conduit_material)
             X = impedance['X'].get(conduit_material)
             if R is None or X is None:
-                print("no R or X")
+
                 return None
 
             R = R / sets
@@ -728,7 +737,7 @@ class CircuitBranch(object):
         self._calculated_conduit_fill = None
 
         wire_info = self.wire_info
-        insulation = wire_info.get('wire_insulation')
+        insulation = self.wire_insulation
         conduit_material = self.conduit_material_type
         conduit_type = self.conduit_type  # already exists
 
@@ -768,7 +777,7 @@ class CircuitBranch(object):
                 self._calculated_conduit_fill = round(total_area / area, 5)  # ⚠️ decimal, not percent
                 return
 
-        logger.warning("No conduit size found that fits total area {:.4f}".format(total_area))
+        logger.warning("{}: No conduit size found that fits total area {:.4f}".format(self.name,total_area))
 
     def calculate_conduit_fill_percentage(self):
         conduit_formatted = self._conduit_size_override if self._auto_calculate_override else self._calculated_conduit_size

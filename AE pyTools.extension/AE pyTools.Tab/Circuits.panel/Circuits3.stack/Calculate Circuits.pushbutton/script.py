@@ -163,6 +163,7 @@ def main():
         return
 
     output = script.get_output()
+    output.close_others()
     output.print_md("## ✅ Shared Parameters Updated")
     output.print_md("* Circuits updated: **{}**".format(len(branches)))
     output.print_md("* Electrical Fixtures updated: **{}**".format(total_fixtures))
