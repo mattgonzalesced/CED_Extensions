@@ -190,7 +190,7 @@ class ChildGroup:
         for eid in ungrouped_ids:
             el = self.doc.GetElement(eid)
             if isinstance(el, DB.FamilyInstance):
-                if el.Category and el.Category.Id.IntegerValue == int(DB.BuiltInCategory.OST_ElectricalFixtures):
+                if el.Category and el.Category.Id.Value == int(DB.BuiltInCategory.OST_ElectricalFixtures):
                     p1 = el.LookupParameter(circuit_param)
                     if p1 and not p1.IsReadOnly:
                         try:
@@ -314,7 +314,7 @@ class ExcelCircuitLoader(object):
         self.data = {}
         self.ignored_sheets = ["References", "Panel Creation"]
         self.required_headers = [
-            "CKT_Panel_CED", "CKT_Circuit Number_CEDT", "CKT_Load Name_CEDT",
+            "CKT_Panel_CEDT", "CKT_Circuit Number_CEDT", "CKT_Load Name_CEDT",
             "CKT_Rating_CED", "CKT_Frame_CED", "Voltage_CED", "Number of Poles_CED",
             "Apparent Load Ph 1_CED", "Apparent Load Ph 2_CED", "Apparent Load Ph 3_CED",
             "Family", "Type"
@@ -325,31 +325,129 @@ class ExcelCircuitLoader(object):
         if not self.path:
             forms.alert("No Excel file selected.")
             return
-        self.data = pyxl.load(self.path, columns=self.required_headers)
+
+        self.data = pyxl.load(self.path, headers=False)
 
     def get_valid_sheet_names(self):
         return [s for s in self.data.keys() if s not in self.ignored_sheets]
+
+    def build_dict_rows(self):
+        for sheetname, sheet in self.data.items():
+            logger.debug("🔍 Processing sheet: **{}**".format(sheetname))
+            rows = sheet.get("rows", [])
+            if len(rows) < 2:
+                output.print_md("⚠️ Sheet '{}' has less than 2 rows.".format(sheetname))
+                continue
+
+            header_row = [str(h).strip() if h is not None else "" for h in rows[0]]
+            logger.debug("📋 Headers from '{}':\n{}".format(sheetname, ", ".join(header_row)))
+
+            dict_rows = []
+            for i, values in enumerate(rows[1:], start=2):  # Start from second row (row 2)
+                row_dict = {}
+
+                for j in range(len(header_row)):
+                    col = header_row[j]
+                    val = values[j] if j < len(values) else None
+                    row_dict[col] = val
+
+
+                dict_rows.append(row_dict)
+
+            self.data[sheetname] = {
+                "columns": header_row,
+                "rows": dict_rows
+            }
 
     def pick_sheet_names(self, sheetnames):
         return forms.SelectFromList.show(sheetnames,
                                          title="Select Circuit Sheets",
                                          multiselect=True)
 
+    def validate_row_headers(self, row):
+        missing = [h for h in self.required_headers if h not in row]
+        if missing:
+            logger.warning("Row missing expected headers: {}".format(", ".join(missing)))
+            return False
+        return True
+
     def get_ordered_rows(self, sheetnames):
         ordered_rows = []
+
         for sheet in sheetnames:
             for row in self.data.get(sheet, {}).get("rows", []):
                 if not isinstance(row, dict):
                     continue
-                panel = str(row.get("CKT_Panel_CED", "")).strip()
-                circuit = str(row.get("CKT_Circuit Number_CEDT", "")).strip()
-                family = str(row.get("Family", "")).strip()
-                typ = str(row.get("Type", "")).strip()
-                if not (panel and circuit and family and typ):
+
+                clean_row = {}
+                for k, v in row.items():
+                    if isinstance(v, str):
+                        clean_row[k] = v.strip()
+                    elif k in ["Voltage_CED", "Number of Poles_CED"] and isinstance(v, (int, float)):
+                        clean_row[k] = int(v)
+                    else:
+                        clean_row[k] = v
+
+                # ✅ Safely handle CKT_Panel_CEDT and CKT_Circuit Number_CEDT
+                panel_val = clean_row.get("CKT_Panel_CEDT")
+                circuit_val = clean_row.get("CKT_Circuit Number_CEDT")
+                panel = str(panel_val).strip() if isinstance(panel_val, basestring) else str(panel_val)
+                circuit = str(circuit_val).strip() if isinstance(circuit_val, basestring) else str(circuit_val)
+
+                if not (panel and circuit):
                     continue
-                clean_row = {k: str(v).strip() if isinstance(v, str) else v for k, v in row.items()}
-                ordered_rows.append(clean_row)
+
+                clean_row = self.apply_family_type_fallback(clean_row)
+
+                if clean_row.get("Family") and clean_row.get("Type"):
+                    ordered_rows.append(clean_row)
+
+        output.print_md("✅ Final ordered row count: **{}**".format(len(ordered_rows)))
         return ordered_rows
+
+    def clean_row_data(self, row):
+        clean_row = {}
+        for k, v in row.items():
+            if isinstance(v, str):
+                clean_row[k] = v.strip()
+            elif k in ["Voltage_CED", "Number of Poles_CED"] and isinstance(v, (int, float)):
+                clean_row[k] = int(v)
+            else:
+                clean_row[k] = v
+        return clean_row
+
+    def apply_family_type_fallback(self, row):
+        type_map = {
+            (120, 1): "120V/1P",
+            (208, 2): "208V/2P",
+            (208, 3): "208V/3P",
+            (277, 1): "277V/1P",
+            (480, 2): "480V/2P",
+            (480, 3): "480V/3P",
+        }
+        fallback_family = "EF-F_Existing Ckt Placeholder-Unbalanced_CED"
+
+        family = row.get("Family", "").strip()
+        typ = row.get("Type", "").strip()
+
+        if family and typ:
+            return row  # already valid
+
+        try:
+            voltage = int(float(row.get("Voltage_CED", 0)))
+            poles = int(float(row.get("Number of Poles_CED", 0)))
+            fallback_type = type_map.get((voltage, poles))
+
+            if fallback_type:
+                row["Family"] = fallback_family
+                row["Type"] = fallback_type
+
+            else:
+                logger.warning("⚠️ No fallback match for Voltage={} Poles={}".format(voltage, poles))
+        except Exception as e:
+            logger.warning("❌ Invalid voltage or poles in row: {}".format(row))
+
+        return row
 
 
 class EquipmentSurface(object):
@@ -387,7 +485,7 @@ class EquipmentSurface(object):
                 for g in inst_geom:
                     if isinstance(g, DB.Solid) and g.Faces.Size > 0:
                         style_id = g.GraphicsStyleId
-                        if not style_id or style_id.IntegerValue < 0:
+                        if not style_id or style_id.Value < 0:
                             continue
                         style = revit.doc.GetElement(style_id)
                         if not style:

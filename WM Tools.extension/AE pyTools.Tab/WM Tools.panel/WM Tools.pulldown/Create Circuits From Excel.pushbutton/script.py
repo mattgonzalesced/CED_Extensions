@@ -17,10 +17,6 @@ output.close_others()
 output.set_width(800)
 logger = script.get_logger()
 
-
-
-
-
 def get_panel_surfaces(panel_names):
     surfaces = {}
     for eq in DB.FilteredElementCollector(revit.doc)\
@@ -30,7 +26,7 @@ def get_panel_surfaces(panel_names):
         if param and param.HasValue:
             value = param.AsString().strip()
             if value in panel_names:
-                surfaces[value] = EquipmentSurface(eq.Id.IntegerValue)
+                surfaces[value] = EquipmentSurface(eq.Id.Value)
     return surfaces
 
 def get_family_symbol(family_name, type_name):
@@ -39,6 +35,8 @@ def get_family_symbol(family_name, type_name):
             return fs
     output.print_md("❌ Symbol not found for Family: '{}' | Type: '{}'".format(family_name, type_name))
     return None
+
+
 
 
 def set_instance_parameters(inst, row):
@@ -79,6 +77,8 @@ def create_circuit(doc, instance, panel):
 def main():
     loader = ExcelCircuitLoader()
     loader.pick_excel_file()
+    loader.build_dict_rows()
+
     sheetnames = loader.get_valid_sheet_names()
     if not sheetnames:
         forms.alert("No valid sheets found.")
@@ -93,7 +93,7 @@ def main():
         output.print_md("⚠️ No valid circuit rows found in selected sheets.")
         return
 
-    panel_names = set(row["CKT_Panel_CED"] for row in ordered_rows)
+    panel_names = set(row["CKT_Panel_CEDT"] for row in ordered_rows)
     surface_map = get_panel_surfaces(panel_names)
 
     output.print_md("### 📋 Matched {} panel names from Excel".format(len(panel_names)))
@@ -129,14 +129,14 @@ def main():
         with revit.Transaction("Activate Symbols", doc):
             for row in ordered_rows:
                 symbol = get_family_symbol(row["Family"], row["Type"])
-                if symbol and not symbol.IsActive and symbol.Id.IntegerValue not in activated_symbols:
+                if symbol and not symbol.IsActive and symbol.Id.Value not in activated_symbols:
                     symbol.Activate()
-                    activated_symbols.add(symbol.Id.IntegerValue)
+                    activated_symbols.add(symbol.Id.Value)
 
 
         with revit.Transaction("Place and Parameterize", doc, swallow_errors=True):
             for row in ordered_rows:
-                panel_name = row["CKT_Panel_CED"]
+                panel_name = row["CKT_Panel_CEDT"]
                 circuit_number = row["CKT_Circuit Number_CEDT"]
 
                 surface = surface_map.get(panel_name)
