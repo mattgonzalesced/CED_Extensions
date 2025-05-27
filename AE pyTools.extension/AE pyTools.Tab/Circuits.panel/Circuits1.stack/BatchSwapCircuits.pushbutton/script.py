@@ -40,24 +40,26 @@ def format_panel_display(panel, doc):
     return "{} - {} (ID: {})".format(panel.Name,dist_system_name, panel.Id)
 
 
-def prompt_for_starting_panel(doc, all_panels):
-    """Prompts the user to select a starting panel."""
-    sorted_panels = get_sorted_filtered_panels(all_panels, doc)
-    panel_options = [format_panel_display(panel, doc) for panel in sorted_panels]
+def prompt_for_panel(doc, panels, title, prompt_msg):
+    """Prompts the user to select a panel from the given list."""
+    sorted_panels = get_sorted_filtered_panels(panels, doc)
 
-    selected_panel_display = forms.SelectFromList.show(
-        panel_options,
-        title="Select Starting Panel",
-        prompt="Choose the panel that contains the circuits to move:",
+    panel_map = {}
+    for panel in sorted_panels:
+        display_str = format_panel_display(panel, doc)
+        panel_map[display_str] = panel
+
+    selected_display = forms.SelectFromList.show(
+        panel_map.keys(),
+        title=title,
+        prompt=prompt_msg,
         multiselect=False
     )
 
-    if not selected_panel_display:
-        script.exit()  # Exit if the user cancels
+    if not selected_display:
+        script.exit()
 
-    selected_panel_id_str = selected_panel_display.split("(ID: ")[-1].rstrip(")")
-    selected_panel_id = ElementId(int(selected_panel_id_str))
-    return doc.GetElement(selected_panel_id)
+    return panel_map[selected_display]
 
 
 # Function to sort and filter the panels by distribution system name and panel name
@@ -87,7 +89,12 @@ def main():
 
     # If auto-detection fails, prompt the user
     if not starting_panel:
-        starting_panel = prompt_for_starting_panel(doc, all_panels)
+        starting_panel = prompt_for_panel(
+            doc,
+            all_panels,
+            title="Select Starting Panel",
+            prompt_msg="Choose the panel that contains the circuits to move:"
+        )
 
     while True:  # Keep asking for a panel until circuits are found or user cancels
         # Step 2: Get the circuits from the starting panel
@@ -110,7 +117,12 @@ def main():
             script.exit()  # Exit the script if user cancels
 
         # If Retry is selected, prompt for a new starting panel
-        starting_panel = prompt_for_starting_panel(doc, all_panels)
+        starting_panel = prompt_for_panel(
+            doc,
+            all_panels,
+            title="Select Starting Panel",
+            prompt_msg="Choose the panel that contains the circuits to move:"
+        )
 
     # Step 3: Sort circuits by odd and even start slots
     circuit_options = sorted(
@@ -152,26 +164,13 @@ def main():
         script.exit()  # No compatible panels found
 
     # Sort and filter compatible panels
-    sorted_compatible_panels = get_sorted_filtered_panels(compatible_panels, doc)
-    compatible_panel_options = [format_panel_display(panel, doc) for panel in sorted_compatible_panels]
-
-    # Prompt the user to select a target panel (with distribution system, panel name, and ID)
-    target_panel_display = forms.SelectFromList.show(
-        compatible_panel_options,
+    # Prompt the user to select a target panel
+    target_panel = prompt_for_panel(
+        doc,
+        compatible_panels,
         title="Select Target Panel (Starting Panel: {})".format(starting_panel.Name),
-        prompt="Choose the target panel to move the circuits to:",
-        multiselect=False
+        prompt_msg="Choose the target panel to move the circuits to:"
     )
-
-    if not target_panel_display:
-        script.exit()
-
-    # Extract the Element ID from the selected display option
-    target_panel_id_str = target_panel_display.split("(ID: ")[-1].rstrip(")")
-    target_panel_id = ElementId(int(target_panel_id_str))
-
-    # Find the selected target panel by its ElementId
-    target_panel = doc.GetElement(target_panel_id)
 
     if not target_panel:
         script.exit()
