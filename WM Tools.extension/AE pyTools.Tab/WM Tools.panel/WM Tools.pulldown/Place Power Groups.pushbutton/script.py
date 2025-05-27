@@ -9,8 +9,21 @@ import re
 doc = revit.doc
 logger = script.get_logger()
 
+config = script.get_config("WM_power_group_offset")
+offset_distance = config.get_option("group_placement_offset")
+if offset_distance is None:
+    offset_distance = 3.0
+else:
+    try:
+        offset_distance = float(offset_distance)
+    except:
+        offset_distance = 3.0
+        logger.info("⚠ Invalid config value for group_placement_offset. Using default: 3.0 ft.")
+
+
 def pick_model_group():
-    group_collector = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_IOSModelGroups).WhereElementIsElementType()
+    group_collector = DB.FilteredElementCollector(doc).OfCategory(
+        DB.BuiltInCategory.OST_IOSModelGroups).WhereElementIsElementType()
     group_options = group_collector
 
     sorted_labels = sorted(["{} (ID: {})".format(DB.Element.Name.__get__(g), g.Id.Value) for g in group_options])
@@ -33,6 +46,7 @@ def pick_model_group():
     logger.error("No matching group found.")
     script.exit()
 
+
 def pick_detail_group(attached_detail_types):
     if not attached_detail_types:
         logger.warning("No attached detail groups available. Will place model group without detail..")
@@ -54,6 +68,7 @@ def pick_detail_group(attached_detail_types):
 
     logger.error("No matching detail group found.")
     return None
+
 
 def main():
     parameter_mapping = {
@@ -78,16 +93,19 @@ def main():
             inst for inst in DB.FilteredElementCollector(doc, doc.ActiveView.Id)
             .OfClass(DB.FamilyInstance)
             if inst.Symbol.Family.Name == "Refrigeration Case Tag - EMS"
-            and query.get_name(inst.Symbol) == "EMS Circuit Label"
+               and query.get_name(inst.Symbol) == "EMS Circuit Label"
         ]
         logger.info("Using {} EMS tags from active view.".format(len(tags)))
 
     if not tags:
-        logger.error("No valid parent elements found.")
+        logger.info("No valid reference elements found.")
+        forms.alert(title="No Reference Elements",
+                    msg="No valid reference elements found. Try selecting the EMS Tags or other elements to place "
+                        "groups on before running the tool.")
         script.exit()
 
     parents = [ParentElement.from_family_instance(t) for t in tags]
-    children = [ChildGroup(p, model_type) for p in parents if p]
+    children = [ChildGroup(p, model_type, offset_distance) for p in parents if p]
 
     systems = defaultdict(list)
     for c in children:
@@ -114,6 +132,7 @@ def main():
                 if default_detail:
                     c.attach_detail_group_by_type(default_detail)
         trans.Commit()
+
 
 if __name__ == "__main__":
     main()
