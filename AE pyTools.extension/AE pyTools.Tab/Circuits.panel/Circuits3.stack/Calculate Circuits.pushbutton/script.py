@@ -8,6 +8,7 @@ uidoc = __revit__.ActiveUIDocument
 doc = revit.doc
 logger = script.get_logger()
 
+
 # -------------------------------------------------------------------------
 # Collects parameter values from a CircuitBranch object
 # -------------------------------------------------------------------------
@@ -44,6 +45,7 @@ def collect_shared_param_values(branch):
         'Circuit Ampacity_CED': branch.circuit_base_ampacity,
     }
 
+
 # -------------------------------------------------------------------------
 # Write shared parameters to the electrical circuit
 # -------------------------------------------------------------------------
@@ -63,6 +65,7 @@ def update_circuit_parameters(circuit, param_values):
                 param.Set(float(value))
         except Exception as e:
             logger.debug("❌ Failed to write '{}' to circuit {}: {}".format(param_name, circuit.Id, e))
+
 
 # -------------------------------------------------------------------------
 # Write shared parameters to connected family instances
@@ -124,9 +127,10 @@ def main():
         for el in selection:
             if isinstance(el, DB.Electrical.ElectricalSystem):
                 test_circuits.append(el)
+        if not test_circuits:
+            test_circuits = eu.pick_circuits_from_list(doc, select_multiple=True)
 
     count = len(test_circuits)
-
     if count > 300:
         proceed = forms.alert(
             "{} circuits selected.\n\nThis may take a while.\n\n".format(count),
@@ -151,7 +155,7 @@ def main():
         branches.append(branch)
 
     # Write all parameters in a single transaction
-    tg = DB.TransactionGroup(doc, "Update All VD Parameters")
+    tg = DB.TransactionGroup(doc, "Calculate Circuits")
     tg.Start()
     t = DB.Transaction(doc, "Write Shared Parameters")
     try:
@@ -176,6 +180,7 @@ def main():
     output.print_md("* Circuits updated: **{}**".format(len(branches)))
     output.print_md("* Electrical Fixtures updated: **{}**".format(total_fixtures))
     output.print_md("* Electrical Equipment updated: **{}**".format(total_equipment))
+
 
 if __name__ == "__main__":
     main()
