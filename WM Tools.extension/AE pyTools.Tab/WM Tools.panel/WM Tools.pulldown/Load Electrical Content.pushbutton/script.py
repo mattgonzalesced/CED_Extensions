@@ -387,6 +387,9 @@ def get_elements_in_view(doc_source, view):
     allowed_categories = [
         DB.BuiltInCategory.OST_IOSModelGroups,
         DB.BuiltInCategory.OST_IOSAttachedDetailGroups,
+        DB.BuiltInCategory.OST_ElectricalFixtures,
+        DB.BuiltInCategory.OST_KeynoteTags,
+        DB.BuiltInCategory.OST_ElectricalFixtureTags
     ]
     category_filters = [DB.ElementCategoryFilter(cat) for cat in allowed_categories]
     combined_filter = DB.LogicalOrFilter(category_filters)
@@ -577,7 +580,6 @@ def main():
         panel_template_ids = collect_panel_template_ids(starter_doc)
         view_filter_ids = collect_filter_ids(starter_doc)
         group_ids = get_elements_in_view(starter_doc, copy_view)
-
         copy_ids = copy_groups(copy_view, group_ids, doc, target_view)
         delete_groups(doc, copy_ids)
 
