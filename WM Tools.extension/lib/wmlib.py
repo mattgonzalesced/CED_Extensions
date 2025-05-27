@@ -52,13 +52,22 @@ class ParentElement:
 
 
 class ChildGroup:
-    def __init__(self, parent, group_type):
+    def __init__(self, parent, group_type, offset_distance=2.0):
         self.parent = parent
         self.group_type = group_type
-        self.location = parent.location_point
+        self.offset_distance = offset_distance
         self.orientation = parent.facing_orientation
         self.child_id = None
         self.doc = doc
+        self.location = self.offset_placement_point()
+
+
+    def offset_placement_point(self):
+        base_location = self.parent.location_point
+        norm_orientation = DB.XYZ.Normalize(self.orientation)
+        offset_vector = norm_orientation.Multiply(self.offset_distance)
+        offset_location = base_location.Add(offset_vector)
+        return offset_location
 
     def place(self):
         inst = self.doc.Create.PlaceGroup(self.location, self.group_type)

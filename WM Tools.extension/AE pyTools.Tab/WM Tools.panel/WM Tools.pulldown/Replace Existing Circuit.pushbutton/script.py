@@ -8,12 +8,13 @@ doc = revit.doc
 uidoc = revit.uidoc
 logger = script.get_logger()
 output = script.get_output()
-
+output.close_others()
 # TODO: FIGURE OUT HOW TO CLEANLY LET IT USE OTHER FAMILIES.  
 FAMILY_NAME_PLACEHOLDER = "EF-F_Existing Ckt Placeholder-Unbalanced_CED"
 CONNECTOR_FAMILY_NAME = "EF-U_Refrig Power Connector-Balanced_CED-WM"
 CIRCUIT_PARAM = "Refrigeration Circuit Number_CEDT"
 TYPE_PARAM = "Type Name"  # Assuming query.get_name(instance.Symbol) gets the type name
+
 
 def collect_connectors():
     collector = DB.FilteredElementCollector(doc) \
@@ -30,6 +31,7 @@ def collect_connectors():
         key = ckt_number.AsString().strip()
         grouped_connectors[key].append(inst)
     return grouped_connectors
+
 
 def filter_and_select_connectors_by_type(grouped_connectors, circuit):
     # Get voltage and poles from the original circuit
@@ -99,9 +101,6 @@ def filter_and_select_connectors_by_type(grouped_connectors, circuit):
     return [eid for label in selected_types for eid in label_map[label]]
 
 
-
-
-
 def main():
     # Validate view
     if not isinstance(doc.ActiveView, DBE.PanelScheduleView):
@@ -166,10 +165,37 @@ def main():
         forms.alert("Error adding to circuit: {}".format(str(e)))
         return
 
-    output.print_md("✅ Placeholder circuit replaced successfully.")
-    output.print_md("🧩 Added {} connectors.".format(len(selected_ids)))
-    output.print_md("🗑️ Placeholder instance deleted.")
+    # output results
+    panel_name = DB.Element.Name.__get__(circuit.BaseEquipment)
+
+    circuit_number = circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER).AsString()
+    load_name = circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME).AsString()
+
+    circuit_link = output.linkify(circuit.Id)
+    output.print_md("✅ **Placeholder circuit replaced successfully.**")
+    output.print_md("🔌 **Circuit:** {} – {} / {} → {}".format(circuit_link, panel_name, circuit_number, load_name))
+
+    # Show added circuit numbers
+    circuit_tags = []
+    type_counts = defaultdict(int)
+
+    for eid in selected_ids:
+        el = doc.GetElement(eid)
+        tag_param = el.LookupParameter(CIRCUIT_PARAM)
+        if tag_param and tag_param.HasValue:
+            circuit_tags.append(tag_param.AsString().strip())
+        type_name = query.get_name(el.Symbol)
+        type_counts[type_name] += 1
+
+    if circuit_tags:
+        unique_tags = sorted(set(circuit_tags))
+        output.print_md("📎 Circuit Tags: {}".format(", ".join(unique_tags)))
+
+    output.print_md("🧩 **Added {} connectors.**".format(len(selected_ids)))
+
+    for type_name, count in sorted(type_counts.items()):
+        output.print_md("- ({})  {}".format(count, type_name))
+
 
 if __name__ == "__main__":
     main()
-
