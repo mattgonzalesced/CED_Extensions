@@ -8,11 +8,15 @@ from Autodesk.Revit.DB import (
 )
 import Autodesk.Revit.DB.Electrical as DBE
 from collections import defaultdict
+from pyrevit.compat import get_elementid_value_func
 
-doc   = revit.doc
+get_id_value = get_elementid_value_func()
+
+doc = revit.doc
 uidoc = revit.uidoc
-out   = script.get_output()
-log   = script.get_logger()
+out = script.get_output()
+log = script.get_logger()
+
 
 # ---------------------------------------------------------------------------
 # 1. Ask once how empty slots should be filled
@@ -23,7 +27,7 @@ def ask_fill_mode():
         title='Fill empty panel slots with...')
     if not mode:
         forms.alert('Nothing chosen – cancelled.', exitscript=True)
-    return mode                                         # str
+    return mode  # str
 
 
 # ---------------------------------------------------------------------------
@@ -31,8 +35,11 @@ def ask_fill_mode():
 # ---------------------------------------------------------------------------
 class _ScheduleOption(object):
     """Wrapper so SelectFromList shows a name but returns the view object."""
+
     def __init__(self, view): self.view = view
+
     def __str__(self):       return self.view.Name
+
 
 def _schedules_from_selection(elements):
     found, skipped = [], defaultdict(int)
@@ -49,12 +56,13 @@ def _schedules_from_selection(elements):
         log.warning('{} “{}” element(s) skipped'.format(cnt, cat))
 
     # remove duplicates
-    uniq = {v.Id.IntegerValue: v for v in found}.values()
+    uniq = {get_id_value(v.Id): v for v in found}.values()
     return list(uniq)
+
 
 def _prompt_for_schedules():
     all_views = [v for v in FilteredElementCollector(doc)
-                   .OfClass(DBE.PanelScheduleView)
+    .OfClass(DBE.PanelScheduleView)
                  if not v.IsTemplate]
     if not all_views:
         forms.alert('No panel schedules in this model.', exitscript=True)
@@ -65,6 +73,7 @@ def _prompt_for_schedules():
     if not picked:
         forms.alert('Nothing selected – cancelled.', exitscript=True)
     return [p.view for p in picked]
+
 
 def collect_schedules_to_process():
     # a) active view
@@ -87,19 +96,19 @@ def collect_schedules_to_process():
 # 3. Scan a schedule and return { slot_num : [(row, col), …] }
 # ---------------------------------------------------------------------------
 def gather_empty_cells(view):
-    tbl  = view.GetTableData()
+    tbl = view.GetTableData()
     body = tbl.GetSectionData(SectionType.Body)
     if not body:
         return {}
 
     max_slot = tbl.NumberOfSlots
-    empties  = defaultdict(list)
+    empties = defaultdict(list)
 
     for row in range(body.NumberOfRows):
         active_slot = None
         cols_for_slot = []
         for col in range(body.NumberOfColumns):
-            slot   = view.GetSlotNumberByCell(row, col)
+            slot = view.GetSlotNumberByCell(row, col)
             ckt_id = view.GetCircuitIdByCell(row, col)
             is_empty = (ckt_id == ElementId.InvalidElementId
                         and 1 <= slot <= max_slot)
@@ -109,8 +118,8 @@ def gather_empty_cells(view):
             else:
                 if active_slot and cols_for_slot:
                     empties[active_slot].extend((row, c) for c in cols_for_slot)
-                active_slot    = slot if is_empty else None
-                cols_for_slot  = [col] if is_empty else []
+                active_slot = slot if is_empty else None
+                cols_for_slot = [col] if is_empty else []
 
         if active_slot and cols_for_slot:
             empties[active_slot].extend((row, c) for c in cols_for_slot)
@@ -125,7 +134,7 @@ def gather_empty_cells(view):
 # 4. Fill schedules and build report  (console opens *after* commit)
 # ---------------------------------------------------------------------------
 def fill_schedules(schedules, mode):
-    results = []                                           # [(panelName, open, spare, space)]
+    results = []  # [(panelName, open, spare, space)]
 
     with Transaction(doc, 'Fill panel spares / spaces') as tx:
         tx.Start()
@@ -136,11 +145,11 @@ def fill_schedules(schedules, mode):
                 results.append((view.Name, 0, 0, 0))
                 continue
 
-            open_slots  = len(empty_map)
-            spare_cnt   = 0
-            space_cnt   = 0
+            open_slots = len(empty_map)
+            spare_cnt = 0
+            space_cnt = 0
 
-            slot_items  = sorted(empty_map.items())
+            slot_items = sorted(empty_map.items())
 
             if mode == 'All Spare':
                 work = [(True, slot_items)]
@@ -148,7 +157,7 @@ def fill_schedules(schedules, mode):
                 work = [(False, slot_items)]
             else:
                 half = len(slot_items) // 2
-                work = [(True,  slot_items[:half]),
+                work = [(True, slot_items[:half]),
                         (False, slot_items[half:])]
 
             for want_spare, chunk in work:
@@ -156,9 +165,11 @@ def fill_schedules(schedules, mode):
                     for row, col in cells:
                         try:
                             if want_spare:
-                                view.AddSpare(row, col); spare_cnt += 1
+                                view.AddSpare(row, col);
+                                spare_cnt += 1
                             else:
-                                view.AddSpace(row, col); space_cnt += 1
+                                view.AddSpace(row, col);
+                                space_cnt += 1
                             view.SetLockSlot(row, col, 0)
                             break
                         except Exception:
@@ -166,7 +177,7 @@ def fill_schedules(schedules, mode):
 
             results.append((view.Name, open_slots, spare_cnt, space_cnt))
 
-        tx.Commit()                                        # ------------------
+        tx.Commit()  # ------------------
 
     # ----------- console output happens only *after* commit -----------------
     out = script.get_output()
@@ -181,13 +192,15 @@ def fill_schedules(schedules, mode):
         if idx != len(results):
             out.print_md("\n-----\n")
 
-    out.show()                                             # pops console
+    out.show()  # pops console
+
 
 # ---------------------------------------------------------------------------
 def main():
     scheds = collect_schedules_to_process()
-    mode   = ask_fill_mode()
+    mode = ask_fill_mode()
     fill_schedules(scheds, mode)
+
 
 if __name__ == '__main__':
     main()

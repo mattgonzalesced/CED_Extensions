@@ -4,6 +4,11 @@ from pyrevit import script, revit, forms, DB
 from Snippets import _elecutils as eu
 logger = script.get_logger()
 import csv
+from pyrevit.compat import get_elementid_value_func
+
+get_id_value = get_elementid_value_func()
+
+
 # -------------------------------
 # Data Classes
 # -------------------------------
@@ -174,7 +179,7 @@ class SystemTree(object):
 
             if hasattr(system, "Elements"):
                 for e in list(system.Elements):
-                    if e.Category and int(e.Category.Id.IntegerValue) == int(DB.BuiltInCategory.OST_ElectricalEquipment):
+                    if e.Category and int(get_id_value(e.Category.Id)) == int(DB.BuiltInCategory.OST_ElectricalEquipment):
                         if e.Id not in visited:
                             branch.is_feeder = True
                             child_node = self.nodes.get(e.Id)

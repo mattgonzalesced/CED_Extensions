@@ -2,6 +2,7 @@ from Autodesk.Revit.DB import FilteredElementCollector, Electrical, Transaction,
     ElementId
 from pyrevit import script, forms, output, DB
 from Autodesk.Revit.DB.Electrical import *
+from pyrevit.compat import get_elementid_value_func
 
 logger = script.get_logger()
 
@@ -244,9 +245,12 @@ def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
             # Retrieve the panel name
             panel_name = circuit.BaseEquipment.Name if circuit.BaseEquipment else "N/A"
 
+            get_id_val = get_elementid_value_func()
+            circuit_id = get_id_val(circuit.Id)
+
             # Store data in a list of dictionaries
             circuits.append({
-                'element_id': circuit.Id.IntegerValue,
+                'element_id': circuit_id,
                 'circuit_number': circuit_number,
                 'load_name': load_name,
                 'start_slot': start_slot,
@@ -274,7 +278,6 @@ def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_space
     panel_groups = {}  # key: panel name, value: list of (sort_key, label)
     all_labels = []  # list of (sort_key, label)
 
-
     for ckt in ckts:
         # Skip spares/spaces if not included
         if not include_spares_and_spaces and ckt.CircuitType in [CircuitType.Spare, CircuitType.Space]:
@@ -283,7 +286,7 @@ def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_space
         # Safely get rating and poles if circuit is a PowerCircuit
         if ckt.SystemType == ElectricalSystemType.PowerCircuit:
             try:
-                rating = int(round(ckt.Rating,0))
+                rating = int(round(ckt.Rating, 0))
             except:
                 rating = "N/A"
 
@@ -295,7 +298,9 @@ def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_space
             rating = "N/A"
             pole = "?"
 
-        ckt_id = ckt.Id.IntegerValue
+        get_id_val = get_elementid_value_func()
+        ckt_id = get_id_val(ckt.Id)
+
         base_equipment = ckt.BaseEquipment
         panel_name = getattr(base_equipment, 'Name', None) if base_equipment else None
         panel_name = panel_name or " No Panel"
@@ -304,19 +309,19 @@ def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_space
         start_slot = ckt.StartSlot if hasattr(ckt, 'StartSlot') else 0
         sort_key = (panel_name, start_slot, load_name.strip())
 
-
         if ckt.CircuitType == CircuitType.Space:
             # Space: no rating/poles, just panel and label
-            label = "[{}]  {}/{} - {}({}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(),pole)
+            label = "[{}]  {}/{} - {}({}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(), pole)
 
         elif ckt.CircuitType == CircuitType.Spare:
             # Spare: show circuit number and panel, label as [SPARE]
-            label = "[{}]  {}/{} - {}  ({} A/{}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(), rating, pole)
+            label = "[{}]  {}/{} - {}  ({} A/{}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(), rating,
+                                                          pole)
 
         else:
             # Normal circuit
             label = "[{}]  {}/{} - {}  ({} A/{}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(), rating,
-                                                       pole)
+                                                          pole)
 
         all_labels.append((sort_key, label))
 

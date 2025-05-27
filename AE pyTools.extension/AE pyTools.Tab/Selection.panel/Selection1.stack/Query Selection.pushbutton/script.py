@@ -2,8 +2,12 @@
 
 
 from pyrevit import script, revit, DB, forms
+from pyrevit.compat import get_elementid_value_func
+
+get_id_value = get_elementid_value_func()
 
 output = script.get_output()
+output.close_others()
 
 # Global variable for selected elements
 selection = revit.get_selection()
@@ -24,7 +28,8 @@ def pick_categories(elements):
         return [el for el in elements if el.Category and el.Category.Name in selected_categories]
     return elements
 
-#TODO should probably limit the amount of parameters that a user can select to avoid excessive run time.
+
+# TODO should probably limit the amount of parameters that a user can select to avoid excessive run time.
 #   perhaps we include a warning alert if parameters exceeds 10 so use can decide what to do.
 def pick_parameters(elements):
     """Gather unique parameters from both instance and type elements, then prompt the user to select parameters."""
@@ -90,7 +95,7 @@ def format_parameter_value(param):
         elif param.StorageType == DB.StorageType.ElementId:
             # Retrieve and display the name of the linked element
             linked_element = revit.doc.GetElement(param.AsElementId())
-            return linked_element.Name if linked_element else str(param.AsElementId().IntegerValue)
+            return linked_element.Name if linked_element else str(get_id_value(param.AsElementId()))
         return ""
 
 
@@ -98,7 +103,7 @@ def collect_element_data(elements, selected_params):
     """Collect data for each element without updating the output until all processing is complete."""
     element_data = []
     for element in elements:
-        element_id = output.linkify(DB.ElementId(element.Id.IntegerValue))
+        element_id = output.linkify(DB.ElementId(get_id_value(element.Id)))
         category_name = element.Category.Name if element.Category else "N/A"
         row = [element_id, category_name]
 

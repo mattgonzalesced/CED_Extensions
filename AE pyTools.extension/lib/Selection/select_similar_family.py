@@ -24,7 +24,9 @@ clr.AddReference("System")
 from System.Collections.Generic import List
 from Autodesk.Revit.DB import *
 from pyrevit import script
+from pyrevit.compat import get_elementid_value_func
 
+get_id_value = get_elementid_value_func()
 
 logger = script.get_logger()
 
@@ -77,7 +79,7 @@ def select_similar_by_family(uidoc, mode):
             # Log and skip problematic elements
             category_name = selected_element.Category.Name if selected_element.Category else "No Category"
             logger.debug("Skipped element {} ({}): {}".format(
-                el_id.IntegerValue,
+                get_id_value(el_id),
                 category_name,
                 str(e)
             ))

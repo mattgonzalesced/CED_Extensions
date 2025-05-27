@@ -7,6 +7,7 @@ from pyrevit import script
 from pyrevit.revit import query
 from pyrevit import HOST_APP
 from pyrevit import EXEC_PARAMS
+from pyrevit.compat import get_elementid_value_func
 
 # Import reusable utilities
 from Snippets._elecutils import get_panel_dist_system, get_compatible_panels, move_circuits_to_panel, \
@@ -164,7 +165,8 @@ def get_circuits_from_selection(include_electrical_equipment=True):
     unique_circuits = []
     seen_ids = set()
     for circuit in circuits:
-        cid = circuit.Id.IntegerValue
+        get_id_val = get_elementid_value_func()
+        cid = get_id_val(circuit.Id)
         if cid not in seen_ids:
             unique_circuits.append(circuit)
             seen_ids.add(cid)

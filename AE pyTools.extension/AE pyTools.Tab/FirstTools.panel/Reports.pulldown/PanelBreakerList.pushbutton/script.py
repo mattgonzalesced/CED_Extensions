@@ -6,6 +6,9 @@ from pyrevit import script
 from pyrevit import revit, DB
 from pyrevit.revit import query
 from collections import defaultdict
+from pyrevit.compat import get_elementid_value_func
+
+get_id_value = get_elementid_value_func()
 
 # Access the current Revit document
 doc = revit.doc
@@ -74,7 +77,7 @@ def get_parameter_by_name(element, param_name):
         elif param.StorageType == DB.StorageType.Integer:
             return param.AsInteger()
         elif param.StorageType == DB.StorageType.ElementId:
-            return param.AsElementId().IntegerValue
+            return param.AsElementId()
     return None
 
 

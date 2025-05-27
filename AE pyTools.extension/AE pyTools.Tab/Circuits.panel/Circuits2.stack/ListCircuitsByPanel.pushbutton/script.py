@@ -3,6 +3,9 @@ __title__ = "List Circuits by Panel"
 
 from pyrevit import script, revit, DB, forms
 from collections import OrderedDict
+from pyrevit.compat import get_elementid_value_func
+
+get_id_value = get_elementid_value_func()
 
 output = script.get_output()
 doc = revit.doc
@@ -27,10 +30,12 @@ def format_panel_display(panel):
     """Returns a string with panel name and element ID for display."""
     return "{} (ID: {})".format(panel.Name, panel.Id)
 
+
 def get_circuits_from_panel(panel):
     """Get circuits associated with the selected panel."""
     panel_circuits = DB.FilteredElementCollector(doc).OfClass(DB.Electrical.ElectricalSystem).ToElements()
     return [circuit for circuit in panel_circuits if circuit.BaseEquipment and circuit.BaseEquipment.Id == panel.Id]
+
 
 def retrieve_parameter_value(element, param_enum):
     """Retrieve the value of a parameter, handling different cases for 'n/a' and empty strings."""
@@ -45,6 +50,7 @@ def retrieve_parameter_value(element, param_enum):
 
     # If parameter exists but has no value, return an empty string
     return ""
+
 
 def format_parameter_value(param):
     """Format the parameter value based on its storage type."""
@@ -61,8 +67,9 @@ def format_parameter_value(param):
         elif param.StorageType == DB.StorageType.ElementId:
             # Retrieve and display the name of the linked element
             linked_element = revit.doc.GetElement(param.AsElementId())
-            return linked_element.Name if linked_element else str(param.AsElementId().IntegerValue)
+            return linked_element.Name if linked_element else str(get_id_value(param.AsElementId()))
         return ""
+
 
 def collect_circuit_data(circuits):
     """Collect all parameter values for circuits."""
@@ -83,6 +90,7 @@ def sort_circuit_data(data):
     circuit_number_index = list(PARAMETER_MAP.keys()).index("CIRCUIT NUMBER")
     return sorted(data, key=lambda x: (x[panel_index], x[circuit_number_index]))
 
+
 def print_report(circuit_data, columns):
     """Print the report in a table with the specified columns."""
     output.print_md("## Circuit Parameter Report")
@@ -92,6 +100,7 @@ def print_report(circuit_data, columns):
         table_data=circuit_data,
         columns=columns
     )
+
 
 # Main execution
 with forms.ProgressBar(title="Executing Script...", max_value=4) as pb:
