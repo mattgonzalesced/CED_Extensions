@@ -116,7 +116,15 @@ def update_connected_elements(branch, param_values):
 # Main Execution
 # -------------------------------------------------------------------------
 def main():
-    test_circuits = eu.pick_circuits_from_list(doc, select_multiple=True)
+    selection = revit.get_selection()
+    test_circuits = []
+    if not selection:
+        test_circuits = eu.pick_circuits_from_list(doc, select_multiple=True)
+    else:
+        for el in selection:
+            if isinstance(el, DB.Electrical.ElectricalSystem):
+                test_circuits.append(el)
+
     count = len(test_circuits)
 
     if count > 300:
