@@ -7,14 +7,14 @@ from pyrevit.interop import xl as pyxl
 from pyrevit import script, revit, DB, forms
 
 output = script.get_output()
-doc = revit.doc
+
 logger = script.get_logger()
 
 
 class ParentElement:
     """Store details about a parent (reference) element."""
 
-    def __init__(self, element_id, location_point, facing_orientation):
+    def __init__(self, element_id, location_point, facing_orientation, doc):
         self.element_id = element_id
         self.location_point = location_point
         self.facing_orientation = facing_orientation
@@ -25,7 +25,7 @@ class ParentElement:
         return self.get_parameter_value("Circuit #")
 
     @classmethod
-    def from_family_instance(cls, element):
+    def from_family_instance(cls, element, doc):
         if not isinstance(element, DB.FamilyInstance):
             logger.debug("Input is not a FamilyInstance: {}".format(element.Id))
             return None
@@ -34,11 +34,11 @@ class ParentElement:
             logger.debug("Skipping element without valid LocationPoint: {}".format(element.Id))
             return None
         orientation = element.FacingOrientation if hasattr(element, "FacingOrientation") else None
-        return cls(element.Id, loc.Point, orientation)
+        return cls(element.Id, loc.Point, orientation,doc)
 
     def get_parameter_value(self, name):
 
-        param = doc.GetElement(self.element_id).LookupParameter(name)
+        param = self.doc.GetElement(self.element_id).LookupParameter(name)
         if not param or not param.HasValue:
             return None
         st = param.StorageType
@@ -52,7 +52,7 @@ class ParentElement:
 
 
 class ChildGroup:
-    def __init__(self, parent, group_type, offset_distance=2.0):
+    def __init__(self, parent, group_type, doc, offset_distance=2.0):
         self.parent = parent
         self.group_type = group_type
         self.offset_distance = offset_distance
@@ -130,7 +130,7 @@ class ChildGroup:
             return False
 
     @classmethod
-    def from_existing_group(cls, group, param_name):
+    def from_existing_group(cls, group, param_name,doc):
         if not isinstance(group, DB.Group):
             logger.error("Provided element is not a Group: {}".format(group.Id))
             return None
@@ -146,7 +146,7 @@ class ChildGroup:
                 name) else None
         })()
 
-        instance = cls(parent_stub, group.GroupType)
+        instance = cls(parent_stub, group.GroupType,doc)
         instance.child_id = group.Id
         return instance
 
@@ -229,7 +229,7 @@ class ChildGroup:
             .ToElements()
 
 
-def collect_reference_tags():
+def collect_reference_tags(doc):
     selected_ids = revit.get_selection().element_ids
     if selected_ids:
         selected_elements = [revit.doc.GetElement(eid) for eid in selected_ids]

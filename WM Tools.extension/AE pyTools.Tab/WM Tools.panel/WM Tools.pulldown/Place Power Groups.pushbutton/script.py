@@ -104,8 +104,8 @@ def main():
                         "groups on before running the tool.")
         script.exit()
 
-    parents = [ParentElement.from_family_instance(t) for t in tags]
-    children = [ChildGroup(p, model_type, offset_distance) for p in parents if p]
+    parents = [ParentElement.from_family_instance(t,doc) for t in tags]
+    children = [ChildGroup(p, model_type, doc,offset_distance) for p in parents if p]
 
     systems = defaultdict(list)
     for c in children:
@@ -127,6 +127,7 @@ def main():
                     group_element = doc.GetElement(c.child_id)
                     param = group_element.LookupParameter("Refrigeration Circuit Number_CEDT")
                     if param and not param.IsReadOnly:
+                        logger.warning("No Refrig Circuit Parameter Found in Reference Element.")
                         param.Set("ckt # not found")
 
                 if default_detail:

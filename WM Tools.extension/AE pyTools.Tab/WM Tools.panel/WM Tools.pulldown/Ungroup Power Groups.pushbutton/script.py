@@ -44,7 +44,7 @@ def main():
         t.Start()
         for group in target_groups:
             try:
-                instance = ChildGroup.from_existing_group(group, CIRCUIT_PARAM)
+                instance = ChildGroup.from_existing_group(group, CIRCUIT_PARAM,doc)
                 if not instance:
                     logger.warning("Could not create ChildGroup from group ID {}".format(group.Id))
                     continue
