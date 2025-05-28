@@ -26,7 +26,9 @@ from pyrevit import revit, DB
 from pyrevit.revit import query
 from pyrevit import HOST_APP
 from os.path import dirname, join
+from pyrevit.compat import get_elementid_value_func
 
+get_id_value = get_elementid_value_func()
 # Initialize console
 console = script.get_output()
 console.close_others()
@@ -87,7 +89,7 @@ def get_revision_data_by_sheet(param_names):
         revision_clouds = [doc.GetElement(cloud_id) for cloud_id in revision_cloud_ids]
 
         for cloud in revision_clouds:
-            revision_id = cloud.RevisionId.IntegerValue
+            revision_id = get_id_value(cloud.RevisionId)
 
             # Ensure data structure for this revision exists
             if revision_id not in revision_data:
@@ -117,10 +119,10 @@ def get_revision_data_by_sheet(param_names):
 
 def get_revision_data_from_cloud(clouds, selected_revisions, param_names):
     """Group revision clouds by selected revisions for Revit versions below 2024."""
-    revision_data = {rev.Id.IntegerValue: [] for rev in selected_revisions}
+    revision_data = {get_id_value(rev.Id): [] for rev in selected_revisions}
 
     for cloud in clouds:
-        rev_id = cloud.RevisionId.IntegerValue
+        rev_id = get_id_value(cloud.RevisionId)
         if rev_id not in revision_data:
             continue
 
@@ -199,7 +201,7 @@ def print_project_metadata():
 def print_revision_report(revisions, revision_data, param_names):
     """Print the revision report."""
     for rev in revisions:
-        revision_id = rev.Id.IntegerValue
+        revision_id = get_id_value(rev.Id)
 
         # Retrieve revision details
         revision_number = query.get_param_value(rev.LookupParameter("Revision Number"))

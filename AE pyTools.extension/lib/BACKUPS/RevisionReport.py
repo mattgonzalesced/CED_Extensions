@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-__title__   = "Revision Report"
-__doc__     = """Version = 1.0
+__title__ = "Revision Report"
+__doc__ = """Version = 1.0
 Date    = 09.18.2024
 ________________________________________________________________
 Description:
@@ -19,20 +19,22 @@ from pyrevit import script, forms
 from pyrevit import coreutils
 from pyrevit import revit, DB
 from pyrevit.revit import query
-from os.path import dirname,join
-
+from os.path import dirname, join
+from pyrevit.compat import get_elementid_value_func
 
 # Initialize console
 console = script.get_output()
 console.close_others()
 console.set_height(800)
 
+get_id_value = get_elementid_value_func()
 
 # Get the directory of the current script
 script_dir = dirname(__file__)
 
 # Construct the relative path to your logo
 logo_path = join(script_dir, 'CED_Logo_H.png')
+
 
 # Report metadata
 def print_project_metadata():
@@ -59,6 +61,7 @@ def print_project_metadata():
     console.print_md("---")
     console.print_md("---")
 
+
 def get_sheet_info(view_id):
     """Retrieve sheet number and name for a given view ID."""
     sheet = revit.doc.GetElement(view_id)
@@ -68,11 +71,13 @@ def get_sheet_info(view_id):
         return sheet_number, sheet_name
     return None, None
 
+
 def get_revision_data(clouds, selected_revisions):
     """Group revision clouds by selected revisions."""
-    revision_data = {rev.Id.IntegerValue: [] for rev in selected_revisions}
+
+    revision_data = {get_id_value(rev.Id): [] for rev in selected_revisions}
     for cloud in clouds:
-        rev_id = cloud.RevisionId.IntegerValue
+        rev_id = get_id_value(cloud.RevisionId)
         if rev_id in revision_data:
             sheet_number, sheet_name = get_sheet_info(cloud.OwnerViewId)
             comment = query.get_param_value(cloud.LookupParameter("Comments"))
@@ -82,6 +87,7 @@ def get_revision_data(clouds, selected_revisions):
                 "Comments": comment
             })
     return revision_data
+
 
 def deduplicate_clouds(cloud_data):
     """Remove duplicate comments for the same sheet in the revision clouds."""
@@ -96,21 +102,24 @@ def deduplicate_clouds(cloud_data):
         seen_sheets_comments.add((sheet_number, comment))
     return deduplicated_clouds
 
+
 def print_revision_report(revisions, revision_data):
     """Print the revision report."""
     for rev in revisions:
         revision_number = query.get_param_value(rev.LookupParameter("Revision Number"))
         revision_date = query.get_param_value(rev.LookupParameter("Revision Date"))
         revision_desc = query.get_param_value(rev.LookupParameter("Revision Description"))
-        rev_clouds = sorted(revision_data[rev.Id.IntegerValue], key=lambda x: x["Sheet Number"] or "")
+        rev_clouds = sorted(revision_data[get_id_value(rev.Id)], key=lambda x: x["Sheet Number"] or "")
 
         deduplicated_clouds = deduplicate_clouds(rev_clouds)
 
         console.print_md(
-            "### Revision Number: {0} | Date: {1} | Description: {2}".format(revision_number, revision_date, revision_desc)
+            "### Revision Number: {0} | Date: {1} | Description: {2}".format(revision_number, revision_date,
+                                                                             revision_desc)
         )
 
-        table_data = [[cloud["Sheet Number"] or "N/A", cloud["Sheet Name"] or "N/A", cloud["Comments"] or "N/A"] for cloud in deduplicated_clouds]
+        table_data = [[cloud["Sheet Number"] or "N/A", cloud["Sheet Name"] or "N/A", cloud["Comments"] or "N/A"] for
+                      cloud in deduplicated_clouds]
 
         if table_data:
             console.print_table(table_data, columns=["Sheet Number", "Sheet Name", "Comments"])
@@ -120,9 +129,9 @@ def print_revision_report(revisions, revision_data):
 
 
 # Main logic
-all_clouds = DB.FilteredElementCollector(revit.doc)\
-    .OfCategory(DB.BuiltInCategory.OST_RevisionClouds)\
-    .WhereElementIsNotElementType()\
+all_clouds = DB.FilteredElementCollector(revit.doc) \
+    .OfCategory(DB.BuiltInCategory.OST_RevisionClouds) \
+    .WhereElementIsNotElementType() \
     .ToElements()
 
 # Select revisions

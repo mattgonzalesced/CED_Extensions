@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from pyrevit import DB, revit, script, HOST_APP
+from pyrevit import DB, revit, script, HOST_APP, forms
 from pyrevit.revit import query, ui
 import pyrevit.extensions as exts
-
+import os
 doc = HOST_APP.doc
 uidoc = HOST_APP.uidoc
 logger = script.get_logger()
@@ -22,6 +22,7 @@ def get_toggle_state():
         param = symbol.LookupParameter(PARAM_NAME)
         if param and param.HasValue:
             return param.AsInteger()
+        print(param.AsInteger())
     return None
 
 
@@ -53,20 +54,9 @@ def main():
                 passed_items.append(query.get_name(symbol))
 
     state_text = "ON" if new_state == 1 else "OFF"
-    logger.success("Case Power Symbols toggled {} for {} Family Types".format(state_text, len(passed_items)))
+    forms.show_balloon("Toggle Connector Symbols","Case Power Symbols toggled {} for {} Family Types".format(state_text, len(passed_items)))
     return state_text
 
-
-# Smart button self-initialization
-def __selfinit__(script_cmp, ui_button_cmp, __rvt__):
-    # Get state by reading it from a type
-    state = get_toggle_state()
-
-    off_icon = ui.resolve_icon_file(script_cmp.directory, exts.DEFAULT_OFF_ICON_FILE)
-    on_icon = ui.resolve_icon_file(script_cmp.directory, "on.png")
-
-    icon_path = on_icon if state == 1 else off_icon
-    ui_button_cmp.set_icon(icon_path)
 
 
 if __name__ == "__main__":

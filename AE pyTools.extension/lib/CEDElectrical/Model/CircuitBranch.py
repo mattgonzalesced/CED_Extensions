@@ -10,7 +10,7 @@ from CEDElectrical.refdata.conduit_area_table import CONDUIT_AREA_TABLE, CONDUIT
 from CEDElectrical.refdata.impedance_table import WIRE_IMPEDANCE_TABLE
 from CEDElectrical.refdata.ocp_cable_defaults import OCP_CABLE_DEFAULTS
 from CEDElectrical.refdata.standard_ocp_table import BREAKER_FRAME_SWITCH_TABLE
-from Autodesk.Revit.DB.Electrical import *
+import Autodesk.Revit.DB.Electrical as DBE
 
 
 
@@ -33,7 +33,6 @@ class CircuitSettings(object):
         self.min_wire_size = '12'
         self.max_wire_size = '600'
         self.min_breaker_size = 20
-        self.max_parallel_size = '500'  # largest wire allowed before parallel
         self.auto_calculate_breaker = False
         self.min_conduit_size = '3/4"'
         self.max_conduit_fill = .36
@@ -47,7 +46,6 @@ class CircuitSettings(object):
             'min_wire_size': self.min_wire_size,
             'max_wire_size': self.max_wire_size,
             'min_breaker_size': self.min_breaker_size,
-            'max_parallel_size': self.max_parallel_size,
             'auto_calculate_breaker': self.auto_calculate_breaker
         }
 
@@ -55,7 +53,6 @@ class CircuitSettings(object):
         self.min_wire_size = data.get('min_wire_size', self.min_wire_size)
         self.max_wire_size = data.get('max_wire_size', self.max_wire_size)
         self.min_breaker_size = data.get('min_breaker_size', self.min_breaker_size)
-        self.max_parallel_size = data.get('max_parallel_size', self.max_parallel_size)
         self.auto_calculate_breaker = data.get('auto_calculate_breaker', self.auto_calculate_breaker)
 
 
@@ -68,7 +65,9 @@ class CircuitBranch(object):
         self.panel = getattr(circuit.BaseEquipment, 'Name', None) if circuit.BaseEquipment else ""
         self.circuit_number = circuit.CircuitNumber
         self.name = "{}-{}".format(self.panel, self.circuit_number)
-        self._wire_info = None  # Lazy-loaded wire info dictionary
+        self._wire_info = self.wire_info  # Lazy-loaded wire info dictionary
+        self._is_transformer_primary = False
+        self._is_feeder = self.is_feeder
 
         # User overrides (None = no override)
         self._auto_calculate_override = False
@@ -100,9 +99,18 @@ class CircuitBranch(object):
 
     # ----------- Classification -----------
 
+    def log_info(self, msg, *args):
+        logger.info("{}: {}".format(self.name, msg), *args)
+
+    def log_warning(self, msg, *args):
+        logger.warning("{}: {}".format(self.name, msg), *args)
+
+    def log_debug(self, msg, *args):
+        logger.debug("{}: {}".format(self.name, msg), *args)
+
     @property
     def branch_type(self):
-        if self.is_feeder:
+        if self._is_feeder:
             return "FEEDER"
         if self.is_space:
             return "SPACE"
@@ -112,38 +120,53 @@ class CircuitBranch(object):
 
     @property
     def is_power_circuit(self):
-        return self.circuit.SystemType == ElectricalSystemType.PowerCircuit
+        return self.circuit.SystemType == DBE.ElectricalSystemType.PowerCircuit
 
     @property
     def is_feeder(self):
+        self._is_feeder = False
         try:
-            # Get elements this circuit supplies
             elements = list(self.circuit.Elements)
+            logger.debug("🔍 Checking is_feeder for circuit: {}".format(self.name))
+
             for el in elements:
                 if isinstance(el, DB.FamilyInstance):
                     family = el.Symbol.Family
                     part_type = family.get_Parameter(DB.BuiltInParameter.FAMILY_CONTENT_PART_TYPE)
+
                     if part_type and part_type.StorageType == DB.StorageType.Integer:
                         part_value = part_type.AsInteger()
+                        logger.debug("➡️ Element: {} (ID: {}), PART_TYPE: {}".format(el.Name, el.Id, part_value))
+
+                        if part_value == 15:
+                            self._is_transformer_primary = True
+                            logger.debug("⚡ Transformer primary detected on circuit {}".format(self.name))
+
                         if part_value in [14, 15, 16, 17]:
-                            return True
+                            self._is_feeder = True
+                            logger.debug(
+                                "✅ Marked as feeder (PART_TYPE: {}) for circuit {}".format(part_value, self.name))
+                            return self._is_feeder
+
+            logger.debug("❌ No feeder-type load found for circuit {}".format(self.name))
         except Exception as e:
-            logger.debug("Error in is_feeder: {}".format(str(e)))
-        return False
+            logger.debug("🚨 Error in is_feeder for circuit {}: {}".format(self.name, str(e)))
+
+        return self._is_feeder
 
     @property
     def is_spare(self):
-        return self.circuit.CircuitType == CircuitType.Spare
+        return self.circuit.CircuitType == DBE.CircuitType.Spare
 
     @property
     def is_space(self):
-        return self.circuit.CircuitType == CircuitType.Space
+        return self.circuit.CircuitType == DBE.CircuitType.Space
 
     # ----------- Wire Info Dictionary -----------
 
     @property
     def max_voltage_drop(self):
-        if self.is_feeder:
+        if self._is_feeder:
             return self.settings.max_feeder_voltage_drop
         else:
             return self.settings.max_branch_voltage_drop
@@ -153,17 +176,30 @@ class CircuitBranch(object):
         if not self.is_power_circuit:
             return {}
 
-        if self._wire_info is None:
-            try:
-                rating = self.rating
-                if rating is not None:
-                    rating_key = int(rating)
-                    self._wire_info = OCP_CABLE_DEFAULTS.get(rating_key, {})
-                else:
-                    self._wire_info = {}
-            except Exception:
-                self._wire_info = {}
+        rating = self.rating
+        if rating is None:
+            logger.debug("⚠️ No rating found for circuit {}, wire info is empty.".format(self.name))
+            self._wire_info = {}
+            return self._wire_info
 
+        rating_key = int(rating)
+        table = OCP_CABLE_DEFAULTS
+
+        if rating_key in table:
+            self._wire_info = table[rating_key]
+            return self._wire_info
+
+        sorted_keys = sorted(table.keys())
+        for key in sorted_keys:
+            if key >= rating_key:
+                self._wire_info = table[key]
+                logger.debug("⚠️ No exact wire info match for {}, using next available: {}".format(rating_key, key))
+                return self._wire_info
+
+        # If no match or next larger found, use largest available
+        fallback_key = sorted_keys[-1]
+        self._wire_info = table[fallback_key]
+        logger.debug("⚠️ Rating {} exceeds all defaults. Using max available: {}".format(rating_key, fallback_key))
         return self._wire_info
 
     # ----------- Circuit Properties -----------
@@ -210,33 +246,35 @@ class CircuitBranch(object):
 
     @property
     def voltage(self):
+        """Returns voltage in Volts, converted from internal units (kV)."""
         try:
             param = self.circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_VOLTAGE)
             if param and param.HasValue:
-                val_str = param.AsValueString()  # e.g. "480 V" or "208 V"
-                voltage = float(val_str.split()[0])
-                return voltage
-        except:
-            return None
+                raw_volt = param.AsDouble()  # internal unit = kV
+                volts = DB.UnitUtils.ConvertFromInternalUnits(raw_volt, DB.UnitTypeId.Volts)
+                return volts
+        except Exception as e:
+            logger.debug("voltage conversion error: {}".format(e))
+        return None
 
     @property
     def apparent_power(self):
         try:
-            return ElectricalSystem.ApparentLoad.__get__(self.circuit)
+            return DBE.ElectricalSystem.ApparentLoad.__get__(self.circuit)
         except:
             return None
 
     @property
     def apparent_current(self):
         try:
-            return ElectricalSystem.ApparentCurrent.__get__(self.circuit)
+            return DBE.ElectricalSystem.ApparentCurrent.__get__(self.circuit)
         except:
             return None
 
     @property
     def circuit_load_current(self):
-        if self.circuit.CircuitType == CircuitType.Circuit:
-            if self.is_feeder:
+        if self.circuit.CircuitType == DBE.CircuitType.Circuit:
+            if self._is_feeder:
                 return self.get_downstream_demand_current()
             else:
                 return self.apparent_current
@@ -244,7 +282,7 @@ class CircuitBranch(object):
     @property
     def poles(self):
         try:
-            return ElectricalSystem.PolesNumber.__get__(self.circuit)
+            return DBE.ElectricalSystem.PolesNumber.__get__(self.circuit)
         except:
             return None
 
@@ -261,7 +299,7 @@ class CircuitBranch(object):
     @property
     def power_factor(self):
         try:
-            return ElectricalSystem.PowerFactor.__get__(self.circuit)
+            return DBE.ElectricalSystem.PowerFactor.__get__(self.circuit)
         except:
             return None
 
@@ -321,30 +359,30 @@ class CircuitBranch(object):
     def wire_material(self):
         if self._wire_material_override:
             return self._wire_material_override
-        return self.wire_info.get('wire_material')
+        return self._wire_info.get('wire_material')
 
     @property
     def wire_temp_rating(self):
         if self._wire_temp_rating_override:
             return self._wire_temp_rating_override
-        return self.wire_info.get('wire_temperature_rating')
+        return self._wire_info.get('wire_temperature_rating')
 
 
     @property
     def wire_insulation(self):
         if self._wire_insulation_override:
             return self._wire_insulation_override
-        return self.wire_info.get('wire_insulation')
+        return self._wire_info.get('wire_insulation')
 
     @property
     def wire_hot_size(self):
         if self._wire_hot_size_override:
             return self._wire_hot_size_override
-        return self.wire_info.get('wire_hot_size')
+        return self._wire_info.get('wire_hot_size')
 
     @property
     def hot_wire_quantity(self):
-        if self.circuit.CircuitType == CircuitType.Circuit:
+        if self.circuit.CircuitType == DBE.CircuitType.Circuit:
             return self.poles
         else:
             return 0
@@ -359,7 +397,7 @@ class CircuitBranch(object):
 
     @property
     def ground_wire_quantity(self):
-        if self.circuit.CircuitType == CircuitType.Circuit:
+        if self.circuit.CircuitType == DBE.CircuitType.Circuit:
             return 1
         else:
             return 0
@@ -379,7 +417,7 @@ class CircuitBranch(object):
             return 1
 
         # Case 3: Automatic check if it's a feeder with L-N voltage
-        if self.is_feeder:
+        if self._is_feeder:
             doc = revit.doc
             try:
                 for el in self.circuit.Elements:
@@ -387,7 +425,7 @@ class CircuitBranch(object):
                         ds_param = el.get_Parameter(DB.BuiltInParameter.RBS_FAMILY_CONTENT_DISTRIBUTION_SYSTEM)
                         if ds_param and ds_param.HasValue:
                             ds_elem = doc.GetElement(ds_param.AsElementId())
-                            if isinstance(ds_elem, DistributionSysType):
+                            if isinstance(ds_elem, DBE.DistributionSysType):
                                 l_n_voltage = ds_elem.VoltageLineToGround
                                 if l_n_voltage:
                                     return 1
@@ -444,13 +482,13 @@ class CircuitBranch(object):
     def conduit_material_type(self):
         if self._auto_calculate_override and self._conduit_type_override:
             return self.get_conduit_material_from_type()
-        return self.wire_info.get('conduit_material_type')
+        return self._wire_info.get('conduit_material_type')
 
     @property
     def conduit_type(self):
         if self._auto_calculate_override and self._conduit_type_override:
             return self._conduit_type_override
-        return self.wire_info.get('conduit_type', "EMT")
+        return self._wire_info.get('conduit_type', "EMT")
 
     @property
     def conduit_size(self):
@@ -488,7 +526,7 @@ class CircuitBranch(object):
 
         # --- Handle user overrides directly ---
         if self._auto_calculate_override and self._wire_hot_size_override:
-
+            self.log_info("overrides set for calc hot wire size.")
             try:
                 material = self._wire_material_override
                 temp = int(str(self._wire_temp_rating_override).replace('C', '').strip())
@@ -513,7 +551,7 @@ class CircuitBranch(object):
                 logger.debug("Override ampacity calc failed: {}".format(e))
                 return
 
-        wire_info = self.wire_info
+        wire_info = self._wire_info
         try:
             temp = int(wire_info.get('wire_temperature_rating', '75').replace('C', '').strip())
         except Exception as e:
@@ -587,7 +625,7 @@ class CircuitBranch(object):
             if amps is None:
                 return
 
-            wire_info = self.wire_info
+            wire_info = self._wire_info
             base_ground = wire_info.get('wire_ground_size')
             base_hot = wire_info.get('wire_hot_size')
             base_sets = wire_info.get('number_of_parallel_sets', 1)
@@ -683,7 +721,7 @@ class CircuitBranch(object):
             if not amps or not length or not voltage:
                 return 0
 
-            wire_info = self.wire_info
+            wire_info = self._wire_info
             material = wire_info.get('wire_material', 'CU')
             conduit_material = self.conduit_material_type
             wire_size = self._normalize_wire_size(wire_size_formatted)
@@ -714,15 +752,52 @@ class CircuitBranch(object):
 
     def get_downstream_demand_current(self):
         try:
+            logger.debug("🔍 Checking downstream demand current for circuit: {}".format(self.name))
+
             for el in self.circuit.Elements:
-                if isinstance(el, DB.FamilyInstance):
-                    param = el.get_Parameter(DB.BuiltInParameter.RBS_ELEC_PANEL_TOTAL_DEMAND_CURRENT_PARAM)
-                    if param and param.StorageType == DB.StorageType.Double:
-                        self._demand_current = param.AsDouble()
-                        return self._demand_current
+                logger.debug("➡️ Inspecting element: {} (ID: {})".format(el.Name, el.Id))
+
+                # Transformer-specific calculation
+                if self._is_transformer_primary:
+                    logger.debug("⚡ Detected transformer primary on circuit: {}".format(self.name))
+                    va_param = el.get_Parameter(DB.BuiltInParameter.RBS_ELEC_PANEL_TOTALESTLOAD_PARAM)
+                    if va_param and va_param.HasValue:
+                        raw_va = va_param.AsDouble()
+                        logger.debug("✅ Found TOTALESTLOAD_PARAM: {} kVA (internal)".format(raw_va))
+
+                        demand_va = DB.UnitUtils.ConvertFromInternalUnits(raw_va, DB.UnitTypeId.VoltAmperes)
+                        logger.debug("🔧 Converted VA: {} VA".format(demand_va))
+
+                        voltage = self.voltage
+                        phase = self.phase
+                        logger.debug("🔌 Voltage: {} V, Phase: {}".format(voltage, phase))
+
+                        if voltage and demand_va:
+                            divisor = voltage if phase == 1 else voltage * 3 ** 0.5
+                            self._demand_current = demand_va / divisor
+                            logger.debug(
+                                "✅ Calculated transformer primary current: {:.2f} A".format(self._demand_current))
+                            return self._demand_current
+                        else:
+                            logger.debug("⚠️ Missing voltage or demand_va for current calculation.")
+
+                    else:
+                        logger.debug("❌ Missing or invalid TOTALESTLOAD_PARAM on transformer element.")
+
+                # Default panel total demand fallback
+                param = el.get_Parameter(DB.BuiltInParameter.RBS_ELEC_PANEL_TOTAL_DEMAND_CURRENT_PARAM)
+                if param and param.StorageType == DB.StorageType.Double:
+                    self._demand_current = param.AsDouble()
+                    logger.debug("✅ Found panel TOTAL_DEMAND_CURRENT: {:.2f} A".format(self._demand_current))
+                    return self._demand_current
+                else:
+                    logger.debug("❌ No TOTAL_DEMAND_CURRENT_PARAM or invalid storage type on element.")
+
         except Exception as e:
-            logger.debug("Error in get_downstream_demand_current: {}".format(str(e)))
+            logger.debug("🚨 Exception in get_downstream_demand_current: {}".format(str(e)))
+
         self._demand_current = None
+        logger.debug("❌ No valid demand current found for circuit: {}".format(self.name))
         return None
 
     def get_conduit_material_from_type(self):
@@ -736,7 +811,7 @@ class CircuitBranch(object):
         self._calculated_conduit_size = None
         self._calculated_conduit_fill = None
 
-        wire_info = self.wire_info
+        wire_info = self._wire_info
         insulation = self.wire_insulation
         conduit_material = self.conduit_material_type
         conduit_type = self.conduit_type  # already exists
@@ -782,7 +857,7 @@ class CircuitBranch(object):
     def calculate_conduit_fill_percentage(self):
         conduit_formatted = self._conduit_size_override if self._auto_calculate_override else self._calculated_conduit_size
         conduit_size = self._normalize_conduit_type(conduit_formatted)
-        wire_info = self.wire_info
+        wire_info = self._wire_info
         insulation = self.wire_insulation
         conduit_material = self.conduit_material_type
         conduit_type = self.conduit_type
@@ -866,8 +941,8 @@ class CircuitBranch(object):
             else:
                 print("    No wire info available.")
 
-        print("Feeder: {}".format(self.is_feeder))
-        if self.is_feeder:
+        print("Feeder: {}".format(self._is_feeder))
+        if self._is_feeder:
             current_source = self.get_downstream_demand_current()
             print("Current used for voltage drop: {:.2f} A (Feeder demand)".format(current_source or 0.0))
         else:
@@ -890,8 +965,8 @@ class CircuitBranch(object):
         if self._calculated_hot_wire and self._calculated_wire_sets:
             # First wire tried: Revit rating, min wire size
 
-            base_wire = self.wire_info.get('wire_hot_size')
-            base_sets = self.wire_info.get('number_of_parallel_sets', 1)
+            base_wire = self._wire_info.get('wire_hot_size')
+            base_sets = self._wire_info.get('number_of_parallel_sets', 1)
             initial_vd = self.calculate_voltage_drop(base_wire, base_sets)
             final_vd = self.calculate_voltage_drop(self._calculated_hot_wire, self._calculated_wire_sets)
 
