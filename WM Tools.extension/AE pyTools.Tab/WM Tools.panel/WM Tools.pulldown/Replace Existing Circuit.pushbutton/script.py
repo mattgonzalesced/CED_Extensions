@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+from collections import defaultdict
+
+import Autodesk.Revit.DB.Electrical as DBE
 from pyrevit import revit, DB, forms, script, output
 from pyrevit.revit import query
-from collections import defaultdict
-import Autodesk.Revit.DB.Electrical as DBE
 
 doc = revit.doc
 uidoc = revit.uidoc
@@ -17,20 +18,29 @@ TYPE_PARAM = "Type Name"  # Assuming query.get_name(instance.Symbol) gets the ty
 
 
 def collect_connectors():
+    param_provider = DB.ParameterValueProvider(DB.ElementId(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER))
+    string_rule = DB.FilterStringRule(param_provider, DB.FilterStringEquals(), CIRCUIT_PARAM)
+    param_filter = DB.ElementParameterFilter(string_rule, True)  # Inverse filter to get only instances with circuit numbers set
+
     collector = DB.FilteredElementCollector(doc) \
         .OfClass(DB.FamilyInstance) \
+        .WherePasses(param_filter) \
         .WhereElementIsNotElementType()
 
     grouped_connectors = defaultdict(list)
-    for inst in collector:
-        if inst.Symbol.Family.Name != CONNECTOR_FAMILY_NAME:
-            continue
+
+    iterator = collector.GetElementIterator()
+    while iterator.MoveNext():
+        inst = iterator.Current
         ckt_number = inst.LookupParameter(CIRCUIT_PARAM)
         if not ckt_number or not ckt_number.HasValue:
             continue
         key = ckt_number.AsString().strip()
         grouped_connectors[key].append(inst)
+
     return grouped_connectors
+
+
 
 
 def filter_and_select_connectors_by_type(grouped_connectors, circuit):
