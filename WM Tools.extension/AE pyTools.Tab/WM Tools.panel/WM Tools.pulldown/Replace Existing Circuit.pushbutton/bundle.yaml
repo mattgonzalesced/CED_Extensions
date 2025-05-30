@@ -1,9 +1,9 @@
 title: "Replace Existing Circuit"
 
 tooltip: >-
-  Version = 1.0
+  Version = 1.1
   
-  Date    = 05.10.2025
+  Date    = 05.30.2025
   ________________________________________________________________
   Description:
 
@@ -11,7 +11,17 @@ tooltip: >-
 
 
   Select a placeholder circuit in a panel schedule, choose matching connector types,
-  and they will be added to the circuit. The placeholder will be deleted.
+  and they will be added to the circuit. The placeholder will be deleted. The tool will filter
+  out any elements that do not match the circuits Voltage and Poles.
+  
+  Note: 
+  
+  This tool has been 'unlocked' to be compatible with any 'CED Standard' electrical fixture.
+  The only requirement is that it has some value entered in the 
+  "Refrigeration Circuit Number_CEDT" parameter. 
+  
+  So, if you need to replace a placeholder with a receptacle or disconnect, simply give that element
+  some value in the "Refrigeration Circuit Number_CEDT" parameter and it will show up as an option.
   ________________________________________________________________
 
   

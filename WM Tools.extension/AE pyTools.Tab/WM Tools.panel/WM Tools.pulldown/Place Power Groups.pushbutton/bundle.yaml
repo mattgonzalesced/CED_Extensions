@@ -1,15 +1,30 @@
 title: "Place Power Groups"
 
 tooltip: >-
-  Version = 1.0
+  Version = 1.1
   
-  Date    = 05.10.2025
+  Date    = 05.30.2025
   ________________________________________________________________
   Description:
   
   Places Groups on top of other selected elements. If no elements
   are selected, it will target all instances of the EMS case tag in
   the active view.
+  
+  SHIFT + Click to implement an offset distance. this will place
+  groups a specified distance away from the reference elements.
+  
+  
+  Note:
+  
+  If the reference element does NOT have a "Circuit #" parameter,
+  the tool will return a warning and will write "Circuit # Not Found"
+  in the groups "Refrigeration Circuit Number_CEDT" parameter.
+  
+  ANOTHER Note:
+  
+  You can place groups on almost any element type. it is not restricted
+  to the EMS tags.
   ________________________________________________________________
   
 
