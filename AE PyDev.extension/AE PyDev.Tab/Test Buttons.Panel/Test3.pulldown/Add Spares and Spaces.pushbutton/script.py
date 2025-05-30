@@ -1,193 +1,81 @@
 # -*- coding: utf-8 -*-
-# Revit Python 2.7  – pyRevit / Revit API
+import os.path
 
-from pyrevit import revit, forms, script
-from Autodesk.Revit.DB import (
-    FilteredElementCollector, Transaction, ElementId,
-    SectionType
-)
-import Autodesk.Revit.DB.Electrical as DBE
-from collections import defaultdict
+import clr
+# pylint: disable=import-error,invalid-name,broad-except
+from pyrevit import script
 
-doc   = revit.doc
-uidoc = revit.uidoc
-out   = script.get_output()
-log   = script.get_logger()
+clr.AddReference('System')
+from System.IO import Directory, File, Path
 
-# ---------------------------------------------------------------------------
-# 1. Ask once how empty slots should be filled
-# ---------------------------------------------------------------------------
-def ask_fill_mode():
-    mode = forms.CommandSwitchWindow.show(
-        ['All Spare', 'All Space', 'Half Spare/Half Space'],
-        title='Fill empty panel slots with...')
-    if not mode:
-        forms.alert('Nothing chosen – cancelled.', exitscript=True)
-    return mode                                         # str
+output = script.get_output()
+logger = script.get_logger()
 
+def copy_folder(source_dir, target_dir):
+    output.print_md("🔄 **Copying from** `{}` **to** `{}`".format(source_dir, target_dir))
 
-# ---------------------------------------------------------------------------
-# 2. Collect panel‑schedule views to process
-# ---------------------------------------------------------------------------
-class _ScheduleOption(object):
-    """Wrapper so SelectFromList shows a name but returns the view object."""
-    def __init__(self, view): self.view = view
-    def __str__(self):       return self.view.Name
+    # Create target directory if it doesn't exist
+    if not Directory.Exists(target_dir):
+        Directory.CreateDirectory(target_dir)
+        output.print_md("- Created target directory `{}`".format(target_dir))
 
-def _schedules_from_selection(elements):
-    found, skipped = [], defaultdict(int)
-    for el in elements:
-        if isinstance(el, DBE.PanelScheduleSheetInstance):
-            v = doc.GetElement(el.ScheduleId)
-            if isinstance(v, DBE.PanelScheduleView):
-                found.append(v)
-        else:
-            cat = el.Category.Name if el.Category else 'Unknown'
-            skipped[cat] += 1
+    # Copy all files
+    for file_path in Directory.GetFiles(source_dir):
+        file_name = Path.GetFileName(file_path)
+        target_file = Path.Combine(target_dir, file_name)
+        File.Copy(file_path, target_file, True)  # True = overwrite existing files
+        output.print_md("- Copied file: `{}`".format(file_name))
 
-    for cat, cnt in skipped.items():
-        log.warning('{} “{}” element(s) skipped'.format(cnt, cat))
+    # Copy all subdirectories recursively
+    for dir_path in Directory.GetDirectories(source_dir):
+        dir_name = Path.GetFileName(dir_path)
+        target_subdir = Path.Combine(target_dir, dir_name)
+        output.print_md("- Entering subdirectory: `{}`".format(dir_name))
+        copy_folder(dir_path, target_subdir)
 
-    # remove duplicates
-    uniq = {v.Id.IntegerValue: v for v in found}.values()
-    return list(uniq)
-
-def _prompt_for_schedules():
-    all_views = [v for v in FilteredElementCollector(doc)
-                   .OfClass(DBE.PanelScheduleView)
-                 if not v.IsTemplate]
-    if not all_views:
-        forms.alert('No panel schedules in this model.', exitscript=True)
-
-    picked = forms.SelectFromList.show(
-        [_ScheduleOption(v) for v in sorted(all_views, key=lambda x: x.Name)],
-        title='Choose panel schedules', multiselect=True)
-    if not picked:
-        forms.alert('Nothing selected – cancelled.', exitscript=True)
-    return [p.view for p in picked]
-
-def collect_schedules_to_process():
-    # a) active view
-    av = uidoc.ActiveView
-    if isinstance(av, DBE.PanelScheduleView):
-        return [av]
-
-    # b) graphics selected on sheet
-    sel = revit.get_selection()
-    if sel:
-        views = _schedules_from_selection(sel.elements)
-        if views:
-            return views
-
-    # c) let user pick
-    return _prompt_for_schedules()
-
-
-# ---------------------------------------------------------------------------
-# 3. Scan a schedule and return { slot_num : [(row, col), …] }
-# ---------------------------------------------------------------------------
-def gather_empty_cells(view):
-    tbl  = view.GetTableData()
-    body = tbl.GetSectionData(SectionType.Body)
-    if not body:
-        return {}
-
-    max_slot = tbl.NumberOfSlots
-    empties  = defaultdict(list)
-
-    for row in range(body.NumberOfRows):
-        active_slot = None
-        cols_for_slot = []
-        for col in range(body.NumberOfColumns):
-            slot   = view.GetSlotNumberByCell(row, col)
-            ckt_id = view.GetCircuitIdByCell(row, col)
-            is_empty = (ckt_id == ElementId.InvalidElementId
-                        and 1 <= slot <= max_slot)
-
-            if is_empty and slot == active_slot:
-                cols_for_slot.append(col)
-            else:
-                if active_slot and cols_for_slot:
-                    empties[active_slot].extend((row, c) for c in cols_for_slot)
-                active_slot    = slot if is_empty else None
-                cols_for_slot  = [col] if is_empty else []
-
-        if active_slot and cols_for_slot:
-            empties[active_slot].extend((row, c) for c in cols_for_slot)
-
-    return empties
-
-
-# ---------------------------------------------------------------------------
-# 4. Fill schedules according to the chosen mode and print summary
-# ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
-# 4. Fill schedules and build report  (console opens *after* commit)
-# ---------------------------------------------------------------------------
-def fill_schedules(schedules, mode):
-    results = []                                           # [(panelName, open, spare, space)]
-
-    with Transaction(doc, 'Fill panel spares / spaces') as tx:
-        tx.Start()
-
-        for view in schedules:
-            empty_map = gather_empty_cells(view)
-            if not empty_map:
-                results.append((view.Name, 0, 0, 0))
-                continue
-
-            open_slots  = len(empty_map)
-            spare_cnt   = 0
-            space_cnt   = 0
-
-            slot_items  = sorted(empty_map.items())
-
-            if mode == 'All Spare':
-                work = [(True, slot_items)]
-            elif mode == 'All Space':
-                work = [(False, slot_items)]
-            else:
-                half = len(slot_items) // 2
-                work = [(True,  slot_items[:half]),
-                        (False, slot_items[half:])]
-
-            for want_spare, chunk in work:
-                for slot, cells in chunk:
-                    for row, col in cells:
-                        try:
-                            if want_spare:
-                                view.AddSpare(row, col); spare_cnt += 1
-                            else:
-                                view.AddSpace(row, col); space_cnt += 1
-                            view.SetLockSlot(row, col, 0)
-                            break
-                        except Exception:
-                            continue
-
-            results.append((view.Name, open_slots, spare_cnt, space_cnt))
-
-        tx.Commit()                                        # ------------------
-
-    # ----------- console output happens only *after* commit -----------------
-    out = script.get_output()
-    out.set_title("Panel‑Schedule Fill Results")
-    out.print_md("# RESULTS\n")
-
-    for idx, (name, open_slots, spare_cnt, space_cnt) in enumerate(results, 1):
-        out.print_md("## {}. {}".format(idx, name))
-        out.print_md("- open slots before : **{}**".format(open_slots))
-        out.print_md("- spares added      : **{}**".format(spare_cnt))
-        out.print_md("- spaces added      : **{}**".format(space_cnt))
-        if idx != len(results):
-            out.print_md("\n-----\n")
-
-    out.show()                                             # pops console
-
-# ---------------------------------------------------------------------------
 def main():
-    scheds = collect_schedules_to_process()
-    mode   = ask_fill_mode()
-    fill_schedules(scheds, mode)
+    user_folder = os.path.expanduser('~')
+    source_path = r"DC\ACCDocs\CoolSys\CED Content Collection\Project Files\Temp"
+    target_path = r"OneDrive - CoolSys Inc\Desktop\_TARGET TEST"
+    source_dir = os.path.join(user_folder, source_path)
+    target_dir = os.path.join(user_folder, target_path)
 
-if __name__ == '__main__':
-    main()
+    output.print_md("# 🚀 **Updating Extension from Source**")
+    output.print_md("🔎 Source Path: `{}`".format(source_dir))
+    output.print_md("📝 Target Path: `{}`".format(target_dir))
+
+    # Step 1: Delete everything in target directory
+    if Directory.Exists(target_dir):
+        output.print_md("🗑️ **Deleting old content in target directory…**")
+        # Delete all files
+        for file_path in Directory.GetFiles(target_dir):
+            File.Delete(file_path)
+            output.print_md("- Deleted file: `{}`".format(Path.GetFileName(file_path)))
+
+        # Delete all subdirectories
+        for dir_path in Directory.GetDirectories(target_dir):
+            Directory.Delete(dir_path, True)
+            output.print_md("- Deleted directory: `{}`".format(Path.GetFileName(dir_path)))
+    else:
+        output.print_md("✅ Target directory did not exist. No deletions needed.")
+
+    # Step 2: Copy everything from source to target
+    output.print_md("📂 **Copying new content…**")
+    copy_folder(source_dir, target_dir)
+
+    output.print_md("🎉 **Update complete!**")
+
+main()
+
+
+# res = True
+#
+# if res:
+#     logger = script.get_logger()
+#     results = script.get_results()
+#
+#     # re-load pyrevit session.
+#     logger.info('Reloading....')
+#     sessionmgr.reload_pyrevit()
+#
+#     results.newsession = sessioninfo.get_session_uuid()
