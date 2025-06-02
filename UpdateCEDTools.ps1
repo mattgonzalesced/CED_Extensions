@@ -45,4 +45,8 @@ Write-Host "Showing final pyRevit environment:"
 pyrevit env
 
 Write-Host "=== Update complete! Please reload pyRevit in Revit. ==="
-Pause
+
+# Remove the following line after verification
+pyrevit extensions paths add "C:\Users\Aevelina\CED_Extensions"
+
+
