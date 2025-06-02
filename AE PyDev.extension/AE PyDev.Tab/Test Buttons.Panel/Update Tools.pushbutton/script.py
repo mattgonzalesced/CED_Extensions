@@ -6,7 +6,7 @@ try:
     # Step 1: Check status
     ps_check = r'C:\Users\Aevelina\AppData\Roaming\pyRevit\Extensions\CED_Extensions\Updater\CheckCEDTools.ps1'
     p1 = subprocess.Popen(
-        ['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps_check],
+        ['powershell.exe', '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps_check],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
     )
     stdout, stderr = p1.communicate()
@@ -23,7 +23,7 @@ try:
             # Step 3: Perform the update
             ps_update = r'C:\Users\Aevelina\AppData\Roaming\pyRevit\Extensions\CED_Extensions\Updater\UpdateCEDTools.ps1'
             p2 = subprocess.Popen(
-                ['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps_update],
+                ['powershell.exe', '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps_update],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
             )
             p2.wait()  # Wait for update to finish

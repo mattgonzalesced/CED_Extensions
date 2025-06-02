@@ -1,5 +1,22 @@
-@echo off
-:: Runs the PowerShell update script in a new console window
-PowerShell -Command "Set-ExecutionPolicy Unrestricted -Scope Process" >> "%TEMP%\StartupLog.txt" 2>&1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\Users\Aevelina\AppData\Roaming\pyRevit\Extensions\CED_Extensions\Updater\UpdateCEDTools.ps1"
+# UpdateCEDTools.ps1
+# Actually pulls updates and sets up extension paths
 
+Write-Host "=== Updating CED Tools Extensions ==="
+
+$repoDir = "$env:APPDATA\pyRevit\Extensions\CED_Extensions"
+$branchName = "develop"
+
+Set-Location $repoDir
+git pull origin $branchName
+
+# Re-add extension path (safe to re-run)
+pyrevit extensions paths add $repoDir
+
+# Enable rocketmode and telemetry
+pyrevit configs rocketmode enable
+pyrevit configs telemetry enable
+
+# Remove the following line after verification
+pyrevit extensions paths add "C:\Users\Aevelina\CED_Extensions"
+
+Write-Host "=== Update complete! Please reload pyRevit in Revit. ==="
