@@ -1,23 +1,12 @@
 import subprocess
 
-from pyrevit import script, forms
-
-logger = script.get_logger()
+from pyrevit import forms
 
 try:
-    # Launch PowerShell script and wait for it to complete
-    ps_script = r'C:\Users\Aevelina\CED_Extensions\UpdateCEDTools.ps1'
-    p = subprocess.Popen(
-        ['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps_script],
+    subprocess.Popen(
+        r'cmd.exe /c start "" powershell.exe -NoExit -NoProfile -ExecutionPolicy Bypass -File "C:\Users\Aevelina\CED_Extensions\UpdateCEDTools.ps1"',
         shell=True
     )
-    p.wait()  # Wait for PowerShell to complete
-
-    # Inform the user to manually reload
-    forms.alert(
-        "Update complete.\nPlease manually click the 'Reload' button in pyRevit to avoid crashes.",
-        title="Update Complete"
-    )
-
+    forms.alert("Update script launched in a new PowerShell window.\nFollow the prompts there.", title="Update Started")
 except Exception as e:
     forms.alert("Update failed:\n{}".format(e), title="Update Error")

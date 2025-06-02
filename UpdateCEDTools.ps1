@@ -38,7 +38,7 @@ pyrevit extensions paths add $repoDir
 # Enable rocketmode and telemetry
 Write-Host "Enabling rocketmode and telemetry..."
 pyrevit configs rocketmode enable
-pyrevit configs telemetry enable
+pyrevit configs telemetry disable
 
 # Show final pyRevit environment
 Write-Host "Showing final pyRevit environment:"
