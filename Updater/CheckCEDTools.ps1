@@ -1,18 +1,13 @@
 $repoDir = "$env:APPDATA\pyRevit\Extensions\CED_Extensions"
-$branchName = "develop"
 
 if (-not (Test-Path $repoDir)) {
     Write-Output "status: clone-needed"
     exit
 }
 
-Set-Location $repoDir
-git fetch origin $branchName
-
-$localHash = git rev-parse HEAD
-$remoteHash = git rev-parse origin/$branchName
-
-if ($localHash -eq $remoteHash) {
+# Use pyRevit CLI to check for updates
+$updateResult = pyrevit extensions update $repoDir 2>&1
+if ($updateResult -match "Already up to date.") {
     Write-Output "status: up-to-date"
 } else {
     Write-Output "status: updates-available"
