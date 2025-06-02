@@ -26,6 +26,8 @@ if (-not (Test-Path $repoDir)) {
 Write-Output "Adding repo folder as an extension search path..."
 pyrevit extensions paths add $repoDir 2>&1
 Write-Output "Extension search path added."
-
+# Optional: enable rocketmode and telemetry
+Write-Output "Enabling rocketmode and telemetry (optional)..."
+pyrevit configs rocketmode enable 2>&1
 Write-Output "=== Update/Clone complete! Please manually reload pyRevit in Revit. ==="
 
