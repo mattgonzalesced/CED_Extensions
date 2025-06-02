@@ -1,5 +1,5 @@
 $repoDir = "$env:APPDATA\pyRevit\Extensions\CED_Extensions"
-$branchName = "develop"
+$branchName = "main"
 
 if (-not (Test-Path $repoDir)) {
     Write-Output "status: clone-needed"

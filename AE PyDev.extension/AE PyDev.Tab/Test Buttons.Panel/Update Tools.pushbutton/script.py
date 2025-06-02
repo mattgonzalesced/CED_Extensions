@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 import subprocess
 
 from pyrevit import forms, script
@@ -6,8 +7,9 @@ from pyrevit import forms, script
 logger = script.get_logger()
 
 try:
-    # Step 1: Check status
-    ps_check = r'C:\Users\Aevelina\CED_Extensions\Updater\CheckCEDTools.ps1'
+    # Dynamically build the path to the PowerShell check script
+    appdata_dir = os.getenv('APPDATA')
+    ps_check = os.path.join(appdata_dir, r'pyRevit\Extensions\CED_Extensions\Updater\CheckCEDTools.ps1')
     check_cmd = [
         'powershell.exe',
         '-NoLogo',
@@ -39,12 +41,12 @@ try:
         forms.alert("✅ Tools are already up to date.\nNo further action is needed.", title="Status")
     elif status_line in ["status: updates-available", "status: clone-needed"]:
         proceed = forms.alert(
-            "🔄 Updates or clone needed.\nDo you want to continue?",
+            "🔄 Updates Available! \nDo you want to continue?",
             ok=True, cancel=True
         )
         if proceed:
-            # Step 2: Run the actual update script
-            ps_update = r'C:\Users\Aevelina\CED_Extensions\Updater\UpdateCEDTools.cmd'
+            # Dynamically build the path to the update script
+            ps_update = os.path.join(appdata_dir, r'pyRevit\Extensions\CED_Extensions\Updater\UpdateCEDTools.cmd')
             update_cmd = [
                 'cmd.exe',
                 '/c',

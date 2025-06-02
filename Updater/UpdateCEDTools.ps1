@@ -5,7 +5,7 @@ Write-Output "=== Starting CED Tools Update/Clone ==="
 $repoUrl = "https://github.com/mattgonzalesced/CED_Extensions.git"
 $extensionsDir = "$env:APPDATA\pyRevit\Extensions"
 $repoDir = Join-Path -Path $extensionsDir -ChildPath "CED_Extensions"
-$branchName = "develop"
+$branchName = "main"
 
 if (-not (Test-Path $repoDir)) {
     Write-Output "Repo folder does not exist. Cloning repo to Extensions folder..."
