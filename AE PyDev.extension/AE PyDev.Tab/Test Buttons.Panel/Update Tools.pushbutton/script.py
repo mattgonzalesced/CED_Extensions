@@ -4,23 +4,19 @@ import subprocess
 from pyrevit import forms
 
 try:
-    ps_update = r'C:\Users\Aevelina\CED_Extensions\Updater\UpdateCEDTools.ps1'
+    # Use the CMD file instead of PowerShell directly
+    cmd_file = r'C:\Users\Aevelina\CED_Extensions\Updater\UpdateCEDTools.cmd'
     update_cmd = [
-        'powershell.exe',
-        '-NoLogo',
-        '-NoProfile',
-        '-ExecutionPolicy', 'Bypass',
-        '-File', ps_update
+        'cmd.exe',
+        '/c',
+        'start',
+        '',  # Start a new window
+        cmd_file
     ]
-    print("=== Running update script ===")
-    p = subprocess.Popen(update_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    stdout, stderr = p.communicate()
-    print("=== RAW STDOUT ===")
-    print(stdout.decode('utf-8').strip())
-    print("=== RAW STDERR ===")
-    print(stderr.decode('utf-8').strip())
-    print("=== Update script exited with code: {} ===".format(p.returncode))
-    forms.alert("✅ Update/Clone complete.\nPlease manually click the 'Reload' button in pyRevit.", title="Complete")
+    print("=== Launching PowerShell window via CMD ===")
+    p = subprocess.Popen(update_cmd, shell=True)
+    print("=== CMD launched ===")
+    forms.alert("🔍 PowerShell window launched.\nPlease watch the console for progress.\nRemember to manually click 'Reload' in pyRevit when done.", title="Update Launched")
 except Exception as e:
     print("❌ Update process failed:")
     print(e)

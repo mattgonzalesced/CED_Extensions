@@ -1,22 +1,31 @@
-# UpdateCEDTools.ps1
-# Actually pulls updates and sets up extension paths
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-Write-Host "=== Updating CED Tools Extensions ==="
+Write-Output "=== Starting CED Tools Update/Clone ==="
 
-$repoDir = "$env:APPDATA\pyRevit\Extensions\CED_Extensions"
-$branchName = "main"
+$repoUrl = "https://github.com/mattgonzalesced/CED_Extensions.git"
+$extensionsDir = "$env:APPDATA\pyRevit\Extensions"
+$repoDir = Join-Path -Path $extensionsDir -ChildPath "CED_Extensions"
+$branchName = "develop"
 
-Set-Location $repoDir
-git pull origin $branchName
+if (-not (Test-Path $repoDir)) {
+    Write-Output "Repo folder does not exist. Cloning repo to Extensions folder..."
+    Set-Location $extensionsDir
+    git clone -b $branchName $repoUrl CED_Extensions 2>&1
+    if (-not (Test-Path $repoDir)) {
+        Write-Output "❌ Clone failed! Repo dir still missing."
+        exit 1
+    }
+    Write-Output "✅ Clone complete!"
+} else {
+    Write-Output "Repo folder exists. Pulling updates..."
+    Set-Location $repoDir
+    git pull origin $branchName 2>&1
+    Write-Output "✅ Updates pulled."
+}
 
-# Re-add extension path (safe to re-run)
-pyrevit extensions paths add $repoDir
+Write-Output "Adding repo folder as an extension search path..."
+pyrevit extensions paths add $repoDir 2>&1
+Write-Output "✅ Extension search path added."
 
-# Enable rocketmode and telemetry
-pyrevit configs rocketmode enable
-pyrevit configs telemetry disable
+Write-Output "=== Update/Clone complete! Please manually reload pyRevit in Revit. ==="
 
-# Remove the following line after verification
-pyrevit extensions paths add "C:\Users\Aevelina\CED_Extensions"
-
-Write-Host "=== Update complete! Please reload pyRevit in Revit. ==="
