@@ -1,81 +1,59 @@
 # -*- coding: utf-8 -*-
-import os.path
+# Open local Desktop Connector path for active cloud project's "Project Files" folder.
 
-import clr
-# pylint: disable=import-error,invalid-name,broad-except
-from pyrevit import script
+import os
 
-clr.AddReference('System')
-from System.IO import Directory, File, Path
+from pyrevit import revit, DB, script, forms
 
-output = script.get_output()
 logger = script.get_logger()
 
-def copy_folder(source_dir, target_dir):
-    output.print_md("🔄 **Copying from** `{}` **to** `{}`".format(source_dir, target_dir))
-
-    # Create target directory if it doesn't exist
-    if not Directory.Exists(target_dir):
-        Directory.CreateDirectory(target_dir)
-        output.print_md("- Created target directory `{}`".format(target_dir))
-
-    # Copy all files
-    for file_path in Directory.GetFiles(source_dir):
-        file_name = Path.GetFileName(file_path)
-        target_file = Path.Combine(target_dir, file_name)
-        File.Copy(file_path, target_file, True)  # True = overwrite existing files
-        output.print_md("- Copied file: `{}`".format(file_name))
-
-    # Copy all subdirectories recursively
-    for dir_path in Directory.GetDirectories(source_dir):
-        dir_name = Path.GetFileName(dir_path)
-        target_subdir = Path.Combine(target_dir, dir_name)
-        output.print_md("- Entering subdirectory: `{}`".format(dir_name))
-        copy_folder(dir_path, target_subdir)
-
 def main():
+    doc = revit.doc
+    model_path = doc.GetWorksharingCentralModelPath()
+
+    if not model_path or model_path.Empty:
+        logger.debug("No central model path found (maybe not a workshared model).")
+        return
+
+    if not model_path.CloudPath:
+        user_visible_path = DB.ModelPathUtils.ConvertModelPathToUserVisiblePath(model_path)
+        logger.debug("Not a cloud path:\n{}".format(user_visible_path))
+        return
+
+    # Get user-visible path
+    user_visible_path = DB.ModelPathUtils.ConvertModelPathToUserVisiblePath(model_path)
+    logger.debug("User-visible path:\n{}".format(user_visible_path))
+
+    if not user_visible_path.startswith("Autodesk Docs://"):
+        logger.debug("Unexpected user-visible path format:\n{}".format(user_visible_path))
+        return
+
+    # Remove prefix and split
+    cleaned_path = user_visible_path.replace("Autodesk Docs://", "")
+    parts = cleaned_path.split("/")
+
+    if len(parts) < 2:
+        logger.debug("Unable to extract project name from path:\n{}".format(user_visible_path))
+        return
+
+    # Extract project name
+    project_name = parts[0]
+    logger.debug("Project Name: {}".format(project_name))
+
+    # Build local Desktop Connector path
     user_folder = os.path.expanduser('~')
-    source_path = r"DC\ACCDocs\CoolSys\CED Content Collection\Project Files\Temp"
-    target_path = r"OneDrive - CoolSys Inc\Desktop\_TARGET TEST"
-    source_dir = os.path.join(user_folder, source_path)
-    target_dir = os.path.join(user_folder, target_path)
+    base_folder = r"DC\ACCDocs\CoolSys"
+    local_project_folder = os.path.join(user_folder, base_folder, project_name, "Project Files")
+    logger.debug("Local Project Files path:\n{}".format(local_project_folder))
 
-    output.print_md("# 🚀 **Updating Extension from Source**")
-    output.print_md("🔎 Source Path: `{}`".format(source_dir))
-    output.print_md("📝 Target Path: `{}`".format(target_dir))
-
-    # Step 1: Delete everything in target directory
-    if Directory.Exists(target_dir):
-        output.print_md("🗑️ **Deleting old content in target directory…**")
-        # Delete all files
-        for file_path in Directory.GetFiles(target_dir):
-            File.Delete(file_path)
-            output.print_md("- Deleted file: `{}`".format(Path.GetFileName(file_path)))
-
-        # Delete all subdirectories
-        for dir_path in Directory.GetDirectories(target_dir):
-            Directory.Delete(dir_path, True)
-            output.print_md("- Deleted directory: `{}`".format(Path.GetFileName(dir_path)))
+    # Check existence and open or alert
+    if os.path.exists(local_project_folder):
+        script.show_folder_in_explorer(local_project_folder)
     else:
-        output.print_md("✅ Target directory did not exist. No deletions needed.")
-
-    # Step 2: Copy everything from source to target
-    output.print_md("📂 **Copying new content…**")
-    copy_folder(source_dir, target_dir)
-
-    output.print_md("🎉 **Update complete!**")
+        forms.alert(
+            "Local folder for project \"{}\" does not exist.\n"
+            "Please sync this project with Desktop Connector.".format(project_name),
+            title="Desktop Connector Project Missing"
+        )
 
 main()
-
-
-# res = True
-#
-# if res:
-#     logger = script.get_logger()
-#     results = script.get_results()
-#
-#     # re-load pyrevit session.
-#     logger.info('Reloading....')
-#     sessionmgr.reload_pyrevit()
-#
-#     results.newsession = sessioninfo.get_session_uuid()
