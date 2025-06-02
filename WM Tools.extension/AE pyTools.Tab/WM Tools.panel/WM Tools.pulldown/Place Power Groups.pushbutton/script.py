@@ -1,24 +1,21 @@
 # -*- coding: utf-8 -*-
-from pyrevit import DB, revit, script, forms
-from pyrevit.revit import query
-from wmlib import *
 from collections import defaultdict
 
-import re
+from wmlib import *
 
 doc = revit.doc
 logger = script.get_logger()
 
 config = script.get_config("WM_power_group_offset")
-offset_distance = config.get_option("group_placement_offset")
+offset_distance = config.get_option("group_placement_offset",0)
 if offset_distance is None:
-    offset_distance = 3.0
+    offset_distance = 0
 else:
     try:
         offset_distance = float(offset_distance)
     except:
-        offset_distance = 3.0
-        logger.info("⚠ Invalid config value for group_placement_offset. Using default: 3.0 ft.")
+        offset_distance = 0
+        logger.info("⚠ Invalid config value for group_placement_offset. Using default: 0 ft.")
 
 
 def pick_model_group():

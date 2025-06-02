@@ -1,19 +1,16 @@
 # -*- coding: utf-8 -*-
-from pyrevit import DB, revit, script, forms
-
-
-import re
+from pyrevit import revit, script, forms
 
 doc = revit.doc
 logger = script.get_logger()
 config = script.get_config("WM_power_group_offset")
+offset_distance = config.get_option("group_placement_offset",0)
 
-offset_distance = 3  # default fallback
 while True:
     user_input = forms.ask_for_string(
         title="Specify Offset Distance",
-        prompt="Enter a distance (in decimal feet) to offset the placed group from the reference element.\n"
-               "Default is 3 ft.\n\n"
+        prompt="Enter a distance (in decimal feet) to offset the placed group from \n"
+               "the reference element.\n\n"
                "The offset is relative to the rotation:\n"
                "Positive = 'Above' or 'in front' of reference \n"
                "Negative = 'Below' or 'behind' reference",

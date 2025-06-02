@@ -1,14 +1,14 @@
 title: "Ungroup Power Groups"
 
 tooltip: >-
-  Version = 1.0
+  Version = 1.1
   
-  Date    = 05.10.2025
+  Date    = 05.30.2025
   ________________________________________________________________
   Description:
   
-  Ungroups selected power groups and passes the Refrigeration
-  Circuit Number value to the elements in the group.
+  Ungroups selected power groups and passes the "Refrigeration
+  Circuit Number_CEDT" value to the elements in the group.
   ________________________________________________________________
   
 

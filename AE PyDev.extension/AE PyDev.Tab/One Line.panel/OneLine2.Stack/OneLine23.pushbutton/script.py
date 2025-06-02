@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # IRONPYTHON 2.7 COMPATIBLE (no f-strings, no .format usage)
-import clr
 from pyrevit import revit, DB, script
 
 logger = script.get_logger()
@@ -27,14 +26,22 @@ DETAIL_PARAM_PANEL_NAME = "Panel Name_CEDT"
 CIRCUIT_VALUE_MAP = {
     "x VD Schedule": "x VD Schedule",
     "Circuit Tree Sort_CED":"Circuit Tree Sort_CED",
-    "CKT_Rating_CED": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM,
-    "CKT_Frame_CED": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_FRAME_PARAM,
-    "CKT_Load Name_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME,
-    "CKT_Schedule Notes_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NOTES_PARAM,
     "CKT_Panel_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
     "CKT_Circuit Number_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER,
-    "CKT_Wire Size_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_WIRE_SIZE_PARAM,
-    "CKT_Length_CED": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_LENGTH_PARAM
+    "CKT_Load Name_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME,
+    "CKT_Rating_CED": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM,
+    "CKT_Frame_CED": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_FRAME_PARAM,
+    "CKT_Schedule Notes_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NOTES_PARAM,
+    "CKT_Length_CED": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_LENGTH_PARAM,
+    "Wire Material_CEDT":"Wire Material_CEDT",
+    "Wire Insulation_CEDT":"Wire Insulation_CEDT",
+    "Wire Temperature Rating_CEDT" : "Wire Temperature Rating_CEDT",
+    "Wire Size_CEDT":"Wire Size_CEDT",
+    "Conduit and Wire Size_CEDT":"Conduit and Wire Size_CEDT",
+    "Conduit Type_CEDT":"Conduit Type_CEDT",
+    "Conduit Size_CEDT":"Conduit Size_CEDT",
+    "Conduit Fill Percentage_CEDT":"Conduit Fill Percentage_CED",
+    "Voltage Drop Percentage_CEDT":"Voltage Drop Percentage_CED",
 }
 
 # Panel built-in param -> detail param name map
@@ -58,6 +65,7 @@ PANEL_VALUE_MAP = {
     "Transformer Rating_CEDT": "Transformer Rating_CEDT",
     "Transformer Rating_CED": "Transformer Rating_CEDT",
     "Transformer %Z_CED": "Transformer %Z_CED",
+    "Panel Feed_CEDT": DB.BuiltInParameter.RBS_ELEC_PANEL_FEED_PARAM,
 }
 
 

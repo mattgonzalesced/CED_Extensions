@@ -1,0 +1,18 @@
+{
+    "extensions": [
+      {
+        "builtin": "False",
+        "enable": "False",
+        "type": "extension",
+        "name": "AE PyDev",
+        "description": "Development Tools",
+        "author": "Anthony Evelina",
+        "author-url": "https://keybase.io/ein",
+        "url": "https://github.com/mattgonzalesced/CED_Extensions.git",
+        "website": "https://github.com/mattgonzalesced/CED_Extensions",
+        "image": "",
+        "dependencies": []
+
+      }
+    ]
+  }
