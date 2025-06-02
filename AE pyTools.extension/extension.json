@@ -1,0 +1,20 @@
+{
+    "extensions": [
+
+       {
+        "builtin": "False",
+        "enable": "True",
+        "type": "extension",
+        "rocket_mode_compatible": "True",
+        "name": "AE pyTools",
+        "description": "Development Tools",
+        "author": "Anthony Evelina",
+        "author-url": "https://keybase.io/ein",
+        "url": "https://github.com/mattgonzalesced/CED_Extensions.git",
+        "website": "https://github.com/mattgonzalesced/CED_Extensions",
+        "image": "",
+        "dependencies": []
+      }
+    ]
+  }
+  
