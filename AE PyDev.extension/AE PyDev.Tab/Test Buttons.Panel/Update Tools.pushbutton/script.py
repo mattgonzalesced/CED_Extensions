@@ -1,37 +1,63 @@
+# -*- coding: utf-8 -*-
 import subprocess
 
 from pyrevit import forms
 
 try:
     # Step 1: Check status
-    ps_check = r'C:\Users\Aevelina\AppData\Roaming\pyRevit\Extensions\CED_Extensions\Updater\CheckCEDTools.ps1'
-    p1 = subprocess.Popen(
-        ['powershell.exe', '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps_check],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
-    )
+    ps_check = r'C:\Users\Aevelina\CED_Extensions\Updater\CheckCEDTools.ps1'
+    check_cmd = [
+        'powershell.exe',
+        '-NoLogo',
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-File', ps_check
+    ]
+    print("=== Running check script ===")
+    p1 = subprocess.Popen(check_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     stdout, stderr = p1.communicate()
-    status = stdout.decode('utf-8').strip()
+    status_output = stdout.decode('utf-8').strip()
+    print("=== RAW STDOUT ===")
+    print(status_output)
+    print("=== RAW STDERR ===")
+    print(stderr.decode('utf-8').strip())
 
-    # Step 2: Act on status
-    if "status: up-to-date" in status:
-        forms.alert("✅ Extensions are already up to date!\nNo further action needed.", title="Update Status")
-    elif "status: clone-needed" in status:
-        forms.alert("⚠️ Extensions folder is missing!\nPlease re-clone manually.", title="Update Status")
-    elif "status: updates-available" in status:
-        proceed = forms.alert("🔄 Updates available.\nClick OK to continue updating.", ok=True, cancel=True)
+    status_line = None
+    for line in status_output.splitlines():
+        if line.startswith("status:"):
+            status_line = line.strip()
+            break
+    print("=== Extracted Status Line ===")
+    print(status_line)
+
+    if status_line == "status: up-to-date":
+        print("✅ Tools already up to date.")
+    elif status_line in ["status: updates-available", "status: clone-needed"]:
+        proceed = forms.alert("🔄 Updates or clone needed. Do you want to continue?", ok=True, cancel=True)
         if proceed:
-            # Step 3: Perform the update
-            ps_update = r'C:\Users\Aevelina\AppData\Roaming\pyRevit\Extensions\CED_Extensions\Updater\UpdateCEDTools.ps1'
-            p2 = subprocess.Popen(
-                ['powershell.exe', '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps_update],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
-            )
-            p2.wait()  # Wait for update to finish
-            forms.alert("✅ Update complete.\nPlease manually click the 'Reload' button in pyRevit.", title="Update Complete")
+            ps_update = r'C:\Users\Aevelina\CED_Extensions\Updater\UpdateCEDTools.ps1'
+            update_cmd = [
+                'powershell.exe',
+                '-NoLogo',
+                '-NoProfile',
+                '-ExecutionPolicy', 'Bypass',
+                '-File', ps_update
+            ]
+            print("=== Running update script ===")
+            p2 = subprocess.Popen(update_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            stdout2, stderr2 = p2.communicate()
+            print("=== RAW STDOUT (Update) ===")
+            print(stdout2.decode('utf-8').strip())
+            print("=== RAW STDERR (Update) ===")
+            print(stderr2.decode('utf-8').strip())
+            print("=== Update script exited with code: {} ===".format(p2.returncode))
+            forms.alert("✅ Update/Clone complete.\nPlease manually click the 'Reload' button in pyRevit.", title="Complete")
         else:
-            forms.alert("Update cancelled by user.", title="Update Cancelled")
+            print("❌ Update/clone cancelled by user.")
     else:
-        forms.alert("❌ Unexpected status:\n{}".format(status), title="Update Status")
+        print("❌ Unexpected status detected.")
+        print(status_output)
 
 except Exception as e:
-    forms.alert("Update process failed:\n{}".format(e), title="Update Error")
+    print("❌ Update process failed:")
+    print(e)
