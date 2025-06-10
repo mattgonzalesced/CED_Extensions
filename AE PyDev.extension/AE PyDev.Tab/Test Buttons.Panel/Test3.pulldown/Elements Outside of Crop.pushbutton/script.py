@@ -1,72 +1,61 @@
 # -*- coding: utf-8 -*-
-__doc__ = "Filter views with enabled crop box and find elements outside crop box"
-__title__ = "Elements Outside Crop Box"
-__author__ = "Your Name"
+# IRONPYTHON 2.7 COMPATIBLE (no f-strings, no .format usage)
+from Autodesk.Revit.DB import FilteredElementCollector, GraphicsStyle, Line, XYZ
+from pyrevit import revit, script
 
-from pyrevit import DB
-from pyrevit import script
+logger = script.get_logger()
 
-output = script.get_output()
+doc = revit.doc
+uidoc = revit.uidoc
 
-# Get the active Revit document
-doc = __revit__.ActiveUIDocument.Document
+# Use selection
+selection_ids = uidoc.Selection.GetElementIds()
+if not selection_ids:
+    logger.error("No elements selected.")
+    script.exit()
 
-# Collect all views in the document
-views_collector = DB.FilteredElementCollector(doc).OfClass(DB.View).WhereElementIsNotElementType()
-output.close_others()
+element = doc.GetElement(list(selection_ids)[0])
 
-# Filter views with an enabled crop box, excluding specific view types
-analyzable_views = [
-    view for view in views_collector
-    if not view.IsTemplate and
-    view.CropBoxActive and
-    view.ViewType not in (
-        DB.ViewType.DraftingView,
-        DB.ViewType.Section,
-        DB.ViewType.ThreeD,
-        DB.ViewType.Elevation
-    )
-]
+# Get the bounding box in the active view
+bbox = element.get_BoundingBox(doc.ActiveView)
+if not bbox:
+    logger.error("Element has no bounding box.")
+    script.exit()
 
-output.print_md("## Views with Enabled Crop Box")
-outside_elements_global = []
+min_pt = bbox.Min
+max_pt = bbox.Max
+centroid = XYZ((min_pt.X + max_pt.X) / 2, (min_pt.Y + max_pt.Y) / 2, (min_pt.Z + max_pt.Z) / 2)
 
-if not analyzable_views:
-    output.print_md("### No views found with an active crop box.")
-else:
-    for view in analyzable_views:
-        view_name = view.Name
+# Create 2D corner points
+p1 = XYZ(min_pt.X, min_pt.Y, 0)
+p2 = XYZ(max_pt.X, min_pt.Y, 0)
+p3 = XYZ(max_pt.X, max_pt.Y, 0)
+p4 = XYZ(min_pt.X, max_pt.Y, 0)
 
-        # Get crop box and its dimensions
-        crop_box = view.CropBox
-        min_point = crop_box.Min
-        max_point = crop_box.Max
+# Find the line style "Solid_05 (Blue)"
+target_style = None
+styles = FilteredElementCollector(doc).OfClass(GraphicsStyle)
+for style in styles:
+    if style.Name == "Solid_05 (Blue)":
+        target_style = style
+        break
 
-        # Collect all elements owned by the view
-        collector = DB.FilteredElementCollector(doc, view.Id) \
-            .WhereElementIsNotElementType() \
-            .OwnedByView(view.Id)
+if not target_style:
+    logger.error("Line style 'Solid_05 (Blue)' not found.")
+    script.exit()
 
-        # Count elements outside the crop box
-        outside_count = 0
-        for elem in collector:
-            location = elem.Location
-            if isinstance(location, DB.LocationPoint):
-                point = location.Point
-                # Check if point is outside the crop box
-                if not (min_point.X <= point.X <= max_point.X and
-                        min_point.Y <= point.Y <= max_point.Y and
-                        min_point.Z <= point.Z <= max_point.Z):
-                    outside_count += 1
-                    outside_elements_global.append(str(elem.Id.IntegerValue))
+# Create detail lines in active view
+with revit.Transaction("Draw Bounding Box Lines"):
+    view = doc.ActiveView
+    lines = [
+        Line.CreateBound(p1, p2),
+        Line.CreateBound(p2, p3),
+        Line.CreateBound(p3, p4),
+        Line.CreateBound(p4, p1),
+        Line.CreateBound(centroid, min_pt)
+    ]
+    for ln in lines:
+        detail_line = doc.Create.NewDetailCurve(view, ln)
+        detail_line.LineStyle = target_style
 
-        # Output results for this view only if there are elements outside the crop box
-        if outside_count > 0:
-            output.print_md("{}: {} elements outside crop box".format(view_name, outside_count))
-
-# Print all element IDs outside crop boxes, separated by commas
-if outside_elements_global:
-    output.print_md("### All Elements Outside Crop Boxes:")
-    output.print_md(", ".join(outside_elements_global))
-else:
-    output.print_md("### No elements found outside any crop boxes.")
+logger.info("Detail lines created around element.")
