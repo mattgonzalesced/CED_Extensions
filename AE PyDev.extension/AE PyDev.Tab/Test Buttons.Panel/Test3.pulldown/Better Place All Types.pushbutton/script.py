@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from pyrevit import forms, revit, DB, script
-from pyrevit.revit import Transaction
 
 output = script.get_output()
 logger = script.get_logger()
@@ -135,7 +134,7 @@ class FamilyTypePlacer(object):
                     except Exception as place_exception:
                         logger.debug("Failed to place {}: {}".format(family_symbol, str(place_exception)))
 
-                y_offset_feet -= 10.0
+                y_offset_feet -= 5.0
 
     def _get_family_by_name(self, name):
         return next((family for family in DB.FilteredElementCollector(self.document).OfClass(DB.Family)
