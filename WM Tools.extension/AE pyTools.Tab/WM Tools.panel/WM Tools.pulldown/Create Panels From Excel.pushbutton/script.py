@@ -2,7 +2,6 @@
 from pyrevit import revit, DB, forms, script, output
 from pyrevit.interop import xl as pyxl
 from pyrevit.revit import query
-from Autodesk.Revit.DB.Electrical import DistributionSysType, ElectricalPhase
 
 doc = revit.doc
 uidoc = revit.uidoc
@@ -86,7 +85,8 @@ def resolve_missing_distribution_systems(rows, dist_lookup):
         selected = forms.SelectFromList.show(
             sorted(display_map.keys()),
             title="Select replacement for distribution system '{}':".format(display_label),
-            multiselect=False
+            multiselect=False,
+            width=600
         )
         if selected:
             updated[name] = display_map[selected].Id
@@ -118,14 +118,65 @@ def find_family_symbol(family_name, type_name):
             return fs
     return None
 
+def get_all_electrical_equipment_symbols():
+    return list(DB.FilteredElementCollector(doc)
+                .OfCategory(DB.BuiltInCategory.OST_ElectricalEquipment)
+                .OfClass(DB.FamilySymbol)
+                .ToElements())
+
+def find_symbol_by_name(family_name, type_name, all_symbols):
+    for fs in all_symbols:
+        if query.get_name(fs.Family) == family_name and query.get_name(fs) == type_name:
+            return fs
+    return None
+
+def symbol_display_name(fs):
+    return "{} : {}".format(query.get_name(fs.Family), query.get_name(fs))
+
+def resolve_missing_families(rows):
+    all_symbols = get_all_electrical_equipment_symbols()
+    display_map = {symbol_display_name(fs): fs for fs in all_symbols}
+
+    missing_map = {}
+    unique_famtypes = sorted(set((r[FAMILY_COL], r[TYPE_COL]) for r in rows))
+
+    for fam, typ in unique_famtypes:
+        if find_symbol_by_name(fam, typ, all_symbols):
+            continue  # already exists
+
+
+        prompt_title = "Select replacement for missing family/type '{} : {}'".format(fam, typ)
+        user_choice = forms.SelectFromList.show(
+            sorted(display_map.keys()),
+            title=prompt_title,
+            multiselect=False,
+            width=800
+        )
+
+        if not user_choice:
+            logger.warning("User cancelled replacement selection for '{} : {}'".format(fam, typ))
+            script.exit()
+
+        missing_map[(fam, typ)] = display_map[user_choice]
+
+    return missing_map
+
 
 def set_instance_parameters(panel, row, dist_lookup):
+    param_status = {}  # key = param name, value = True (success) or string (error)
+
     for param_name, value in row.items():
         if param_name in PARAM_EXCLUDE:
             continue
 
         param = panel.LookupParameter(param_name)
-        if not param or param.IsReadOnly:
+
+        if not param:
+            param_status[param_name] = "NOT FOUND"
+            continue
+
+        if param.IsReadOnly:
+            param_status[param_name] = "READ-ONLY"
             continue
 
         try:
@@ -133,19 +184,30 @@ def set_instance_parameters(panel, row, dist_lookup):
                 sys_id = dist_lookup.get(str(value).strip())
                 if sys_id:
                     param.Set(sys_id)
+                    param_status[param_name] = True
                 else:
-                    logger.warning("Distribution system '{}' not found".format(value))
+                    param_status[param_name] = "INVALID VALUE"
             elif param.StorageType == DB.StorageType.String:
                 param.Set(str(value))
+                param_status[param_name] = True
             elif param.StorageType == DB.StorageType.Double:
                 param.Set(float(value))
+                param_status[param_name] = True
             elif param.StorageType == DB.StorageType.Integer:
                 param.Set(int(value))
+                param_status[param_name] = True
+            elif param.StorageType == DB.StorageType.ElementId and isinstance(value, DB.ElementId):
+                param.Set(value)
+                param_status[param_name] = True
+            else:
+                param_status[param_name] = "UNHANDLED TYPE"
         except Exception as e:
-            logger.warning("Could not set param '{}': {}".format(param_name, e))
+            param_status[param_name] = "ERROR: {}".format(e)
+
+    return param_status
 
 
-def print_panel_report(row):
+def print_panel_report(row, param_status=None):
     panel_name = row.get("Panel Name_CEDT", "[Unnamed Panel]")
     out.print_md("### **{}**".format(panel_name))
 
@@ -161,10 +223,17 @@ def print_panel_report(row):
 
     for key in ordered_keys:
         val = row.get(key)
-        if val is not None:
+        if val is None:
+            continue
+
+        if param_status and key in param_status and param_status[key] != True:
+            err = param_status[key]
+            out.print_md("**{}**: <span style='color:red'>PARAMETER {}</span>".format(key, err))
+        else:
             out.print_md("**{}**: {}".format(key, val))
 
     out.print_md("---")
+
 
 
 def main():
@@ -175,11 +244,16 @@ def main():
 
     with DB.Transaction(doc, "Place Panels from Excel") as t:
         t.Start()
+        missing_famtype_map = resolve_missing_families(rows)
+
         for i, row in enumerate(rows):
             family_name = row.get(FAMILY_COL)
             type_name = row.get(TYPE_COL)
 
             family_symbol = find_family_symbol(family_name, type_name)
+            if not family_symbol:
+                family_symbol = missing_famtype_map.get((family_name, type_name))
+
             if not family_symbol:
                 logger.warning("Family/type not found: {} / {}".format(family_name, type_name))
                 continue
@@ -191,8 +265,9 @@ def main():
             point = DB.XYZ(start_point.X + (i * DELTA_X), start_point.Y, start_point.Z)
             panel = doc.Create.NewFamilyInstance(point, family_symbol, view_level,
                                                  DB.Structure.StructuralType.NonStructural)
-            set_instance_parameters(panel, row, dist_lookup)
-            print_panel_report(row)
+            param_status = set_instance_parameters(panel, row, dist_lookup)
+            print_panel_report(row, param_status)
+
         t.Commit()
 
 
