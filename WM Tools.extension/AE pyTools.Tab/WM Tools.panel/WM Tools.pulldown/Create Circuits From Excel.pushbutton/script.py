@@ -1,14 +1,9 @@
 # -*- coding: utf-8 -*-
-import clr
-import csv
-from pyrevit import script, revit, DB, forms
-from pyrevit.revit.db import query
-from pyrevit.interop import xl as pyxl
-from wmlib import *
 import Autodesk.Revit.DB.Electrical as DBE
+import clr
 from System.Collections.Generic import List
-from collections import defaultdict
 
+from wmlib import *
 
 doc = revit.doc
 uidoc = revit.uidoc
@@ -29,13 +24,55 @@ def get_panel_surfaces(panel_names):
                 surfaces[value] = EquipmentSurface(eq.Id.Value)
     return surfaces
 
-def get_family_symbol(family_name, type_name):
+
+
+# --- Load Families ---
+class FamilyLoaderOptionsHandler(DB.IFamilyLoadOptions):
+    def OnFamilyFound(self, familyInUse, overwriteParameterValues):
+        overwriteParameterValues.Value = True
+        return True
+
+    def OnSharedFamilyFound(self, sharedFamily, familyInUse, source, overwriteParameterValues):
+        source.Value = DB.FamilySource.Family
+        overwriteParameterValues.Value = True
+        return True
+
+
+def find_symbol_in_doc(family_name, type_name):
     for fs in DB.FilteredElementCollector(doc).OfClass(DB.FamilySymbol):
         if query.get_name(fs.Family) == family_name and query.get_name(fs) == type_name:
             return fs
-    output.print_md("❌ Symbol not found for Family: '{}' | Type: '{}'".format(family_name, type_name))
     return None
 
+
+def load_family_from_disk(family_name):
+    import os
+    family_path = os.path.join(os.path.dirname(__file__), "{}.rfa".format(family_name))
+    if not os.path.exists(family_path):
+        output.print_md("❌ Family file not found: `{}`".format(family_path))
+        return None
+
+    output.print_md("📥 Loading family from file: `{}`".format(family_path))
+    handler = FamilyLoaderOptionsHandler()
+    family_loaded = clr.Reference[DB.Family]()
+    success = doc.LoadFamily(family_path, handler, family_loaded)
+    return family_loaded.Value if success else None
+
+
+def get_family_symbol(family_name, type_name):
+    symbol = find_symbol_in_doc(family_name, type_name)
+    if symbol:
+        return symbol
+
+    loaded_family = load_family_from_disk(family_name)
+    if loaded_family:
+        for sym_id in loaded_family.GetFamilySymbolIds():
+            symbol = doc.GetElement(sym_id)
+            if query.get_name(symbol) == type_name:
+                return symbol
+
+        output.print_md("❌ Type '{}' not found in newly loaded family '{}'.".format(type_name, family_name))
+    return None
 
 
 
@@ -78,7 +115,7 @@ def main():
     loader = ExcelCircuitLoader()
     loader.pick_excel_file()
     loader.build_dict_rows()
-
+    output.freeze()
     sheetnames = loader.get_valid_sheet_names()
     if not sheetnames:
         forms.alert("No valid sheets found.")
@@ -103,9 +140,21 @@ def main():
     system_data = []
     activated_symbols = set()
 
+    missing_families = set()
+    for row in ordered_rows:
+        fam = row["Family"]
+        typ = row["Type"]
+        if not find_symbol_in_doc(fam, typ):
+            missing_families.add(fam)
+
     with DB.TransactionGroup(doc, "Create Circuits From Excel") as tg:
         tg.Start()
 
+        if missing_families:
+            with revit.Transaction("Load Missing Families", doc):
+                for fam in missing_families:
+                    load_family_from_disk(fam)
+        output.unfreeze()
         with revit.Transaction("Set Ckt Sequence", doc):
             try:
                 electrical_settings = DBE.ElectricalSetting.GetElectricalSettings(doc)
