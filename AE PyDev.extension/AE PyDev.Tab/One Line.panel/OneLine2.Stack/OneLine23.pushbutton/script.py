@@ -33,6 +33,8 @@ CIRCUIT_VALUE_MAP = {
     "CKT_Frame_CED": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_FRAME_PARAM,
     "CKT_Schedule Notes_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NOTES_PARAM,
     "CKT_Length_CED": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_LENGTH_PARAM,
+    "Number of Poles_CED": DB.BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES,
+    "Voltage_CED":DB.BuiltInParameter.RBS_ELEC_VOLTAGE,
     "Wire Material_CEDT":"Wire Material_CEDT",
     "Wire Insulation_CEDT":"Wire Insulation_CEDT",
     "Wire Temperature Rating_CEDT" : "Wire Temperature Rating_CEDT",
@@ -64,6 +66,8 @@ PANEL_VALUE_MAP = {
     "Max Number of Circuits_CED":DB.BuiltInParameter.RBS_ELEC_NUMBER_OF_CIRCUITS,
     "Transformer Rating_CEDT": "Transformer Rating_CEDT",
     "Transformer Rating_CED": "Transformer Rating_CEDT",
+    "Transformer Primary Description_CEDT":"Transformer Primary Description_CEDT",
+    "Transformer Secondary Description_CEDT":"Transformer Secondary Description_CEDT",
     "Transformer %Z_CED": "Transformer %Z_CED",
     "Panel Feed_CEDT": DB.BuiltInParameter.RBS_ELEC_PANEL_FEED_PARAM,
 }
@@ -157,6 +161,8 @@ def set_detail_param_value(elem, param_name, new_value):
     except:
         logger.debug("      set_detail_param_value: FAILED setting '" + param_name + "' on " + str(elem.Id))
 
+def is_not_in_group(element):
+    return element.GroupId == DB.ElementId.InvalidElementId
 
 def main():
     doc = revit.doc
@@ -205,10 +211,12 @@ def main():
             logger.debug("  Panel " + str(pnl.Id) + " has no name => skipping")
 
     # 3) Collect detail items
-    detail_items = DB.FilteredElementCollector(doc)\
+    detail_item_collector = DB.FilteredElementCollector(doc)\
                      .OfCategory(DB.BuiltInCategory.OST_DetailComponents)\
                      .WhereElementIsNotElementType()\
                      .ToElements()
+
+    detail_items = [el for el in detail_item_collector if is_not_in_group(el)]
 
     logger.debug("Collected " + str(len(detail_items)) + " detail item(s).")
 
