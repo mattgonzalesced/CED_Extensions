@@ -1,59 +1,87 @@
 # -*- coding: utf-8 -*-
+from pyrevit import revit, DB, script, forms
+from pyrevit.interop import xl as pyxl
+from pyrevit.revit import query
 
-from pyrevit import DB
-from pyrevit import forms
-from pyrevit import revit
-from pyrevit import script
-
+logger = script.get_logger()
 doc = revit.doc
 uidoc = revit.uidoc
-
-# Initialize output window
+active_view = uidoc.ActiveView
+level = active_view.GenLevel
 output = script.get_output()
-logger = script.get_logger()
+output.close_others()
+HEADERS = [
+    "Id", "Family", "Type", "Level: Name",
+    "Coordinates - Internal: Point_X",
+    "Coordinates - Internal: Point_Y",
+    "Coordinates - Internal: Point_Z",
+    "CKT_Panel_CEDT",
+    "CKT_Circuit Number_CEDT"
+]
 
-def print_filter_rules(filter_elem):
-    """Prints the filter rules of a given filter element."""
-    rules = filter_elem.GetElementFilterParameters()
-    if not rules:
-        logger.info("No filter rules found in: {}".format(filter_elem.Name))
-        return
+FAMILY_COL = "Family"
+TYPE_COL = "Type"
+X_COL = "Coordinates - Internal: Point_X"
+Y_COL = "Coordinates - Internal: Point_Y"
+Z_COL = "Coordinates - Internal: Point_Z"
+PNL_COL = "CKT_Panel_CEDT"
+CKT_COL = "CKT_Circuit Number_CEDT"
 
-    logger.info("Filter rules for '{}':".format(filter_elem.Name))
-    for idx, rule in enumerate(rules):
-        try:
-            param_id = rule.ParameterId
-            param_elem = doc.GetElement(param_id)
-            param_name = param_elem.Name if param_elem else str(param_id.IntegerValue)
-            logger.info("  Rule {}: Parameter = '{}', Rule Type = '{}'".format(
-                idx+1,
-                param_name,
-                rule.GetType().Name
-            ))
-        except Exception as e:
-            logger.warning("  Error processing rule {}: {}".format(idx+1, e))
 
-def main():
-    # Prompt the user to select a filter element
-    filter_collector = DB.FilteredElementCollector(doc).OfClass(DB.ParameterFilterElement)
-    filters = list(filter_collector)
-    if not filters:
-        forms.alert("No filters found in the project.", exitscript=True)
+# Use LookupParameter to set shared parameters
+def set_parameter(element, param_name, value):
+    param = element.LookupParameter(param_name)
+    if param and value is not None:
+        param.Set(value)
+def load_excel_rows():
+    path = forms.pick_file(title="Select Excel File")
+    if not path:
+        script.exit()
+    data = pyxl.load(path, sheets=None, columns=HEADERS)
+    sheet_name = list(data.keys())[0]
+    return [r for r in data[sheet_name]["rows"] if r.get(FAMILY_COL) and r.get(TYPE_COL)]
 
-    selected_filter = forms.SelectFromList.show(
-        [f.Name for f in filters],
-        title="Select a View Filter"
-    )
+# Build a map of (Family, Type) -> FamilySymbol
+def get_family_symbol_map():
+    symbol_map = {}
+    for symbol in DB.FilteredElementCollector(doc).OfClass(DB.FamilySymbol).ToElements():
+        fam_name = query.get_name(symbol.Family)
+        typ_name = query.get_name(symbol)
+        symbol_map[(fam_name, typ_name)] = symbol
+    return symbol_map
 
-    if not selected_filter:
-        forms.alert("No filter selected.", exitscript=True)
+rows = load_excel_rows()
+symbol_lookup = get_family_symbol_map()
+elements_created = []
 
-    # Find the filter element by name
-    filter_elem = next((f for f in filters if f.Name == selected_filter), None)
-    if filter_elem:
-        print_filter_rules(filter_elem)
-    else:
-        forms.alert("Selected filter not found.", exitscript=True)
+with revit.Transaction("Place Families from Excel"):
+    for row in rows:
+        fam = row[FAMILY_COL]
+        typ = row[TYPE_COL]
+        x = float(row.get(X_COL, "0"))
+        y = float(row.get(Y_COL, "0"))
+        z = float(row.get(Z_COL, "0"))
+        id = str(row.get("Id","XXXX"))
+        pnl = str(row.get(PNL_COL,""))
+        ckt = str(row.get(CKT_COL,""))
+        symbol = symbol_lookup.get((fam, typ))
+        if not symbol:
+            logger.warning("Family symbol not found: {} : {}".format(fam, typ))
+            continue
 
-if __name__ == "__main__":
-    main()
+        if not symbol.IsActive:
+            symbol.Activate()
+            doc.Regenerate()
+
+        pt = DB.XYZ(x, y, z)
+        inst = doc.Create.NewFamilyInstance(pt, symbol, level, DB.Structure.StructuralType.NonStructural)
+        set_parameter(inst,"CKT_Panel_CEDT",pnl)
+        set_parameter(inst, "CKT_Circuit Number_CEDT", ckt)
+        set_parameter(inst, "Mark", str(id))
+
+
+        elements_created.append(inst.Id)
+selection = revit.get_selection()
+selection.set_to(elements_created)
+
+script.get_output().print_md("### Placed {} element(s).".format(len(elements_created)))
