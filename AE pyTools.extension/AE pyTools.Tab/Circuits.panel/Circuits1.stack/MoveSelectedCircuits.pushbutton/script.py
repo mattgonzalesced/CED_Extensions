@@ -1,17 +1,14 @@
 # -*- coding: utf-8 -*-
-from pyrevit import revit, UI, DB
-
 from Autodesk.Revit.DB import Electrical
+from pyrevit import DB
+from pyrevit import HOST_APP
 from pyrevit import forms
 from pyrevit import script
-from pyrevit.revit import query
-from pyrevit import HOST_APP
-from pyrevit import EXEC_PARAMS
 from pyrevit.compat import get_elementid_value_func
 
 # Import reusable utilities
 from Snippets._elecutils import get_panel_dist_system, get_compatible_panels, move_circuits_to_panel, \
-    get_circuits_from_panel, get_all_panels
+    get_all_panels
 
 # Get the current document
 doc = __revit__.ActiveUIDocument.Document
@@ -27,6 +24,9 @@ def get_sorted_filtered_panels(all_panels, doc):
 
     # Filter out panels with "Unknown Dist. System"
     for panel in all_panels:
+        if panel.DesignOption is not None:
+            continue
+
         panel_data = get_panel_dist_system(panel, doc)
         if panel_data['dist_system_name'] and panel_data['dist_system_name'] != "Unnamed Distribution System":
             valid_panels.append((panel.Name, panel_data['dist_system_name'], panel))

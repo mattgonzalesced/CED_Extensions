@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 __title__ = "Panel Breaker Report"
 
-import clr
-from pyrevit import script
-from pyrevit import revit, DB
-from pyrevit.revit import query
 from collections import defaultdict
+
+from pyrevit import revit, DB
+from pyrevit import script
 from pyrevit.compat import get_elementid_value_func
 
 get_id_value = get_elementid_value_func()
@@ -86,6 +85,9 @@ equipment_info = {}
 
 # Extract information from each electrical equipment instance
 for equip in elec_equip:
+    if equip.DesignOption is not None:
+        continue
+
     panel_name = get_parameter_by_name(equip, "Panel Name")
     if not panel_name:
         continue

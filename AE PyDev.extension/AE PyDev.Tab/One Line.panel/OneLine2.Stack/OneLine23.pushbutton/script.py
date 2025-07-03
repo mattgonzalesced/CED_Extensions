@@ -26,6 +26,7 @@ DETAIL_PARAM_PANEL_NAME = "Panel Name_CEDT"
 CIRCUIT_VALUE_MAP = {
     "x VD Schedule": "x VD Schedule",
     "Circuit Tree Sort_CED":"Circuit Tree Sort_CED",
+    "CKT_Circuit Type_CEDT":"CKT_Circuit Type_CEDT",
     "CKT_Panel_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
     "CKT_Circuit Number_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER,
     "CKT_Load Name_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME,
@@ -37,13 +38,14 @@ CIRCUIT_VALUE_MAP = {
     "Voltage_CED":DB.BuiltInParameter.RBS_ELEC_VOLTAGE,
     "Wire Material_CEDT":"Wire Material_CEDT",
     "Wire Insulation_CEDT":"Wire Insulation_CEDT",
-    "Wire Temperature Rating_CEDT" : "Wire Temperature Rating_CEDT",
+    "Wire Temparature Rating_CEDT" : "Wire Temparature Rating_CEDT",
     "Wire Size_CEDT":"Wire Size_CEDT",
     "Conduit and Wire Size_CEDT":"Conduit and Wire Size_CEDT",
     "Conduit Type_CEDT":"Conduit Type_CEDT",
     "Conduit Size_CEDT":"Conduit Size_CEDT",
-    "Conduit Fill Percentage_CEDT":"Conduit Fill Percentage_CED",
-    "Voltage Drop Percentage_CEDT":"Voltage Drop Percentage_CED",
+    "Conduit Fill Percentage_CED":"Conduit Fill Percentage_CED",
+    "Voltage Drop Percentage_CED":"Voltage Drop Percentage_CED",
+    "Circuit Load Current_CED":"Circuit Load Current_CED"
 }
 
 # Panel built-in param -> detail param name map
@@ -177,6 +179,9 @@ def main():
                       .ToElements()
 
     for ckt in ckt_collector:
+        if ckt.DesignOption is not None:
+            continue
+
         pval = get_model_param_value(ckt, DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM)
         cnum = get_model_param_value(ckt, DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER)
         if pval and cnum:
@@ -200,6 +205,8 @@ def main():
                       .ToElements()
 
     for pnl in pnl_collector:
+        if pnl.DesignOption is not None:
+            continue
         pname = get_model_param_value(pnl, DB.BuiltInParameter.RBS_ELEC_PANEL_NAME)
         if pname:
             pdata = {}
@@ -216,8 +223,9 @@ def main():
                      .WhereElementIsNotElementType()\
                      .ToElements()
 
-    detail_items = [el for el in detail_item_collector if is_not_in_group(el)]
-
+    detail_items = [
+        el for el in detail_item_collector
+        if is_not_in_group(el) and  el.DesignOption is None]
     logger.debug("Collected " + str(len(detail_items)) + " detail item(s).")
 
     t = DB.Transaction(doc, "Sync Circuits/Panels to Detail Items")

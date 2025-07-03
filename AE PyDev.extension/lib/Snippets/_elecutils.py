@@ -1,7 +1,6 @@
-from Autodesk.Revit.DB import FilteredElementCollector, Electrical, Transaction, BuiltInCategory, BuiltInParameter, \
-    ElementId
-from pyrevit import script, forms, output, DB
+from Autodesk.Revit.DB import FilteredElementCollector, Electrical, Transaction, BuiltInCategory, BuiltInParameter
 from Autodesk.Revit.DB.Electrical import *
+from pyrevit import script, forms, DB
 
 logger = script.get_logger()
 
@@ -12,6 +11,7 @@ def get_all_panels(doc, el_id=False):
         collector = collector.ToElementIds()
     else:
         collector = collector.ToElements()
+
     return collector
 
 
@@ -272,10 +272,12 @@ def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_space
     panel_groups = {}  # key: panel name, value: list of (sort_key, label)
     all_labels = []  # list of (sort_key, label)
 
-
     for ckt in ckts:
         # Skip spares/spaces if not included
         if not include_spares_and_spaces and ckt.CircuitType in [CircuitType.Spare, CircuitType.Space]:
+            continue
+
+        if ckt.DesignOption is not None:
             continue
 
         # Safely get rating and poles if circuit is a PowerCircuit
@@ -357,6 +359,9 @@ def pick_panel_from_list(doc, select_multiple=False):
     grouped_options = {" All": []}
 
     for panel in panels:
+        if panel.DesignOption is not None:
+            continue
+
         panel_name = DB.Element.Name.__get__(panel)
         panel_data = get_panel_dist_system(panel, doc)
         dist_system = panel_data.get('dist_system_name', 'Unspecified')

@@ -7,7 +7,8 @@ __doc__ = '''Working ok.
     '''
 
 from pyrevit import forms, script, revit, DB
-import pyrevit.revit.db.query as query
+
+import Snippets._elecutils as eu
 
 # Start the transaction for modifying the Revit model
 doc = revit.doc
@@ -45,7 +46,15 @@ if not fixtures_with_mep_model:
 
 # Step 2: Prompt the user to select a panel using pyRevit forms
 # Use pyRevit's query to filter for electrical equipment
-panels = query.get_elements_by_categories([DB.BuiltInCategory.OST_ElectricalEquipment])
+
+all_panels = eu.get_all_panels(doc)
+# If auto-detection fails, prompt the user
+panels = []
+for panel in all_panels:
+    if panel.DesignOption is not None:
+        continue
+    else:
+        panels.append(panel)
 
 # Create a dictionary with Distribution System and Panel Name
 panel_dict = {}
