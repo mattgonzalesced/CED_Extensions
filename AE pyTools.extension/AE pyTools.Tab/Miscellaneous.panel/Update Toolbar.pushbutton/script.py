@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-__doc__   = "Copies updater out first, wipes old extension, then runs updater from %TEMP%"
-__title__ = "Safe Clean & Run Updater"
+__doc__   = "Updates Toolbar by pulling from Github Repo"
+__title__ = "Run Updater"
 
 import os
 import shutil
