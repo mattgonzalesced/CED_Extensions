@@ -1,37 +1,41 @@
 # -*- coding: utf-8 -*-
-__doc__ = "Launches the Updater_pyrevit.exe in the same folder as this script"
-__title__ = "Run Updater"
+__doc__ = "Copies & launches Updater_pyrevit.exe from %TEMP% (no UAC needed)"
+__title__ = "Run Updater (Temp)"
 
 import os
+import shutil
+import tempfile
 import clr
+from pyrevit import forms
 
-# Bring in .NET Process API
+# Bring in the .NET Process API
 clr.AddReference('System')
 from System.Diagnostics import Process
 
 def main():
-    # Get folder where this script lives
+    # 1. Locate source EXE (next to this script)
     script_dir = os.path.dirname(__file__)
-    
-    # Name of your EXE
-    exe_name = "Updater_pyrevit.exe"
-    exe_path = os.path.join(script_dir, exe_name)
-    
-    # If the EXE isn't found, alert and exit
-    if not os.path.isfile(exe_path):
-        from pyrevit import forms
+    src_exe   = os.path.join(script_dir, "Updater_pyrevit.exe")
+    if not os.path.isfile(src_exe):
+        forms.alert("Could not find:\n{}".format(src_exe), exitscript=True)
+
+    # 2. Copy to a temp location
+    temp_dir = tempfile.gettempdir()
+    dst_exe  = os.path.join(temp_dir, "Updater_pyrevit.exe")
+    try:
+        shutil.copy2(src_exe, dst_exe)
+    except Exception as copy_err:
         forms.alert(
-            "Could not find:\n{}".format(exe_path),
+            "Failed to copy updater to temp:\n{}\n\n{}".format(dst_exe, copy_err),
             exitscript=True
         )
-    
-    # Launch the EXE
+
+    # 3. Run the EXE from %TEMP%
     try:
-        Process.Start(exe_path)
-    except Exception as e:
-        from pyrevit import forms
+        Process.Start(dst_exe)
+    except Exception as run_err:
         forms.alert(
-            "Failed to start:\n{}\n\n{}".format(exe_path, e),
+            "Failed to start updater:\n{}\n\n{}".format(dst_exe, run_err),
             exitscript=True
         )
 
