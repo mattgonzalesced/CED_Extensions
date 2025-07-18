@@ -1,7 +1,6 @@
-from Autodesk.Revit.DB import FilteredElementCollector, Electrical, Transaction, BuiltInCategory, BuiltInParameter, \
-    ElementId
-from pyrevit import script, forms, output, DB
+from Autodesk.Revit.DB import FilteredElementCollector, Electrical, Transaction, BuiltInCategory, BuiltInParameter
 from Autodesk.Revit.DB.Electrical import *
+from pyrevit import script, forms, DB
 from pyrevit.compat import get_elementid_value_func
 
 logger = script.get_logger()
@@ -393,3 +392,30 @@ def pick_panel_from_list(doc, select_multiple=False):
     selected_panels = [panel_lookup[name] for name in selected_names] if select_multiple else panel_lookup[
         selected_names]
     return selected_panels
+
+
+def get_circuits_from_selection(selection):
+    circuits = []
+
+    if not isinstance(selection, (list, tuple, set)):
+        selection = [selection]
+
+    for item in selection:
+        mep = item.MEPModel
+        if not mep:
+            continue
+
+        if item.Category == DB.BuiltInCategory.OST_ElectricalEquipment:
+            all_systems = mep.GetElectricalSystems() or []
+            assigned_systems = mep.GetAssignedElectricalSystems() or []
+            assigned_ids = set([sys.Id for sys in assigned_systems])
+
+            supply_systems = [sys for sys in all_systems if sys.Id not in assigned_ids]
+
+            circuits.extend(supply_systems)
+        else:
+            all_systems = mep.GetElectricalSystems() or []
+            circuits.extend(all_systems)
+
+    return circuits
+

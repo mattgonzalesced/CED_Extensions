@@ -4,10 +4,8 @@ import clr
 clr.AddReference('System')
 from System.Collections.Generic import List
 
-from pyrevit import script
-from pyrevit import revit, DB, forms, script, UI
-from pyrevit.revit import query
-from Snippets._elecutils import pick_circuits_from_list
+from pyrevit import revit, DB, forms, script
+from Snippets._elecutils import pick_circuits_from_list, get_circuits_from_selection
 
 # Access the current Revit document
 doc = revit.doc
@@ -22,7 +20,11 @@ logger = script.get_logger()
 
 
 # Step 1: Pick circuits
-selected_circuits = pick_circuits_from_list(doc, select_multiple=True,include_spares_and_spaces=True)
+selection = revit.get_selection().elements
+if selection:
+    selected_circuits = get_circuits_from_selection(selection)
+else:
+    selected_circuits = pick_circuits_from_list(doc, select_multiple=True,include_spares_and_spaces=True)
 if not selected_circuits:
     forms.alert("No circuits selected.", exitscript=True)
 
