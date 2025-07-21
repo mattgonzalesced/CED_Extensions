@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 __title__ = "Batch Swap Circuits"
 __doc__ = """Version = 1.1"""
-#TODO FIX SORTING ISSUE
+from Autodesk.Revit.DB import Electrical, BuiltInCategory, ElementId
+# TODO FIX SORTING ISSUE
 from pyrevit import script, forms
+
 from Snippets._elecutils import get_panel_dist_system, get_compatible_panels, move_circuits_to_panel, \
     get_circuits_from_panel, get_all_panels
-from Autodesk.Revit.DB import Electrical, BuiltInCategory, Transaction, ElementId, FilteredElementCollector, \
-    BuiltInParameter
 
 # Get the current document and UI document
 doc = __revit__.ActiveUIDocument.Document
@@ -86,12 +86,18 @@ def main():
 
     # Get all panels in the project
     all_panels = get_all_panels(doc)
-
     # If auto-detection fails, prompt the user
+    panels = []
+    for panel in all_panels:
+        if panel.DesignOption is not None:
+            continue
+        else:
+            panels.append(panel)
+
     if not starting_panel:
         starting_panel = prompt_for_panel(
             doc,
-            all_panels,
+            panels,
             title="Select Starting Panel",
             prompt_msg="Choose the panel that contains the circuits to move:"
         )
@@ -119,7 +125,7 @@ def main():
         # If Retry is selected, prompt for a new starting panel
         starting_panel = prompt_for_panel(
             doc,
-            all_panels,
+            panels,
             title="Select Starting Panel",
             prompt_msg="Choose the panel that contains the circuits to move:"
         )
@@ -155,7 +161,7 @@ def main():
     # Step 4: Get compatible panels based on the selected circuits
     compatible_panels = []
     for circuit in selected_circuit_objects:
-        compatible_panels.extend(get_compatible_panels(circuit, all_panels, doc))
+        compatible_panels.extend(get_compatible_panels(circuit, panels, doc))
 
     # Use a set to remove duplicate panels
     compatible_panels = list(set(compatible_panels))

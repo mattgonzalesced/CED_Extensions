@@ -58,16 +58,16 @@ try:
             subprocess.Popen(update_cmd, shell=True)
             logger.debug("=== CMD launched ===")
             forms.alert(
-                "🔍 PowerShell window launched.\nPlease watch the console for progress.\nRemember to manually click 'Reload' in pyRevit when done.",
+                "🔍 PowerShell window launched.\nPlease watch the console for progress.\n Click 'Reload' in pyRevit when Finished!",
                 title="Update Launched"
             )
         else:
             logger.debug("❌ Update/clone cancelled by user.")
-            forms.alert("Update/clone cancelled by user.", title="Cancelled")
+
     else:
-        logger.debug("❌ Unexpected status detected.")
-        logger.debug(status_output)
-        forms.alert("❌ Unexpected status detected:\n{}".format(status_output), title="Error")
+        logger.warning("❌ Unexpected status detected.")
+        logger.warning(status_output)
+
 
 except Exception as e:
     logger.error("❌ Update process failed: {}".format(e))

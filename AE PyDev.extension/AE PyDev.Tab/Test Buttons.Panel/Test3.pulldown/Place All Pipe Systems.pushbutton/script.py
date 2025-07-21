@@ -4,11 +4,10 @@
 __title__ = "Draw Unique Piping System Segments"
 __author__ = "Your Name"
 
-from pyrevit import revit, forms, script
-from pyrevit.revit import query
 from Autodesk.Revit.DB import (BuiltInCategory, XYZ, FilteredElementCollector, Level)
 from Autodesk.Revit.DB.Plumbing import Pipe, PipeType, PipingSystemType
-import sys
+from pyrevit import revit, forms, script
+from pyrevit.revit import query
 
 doc = revit.doc
 

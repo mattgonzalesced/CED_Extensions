@@ -56,6 +56,8 @@ def place_family_types():
 
     # Get the level of the current view
     level = get_current_view_level()
+    level_height = level.Elevation
+    z_offset = z_start-level_height
     if not level:
         forms.alert("Could not retrieve level from the current view. Exiting script.", exitscript=True)
 
@@ -81,7 +83,7 @@ def place_family_types():
                     family_type.Activate()  # Ensure type is active
 
                 x_offset = idx * 10  # 10 ft for each type
-                point = DB.XYZ(x_start + x_offset, y_start + y_offset, z_start)
+                point = DB.XYZ(x_start + x_offset, y_start + y_offset, z_offset)
 
                 # Place the family type at the given level
                 revit.doc.Create.NewFamilyInstance(

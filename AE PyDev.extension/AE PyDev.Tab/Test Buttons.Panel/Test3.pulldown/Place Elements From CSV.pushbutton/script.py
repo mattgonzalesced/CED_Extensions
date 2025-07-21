@@ -1,142 +1,87 @@
 # -*- coding: utf-8 -*-
+from pyrevit import revit, DB, script, forms
+from pyrevit.interop import xl as pyxl
+from pyrevit.revit import query
 
-from pyrevit import forms
-from pyrevit import script
-from pyrevit import revit
-from pyrevit import DB
-from pyrevit.revit.db import query
-import csv
-
-
+logger = script.get_logger()
 doc = revit.doc
 uidoc = revit.uidoc
-
-# Initialize output window
+active_view = uidoc.ActiveView
+level = active_view.GenLevel
 output = script.get_output()
+output.close_others()
+HEADERS = [
+    "Id", "Family", "Type", "Level: Name",
+    "Coordinates - Internal: Point_X",
+    "Coordinates - Internal: Point_Y",
+    "Coordinates - Internal: Point_Z",
+    "CKT_Panel_CEDT",
+    "CKT_Circuit Number_CEDT"
+]
+
+FAMILY_COL = "Family"
+TYPE_COL = "Type"
+X_COL = "Coordinates - Internal: Point_X"
+Y_COL = "Coordinates - Internal: Point_Y"
+Z_COL = "Coordinates - Internal: Point_Z"
+PNL_COL = "CKT_Panel_CEDT"
+CKT_COL = "CKT_Circuit Number_CEDT"
 
 
-import clr
-import csv
-import os
-from pyrevit import DB, UI
-from pyrevit import forms
+# Use LookupParameter to set shared parameters
+def set_parameter(element, param_name, value):
+    param = element.LookupParameter(param_name)
+    if param and value is not None:
+        param.Set(value)
+def load_excel_rows():
+    path = forms.pick_file(title="Select Excel File")
+    if not path:
+        script.exit()
+    data = pyxl.load(path, sheets=None, columns=HEADERS)
+    sheet_name = list(data.keys())[0]
+    return [r for r in data[sheet_name]["rows"] if r.get(FAMILY_COL) and r.get(TYPE_COL)]
 
-clr.AddReference('RevitAPI')
-clr.AddReference('RevitAPIUI')
-clr.AddReference('RevitServices')
-from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager
+# Build a map of (Family, Type) -> FamilySymbol
+def get_family_symbol_map():
+    symbol_map = {}
+    for symbol in DB.FilteredElementCollector(doc).OfClass(DB.FamilySymbol).ToElements():
+        fam_name = query.get_name(symbol.Family)
+        typ_name = query.get_name(symbol)
+        symbol_map[(fam_name, typ_name)] = symbol
+    return symbol_map
 
-# Define the FamilyPlacer class for scalability
-class FamilyPlacer:
-    def __init__(self, doc):
-        self.doc = doc
+rows = load_excel_rows()
+symbol_lookup = get_family_symbol_map()
+elements_created = []
 
-    def place_family_instance(self, family_name, type_name, x, y, z, rotation, level_name, equipment_id_param, equipment_id_value):
-        # Get the family symbol
-        family_symbol = self.get_family_symbol(family_name, type_name)
-        if not family_symbol:
-            raise Exception("Family or type not found: {} - {}".format(family_name, type_name))
+with revit.Transaction("Place Families from Excel"):
+    for row in rows:
+        fam = row[FAMILY_COL]
+        typ = row[TYPE_COL]
+        x = float(row.get(X_COL, "0"))
+        y = float(row.get(Y_COL, "0"))
+        z = float(row.get(Z_COL, "0"))
+        id = str(row.get("Id","XXXX"))
+        pnl = str(row.get(PNL_COL,""))
+        ckt = str(row.get(CKT_COL,""))
+        symbol = symbol_lookup.get((fam, typ))
+        if not symbol:
+            logger.warning("Family symbol not found: {} : {}".format(fam, typ))
+            continue
 
-        # Ensure the family symbol is active
-        if not family_symbol.IsActive:
-            family_symbol.Activate()
-            self.doc.Regenerate()
+        if not symbol.IsActive:
+            symbol.Activate()
+            doc.Regenerate()
 
-        # Get the level
-        level = self.get_level(level_name)
-        if not level:
-            raise Exception("Level not found: {}".format(level_name))
+        pt = DB.XYZ(x, y, z)
+        inst = doc.Create.NewFamilyInstance(pt, symbol, level, DB.Structure.StructuralType.NonStructural)
+        set_parameter(inst,"CKT_Panel_CEDT",pnl)
+        set_parameter(inst, "CKT_Circuit Number_CEDT", ckt)
+        set_parameter(inst, "Mark", str(id))
 
-        # Create a placement point
-        point = DB.XYZ(x, y, z)
 
-        # Start a transaction
-        TransactionManager.Instance.EnsureInTransaction(self.doc)
+        elements_created.append(inst.Id)
+selection = revit.get_selection()
+selection.set_to(elements_created)
 
-        # Place the family instance
-        instance = self.doc.Create.NewFamilyInstance(point, family_symbol, level, DB.Structure.StructuralType.NonStructural)
-
-        # Apply rotation
-        if rotation:
-            self.rotate_instance(instance, rotation)
-
-        # Set the Equipment ID parameter
-        param = instance.LookupParameter(equipment_id_param)
-        if param and param.IsReadOnly == False:
-            param.Set(equipment_id_value)
-
-        TransactionManager.Instance.TransactionTaskDone()
-        return instance
-
-    def get_family_symbol(self, family_name, type_name):
-        collector = DB.FilteredElementCollector(self.doc)
-        collector.OfClass(DB.FamilySymbol)
-        for symbol in collector:
-            if symbol.FamilyName == family_name and symbol.Name == type_name:
-                return symbol
-        return None
-
-    def get_level(self, level_name):
-        collector = DB.FilteredElementCollector(self.doc)
-        collector.OfClass(DB.Level)
-        for level in collector:
-            if level.Name == level_name:
-                return level
-        return None
-
-    def rotate_instance(self, instance, angle):
-        location = instance.Location
-        if isinstance(location, DB.LocationPoint):
-            point = location.Point
-            axis = DB.Line.CreateBound(point, point.Add(DB.XYZ(0, 0, 1)))
-            angle_rad = DB.UnitUtils.ConvertToInternalUnits(angle, DB.DisplayUnitType.DUT_DEGREES)
-            DB.ElementTransformUtils.RotateElement(self.doc, instance.Id, axis, angle_rad)
-
-# CSV Handler class
-class CSVHandler:
-    @staticmethod
-    def read_csv(file_path):
-        data = []
-        with open(file_path, 'r') as csv_file:
-            reader = csv.DictReader(csv_file)
-            for row in reader:
-                data.append(row)
-        return data
-
-# Main script execution
-def main():
-    doc = DocumentManager.Instance.CurrentDBDocument
-
-    # Get the CSV file path
-    file_path = forms.pick_file(file_ext='csv', init_dir=os.getcwd())
-    if not file_path:
-        forms.alert("No file selected. Operation cancelled.", title="Error")
-        return
-
-    # Read the CSV data
-    csv_data = CSVHandler.read_csv(file_path)
-
-    # Initialize the FamilyPlacer
-    family_placer = FamilyPlacer(doc)
-
-    # Process each row in the CSV
-    for row in csv_data:
-        try:
-            family_placer.place_family_instance(
-                family_name=row['family'],
-                type_name=row['type_name'],
-                x=float(row['x']),
-                y=float(row['y']),
-                z=float(row['z']),
-                rotation=float(row['rotation']),
-                level_name=row['level'],
-                equipment_id_param="Equipment ID_CEDT",
-                equipment_id_value=row['id']
-            )
-        except Exception as e:
-            forms.alert("Error placing family: {}\n{}".format(row, str(e)), title="Error")
-
-# Run the script
-if __name__ == "__main__":
-    main()
+script.get_output().print_md("### Placed {} element(s).".format(len(elements_created)))

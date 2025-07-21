@@ -13,6 +13,3 @@ tooltip:
     
 
 author: Anthony Evelina - CoolSys (2025)
-engine:
-  persistent: false
-  full_frame: false

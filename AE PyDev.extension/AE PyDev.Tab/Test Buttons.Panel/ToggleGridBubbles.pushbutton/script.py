@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
-import os
-import re
-from pyrevit import forms, script
+from pyrevit import forms
 from pyrevit import revit, DB
-from pyrevit import UI
-from pyrevit import coreutils
 
 doc = revit.doc
 active_view = doc.ActiveView
 
-all_grids = DB.FilteredElementCollector(revit.doc) \
+all_grids = DB.FilteredElementCollector(revit.doc,active_view.Id) \
     .OfCategory(DB.BuiltInCategory.OST_Grids) \
     .WhereElementIsNotElementType().ToElements()
 
@@ -30,9 +26,9 @@ if selection:
 else:
     grids = all_grids
 
-try:
-    with revit.Transaction('Toggle Grid Bubbles'):
-        for grid in grids:
+with revit.Transaction('Toggle Grid Bubbles'):
+    for grid in grids:
+        try:
             if selected_option == 'Show All':
                 grid.ShowBubbleInView(DB.DatumEnds.End0, active_view)
                 grid.ShowBubbleInView(DB.DatumEnds.End1, active_view)
@@ -48,7 +44,7 @@ try:
                 grid.HideBubbleInView(DB.DatumEnds.End0, active_view)
                 grid.ShowBubbleInView(DB.DatumEnds.End1, active_view)
 
-except Exception:
-    pass
+        except Exception:
+            continue
 
 revit.uidoc.RefreshActiveView()

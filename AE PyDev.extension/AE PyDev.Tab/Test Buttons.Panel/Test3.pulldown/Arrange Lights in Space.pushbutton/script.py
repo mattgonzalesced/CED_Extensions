@@ -2,7 +2,6 @@
 
 from pyrevit import revit, DB, forms, script
 from pyrevit.revit import Transaction
-import math
 
 output = script.get_output()
 logger = script.get_logger()
