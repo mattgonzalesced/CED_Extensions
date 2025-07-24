@@ -1,131 +1,179 @@
 # -*- coding: utf-8 -*-
+__title__ = "Tagging Tools"
 
-__title__ = "Sync Parameters"
-__doc__ = "Copies shared parameter values from equipment to corresponding symbols"
+from pyrevit import revit, DB, forms, script
+from pyrevit.revit import Transaction
 
-from pyrevit import revit, DB, script
-
-# Get logger for debugging
-logger = script.get_logger()
+from Snippets.tagcatmap import TAG_CAT_MAP
 
 doc = revit.doc
+uidoc = revit.uidoc
+logger = script.get_logger()
 
-# Mapping of shared parameters in symbols to built-in parameters in components
-PARAMETER_MAP = {
-    "Panel Name_CEDT": DB.BuiltInParameter.RBS_ELEC_PANEL_NAME,
-    "Mains Rating_CED": DB.BuiltInParameter.RBS_ELEC_PANEL_MCB_RATING_PARAM,
-    "Main Breaker Rating_CED": DB.BuiltInParameter.RBS_ELEC_PANEL_MCB_RATING_PARAM,
-    "Short Circuit Rating_CEDT": DB.BuiltInParameter.RBS_ELEC_SHORT_CIRCUIT_RATING,
-    "Mounting_CEDT": DB.BuiltInParameter.RBS_ELEC_MOUNTING,
-    "Panel Modifications_CEDT": DB.BuiltInParameter.RBS_ELEC_MODIFICATIONS,
-    "Distribution System_CEDR": DB.BuiltInParameter.RBS_FAMILY_CONTENT_DISTRIBUTION_SYSTEM,
-    "Total Connected Load_CEDR": DB.BuiltInParameter.RBS_ELEC_PANEL_TOTALLOAD_PARAM,
-    "Total Demand Load_CEDR": DB.BuiltInParameter.RBS_ELEC_PANEL_TOTAL_DEMAND_CURRENT_PARAM,
-    "Total Connected Current_CEDR": DB.BuiltInParameter.RBS_ELEC_PANEL_TOTAL_CONNECTED_CURRENT_PARAM,
-    "Total Demand Current_CEDR": DB.BuiltInParameter.RBS_ELEC_PANEL_TOTAL_DEMAND_CURRENT_PARAM,
-    "Voltage_CED": DB.BuiltInParameter.RBS_ELEC_VOLTAGE,
-    "Number of Poles_CED": DB.BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES,
-    "CKT_Panel_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
-    "CKT_Circuit Number_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER,
-    "CKT_Load Name_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME,
-    "CKT_Rating_CED": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM,
-    "CKT_Frame_CED": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_FRAME_PARAM,
-    "CKT_Wire Size_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_WIRE_SIZE_PARAM
-}
 
-# Known test elements (Component ID, Symbol ID)
-test_pairs = [("3885958", "3952805"), ("3952615", "3952806")]
+def get_tag_categories_for_element(category_obj):
+    category_id = category_obj.Id.IntegerValue  # Get int ID of the element's category
 
-# Function to retrieve elements by ID
-def get_element_by_id(element_id):
-    """Retrieve a Revit element by its ID."""
-    return doc.GetElement(DB.ElementId(int(element_id)))
+    matching_tag_cats = [
+        tag_cat for tag_cat, model_cat in TAG_CAT_MAP.items()
+        if model_cat.value__ == category_id
+    ]
 
-# Retrieve only the test components and symbols
-components = [get_element_by_id(comp_id) for comp_id, _ in test_pairs]
-symbols = [get_element_by_id(sym_id) for _, sym_id in test_pairs]
+    if not matching_tag_cats:
+        logger.info("No tag categories found for category ID: {} ({})".format(
+            category_id, category_obj.Name))
+    else:
+        logger.info("Found tag categories: {}".format([cat.ToString() for cat in matching_tag_cats]))
 
-# Remove None values if retrieval failed
-components = [c for c in components if c]
-symbols = [s for s in symbols if s]
+    return matching_tag_cats
 
-# Log found elements
-logger.info("Processing test elements only...")
-for comp in components:
-    logger.info("Component Found: ID {}".format(comp.Id.IntegerValue))
-for sym in symbols:
-    logger.info("Symbol Found: ID {}".format(sym.Id.IntegerValue))
+def get_all_tag_family_symbols():
+    tag_types = []
+    for tag_cat in TAG_CAT_MAP.keys():
+        tag_types += DB.FilteredElementCollector(doc) \
+            .OfClass(DB.FamilySymbol) \
+            .OfCategory(tag_cat) \
+            .ToElements()
+    return tag_types
 
-# Create mapping from Component ID to Symbol
-component_to_symbol = {}
-for comp, sym in zip(components, symbols):
-    component_to_symbol[comp] = sym
-    logger.info("Mapping: Component {} -> Symbol {}".format(comp.Id.IntegerValue, sym.Id.IntegerValue))
 
-# Start transaction
-with revit.Transaction("Sync Parameters from Component to Symbol"):
-    for component, symbol in component_to_symbol.items():
-        # Get Family Symbol (Type parameters)
-        family_symbol = component.Document.GetElement(component.GetTypeId())
+def get_tag_types_for_category(element_category):
+    tag_types = []
+    tag_categories = get_tag_categories_for_element(element_category)
 
-        # Get all shared parameters for component (Instance & Type) and symbol (Instance only)
-        component_params = {
-            p.Definition.Name: p for p in component.Parameters if p.IsShared
-        }
+    all_tag_types = get_all_tag_family_symbols()
 
-        if family_symbol:
-            component_params.update({
-                p.Definition.Name: p for p in family_symbol.Parameters if p.IsShared
-            })
-
-        symbol_params = {
-            p.Definition.Name: p for p in symbol.Parameters if p.IsShared
-        }
-
-        # Find intersection of parameters (parameters that exist in both)
-        common_params = set(component_params.keys()) & set(symbol_params.keys())
-
-        # Include built-in parameters from PARAMETER_MAP
-        for sym_param_name, built_in_param in PARAMETER_MAP.items():
-            if sym_param_name in symbol_params:
-                built_in_comp_param = component.get_Parameter(built_in_param)
-                if built_in_comp_param:
-                    common_params.add(sym_param_name)
-                    component_params[sym_param_name] = built_in_comp_param  # Map manually
-
-        if not common_params:
-            logger.warning("No shared parameters found for Component {} and Symbol {}".format(
-                component.Id.IntegerValue, symbol.Id.IntegerValue))
-            continue  # Skip to next pair if no shared parameters
-
-        # Copy values from component → symbol
-        for param_name in common_params:
-            comp_param = component_params.get(param_name)
-            sym_param = symbol_params.get(param_name)
-
-            if not comp_param or not sym_param:
-                logger.warning("Skipping '{}' due to missing parameters.".format(param_name))
+    for tag in all_tag_types:
+        try:
+            tag_cat = tag.Category
+            if not tag_cat:
                 continue
+            if tag_cat.Id == DB.ElementId(DB.BuiltInCategory.OST_MultiCategoryTags):
+                tag_types.append(tag)
+            elif tag_cat.Id.IntegerValue in [c.value__ for c in tag_categories]:
+                tag_types.append(tag)
+        except Exception as e:
+            logger.error("Error on tag {}: {}".format(tag.Name, e))
 
-            if sym_param.StorageType == comp_param.StorageType:
-                try:
-                    if comp_param.StorageType == DB.StorageType.String:
-                        sym_param.Set(comp_param.AsString())
+    logger.info("Found {} tag types for element category {}".format(len(tag_types), element_category.Name))
+    return tag_types
 
-                    elif comp_param.StorageType == DB.StorageType.Integer:
-                        if sym_param.Definition.ParameterType == DB.ParameterType.ElementId:
-                            sym_param.Set(DB.ElementId(comp_param.AsInteger()))  # Convert to ElementId if needed
-                        else:
-                            sym_param.Set(comp_param.AsInteger())
 
-                    elif comp_param.StorageType == DB.StorageType.Double:
-                        sym_param.Set(comp_param.AsDouble())
+def get_tag_label(tag_symbol):
+    try:
+        tag_cat = tag_symbol.Category.Name if tag_symbol.Category else "?"
+        type_name = tag_symbol.get_Parameter(DB.BuiltInParameter.SYMBOL_NAME_PARAM).AsString()
+        fam_name = tag_symbol.get_Parameter(DB.BuiltInParameter.SYMBOL_FAMILY_NAME_PARAM).AsString()
+        value = fam_name + " : " + type_name
+        logger.info(value)
+        return "[{}] {}".format(tag_cat, value)
+    except Exception as e:
+        logger.error("Error building label for tag type: {}".format(e))
+        return "[?] <error>"
 
-                    logger.info("Copied '{}' from Component {} to Symbol {}".format(
-                        param_name, component.Id.IntegerValue, symbol.Id.IntegerValue))
 
-                except Exception as e:
-                    logger.warning("⚠️ Failed to copy '{}' from Component {} to Symbol {}: {}".format(
-                        param_name, component.Id.IntegerValue, symbol.Id.IntegerValue, str(e)))
+def get_element_bbox_center(element):
+    bbox = element.get_BoundingBox(None)
+    center = (bbox.Min + bbox.Max) * 0.5
+    return bbox, center
 
-logger.info("✅ Parameter synchronization completed.")
+
+def get_tag_column_locations(bbox, count, spacing=3.0):
+    max_x = bbox.Max.X
+    mid_y = (bbox.Min.Y + bbox.Max.Y) / 2.0
+    center_z = (bbox.Min.Z + bbox.Max.Z) / 2.0
+
+    start_y = mid_y + ((count - 1) * spacing / 2.0)
+    tag_positions = []
+
+    for i in range(count):
+        pos = DB.XYZ(max_x + 8.0, start_y - i * spacing, center_z)
+        tag_positions.append(pos)
+
+    return tag_positions
+
+
+def tag_element_with_types(element, tag_types):
+    bbox, center = get_element_bbox_center(element)
+    positions = get_tag_column_locations(bbox, len(tag_types))
+    reference = DB.Reference(element)
+    scale = revit.active_view.Scale
+    elbow_offset = scale * 0.03  # approx 3% of a drawing scale inch
+
+    with Transaction("Tag Element With Selected Tags"):
+        for tag_type, loc in zip(tag_types, positions):
+            if not tag_type.IsActive:
+                tag_type.Activate()
+                doc.Regenerate()
+
+            # Create the tag
+            tag = DB.IndependentTag.Create(
+                doc,
+                tag_type.Id,
+                revit.active_view.Id,
+                reference,
+                True,
+                DB.TagOrientation.Horizontal,
+                loc
+            )
+
+            # Regenerate to ensure geometry is resolved
+            doc.Regenerate()
+
+            leader_param = tag.get_Parameter(DB.BuiltInParameter.LEADER_LINE)
+            if leader_param:
+                leader_param.Set(0)  # False
+
+            # Get bounding box of the tag head
+            tag_bbox = tag.get_BoundingBox(revit.active_view)
+
+            if tag_bbox:
+                tag_min_x = tag_bbox.Min.X
+                elbow_pt = DB.XYZ(tag_min_x - elbow_offset, loc.Y, loc.Z)
+            else:
+                elbow_pt = loc + DB.XYZ(elbow_offset, 0, 0)
+
+            # Set the tag head first
+            tag.TagHeadPosition = loc
+
+            # Re-enable leader line
+            if leader_param:
+                leader_param.Set(1)  # True
+
+            # Now finalize leader
+            tag.LeaderEndCondition = DB.LeaderEndCondition.Attached
+            tag.SetLeaderElbow(reference, elbow_pt)
+
+
+# --- Main ---
+selection = revit.get_selection()
+if not selection or len(selection) != 1:
+    forms.alert("Select one element to tag.")
+    script.exit()
+
+element = selection[0]
+category = element.Category
+if not category:
+    forms.alert("Selected element has no category.")
+    script.exit()
+
+valid_tags = get_tag_types_for_category(category)
+
+if not valid_tags:
+    script.exit()
+
+options = [get_tag_label(tag) for tag in valid_tags]
+
+
+selected = forms.SelectFromList.show(options, multiselect=True, title="Select Tag Types")
+
+if not selected:
+    script.exit()
+
+selected_tag_types = [t for t in valid_tags if get_tag_label(t) in selected]
+
+tag_element_with_types(element,selected_tag_types)
+
+
+
+

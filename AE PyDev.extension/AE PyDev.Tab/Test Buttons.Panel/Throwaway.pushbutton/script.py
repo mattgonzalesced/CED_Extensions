@@ -9,13 +9,31 @@ COMMON_FIELDS = [
     "Schedule Sort Order",
     "Family",
     "Type",
-    "Equipment Type_CEDT",
-    "Equipment Type ID_CEDT",
-    "Equipment ID_CEDT",
-    "Equipment Remarks_CEDT"
+    "Product Type",
+    "Identity Type Mark",
+    "Identity Label Seperator",
+    "Identity Mark",
+    "Description",
+    "Schedule Description",
+    "Installed Location",
+    "Space: Name",
+    "Space: Number",
+    "Schedule Notes"
+
 ]
 
+REMOVE_FIELDS = ["Equipment Type_CEDT",
+    "Equipment Type ID_CEDT",
+    "Equipment ID_CEDT",
+    "Equipment Remarks_CEDT"]
 
+field_replacement_map  = {
+    "Equipment Type_CEDT":"Product Type",
+    "Equipment Type ID_CEDT":"Identity Type Mark",
+    "Equipment ID_CEDT":"Identity Mark",
+    "Equipment Remarks_CEDT":"Schedule Notes",
+    "Area Served_CEDT":"Area Served"
+}
 # ---------------------------------------------------
 # Collect all project parameters
 def get_all_project_params():
@@ -85,6 +103,81 @@ def remove_schedulable_fields_from_schedule(schedule, schedulable_fields_to_remo
 
     output.print_md("- Removed from `{}`: {}".format(schedule.Name, ", ".join(removed_names)))
 
+
+def replace_schedule_fields(schedules, field_replacement_map):
+    """
+    Replaces specified schedule fields with new ones while preserving field order.
+
+    Args:
+        schedules (list[DB.ViewSchedule]): List of Revit schedule elements to process.
+        field_replacement_map (dict): Dictionary where keys are existing field names,
+                                      and values are the new field names to replace them with.
+
+
+    Example Usage:
+        def main():
+        field_replacement_map = {
+            "Type": "Equipment Type_CEDT",
+            "Identity Label Seperator": "Schedule Notes"
+        }
+
+        selected_schedules = forms.select_schedules(title="Pick schedules to replace fields", multiple=True)
+        if not selected_schedules:
+            forms.alert("No schedules selected.")
+            return
+
+        replace_schedule_fields(selected_schedules, field_replacement_map)
+        forms.alert("Field replacements complete.")
+    """
+    with revit.Transaction("Replace Fields in Schedules"):
+        for schedule in schedules:
+            definition = schedule.Definition
+            current_field_ids = definition.GetFieldOrder()
+            current_field_names = [definition.GetField(fid).GetName() for fid in current_field_ids]
+
+            original_order = list(current_field_names)
+            fields_to_remove_ids = []
+            fields_to_add = []
+
+            schedulable_map = get_schedulable_instance_fields(schedule)
+
+            for field_id in current_field_ids:
+                field = definition.GetField(field_id)
+                if not field:
+                    continue
+                field_name = field.GetName()
+
+                # Only process fields that exist and have a replacement
+                if field_name in field_replacement_map:
+                    replacement_name = field_replacement_map[field_name]
+
+                    # Find replacement in schedulable map
+                    replacement_found = False
+                    for schedulable in schedulable_map.values():
+                        if get_schedulable_field_name(schedulable) == replacement_name:
+                            fields_to_add.append(schedulable)
+                            fields_to_remove_ids.append(field_id)
+                            replacement_found = True
+                            break
+
+                    if not replacement_found:
+                        output.print_md("- ⚠️ Replacement field `{}` not found in `{}`. Skipping.".format(replacement_name, schedule.Name))
+
+            # Remove fields only if matched
+            for field_id in fields_to_remove_ids:
+                definition.RemoveField(field_id)
+
+            add_schedulable_fields_to_schedule(schedule, fields_to_add)
+
+            # Reorder: Replace old names with new ones
+            updated_order = []
+            for name in original_order:
+                if name in field_replacement_map and field_replacement_map[name] in [get_schedulable_field_name(f) for f in fields_to_add]:
+                    updated_order.append(field_replacement_map[name])
+                elif name not in field_replacement_map.keys():
+                    updated_order.append(name)
+
+            reorder_fields_by_name(definition, updated_order)
 
 def add_filter_to_schedule(schedule, parameter_name, filter_type, value, insert_on_top=False):
     definition = schedule.Definition
@@ -305,55 +398,19 @@ def pick_schedulable_fields_from_schedules(schedules):
 
 
 def main():
-    # Mapping: Filter value → Schedule name
-    filter_map = {
-        "Air Curtain": "Air Curtain Schedule",
-        "Destratification": "Destratification Fan Schedule",
-        "Exhaust": "Exhaust Fan Schedule",
-        "Gravity Ventilator": "Gravity Intake Ventilator Schedule",
-        "Hood": "Hood Schedule",
-        "Makeup Air": "Makeup Air Unit Schedule",
-        "Outside Air": "Outside Air Unit Schedule",
-        "RTU": "Rooftop Unit Schedule",
-        "Condensing Unit": "Split System Condensing Unit Schedule",
-        "Fan Coil": "Split System Fan Coil Unit Schedule"
-    }
 
-    schedules = DB.FilteredElementCollector(doc).OfClass(DB.ViewSchedule).ToElements()
-    schedule_by_name = {schedule.Name: schedule for schedule in schedules}
+    selected_schedules = forms.select_schedules(title="Pick schedules to replace fields", multiple=True)
+    if not selected_schedules:
+        forms.alert("No schedules selected.")
+        return
 
-    filter_field_name = "Schedule Filter"
-    filter_type = DB.ScheduleFilterType.Equal
-    insert_at_top = True
+    with revit.Transaction("Replace Fields in Schedules"):
 
-    with revit.Transaction("Apply Filters to Unit Schedules"):
-        for filter_value, schedule_name in filter_map.items():
-            schedule = schedule_by_name.get(schedule_name)
-            if not schedule:
-                output.print_md("- ⚠️ Schedule not found: `{}`".format(schedule_name))
-                continue
+        field_replacement_map = {
+            "Equipment Requires Power_CED": "Power Connection Required",
+        }
 
-            definition = schedule.Definition
-            existing_field_names = [definition.GetField(fid).GetName() for fid in definition.GetFieldOrder()]
-
-            # Ensure the Schedule Filter field exists
-            if filter_field_name not in existing_field_names:
-                schedulable_map = get_schedulable_instance_fields(schedule)
-                found = False
-                for schedulable in schedulable_map.values():
-                    if get_schedulable_field_name(schedulable) == filter_field_name:
-                        definition.AddField(schedulable)
-                        output.print_md("- 🔧 Added missing field `{}` to `{}`".format(filter_field_name, schedule_name))
-                        found = True
-                    break
-                if not found:
-                    output.print_md("- ❌ Could not find schedulable field `{}` for `{}`".format(filter_field_name, schedule_name))
-                    continue
-
-            # Add the filter
-            add_filter_to_schedule(schedule, filter_field_name, filter_type, filter_value, insert_at_top)
-
-
-
+        replace_schedule_fields(selected_schedules,field_replacement_map)
+    forms.alert("Field replacements complete.")
 if __name__ == '__main__':
     main()
