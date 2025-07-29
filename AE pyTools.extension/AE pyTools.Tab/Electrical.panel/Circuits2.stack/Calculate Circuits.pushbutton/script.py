@@ -146,6 +146,8 @@ def main():
     # Perform all calculations first
     for circuit in test_circuits:
         branch = CircuitBranch(circuit)
+        if not branch.is_power_circuit:
+            continue
         branch.calculate_breaker_size()
         branch.calculate_hot_wire_size()
         branch.calculate_ground_wire_size()
@@ -170,7 +172,7 @@ def main():
     except Exception as e:
         t.RollBack()
         tg.RollBack()
-        logger.error("❌ Transaction failed: {}".format(e))
+        logger.error("{}❌ Transaction failed: {}".format(branch.name,e))
         return
 
     output = script.get_output()
