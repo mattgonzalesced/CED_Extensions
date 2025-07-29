@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import clr
 import math
-from pyrevit import script, forms
-from pyrevit import revit, DB
+
 from System.Collections.Generic import List
+from pyrevit import revit, DB
+from pyrevit import script, forms
+
 # Access the current Revit document
 doc = revit.doc
 output = script.get_output()
@@ -30,19 +31,19 @@ category_counts = {}
 model_orientation_counts = {}
 
 selection = revit.get_selection()
-if selection:
-    selected_ids = List[DB.ElementId](selection.element_ids)
+selected_ids = List[DB.ElementId]()
 
 elements = []
 
 for name, cat in category_enum.items():
     if selection:
+        selected_ids = List[DB.ElementId](selection.element_ids)
         collector = DB.FilteredElementCollector(doc, selected_ids) \
             .OfCategory(cat) \
             .WhereElementIsNotElementType() \
             .ToElements()
     else:
-        collector = DB.FilteredElementCollector(doc) \
+        collector = DB.FilteredElementCollector(doc,doc.ActiveView.Id) \
             .OfCategory(cat) \
             .WhereElementIsNotElementType() \
             .ToElements()
@@ -132,8 +133,12 @@ if __shiftclick__:
     else:
         output.print_md("No elements were affected.")
 else:
-    # Regular click: Show alert with summary
     if affected_elements:
+        selection.set_to([doc.GetElement(eid) for eid, _, _, _ in affected_elements])
+
         forms.alert('{} tag(s) were updated.'.format(len(affected_elements)))
+    elif selected_ids.Count > 0:
+        selection.set_to(selected_ids)
+        forms.alert('No tags needed updating.')
     else:
         forms.alert('No tags needed updating.')
