@@ -2,3 +2,6 @@ layout:
   - CreateDedicatedCircuits
   - BatchSwapCircuits
   - MoveSelectedCircuits
+  - Add Spares and Spaces
+  - -----
+  - Load Electrical Parameters

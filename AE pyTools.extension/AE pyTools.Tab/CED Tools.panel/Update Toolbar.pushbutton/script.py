@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 __doc__   = "Updates Toolbar by pulling from Github Repo"
-__title__ = "Run Updater"
 
 import os
 import shutil
