@@ -130,7 +130,7 @@ def main():
             test_circuits = eu.pick_circuits_from_list(doc, select_multiple=True)
 
     count = len(test_circuits)
-    if count > 300:
+    if count > 1000:
         proceed = forms.alert(
             "{} circuits selected.\n\nThis may take a while.\n\n".format(count),
             title="⚠️ Large Selection Warning",
