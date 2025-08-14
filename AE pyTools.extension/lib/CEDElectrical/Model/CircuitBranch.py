@@ -24,6 +24,9 @@ PART_TYPE_MAP = {
     18: "Equipment Switch"
 }
 
+# TODO: make sure circuit settings is set up correctly for use in the circuit branch class. these settings
+#  should apply to every instance of circuit branch, so we need to make sure we're efficient and not recreating
+#  data unnecessarily.
 
 class CircuitSettings(object):
     def __init__(self):
@@ -169,6 +172,7 @@ class CircuitBranch(object):
         else:
             return self.settings.max_branch_voltage_drop
 
+
     @property
     def wire_info(self):
         if not self.is_power_circuit:
@@ -201,7 +205,8 @@ class CircuitBranch(object):
         return self._wire_info
 
     # ----------- Circuit Properties -----------
-
+    # TODO: need debug loggers in these try except blocks. this applies to many methods and properties
+    #  we need clear understanding of what fails and we need to determine how to handle failures
     @property
     def load_name(self):
         try:
@@ -895,7 +900,9 @@ class CircuitBranch(object):
         return round(total_area / conduit_area, 5)  # ⚠️ keep as decimal
 
     # TODO: need to handle cases where the Neutral does NOT equal hot. it needs to be
-    #  a separate chunk, cant just be number of wires
+    #  a separate chunk, cant just be number of wires.
+    #  example if 3 hots and 1 neutral, and hot_size = neutral_size: 4#12
+    #  example if 3 hots and 1 neutral, and hot_size not = neutral_size: 3#12H + 1#10N
     def get_wire_set_string(self):
         wp = self.settings.wire_size_prefix or ''
         parts = []
