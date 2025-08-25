@@ -18,9 +18,9 @@ def main():
     if not os.path.isfile(exe_path):
         script.exit("[ERROR] Could not find app.exe at:\n    " + exe_path)
 
-    # Launch the executable
+    # Launch the executable with correct working directory
     try:
-        subprocess.Popen([exe_path], shell=True)
+        subprocess.Popen([exe_path], cwd=script_dir, shell=True)
     except Exception as e:
         script.exit("[ERROR] Failed to launch app.exe:\n    " + str(e))
 
