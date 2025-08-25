@@ -23,7 +23,7 @@ def find_extension_root(script_dir):
     return None
 
 
-def is_under(path: Path, root: Path) -> bool:
+def is_under(path, root):
     """True if path is inside root (after resolving)."""
     try:
         path.resolve().relative_to(root.resolve())
