@@ -10,72 +10,77 @@ IronPython 2.7 compliant.
 FIX: Newly created filters are now explicitly disabled so the first run no longer shows
      the misleading "Fixture check OFF" message.
 """
-import clr, sys, traceback
-from pyrevit import revit, DB
+import sys
+import traceback
+
 from Autodesk.Revit.DB import (
     BuiltInCategory, BuiltInParameter, Transaction, ElementId,
     FilteredElementCollector, ParameterFilterRuleFactory,
     ElementParameterFilter, ParameterFilterElement,
     OverrideGraphicSettings, Color
 )
+from pyrevit import revit, DB, script
+
+logger = script.get_logger()
+
 def activate_temp_view_mode(view):
     try:
-        print("View type: {}".format(view.ViewType))
+        logger.debug("View type: {}".format(view.ViewType))
         
         # Check if view can enable temporary mode
         can_enable = view.CanEnableTemporaryViewPropertiesMode()
-        print("Can enable temporary view properties mode: {}".format(can_enable))
+        logger.debug("Can enable temporary view properties mode: {}".format(can_enable))
         
         if not can_enable:
-            print("View cannot enable temporary view properties mode in current state")
+            logger.debug("View cannot enable temporary view properties mode in current state")
             return False
         
         is_enabled = view.IsTemporaryViewPropertiesModeEnabled()
-        print("Temporary view properties mode enabled: {}".format(is_enabled))
+        logger.debug("Temporary view properties mode enabled: {}".format(is_enabled))
         
         if not is_enabled:
             # Check if view has existing template
             current_template_id = view.ViewTemplateId
-            print("Current view template ID: {}".format(current_template_id))
+            logger.debug("Current view template ID: {}".format(current_template_id))
             
             # Try different approaches based on whether view has template
             if current_template_id and current_template_id != DB.ElementId.InvalidElementId:
-                print("Enabling temp mode with current template ID: {}".format(current_template_id))
+                logger.debug("Enabling temp mode with current template ID: {}".format(current_template_id))
                 view.EnableTemporaryViewPropertiesMode(current_template_id)
             else:
                 # Try to find any view template to use
-                print("No current template - searching for available templates...")
+                logger.debug("No current template - searching for available templates...")
                 templates = FilteredElementCollector(doc).OfClass(DB.View).ToElements()
                 templates = [t for t in templates if t.IsTemplate and t.ViewType == view.ViewType]
                 
                 if templates:
-                    print("Found {} templates for view type {}".format(len(templates), view.ViewType))
+                    logger.debug("Found {} templates for view type {}".format(len(templates), view.ViewType))
                     template_id = templates[0].Id
-                    print("Using template: {} (ID: {})".format(templates[0].Name, template_id))
+                    logger.debug("Using template: {} (ID: {})".format(templates[0].Name, template_id))
                     view.EnableTemporaryViewPropertiesMode(template_id)
                 else:
-                    print("No templates found - trying with InvalidElementId")
+                    logger.debug("No templates found - trying with InvalidElementId")
                     view.EnableTemporaryViewPropertiesMode(DB.ElementId.InvalidElementId)
             
-            print("EnableTemporaryViewPropertiesMode() call completed")
+            logger.debug("EnableTemporaryViewPropertiesMode() call completed")
             
             # Check if it worked
             final_status = view.IsTemporaryViewPropertiesModeEnabled()
-            print("Final status: {}".format(final_status))
+            logger.debug("Final status: {}".format(final_status))
             
             if final_status:
-                print("Successfully activated temporary view properties mode")
+                logger.debug("Successfully activated temporary view properties mode")
                 return True
             else:
-                print("Failed to activate - status unchanged")
+                logger.debug("Failed to activate - status unchanged")
                 return False
         else:
-            print("Temporary view properties mode already active")
+            logger.debug("Temporary view properties mode already active")
             return True
             
     except Exception as ex:
-        print("Failed to activate temporary view properties mode: {}".format(ex))
-        print("Full traceback: {}".format(traceback.format_exc()))
+        logger.debug("Failed to activate temporary view properties mode: {}".format(ex))
+        logger.debug("Full traceback: {}".format(traceback.format_exc()))
         return False
 
 # -- Small UI helper ------------------------------------------------
@@ -85,7 +90,7 @@ try:
         TaskDialog.Show(title, msg)
 except ImportError:
     def alert(msg, title="Fixture Check"):
-        print("[{0}] {1}".format(title, msg))
+        logger.debug("[{0}] {1}".format(title, msg))
 
 doc  = revit.doc
 view = doc.ActiveView
@@ -137,7 +142,8 @@ from System.Collections.Generic import List
 
 cats = List[ElementId]([
     doc.Settings.Categories.get_Item(BuiltInCategory.OST_ElectricalFixtures).Id,
-    doc.Settings.Categories.get_Item(BuiltInCategory.OST_LightingFixtures).Id
+    doc.Settings.Categories.get_Item(BuiltInCategory.OST_LightingFixtures).Id,
+    doc.Settings.Categories.get_Item(BuiltInCategory.OST_LightingDevices).Id
 ])
 
 sample = next((e for e in FilteredElementCollector(doc)

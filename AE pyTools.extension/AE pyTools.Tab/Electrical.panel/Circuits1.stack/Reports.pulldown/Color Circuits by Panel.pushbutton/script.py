@@ -4,11 +4,9 @@
 # - Colors current (or new) plan/RCP/3D view using overrides (unique for included, grey+halftone for others)
 # - Creates/updates legend drafting view with swatches + labels (swatches keyed via Comments)
 # - DOES NOT modify or create any View Templates
-# - MODIFIED: Generates maximally contrasting colors based on number of selected panels
 
 from System.Collections.Generic import List
 from pyrevit import revit, DB, forms, script
-import math
 
 logger = script.get_logger()
 output = script.get_output()
@@ -21,31 +19,95 @@ FILTER_PREFIX = "PanelChecker - {0} - {1}"      # part_type, panel_name
 LEGEND_VIEW_NAME = "PanelChecker Legend"
 FILLED_REGION_TYPE_NAME = "PanelChecker - Solid Fill"
 VIEW_TEMPLATE_NAME = "E_PanelChecker View"
-
+NO_PANEL_FLAG = "__NO PANEL__"
 BIP_PANEL_ON_DEVICES = DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM
 BIP_COMMENTS = DB.BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS
 
-DEVICE_FIXTURE_OR_CATS = [
-    DB.BuiltInCategory.OST_DetailComponents,
-    DB.BuiltInCategory.OST_ElectricalEquipment,
-    DB.BuiltInCategory.OST_ElectricalFixtures,
-    DB.BuiltInCategory.OST_DataDevices,
-    DB.BuiltInCategory.OST_FireAlarmDevices,
-    DB.BuiltInCategory.OST_LightingDevices,
-    DB.BuiltInCategory.OST_LightingFixtures,
-    DB.BuiltInCategory.OST_MechanicalControlDevices,
-    DB.BuiltInCategory.OST_SecurityDevices,
+DEVICE_FIXTURE_OR_CATS = {
+    DB.BuiltInCategory.OST_DetailComponents: DB.BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS,
+    DB.BuiltInCategory.OST_ElectricalEquipment: DB.BuiltInParameter.RBS_ELEC_PANEL_NAME,
+    DB.BuiltInCategory.OST_ElectricalFixtures: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
+    DB.BuiltInCategory.OST_DataDevices: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
+    DB.BuiltInCategory.OST_FireAlarmDevices: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
+    DB.BuiltInCategory.OST_LightingDevices: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
+    DB.BuiltInCategory.OST_LightingFixtures: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
+    DB.BuiltInCategory.OST_MechanicalControlDevices: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
+    DB.BuiltInCategory.OST_SecurityDevices: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
+}
+
+SYSTEMS_DEVICES = {
+    DB.BuiltInCategory.OST_DataDevices: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
+    DB.BuiltInCategory.OST_FireAlarmDevices: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
+    DB.BuiltInCategory.OST_SecurityDevices: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
+}
+
+POWER_FIXTURE_EQUIP = {
+    DB.BuiltInCategory.OST_DetailComponents: DB.BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS,
+    DB.BuiltInCategory.OST_ElectricalEquipment: DB.BuiltInParameter.RBS_ELEC_PANEL_NAME,
+    DB.BuiltInCategory.OST_ElectricalFixtures: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
+    DB.BuiltInCategory.OST_LightingDevices: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
+    DB.BuiltInCategory.OST_LightingFixtures: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
+    DB.BuiltInCategory.OST_MechanicalControlDevices: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
+}
+
+COLOR_PALETTE = [
+    (0, 108, 153),  # teal blue
+    (255, 200, 0),  # golden yellow
+    (84, 0, 153),  # dark violet
+    (255, 80, 0),  # bright orange
+    (0, 220, 180),  # aqua green
+    (200, 0, 150),  # magenta
+    (100, 220, 0),  # lime green
+    (255, 0, 195),  # hot pink
+    (0, 60, 120),  # navy blue
+    (255, 255, 0),  # yellow
+    (182, 0, 255),  # bright purple
+    (153, 48, 0),  # reddish brown
+    (0, 234, 255),  # light cyan
+    (120, 0, 90),  # plum
+    (255, 104, 0),  # pumpkin orange
+    (36, 108, 132),  # muted teal
+    (255, 0, 234),  # neon pink
+    (60, 132, 0),  # forest green
+    (140, 0, 255),  # violet
+    (220, 120, 0),  # amber
+    # ---- remaining, still sequenced for variety ----
+    (0, 100, 200),
+    (153, 120, 0),
+    (0, 132, 108),
+    (78, 234, 255),
+    (132, 72, 0),
+    (255, 156, 0),
+    (24, 96, 36),
+    (40, 160, 60),
+    (52, 208, 78),
+    (153, 72, 120),
+    (255, 120, 200),
+    (255, 156, 255),
+    (96, 120, 24),
+    (160, 200, 40),
+    (208, 255, 52),
+    (90, 0, 0),
+    (150, 0, 0),
+    (195, 0, 0),
+    (108, 12, 24),
+    (180, 20, 40),
+    (83, 41, 11),
+    (139, 69, 19),
+    (180, 89, 24),
+    (126, 63, 18),
+    (123, 79, 37),
+    (205, 133, 63),
+    (255, 172, 81),
+    (96, 49, 27),
+    (160, 82, 45),
+    (208, 106, 58),
+    (126, 108, 84),
+    (210, 180, 140),
 ]
 
-# Fallback palette for when dynamic generation fails
-COLOR_PALETTE = [
-    (60, 180, 75), (255, 225, 25), (67, 99, 216),
-    (245, 130, 48), (145, 30, 180), (70, 240, 240), (240, 50, 230),
-    (210, 245, 60), (250, 190, 190), (0, 128, 128), (230, 190, 255),
-    (170, 110, 40), (255, 250, 200), (170, 255, 195),
-    (128, 128, 0), (255, 215, 180), (0, 0, 128),
-]
 GREY = (160, 160, 160)
+RED = (255,0,0)
 
 # -----------------------------------------------------------------------------
 # 1) Small helpers
@@ -63,196 +125,7 @@ def _as_sorted_unique(items):
     out.sort()
     return out
 
-# -----------------------------------------------------------------------------
-# 1.5) Color generation functions for maximum contrast
-# -----------------------------------------------------------------------------
-def generate_max_contrast_colors(num_colors):
-    """
-    Generate maximally contrasting colors using HSL color space.
-    Distributes hues evenly, varies saturation and lightness for better contrast.
-    Excludes red hues (0-30 degrees and 330-360 degrees in hue circle).
-    """
-    if num_colors <= 0:
-        return []
-    
-    colors = []
-    
-    # For very small numbers, use hand-picked high contrast colors
-    if num_colors == 1:
-        return [(255, 0, 0)]  # Red
-    elif num_colors == 2:
-        return [(255, 0, 0), (0, 255, 255)]  # Red and Cyan
-    elif num_colors == 3:
-        return [(255, 0, 0), (0, 255, 0), (0, 0, 255)]  # Red, Green, Blue
-    elif num_colors == 4:
-        return [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0)]  # Red, Green, Blue, Yellow
-    
-    # For larger numbers, use algorithmic generation
-    # Use CIELAB color space for perceptually uniform spacing
-    # Generate colors in a circle around the a*b* plane avoiding red region
-    
-    for i in range(num_colors):
-        # Generate angle avoiding red spectrum (330° to 30° in hue space)
-        # Map to a*b* plane angle, avoiding red region
-        angle_range = 300.0  # degrees available (avoiding 60° red zone)
-        start_angle = 30.0   # start at 30° to avoid red
-        
-        angle_deg = start_angle + (i / float(num_colors)) * angle_range
-        angle_rad = math.radians(angle_deg)
-        
-        # Adjust L* slightly to counteract Bezold-Brücke shift
-        L = 60.0 + 5.0 * math.sin(2 * angle_rad)  # Varies L* by ±5 based on hue
-        
-        # Generate a* and b* values on a circle (for vivid colors)
-        chroma = 60.0  # High chroma for vivid colors
-        a = chroma * math.cos(angle_rad)
-        b = chroma * math.sin(angle_rad)
-        
-        # Convert CIELAB to RGB
-        rgb = lab_to_rgb(L, a, b)
-        colors.append(rgb)
-    
-    return colors
 
-def lab_to_rgb(l, a, b):
-    """Convert CIELAB color to RGB. L in [0, 100], a,b in [-128, 127], returns (r, g, b) in [0, 255]"""
-    # Convert LAB to XYZ
-    fy = (l + 16.0) / 116.0
-    fx = a / 500.0 + fy
-    fz = fy - b / 200.0
-    
-    # Convert to XYZ
-    def f_inv(t):
-        if t > 6.0/29.0:
-            return t ** 3
-        else:
-            return 3.0 * (6.0/29.0) ** 2 * (t - 4.0/29.0)
-    
-    # D65 white point
-    xn, yn, zn = 95.047, 100.0, 108.883
-    
-    x = xn * f_inv(fx)
-    y = yn * f_inv(fy) 
-    z = zn * f_inv(fz)
-    
-    # Convert XYZ to RGB (sRGB matrix)
-    r =  3.2406 * x - 1.5372 * y - 0.4986 * z
-    g = -0.9689 * x + 1.8758 * y + 0.0415 * z
-    b =  0.0557 * x - 0.2040 * y + 1.0570 * z
-    
-    # Gamma correction
-    def gamma_correct(c):
-        if c <= 0.0031308:
-            return 12.92 * c
-        else:
-            return 1.055 * (c ** (1.0/2.4)) - 0.055
-    
-    r = gamma_correct(r / 100.0)
-    g = gamma_correct(g / 100.0)
-    b = gamma_correct(b / 100.0)
-    
-    # Clamp to [0, 1] and convert to [0, 255]
-    r = max(0, min(1, r))
-    g = max(0, min(1, g))
-    b = max(0, min(1, b))
-    
-    return (int(r * 255), int(g * 255), int(b * 255))
-
-
-def optimize_color_distances(colors, num_colors):
-    """
-    Optimize color selection for maximum perceptual distance.
-    Uses a simplified LAB color distance approximation.
-    Avoids red hues (0-60° and 300-360°).
-    """
-    if num_colors <= 8:
-        return colors
-    
-    # Start with evenly distributed colors in HSV space
-    optimized = []
-    
-    # Define primary anchors for better distribution (no red colors)
-    anchors = [
-        (0, 255, 0),      # Green
-        (0, 0, 255),      # Blue
-        (255, 255, 0),    # Yellow
-        (255, 0, 255),    # Magenta
-        (0, 255, 255),    # Cyan
-        (255, 128, 0),    # Orange
-        (128, 0, 255),    # Purple
-        (0, 128, 0),      # Dark Green
-        (0, 0, 128),      # Navy
-        (255, 192, 203),  # Pink
-        (165, 42, 42),    # Brown
-        (255, 215, 0),    # Gold
-        (75, 0, 130),     # Indigo
-    ]
-    
-    # Use anchors first if we need them
-    if num_colors <= len(anchors):
-        # Pick the most distinct anchors
-        step = len(anchors) / float(num_colors)
-        for i in range(num_colors):
-            idx = int(i * step)
-            optimized.append(anchors[idx])
-    else:
-        # Use all anchors and generate more
-        optimized = list(anchors)
-        
-        # Generate additional colors
-        while len(optimized) < num_colors:
-            best_color = None
-            best_min_dist = 0
-            
-            # Try several random colors and pick the one with max min distance
-            for _ in range(20):
-                # Generate a random color with good saturation, avoiding red hues
-                import random
-                # Generate hue in allowed range (60° to 300°)
-                allowed_hue_range = 240.0 / 360.0  # 0.667
-                start_hue = 60.0 / 360.0  # 0.167
-                h = start_hue + random.random() * allowed_hue_range
-                
-                s = 0.6 + random.random() * 0.4
-                l = 0.3 + random.random() * 0.4
-                # Convert hue to CIELAB a*b* coordinates
-                angle_rad = math.radians(h * 360.0)
-                chroma = 60.0
-                a = chroma * math.cos(angle_rad) 
-                b = chroma * math.sin(angle_rad)
-                candidate = lab_to_rgb(60.0, a, b)
-                
-                # Calculate minimum distance to existing colors
-                min_dist = float('inf')
-                for existing in optimized:
-                    dist = color_distance(candidate, existing)
-                    if dist < min_dist:
-                        min_dist = dist
-                
-                if min_dist > best_min_dist:
-                    best_min_dist = min_dist
-                    best_color = candidate
-            
-            if best_color:
-                optimized.append(best_color)
-    
-    return optimized[:num_colors]
-
-def color_distance(c1, c2):
-    """
-    Calculate perceptual color distance using weighted Euclidean distance.
-    This is a simplified approximation of LAB color distance.
-    """
-    r1, g1, b1 = c1
-    r2, g2, b2 = c2
-    
-    # Weight factors for perceptual difference
-    # Human eye is more sensitive to green, less to blue
-    dr = (r1 - r2) * 0.30
-    dg = (g1 - g2) * 0.59
-    db = (b1 - b2) * 0.11
-    
-    return math.sqrt(dr*dr + dg*dg + db*db)
 
 # -----------------------------------------------------------------------------
 # 2) Panel discovery
@@ -290,6 +163,22 @@ def get_all_panel_names(doc):
 # -----------------------------------------------------------------------------
 # 3) Filter creation (ONE filter per panel, OR across category-scoped rules)
 # -----------------------------------------------------------------------------
+def _param_element_id_for_shared_name(doc, exact_name):
+    try:
+        for pe in DB.FilteredElementCollector(doc).OfClass(DB.ParameterElement):
+            nm = None
+            try:
+                nm = pe.Name
+            except Exception:
+                d = pe.GetDefinition()
+                if d:
+                    nm = d.Name
+            if nm and nm == exact_name:
+                return pe.Id
+    except Exception:
+        pass
+    return None
+
 def rect_curveloops(x, y, w, h):
     p0 = DB.XYZ(x,     y,     0.0)
     p1 = DB.XYZ(x + w, y,     0.0)
@@ -414,13 +303,14 @@ def activate_temp_view_mode(view, template):
     try:
         if view.IsTemporaryViewPropertiesModeEnabled():
             view.DisableTemporaryViewMode(DB.TemporaryViewMode.TemporaryViewProperties)
+        #view.ViewTemplateId = DB.ElementId.InvalidElementId  # Clear existing
         view.EnableTemporaryViewPropertiesMode(template.Id)
         logger.debug("Activated temporary view mode with template: {}".format(template.Name))
     except Exception as ex:
         logger.debug("Failed to activate temporary view mode: {}".format(ex))
 
 
-def build_overrides(color_tuple, use_halftone, solid_fill_pattern_id):
+def build_overrides(color_tuple, use_halftone, solid_fill_pattern_id, lineweight=None):
     r, g, b = color_tuple
     col = _rgb(r, g, b)
     ogs = DB.OverrideGraphicSettings()
@@ -429,7 +319,6 @@ def build_overrides(color_tuple, use_halftone, solid_fill_pattern_id):
     except Exception:
         pass
     try:
-        # if these APIs exist in your version, great; otherwise color still comes via lines
         ogs.SetSurfaceForegroundPatternId(solid_fill_pattern_id)
         ogs.SetSurfaceForegroundPatternColor(col)
     except Exception:
@@ -438,7 +327,13 @@ def build_overrides(color_tuple, use_halftone, solid_fill_pattern_id):
         ogs.SetHalftone(bool(use_halftone))
     except Exception:
         pass
+    if lineweight is not None:
+        try:
+            ogs.SetProjectionLineWeight(lineweight)
+        except Exception:
+            pass
     return ogs
+
 
 
 # -----------------------------------------------------------------------------
@@ -569,61 +464,70 @@ def create_or_update_legend_drafting_view(legend_view, color_map, template, fr_t
 
 
 
-
 def create_or_update_panel_filter_logical_or(panel_name):
-    """Creates or updates a ParameterFilterElement with a Logical OR of per-category ElementParameterFilters."""
-    logger.debug("Building filter: Panel Checker - {0}".format(panel_name))
-    filter_name = "Panel Checker - {0}".format(panel_name)
+    """Creates or updates a ParameterFilterElement with a Logical OR of per-category ElementParameterFilters.
+       Special handling: if panel_name == "__NO_PANEL__", then:
+         - Electrical Equipment: Supply From == ""
+         - Fixtures/Devices: Panel == ""
+         - Detail Items: Comments == "__NO PANEL__"
+    """
+    is_no_panel = (panel_name == NO_PANEL_FLAG)
+    filter_label = "No Panel" if is_no_panel else panel_name
+    filter_name = "Panel Checker - {0}".format(filter_label)
+    logger.debug("Building filter: {0}".format(filter_name))
 
-    # Categories and their corresponding parameter BIP for string match
-    category_param_map = {
-        DB.BuiltInCategory.OST_DetailComponents: DB.BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS,
-        DB.BuiltInCategory.OST_ElectricalEquipment: DB.BuiltInParameter.RBS_ELEC_PANEL_NAME,
-        DB.BuiltInCategory.OST_ElectricalFixtures: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
-        DB.BuiltInCategory.OST_DataDevices: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
-        DB.BuiltInCategory.OST_FireAlarmDevices: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
-        DB.BuiltInCategory.OST_LightingDevices: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
-        DB.BuiltInCategory.OST_LightingFixtures: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
-        DB.BuiltInCategory.OST_MechanicalControlDevices: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
-        DB.BuiltInCategory.OST_SecurityDevices: DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
-    }
 
-    # Collect valid filters
     or_filters = []
     cat_ids = []
 
-    for bic, bip in category_param_map.items():
+    for bic, bip in POWER_FIXTURE_EQUIP.items():
         try:
             cat = doc.Settings.Categories.get_Item(bic)
+            if not cat:
+                continue
             cat_id = cat.Id
             cat_ids.append(cat_id)
 
-            # Build FilterCategoryRule with correct collection
+            # --- Special case handling ---
+            if is_no_panel:
+                if bic == DB.BuiltInCategory.OST_ElectricalEquipment:
+                    bip = DB.BuiltInParameter.RBS_ELEC_PANEL_SUPPLY_FROM_PARAM
+                    match_val = ""
+                elif bic == DB.BuiltInCategory.OST_DetailComponents:
+                    match_val = NO_PANEL_FLAG
+                else:
+                    match_val = ""
+            else:
+                # Normal case: match panel name
+                match_val = panel_name
+
+            # Build rules (same style as before)
             cat_rule = DB.FilterCategoryRule(List[DB.ElementId]([cat_id]))
             val_rule = DB.FilterStringRule(
                 DB.ParameterValueProvider(DB.ElementId(bip)),
                 DB.FilterStringEquals(),
-                panel_name,
+                match_val,
             )
             filter_rules = List[DB.FilterRule]([cat_rule, val_rule])
             epf = DB.ElementParameterFilter(filter_rules)
 
             or_filters.append(epf)
             logger.debug("Added rule for category: {0}".format(bic.ToString()))
+
         except Exception as ex:
             logger.debug("Failed to build rule for category {0}: {1}".format(bic.ToString(), ex))
 
     if not or_filters:
-        logger.debug("No valid filters for panel '{0}'".format(panel_name))
+        logger.debug("No valid filters for panel '{0}'".format(filter_label))
         return None
 
     try:
         final_filter = DB.LogicalOrFilter(List[DB.ElementFilter](or_filters))
     except Exception as ex:
-        logger.debug("Failed to create LogicalOrFilter for panel '{0}': {1}".format(panel_name, ex))
+        logger.debug("Failed to create LogicalOrFilter for panel '{0}': {1}".format(filter_label, ex))
         return None
 
-    # Look for existing ParameterFilterElement
+    # Reuse or create filter element
     existing = None
     for pfe in DB.FilteredElementCollector(doc).OfClass(DB.ParameterFilterElement):
         if pfe.Name == filter_name:
@@ -644,6 +548,7 @@ def create_or_update_panel_filter_logical_or(panel_name):
     except Exception as ex:
         logger.debug("Failed to create or update filter '{0}': {1}".format(filter_name, ex))
         return None
+
 
 
 
@@ -669,29 +574,9 @@ def main():
         return
 
     include_set = set(selection)
+    include_set.add(NO_PANEL_FLAG)
     solid_id = get_solid_fill_pattern_id(doc)
 
-    # MODIFIED: Generate maximally contrasting colors based on selection count
-    selected_count = len(selection)
-    logger.debug("Generating {0} maximally contrasting colors for selected panels".format(selected_count))
-    
-    try:
-        contrast_colors = generate_max_contrast_colors(selected_count)
-        logger.debug("Successfully generated {0} contrasting colors".format(len(contrast_colors)))
-    except Exception as ex:
-        logger.debug("Failed to generate contrasting colors: {0}. Using fallback palette.".format(ex))
-        contrast_colors = COLOR_PALETTE[:selected_count]
-    
-    # Create mapping of panel names to colors
-    selected_panels = sorted(list(include_set))
-    panel_color_map = {}
-    for i, panel in enumerate(selected_panels):
-        if i < len(contrast_colors):
-            panel_color_map[panel] = contrast_colors[i]
-        else:
-            # Fallback if we somehow don't have enough colors
-            panel_color_map[panel] = COLOR_PALETTE[i % len(COLOR_PALETTE)]
-    
     template = None
     legend_view = None
     color_map = {}
@@ -702,19 +587,34 @@ def main():
 
         with DB.Transaction(doc, "Create/Update Filters") as tx1:
             tx1.Start()
+            color_index = 0  # counter for included panels
+
+            # --- Normal panels ---
             for pn in all_panels:
-                # Use the generated contrasting color if panel is selected, otherwise grey
                 if pn in include_set:
-                    rgb = panel_color_map[pn]
+                    rgb = COLOR_PALETTE[color_index % len(COLOR_PALETTE)]
+                    color_index += 1
+                    use_halftone = False
                 else:
                     rgb = GREY
-                    
+                    use_halftone = True
+
                 color_map[pn] = rgb
                 pfe = create_or_update_panel_filter_logical_or(pn)
                 if pfe:
-                    use_halftone = pn not in include_set
                     ogs = build_overrides(rgb, use_halftone, solid_id)
                     filter_override_data.append((pfe, ogs))
+
+            # --- Special "No Panel" filter ---
+            if NO_PANEL_FLAG in include_set:
+                rgb = RED
+                use_halftone = False
+                color_map[NO_PANEL_FLAG] = rgb
+                pfe = create_or_update_panel_filter_logical_or(NO_PANEL_FLAG)
+                if pfe:
+                    ogs = build_overrides(rgb, use_halftone, solid_id, lineweight=8)
+                    filter_override_data.append((pfe, ogs))
+
             tx1.Commit()
 
         with DB.Transaction(doc, "View Template Setup") as tx2:
@@ -730,7 +630,7 @@ def main():
             legend_view = get_or_create_drafting_view(LEGEND_VIEW_NAME, 48, template)
             tx21.Commit()
 
-        with DB.Transaction(doc, "Legend Creation") as tx3:
+        with DB.Transaction(doc, "Legend Creation2") as tx3:
             tx3.Start()
             # Before calling legend view function
             fr_type = get_filled_region_type("PanelChecker - Solid Fill")
