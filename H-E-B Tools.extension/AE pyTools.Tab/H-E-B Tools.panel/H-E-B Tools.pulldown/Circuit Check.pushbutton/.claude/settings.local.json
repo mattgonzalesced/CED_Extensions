@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:www.revitapidocs.com)",
+      "WebFetch(domain:forums.autodesk.com)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

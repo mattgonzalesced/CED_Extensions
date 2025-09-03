@@ -18,65 +18,6 @@ from Autodesk.Revit.DB import (
     ElementParameterFilter, ParameterFilterElement,
     OverrideGraphicSettings, Color
 )
-def activate_temp_view_mode(view):
-    try:
-        print("View type: {}".format(view.ViewType))
-        
-        # Check if view can enable temporary mode
-        can_enable = view.CanEnableTemporaryViewPropertiesMode()
-        print("Can enable temporary view properties mode: {}".format(can_enable))
-        
-        if not can_enable:
-            print("View cannot enable temporary view properties mode in current state")
-            return False
-        
-        is_enabled = view.IsTemporaryViewPropertiesModeEnabled()
-        print("Temporary view properties mode enabled: {}".format(is_enabled))
-        
-        if not is_enabled:
-            # Check if view has existing template
-            current_template_id = view.ViewTemplateId
-            print("Current view template ID: {}".format(current_template_id))
-            
-            # Try different approaches based on whether view has template
-            if current_template_id and current_template_id != DB.ElementId.InvalidElementId:
-                print("Enabling temp mode with current template ID: {}".format(current_template_id))
-                view.EnableTemporaryViewPropertiesMode(current_template_id)
-            else:
-                # Try to find any view template to use
-                print("No current template - searching for available templates...")
-                templates = FilteredElementCollector(doc).OfClass(DB.View).ToElements()
-                templates = [t for t in templates if t.IsTemplate and t.ViewType == view.ViewType]
-                
-                if templates:
-                    print("Found {} templates for view type {}".format(len(templates), view.ViewType))
-                    template_id = templates[0].Id
-                    print("Using template: {} (ID: {})".format(templates[0].Name, template_id))
-                    view.EnableTemporaryViewPropertiesMode(template_id)
-                else:
-                    print("No templates found - trying with InvalidElementId")
-                    view.EnableTemporaryViewPropertiesMode(DB.ElementId.InvalidElementId)
-            
-            print("EnableTemporaryViewPropertiesMode() call completed")
-            
-            # Check if it worked
-            final_status = view.IsTemporaryViewPropertiesModeEnabled()
-            print("Final status: {}".format(final_status))
-            
-            if final_status:
-                print("Successfully activated temporary view properties mode")
-                return True
-            else:
-                print("Failed to activate - status unchanged")
-                return False
-        else:
-            print("Temporary view properties mode already active")
-            return True
-            
-    except Exception as ex:
-        print("Failed to activate temporary view properties mode: {}".format(ex))
-        print("Full traceback: {}".format(traceback.format_exc()))
-        return False
 
 # -- Small UI helper ------------------------------------------------
 try:
@@ -171,9 +112,6 @@ GREEN = Color(60, 200, 60)
 t = Transaction(doc, "Toggle Fixture Check")
 try:
     t.Start()
-
-    # Activate temporary view properties mode if not already active
-    activate_temp_view_mode(view)
 
     # 1) make sure filters exist & attached (ensure_filter now disables new ones)
     fid_unc = ensure_filter(UNC_NAME, rl_empty,  cats)
