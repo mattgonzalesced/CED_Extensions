@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 
-from pyrevit import DB, script, forms, revit
+import Autodesk.Revit.DB.Electrical as DBE
 from System import Guid
-from CEDElectrical.refdata.shared_params_table import SHARED_PARAMS
-from CEDElectrical.refdata.egc_table import EGC_TABLE
+from pyrevit import DB, script, revit
+
 from CEDElectrical.refdata.ampacity_table import WIRE_AMPACITY_TABLE
 from CEDElectrical.refdata.conductor_area_table import CONDUCTOR_AREA_TABLE
 from CEDElectrical.refdata.conduit_area_table import CONDUIT_AREA_TABLE, CONDUIT_SIZE_INDEX
+from CEDElectrical.refdata.egc_table import EGC_TABLE
 from CEDElectrical.refdata.impedance_table import WIRE_IMPEDANCE_TABLE
 from CEDElectrical.refdata.ocp_cable_defaults import OCP_CABLE_DEFAULTS
+from CEDElectrical.refdata.shared_params_table import SHARED_PARAMS
 from CEDElectrical.refdata.standard_ocp_table import BREAKER_FRAME_SWITCH_TABLE
-import Autodesk.Revit.DB.Electrical as DBE
-
-
-
 
 console = script.get_output()
 logger = script.get_logger()
@@ -26,6 +24,9 @@ PART_TYPE_MAP = {
     18: "Equipment Switch"
 }
 
+# TODO: make sure circuit settings is set up correctly for use in the circuit branch class. these settings
+#  should apply to every instance of circuit branch, so we need to make sure we're efficient and not recreating
+#  data unnecessarily.
 
 class CircuitSettings(object):
     def __init__(self):
@@ -81,12 +82,12 @@ class CircuitBranch(object):
         self._wire_temp_rating_override = None
         self._wire_insulation_override = None
         self._wire_hot_size_override = None
+        self._wire_neutral_size_override = None
         self._wire_ground_size_override = None
         self._conduit_type_override = None
         self._conduit_size_override = None
         self._get_user_overrides()
         self._max_single_wire_size = '500'  # Max size before parallel sets
-
 
         # Calculated values (set by calculation methods)
         self._calculated_breaker = None
@@ -171,6 +172,7 @@ class CircuitBranch(object):
         else:
             return self.settings.max_branch_voltage_drop
 
+
     @property
     def wire_info(self):
         if not self.is_power_circuit:
@@ -203,7 +205,8 @@ class CircuitBranch(object):
         return self._wire_info
 
     # ----------- Circuit Properties -----------
-
+    # TODO: need debug loggers in these try except blocks. this applies to many methods and properties
+    #  we need clear understanding of what fails and we need to determine how to handle failures
     @property
     def load_name(self):
         try:
@@ -328,11 +331,14 @@ class CircuitBranch(object):
             self._breaker_override = self._get_param_value(SHARED_PARAMS['CKT_Rating_CED']['GUID'])
             self._wire_sets_override = self._get_param_value(SHARED_PARAMS['CKT_Number of Sets_CED']['GUID'])
             self._wire_hot_size_override = self._get_param_value(SHARED_PARAMS['CKT_Wire Hot Size_CEDT']['GUID'])
+            self._wire_neutral_size_override = self._get_param_value(
+                SHARED_PARAMS['CKT_Wire Neutral Size_CEDT']['GUID'])
             self._wire_ground_size_override = self._get_param_value(SHARED_PARAMS['CKT_Wire Ground Size_CEDT']['GUID'])
             self._conduit_type_override = self._get_param_value(SHARED_PARAMS['Conduit Type_CEDT']['GUID'])
             self._conduit_size_override = self._get_param_value(SHARED_PARAMS['Conduit Size_CEDT']['GUID'])
             self._wire_material_override = self._get_param_value(SHARED_PARAMS['Wire Material_CEDT']['GUID'])
-            self._wire_temp_rating_override = self._get_param_value(SHARED_PARAMS['Wire Temperature Rating_CEDT']['GUID'])
+            self._wire_temp_rating_override = self._get_param_value(
+                SHARED_PARAMS['Wire Temperature Rating_CEDT']['GUID'])
             self._wire_insulation_override = self._get_param_value(SHARED_PARAMS['Wire Insulation_CEDT']['GUID'])
             logger.debug("got overrides")
         except Exception as e:
@@ -354,7 +360,6 @@ class CircuitBranch(object):
         else:
             return self._calculated_breaker
 
-
     @property
     def wire_material(self):
         if self._wire_material_override:
@@ -367,18 +372,17 @@ class CircuitBranch(object):
             return self._wire_temp_rating_override
         return self._wire_info.get('wire_temperature_rating')
 
-
     @property
     def wire_insulation(self):
         if self._wire_insulation_override:
             return self._wire_insulation_override
         return self._wire_info.get('wire_insulation')
 
-    @property
-    def wire_hot_size(self):
-        if self._wire_hot_size_override:
-            return self._wire_hot_size_override
-        return self._wire_info.get('wire_hot_size')
+    # @property
+    # def wire_hot_size(self):
+    #     if self._wire_hot_size_override:
+    #         return self._wire_hot_size_override
+    #     return self._wire_info.get('wire_hot_size')
 
     @property
     def hot_wire_quantity(self):
@@ -445,6 +449,16 @@ class CircuitBranch(object):
     def neutral_wire_size(self):
         if self.neutral_wire_quantity == 0:
             return ""
+
+        if self._auto_calculate_override:
+            if self._wire_neutral_size_override is not None:
+                raw = self._wire_neutral_size_override
+            else:
+                return self.hot_wire_size
+
+            size = self._normalize_wire_size(raw)
+            if size and self.settings.wire_size_prefix:
+                return "{}{}".format(self.settings.wire_size_prefix, size)
         return self.hot_wire_size
 
     @property
@@ -633,7 +647,7 @@ class CircuitBranch(object):
             calc_hot = self._calculated_hot_wire
             calc_sets = self._calculated_wire_sets
             material = self.wire_material
-            logger.debug("hot: {}, gnd: {}, calc hot: {}".format(base_hot,base_ground,calc_hot))
+            logger.debug("hot: {}, gnd: {}, calc hot: {}".format(base_hot, base_ground, calc_hot))
             # If base_ground is missing, fallback to EGC lookup
             if not base_ground:
                 egc_list = EGC_TABLE.get(material)
@@ -646,7 +660,8 @@ class CircuitBranch(object):
                     # amps > all table entries
                     fallback = egc_list[-1][1]
                     logger.warning(
-                        "{}: Breaker rating {}A exceeds EGC table. Using max ground size: {}".format(self.name,amps, fallback))
+                        "{}: Breaker rating {}A exceeds EGC table. Using max ground size: {}".format(self.name, amps,
+                                                                                                     fallback))
                     self._calculated_ground_wire = fallback
                     return
                 else:
@@ -728,13 +743,12 @@ class CircuitBranch(object):
 
             impedance = WIRE_IMPEDANCE_TABLE.get(wire_size)
             if not impedance:
-                logger.debug("{}: no impedance found for wire size {}".format(self.name,wire_size))
+                logger.debug("{}: no impedance found for wire size {}".format(self.name, wire_size))
                 return None
 
             R = impedance['R'].get(material, {}).get(conduit_material)
             X = impedance['X'].get(conduit_material)
             if R is None or X is None:
-
                 return None
 
             R = R / sets
@@ -852,7 +866,7 @@ class CircuitBranch(object):
                 self._calculated_conduit_fill = round(total_area / area, 5)  # ⚠️ decimal, not percent
                 return
 
-        logger.warning("{}: No conduit size found that fits total area {:.4f}".format(self.name,total_area))
+        logger.warning("{}: No conduit size found that fits total area {:.4f}".format(self.name, total_area))
 
     def calculate_conduit_fill_percentage(self):
         conduit_formatted = self._conduit_size_override if self._auto_calculate_override else self._calculated_conduit_size
@@ -875,7 +889,8 @@ class CircuitBranch(object):
             (self._normalize_wire_size(self.ground_wire_size), self.ground_wire_quantity),
             (self._normalize_wire_size(self.isolated_ground_wire_size), self.isolated_ground_wire_quantity)
         ]
-
+        # TODO: need to build protections in for sizes that are NOT found! need to decide if this should happen here
+        #  or in the wire size attributes
         total_area = sum(
             CONDUCTOR_AREA_TABLE[size]['area'][insulation] * qty
             for size, qty in sizes_and_qtys
@@ -884,6 +899,10 @@ class CircuitBranch(object):
 
         return round(total_area / conduit_area, 5)  # ⚠️ keep as decimal
 
+    # TODO: need to handle cases where the Neutral does NOT equal hot. it needs to be
+    #  a separate chunk, cant just be number of wires.
+    #  example if 3 hots and 1 neutral, and hot_size = neutral_size: 4#12
+    #  example if 3 hots and 1 neutral, and hot_size not = neutral_size: 3#12H + 1#10N
     def get_wire_set_string(self):
         wp = self.settings.wire_size_prefix or ''
         parts = []

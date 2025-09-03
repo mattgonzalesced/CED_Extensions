@@ -2,6 +2,8 @@ import re
 
 from pyrevit import DB, script, forms
 
+from CEDElectrical.refdata.standard_ocp_table import BREAKER_FRAME_SWITCH_TABLE
+
 logger = script.get_logger()
 output = script.get_output()
 
@@ -13,6 +15,20 @@ device_critical = []
 circuit_critical = []
 equipment_critical = []
 
+# Prepare standard breaker size set
+STANDARD_BREAKER_SIZES = set()
+for val in BREAKER_FRAME_SWITCH_TABLE.keys():
+    try:
+        STANDARD_BREAKER_SIZES.add(float(val))
+    except Exception:
+        continue
+
+# Helper: check if a value is close to any allowed size (0.001 A tolerance)
+def is_standard_rating(value, standard_set, tolerance=0.001):
+    for std in standard_set:
+        if abs(value - std) <= tolerance:
+            return True
+    return False
 
 
 # Regular expression to extract the VA value from the RBS_ELECTRICAL_DATA parameter
@@ -176,6 +192,38 @@ for circuit in circuits_collector:
                 load_name,
                 "Load on Circuit %s is Zero" % panel_circuit
             ])
+
+        # Check: breaker rating must match a known standard
+        if circuit_rating is not None and STANDARD_BREAKER_SIZES:
+            if not is_standard_rating(circuit_rating, STANDARD_BREAKER_SIZES):
+                sorted_standards = sorted(STANDARD_BREAKER_SIZES)
+                lower = None
+                upper = None
+
+                for std in sorted_standards:
+                    if std < circuit_rating:
+                        lower = std
+                    elif std >= circuit_rating:
+                        upper = std
+                        break
+
+                msg_parts = ["Breaker rating ({:.2f} A) is non-standard".format(circuit_rating)]
+                if lower is not None:
+                    msg_parts.append(
+                        "next lowest: {} A".format(int(lower) if lower == int(lower) else "{:.2f}".format(lower)))
+                if upper is not None:
+                    msg_parts.append(
+                        "next highest: {} A".format(int(upper) if upper == int(upper) else "{:.2f}".format(upper)))
+
+                circuit_critical.append([
+                    output.linkify(circuit.Id),
+                    panel_circuit,
+                    load_name,
+                    " ({})".format(", ".join(msg_parts))
+                ])
+
+
+
 
     except Exception as e:
         logger.error("Error checking circuit %s: %s" % (circuit.Id, str(e)))

@@ -23,17 +23,19 @@ COMMON_FIELDS = [
 ]
 
 REMOVE_FIELDS = ["Equipment Type_CEDT",
-    "Equipment Type ID_CEDT",
-    "Equipment ID_CEDT",
-    "Equipment Remarks_CEDT"]
+                 "Equipment Type ID_CEDT",
+                 "Equipment ID_CEDT",
+                 "Equipment Remarks_CEDT"]
 
-field_replacement_map  = {
-    "Equipment Type_CEDT":"Product Type",
-    "Equipment Type ID_CEDT":"Identity Type Mark",
-    "Equipment ID_CEDT":"Identity Mark",
-    "Equipment Remarks_CEDT":"Schedule Notes",
-    "Area Served_CEDT":"Area Served"
+field_replacement_map = {
+    "Equipment Type_CEDT": "Product Type",
+    "Equipment Type ID_CEDT": "Identity Type Mark",
+    "Equipment ID_CEDT": "Identity Mark",
+    "Equipment Remarks_CEDT": "Schedule Notes",
+    "Area Served_CEDT": "Area Served"
 }
+
+
 # ---------------------------------------------------
 # Collect all project parameters
 def get_all_project_params():
@@ -161,7 +163,9 @@ def replace_schedule_fields(schedules, field_replacement_map):
                             break
 
                     if not replacement_found:
-                        output.print_md("- ⚠️ Replacement field `{}` not found in `{}`. Skipping.".format(replacement_name, schedule.Name))
+                        output.print_md(
+                            "- ⚠️ Replacement field `{}` not found in `{}`. Skipping.".format(replacement_name,
+                                                                                              schedule.Name))
 
             # Remove fields only if matched
             for field_id in fields_to_remove_ids:
@@ -172,12 +176,14 @@ def replace_schedule_fields(schedules, field_replacement_map):
             # Reorder: Replace old names with new ones
             updated_order = []
             for name in original_order:
-                if name in field_replacement_map and field_replacement_map[name] in [get_schedulable_field_name(f) for f in fields_to_add]:
+                if name in field_replacement_map and field_replacement_map[name] in [get_schedulable_field_name(f) for f
+                                                                                     in fields_to_add]:
                     updated_order.append(field_replacement_map[name])
                 elif name not in field_replacement_map.keys():
                     updated_order.append(name)
 
             reorder_fields_by_name(definition, updated_order)
+
 
 def add_filter_to_schedule(schedule, parameter_name, filter_type, value, insert_on_top=False):
     definition = schedule.Definition
@@ -397,20 +403,103 @@ def pick_schedulable_fields_from_schedules(schedules):
     return [field_map[name] for name in selected_names]
 
 
-def main():
+def get_schedulable_instance_fields_from_category(category):
+    """Returns schedulable instance fields from a given category."""
+    schedulable_fields = []
+    with revit.Transaction("Get Schedulable Fields from Category"):
+        temp_schedule = DB.ViewSchedule.CreateSchedule(doc, category.Id)
+        schedulable_fields = temp_schedule.Definition.GetSchedulableFields()
+        doc.Delete(temp_schedule.Id)
 
-    selected_schedules = forms.select_schedules(title="Pick schedules to replace fields", multiple=True)
-    if not selected_schedules:
-        forms.alert("No schedules selected.")
+    return {
+        f.ParameterId.Value: f
+        for f in schedulable_fields
+        if f.FieldType == DB.ScheduleFieldType.Instance
+    }
+
+def main():
+    source_schedule = forms.select_schedules(title="Select Source Schedule (Mechanical)", multiple=False)
+    if not source_schedule:
+        forms.alert("No source schedule selected.")
         return
 
-    with revit.Transaction("Replace Fields in Schedules"):
+    plumbing_category = DB.Category.GetCategory(doc, DB.BuiltInCategory.OST_PlumbingEquipment)
+    if not plumbing_category:
+        forms.alert("Plumbing Equipment category not found.")
+        return
 
-        field_replacement_map = {
-            "Equipment Requires Power_CED": "Power Connection Required",
-        }
+    source_def = source_schedule.Definition
+    source_fields = source_def.GetFieldOrder()
+    plumbing_schedulable = get_schedulable_instance_fields_from_category(plumbing_category)
 
-        replace_schedule_fields(selected_schedules,field_replacement_map)
-    forms.alert("Field replacements complete.")
+    # Also include space-based fields
+    space_category = DB.Category.GetCategory(doc, DB.BuiltInCategory.OST_MEPSpaces)
+    space_schedulable = get_schedulable_instance_fields_from_category(space_category)
+
+    combined_schedulables = plumbing_schedulable.copy()
+    combined_schedulables.update(space_schedulable)
+
+    field_map = {}  # {field name: (schedulable field, is_hidden)}
+    skipped_fields = []
+
+    for field_id in source_fields:
+        source_field = source_def.GetField(field_id)
+        if not source_field:
+            continue
+        field_name = source_field.GetName()
+        is_hidden = source_field.IsHidden
+
+        match = None
+        for schedulable in combined_schedulables.values():
+            if get_schedulable_field_name(schedulable) == field_name:
+                match = schedulable
+                break
+
+        if match:
+            field_map[field_name] = (match, is_hidden)
+        else:
+            skipped_fields.append(field_name)
+
+    with revit.Transaction("Duplicate Schedule to Plumbing"):
+        new_schedule = DB.ViewSchedule.CreateSchedule(doc, plumbing_category.Id)
+        new_schedule.Name = "PE_{}".format(source_schedule.Name)
+        new_def = new_schedule.Definition
+
+        added_field_ids = []
+        for field_id in source_def.GetFieldOrder():
+            source_field = source_def.GetField(field_id)
+            if not source_field:
+                continue
+            field_name = source_field.GetName()
+            if field_name in field_map:
+                schedulable_field, is_hidden = field_map[field_name]
+                try:
+                    new_field = new_def.AddField(schedulable_field)
+                    new_def.GetField(new_field.FieldId).IsHidden = is_hidden
+                    added_field_ids.append(new_field.FieldId)
+                except:
+                    skipped_fields.append(field_name)
+
+        new_def.SetFieldOrder(added_field_ids)
+
+        for filt in source_def.GetFilters():
+            try:
+                new_def.InsertFilter(filt, len(new_def.GetFilters()))
+            except:
+                output.print_md("- ⚠️ Could not copy filter: `{}`".format(filt))
+
+        for i in range(source_def.GetSortGroupFieldCount()):
+            try:
+                sort_data = source_def.GetSortGroupField(i)
+                new_def.SetSortGroupField(i, sort_data)
+            except:
+                pass
+
+    output.print_md("# ✅ Plumbing Schedule Created: `{}`".format(new_schedule.Name))
+    if skipped_fields:
+        output.print_md("## ⚠️ Fields Skipped (Not Available in Plumbing or Space Category):")
+        for name in skipped_fields:
+            output.print_md("- `{}`".format(name))
+
 if __name__ == '__main__':
     main()
