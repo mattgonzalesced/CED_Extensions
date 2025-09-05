@@ -441,9 +441,8 @@ def create_or_update_legend_drafting_view(legend_view, color_map, template, fr_t
 
     width, height, spacing, text_dx = 1.0, 0.5, 1.0, 1.0
 
-    total_items = len(color_map)
     for idx, (panel_name, rgb) in enumerate(color_map):
-        x, y = 0.0, (total_items - 1 - idx) * spacing
+        x, y = 0.0, idx * spacing
         loops = rect_curveloops(x, y, width, height)
 
         try:
@@ -590,16 +589,6 @@ def main():
             tx1.Start()
             color_index = 0  # counter for included panels
 
-            # --- Special "No Panel" filter FIRST for top priority ---
-            if NO_PANEL_FLAG in include_set:
-                rgb = RED
-                use_halftone = False
-                color_map[NO_PANEL_FLAG] = rgb
-                pfe = create_or_update_panel_filter_logical_or(NO_PANEL_FLAG)
-                if pfe:
-                    ogs = build_overrides(rgb, use_halftone, solid_id, lineweight=8)
-                    filter_override_data.append((pfe, ogs))
-
             # --- Normal panels ---
             for pn in all_panels:
                 if pn in include_set:
@@ -614,6 +603,16 @@ def main():
                 pfe = create_or_update_panel_filter_logical_or(pn)
                 if pfe:
                     ogs = build_overrides(rgb, use_halftone, solid_id)
+                    filter_override_data.append((pfe, ogs))
+
+            # --- Special "No Panel" filter ---
+            if NO_PANEL_FLAG in include_set:
+                rgb = RED
+                use_halftone = False
+                color_map[NO_PANEL_FLAG] = rgb
+                pfe = create_or_update_panel_filter_logical_or(NO_PANEL_FLAG)
+                if pfe:
+                    ogs = build_overrides(rgb, use_halftone, solid_id, lineweight=8)
                     filter_override_data.append((pfe, ogs))
 
             tx1.Commit()
@@ -639,18 +638,7 @@ def main():
             if not fr_type:
                 logger.debug("No filled region type could be created.")
                 return
-            # Sort color_map alphabetically, but keep "__NO PANEL__" at the top
-            sorted_items = []
-            # Add NO_PANEL_FLAG at the beginning if it exists
-            if NO_PANEL_FLAG in color_map:
-                sorted_items.append((NO_PANEL_FLAG, color_map[NO_PANEL_FLAG]))
-            # Then add all other panels sorted alphabetically
-            sorted_items.extend(sorted(
-                [(k, v) for k, v in color_map.items() if k != NO_PANEL_FLAG],
-                key=lambda x: x[0].lower()
-            ))
-            
-            create_or_update_legend_drafting_view(legend_view, sorted_items, template, fr_type)
+            create_or_update_legend_drafting_view(legend_view, list(color_map.items()), template, fr_type)
 
             tx3.Commit()
 
