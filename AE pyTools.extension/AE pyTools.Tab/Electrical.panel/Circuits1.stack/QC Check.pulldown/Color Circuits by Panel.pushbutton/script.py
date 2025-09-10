@@ -15,7 +15,7 @@ doc = revit.doc
 # -----------------------------------------------------------------------------
 # 0) Constants
 # -----------------------------------------------------------------------------
-FILTER_PREFIX = "PanelChecker - {0} - {1}"      # part_type, panel_name
+FILTER_PREFIX = "PanelChecker - {0} - {1}"  # part_type, panel_name
 LEGEND_VIEW_NAME = "PanelChecker Legend"
 FILLED_REGION_TYPE_NAME = "PanelChecker - Solid Fill"
 VIEW_TEMPLATE_NAME = "E_PanelChecker View"
@@ -107,13 +107,15 @@ COLOR_PALETTE = [
 ]
 
 GREY = (160, 160, 160)
-RED = (255,0,0)
+RED = (255, 0, 0)
+
 
 # -----------------------------------------------------------------------------
 # 1) Small helpers
 # -----------------------------------------------------------------------------
 def _rgb(r, g, b):
     return DB.Color(bytearray([r])[0], bytearray([g])[0], bytearray([b])[0])
+
 
 def _as_sorted_unique(items):
     seen = set()
@@ -126,7 +128,6 @@ def _as_sorted_unique(items):
     return out
 
 
-
 # -----------------------------------------------------------------------------
 # 2) Panel discovery
 # -----------------------------------------------------------------------------
@@ -135,6 +136,7 @@ def get_electrical_equipment(doc):
                 .OfCategory(DB.BuiltInCategory.OST_ElectricalEquipment)
                 .WhereElementIsNotElementType())
 
+
 def get_all_panel_names(doc):
     names = []
     for eq in get_electrical_equipment(doc):
@@ -142,7 +144,7 @@ def get_all_panel_names(doc):
         try:
             ds = eq.LookupParameter("Distribution System")
             if ds is None or not ds.HasValue or not ds.AsElementId() \
-               or ds.AsElementId() == DB.ElementId.InvalidElementId:
+                    or ds.AsElementId() == DB.ElementId.InvalidElementId:
                 ok = False
         except Exception:
             ok = False
@@ -159,6 +161,7 @@ def get_all_panel_names(doc):
         if pn:
             names.append(pn.strip())
     return _as_sorted_unique(names)
+
 
 # -----------------------------------------------------------------------------
 # 3) Filter creation (ONE filter per panel, OR across category-scoped rules)
@@ -179,11 +182,12 @@ def _param_element_id_for_shared_name(doc, exact_name):
         pass
     return None
 
+
 def rect_curveloops(x, y, w, h):
-    p0 = DB.XYZ(x,     y,     0.0)
-    p1 = DB.XYZ(x + w, y,     0.0)
+    p0 = DB.XYZ(x, y, 0.0)
+    p1 = DB.XYZ(x + w, y, 0.0)
     p2 = DB.XYZ(x + w, y + h, 0.0)
-    p3 = DB.XYZ(x,     y + h, 0.0)
+    p3 = DB.XYZ(x, y + h, 0.0)
     loop = DB.CurveLoop()
     loop.Append(DB.Line.CreateBound(p0, p1))
     loop.Append(DB.Line.CreateBound(p1, p2))
@@ -192,6 +196,7 @@ def rect_curveloops(x, y, w, h):
     outer = List[DB.CurveLoop]()
     outer.Add(loop)
     return outer
+
 
 def get_or_create_filled_region_type(doc, type_name):
     for frt in DB.FilteredElementCollector(doc).OfClass(DB.FilledRegionType):
@@ -223,15 +228,11 @@ def pick_text_type():
             continue
     return preferred or fallback
 
+
 # -----------------------------------------------------------------------------
 # 4) Overrides + apply to a single view (no templates touched)
 # -----------------------------------------------------------------------------
-def get_or_create_view_template(template_name):
-    active_view = revit.active_view
-    if not isinstance(active_view, DB.ViewPlan) or active_view.ViewType != DB.ViewType.FloorPlan:
-        forms.alert("Active view must be a floor plan to create a view template.",script)
-        return None
-
+def get_or_create_view_template(template_name, active_view):
     # Check for existing template
     for v in DB.FilteredElementCollector(doc).OfClass(DB.View).WhereElementIsNotElementType():
         if v.IsTemplate and v.Name == template_name:
@@ -245,6 +246,7 @@ def get_or_create_view_template(template_name):
     except Exception as ex:
         logger.debug("Failed to create template from active view: {}".format(ex))
         return None
+
 
 def enforce_template_controls_only_filters(template_view):
     try:
@@ -299,11 +301,12 @@ def apply_filters_to_template(view_template, filter_override_data):
         except Exception as ex:
             logger.debug("Failed to apply filter '{0}' to template: {1}".format(pfe.Name, ex))
 
+
 def activate_temp_view_mode(view, template):
     try:
         if view.IsTemporaryViewPropertiesModeEnabled():
             view.DisableTemporaryViewMode(DB.TemporaryViewMode.TemporaryViewProperties)
-        #view.ViewTemplateId = DB.ElementId.InvalidElementId  # Clear existing
+        # view.ViewTemplateId = DB.ElementId.InvalidElementId  # Clear existing
         view.EnableTemporaryViewPropertiesMode(template.Id)
         logger.debug("Activated temporary view mode with template: {}".format(template.Name))
     except Exception as ex:
@@ -335,7 +338,6 @@ def build_overrides(color_tuple, use_halftone, solid_fill_pattern_id, lineweight
     return ogs
 
 
-
 # -----------------------------------------------------------------------------
 # 5) Legend view + filled regions (swatches)
 # -----------------------------------------------------------------------------
@@ -358,6 +360,7 @@ def get_filled_region_type(name):
         logger.debug("No FilledRegionType available in document.")
         return None
     return fr_type
+
 
 def get_filled_region_type_thisisbroken(name):
     for frt in DB.FilteredElementCollector(doc).OfClass(DB.FilledRegionType):
@@ -384,7 +387,6 @@ def get_filled_region_type_thisisbroken(name):
     return new_type
 
 
-
 def get_or_create_drafting_view(view_name, scale_int, template):
     legend_view = next((v for v in DB.FilteredElementCollector(doc).OfClass(DB.ViewDrafting)
                         if v.Name == view_name), None)
@@ -405,8 +407,8 @@ def get_or_create_drafting_view(view_name, scale_int, template):
     logger.debug("I CREATED A NEW DRAFTING VIEW!")
     return legend_view
 
-def create_or_update_legend_drafting_view(legend_view, color_map, template, fr_type):
 
+def create_or_update_legend_drafting_view(legend_view, color_map, template, fr_type):
     if not legend_view:
         logger.debug("Legend view creation failed.")
         return
@@ -431,13 +433,12 @@ def create_or_update_legend_drafting_view(legend_view, color_map, template, fr_t
 
     view_items = DB.FilteredElementCollector(doc, legend_view.Id)
     deletable_items = [el for el in view_items
-                       if isinstance(el,DB.FilledRegion) or isinstance(el,DB.TextNote)]
+                       if isinstance(el, DB.FilledRegion) or isinstance(el, DB.TextNote)]
     for el in deletable_items:
         try:
             doc.Delete(el.Id)
         except Exception as ex:
             logger.debug("Failed to delete element {}: {}".format(el.Id, ex))
-
 
     width, height, spacing, text_dx = 1.0, 0.5, 1.0, 1.0
 
@@ -463,7 +464,6 @@ def create_or_update_legend_drafting_view(legend_view, color_map, template, fr_t
             logger.debug("Failed to create text note for {}: {}".format(panel_name, ex))
 
 
-
 def create_or_update_panel_filter_logical_or(panel_name):
     """Creates or updates a ParameterFilterElement with a Logical OR of per-category ElementParameterFilters.
        Special handling: if panel_name == "__NO_PANEL__", then:
@@ -475,7 +475,6 @@ def create_or_update_panel_filter_logical_or(panel_name):
     filter_label = "No Panel" if is_no_panel else panel_name
     filter_name = "Panel Checker - {0}".format(filter_label)
     logger.debug("Building filter: {0}".format(filter_name))
-
 
     or_filters = []
     cat_ids = []
@@ -550,15 +549,14 @@ def create_or_update_panel_filter_logical_or(panel_name):
         return None
 
 
-
-
 # -----------------------------------------------------------------------------
 # 7) Main
 # -----------------------------------------------------------------------------
 def main():
+    print("WTF")
     active_view = revit.active_view
-    if not isinstance(active_view, DB.ViewPlan) or active_view.ViewType != DB.ViewType.FloorPlan:
-        forms.alert("Active view must be a floor plan to create a view template.",exitscript=True)
+    if not isinstance(active_view, DB.ViewPlan) or active_view.ViewType not in (DB.ViewType.FloorPlan, DB.ViewType.CeilingPlan):
+        forms.alert("Active view must be a floor plan or RCP to create a view template.", exitscript=True)
 
     all_panels = get_all_panel_names(doc)
     if not all_panels:
@@ -619,7 +617,7 @@ def main():
 
         with DB.Transaction(doc, "View Template Setup") as tx2:
             tx2.Start()
-            template = get_or_create_view_template(VIEW_TEMPLATE_NAME)
+            template = get_or_create_view_template(VIEW_TEMPLATE_NAME, active_view)
             if template:
                 enforce_template_controls_only_filters(template)
                 apply_filters_to_template(template, filter_override_data)
@@ -650,7 +648,9 @@ def main():
 
         tg.Assimilate()
 
-    forms.alert("Filters applied to view template '{0}'. View switched to Temporary Template Mode.".format(VIEW_TEMPLATE_NAME))
+    forms.alert(
+        "Filters applied to view template '{0}'. View switched to Temporary Template Mode.".format(VIEW_TEMPLATE_NAME))
+
 
 if __name__ == "__main__":
     try:
