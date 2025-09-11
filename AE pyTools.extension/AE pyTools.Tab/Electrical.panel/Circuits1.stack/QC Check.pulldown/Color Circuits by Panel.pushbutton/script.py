@@ -553,7 +553,6 @@ def create_or_update_panel_filter_logical_or(panel_name):
 # 7) Main
 # -----------------------------------------------------------------------------
 def main():
-    print("WTF")
     active_view = revit.active_view
     if not isinstance(active_view, DB.ViewPlan) or active_view.ViewType not in (DB.ViewType.FloorPlan, DB.ViewType.CeilingPlan):
         forms.alert("Active view must be a floor plan or RCP to create a view template.", exitscript=True)
