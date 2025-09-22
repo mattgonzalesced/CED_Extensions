@@ -14,8 +14,8 @@ logger = script.get_logger()
 
 def get_panel_surfaces(panel_names):
     surfaces = {}
-    for eq in DB.FilteredElementCollector(revit.doc)\
-            .OfCategory(DB.BuiltInCategory.OST_ElectricalEquipment)\
+    for eq in DB.FilteredElementCollector(revit.doc) \
+            .OfCategory(DB.BuiltInCategory.OST_ElectricalEquipment) \
             .WhereElementIsNotElementType():
         param = eq.LookupParameter("Panel Name_CEDT")
         if param and param.HasValue:
@@ -25,6 +25,17 @@ def get_panel_surfaces(panel_names):
     return surfaces
 
 
+def get_panel_elements(panel_names):
+    panels = {}
+    for eq in DB.FilteredElementCollector(revit.doc) \
+            .OfCategory(DB.BuiltInCategory.OST_ElectricalEquipment) \
+            .WhereElementIsNotElementType():
+        param = eq.LookupParameter("Panel Name_CEDT")
+        if param and param.HasValue:
+            value = param.AsString().strip()
+            if value in panel_names:
+                panels[value] = eq
+    return panels   # ✅ return the dict, not just eq
 
 # --- Load Families ---
 class FamilyLoaderOptionsHandler(DB.IFamilyLoadOptions):
@@ -89,18 +100,33 @@ def set_instance_parameters(inst, row):
                 elif param.StorageType == DB.StorageType.Integer:
                     param.Set(int(float(val)))
                 elif param.StorageType == DB.StorageType.Double:
-                    # Special handling for Apparent Load keys
-                    if key in ["Apparent Load Ph 1_CED", "Apparent Load Ph 2_CED", "Apparent Load Ph 3_CED"]:
-                        logger.debug("Setting Apparent Load Units")
+                    # --- Apparent Load (VA) ---
+                    if key in ["Apparent Load Ph 1_CED",
+                               "Apparent Load Ph 2_CED",
+                               "Apparent Load Ph 3_CED",
+                               "Apparent Load Input_CED"]:
+                        logger.debug("Setting Apparent Load Units (VA)")
                         forge_type_va = DB.ForgeTypeId("autodesk.unit.unit:voltAmperes-1.0.1")
                         converted = DB.UnitUtils.ConvertToInternalUnits(float(val), forge_type_va)
                         param.Set(converted)
-                        logger.debug("Original Val: {}, Converted: {}".format(val, converted))
+                        logger.debug("Original Val: {}, Converted (VA): {}".format(val, converted))
+
+                    # --- Voltage (V) ---
+                    elif "Voltage" in key:   # or use a stricter list if needed
+                        logger.debug("Setting Voltage Units (V)")
+                        forge_type_v = DB.ForgeTypeId("autodesk.unit.unit:volts-1.0.1")
+                        converted = DB.UnitUtils.ConvertToInternalUnits(float(val), forge_type_v)
+                        param.Set(converted)
+                        logger.debug("Original Val: {}, Converted (V): {}".format(val, converted))
+
+                    # --- Regular doubles ---
                     else:
                         logger.debug("No unit conversion, regular double")
                         param.Set(float(val))
+
             except Exception as e:
                 output.print_md("⚠️ Failed to set {}: {}".format(key, e))
+
 
 
 
@@ -132,7 +158,7 @@ def main():
 
     panel_names = set(row["CKT_Panel_CEDT"] for row in ordered_rows)
     surface_map = get_panel_surfaces(panel_names)
-
+    panels = get_panel_elements(panel_names)
     output.print_md("### 📋 Matched {} panel names from Excel".format(len(panel_names)))
     output.print_md("### 🧱 Found {} panel surfaces in model".format(len(surface_map)))
 
@@ -182,28 +208,69 @@ def main():
                     symbol.Activate()
                     activated_symbols.add(symbol.Id.Value)
 
+        spacing = 3.0  # feet
+        panel_offsets = {}  # track per-panel placement counts
+        panel_map = get_panel_elements(panel_names)
 
         with revit.Transaction("Place and Parameterize", doc, swallow_errors=True):
             for row in ordered_rows:
                 panel_name = row["CKT_Panel_CEDT"]
                 circuit_number = row["CKT_Circuit Number_CEDT"]
 
-                surface = surface_map.get(panel_name)
-                if not surface or not surface.face:
-                    output.print_md("❌ Panel '{}' missing or has no placeable face.".format(panel_name))
-                    continue
-
                 symbol = get_family_symbol(row["Family"], row["Type"])
                 if not symbol:
                     output.print_md("❌ Symbol not found for {} / {}".format(row["Family"], row["Type"]))
                     continue
 
-                ref = surface.face
-                point = surface.location + 0.25 * surface.facing
-                instance = doc.Create.NewFamilyInstance(ref, point, DB.XYZ(1, 0, 0), symbol)
+                placement_type = symbol.Family.FamilyPlacementType
 
+                if placement_type in (
+                        DB.FamilyPlacementType.OneLevelBasedHosted,
+                        DB. FamilyPlacementType.WorkPlaneBased,  # sometimes still face-based
+                ):
+                    # --- FACE-BASED LOGIC ---
+                    surface = surface_map.get(panel_name)
+                    if not surface or not surface.face:
+                        output.print_md("❌ Panel '{}' missing or has no placeable face.".format(panel_name))
+                        continue
+
+                    ref = surface.face
+                    point = surface.location + 0.25 * surface.facing
+                    instance = doc.Create.NewFamilyInstance(ref, point, DB.XYZ(1, 0, 0), symbol)
+
+                else:
+                    # --- UNHOSTED LOGIC ---
+                    # Track per-panel column index
+                    if panel_name not in panel_offsets:
+                        panel_offsets[panel_name] = 0
+
+                    # Row index for this circuit in the panel
+                    row_index = panel_offsets[panel_name]
+                    panel_offsets[panel_name] += 1
+
+                    # Column index = position of this panel among all panels
+                    if "panel_columns" not in globals():
+                        panel_columns = {}
+                    if panel_name not in panel_columns:
+                        panel_columns[panel_name] = len(panel_columns)  # assign new column for each panel
+
+                    col_index = panel_columns[panel_name]
+
+                    # Placement point: X = panel column, Y = circuit row
+                    x_spacing = 6.0  # feet between panel columns
+                    y_spacing = 3.0  # feet between circuits
+                    base_point = DB.XYZ(col_index * x_spacing, row_index * y_spacing, 0)
+
+                    instance = doc.Create.NewFamilyInstance(
+                        base_point,
+                        symbol,
+                        doc.ActiveView.GenLevel,
+                        DB.Structure.StructuralType.NonStructural
+                    )
+
+                # --- Shared parameterization ---
                 set_instance_parameters(instance, row)
-                # Force set default circuit notes
+
                 param = instance.LookupParameter("CKT_Schedule Notes_CEDT")
                 if param and not param.IsReadOnly:
                     param.Set("EX")
@@ -211,7 +278,7 @@ def main():
                 all_instances.append(instance)
                 system_data.append({
                     "instance": instance,
-                    "panel": surface.element,
+                    "panel": panel_map.get(panel_name),  # ✅ now looks up from dict
                     "circuit_number": circuit_number,
                     "load_name": row.get("CKT_Load Name_CEDT", ""),
                     "rating": row.get("CKT_Rating_CED", ""),
@@ -223,9 +290,44 @@ def main():
         created_systems = {}
         with revit.Transaction("Create Circuits", doc, swallow_errors=True):
             for data in system_data:
-                system = create_circuit(doc, data["instance"], data["panel"])
+                inst = data["instance"]
+                panel = data["panel"]
+                ckt_num = data["circuit_number"]
+
+                # Create the electrical system
+                system = create_circuit(doc, inst, panel)
                 if system:
-                    system.SelectPanel(data["panel"])
+                    logger.debug("Created system for circuit {} (Instance Id: {})"
+                                 .format(ckt_num, inst.Id.IntegerValue))
+
+                    if panel:
+                        try:
+                            system.SelectPanel(panel)
+
+                            # Gather panel info for debug
+                            poles = inst.LookupParameter("Number of Poles").AsInteger() \
+                                if inst.LookupParameter("Number of Poles") else None
+                            voltage_param = panel.LookupParameter("Voltage_CED") or panel.LookupParameter(
+                                "Panel Voltage")
+                            volts = voltage_param.AsDouble() if voltage_param else None
+
+                            # Convert volts from internal units
+                            if volts:
+                                volts = DB.UnitUtils.ConvertFromInternalUnits(
+                                    volts,
+                                    DB.ForgeTypeId("autodesk.unit.unit:volts-1.0.1")
+                                )
+
+                            logger.debug("Assigned to panel '{}': Circuit {} | Poles={} | Volts={}"
+                                         .format(query.get_name(panel),
+                                                 ckt_num,
+                                                 poles if poles is not None else "N/A",
+                                                 volts if volts is not None else "N/A"))
+
+                        except Exception as e:
+                            logger.warning("Failed to assign system for circuit {} to panel '{}': {}"
+                                           .format(ckt_num, query.get_name(panel), e))
+
                     created_systems[system.Id] = data
 
         with revit.Transaction("Set Circuit Parameters", doc, swallow_errors=True):

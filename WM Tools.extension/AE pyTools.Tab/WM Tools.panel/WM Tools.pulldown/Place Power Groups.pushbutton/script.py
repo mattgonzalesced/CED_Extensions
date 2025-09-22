@@ -1,22 +1,21 @@
 # -*- coding: utf-8 -*-
-from collections import defaultdict
 
 from wmlib import *
 
 doc = revit.doc
 logger = script.get_logger()
-
-config = script.get_config("WM_power_group_offset")
-offset_distance = config.get_option("group_placement_offset",0)
-if offset_distance is None:
-    offset_distance = 0
-else:
-    try:
-        offset_distance = float(offset_distance)
-    except:
-        offset_distance = 0
-        logger.info("⚠ Invalid config value for group_placement_offset. Using default: 0 ft.")
-
+#
+# config = script.get_config("WM_power_group_offset")
+# offset_distance = config.get_option("group_placement_offset",0)
+# if offset_distance is None:
+#     offset_distance = 0
+# else:
+#     try:
+#         offset_distance = float(offset_distance)
+#     except:
+#         offset_distance = 0
+#         logger.info("⚠ Invalid config value for group_placement_offset. Using default: 0 ft.")
+#
 
 def pick_model_group():
     group_collector = DB.FilteredElementCollector(doc).OfCategory(
