@@ -6,8 +6,6 @@ from pyrevit import script, revit, DB
 #pyrevit doesnt have Autodesk.Revit.DB.Electrical, so I import that as DBE to mimic the same convention
 #this helps you keep track of the modules youre using. doing a * import can get messy
 
-
-
 # Setup
 uidoc = revit.uidoc
 doc = revit.doc
@@ -21,6 +19,25 @@ logger.debug("Use These within your code to test conditions and print values/var
 
 
 
+#transaction types
+t1 = revit.Transaction  #pyrevits special transaction
+t2 = DB.Transaction     #standard
+
+#pyrevits special transaction
+with t1("pyervit transaction",doc):
+    #do stuff here
+
+#standard transaction. more wordy
+with t2(doc, "normal revit transaction"):
+    t2.Start
+    try:
+        #do stuff here
+        t2.Commit
+    except: t2.RollBack
+
+
+
+
 #this sets up any output window that you want to show. it has functions to control its appearance,
 output = script.get_output()
 output.close_others()   #prevents windows from building up as you run scripts
@@ -31,10 +48,9 @@ output.close_others()   #prevents windows from building up as you run scripts
 #SELECTION
 #you can use Revit API selection method
 selection = uidoc.Selection
+ref_picked_object = selection.PickObject(DB.ObjectType.Element)
 #or use pyrevits wrapper which provides some more functionality
 pyrevit_selection = revit.get_selection()
-
-
 
 
 
