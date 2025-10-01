@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Revit Python 2.7 – pyRevit / Revit API
 # Single-UI version: choose schedules + action + mode in one dialog, then run.
+# Control fix: use ListView (CheckBoxes + MultiSelect) instead of CheckedListBox.
 
 from collections import defaultdict
 
@@ -16,8 +17,9 @@ clr.AddReference('System.Drawing')
 clr.AddReference('System.Windows.Forms')
 from System.Drawing import Point, Size
 from System.Windows.Forms import (
-    Form, Label, ComboBox, Button, CheckedListBox, DialogResult, AnchorStyles,
-    MessageBox, MessageBoxButtons, FormStartPosition, ComboBoxStyle
+    Form, Label, ComboBox, Button, DialogResult, AnchorStyles,
+    MessageBox, MessageBoxButtons, FormStartPosition, ComboBoxStyle,
+    ListView, ListViewItem, View
 )
 
 get_id_value = get_elementid_value_func()
@@ -151,7 +153,7 @@ def _all_panel_schedule_views():
             if not v.IsTemplate]
 
 # ---------------------------------------------------------------------------
-# 2. Single, consolidated UI
+# 2. Single, consolidated UI (+ bulk check buttons, multi-select via ListView)
 # ---------------------------------------------------------------------------
 FILL_ACTION   = 'Fill empty slots'
 REMOVE_ACTION = 'Remove spares/spaces'
@@ -163,67 +165,68 @@ class UnifiedDialog(Form):
     def __init__(self, all_views, prechecked):
         self.Text = 'Panel Schedule: Fill/Remove'
         self.StartPosition = FormStartPosition.CenterScreen
-        self.Width  = 520
-        self.Height = 520
-        self.MinimumSize = Size(520, 520)
+        self.Width  = 560
+        self.Height = 600
+        self.MinimumSize = Size(560, 600)
 
         # Labels
         self.lblSchedules = Label(Text='1) Choose Panel Schedule(s):')
         self.lblSchedules.Location = Point(12, 12)
         self.lblSchedules.AutoSize = True
 
-        self.listSchedules = CheckedListBox()
+        # ListView with CheckBoxes + MultiSelect
+        self.listSchedules = ListView()
         self.listSchedules.Location = Point(12, 32)
-        self.listSchedules.Size = Size(480, 300)
+        self.listSchedules.Size = Size(520, 320)
         self.listSchedules.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+        self.listSchedules.View = View.List
+        self.listSchedules.FullRowSelect = True
+        self.listSchedules.CheckBoxes = True
+        self.listSchedules.MultiSelect = True
 
-        # Populate schedules with NAMES ONLY + index→view map
-        self._idset_pre = set(get_id_value(v.Id) for v in prechecked)
-        self._idx_to_view = {}
-
+        # Populate schedules with NAMES ONLY; store view in ListViewItem.Tag
+        pre_idset = set(get_id_value(v.Id) for v in prechecked)
         for v in sorted(all_views, key=lambda x: x.Name):
-            display = u"{}".format(v.Name)   # name only
-            idx = self.listSchedules.Items.Add(display)
-            self._idx_to_view[idx] = v
-            if get_id_value(v.Id) in self._idset_pre:
-                self.listSchedules.SetItemChecked(idx, True)
+            item = ListViewItem(v.Name)
+            item.Tag = v
+            item.Checked = (get_id_value(v.Id) in pre_idset)
+            self.listSchedules.Items.Add(item)
+
+        # Bulk buttons (Check / Uncheck / Toggle) that respect current selection
+        y_btns = 362
+        self.btnCheckAll   = Button(Text='Check All');   self.btnCheckAll.Location   = Point(12,  y_btns)
+        self.btnUncheckAll = Button(Text='Uncheck All'); self.btnUncheckAll.Location = Point(108, y_btns)
+        self.btnToggleAll  = Button(Text='Toggle All');  self.btnToggleAll.Location  = Point(220, y_btns)
+
+        self.btnCheckAll.Click   += self._on_check_all
+        self.btnUncheckAll.Click += self._on_uncheck_all
+        self.btnToggleAll.Click  += self._on_toggle_all
 
         # Action
-        self.lblAction = Label(Text='2) Action:')
-        self.lblAction.Location = Point(12, 342)
-        self.lblAction.AutoSize = True
-
+        self.lblAction = Label(Text='2) Action:'); self.lblAction.Location = Point(12, 402); self.lblAction.AutoSize = True
         self.cmbAction = ComboBox(DropDownStyle=ComboBoxStyle.DropDownList)
-        self.cmbAction.Location = Point(12, 362)
-        self.cmbAction.Size = Size(230, 24)
-        self.cmbAction.Items.Add(FILL_ACTION)
-        self.cmbAction.Items.Add(REMOVE_ACTION)
+        self.cmbAction.Location = Point(12, 422); self.cmbAction.Size = Size(240, 24)
+        self.cmbAction.Items.Add(FILL_ACTION); self.cmbAction.Items.Add(REMOVE_ACTION)
         self.cmbAction.SelectedIndex = 0  # default to Fill
 
         # Mode (changes with action)
-        self.lblMode = Label(Text='3) Mode:')
-        self.lblMode.Location = Point(262, 342)
-        self.lblMode.AutoSize = True
-
+        self.lblMode = Label(Text='3) Mode:'); self.lblMode.Location = Point(272, 402); self.lblMode.AutoSize = True
         self.cmbMode = ComboBox(DropDownStyle=ComboBoxStyle.DropDownList)
-        self.cmbMode.Location = Point(262, 362)
-        self.cmbMode.Size = Size(230, 24)
+        self.cmbMode.Location = Point(272, 422); self.cmbMode.Size = Size(260, 24)
 
         # Buttons
-        self.btnOK = Button(Text='OK')
-        self.btnOK.Location = Point(312, 420)
-        self.btnOK.Click += self._on_ok
-
-        self.btnCancel = Button(Text='Cancel')
-        self.btnCancel.Location = Point(398, 420)
-        self.btnCancel.DialogResult = DialogResult.Cancel
+        self.btnOK = Button(Text='OK'); self.btnOK.Location = Point(352, 500); self.btnOK.Click += self._on_ok
+        self.btnCancel = Button(Text='Cancel'); self.btnCancel.Location = Point(438, 500); self.btnCancel.DialogResult = DialogResult.Cancel
 
         # Wire events
         self.cmbAction.SelectedIndexChanged += self._on_action_changed
 
         # Add controls
-        for ctl in (self.lblSchedules, self.listSchedules, self.lblAction, self.cmbAction,
-                    self.lblMode, self.cmbMode, self.btnOK, self.btnCancel):
+        for ctl in (self.lblSchedules, self.listSchedules,
+                    self.btnCheckAll, self.btnUncheckAll, self.btnToggleAll,
+                    self.lblAction, self.cmbAction,
+                    self.lblMode, self.cmbMode,
+                    self.btnOK, self.btnCancel):
             self.Controls.Add(ctl)
 
         # Initialize mode list
@@ -234,6 +237,30 @@ class UnifiedDialog(Form):
         self.chosen_action = None
         self.chosen_mode = None
 
+    # ---------- Bulk selection helpers ----------
+    def _target_items(self):
+        # If user highlighted some rows, operate on that subset; else operate on all rows.
+        if self.listSchedules.SelectedItems.Count > 0:
+            return [it for it in self.listSchedules.SelectedItems]
+        return [it for it in self.listSchedules.Items]
+
+    def _set_checked_items(self, items, value=None, toggle=False):
+        for it in items:
+            if toggle:
+                it.Checked = (not it.Checked)
+            else:
+                it.Checked = bool(value)
+
+    def _on_check_all(self, sender, args):
+        self._set_checked_items(self._target_items(), value=True)
+
+    def _on_uncheck_all(self, sender, args):
+        self._set_checked_items(self._target_items(), value=False)
+
+    def _on_toggle_all(self, sender, args):
+        self._set_checked_items(self._target_items(), toggle=True)
+
+    # ---------- Action/Mode/OK ----------
     def _on_action_changed(self, sender, args):
         self._populate_modes()
 
@@ -241,29 +268,26 @@ class UnifiedDialog(Form):
         self.cmbMode.Items.Clear()
         act = self.cmbAction.SelectedItem
         if act == FILL_ACTION:
-            for m in FILL_MODES:
-                self.cmbMode.Items.Add(m)
+            for m in FILL_MODES: self.cmbMode.Items.Add(m)
             self.cmbMode.SelectedIndex = 0
         else:
-            for m in REMOVE_MODES:
-                self.cmbMode.Items.Add(m)
+            for m in REMOVE_MODES: self.cmbMode.Items.Add(m)
             self.cmbMode.SelectedIndex = 0
 
     def _on_ok(self, sender, args):
         chosen = []
-        for i in range(self.listSchedules.Items.Count):
-            if self.listSchedules.GetItemChecked(i):
-                chosen.append(self._idx_to_view[i])
+        for it in self.listSchedules.Items:
+            if it.Checked:
+                chosen.append(it.Tag)   # Tag stores the PanelScheduleView
 
         if not chosen:
-            MessageBox.Show('Please check at least one panel schedule.', 'Selection required',
-                            MessageBoxButtons.OK)
+            MessageBox.Show('Please check at least one panel schedule.', 'Selection required', MessageBoxButtons.OK)
             return
 
-        self.chosen_views = chosen
+        self.chosen_views  = chosen
         self.chosen_action = self.cmbAction.SelectedItem
         self.chosen_mode   = self.cmbMode.SelectedItem
-        self.DialogResult = DialogResult.OK
+        self.DialogResult  = DialogResult.OK
         self.Close()
 
 def show_unified_dialog():

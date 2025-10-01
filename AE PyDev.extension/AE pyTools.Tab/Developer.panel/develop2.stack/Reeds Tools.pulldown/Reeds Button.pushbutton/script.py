@@ -20,20 +20,20 @@ logger.debug("Use These within your code to test conditions and print values/var
 
 
 #transaction types
-t1 = revit.Transaction  #pyrevits special transaction
-t2 = DB.Transaction     #standard
+#t1 = revit.Transaction  #pyrevits special transaction
+#t2 = DB.Transaction     #standard
 
 #pyrevits special transaction
-with t1("pyervit transaction",doc):
+#with t1("pyervit transaction",doc):
     #do stuff here
 
 #standard transaction. more wordy
-with t2(doc, "normal revit transaction"):
-    t2.Start
-    try:
+#with t2(doc, "normal revit transaction"):
+ #   t2.Start
+  #  try:
         #do stuff here
-        t2.Commit
-    except: t2.RollBack
+   #     t2.Commit
+    #except: t2.RollBack
 
 
 
