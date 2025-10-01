@@ -161,7 +161,7 @@ REMOVE_MODES = ['Spares only', 'Spaces only', 'Both']
 
 class UnifiedDialog(Form):
     def __init__(self, all_views, prechecked):
-        self.Text = 'Panel Schedule: Fill/Remove (One-step UI)'
+        self.Text = 'Panel Schedule: Fill/Remove'
         self.StartPosition = FormStartPosition.CenterScreen
         self.Width  = 520
         self.Height = 520
