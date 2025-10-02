@@ -15,6 +15,10 @@ device_critical = []
 circuit_critical = []
 equipment_critical = []
 
+
+#design option filter
+option_filter = DB.ElementDesignOptionFilter(DB.ElementId.InvalidElementId)
+
 # Prepare standard breaker size set
 STANDARD_BREAKER_SIZES = set()
 for val in BREAKER_FRAME_SWITCH_TABLE.keys():
@@ -72,6 +76,7 @@ def check_thresholds(device_count, circuit_count, equipment_count):
 elec_equipment_collector = DB.FilteredElementCollector(doc) \
     .OfCategory(DB.BuiltInCategory.OST_ElectricalEquipment) \
     .WhereElementIsNotElementType() \
+    .WherePasses(option_filter)\
     .ToElements()
 
 logger.info("Found %d electrical equipment instances" % len(elec_equipment_collector))
@@ -83,6 +88,7 @@ for name, cat in category_enum.items():
         devices_collector = DB.FilteredElementCollector(doc) \
             .OfCategory(cat) \
             .WhereElementIsNotElementType() \
+            .WherePasses(option_filter) \
             .ToElements()
         elec_devices.extend(devices_collector)
 
@@ -92,6 +98,7 @@ logger.info("Found %d electrical device instances" % len(elec_devices))
 circuits_collector = DB.FilteredElementCollector(doc) \
     .OfCategory(DB.BuiltInCategory.OST_ElectricalCircuit) \
     .WhereElementIsNotElementType() \
+    .WherePasses(option_filter) \
     .ToElements()
 
 logger.info("Found %d electrical circuit instances" % len(circuits_collector))
