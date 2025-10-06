@@ -1,4 +1,47 @@
-{ "distribution": { "service_voltage": "120/208V-3Ø-4W", "main_ocpd_a": 800,
-  "panels": [{ "name": "LP-1", "voltage": "120/208V", "poles": 42, "location_regex": "Elec Room L1" }] } }
+{
+  "distribution": {
+    "service_voltage": "120/208V-3Ø-4W",
+    "main_ocpd_a": 800,
+    "defaults": {
+      "mount_height_ft": 5.5,
+      "clearance_depth_ft": 3.0,
+      "clearance_width_ft": 3.0
+    },
+    "panels_catalog": [
+      {
+        "key": "LP",
+        "family_name": "Electrical_Panelboard_Wall_Mounted",
+        "type_name": "LP 42ckt 120/208V",
+        "voltage": "120/208V",
+        "poles": 42
+      },
+      {
+        "key": "SPA",
+        "family_name": "Electrical_Panelboard_Wall_Mounted",
+        "type_name": "PP 42ckt 240V",
+        "voltage": "240V",
+        "poles": 42
+      }
+    ],
+    "space_rules": [
+      {
+        "match": { "name_regex": "(?i)elec\\.?\\s*rm|electrical room" },
+        "place": [{ "panel_key": "LP", "name_format": "LP-${LEVEL_NUM}-${INDEX}", "per_space_max": 2 }]
+      },
+      {
+        "match": { "name_regex": "(?i)mech|mechanical" },
+        "place": [{ "panel_key": "PP", "name_format": "PP-${LEVEL_NUM}-${INDEX}", "per_space_max": 1 }]
+      },
+      {
+        "match": { "name_regex": "(?i)office|open office" },
+        "place": [{ "panel_key": "LP", "name_format": "LP-${LEVEL_NUM}-${INDEX}", "per_space_max": 1 }]
+      }
+    ],
+    "naming": {
+      "level_token_regex": "(?i)L(?:evel)?\\s*(\\d+)",  // extract level number from level name if present
+      "start_index": 1
+    }
+  }
+}
 
 
