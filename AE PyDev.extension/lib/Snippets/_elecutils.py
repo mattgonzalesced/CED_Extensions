@@ -3,10 +3,11 @@ from Autodesk.Revit.DB.Electrical import *
 from pyrevit import script, forms, DB
 
 logger = script.get_logger()
-
+#design option filter
+option_filter = DB.ElementDesignOptionFilter(DB.ElementId.InvalidElementId)
 def get_all_panels(doc, el_id=False):
     collector = FilteredElementCollector(doc).OfCategory(
-        BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType()
+        BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType().WherePasses(option_filter)
     if el_id:
         collector = collector.ToElementIds()
     else:
@@ -17,7 +18,7 @@ def get_all_panels(doc, el_id=False):
 
 def get_all_panel_types(doc, el_id=False):
     collector = FilteredElementCollector(doc).OfCategory(
-        BuiltInCategory.OST_ElectricalEquipment).WhereElementIsElementType()
+        BuiltInCategory.OST_ElectricalEquipment).WhereElementIsElementType().WherePasses(option_filter)
     if el_id:
         collector = collector.ToElementIds()
     else:
@@ -27,7 +28,7 @@ def get_all_panel_types(doc, el_id=False):
 
 def get_all_circuits(doc, el_id=False):
     collector = FilteredElementCollector(doc).OfCategory(
-        BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType()
+        BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType().WherePasses(option_filter)
     if el_id:
         collector = collector.ToElementIds()
     else:
@@ -37,7 +38,7 @@ def get_all_circuits(doc, el_id=False):
 
 def get_all_elec_fixtures(doc, el_id=False):
     collector = FilteredElementCollector(doc).OfCategory(
-        BuiltInCategory.OST_ElectricalFixtures).WhereElementIsNotElementType()
+        BuiltInCategory.OST_ElectricalFixtures).WhereElementIsNotElementType().WherePasses(option_filter)
     if el_id:
         collector = collector.ToElementIds()
     else:
@@ -46,7 +47,7 @@ def get_all_elec_fixtures(doc, el_id=False):
 
 
 def get_all_data_devices(doc, el_id=False):
-    collector = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DataDevices).WhereElementIsNotElementType()
+    collector = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DataDevices).WhereElementIsNotElementType().WherePasses(option_filter)
     if el_id:
         collector = collector.ToElementIds()
     else:
@@ -56,7 +57,7 @@ def get_all_data_devices(doc, el_id=False):
 
 def get_all_light_devices(doc, el_id=False):
     collector = FilteredElementCollector(doc).OfCategory(
-        BuiltInCategory.OST_LightingDevices).WhereElementIsNotElementType()
+        BuiltInCategory.OST_LightingDevices).WhereElementIsNotElementType().WherePasses(option_filter)
     if el_id:
         collector = collector.ToElementIds()
     else:
@@ -66,7 +67,7 @@ def get_all_light_devices(doc, el_id=False):
 
 def get_all_light_fixtures(doc, el_id=False):
     collector = FilteredElementCollector(doc).OfCategory(
-        BuiltInCategory.OST_LightingFixtures).WhereElementIsNotElementType()
+        BuiltInCategory.OST_LightingFixtures).WhereElementIsNotElementType().WherePasses(option_filter)
     if el_id:
         collector = collector.ToElementIds()
     else:
@@ -220,7 +221,7 @@ def find_open_slots(target_panel):
 def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
     """Get circuits from a selected panel with sorting and inclusion of spare/space circuits."""
     circuits = []
-    panel_circuits = FilteredElementCollector(doc).OfClass(Electrical.ElectricalSystem).ToElements()
+    panel_circuits = FilteredElementCollector(doc).OfClass(Electrical.ElectricalSystem).WherePasses(option_filter).ToElements()
 
     for circuit in panel_circuits:
         if circuit.BaseEquipment and circuit.BaseEquipment.Id == panel.Id:
@@ -265,7 +266,7 @@ def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
 def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_spaces=False):
     ckts = DB.FilteredElementCollector(doc) \
         .OfClass(ElectricalSystem) \
-        .WhereElementIsNotElementType()
+        .WhereElementIsNotElementType().WherePasses(option_filter)
 
     grouped_options = {" All": []}
     ckt_lookup = {}
@@ -275,9 +276,6 @@ def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_space
     for ckt in ckts:
         # Skip spares/spaces if not included
         if not include_spares_and_spaces and ckt.CircuitType in [CircuitType.Spare, CircuitType.Space]:
-            continue
-
-        if ckt.DesignOption is not None:
             continue
 
         # Safely get rating and poles if circuit is a PowerCircuit
@@ -353,14 +351,12 @@ def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_space
 
 def pick_panel_from_list(doc, select_multiple=False):
     panels = FilteredElementCollector(doc).OfCategory(
-        BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType()
+        BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType().WherePasses(option_filter)
 
     panel_lookup = {}
     grouped_options = {" All": []}
 
     for panel in panels:
-        if panel.DesignOption is not None:
-            continue
 
         panel_name = DB.Element.Name.__get__(panel)
         panel_data = get_panel_dist_system(panel, doc)

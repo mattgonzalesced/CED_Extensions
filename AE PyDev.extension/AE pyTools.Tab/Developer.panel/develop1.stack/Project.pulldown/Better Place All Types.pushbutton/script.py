@@ -117,7 +117,6 @@ class FamilyTypePlacer(object):
                 for index, family_symbol in enumerate(family_types):
                     if not family_symbol.IsActive:
                         family_symbol.Activate()
-                        self.document.Regenerate()
 
                     x_offset_feet = index * 10.0
                     placement_point = DB.XYZ(
@@ -133,8 +132,9 @@ class FamilyTypePlacer(object):
                             self._place_in_model_view(family_symbol, placement_point)
                     except Exception as place_exception:
                         logger.debug("Failed to place {}: {}".format(family_symbol, str(place_exception)))
-
                 y_offset_feet -= 5.0
+            self.document.Regenerate()
+
 
     def _get_family_by_name(self, name):
         return next((family for family in DB.FilteredElementCollector(self.document).OfClass(DB.Family)

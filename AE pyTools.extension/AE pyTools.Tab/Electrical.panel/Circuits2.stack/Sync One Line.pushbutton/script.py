@@ -25,8 +25,8 @@ DETAIL_PARAM_PANEL_NAME = "Panel Name_CEDT"
 # Key here is "DetailParamName" : "BuiltInParamOnCircuit"
 CIRCUIT_VALUE_MAP = {
     "x VD Schedule": "x VD Schedule",
-    "Circuit Tree Sort_CED":"Circuit Tree Sort_CED",
-    "CKT_Circuit Type_CEDT":"CKT_Circuit Type_CEDT",
+    "Circuit Tree Sort_CED": "Circuit Tree Sort_CED",
+    "CKT_Circuit Type_CEDT": "CKT_Circuit Type_CEDT",
     "CKT_Panel_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM,
     "CKT_Circuit Number_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER,
     "CKT_Load Name_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME,
@@ -35,25 +35,25 @@ CIRCUIT_VALUE_MAP = {
     "CKT_Schedule Notes_CEDT": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NOTES_PARAM,
     "CKT_Length_CED": DB.BuiltInParameter.RBS_ELEC_CIRCUIT_LENGTH_PARAM,
     "Number of Poles_CED": DB.BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES,
-    "Voltage_CED":DB.BuiltInParameter.RBS_ELEC_VOLTAGE,
-    "Wire Material_CEDT":"Wire Material_CEDT",
-    "Wire Insulation_CEDT":"Wire Insulation_CEDT",
-    "Wire Temparature Rating_CEDT" : "Wire Temparature Rating_CEDT",
-    "Wire Size_CEDT":"Wire Size_CEDT",
-    "Conduit and Wire Size_CEDT":"Conduit and Wire Size_CEDT",
-    "Conduit Type_CEDT":"Conduit Type_CEDT",
-    "Conduit Size_CEDT":"Conduit Size_CEDT",
-    "Conduit Fill Percentage_CED":"Conduit Fill Percentage_CED",
-    "Voltage Drop Percentage_CED":"Voltage Drop Percentage_CED",
-    "Circuit Load Current_CED":"Circuit Load Current_CED"
+    "Voltage_CED": DB.BuiltInParameter.RBS_ELEC_VOLTAGE,
+    "Wire Material_CEDT": "Wire Material_CEDT",
+    "Wire Insulation_CEDT": "Wire Insulation_CEDT",
+    "Wire Temparature Rating_CEDT": "Wire Temparature Rating_CEDT",
+    "Wire Size_CEDT": "Wire Size_CEDT",
+    "Conduit and Wire Size_CEDT": "Conduit and Wire Size_CEDT",
+    "Conduit Type_CEDT": "Conduit Type_CEDT",
+    "Conduit Size_CEDT": "Conduit Size_CEDT",
+    "Conduit Fill Percentage_CED": "Conduit Fill Percentage_CED",
+    "Voltage Drop Percentage_CED": "Voltage Drop Percentage_CED",
+    "Circuit Load Current_CED": "Circuit Load Current_CED"
 }
 
 # Panel built-in param -> detail param name map
 PANEL_VALUE_MAP = {
     "Panel Name_CEDT": DB.BuiltInParameter.RBS_ELEC_PANEL_NAME,
     "Mains Rating_CED": "Mains Rating_CED",
-    "Mains Type_CEDT" : "Mains Type_CEDT",
-    "Phase_CED":"Phase_CED",
+    "Mains Type_CEDT": "Mains Type_CEDT",
+    "Phase_CED": "Phase_CED",
     "Main Breaker Rating_CED": DB.BuiltInParameter.RBS_ELEC_PANEL_MCB_RATING_PARAM,
     "Short Circuit Rating_CEDT": DB.BuiltInParameter.RBS_ELEC_SHORT_CIRCUIT_RATING,
     "Mounting_CEDT": DB.BuiltInParameter.RBS_ELEC_MOUNTING,
@@ -65,11 +65,11 @@ PANEL_VALUE_MAP = {
     "Total Connected Current_CEDR": DB.BuiltInParameter.RBS_ELEC_PANEL_TOTAL_CONNECTED_CURRENT_PARAM,
     "Total Demand Current_CEDR": DB.BuiltInParameter.RBS_ELEC_PANEL_TOTAL_DEMAND_CURRENT_PARAM,
     "Max Number of Single Pole Breakers_CED": DB.BuiltInParameter.RBS_ELEC_MAX_POLE_BREAKERS,
-    "Max Number of Circuits_CED":DB.BuiltInParameter.RBS_ELEC_NUMBER_OF_CIRCUITS,
+    "Max Number of Circuits_CED": DB.BuiltInParameter.RBS_ELEC_NUMBER_OF_CIRCUITS,
     "Transformer Rating_CEDT": "Transformer Rating_CEDT",
     "Transformer Rating_CED": "Transformer Rating_CEDT",
-    "Transformer Primary Description_CEDT":"Transformer Primary Description_CEDT",
-    "Transformer Secondary Description_CEDT":"Transformer Secondary Description_CEDT",
+    "Transformer Primary Description_CEDT": "Transformer Primary Description_CEDT",
+    "Transformer Secondary Description_CEDT": "Transformer Secondary Description_CEDT",
     "Transformer %Z_CED": "Transformer %Z_CED",
     "Panel Feed_CEDT": DB.BuiltInParameter.RBS_ELEC_PANEL_FEED_PARAM,
 }
@@ -122,7 +122,6 @@ def get_model_param_value(elem, param_key, allow_type_fallback=True):
     return None
 
 
-
 def get_detail_param_value(elem, param_name):
     """
     Read a string/int/double from the detail item’s custom param param_name. Return None if not found or empty.
@@ -159,12 +158,15 @@ def set_detail_param_value(elem, param_name, new_value):
         if new_value is None:
             new_value = ""
         p.Set(new_value)
-        logger.debug("      set_detail_param_value: Set '" + param_name + "' to '" + str(new_value) + "' on " + str(elem.Id))
+        logger.debug(
+            "      set_detail_param_value: Set '" + param_name + "' to '" + str(new_value) + "' on " + str(elem.Id))
     except:
         logger.debug("      set_detail_param_value: FAILED setting '" + param_name + "' on " + str(elem.Id))
 
+
 def is_not_in_group(element):
     return element.GroupId == DB.ElementId.InvalidElementId
+
 
 def main():
     doc = revit.doc
@@ -174,14 +176,15 @@ def main():
     circuit_map = {}
     logger.debug("Collecting circuits...")
 
-    ckt_collector = DB.FilteredElementCollector(doc)\
-                      .OfClass(DB.Electrical.ElectricalSystem)\
-                      .ToElements()
+    # design option filter
+    option_filter = DB.ElementDesignOptionFilter(DB.ElementId.InvalidElementId)
+
+    ckt_collector = DB.FilteredElementCollector(doc) \
+        .OfClass(DB.Electrical.ElectricalSystem) \
+        .WherePasses(option_filter) \
+        .ToElements()
 
     for ckt in ckt_collector:
-        if ckt.DesignOption is not None:
-            continue
-
         pval = get_model_param_value(ckt, DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM)
         cnum = get_model_param_value(ckt, DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER)
         if pval and cnum:
@@ -199,14 +202,14 @@ def main():
     panel_map = {}
     logger.debug("Collecting panels...")
 
-    pnl_collector = DB.FilteredElementCollector(doc)\
-                      .OfCategory(DB.BuiltInCategory.OST_ElectricalEquipment)\
-                      .WhereElementIsNotElementType()\
-                      .ToElements()
+    pnl_collector = DB.FilteredElementCollector(doc) \
+        .OfCategory(DB.BuiltInCategory.OST_ElectricalEquipment) \
+        .WhereElementIsNotElementType() \
+        .WherePasses(option_filter) \
+        .ToElements()
 
     for pnl in pnl_collector:
-        if pnl.DesignOption is not None:
-            continue
+
         pname = get_model_param_value(pnl, DB.BuiltInParameter.RBS_ELEC_PANEL_NAME)
         if pname:
             pdata = {}
@@ -218,14 +221,15 @@ def main():
             logger.debug("  Panel " + str(pnl.Id) + " has no name => skipping")
 
     # 3) Collect detail items
-    detail_item_collector = DB.FilteredElementCollector(doc)\
-                     .OfCategory(DB.BuiltInCategory.OST_DetailComponents)\
-                     .WhereElementIsNotElementType()\
-                     .ToElements()
+    detail_item_collector = DB.FilteredElementCollector(doc) \
+        .OfCategory(DB.BuiltInCategory.OST_DetailComponents) \
+        .WhereElementIsNotElementType() \
+        .WherePasses(option_filter) \
+        .ToElements()
 
     detail_items = [
         el for el in detail_item_collector
-        if is_not_in_group(el) and  el.DesignOption is None]
+        if is_not_in_group(el)]
     logger.debug("Collected " + str(len(detail_items)) + " detail item(s).")
 
     t = DB.Transaction(doc, "Sync Circuits/Panels to Detail Items")
@@ -239,7 +243,8 @@ def main():
         cnum_val = get_detail_param_value(ditem, DETAIL_PARAM_CKT_NUMBER)
         pname_val = get_detail_param_value(ditem, DETAIL_PARAM_PANEL_NAME)
 
-        logger.debug("    cpanel_val='" + str(cpanel_val) + "' cnum_val='" + str(cnum_val) + "' pname_val='" + str(pname_val) + "'")
+        logger.debug("    cpanel_val='" + str(cpanel_val) + "' cnum_val='" + str(cnum_val) + "' pname_val='" + str(
+            pname_val) + "'")
         changed = False
 
         # If circuit reference is found, see if we can retrieve that from circuit_map
@@ -273,6 +278,7 @@ def main():
 
     t.Commit()
     logger.info("Sync finished. Updated " + str(update_count) + " detail item(s).")
+
 
 if __name__ == "__main__":
     main()

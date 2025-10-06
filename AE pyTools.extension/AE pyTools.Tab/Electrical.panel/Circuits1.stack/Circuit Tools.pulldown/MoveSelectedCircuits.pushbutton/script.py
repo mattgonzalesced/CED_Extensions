@@ -24,8 +24,6 @@ def get_sorted_filtered_panels(all_panels, doc):
 
     # Filter out panels with "Unknown Dist. System"
     for panel in all_panels:
-        if panel.DesignOption is not None:
-            continue
 
         panel_data = get_panel_dist_system(panel, doc)
         if panel_data['dist_system_name'] and panel_data['dist_system_name'] != "Unnamed Distribution System":

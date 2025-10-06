@@ -17,22 +17,28 @@ output = script.get_output()
 output.close_others()
 output.set_width(800)
 
+#design option filter
+option_filter = DB.ElementDesignOptionFilter(DB.ElementId.InvalidElementId)
+
 # Collect all electrical circuits
 circuits = DB.FilteredElementCollector(doc) \
     .OfCategory(DB.BuiltInCategory.OST_ElectricalCircuit) \
     .WhereElementIsNotElementType() \
+    .WherePasses(option_filter) \
     .ToElements()
 
 # Collect all internal circuits (spares and spaces)
 internal_circuits = DB.FilteredElementCollector(doc) \
     .OfCategory(DB.BuiltInCategory.OST_ElectricalInternalCircuits) \
     .WhereElementIsNotElementType() \
+    .WherePasses(option_filter) \
     .ToElements()
 
 # Collect all Electrical Panels
 elec_equip = DB.FilteredElementCollector(doc) \
     .OfCategory(DB.BuiltInCategory.OST_ElectricalEquipment) \
     .WhereElementIsNotElementType() \
+    .WherePasses(option_filter) \
     .ToElements()
 
 # Combine both sets of circuits
@@ -85,8 +91,6 @@ equipment_info = {}
 
 # Extract information from each electrical equipment instance
 for equip in elec_equip:
-    if equip.DesignOption is not None:
-        continue
 
     panel_name = get_parameter_by_name(equip, "Panel Name")
     if not panel_name:
@@ -174,7 +178,7 @@ def generate_report_tables():
                         '<th style="width: 10%; text-align: left; margin: 0; padding: 5px 0;">Count</th>'
                         '<th style="width: 20%; text-align: left; margin: 0; padding: 5px 0;">Amps / Poles</th>'
                         '<th style="width: 50%; text-align: left; margin: 0; padding: 5px 0;">Notes</th>'
-                        '<th style="width: 20%; text-align: left; margin: 0; padding: 5px 0;">Label</th>'
+                        '<th style="width: 20%; text-align: left; margin: 0; padding: 5px 0;">Spare/Space</th>'
                         '</tr>')
 
         # Helper function to generate a row safely
