@@ -1,0 +1,30 @@
+{
+  "space_categories": {
+    "L shape space": {
+      "match": {
+        "include": [
+          "L shape space"
+        ]
+      }
+    },
+    "T shape space": {
+      "match": {
+        "include": [
+          "T shape space"
+        ]
+      }
+    },
+    "Weird Space": {
+      "match": {
+        "include": [
+          "Weird Space"
+        ]
+      }
+    }
+  },
+  "defaults": {
+    "unknown_category": "Support",
+    "case_sensitive": false,
+    "regex": true
+  }
+}

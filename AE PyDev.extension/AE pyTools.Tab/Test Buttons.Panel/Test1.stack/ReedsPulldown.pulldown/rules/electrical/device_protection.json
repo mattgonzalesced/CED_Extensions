@@ -1,0 +1,11 @@
+{
+  "device_protection": {
+    "by_category": {
+      "Restrooms": { "gfci": true, "afci": false, "tamper_resistant": true },
+      "Kitchen":   { "gfci": true, "afci": false, "tamper_resistant": true },
+      "Offices":   { "gfci": false, "afci": true,  "tamper_resistant": true },
+      "Circulation": { "gfci": false, "afci": true, "tamper_resistant": true }
+    }
+  }
+}
+

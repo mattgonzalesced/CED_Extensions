@@ -1,0 +1,2 @@
+{ "transformers": { "default_impedance_%": 5.75, "secondary_ocpd_rule": "closest_standard", "xo_bonding": "solid" } }
+

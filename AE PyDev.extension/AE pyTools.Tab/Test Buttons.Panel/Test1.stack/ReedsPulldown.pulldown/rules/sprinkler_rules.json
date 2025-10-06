@@ -1,0 +1,131 @@
+{
+  "defaults": {
+    "ceiling_mount_preference": ["Ceiling", "Work Plane"],
+    "workplane_height_ft": 2.5,
+    "spacing_ft": {
+      "min": 8,
+      "max": 12,
+      "target": 10
+    },
+    "offset_ft": 2,
+    "min_per_room": 1,
+    "max_per_room": 20,
+    "avoid": {
+      "above_doors": true,
+      "under_beams_clear_ft": 0.5
+    },
+    "switching": {
+      "zones": "per_room"
+    },
+    "circuiting": {
+      "panel_preference": ["LP-1", "LP-2"],
+      "max_va_per_circuit": 1200,
+      "phases": "balance"
+    }
+  },
+  "categories": {
+    "L shape space": {
+      "fixture_candidates": [
+        {
+          "family": "Downlight - Rectangle - LED",
+          "type_catalog_name": "25W Rectangle",
+          "load_from": "C:\\Users\\reed.pinterich\\Documents\\Downlight - Rectangle - LED.rfa",
+          "spacing_ft": {
+            "target": 5,
+            "min": 2,
+            "max": 12
+          },
+          "offset_ft": 2
+        }
+      ],
+      "switching": {
+        "zones": "per_row"
+      },
+      "circuiting": {
+        "panel_preference": ["LP-1"]
+      }
+    },
+    "Circulation": {
+      "fixture_candidates": [
+        {
+          "family": "LT_Strip_4ft",
+          "type": "LED",
+          "spacing_ft": {
+            "target": 12
+          }
+        }
+      ],
+      "switching": {
+        "zones": "per_corridor"
+      },
+      "circuiting": {
+        "panel_preference": ["LP-1"]
+      }
+    },
+    "T shape space": {
+      "fixture_candidates": [
+        {
+          "family": "Downlight - Rectangle - LED",
+          "type_catalog_name": "25W Rectangle",
+          "load_from": "C:\\Users\\reed.pinterich\\Documents\\Downlight - Rectangle - LED.rfa",
+          "spacing_ft": {
+            "target": 10,
+            "min": 8,
+            "max": 12
+          },
+          "offset_ft": 2
+        }
+      ],
+      "avoid": {
+        "above_doors": true
+      },
+      "switching": {
+        "zones": "per_room"
+      }
+    },
+    "Weird Space": {
+      "fixture_candidates": [
+        {
+          "family": "Downlight - Rectangle - LED",
+          "type_catalog_name": "25W Rectangle",
+          "load_from": "C:\\Users\\reed.pinterich\\Documents\\Downlight - Rectangle - LED.rfa",
+          "spacing_ft": {
+            "target": 5,
+            "min": 2,
+            "max": 12
+          },
+          "offset_ft": 2
+        }
+      ],
+      "switching": {
+        "zones": "per_room"
+      },
+      "circuiting": {
+        "panel_preference": ["LP-K"]
+      }
+    },
+    "Electrical": {
+      "fixture_candidates": [
+        {
+          "family": "Downlight - Rectangle - LED",
+          "type_catalog_name": "25W Rectangle",
+          "load_from": "C:\\Users\\reed.pinterich\\Documents\\Downlight - Rectangle - LED.rfa",
+          "spacing_ft": {
+            "target": 10,
+            "min": 8,
+            "max": 12
+          },
+          "offset_ft": 2,
+          "max_per_room": 30
+        }
+      ],
+      "switching": {
+        "zones": "per_space"
+      },
+      "circuiting": {
+        "panel_preference": ["LP-S", "HP-1"]
+      }
+    }
+  }
+}
+

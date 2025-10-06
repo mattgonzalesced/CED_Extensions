@@ -1,0 +1,9 @@
+{
+  "specials": {
+    "healthcare": false,
+    "hazardous": false,
+    "pools": false,
+    "commercial_kitchen": false
+  }
+}
+

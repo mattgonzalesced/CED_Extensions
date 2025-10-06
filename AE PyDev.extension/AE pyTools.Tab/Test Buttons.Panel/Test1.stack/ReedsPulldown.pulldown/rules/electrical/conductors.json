@@ -1,0 +1,8 @@
+{
+  "conductors": {
+    "temp_rating": "75C",
+    "vd_targets_percent": { "branch_max": 3, "feeder_max": 3, "total_max": 5 },
+    "neutral_sizing": "per_load_type"
+  }
+}
+

@@ -1,0 +1,4 @@
+{ "distribution": { "service_voltage": "120/208V-3Ø-4W", "main_ocpd_a": 800,
+  "panels": [{ "name": "LP-1", "voltage": "120/208V", "poles": 42, "location_regex": "Elec Room L1" }] } }
+
+

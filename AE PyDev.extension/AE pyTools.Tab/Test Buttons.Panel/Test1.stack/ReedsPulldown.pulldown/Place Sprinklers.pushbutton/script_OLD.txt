@@ -1,0 +1,618 @@
+# -*- coding: utf-8 -*-
+# script.py — Room → Category → Lighting Rules → (Plan / Place)
+# Works inside pyRevit pushbutton. No external packages required.
+# Toggle DRY_RUN to False to enable actual placement (see TODOs below).
+
+# =========================
+# 0) SETTINGS / TOGGLES
+# =========================
+DRY_RUN = False                 # <— set to False to actually place fixtures (see TODOs)
+ONLY_CURRENT_LEVEL = False     # filter rooms to active view's level
+PREFER_SELECTION = True        # if one or more rooms are selected, use only those
+VERBOSE = True                 # print more diagnostics
+
+# =========================
+# 1) BIND TO REVIT SAFELY
+# =========================
+import sys, os, math
+import clr
+
+# try pyrevit.revit first (cleanest)
+uiapp = uidoc = doc = app = active_view = None
+try:
+    from pyrevit import revit
+    uiapp = revit.uiapp
+    uidoc = revit.uidoc
+    doc   = revit.doc
+    app   = uiapp.Application if uiapp else None
+except Exception:
+    pass
+
+# fallback: __revit__
+if app is None:
+    try:
+        uiapp = __revit__
+        app   = uiapp.Application
+        uidoc = uiapp.ActiveUIDocument
+        doc   = uidoc.Document if uidoc else None
+    except Exception:
+        pass
+
+# fallback: RevitServices
+if app is None:
+    try:
+        clr.AddReference('RevitServices')
+        from RevitServices.Persistence import DocumentManager
+        dm    = DocumentManager.Instance
+        uiapp = dm.CurrentUIApplication
+        uidoc = uiapp.ActiveUIDocument if uiapp else None
+        doc   = dm.CurrentDBDocument
+        app   = uiapp.Application if uiapp else None
+    except Exception:
+        pass
+
+if app is None or uiapp is None:
+    raise EnvironmentError(
+        "[FATAL] Could not acquire Revit UIApplication. "
+        "Run this from a pyRevit pushbutton *inside* Revit. "
+        "Open a project/family and ensure your extension is loaded."
+    )
+
+if doc is None:
+    raise EnvironmentError(
+        "[FATAL] No active Revit document. Open a project or family first."
+    )
+
+active_view = doc.ActiveView
+
+# =========================
+# 2) REVIT API IMPORTS
+# =========================
+clr.AddReference('RevitAPI')
+from Autodesk.Revit.DB import (
+    FilteredElementCollector, BuiltInCategory, ElementId, Level, SpatialElement,
+    XYZ, Transaction, TransactionGroup, FamilySymbol, Family, FamilyInstance,
+    FamilyPlacementType, View, BoundingBoxXYZ, Outline, Options, Transform,
+    IFamilyLoadOptions
+)
+
+# =========================
+# 3) PATHS & RULE LOADER
+# =========================
+# expects: rules/identify_rooms.yaml and rules/lighting_rules.yaml
+SCRIPT_DIR = os.path.dirname(__file__)
+RULES_DIR  = os.path.join(SCRIPT_DIR, "rules")
+IDENTIFY   = os.path.join(RULES_DIR, "identify_rooms.json")     # or .json twin
+LIGHTING   = os.path.join(RULES_DIR, "lighting_rules.json")     # or .json twin
+
+# rules_loader.py must be in lib/
+LIB_DIR = os.path.join(SCRIPT_DIR, "lib")
+if LIB_DIR not in sys.path:
+    sys.path.append(LIB_DIR)
+
+from rules_loader import build_rule_for_room  # previously provided
+
+# =========================
+# 4) UTIL / LOGGING
+# =========================
+def log(msg):
+    if VERBOSE:
+        print(msg)
+
+def ft(x):
+    return x  # Revit internal units are imperial feet already
+
+def clamp(n, lo, hi):
+    return max(lo, min(n, hi))
+
+# =========================
+# 5) ROOM COLLECTION
+# =========================
+def get_room_level(room):
+    try:
+        lid = room.LevelId
+        return doc.GetElement(lid) if lid and lid.IntegerValue > 0 else None
+    except:
+        return None
+
+def get_current_view_level():
+    try:
+        return doc.GetElement(active_view.GenLevel.Id)
+    except:
+        return None
+
+def get_selected_rooms_first():
+    if not PREFER_SELECTION or uidoc is None:
+        return []
+    ids = list(uidoc.Selection.GetElementIds())
+    out = []
+    for eid in ids:
+        el = doc.GetElement(eid)
+        if isinstance(el, SpatialElement) and el.Category and el.Category.Id.IntegerValue == int(BuiltInCategory.OST_Rooms):
+            out.append(el)
+    return out
+
+def collect_all_rooms():
+    return list(FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Rooms).WhereElementIsNotElementType())
+
+def filter_rooms_to_view_level(rooms, level):
+    if not level:
+        return rooms
+    out = []
+    for r in rooms:
+        rlvl = get_room_level(r)
+        if rlvl and rlvl.Id == level.Id:
+            out.append(r)
+    return out
+
+def get_target_rooms(only_current_level=ONLY_CURRENT_LEVEL, prefer_selection=PREFER_SELECTION):
+    sel = get_selected_rooms_first() if prefer_selection else []
+    if sel:
+        return sel
+    rooms = collect_all_rooms()
+    if only_current_level:
+        lvl = get_current_view_level()
+        rooms = filter_rooms_to_view_level(rooms, lvl)
+    return rooms
+
+def room_display_name(room):
+    try:
+        p = room.LookupParameter("Name")
+        nm = p.AsString() if p else room.Name
+    except:
+        nm = getattr(room, "Name", "")
+    num = ""
+    try:
+        q = room.LookupParameter("Number")
+        num = q.AsString() if q else ""
+    except:
+        pass
+    return (nm or "").strip(), (num or "").strip()
+
+def get_room_bbox_center(room):
+    """Approximate center using the Room's computed location (fallback to bbox)."""
+    try:
+        loc = room.Location
+        if loc and hasattr(loc, "Point") and loc.Point:
+            return loc.Point  # XYZ
+    except:
+        pass
+    try:
+        # fallback: room's bbox in active view context (approx)
+        opt = Options()
+        geo = room.get_Geometry(opt)
+        bbox = None
+        for g in geo:
+            try:
+                bb = g.GetBoundingBox()
+                if bb:
+                    if bbox is None:
+                        bbox = BoundingBoxXYZ()
+                        bbox.Min = bb.Min
+                        bbox.Max = bb.Max
+                    else:
+                        bbox.Min = XYZ(min(bbox.Min.X, bb.Min.X),
+                                       min(bbox.Min.Y, bb.Min.Y),
+                                       min(bbox.Min.Z, bb.Min.Z))
+                        bbox.Max = XYZ(max(bbox.Max.X, bb.Max.X),
+                                       max(bbox.Max.Y, bb.Max.Y),
+                                       max(bbox.Max.Z, bb.Max.Z))
+            except:
+                continue
+        if bbox:
+            cen = (bbox.Min + bbox.Max) * 0.5
+            return cen
+    except:
+        pass
+    # ultimate fallback: project origin
+    return XYZ(0, 0, 0)
+
+# =========================
+# 6) SIMPLE GRID PROPOSAL
+# =========================
+def propose_grid_points(room, spacing_ft_target, offset_ft=2.0, max_count=50):
+    """
+    Super-simple grid based on the room's bbox in plan.
+    For production, replace with your better grid that respects room shape & ceiling grid.
+    """
+    # Room bbox in plan (use room boundaries later; bbox is a coarse approximation)
+    bb = room.get_BoundingBox(active_view)
+    if not bb:
+        # fallback to computed center only
+        return [get_room_bbox_center(room)]
+    minpt, maxpt = bb.Min, bb.Max
+    # shrink bbox by offset
+    minx, miny = minpt.X + offset_ft, minpt.Y + offset_ft
+    maxx, maxy = maxpt.X - offset_ft, maxpt.Y - offset_ft
+
+    if maxx <= minx or maxy <= miny:
+        return [get_room_bbox_center(room)]
+
+    # how many steps fit?
+    width  = maxx - minx
+    depth  = maxy - miny
+    nx = int(max(1, round(width  / spacing_ft_target)))
+    ny = int(max(1, round(depth  / spacing_ft_target)))
+
+    pts = []
+    for ix in range(nx):
+        x = minx + (ix + 0.5) * (width / nx)
+        for iy in range(ny):
+            y = miny + (iy + 0.5) * (depth / ny)
+            pts.append(XYZ(x, y, 0.0))
+
+    if len(pts) > max_count:
+        pts = pts[:max_count]
+    return pts
+
+# =========================
+# 7) FIXTURE SELECTION HOOKS
+# =========================
+# --- Always-overwrite load options ---
+# ---- Type-catalog aware matcher & loader (paste into script.py) ----
+
+class _AlwaysLoad(IFamilyLoadOptions):
+    # Overwrite if family already exists in project
+    def OnFamilyFound(self, familyInUse, overwriteParameterValues):
+        try:
+            overwriteParameterValues[0] = True
+        except Exception:
+            pass
+        return True
+    def OnSharedFamilyFound(self, sharedFamily, familyInUse, source, overwriteParameterValues):
+        try:
+            overwriteParameterValues[0] = True
+        except Exception:
+            pass
+        return True
+
+def _collect_symbols_any():
+    """Gather (FamilyName, TypeName, FamilySymbol) from likely categories, then all."""
+    pairs = []
+    def add(col):
+        for fs in col:
+            try:
+                fam = fs.Family
+                pairs.append((fam.Name if fam else "", fs.Name, fs))
+            except:
+                continue
+    try:
+        add(FilteredElementCollector(doc).OfClass(FamilySymbol).OfCategory(BuiltInCategory.OST_LightingFixtures))
+    except: pass
+    try:
+        add(FilteredElementCollector(doc).OfClass(FamilySymbol).OfCategory(BuiltInCategory.OST_LightingDevices))
+    except: pass
+    if not pairs:
+        try:
+            add(FilteredElementCollector(doc).OfClass(FamilySymbol))
+        except: pass
+    return pairs
+
+def _try_load_family_shell(rfa_path):
+    """Load the family container (.rfa) into the project (no specific types)."""
+    if not (rfa_path and os.path.exists(rfa_path)):
+        return False
+    t = Transaction(doc, "Load Family Shell")
+    t.Start()
+    try:
+        ok = doc.LoadFamily(rfa_path, _AlwaysLoad())
+        t.Commit()
+        return ok
+    except Exception as ex:
+        try: t.RollBack()
+        except: pass
+        print("[LOAD] Family shell load failed:", ex)
+        return False
+
+def _parse_type_catalog(txt_path):
+    """Read .txt type catalog and return list of type names (first field of each row)."""
+    if not os.path.exists(txt_path):
+        return []
+    with open(txt_path, 'rb') as f:
+        data = f.read()
+    text = None
+    for enc in ('utf-8-sig', 'utf-16', 'latin-1'):
+        try:
+            text = data.decode(enc); break
+        except: pass
+    if text is None:
+        return []
+    names = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith('//'):
+            continue
+        # first token (before comma/tab/semicolon) is the type name
+        sep_idx = None
+        for sep in (',', '\t', ';'):
+            i = line.find(sep)
+            if i != -1:
+                sep_idx = i; break
+        first = line if sep_idx is None else line[:sep_idx]
+        first = first.strip().strip('"').strip("'")
+        if first:
+            names.append(first)
+    return names
+
+def _collapse_ws(s):
+    return " ".join((s or "").split())
+
+def _choose_catalog_type(type_names, want_exact, want_regex):
+    """Pick a catalog type name by exact, case-insensitive, whitespace-collapsed, or regex."""
+    if not type_names:
+        return None
+    # exact (case-sensitive)
+    if want_exact and want_exact in type_names:
+        return want_exact
+    # exact (case-insensitive)
+    if want_exact:
+        lowmap = {n.lower(): n for n in type_names}
+        ne = want_exact.lower()
+        if ne in lowmap:
+            return lowmap[ne]
+    # exact (whitespace-collapsed)
+    if want_exact:
+        cmap = { _collapse_ws(n).lower(): n for n in type_names }
+        key = _collapse_ws(want_exact).lower()
+        if key in cmap:
+            return cmap[key]
+    # regex
+    if want_regex:
+        try:
+            rx = re.compile(want_regex, re.IGNORECASE)
+            for n in type_names:
+                if rx.search(n):
+                    return n
+        except Exception:
+            pass
+    # fallback: first entry so we don't stall
+    return type_names[0]
+
+def _dump_catalog_names(names, max_show=60):
+    print("[CATALOG] Found {0} type names in catalog:".format(len(names)))
+    for n in names[:max_show]:
+        print("  - {0}".format(n))
+    if len(names) > max_show:
+        print("  … ({0} more)".format(len(names) - max_show))
+
+def _try_load_symbol_from_catalog(rfa_path, type_name):
+    """Load a specific type from a type catalog into the project via LoadFamilySymbol."""
+    if not (rfa_path and os.path.exists(rfa_path) and type_name):
+        return None
+    try:
+        out = clr.StrongBox[FamilySymbol]()
+    except:
+        out = clr.StrongBox[FamilySymbol](None)
+    t = Transaction(doc, "Load Family Symbol (Catalog)")
+    t.Start()
+    try:
+        ok = doc.LoadFamilySymbol(rfa_path, type_name, out)
+        if ok and out.Value:
+            sym = out.Value
+            try:
+                if not sym.IsActive:
+                    sym.Activate()
+            except:  # activation can be deferred to placement txn
+                pass
+            t.Commit()
+            print("[LOAD] Loaded type from catalog:", type_name)
+            return sym
+        t.RollBack()
+        print("[LOAD] LoadFamilySymbol returned False for:", type_name)
+        return None
+    except Exception as ex:
+        try: t.RollBack()
+        except: pass
+        print("[LOAD] Exception loading symbol from catalog:", ex)
+        return None
+
+def pick_fixture_symbol(rule):
+    """
+    Returns a FamilySymbol selected by rule['fixture_candidates'] entry with keys:
+      - family              (required)   e.g., "Downlight - Rectangle - LED"
+      - type_catalog_name   (optional)   exact catalog row name, e.g., "18W Square"
+      - type_regex          (optional)   regex to match a catalog row, e.g., "^18\\s*W\\s*Square$"
+      - load_from           (optional)   full path to .rfa to load (catalog .txt must share basename)
+    Strategy:
+      1) Try match any already-loaded symbols.
+      2) Load family shell (RFA) if needed.
+      3) If a .txt catalog exists, list names, choose one, and LoadFamilySymbol().
+      4) Re-scan & return the symbol.
+    """
+    cands = (rule.get('fixture_candidates') or [])
+    if not cands:
+        print("[MATCH] No fixture_candidates in rule.")
+        return None
+
+    for cand in cands:
+        fam_req   = (cand.get('family') or "").strip()
+        typ_exact = (cand.get('type_catalog_name') or cand.get('type') or "").strip()
+        typ_regex = (cand.get('type_regex') or "").strip()
+        rfa_path  = (cand.get('load_from') or "").strip()
+
+        # 0) try anything already loaded
+        pairs = _collect_symbols_any()
+        for f, t, fs in pairs:
+            if f == fam_req and (not typ_exact or t == typ_exact):
+                try:
+                    if not fs.IsActive: fs.Activate()
+                except: pass
+                print("[MATCH] Exact:", f, "::", t)
+                return fs
+            if f.lower() == fam_req.lower() and (not typ_exact or t.lower() == typ_exact.lower()):
+                try:
+                    if not fs.IsActive: fs.Activate()
+                except: pass
+                print("[MATCH] Case-insensitive:", f, "::", t)
+                return fs
+
+        # 1) ensure family shell is in the project
+        if rfa_path and os.path.exists(rfa_path):
+            _try_load_family_shell(rfa_path)
+
+            # 2) if a type catalog exists, choose a type and load that symbol
+            cat_path = os.path.splitext(rfa_path)[0] + ".txt"
+            if os.path.exists(cat_path):
+                names = _parse_type_catalog(cat_path)
+                if names:
+                    _dump_catalog_names(names)  # shows EXACT names to use
+                    chosen = _choose_catalog_type(names, typ_exact, typ_regex)
+                    if chosen:
+                        sym = _try_load_symbol_from_catalog(rfa_path, chosen)
+                        if sym:
+                            return sym
+                    else:
+                        print("[LOAD] Catalog found but no matching name. Tweak 'type_catalog_name' or 'type_regex'.")
+
+            # 3) re-scan in case family has built-in types (no catalog)
+            pairs = _collect_symbols_any()
+            for f, t, fs in pairs:
+                if f == fam_req and (not typ_exact or t == typ_exact):
+                    try:
+                        if not fs.IsActive: fs.Activate()
+                    except: pass
+                    print("[MATCH] Exact after load:", f, "::", t)
+                    return fs
+
+        print("[MATCH] Candidate did not resolve a symbol; trying next candidate (if any).")
+
+    # final: show what's in the model
+    pairs = _collect_symbols_any()
+    if not pairs:
+        print("[MATCH] No FamilySymbol instances are loaded in this model.")
+    else:
+        print("[MATCH] Available symbols (Family :: Type):")
+        for f, t, _ in sorted(pairs)[:50]:
+            print("  - {0} :: {1}".format(f, t))
+    return None
+
+# =========================
+# 8) HOST / ELEVATION RESOLUTION (BASIC)
+# =========================
+def resolve_host_elevation(room, default_height_ft=8.0):
+    """
+    For workplane-based placement fallback: z = level elevation + default_height_ft
+    If you are using ceiling-hosted families, replace this with a routine that
+    finds the ceiling face reference inside the room and uses face-hosted placement.
+    """
+    lvl = get_room_level(room)
+    lvl_elev = lvl.Elevation if lvl else 0.0
+    z = lvl_elev + default_height_ft
+    return z
+
+# =========================
+# 9) PLACEMENT (SAFE STUB)
+# =========================
+def place_fixtures_in_room(room, rule):
+    """
+    DRY-RUN: computes points & reports. If DRY_RUN=False and the chosen symbol
+    is non-hosted or workplane-based, it will place instances at a set elevation.
+    For ceiling-hosted troffers, replace this with your ceiling hosting routine.
+    """
+    name, number = room_display_name(room)
+    spacing = (rule.get('spacing_ft') or {}).get('target', 10.0)
+    offset  = rule.get('offset_ft', 2.0)
+    min_q   = int(rule.get('min_per_room', 1))
+    max_q   = int(rule.get('max_per_room', 20))
+
+    pts_plan = propose_grid_points(room, spacing_ft_target=spacing, offset_ft=offset, max_count=max_q)
+    # enforce min/max
+    if len(pts_plan) < min_q:
+        # add center if empty
+        while len(pts_plan) < min_q:
+            pts_plan.append(get_room_bbox_center(room))
+
+    pts_plan = pts_plan[:max_q]
+    log("[PLAN] {0} {1}: proposed {2} pts (spacing ≈ {3}ft)".format(name, number, len(pts_plan), spacing))
+
+    if DRY_RUN:
+        return len(pts_plan), []
+
+    # try to get a symbol
+    sym = pick_fixture_symbol(rule)
+    if sym is None:
+        log("[WARN] No matching FamilySymbol for rule; skipping placement.")
+        return len(pts_plan), []
+
+    # place instances at resolved elevation (workplane-like fallback)
+    z = resolve_host_elevation(room)
+    t = Transaction(doc, "Place Lighting (AutoLayout)")
+    t.Start()
+    placed = []
+    try:
+        for p in pts_plan:
+            pt3 = XYZ(p.X, p.Y, z)
+            try:
+                inst = doc.Create.NewFamilyInstance(pt3, sym, get_room_level(room), 0)  # 0 == StructuralType.NonStructural
+            except:
+                # If NewFamilyInstance signature differs across versions, try the 2022+ signature
+                inst = doc.Create.NewFamilyInstance(pt3, sym, get_room_level(room), None)
+            placed.append(inst)
+        t.Commit()
+        log("[PLACE] Placed {0} instances in {1} {2}".format(len(placed), name, number))
+    except Exception as ex:
+        log("[ERROR] Placement failed: {0}".format(ex))
+        try:
+            t.RollBack()
+        except:
+            pass
+    return len(pts_plan), placed
+
+# =========================
+# 10) MAIN
+# =========================
+def main():
+    # sanity: rules files exist
+    if not os.path.exists(IDENTIFY):
+        print("[FATAL] Missing rules file:", IDENTIFY)
+        return
+    if not os.path.exists(LIGHTING):
+        print("[FATAL] Missing rules file:", LIGHTING)
+        return
+
+    rooms = get_target_rooms(only_current_level=ONLY_CURRENT_LEVEL, prefer_selection=PREFER_SELECTION)
+
+    if not rooms:
+        print("[ERROR] No Room elements found.")
+        print("Checklist:")
+        print("  - Place a Room inside closed boundaries (or add Room Separation Lines).")
+        print("  - Ensure linked walls set to Room Bounding.")
+        print("  - Open a plan view with your room visible.")
+        return
+
+    if len(rooms) == 1:
+        nm, num = room_display_name(rooms[0])
+        print("[INFO] One room found: {0} {1}".format(nm, num))
+    else:
+        print("[INFO] {0} rooms found. Processing…".format(len(rooms)))
+
+    total_planned = 0
+    total_placed  = 0
+
+    for r in rooms:
+        nm, num = room_display_name(r)
+        try:
+            category, rule = build_rule_for_room(nm or "", IDENTIFY, LIGHTING)
+        except Exception as ex:
+            print("[ERROR] Could not build rules for room '{0}': {1}".format(nm, ex))
+            continue
+
+        cands = rule.get('fixture_candidates', []) or []
+        cand_str = "{0} candidate(s)".format(len(cands))
+        if cands:
+            c0 = cands[0]
+            cand_str = "{0} (e.g., {1} :: {2})".format(len(cands), c0.get('family'), c0.get('type'))
+        print("[RULES] '{0}' → Category '{1}' | {2}".format(nm, category, cand_str))
+
+        planned, placed = place_fixtures_in_room(r, rule)
+        total_planned += planned
+        total_placed  += len(placed)
+
+    if DRY_RUN:
+        print("[RESULT] DRY-RUN complete. Planned {0} placements across {1} room(s).".format(total_planned, len(rooms)))
+        print("         Set DRY_RUN = False to enable actual placement.")
+    else:
+        print("[RESULT] Placed {0} instances (planned {1}) across {2} room(s).".format(total_placed, total_planned, len(rooms)))
+
+if __name__ == "__main__":
+    main()

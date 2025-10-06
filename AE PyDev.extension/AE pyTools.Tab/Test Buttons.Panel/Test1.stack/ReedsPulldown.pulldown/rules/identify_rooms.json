@@ -1,0 +1,91 @@
+{
+  "room_categories": {
+    "Offices": {
+      "match": {
+        "include": [
+          "Office",
+          "Conf",
+          "Conference",
+          "Open Office",
+          "Training"
+        ],
+        "exclude": [
+          "Electrical",
+          "Mechanical",
+          "Storage"
+        ]
+      }
+    },
+    "Circulation": {
+      "match": {
+        "include": [
+          "Corridor",
+          "Lobby",
+          "Vestibule"
+        ]
+      }
+    },
+    "Restrooms": {
+      "match": {
+        "include": [
+          "Restroom",
+          "Toilet",
+          "WC",
+          "Bath"
+        ]
+      }
+    },
+    "Electrical": {
+      "match": {
+        "include": [
+          "Electrical",
+          "Mechanical",
+          "Janitor",
+          "Storage",
+          "IT",
+          "Telecom"
+        ]
+      }
+    },
+    "Kitchen": {
+      "match": {
+        "include": [
+          "Kitchen",
+          "Breakroom",
+          "Pantry"
+        ]
+      }
+    },
+    "Hallway": {
+      "match": {
+        "include": [
+          "Hall",
+          "Lab",
+          "Server",
+          "Data",
+          "Equipment",
+          "Boiler"
+        ]
+      }
+    },
+    "T shape space": {
+      "match": {
+        "include": [
+          "T shape"
+        ]
+      }
+    },
+    "L shape space": {
+      "match": {
+        "include": [
+          "L shape"
+        ]
+      }
+    }
+  },
+  "defaults": {
+    "unknown_category": "Support",
+    "case_sensitive": false,
+    "regex": true
+  }
+}

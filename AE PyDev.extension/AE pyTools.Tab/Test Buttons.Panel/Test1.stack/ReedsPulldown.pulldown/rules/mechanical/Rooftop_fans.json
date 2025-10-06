@@ -1,0 +1,57 @@
+{
+  "version": "1.1",
+  "defaults": {
+    "fan_name_hints": ["ROOF", "FAN", "EXHAUST"],
+    "fan_offset_ft": 3.0
+  },
+
+  "fan_rules_by_space": {
+    "General": {
+      "device_candidates": [
+        {
+          "family": "M_Roof_Exhaust_Fan",
+          "type": "Size-18in",
+          "load_from": "C:\\Families\\Mechanical\\M_Roof_Exhaust_Fan.rfa"
+        }
+      ]
+    },
+
+    "Restrooms": {
+      "device_candidates": [
+        {
+          "family": "M_Roof_Exhaust_Fan",
+          "type": "Size-14in",
+          "load_from": "C:\\Families\\Mechanical\\M_Roof_Exhaust_Fan.rfa"
+        }
+      ],
+      "fan_name_hints": ["ROOF", "FAN", "BATH", "EXHAUST"],
+      "fan_offset_ft": 2.5
+    },
+
+    "T shape space": {
+      "device_candidates": [
+        {
+          "family": "Downlight - Rectangle - LED",
+          "type_catalog_name": "Size 2 - 6 inch Inlet",
+          "load_from": "C:\\Users\\reed.pinterich\\Documents\\VAV Unit - Parallel Fan Powered.rfa"
+        },
+        {
+          "family": "M_Roof_Exhaust_Fan",
+          "type": "Size-18in"
+        }
+      ]
+    },
+
+    "L shape space": {
+      "device_candidates": [
+        {
+          "family": "M_Roof_Supply_Fan",
+          "type": "Standard-20in",
+          "load_from": "C:\\Families\\Mechanical\\M_Roof_Supply_Fan.rfa"
+        }
+      ],
+      "fan_name_hints": ["ROOF", "FAN", "SUPPLY"]
+    }
+  }
+}
+
