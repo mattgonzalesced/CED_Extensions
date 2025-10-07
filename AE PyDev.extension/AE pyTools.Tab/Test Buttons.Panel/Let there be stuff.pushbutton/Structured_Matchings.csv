@@ -1,0 +1,31 @@
+CAD_Block_Name,Lighting_Fixture,Electrical_Fixture,Electrical_Fixture_Parameters,Mechanical_Equipment,Model_Groups,Generic Annotations,Notes
+27TV,,EF-U_Receptacle_CED:Duplex Floor,EF-U_Receptacle_CED:Duplex Floor:dev-Group ID:27TV,,,,TV outlet
+43 tv,,EF-U_Receptacle_CED:Duplex Floor,EF-U_Receptacle_CED:Duplex Floor:dev-Group ID:43 tv,,,,TV outlet
+65tv,,EF-U_Receptacle_CED:Duplex Floor,EF-U_Receptacle_CED:Duplex Floor:dev-Group ID:65tv,,,,TV outlet
+70tv,,EF-U_Receptacle_CED:Duplex Floor,EF-U_Receptacle_CED:Duplex Floor:dev-Group ID:70tv,,,,TV outlet
+75TV,,EF-U_Receptacle_CED:Duplex Floor,EF-U_Receptacle_CED:Duplex Floor:dev-Group ID:75tv,,,,TV outlet
+BCS Speaker,,Speaker Family,EF-U_Receptacle_CED:Duplex Floor:dev-Group ID:BCS speaker,,,,Speaker with electrical
+BEAUTYANGEL,,"EF-U_Disconnect Switch_CED:Fused - 30A, EF-U_Receptacle_CED:Duplex Floor",EF-U_Receptacle_CED:Duplex Floor:dev-Group ID:BEAUTYANGEL,,,,
+E1,Emergency_Exit_Light:Standard,,,,,,Emergency lighting
+E2,Emergency_Exit_Light:With Arrows,,,,,,Emergency lighting with arrows
+E5,Smoke_Detector:Standard,,,,,,Smoke detector
+Exit Sign,Emergency_Exit_Light:Standard,,,,,,Exit sign
+F1,Lighting_Fixture:Standard,,,,,,General lighting
+F12C,Lighting_Fixture:Standard,,,,,,General lighting
+F13,Lighting_Fixture:Standard,,,,,,General lighting
+F3,Lighting_Fixture:Standard,,,,,,General lighting
+F6-1,Lighting_Fixture:Standard,,,,,,General lighting
+F9,Lighting_Fixture:Standard,,,,,,General lighting
+FAN 1,,EF-U_Disconnect Switch_CED:Fused - 30A,EF-U_Disconnect Switch_CED:Fused - 30A:dev-Group ID:Fan ID,,,,Fan disconnect
+HM5A,,EF-U_Receptacle_CED:Duplex Floor,EF-U_Receptacle_CED:Duplex Floor:dev-Group ID:HM5A,,,,Floor receptacle
+HM62A,,EF-U_Disconnect Switch_CED:Fused - 30A,EF-U_Disconnect Switch_CED:Fused - 30A:dev-Group ID:HM62A,,,,Equipment disconnect
+HM62B_Up tanning,,EF-U_Disconnect Switch_CED:Fused - 30A,EF-U_Disconnect Switch_CED:Fused - 30A:dev-Group ID:HM62B_Up tanning,,,,Tanning equipment disconnect
+HM62E Hybrid Tanning Booth,,EF-U_Disconnect Switch_CED:Fused - 30A,EF-U_Disconnect Switch_CED:Fused - 30A:dev-Group ID:HM62E Hybrid Tanning Booth,,,,Tanning with speaker and data
+HM63C,,EF-U_Receptacle_CED:Duplex Floor,EF-U_Receptacle_CED:Duplex Floor:dev-Group ID:HM63C,,,,Multiple receptacles
+Hybrid Light Bed HM62D,,EF-U_Disconnect Switch_CED:Fused - 30A,EF-U_Disconnect Switch_CED:Fused - 30A:dev-Group ID:Hybrid Light Bed HM62D,,,,Tanning bed disconnect
+it,Lighting_Fixture:Standard,EF-U_Receptacle_CED:Duplex Floor,EF-U_Receptacle_CED:Duplex Floor:dev-Group ID:it,,,,Lighting and power
+Stepmill (C5X-5PL-PF),,EF-U_Receptacle_CED:Duplex Floor,EF-U_Receptacle_CED:Duplex Floor:dev-Group ID:Stepmill (C5X-5PL-PF),,,,Exercise equipment power
+Treadmill (T5X-5PL-PF),,"EF-U_Receptacle_CED:Duplex Floor, EF-U_Disconnect Switch_CED:Fused - 30A","EF-U_Receptacle_CED:Duplex Floor:dev-Group ID:Treadmill (T5X-5PL-PF),EF-U_Disconnect Switch_CED:Fused - 30A:dev-Group ID:Treadmill (T5X-5PL-PF)",,P_Gas-fired Water Heater Plant:Group 1,Manual Key Note- All Shapes:Square,Exercise equipment power
+TV TRUSS,,"EF-U_Receptacle_CED:Duplex Floor,EF-U_Receptacle_CED:Duplex Floor","EF-U_Receptacle_CED:Duplex Floor:dev-Group ID:TV TRUSS, EF-U_Receptacle_CED:Duplex Floor:dev-Group ID:TV TRUSS",,,,TV mounting power
+vending machine,,EF-U_Receptacle_CED:Duplex Floor,EF-U_Receptacle_CED:Duplex Floor:dev-Group ID:vending machine,,,,Vending machine power
+EX'G ADA DF,,,,,,,Existing ADA fountain
