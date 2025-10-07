@@ -1,0 +1,172 @@
+{
+  "space_categories": {
+    "L shape space": {
+      "match": {
+        "include": [
+          "L shape"
+        ]
+      }
+    },
+    "T shape space": {
+      "match": {
+        "include": [
+          "T shape"
+        ]
+      }
+    },
+    "Weird space": {
+      "match": {
+        "include": [
+          "Weird"
+        ]
+      }
+    },
+    "Back Office": {
+      "match": {
+        "include": [
+          "Back Office"
+        ]
+      }
+    },
+    "Device Check": {
+      "match": {
+        "include": [
+          "Device Check"
+        ],
+        "exclude": [
+          "CO2 Device Check"
+        ]
+      }
+    },
+    "CO2 Device Check": {
+      "match": {
+        "include": [
+          "CO2"
+        ]
+      }
+    },
+    "Break Room": {
+      "match": {
+        "include": [
+          "Break"
+        ]
+      }
+    },
+    "Dairy/ Produce Cooler": {
+      "match": {
+        "include": [
+          "Dairy"
+        ],
+        "exclude": [
+          "CO2 Device Check"
+        ]
+      }
+    },
+    "Freezer": {
+      "match": {
+        "include": [
+          "Freezer"
+        ],
+        "exclude": [
+          "CO2 Device Check"
+        ]
+      }
+    },
+    "Front Office": {
+      "match": {
+        "include": [
+          "Front Office"
+        ],
+        "exclude": [
+          "CO2 Device Check"
+        ]
+      }
+    },
+    "Hallway": {
+      "match": {
+        "include": [
+          "Hallway"
+        ],
+        "exclude": [
+          "CO2 Device Check"
+        ]
+      }
+    },
+    "Meat Cooler": {
+      "match": {
+        "include": [
+          "Meat Cooler",
+          "Meat Locker",
+          "Butcher Shop"
+        ],
+        "exclude": [
+          "CO2 Device Check"
+        ]
+      }
+    },
+    "Receiving Area": {
+      "match": {
+        "include": [
+          "Receiving Area"
+        ],
+        "exclude": [
+          "CO2 Device Check"
+        ]
+      }
+    },
+    "Restroom": {
+      "match": {
+        "include": [
+          "Restroom",
+          "Restroom #1",
+          "Restroom #2",
+          "Men's Room",
+          "Women's Room",
+          "Ladies Room",
+          "Unisex Restroom"
+        ],
+        "exclude": [
+          "CO2 Device Check"
+        ]
+      }
+    },
+    "Sales Floor": {
+      "match": {
+        "include": [
+          "Sales Floor"
+        ],
+        "exclude": [
+          "CO2 Device Check"
+        ]
+      }
+    },
+    "Stock Room": {
+      "match": {
+        "include": [
+          "Stock Room",
+          "The back",
+          "Let me check the back"
+        ],
+        "exclude": [
+          "CO2 Device Check"
+        ]
+      }
+    },
+    "Vestibule": {
+      "match": {
+        "include": [
+          "Vestibule",
+          "Portcullis"
+        ],
+        "exclude": [
+          "CO2 Device Check"
+        ]
+      }
+    }
+  },
+  "defaults": {
+    "unknown_category": "Support",
+    "case_sensitive": false,
+    "regex": true
+  }
+}
