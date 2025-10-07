@@ -24,7 +24,7 @@
         ]
       }
     },
-    "Break Room": {
+    "Break Room 107": {
       "match": {
         "include": [
           "Break"
@@ -96,6 +96,7 @@
     "Restroom": {
       "match": {
         "include": [
+          "Restroom",
           "Restroom #1",
           "Restroom #2",
           "Men's Room",
