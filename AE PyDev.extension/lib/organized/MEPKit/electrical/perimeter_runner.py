@@ -30,8 +30,11 @@ def place_perimeter_recepts(doc, logger=None):
         match_text = space_match_text(sp)
         cat = categorize_space_by_name(match_text, id_rules)
 
-        log.info("Space Id %s → name='%s' match_text='%s' → category [%s]",
-                 sp.Id.IntegerValue, name, match_text, cat)
+        log.info(
+            u"Space Id {} → name='{}' match_text='{}' → category [{}]".format(
+                sp.Id.IntegerValue, name, match_text, cat
+            )
+        )
 
         cat_rule, general = get_category_rule(bc_rules, cat, fallback='Support')
 

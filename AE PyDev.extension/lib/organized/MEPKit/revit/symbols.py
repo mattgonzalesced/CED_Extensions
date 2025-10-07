@@ -2,6 +2,7 @@
 # lib/organized/MEPKit/revit/symbols.py
 from __future__ import absolute_import
 import os, clr
+clr.AddReference("RevitAPI")
 from Autodesk.Revit.DB import (FilteredElementCollector, FamilySymbol, Level, Family, IFamilyLoadOptions)
 from Autodesk.Revit.DB.Structure import StructuralType
 
@@ -10,54 +11,89 @@ from Autodesk.Revit.DB.Structure import StructuralType
 
 
 # --- loading support (so rules' "load_from" actually works) ---
-class _AlwaysLoad(IFamilyLoadOptions):
+class AlwaysLoad(IFamilyLoadOptions):
     def OnFamilyFound(self, familyInUse, overwriteParameterValues):
-        overwriteParameterValues = True
-        return True
+        overwriteParameterValues = True; return True
     def OnSharedFamilyFound(self, sharedFamily, familyInUse, source, overwriteParameterValues):
-        overwriteParameterValues = True
-        return True
+        overwriteParameterValues = True; return True
 
-def load_family(doc, family_path, logger=None):
-    if not family_path or not os.path.exists(family_path):
-        if logger: logger.warning("Family path not found: {}".format(family_path))
-        return None
-    fam_ref = clr.Reference[Family]()
-    ok = doc.LoadFamily(family_path, _AlwaysLoad(), fam_ref)
-    if not ok:
-        if logger: logger.warning("LoadFamily failed: {}".format(family_path))
-        return None
-    if logger: logger.info("Loaded family from: {}".format(family_path))
-    return fam_ref.Value
-
-# --- symbol resolution & placement ---
-def resolve_symbol(doc, family_name, type_name=None):
+def _resolve_symbol_exact(doc, family_name, type_name=None):
     fam_l = (family_name or '').strip().lower()
     type_l = (type_name or '').strip().lower() if type_name else None
     for s in FilteredElementCollector(doc).OfClass(FamilySymbol):
         if s.FamilyName.strip().lower() != fam_l:
             continue
-        if (type_l is None) or (s.Name.strip().lower() == type_l):
+        if type_l is None or s.Name.strip().lower() == type_l:
             return s
     return None
 
+def _log_family_symbols(doc, fam, logger=None, note=None):
+    try:
+        ids = list(fam.GetFamilySymbolIds())
+        names = []
+        for sid in ids:
+            sym = doc.GetElement(sid)
+            if sym:
+                names.append(sym.Name)
+        if logger:
+            logger.info(u"Family '{}' types {}{}: {}".format(
+                fam.Name,
+                "(from {}) ".format(note) if note else "",
+                "(count={})".format(len(names)),
+                u", ".join(u"'{}'".format(n) for n in names) if names else "<none>"
+            ))
+    except:
+        pass
+
 def resolve_or_load_symbol(doc, family_name, type_name=None, load_path=None, logger=None):
-    sym = resolve_symbol(doc, family_name, type_name)
+    # 1) Already in project?
+    sym = _resolve_symbol_exact(doc, family_name, type_name)
     if sym:
         return sym
+
+    # 2) Type-catalog load (if type provided)
+    opts = AlwaysLoad()
+    if load_path and type_name:
+        try:
+            if doc.LoadFamilySymbol(load_path, type_name, opts):
+                if logger: logger.info(u"Loaded catalog type: {} :: {}".format(family_name, type_name))
+                sym = _resolve_symbol_exact(doc, family_name, type_name)
+                if sym: return sym
+        except:
+            pass
+
+    # 3) Load full family (non-catalog) and pick symbol from the loaded Family object
+    fam_ref = clr.Reference[Family]()
     if load_path:
-        fam = load_family(doc, load_path, logger=logger)
-        if fam:
-            # Try again after load
-            return resolve_symbol(doc, family_name, type_name)
-    # As a last resort, try a loose contains match on family name
+        try:
+            if doc.LoadFamily(load_path, opts, fam_ref):
+                fam = fam_ref.Value
+                if logger: logger.info(u"Loaded family from: {}".format(load_path))
+                _log_family_symbols(doc, fam, logger, note="loaded")
+                # Prefer the requested type_name if provided
+                if type_name:
+                    type_l = type_name.strip().lower()
+                    for sid in fam.GetFamilySymbolIds():
+                        s = doc.GetElement(sid)
+                        if s and s.Name.strip().lower() == type_l:
+                            return s
+                # Else: pick first available symbol
+                for sid in fam.GetFamilySymbolIds():
+                    s = doc.GetElement(sid)
+                    if s: return s
+        except:
+            pass
+
+    # 4) Last-ditch: loose match on family name anywhere
     fam_l = (family_name or '').strip().lower()
-    type_l = (type_name or '').strip().lower() if type_name else None
     for s in FilteredElementCollector(doc).OfClass(FamilySymbol):
         if fam_l in s.FamilyName.strip().lower():
-            if (type_l is None) or (s.Name.strip().lower() == type_l):
-                if logger: logger.warning("Using loose match: {} :: {}".format(s.FamilyName, s.Name))
-                return s
+            if logger: logger.warning(u"Using loose match: {} :: {}".format(s.FamilyName, s.Name))
+            return s
+
+    if logger:
+        logger.warning(u"Failed to resolve symbol: family='{}' type='{}' (path='{}')"
+                       .format(family_name, type_name or '*', load_path or ''))
     return None
 
 def ensure_active(doc, symbol):
