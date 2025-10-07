@@ -11,9 +11,6 @@ from Autodesk.Revit.DB import (
     Level
 )
 from Autodesk.Revit.DB.Structure import StructuralType
-from organized.MEPKit.revit.placement import (
-    ensure_active, any_level, place_hosted, place_free
-)
 
 # ------------------------------
 # small tx helper (works inside/outside an outer tx)
