@@ -94,7 +94,7 @@ def build_ctx():
 def execute_tool_script(tool_name, ctx):
     """
     Execute tools/<tool_name>.py as if launched by a pyRevit pushbutton.
-    Works on IronPython 2.7 (pyRevit 4.x) and CPython 3 (newer stacks).
+    Works on IronPython 2.7.
     """
     import os, sys, runpy
     # IronPython-compatible builtins import
@@ -103,7 +103,7 @@ def execute_tool_script(tool_name, ctx):
     except ImportError:
         import __builtin__ as _builtins
 
-    # pyRevit context objects many scripts expect
+    # Pull real pyRevit context
     from pyrevit import revit as _revit
     from pyrevit import script as _script
     from pyrevit import forms as _forms
@@ -116,40 +116,46 @@ def execute_tool_script(tool_name, ctx):
     if not os.path.exists(tool_path):
         raise RuntimeError("Tool not found: {0}".format(tool_path))
 
-    # --- Pretend we're a real pyRevit pushbutton run ---
-    # Strongest signal: context + core globals
+    # >>> IMPORTANT: __revit__ must be UIApplication, not the 'pyrevit.revit' module
+    _uiapp = _revit.uiapp         # UIApplication
+    _uidoc = _revit.uidoc         # UIDocument
+    _doc   = _revit.doc           # Document
+
+    # Guard: ensure we really have a project doc (your scripts also check this)
+    if _doc is None or (_doc.IsFamilyDocument if hasattr(_doc, "IsFamilyDocument") else False):
+        raise EnvironmentError("Open a project in Revit and run from a pyRevit button.")
+
+    # Build the globals exactly like a pushbutton run
     globals_dict = {
         "__name__": "__main__",
         "__file__": tool_path,
-        "__revit__": _revit,
-        "__doc__": _revit.doc,       # legacy alias some scripts use
-        "__uidoc__": _revit.uidoc,
-        "__context__": "project",    # <—— many guards look for this
-        "__window__": None,          # harmless default
+        "__revit__": _uiapp,       # <<<<<< UIApplication (the crucial bit)
+        "__uidoc__": _uidoc,
+        "__doc__": _doc,
+        "__context__": "project",
+        "__window__": None,
         "revit": _revit,
         "script": _script,
         "forms": _forms,
         "HOST_APP": _HOST_APP,
-        # Optional agent context
-        "CTX": ctx,
+        "CTX": ctx,                # optional
     }
 
-    # Mirror key objects into builtins for older patterns
-    setattr(_builtins, "__revit__", _revit)
+    # Mirror into builtins for legacy patterns
+    setattr(_builtins, "__revit__", _uiapp)
+    setattr(_builtins, "__uidoc__", _uidoc)
+    setattr(_builtins, "__doc__", _doc)
+    setattr(_builtins, "__context__", "project")
     setattr(_builtins, "revit", _revit)
     setattr(_builtins, "script", _script)
     setattr(_builtins, "forms", _forms)
     setattr(_builtins, "HOST_APP", _HOST_APP)
-    setattr(_builtins, "__context__", "project")
-    setattr(_builtins, "__uidoc__", _revit.uidoc)
-    setattr(_builtins, "__doc__", _revit.doc)
 
-    # Env flags some scripts check
+    # Env hints some scripts read
     os.environ.setdefault("PYREVIT_RUNNING", "1")
     os.environ.setdefault("PYREVIT_EXEC_CTX", "project")
-    os.environ.setdefault("PYREVIT_AGENT", "1")  # harmless, but distinguishable
 
-    # Emulate running directly so relative imports/paths work
+    # Emulate pushbutton working dir & sys.path
     tool_dir = os.path.dirname(tool_path)
     old_cwd = os.getcwd()
     inserted_path0 = False
@@ -167,8 +173,7 @@ def execute_tool_script(tool_name, ctx):
         os.chdir(old_cwd)
         if inserted_path0 and sys.path and sys.path[0] == tool_dir:
             sys.path.pop(0)
-        # Optional cleanup
-        for k in ("__revit__", "revit", "script", "forms", "HOST_APP", "__context__", "__uidoc__", "__doc__"):
+        for k in ("__revit__", "__uidoc__", "__doc__", "__context__", "revit", "script", "forms", "HOST_APP"):
             if hasattr(_builtins, k):
                 try: delattr(_builtins, k)
                 except: pass
