@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # lib/organized/MEPKit/revit/symbols.py
 from __future__ import absolute_import
-from Autodesk.Revit.DB import FilteredElementCollector, FamilySymbol, Level, StructuralType
+from Autodesk.Revit.DB import (FilteredElementCollector, FamilySymbol, Level)
+from Autodesk.Revit.DB.Structure import StructuralType
 
 def resolve_symbol(doc, family_name, type_name=None):
     fam_l = (family_name or '').strip().lower()
