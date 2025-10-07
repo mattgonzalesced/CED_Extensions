@@ -94,15 +94,14 @@ def build_ctx():
 def execute_tool_script(tool_name, ctx):
     """
     Execute tools/<tool_name>.py as if launched by a pyRevit pushbutton.
-    Compatible with IronPython 2.7 (__builtin__) and CPython 3 (builtins).
+    Works on IronPython 2.7 (pyRevit 4.x) and CPython 3 (newer stacks).
     """
     import os, sys, runpy
-
-    # IronPython-compatible "builtins" import
+    # IronPython-compatible builtins import
     try:
-        import builtins as _builtins      # CPython 3.x
+        import builtins as _builtins
     except ImportError:
-        import __builtin__ as _builtins   # IronPython 2.7
+        import __builtin__ as _builtins
 
     # pyRevit context objects many scripts expect
     from pyrevit import revit as _revit
@@ -117,34 +116,48 @@ def execute_tool_script(tool_name, ctx):
     if not os.path.exists(tool_path):
         raise RuntimeError("Tool not found: {0}".format(tool_path))
 
-    # Make the tool think it's running as a normal pyRevit pushbutton
+    # --- Pretend we're a real pyRevit pushbutton run ---
+    # Strongest signal: context + core globals
     globals_dict = {
-        "__name__": "__main__",        # run as a script
-        "__file__": tool_path,         # many scripts resolve paths from this
-        "__revit__": _revit,           # legacy convenience
-        "__doc__": _revit.doc,         # legacy convenience (module-level alias)
-        "__uidoc__": _revit.uidoc,     # legacy convenience
-        "revit": _revit,               # some scripts import these at top-level
+        "__name__": "__main__",
+        "__file__": tool_path,
+        "__revit__": _revit,
+        "__doc__": _revit.doc,       # legacy alias some scripts use
+        "__uidoc__": _revit.uidoc,
+        "__context__": "project",    # <—— many guards look for this
+        "__window__": None,          # harmless default
+        "revit": _revit,
         "script": _script,
         "forms": _forms,
         "HOST_APP": _HOST_APP,
-        "CTX": ctx,                    # optional agent context
+        # Optional agent context
+        "CTX": ctx,
     }
 
-    # Also mirror into builtins for older scripts that read from there
+    # Mirror key objects into builtins for older patterns
     setattr(_builtins, "__revit__", _revit)
     setattr(_builtins, "revit", _revit)
     setattr(_builtins, "script", _script)
     setattr(_builtins, "forms", _forms)
     setattr(_builtins, "HOST_APP", _HOST_APP)
+    setattr(_builtins, "__context__", "project")
+    setattr(_builtins, "__uidoc__", _revit.uidoc)
+    setattr(_builtins, "__doc__", _revit.doc)
 
-    old_cwd = os.getcwd()
-    # emulate running directly so relative imports/paths work
+    # Env flags some scripts check
+    os.environ.setdefault("PYREVIT_RUNNING", "1")
+    os.environ.setdefault("PYREVIT_EXEC_CTX", "project")
+    os.environ.setdefault("PYREVIT_AGENT", "1")  # harmless, but distinguishable
+
+    # Emulate running directly so relative imports/paths work
     tool_dir = os.path.dirname(tool_path)
+    old_cwd = os.getcwd()
+    inserted_path0 = False
     try:
-        os.chdir(tool_dir)
         if not sys.path or sys.path[0] != tool_dir:
             sys.path.insert(0, tool_dir)
+            inserted_path0 = True
+        os.chdir(tool_dir)
 
         log("Running tool: {0}".format(tool_name))
         log("CWD={0} | FILE={1}".format(os.getcwd(), tool_path))
@@ -152,16 +165,13 @@ def execute_tool_script(tool_name, ctx):
         log("Completed: {0}".format(tool_name))
     finally:
         os.chdir(old_cwd)
-        # remove tool_dir we may have inserted at index 0
-        if sys.path and sys.path[0] == tool_dir:
+        if inserted_path0 and sys.path and sys.path[0] == tool_dir:
             sys.path.pop(0)
-        # optional cleanup; harmless if left
-        for k in ("__revit__", "revit", "script", "forms", "HOST_APP"):
+        # Optional cleanup
+        for k in ("__revit__", "revit", "script", "forms", "HOST_APP", "__context__", "__uidoc__", "__doc__"):
             if hasattr(_builtins, k):
-                try:
-                    delattr(_builtins, k)
-                except:
-                    pass
+                try: delattr(_builtins, k)
+                except: pass
 # ------------------------------------------------------------------------
 # Main agent logic
 # ------------------------------------------------------------------------
