@@ -10,9 +10,16 @@
     },
     "receptacle_rules_by_category": {
       "L shape space": {
-        "wall_spacing_ft": { "first": 12, "next": 20 },
+        "wall_spacing_ft": { "first": 20, "next": 20 },
         "mount_height_in": 16,
         "min_per_room": 2,
+        "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 6.0,
+        "door_edge_margin_in": 1.0,
+        "avoid_doors_radius_ft": 3.0,
+        "door_snap_tolerance_ft": 6.0
+      },
         "device_candidates": [
           {
             "family": "Duplex Receptacle - Wall",
@@ -21,7 +28,7 @@
           }
         ]
       },
-      "Weird Space": {
+      "Weird space": {
         "wall_spacing_ft": { "first": 20, "next": 20 },
         "mount_height_in": 16,
         "min_per_room": 2,
@@ -36,6 +43,25 @@
           {
             "family": "Duplex Receptacle - Wall",
             "type_catalog_name": "GFCI",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\Duplex Receptacle.rfa"
+          }
+        ]
+      },
+      "T shape space": {
+        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 6.0,
+        "door_edge_margin_in": 1.0,
+        "avoid_doors_radius_ft": 3.0,
+        "door_snap_tolerance_ft": 6.0
+      },
+        "device_candidates": [
+          {
+            "family": "Duplex Receptacle - Wall",
+            "type_catalog_name": "Standard",
             "load_from": "C:\\Users\\reed.pinterich\\Documents\\Duplex Receptacle.rfa"
           }
         ]
@@ -55,18 +81,6 @@
           {
             "family": "Duplex Wall",
             "type_catalog_name": "Standard",
-            "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
-          }
-        ]
-      },
-      "T shape space": {
-        "wall_spacing_ft": { "first": 12, "next": 20 },
-        "mount_height_in": 16,
-        "min_per_room": 2,
-        "device_candidates": [
-          {
-            "family": "Duplex Receptacle - Wall",
-            "type_catalog_name": "Duplex Wall",
             "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
           }
         ]

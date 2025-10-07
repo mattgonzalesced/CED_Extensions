@@ -1,5 +1,26 @@
 {
   "space_categories": {
+    "L shape space": {
+      "match": {
+        "include": [
+          "L shape"
+        ]
+      }
+    },
+    "T shape space": {
+      "match": {
+        "include": [
+          "T shape"
+        ]
+      }
+    },
+    "Weird space": {
+      "match": {
+        "include": [
+          "Weird"
+        ]
+      }
+    },
     "Back Office": {
       "match": {
         "include": [
