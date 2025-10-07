@@ -94,18 +94,34 @@ def build_ctx():
 def execute_tool_script(tool_name, ctx):
     """
     tool_name: base filename (e.g., 'place_receptacles')
-    Executes the script as if pyRevit ran it.
+    Executes the script as if pyRevit ran it directly, with pyRevit-style globals.
     """
+    import os, runpy
+    from pyrevit import revit as _revit
+
     tool_path = os.path.join(TOOLS_DIR, tool_name + ".py")
     if not os.path.exists(tool_path):
         raise RuntimeError("Tool not found: {0}".format(tool_path))
 
-    log("Running tool script: {0}".format(tool_path))
-    # Run the script in its own isolated namespace
-    # (equivalent to executing python <script>)
-    globals_dict = {"__name__": "__main__", "CTX": ctx}
-    runpy.run_path(tool_path, globals_dict)
-    log("Completed tool: {0}".format(tool_name))
+    # Make the tool think it's running as a normal pyRevit pushbutton
+    globals_dict = {
+        "__name__": "__main__",        # run as a script
+        "__file__": tool_path,         # many scripts resolve paths from this
+        "__revit__": _revit,           # legacy convenience
+        "__doc__": _revit.doc,         # legacy convenience
+        "__uidoc__": _revit.uidoc,     # legacy convenience
+        "CTX": ctx,                    # optional context if your tools want it
+    }
+
+    old_cwd = os.getcwd()
+    try:
+        os.chdir(os.path.dirname(tool_path))   # match pushbutton working dir
+        log("Running tool: {0}".format(tool_name))
+        log("CWD={0} | FILE={1}".format(os.getcwd(), tool_path))
+        runpy.run_path(tool_path, globals_dict)
+        log("Completed: {0}".format(tool_name))
+    finally:
+        os.chdir(old_cwd)
 
 # ------------------------------------------------------------------------
 # Main agent logic
