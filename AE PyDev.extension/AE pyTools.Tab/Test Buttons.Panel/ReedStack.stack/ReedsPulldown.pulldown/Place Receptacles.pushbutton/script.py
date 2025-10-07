@@ -26,7 +26,7 @@ from Autodesk.Revit.DB import (
     FilteredElementCollector, BuiltInCategory, FamilySymbol, FamilyPlacementType,
     Transaction, SpatialElementBoundaryOptions, XYZ, Wall, HostObjectUtils, ShellLayerType,
     FamilyInstance, Curve, BuiltInParameter, Transform, RevitLinkInstance, Opening,
-    SpacialElementBoundaryLocation, ElementId, LocationCurve, Outline, BoundingBoxIntersectsFilter
+    SpatialElementBoundaryLocation, ElementId, LocationCurve, Outline, BoundingBoxIntersectsFilter
 )
 from Autodesk.Revit.DB.Structure import StructuralType
 
