@@ -93,36 +93,64 @@ def build_ctx():
 # ------------------------------------------------------------------------
 def execute_tool_script(tool_name, ctx):
     """
-    tool_name: base filename (e.g., 'place_receptacles')
-    Executes the script as if pyRevit ran it directly, with pyRevit-style globals.
+    Execute a tools/<tool_name>.py as if launched by a pyRevit pushbutton.
     """
-    import os, runpy
+    import os, sys, runpy, builtins
     from pyrevit import revit as _revit
+    from pyrevit import script as _script
+    from pyrevit import forms as _forms
+    from pyrevit import HOST_APP as _HOST_APP
 
     tool_path = os.path.join(TOOLS_DIR, tool_name + ".py")
     if not os.path.exists(tool_path):
         raise RuntimeError("Tool not found: {0}".format(tool_path))
 
-    # Make the tool think it's running as a normal pyRevit pushbutton
+    # Make the tool's module namespace look like a pyRevit pushbutton run
     globals_dict = {
-        "__name__": "__main__",        # run as a script
-        "__file__": tool_path,         # many scripts resolve paths from this
-        "__revit__": _revit,           # legacy convenience
-        "__doc__": _revit.doc,         # legacy convenience
-        "__uidoc__": _revit.uidoc,     # legacy convenience
-        "CTX": ctx,                    # optional context if your tools want it
+        "__name__": "__main__",         # run as a script
+        "__file__": tool_path,          # scripts often resolve paths from this
+        "__revit__": _revit,            # legacy convenience
+        "__doc__": _revit.doc,          # legacy convenience (module-level alias)
+        "__uidoc__": _revit.uidoc,      # legacy convenience (module-level alias)
+        # Common pyRevit imports some scripts expect to already exist
+        "revit": _revit,
+        "script": _script,
+        "forms": _forms,
+        "HOST_APP": _HOST_APP,
+        # Optional agent context if tools want it
+        "CTX": ctx,
     }
 
+    # Also mirror these into builtins for very old scripts that read them there
+    builtins.__revit__ = _revit
+    builtins.revit = _revit
+    builtins.script = _script
+    builtins.forms = _forms
+    builtins.HOST_APP = _HOST_APP
+    # (do NOT overwrite builtins.__doc__ — that's Python's docstring)
+
     old_cwd = os.getcwd()
+    old_sys_path0 = sys.path[0] if sys.path else None
     try:
-        os.chdir(os.path.dirname(tool_path))   # match pushbutton working dir
+        # Match a normal button's working directory
+        os.chdir(os.path.dirname(tool_path))
+        # Ensure the tool’s folder is at sys.path[0] like a direct run
+        sys.path.insert(0, os.path.dirname(tool_path))
+
         log("Running tool: {0}".format(tool_name))
         log("CWD={0} | FILE={1}".format(os.getcwd(), tool_path))
         runpy.run_path(tool_path, globals_dict)
         log("Completed: {0}".format(tool_name))
     finally:
         os.chdir(old_cwd)
-
+        # Remove the path we inserted at position 0
+        if sys.path and sys.path[0] == os.path.dirname(tool_path):
+            sys.path.pop(0)
+        # Best-effort cleanup of builtins (harmless if left, but tidy)
+        for k in ("__revit__", "revit", "script", "forms", "HOST_APP"):
+            if hasattr(builtins, k):
+                try: delattr(builtins, k)
+                except: pass
 # ------------------------------------------------------------------------
 # Main agent logic
 # ------------------------------------------------------------------------
