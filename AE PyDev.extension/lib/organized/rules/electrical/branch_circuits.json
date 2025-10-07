@@ -20,7 +20,7 @@
         "avoid_doors_ft:": 6.0,
         "door_edge_margin_in": 1.0,
         "avoid_doors_radius_ft": 2.0,
-        "door_snap_tolerance_ft": 2.0
+        "door_snap_tolerance_ft": 6.0
       },
         "device_candidates": [
           {
@@ -38,8 +38,8 @@
         "avoid_corners_ft": 2.0,
         "avoid_doors_ft:": 6.0,
         "door_edge_margin_in": 1.0,
-        "avoid_doors_radius_ft": 3.0,
-        "door_snap_tolerance_ft": 6.0
+        "avoid_doors_radius_ft": 2.0,
+        "door_snap_tolerance_ft": 2.0
       },
         "device_candidates": [
           {
@@ -69,15 +69,15 @@
         ]
       },
       "Device Check": {
-        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "wall_spacing_ft": { "first": 10, "next": 20 },
         "mount_height_in": 16,
         "min_per_room": 2,
         "placement_constraints": {
         "avoid_corners_ft": 2.0,
         "avoid_doors_ft:": 6.0,
         "door_edge_margin_in": 1.0,
-        "avoid_doors_radius_ft": 3.0,
-        "door_snap_tolerance_ft": 6.0
+        "avoid_doors_radius_ft": 2.0,
+        "door_snap_tolerance_ft": 2.0
       },
         "device_candidates": [
           {
@@ -88,15 +88,15 @@
         ]
       },
       "Back Office": {
-        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "wall_spacing_ft": { "first": 10, "next": 20 },
         "mount_height_in": 16,
         "min_per_room": 2,
         "placement_constraints": {
         "avoid_corners_ft": 2.0,
         "avoid_doors_ft:": 6.0,
         "door_edge_margin_in": 1.0,
-        "avoid_doors_radius_ft": 3.0,
-        "door_snap_tolerance_ft": 6.0
+        "avoid_doors_radius_ft": 2.0,
+        "door_snap_tolerance_ft": 2.0
       },
         "device_candidates": [
           {
@@ -107,15 +107,15 @@
         ]
       },
       "Break Room": {
-        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "wall_spacing_ft": { "first": 10, "next": 20 },
         "mount_height_in": 16,
         "min_per_room": 2,
         "placement_constraints": {
         "avoid_corners_ft": 2.0,
         "avoid_doors_ft:": 6.0,
         "door_edge_margin_in": 1.0,
-        "avoid_doors_radius_ft": 3.0,
-        "door_snap_tolerance_ft": 6.0
+        "avoid_doors_radius_ft": 2.0,
+        "door_snap_tolerance_ft": 2.0
       },
         "device_candidates": [
           {
@@ -126,15 +126,15 @@
         ]
       },
       "CO2 Device Check": {
-        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "wall_spacing_ft": { "first": 10, "next": 20 },
         "mount_height_in": 16,
         "min_per_room": 2,
         "placement_constraints": {
         "avoid_corners_ft": 2.0,
         "avoid_doors_ft:": 6.0,
         "door_edge_margin_in": 1.0,
-        "avoid_doors_radius_ft": 3.0,
-        "door_snap_tolerance_ft": 6.0
+        "avoid_doors_radius_ft": 2.0,
+        "door_snap_tolerance_ft": 2.0
       },
         "device_candidates": [
           {
@@ -145,15 +145,15 @@
         ]
       },
       "Dairy/ Produce Cooler": {
-        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "wall_spacing_ft": { "first": 10, "next": 20 },
         "mount_height_in": 16,
         "min_per_room": 2,
         "placement_constraints": {
         "avoid_corners_ft": 2.0,
         "avoid_doors_ft:": 6.0,
         "door_edge_margin_in": 1.0,
-        "avoid_doors_radius_ft": 3.0,
-        "door_snap_tolerance_ft": 6.0
+        "avoid_doors_radius_ft": 2.0,
+        "door_snap_tolerance_ft": 2.0
       },
         "device_candidates": [
           {
@@ -164,15 +164,15 @@
         ]
       },
       "Freezer": {
-        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "wall_spacing_ft": { "first": 10, "next": 20 },
         "mount_height_in": 16,
         "min_per_room": 2,
         "placement_constraints": {
         "avoid_corners_ft": 2.0,
         "avoid_doors_ft:": 6.0,
         "door_edge_margin_in": 1.0,
-        "avoid_doors_radius_ft": 3.0,
-        "door_snap_tolerance_ft": 6.0
+        "avoid_doors_radius_ft": 2.0,
+        "door_snap_tolerance_ft": 2.0
       },
         "device_candidates": [
           {
@@ -183,15 +183,15 @@
         ]
       },
       "Front Office": {
-        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "wall_spacing_ft": { "first": 10, "next": 20 },
         "mount_height_in": 16,
         "min_per_room": 2,
         "placement_constraints": {
         "avoid_corners_ft": 2.0,
         "avoid_doors_ft:": 6.0,
         "door_edge_margin_in": 1.0,
-        "avoid_doors_radius_ft": 3.0,
-        "door_snap_tolerance_ft": 6.0
+        "avoid_doors_radius_ft": 2.0,
+        "door_snap_tolerance_ft": 2.0
       },
         "device_candidates": [
           {
@@ -202,15 +202,15 @@
         ]
       },
       "Hallway": {
-        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "wall_spacing_ft": { "first": 10, "next": 20 },
         "mount_height_in": 16,
         "min_per_room": 2,
         "placement_constraints": {
         "avoid_corners_ft": 2.0,
         "avoid_doors_ft:": 6.0,
         "door_edge_margin_in": 1.0,
-        "avoid_doors_radius_ft": 3.0,
-        "door_snap_tolerance_ft": 6.0
+        "avoid_doors_radius_ft": 2.0,
+        "door_snap_tolerance_ft": 2.0
       },
         "device_candidates": [
           {
@@ -221,15 +221,15 @@
         ]
       },
       "Meat Cooler": {
-        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "wall_spacing_ft": { "first": 10, "next": 20 },
         "mount_height_in": 16,
         "min_per_room": 2,
         "placement_constraints": {
         "avoid_corners_ft": 2.0,
         "avoid_doors_ft:": 6.0,
         "door_edge_margin_in": 1.0,
-        "avoid_doors_radius_ft": 3.0,
-        "door_snap_tolerance_ft": 6.0
+        "avoid_doors_radius_ft": 2.0,
+        "door_snap_tolerance_ft": 2.0
       },
         "device_candidates": [
           {
@@ -240,15 +240,15 @@
         ]
       },
       "Receiving Area": {
-        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "wall_spacing_ft": { "first": 10, "next": 20 },
         "mount_height_in": 16,
         "min_per_room": 2,
         "placement_constraints": {
         "avoid_corners_ft": 2.0,
         "avoid_doors_ft:": 6.0,
         "door_edge_margin_in": 1.0,
-        "avoid_doors_radius_ft": 3.0,
-        "door_snap_tolerance_ft": 6.0
+        "avoid_doors_radius_ft": 2.0,
+        "door_snap_tolerance_ft": 2.0
       },
         "device_candidates": [
           {
@@ -259,15 +259,15 @@
         ]
       },
       "Restroom": {
-        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "wall_spacing_ft": { "first": 10, "next": 20 },
         "mount_height_in": 16,
         "min_per_room": 2,
         "placement_constraints": {
         "avoid_corners_ft": 2.0,
         "avoid_doors_ft:": 6.0,
         "door_edge_margin_in": 1.0,
-        "avoid_doors_radius_ft": 3.0,
-        "door_snap_tolerance_ft": 6.0
+        "avoid_doors_radius_ft": 2.0,
+        "door_snap_tolerance_ft": 2.0
       },
         "device_candidates": [
           {
@@ -278,15 +278,15 @@
         ]
       },
       "Sales Floor": {
-        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "wall_spacing_ft": { "first": 10, "next": 20 },
         "mount_height_in": 16,
         "min_per_room": 2,
         "placement_constraints": {
         "avoid_corners_ft": 2.0,
         "avoid_doors_ft:": 6.0,
         "door_edge_margin_in": 1.0,
-        "avoid_doors_radius_ft": 3.0,
-        "door_snap_tolerance_ft": 6.0
+        "avoid_doors_radius_ft": 2.0,
+        "door_snap_tolerance_ft": 2.0
       },
         "device_candidates": [
           {
@@ -297,15 +297,15 @@
         ]
       },
       "Stock Room": {
-        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "wall_spacing_ft": { "first": 10, "next": 20 },
         "mount_height_in": 16,
         "min_per_room": 2,
         "placement_constraints": {
         "avoid_corners_ft": 2.0,
         "avoid_doors_ft:": 6.0,
         "door_edge_margin_in": 1.0,
-        "avoid_doors_radius_ft": 3.0,
-        "door_snap_tolerance_ft": 6.0
+        "avoid_doors_radius_ft": 2.0,
+        "door_snap_tolerance_ft": 2.0
       },
         "device_candidates": [
           {
@@ -316,15 +316,15 @@
         ]
       },
       "Vestibule": {
-        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "wall_spacing_ft": { "first": 10, "next": 20 },
         "mount_height_in": 16,
         "min_per_room": 2,
         "placement_constraints": {
         "avoid_corners_ft": 2.0,
         "avoid_doors_ft:": 6.0,
         "door_edge_margin_in": 1.0,
-        "avoid_doors_radius_ft": 3.0,
-        "door_snap_tolerance_ft": 6.0
+        "avoid_doors_radius_ft": 2.0,
+        "door_snap_tolerance_ft": 2.0
       },
         "device_candidates": [
           {
