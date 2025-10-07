@@ -2,14 +2,14 @@
 # lib/organized/MEPKit/revit/placement.py
 from __future__ import absolute_import
 import traceback
+from System import Enum
 from Autodesk.Revit.DB import (
     FilteredElementCollector, Level, XYZ, BuiltInParameter, HostObjectUtils, ShellLayerType, Wall
 )
 from Autodesk.Revit.DB.Structure import StructuralType
 
-# --- small utilities ------------------------------------------------
 
-# ---------- tiny utils
+# --- small utilities ------------------------------------------------
 
 def ensure_active(doc, symbol):
     if symbol and not symbol.IsActive:
@@ -35,29 +35,40 @@ def _host_level(doc, host):
     except: pass
     return any_level(doc)
 
-def _set_elevation_like_params(elem, height_ft):
+def _set_elevation_like_params(elem, height_ft, logger=None):
     if height_ft is None:
         return
-    # common built-ins
-    for bip in (
-        BuiltInParameter.INSTANCE_ELEVATION_PARAM,
-        BuiltInParameter.FAMILY_LEVEL_OFFSET_PARAM,
-        BuiltInParameter.INSTANCE_FREE_HOST_OFFSET_PARAM,
-    ):
+    # the bip thing here is because Built in parameter.Family_level_offset_param was being shadowed.
+    def _try_bip(name):
         try:
+            bip = Enum.Parse(BuiltInParameter, name)  # parse by name, avoids attribute lookup
             p = elem.get_Parameter(bip)
             if p and (not p.IsReadOnly):
                 p.Set(float(height_ft))
-                return
-        except: pass
-    # friendly names used by many content libraries
-    for name in ("Elevation from Level", "Elevation", "Offset", "Mounting Height", "Device Elevation", "Height"):
+                if logger: logger.debug(u"[ELEV] set via {} = {}".format(name, height_ft))
+                return True
+        except Exception as ex:
+            if logger: logger.debug(u"[ELEV] {} not usable: {}".format(name, ex))
+        return False
+
+    # Built-in names to try (some may not exist in your Revit/content)
+    for bip_name in ("INSTANCE_ELEVATION_PARAM",
+                     "FAMILY_LEVEL_OFFSET_PARAM",
+                     "INSTANCE_FREE_HOST_OFFSET_PARAM"):
+        if _try_bip(bip_name):
+            return
+
+    # Friendly/project parameter names
+    for name in ("Elevation from Level", "Elevation", "Offset",
+                 "Mounting Height", "Device Elevation", "Height"):
         try:
             p = elem.LookupParameter(name)
             if p and (not p.IsReadOnly):
                 p.Set(float(height_ft))
+                if logger: logger.debug(u"[ELEV] set via '{}' = {}".format(name, height_ft))
                 return
-        except: pass
+        except Exception as ex:
+            if logger: logger.debug(u"[ELEV] '{}' not usable: {}".format(name, ex))
 
 def _log_exc(logger, tag, ex):
     if logger:
@@ -106,11 +117,17 @@ def place_hosted(doc, host, symbol, point_xyz, mounting_height_ft=None, logger=N
                    list(HostObjectUtils.GetSideFaces(host, ShellLayerType.Interior))
             if refs:
                 ref = refs[0]
-                # point: use desired Z if possible
                 pC = pA
-                normal = host.Orientation  # Revit uses this as "up" on the face-based overload
-                inst = doc.Create.NewFamilyInstance(ref, pC, normal, symbol)
-                _set_elevation_like_params(inst, mounting_height_ft)
+                # pick a reference direction not parallel to the face normal (host.Orientation is the face normal on walls)
+                ref_dir = XYZ.BasisZ
+                try:
+                    n = host.Orientation
+                    if abs(ref_dir.DotProduct(n)) > 0.99:
+                        ref_dir = XYZ.BasisX
+                except:  # if Orientation not available, keep BasisZ
+                    pass
+                inst = doc.Create.NewFamilyInstance(ref, pC, ref_dir, symbol)
+                _set_elevation_like_params(inst, mounting_height_ft, logger=logger)
                 return inst
     except Exception as ex:
         _log_exc(logger, "place_hosted:C(face)", ex)
@@ -130,7 +147,7 @@ def place_free(doc, symbol, point_xyz, level=None, mounting_height_ft=None, logg
 
     try:
         inst = doc.Create.NewFamilyInstance(pA, symbol, lvl, StructuralType.NonStructural)
-        _set_elevation_like_params(inst, mounting_height_ft)
+        _set_elevation_like_params(inst, mounting_height_ft, logger=logger)
         return inst
     except Exception as ex:
         _log_exc(logger, "place_free:A", ex)
