@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # lib/organized/MEPKit/electrical/perimeter_runner.py
 from __future__ import absolute_import
-from organized.MEPKit.core.logging import get_logger
+from organized.MEPKit.core.log import get_logger
 from organized.MEPKit.core.rules import (
     load_identify_rules, load_branch_rules, normalize_constraints,
     categorize_space_by_name, get_category_rule

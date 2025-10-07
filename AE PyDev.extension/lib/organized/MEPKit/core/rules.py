@@ -2,7 +2,7 @@
 # lib/organized/MEPKit/core/rules.py
 from __future__ import absolute_import
 import os, re
-from organized.MEPKit.core.io import read_json
+from organized.MEPKit.core.io_utils import read_json
 from organized.MEPKit.core.paths import rules_dir
 
 # ---------- load
