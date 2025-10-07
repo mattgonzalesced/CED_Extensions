@@ -103,13 +103,12 @@ def place_perimeter_recepts(doc, logger=None):
 
                 for p in pts:
                     try:
-                        inst = place_hosted(doc, wall, sym, p, mounting_height_ft=mh_ft) if wall else place_free(doc, sym, p, mounting_height_ft=mh_ft)
+                        inst = place_hosted(doc, wall, sym, p, mounting_height_ft=mh_ft, logger=log) if wall else place_free(doc, sym, p, mounting_height_ft=mh_ft, logger=log)
                         if mh_ft is not None:
                             set_param_value(inst, "Mounting Height", mh_ft)
                         placed_here += 1
-                    except:
-                        # keep going on errors
-                        pass
+                    except Exception as ex:
+                        log.warning(u"Placement failed at point → {}".format(ex))
 
         log.info("Space '{}' [{}] → loops={}, segs={}, pts pre/ post door = {}/{} → placed {}"
                  .format(name, cat, len(loops), seg_count, pre_pts_total, post_pts_total, placed_here))
