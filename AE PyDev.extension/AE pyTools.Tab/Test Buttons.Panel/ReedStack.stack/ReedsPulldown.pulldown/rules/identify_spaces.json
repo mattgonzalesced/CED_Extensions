@@ -27,16 +27,14 @@
     "Break Room": {
       "match": {
         "include": [
-          "Break Room",
-          "Kitchen"
+          "Break"
         ]
       }
     },
-    "Dairy": {
+    "Dairy/ Produce Cooler": {
       "match": {
         "include": [
-          "Dairy",
-          "Produce"
+          "Dairy"
         ],
         "exclude": [
           "CO2 Device Check"

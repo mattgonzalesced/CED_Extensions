@@ -128,7 +128,7 @@
           }
         ]
       },
-      "Dairy": {
+      "Dairy/ Produce Cooler": {
         "wall_spacing_ft": { "first": 20, "next": 20 },
         "mount_height_in": 16,
         "min_per_room": 2,
