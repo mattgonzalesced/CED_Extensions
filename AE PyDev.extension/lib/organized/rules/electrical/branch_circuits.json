@@ -259,15 +259,15 @@
         ]
       },
       "Restroom": {
-        "wall_spacing_ft": { "first": 10, "next": 20 },
+        "wall_spacing_ft": { "first": 5, "next": 15 },
         "mount_height_in": 16,
         "min_per_room": 2,
         "placement_constraints": {
-        "avoid_corners_ft": 2.0,
-        "avoid_doors_ft:": 6.0,
+        "avoid_corners_ft": 0.0,
+        "avoid_doors_ft:": 0.0,
         "door_edge_margin_in": 1.0,
-        "avoid_doors_radius_ft": 2.0,
-        "door_snap_tolerance_ft": 2.0
+        "avoid_doors_radius_ft": 0.0,
+        "door_snap_tolerance_ft": 0.0
       },
         "device_candidates": [
           {
