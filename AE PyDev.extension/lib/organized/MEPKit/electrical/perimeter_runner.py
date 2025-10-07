@@ -9,7 +9,7 @@ from organized.MEPKit.core.rules import (
 from organized.MEPKit.revit.transactions import RunInTransaction
 from organized.MEPKit.revit.spaces import collect_spaces_or_rooms, space_name, boundary_loops, segment_curve, segment_host_wall, sample_points_on_segment, space_match_text
 from organized.MEPKit.revit.doors import door_points_on_wall, filter_points_by_doors
-from organized.MEPKit.revit import placement
+from organized.MEPKit.revit.placement import place_hosted, place_free
 from organized.MEPKit.revit.symbols import resolve_or_load_symbol
 from organized.MEPKit.revit.params import set_param_value  # optional for mounting height
 
