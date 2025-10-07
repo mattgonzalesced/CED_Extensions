@@ -1,66 +1,43 @@
 # -*- coding: utf-8 -*-
 # lib/organized/MEPKit/core/log.py
-# IronPython 2.7 / pyRevit-safe
+# Minimal, pyRevit-aware logger that also works outside pyRevit.
 
-def open_output(title="MEPKit Log", header_md=None):
+_levels = {"DEBUG":10, "INFO":20, "WARNING":30, "ERROR":40}
+
+def get_logger(name="MEPKit", level="INFO", title=None):
+    """Return a tiny logger with .debug/.info/.warning/.error that prints to the pyRevit Output panel when available."""
+    minlvl = _levels.get(str(level).upper(), 20)
     try:
         from pyrevit import script
         out = script.get_output()
         if title:
-            out.set_title(title)
-        if header_md:
-            out.print_md(header_md)
-        else:
-            out.print_md("### {}".format(title))
-        try:
-            out.center(); out.maximize()
-        except Exception:
-            pass
-        return out
+            out.set_title(title); out.print_md("## " + title)
+        class _Logger(object):
+            def _w(self, lvl, msg, *a):
+                if _levels[lvl] < minlvl: return
+                txt = msg.format(*a) if a else str(msg)
+                out.write("{}: {}\n".format(lvl, txt))
+            def debug(self, msg, *a):   self._w("DEBUG", msg, *a)
+            def info(self, msg, *a):    self._w("INFO", msg, *a)
+            def warning(self, msg, *a): self._w("WARNING", msg, *a)
+            def error(self, msg, *a):   self._w("ERROR", msg, *a)
+        return _Logger()
     except Exception:
-        return None
-
-def get_logger(name="MEPKit", level="INFO"):
-    # Always try pyRevit logger first and bind it to current Output
-    try:
-        from pyrevit import script
-        out = script.get_output()              # forces an Output target
-        log = script.get_logger()              # bound to this Output
-        # normalize level
-        import logging as _logging
-        log.setLevel(getattr(_logging, level.upper(), _logging.INFO))
-        return log
-    except Exception:
-        # Fallback to stdlib logger, but try to route it into pyRevit Output if available
-        import logging as _logging
-        log = _logging.getLogger(name)
-        if not log.handlers:
-            try:
-                from pyrevit import script
-                out = script.get_output()
-                class _PyRevitOutputHandler(_logging.Handler):
-                    def emit(self, record):
-                        try:
-                            msg = self.format(record)
-                            out.write(msg + "\n")
-                        except Exception:
-                            pass
-                h = _PyRevitOutputHandler()
-                h.setFormatter(_logging.Formatter('%(levelname)s: %(message)s'))
-                log.addHandler(h)
-            except Exception:
-                # Final fallback: plain stderr
-                h = _logging.StreamHandler()
-                h.setFormatter(_logging.Formatter('%(levelname)s: %(message)s'))
-                log.addHandler(h)
-        log.setLevel(getattr(_logging, level.upper(), _logging.INFO))
-        return log
+        # Fallback to plain print
+        class _PrintLogger(object):
+            def _w(self, lvl, msg, *a):
+                if _levels[lvl] < minlvl: return
+                txt = msg.format(*a) if a else str(msg)
+                print("{}: {}".format(lvl, txt))
+            debug = lambda self,m,*a: _PrintLogger._w(self,"DEBUG",m,*a)
+            info  = lambda self,m,*a: _PrintLogger._w(self,"INFO",m,*a)
+            warning=lambda self,m,*a: _PrintLogger._w(self,"WARNING",m,*a)
+            error = lambda self,m,*a: _PrintLogger._w(self,"ERROR",m,*a)
+        return _PrintLogger()
 
 def alert(msg, title="MEPKit", warn=False):
     try:
         from pyrevit import forms
-        forms.alert(msg, title=title, warn_icon=warn)
+        forms.alert(str(msg), title=title, warn_icon=bool(warn))
     except Exception:
         print("[{}] {}".format(title, msg))
-
-__all__ = ["get_logger", "open_output", "alert"]
