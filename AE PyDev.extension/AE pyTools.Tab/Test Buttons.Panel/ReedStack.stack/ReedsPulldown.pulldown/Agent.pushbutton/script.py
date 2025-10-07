@@ -94,7 +94,7 @@ def build_ctx():
 def execute_tool_script(tool_name, ctx):
     """
     Execute tools/<tool_name>.py as if launched by a pyRevit pushbutton.
-    Works on IronPython 2.7.
+    Works across pyRevit versions that may not expose revit.uiapp.
     """
     import os, sys, runpy
     # IronPython-compatible builtins import
@@ -103,7 +103,6 @@ def execute_tool_script(tool_name, ctx):
     except ImportError:
         import __builtin__ as _builtins
 
-    # Pull real pyRevit context
     from pyrevit import revit as _revit
     from pyrevit import script as _script
     from pyrevit import forms as _forms
@@ -116,20 +115,30 @@ def execute_tool_script(tool_name, ctx):
     if not os.path.exists(tool_path):
         raise RuntimeError("Tool not found: {0}".format(tool_path))
 
-    # >>> IMPORTANT: __revit__ must be UIApplication, not the 'pyrevit.revit' module
-    _uiapp = _revit.uiapp         # UIApplication
-    _uidoc = _revit.uidoc         # UIDocument
-    _doc   = _revit.doc           # Document
+    # ---- Resolve UIApplication, UIDocument, Document robustly ----
+    _uidoc = getattr(_revit, "uidoc", None)
+    _doc   = getattr(_revit, "doc", None)
+    _uiapp = None
 
-    # Guard: ensure we really have a project doc (your scripts also check this)
-    if _doc is None or (_doc.IsFamilyDocument if hasattr(_doc, "IsFamilyDocument") else False):
+    # Preferred: HOST_APP.uiapp
+    if _HOST_APP is not None:
+        _uiapp = getattr(_HOST_APP, "uiapp", None)
+
+    # Fallback: from uidoc
+    if _uiapp is None and _uidoc is not None:
+        _uiapp = getattr(_uidoc, "Application", None)
+        if _doc is None:
+            _doc = getattr(_uidoc, "Document", None)
+
+    # Final guard: need a *project* document
+    if _doc is None or (hasattr(_doc, "IsFamilyDocument") and _doc.IsFamilyDocument):
         raise EnvironmentError("Open a project in Revit and run from a pyRevit button.")
 
-    # Build the globals exactly like a pushbutton run
+    # ---- Build pushbutton-like globals ----
     globals_dict = {
         "__name__": "__main__",
         "__file__": tool_path,
-        "__revit__": _uiapp,       # <<<<<< UIApplication (the crucial bit)
+        "__revit__": _uiapp,       # IMPORTANT: UIApplication (or None if not available)
         "__uidoc__": _uidoc,
         "__doc__": _doc,
         "__context__": "project",
@@ -138,10 +147,10 @@ def execute_tool_script(tool_name, ctx):
         "script": _script,
         "forms": _forms,
         "HOST_APP": _HOST_APP,
-        "CTX": ctx,                # optional
+        "CTX": ctx,
     }
 
-    # Mirror into builtins for legacy patterns
+    # Mirror into builtins (legacy patterns)
     setattr(_builtins, "__revit__", _uiapp)
     setattr(_builtins, "__uidoc__", _uidoc)
     setattr(_builtins, "__doc__", _doc)
@@ -151,11 +160,11 @@ def execute_tool_script(tool_name, ctx):
     setattr(_builtins, "forms", _forms)
     setattr(_builtins, "HOST_APP", _HOST_APP)
 
-    # Env hints some scripts read
+    # Env flags some scripts check
     os.environ.setdefault("PYREVIT_RUNNING", "1")
     os.environ.setdefault("PYREVIT_EXEC_CTX", "project")
 
-    # Emulate pushbutton working dir & sys.path
+    # ---- Emulate pushbutton CWD and sys.path[0] ----
     tool_dir = os.path.dirname(tool_path)
     old_cwd = os.getcwd()
     inserted_path0 = False
