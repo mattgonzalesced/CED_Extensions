@@ -12,8 +12,14 @@ from organized.MEPKit.revit.appdoc import get_doc
 from organized.MEPKit.core.log import get_logger, alert
 from organized.MEPKit.electrical.perimeter_runner import place_perimeter_recepts
 
+open_output("Perimeter Recepts Log", header_md="## Perimeter Recepts — run log")
+
 doc = get_doc()
 log = get_logger("PerimeterRecepts", level="INFO")
+
+log.info("---- start ----")
 count = place_perimeter_recepts(doc, logger=log)
+log.info("---- done; placed {} ----".format(count))
+
 alert("Placed {} perimeter receptacle(s).\nCheck the pyRevit Output panel for details."
       .format(count), title="Perimeter Recepts", warn=False)

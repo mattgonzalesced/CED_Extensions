@@ -4,7 +4,6 @@ import logging
 # lib/organized/MEPKit/core/log.py
 def get_logger(name="MEPKit", level="INFO"):
     try:
-        # Use pyRevit's output-aware logger (shows in Output panel)
         from pyrevit import script as _script
         return _script.get_logger()
     except Exception:
@@ -22,5 +21,28 @@ def alert(msg, title="MEPKit", warn=False):
         from pyrevit import forms
         forms.alert(msg, title=title, warn_icon=warn)
     except Exception:
-        # Fallback: print if not in pyRevit context
         print("[{}] {}".format(title, msg))
+
+# NEW: explicitly open/focus the pyRevit Output panel
+def open_output(title="MEPKit Log", header_md=None):
+    try:
+        from pyrevit import script
+        out = script.get_output()
+        if title:
+            out.set_title(title)
+        # these prints FORCE the window to show
+        if header_md:
+            out.print_md(header_md)
+        else:
+            out.print_md("### {}".format(title))
+        try:
+            out.center()
+            out.maximize()
+        except Exception:
+            pass
+        return out
+    except Exception:
+        # Fallback: nothing to open when not in pyRevit context
+        return None
+
+__all__ = ["get_logger", "alert", "open_output"]
