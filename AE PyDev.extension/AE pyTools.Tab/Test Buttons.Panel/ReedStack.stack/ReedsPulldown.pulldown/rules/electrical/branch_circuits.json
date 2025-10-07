@@ -1,0 +1,326 @@
+{
+  "branch_circuits": {
+    "general": {
+      "receptacle_unit_load_va": 180,
+      "default_circuit_ampacity_a": 20,
+      "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 2.0
+      }
+    },
+    "receptacle_rules_by_category": {
+      "L shape space": {
+        "wall_spacing_ft": { "first": 12, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "device_candidates": [
+          {
+            "family": "Duplex Receptacle - Wall",
+            "type_catalog_name": "Standard",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\Duplex Receptacle.rfa"
+          }
+        ]
+      },
+      "Weird Space": {
+        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 6.0,
+        "door_edge_margin_in": 1.0,
+        "avoid_doors_radius_ft": 3.0,
+        "door_snap_tolerance_ft": 6.0
+      },
+        "device_candidates": [
+          {
+            "family": "Duplex Receptacle - Wall",
+            "type_catalog_name": "GFCI",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\Duplex Receptacle.rfa"
+          }
+        ]
+      },
+      "Device Check": {
+        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 6.0,
+        "door_edge_margin_in": 1.0,
+        "avoid_doors_radius_ft": 3.0,
+        "door_snap_tolerance_ft": 6.0
+      },
+        "device_candidates": [
+          {
+            "family": "Duplex Wall",
+            "type_catalog_name": "Standard",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
+          }
+        ]
+      },
+      "T shape space": {
+        "wall_spacing_ft": { "first": 12, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "device_candidates": [
+          {
+            "family": "Duplex Receptacle - Wall",
+            "type_catalog_name": "Duplex Wall",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
+          }
+        ]
+      },
+      "Back Office": {
+        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 6.0,
+        "door_edge_margin_in": 1.0,
+        "avoid_doors_radius_ft": 3.0,
+        "door_snap_tolerance_ft": 6.0
+      },
+        "device_candidates": [
+          {
+            "family": "Duplex Wall",
+            "type_catalog_name": "Standard",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
+          }
+        ]
+      },
+      "Break Room": {
+        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 6.0,
+        "door_edge_margin_in": 1.0,
+        "avoid_doors_radius_ft": 3.0,
+        "door_snap_tolerance_ft": 6.0
+      },
+        "device_candidates": [
+          {
+            "family": "Duplex Wall",
+            "type_catalog_name": "Standard",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
+          }
+        ]
+      },
+      "CO2 Device Check": {
+        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 6.0,
+        "door_edge_margin_in": 1.0,
+        "avoid_doors_radius_ft": 3.0,
+        "door_snap_tolerance_ft": 6.0
+      },
+        "device_candidates": [
+          {
+            "family": "Duplex Wall",
+            "type_catalog_name": "Standard",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
+          }
+        ]
+      },
+      "Dairy": {
+        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 6.0,
+        "door_edge_margin_in": 1.0,
+        "avoid_doors_radius_ft": 3.0,
+        "door_snap_tolerance_ft": 6.0
+      },
+        "device_candidates": [
+          {
+            "family": "Duplex Wall",
+            "type_catalog_name": "Standard",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
+          }
+        ]
+      },
+      "Freezer": {
+        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 6.0,
+        "door_edge_margin_in": 1.0,
+        "avoid_doors_radius_ft": 3.0,
+        "door_snap_tolerance_ft": 6.0
+      },
+        "device_candidates": [
+          {
+            "family": "Duplex Wall",
+            "type_catalog_name": "Standard",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
+          }
+        ]
+      },
+      "Front Office": {
+        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 6.0,
+        "door_edge_margin_in": 1.0,
+        "avoid_doors_radius_ft": 3.0,
+        "door_snap_tolerance_ft": 6.0
+      },
+        "device_candidates": [
+          {
+            "family": "Duplex Wall",
+            "type_catalog_name": "Standard",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
+          }
+        ]
+      },
+      "Hallway": {
+        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 6.0,
+        "door_edge_margin_in": 1.0,
+        "avoid_doors_radius_ft": 3.0,
+        "door_snap_tolerance_ft": 6.0
+      },
+        "device_candidates": [
+          {
+            "family": "Duplex Wall",
+            "type_catalog_name": "Standard",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
+          }
+        ]
+      },
+      "Meat Cooler": {
+        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 6.0,
+        "door_edge_margin_in": 1.0,
+        "avoid_doors_radius_ft": 3.0,
+        "door_snap_tolerance_ft": 6.0
+      },
+        "device_candidates": [
+          {
+            "family": "Duplex Wall",
+            "type_catalog_name": "Standard",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
+          }
+        ]
+      },
+      "Receiving Area": {
+        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 6.0,
+        "door_edge_margin_in": 1.0,
+        "avoid_doors_radius_ft": 3.0,
+        "door_snap_tolerance_ft": 6.0
+      },
+        "device_candidates": [
+          {
+            "family": "Duplex Wall",
+            "type_catalog_name": "Standard",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
+          }
+        ]
+      },
+      "Restroom": {
+        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 6.0,
+        "door_edge_margin_in": 1.0,
+        "avoid_doors_radius_ft": 3.0,
+        "door_snap_tolerance_ft": 6.0
+      },
+        "device_candidates": [
+          {
+            "family": "Duplex Wall",
+            "type_catalog_name": "Standard",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
+          }
+        ]
+      },
+      "Sales Floor": {
+        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 6.0,
+        "door_edge_margin_in": 1.0,
+        "avoid_doors_radius_ft": 3.0,
+        "door_snap_tolerance_ft": 6.0
+      },
+        "device_candidates": [
+          {
+            "family": "Duplex Wall",
+            "type_catalog_name": "Standard",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
+          }
+        ]
+      },
+      "Stock Room": {
+        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 6.0,
+        "door_edge_margin_in": 1.0,
+        "avoid_doors_radius_ft": 3.0,
+        "door_snap_tolerance_ft": 6.0
+      },
+        "device_candidates": [
+          {
+            "family": "Duplex Wall",
+            "type_catalog_name": "Standard",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
+          }
+        ]
+      },
+      "Vestibule": {
+        "wall_spacing_ft": { "first": 20, "next": 20 },
+        "mount_height_in": 16,
+        "min_per_room": 2,
+        "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 6.0,
+        "door_edge_margin_in": 1.0,
+        "avoid_doors_radius_ft": 3.0,
+        "door_snap_tolerance_ft": 6.0
+      },
+        "device_candidates": [
+          {
+            "family": "Duplex Wall",
+            "type_catalog_name": "Standard",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
+          }
+        ]
+      },
+      "Support": {},
+      "Special": {}
+    }
+  }
+}
+
