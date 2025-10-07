@@ -98,9 +98,9 @@ def ensure_min_points_for_space(all_samples_xy, post_points_xy, wall_segments, m
     ac = float(constraints.get('avoid_corners_ft', 2.0))
     ad = float(constraints.get('avoid_doors_radius_ft', 2.0))
     relax_plan = [
-        dict(avoid_corners_ft=max(ac * 0.5, 0.0), avoid_doors_radius_ft=ad),   # halve corner margin
+        dict(avoid_corners_ft=max(ac - 0.5, 0.0), avoid_doors_radius_ft=ad),   # halve corner margin
         dict(avoid_corners_ft=0.0,               avoid_doors_radius_ft=ad),   # no corner margin
-        dict(avoid_corners_ft=0.0,               avoid_doors_radius_ft=max(ad * 0.5, 0.0)),  # halve door
+        dict(avoid_corners_ft=0.0,               avoid_doors_radius_ft=max(ad - 0.5, 0.0)),  # halve door
         dict(avoid_corners_ft=0.0,               avoid_doors_radius_ft=0.0),  # no door margin
     ]
     # Re-filter from all_samples with relaxed margins
