@@ -114,7 +114,7 @@
         "avoid_corners_ft": 2.0,
         "avoid_doors_ft:": 6.0,
         "door_edge_margin_in": 1.0,
-        "avoid_doors_radius_ft": 2.0,
+        "avoid_doors_radius_ft": 3.0,
         "door_snap_tolerance_ft": 2.0
       },
         "device_candidates": [
