@@ -198,6 +198,34 @@ def execute_tool_script(tool_name, ctx):
             if hasattr(_builtins, k):
                 try: delattr(_builtins, k)
                 except: pass
+
+# --- Agent-side selection helpers (no tool edits needed) ---
+def _collect_spaces(doc, mode="all"):
+    from Autodesk.Revit.DB import FilteredElementCollector, BuiltInCategory
+    elems = FilteredElementCollector(doc).OfCategory(
+        BuiltInCategory.OST_MEPSpaces
+    ).WhereElementIsNotElementType().ToElements()
+    if mode == "active_view_level":
+        try:
+            view = doc.ActiveView
+            if hasattr(view, "GenLevel") and view.GenLevel:
+                lvlid = view.GenLevel.Id
+                elems = [e for e in elems if getattr(e, "LevelId", None) == lvlid]
+        except:
+            pass
+    return elems
+
+def _select_elements(uidoc, elements):
+    # IronPython-friendly: convert to List[ElementId]
+    from System.Collections.Generic import List
+    from Autodesk.Revit.DB import ElementId
+    ids = List[ElementId]([e.Id for e in elements])
+    uidoc.Selection.SetElementIds(ids)
+
+def _clear_selection(uidoc):
+    from System.Collections.Generic import List
+    from Autodesk.Revit.DB import ElementId
+    uidoc.Selection.SetElementIds(List[ElementId]())
 # ------------------------------------------------------------------------
 # Main agent logic
 # ------------------------------------------------------------------------
@@ -206,6 +234,7 @@ def run_agent():
     ctx = build_ctx()
     stop_on_fail = bool(cfg.get("stop_on_fail", True))
     dry_run = bool(cfg.get("dry_run", False))
+    ctx["dry_run"] = dry_run
 
     log("Starting {0} v{1}".format(cfg.get("agent_name", "Agent"), cfg.get("version", "0.0")))
     log("DRY_RUN={0} | STOP_ON_FAIL={1}".format(dry_run, stop_on_fail))
@@ -219,9 +248,22 @@ def run_agent():
     for i, step in enumerate(plan):
         tool_name = step.get("tool")
         log("Step {0}/{1}: executing '{2}'".format(i + 1, len(plan), tool_name))
+
+        preselected = False
         try:
+            # Preselect Spaces for place_receptacles (so the tool runs the same as when you click by hand)
+            if tool_name == "place_receptacles":
+                spaces = _collect_spaces(ctx["doc"], mode="all")  # or "active_view_level"
+                log("[DIAG] Preselecting {0} Space(s) for place_receptacles.".format(len(spaces)))
+                if spaces:
+                    _select_elements(ctx["uidoc"], spaces)
+                    preselected = True
+                else:
+                    log("[HINT] No MEP Spaces found; the tool may no-op.")
+
             execute_tool_script(tool_name, ctx)
             results.append({"tool": tool_name, "ok": True})
+
         except Exception as e:
             tb = traceback.format_exc()
             log("!! '{0}' failed: {1}\n{2}".format(tool_name, e, tb))
@@ -229,9 +271,12 @@ def run_agent():
             if stop_on_fail:
                 log("STOP_ON_FAIL=True. Halting.")
                 break
+        finally:
+            if tool_name == "place_receptacles" and preselected:
+                _clear_selection(ctx["uidoc"])
 
-    ok_ct   = len([r for r in results if r.get("ok")])
-    fail_ct = len([r for r in results if not r.get("ok")])
+    ok_ct   = sum(1 for r in results if r.get("ok"))
+    fail_ct = sum(1 for r in results if not r.get("ok"))
     log("Agent complete. {0} succeeded, {1} failed.".format(ok_ct, fail_ct))
     info_dialog("Agent", "Done.\nSucceeded: {0}\nFailed: {1}".format(ok_ct, fail_ct))
 
