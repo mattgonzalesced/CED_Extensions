@@ -7,7 +7,7 @@
         ]
       }
     },
-    "Device Check 2": {
+    "Device Check": {
       "match": {
         "include": [
           "Device Check"

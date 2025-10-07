@@ -38,7 +38,7 @@
       }
     ],
     "naming": {
-      "level_token_regex": "(?i)L(?:evel)?\\s*(\\d+)",  // extract level number from level name if present
+      "level_token_regex": "(?i)L(?:evel)?\\s*(\\d+)",
       "start_index": 1
     }
   }
