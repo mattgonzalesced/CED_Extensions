@@ -25,7 +25,8 @@ clr.AddReference('RevitAPI')
 from Autodesk.Revit.DB import (
     FilteredElementCollector, BuiltInCategory, FamilySymbol, FamilyPlacementType,
     Transaction, SpatialElementBoundaryOptions, XYZ, Wall, HostObjectUtils, ShellLayerType,
-    FamilyInstance, Curve, BuiltInParameter, Transform, RevitLinkInstance, Opening
+    FamilyInstance, Curve, BuiltInParameter, Transform, RevitLinkInstance, Opening,
+    SpacialElementBoundaryLocation, ElementId, LocationCurve, Outline, BoundingBoxIntersectsFilter
 )
 from Autodesk.Revit.DB.Structure import StructuralType
 
@@ -603,22 +604,187 @@ def pick_receptacle_symbol(doc, device_candidates):
 
     log("[MATCH] No Electrical Fixture symbols available.")
     return None
+# ----------- Include Linked Walls----------
+def _get_space_phase(doc, space):
+    # Rooms: PhaseId; MEP Spaces: PhaseId often works too
+    try:
+        pid = getattr(space, "PhaseId", None)
+        return doc.GetElement(pid) if pid else None
+    except:
+        return None
+
+def _phase_seq(doc, phaseId):
+    try:
+        if phaseId and phaseId != ElementId.InvalidElementId:
+            ph = doc.GetElement(phaseId)
+            return getattr(ph, "SequenceNumber", 0)
+    except:
+        pass
+    return 0
+
+def _wall_valid_for_phase(doc, wall, space_phase):
+    if not space_phase:
+        return True
+    sp_seq = getattr(space_phase, "SequenceNumber", 0)
+    p_created = wall.get_Parameter(BuiltInParameter.PHASE_CREATED)
+    p_demo    = wall.get_Parameter(BuiltInParameter.PHASE_DEMOLISHED)
+    created_seq = _phase_seq(doc, p_created.AsElementId() if p_created else None)
+    demo_seq    = _phase_seq(doc, p_demo.AsElementId() if p_demo else None)
+    if created_seq > sp_seq:
+        return False
+    if demo_seq and demo_seq <= sp_seq:
+        return False
+    return True
+
+def _room_bounding_wall(wall):
+    p = wall.get_Parameter(BuiltInParameter.WALL_ATTR_ROOM_BOUNDING)
+    return (p and p.AsInteger() == 1)
+
+def _harvest_boundary_segments(doc, space, dbg=False):
+    """
+    Return list of dicts:
+    { 'curve': Curve, 'host_wall': Wall or None, 'is_link': bool,
+      'link_inst': RevitLinkInstance or None, 'linked_wall': Wall or None,
+      'is_separation': bool, 'phase_ok': bool, 'room_bounding': bool }
+    """
+    out = []
+    opt = SpatialElementBoundaryOptions()
+    opt.SpatialElementBoundaryLocation = SpatialElementBoundaryLocation.Finish
+    loops = space.GetBoundarySegments(opt) or []
+    sp_phase = _get_space_phase(doc, space)
+
+    for loop in loops:
+        for seg in loop:
+            crv = seg.GetCurve()
+            host_wall = None
+            linked_wall = None
+            link_inst = None
+            is_link = False
+            is_sep  = False
+            phase_ok = True
+            room_bounding = True
+
+            elId = seg.ElementId
+            el = doc.GetElement(elId) if elId and elId != ElementId.InvalidElementId else None
+
+            # Link?
+            linkElId = getattr(seg, "LinkElementId", None)
+            if linkElId and linkElId != ElementId.InvalidElementId and isinstance(el, RevitLinkInstance):
+                is_link = True
+                link_inst = el
+                ldoc = link_inst.GetLinkDocument()
+                linked_wall = ldoc.GetElement(linkElId) if ldoc else None
+
+            # Host wall in current model?
+            if isinstance(el, Wall):
+                host_wall = el
+
+            # Separation line?
+            try:
+                if el and el.Category and el.Category.Id.IntegerValue == int(BuiltInCategory.OST_RoomSeparationLines):
+                    is_sep = True
+            except:
+                pass
+
+            if host_wall:
+                phase_ok = _wall_valid_for_phase(doc, host_wall, sp_phase)
+                room_bounding = _room_bounding_wall(host_wall)
+
+            out.append({
+                'curve': crv,
+                'host_wall': host_wall,
+                'is_link': is_link,
+                'link_inst': link_inst,
+                'linked_wall': linked_wall,
+                'is_separation': is_sep,
+                'phase_ok': phase_ok,
+                'room_bounding': room_bounding
+            })
+
+    if dbg:
+        n = len(out)
+        n_host = sum(1 for r in out if r['host_wall'])
+        n_link = sum(1 for r in out if r['is_link'])
+        n_sep  = sum(1 for r in out if r['is_separation'])
+        print("[DBG] Boundary segments: total={}, host_walls={}, linked={}, separation_lines={}".format(n, n_host, n_link, n_sep))
+    return out
+
+def _find_nearest_host_wall_for_curve(doc, curve, space_phase=None, z_pad=5.0, search_ft=2.0, require_room_bounding=True):
+    """Map a link/separation boundary curve to a nearby host wall you can place on."""
+    p0 = curve.GetEndPoint(0); p1 = curve.GetEndPoint(1)
+    minX, maxX = min(p0.X, p1.X), max(p0.X, p1.X)
+    minY, maxY = min(p0.Y, p1.Y), max(p0.Y, p1.Y)
+    minZ, maxZ = min(p0.Z, p1.Z) - z_pad, max(p0.Z, p1.Z) + z_pad
+    o = Outline(XYZ(minX - search_ft, minY - search_ft, minZ), XYZ(maxX + search_ft, maxY + search_ft, maxZ))
+    f = BoundingBoxIntersectsFilter(o)
+
+    candidates = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Walls).WherePasses(f).ToElements()
+    best = None
+    best_score = 1e9
+
+    try:
+        line = curve if hasattr(curve, "Direction") else Line.CreateBound(p0, p1)
+        want_dir = line.Direction.Normalize()
+    except:
+        want_dir = XYZ(1,0,0)
+
+    mid = (p0 + p1) / 2.0
+    for w in candidates:
+        if require_room_bounding and not _room_bounding_wall(w):
+            continue
+        if space_phase and not _wall_valid_for_phase(doc, w, space_phase):
+            continue
+        lc = getattr(w, "Location", None)
+        if not isinstance(lc, LocationCurve):
+            continue
+        wline = lc.Curve
+        proj = wline.Project(mid)
+        if not proj:
+            continue
+        d = mid.DistanceTo(proj.XYZPoint)
+        try:
+            wdir = (wline.GetEndPoint(1) - wline.GetEndPoint(0)).Normalize()
+            parallel = abs(wdir.DotProduct(want_dir))
+            score = d / max(parallel, 0.1)  # prefer close & parallel
+        except:
+            score = d
+        if d <= search_ft and score < best_score:
+            best = w; best_score = score
+
+    return best
 
 # ---------- Geometry along walls ----------
 def room_wall_segments(doc, room):
-    """Return list of (wall, curve_on_room_boundary) for walls bounding the room."""
-    opts = SpatialElementBoundaryOptions()
-    walls = []
-    loops = room.GetBoundarySegments(opts)
-    if not loops: return walls
-    for loop in loops:
-        for seg in loop:
-            try:
-                elem = doc.GetElement(seg.ElementId)
-                if isinstance(elem, Wall):
-                    walls.append((elem, seg.GetCurve()))
-            except: pass
-    return walls
+    """
+    Return list of (host_wall, boundary_curve) where host_wall is in the current model
+    and valid for the room/space phase. Link/separation segments are mapped to a nearby host wall.
+    """
+    pairs = []
+    segs = _harvest_boundary_segments(doc, room, dbg=True)
+    sp_phase = _get_space_phase(doc, room)
+
+    mapped_from_links = 0
+    for s in segs:
+        crv = s['curve']
+        if s['host_wall'] and s['phase_ok'] and s['room_bounding']:
+            pairs.append((s['host_wall'], crv))
+        else:
+            if s['is_link'] or s['is_separation']:
+                w = _find_nearest_host_wall_for_curve(doc, crv, space_phase=sp_phase, search_ft=2.0, require_room_bounding=True)
+                if w:
+                    pairs.append((w, crv))
+                    mapped_from_links += 1
+
+    if not pairs and any(s['is_link'] for s in segs):
+        print("[WARN] Boundaries appear to be mostly from a linked model with no nearby host walls. "
+              "Consider using a FACE-BASED receptacle and a face-pick workflow for placement.")
+
+    if pairs:
+        print("[DBG] Hostable segments: {} (mapped from link/separation: {})".format(len(pairs), mapped_from_links))
+    else:
+        print("[DBG] No hostable wall segments found for this space.")
+
+    return pairs
 
 def points_along_curve(curve, first_ft, next_ft):
     """Return list of XYZ (plan) along curve at first/next distances."""
