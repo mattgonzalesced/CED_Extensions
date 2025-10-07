@@ -6,6 +6,26 @@ from Autodesk.Revit.DB import (
     FilteredElementCollector, BuiltInCategory, SpatialElementBoundaryOptions,
     LocationPoint, LocationCurve, XYZ, Line, Wall
 )
+from organized.MEPKit.revit.params import get_param_value
+
+def space_match_text(space):
+    """Return a robust text blob for categorization: Name, Space/Room Name, Number, Dept, Function, Occupancy."""
+    parts = []
+    # direct props
+    for attr in ("Name", "Number"):
+        try:
+            val = getattr(space, attr, None)
+            if val: parts.append(val)
+        except: pass
+    # common parameters found on Spaces/Rooms
+    for pname in ("Name", "Space Name", "Room Name", "Number", "Department", "Function", "Occupancy"):
+        try:
+            v = get_param_value(space, pname)
+            if v: parts.append(str(v))
+        except: pass
+    # collapse to a single string
+    blob = u" ".join([p for p in parts if p]).strip()
+    return blob or u""
 
 def collect_spaces_or_rooms(doc):
     spaces = list(FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_MEPSpaces).WhereElementIsNotElementType())

@@ -7,7 +7,7 @@ from organized.MEPKit.core.rules import (
     categorize_space_by_name, get_category_rule
 )
 from organized.MEPKit.revit.transactions import RunInTransaction
-from organized.MEPKit.revit.spaces import collect_spaces_or_rooms, space_name, boundary_loops, segment_curve, segment_host_wall, sample_points_on_segment
+from organized.MEPKit.revit.spaces import collect_spaces_or_rooms, space_name, boundary_loops, segment_curve, segment_host_wall, sample_points_on_segment, space_match_text
 from organized.MEPKit.revit.doors import door_points_on_wall, filter_points_by_doors
 from organized.MEPKit.revit.symbols import resolve_or_load_symbol, place_hosted, place_free
 from organized.MEPKit.revit.params import set_param_value  # optional for mounting height
@@ -27,7 +27,12 @@ def place_perimeter_recepts(doc, logger=None):
     total = 0
     for sp in spaces:
         name = space_name(sp)
-        cat = categorize_space_by_name(name, id_rules)
+        match_text = space_match_text(sp)
+        cat = categorize_space_by_name(match_text, id_rules)
+
+        log.info("Space Id %s → name='%s' match_text='%s' → category [%s]",
+                 sp.Id.IntegerValue, name, match_text, cat)
+
         cat_rule, general = get_category_rule(bc_rules, cat, fallback='Support')
 
         if not cat_rule:
