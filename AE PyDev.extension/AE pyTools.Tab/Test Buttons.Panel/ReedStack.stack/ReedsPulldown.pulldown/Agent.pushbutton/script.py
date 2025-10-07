@@ -91,7 +91,7 @@ def build_ctx():
 # ------------------------------------------------------------------------
 # Execute a tool script directly
 # ------------------------------------------------------------------------
-def execute_tool_script(tool_name, ctx):
+def execute_tool_script(tool_name, ctx, exec_ctx="project"):
     """Run tools/<tool_name>.py as if launched by a pyRevit pushbutton."""
     import os, sys, runpy
     # IronPython-compatible builtins
@@ -100,27 +100,23 @@ def execute_tool_script(tool_name, ctx):
     except ImportError:
         import __builtin__ as _builtins
 
-    import pyrevit as _py  # import the package first
+    import pyrevit as _py
 
-    # --- Resolve UIApplication first (without touching pyrevit.revit yet) ---
+    # Resolve UIApplication first (so pyrevit.revit can use it)
     uiapp = getattr(_py, "__revit__", None)
     try:
-        # Prefer the real one if pyRevit has it
         if uiapp is None and hasattr(_py, "HOST_APP") and getattr(_py.HOST_APP, "uiapp", None):
             uiapp = _py.HOST_APP.uiapp
     except Exception:
         pass
-    # Last-resort: try builtins (some environments inject it there)
     if uiapp is None and hasattr(_builtins, "__revit__"):
         uiapp = getattr(_builtins, "__revit__", None)
-
     if uiapp is None:
-        raise EnvironmentError("Can’t resolve UIApplication (__revit__). Run from pyRevit with a project open.")
+        raise EnvironmentError("Can’t resolve UIApplication. Run from pyRevit with a project open.")
 
     # Make pyrevit’s package-level global available BEFORE importing pyrevit.revit
     setattr(_py, "__revit__", uiapp)
 
-    # Now it’s safe to use pyrevit.revit helpers
     from pyrevit import revit as _revit
     from pyrevit import script as _script
     from pyrevit import forms as _forms
@@ -129,30 +125,23 @@ def execute_tool_script(tool_name, ctx):
     except Exception:
         _HOST_APP = None
 
-    # Derive uidoc/doc
-    uidoc = getattr(_revit, "uidoc", None)
-    if uidoc is None and hasattr(uiapp, "ActiveUIDocument"):
-        uidoc = uiapp.ActiveUIDocument
-    doc = getattr(_revit, "doc", None)
-    if doc is None and uidoc is not None:
-        doc = getattr(uidoc, "Document", None)
-
-    # Require a project document
+    uidoc = getattr(_revit, "uidoc", None) or getattr(uiapp, "ActiveUIDocument", None)
+    doc   = getattr(_revit, "doc", None)   or (getattr(uidoc, "Document", None) if uidoc else None)
     if doc is None or (hasattr(doc, "IsFamilyDocument") and doc.IsFamilyDocument):
         raise EnvironmentError("Open a project document (not a family) and run from a pyRevit button.")
 
-    # ---- Build a pushbutton-like globals dict ----
     tool_path = os.path.join(TOOLS_DIR, tool_name + ".py")
     if not os.path.exists(tool_path):
         raise RuntimeError("Tool not found: {0}".format(tool_path))
 
+    # >>> Inject pyRevit-like globals (including the exec context) <<<
     globals_dict = {
         "__name__": "__main__",
         "__file__": tool_path,
-        "__revit__": uiapp,          # IMPORTANT: UIApplication
+        "__revit__": uiapp,          # UIApplication
         "__uidoc__": uidoc,
         "__doc__": doc,
-        "__context__": "project",
+        "__context__": exec_ctx,     # <<< "project" or "selection"
         "__window__": None,
         "revit": _revit,
         "script": _script,
@@ -165,15 +154,15 @@ def execute_tool_script(tool_name, ctx):
     setattr(_builtins, "__revit__", uiapp)
     setattr(_builtins, "__uidoc__", uidoc)
     setattr(_builtins, "__doc__", doc)
-    setattr(_builtins, "__context__", "project")
+    setattr(_builtins, "__context__", exec_ctx)
     setattr(_builtins, "revit", _revit)
     setattr(_builtins, "script", _script)
     setattr(_builtins, "forms", _forms)
     setattr(_builtins, "HOST_APP", _HOST_APP)
 
-    # Env hints
-    os.environ.setdefault("PYREVIT_RUNNING", "1")
-    os.environ.setdefault("PYREVIT_EXEC_CTX", "project")
+    # Env hints some scripts read
+    os.environ["PYREVIT_RUNNING"] = "1"
+    os.environ["PYREVIT_EXEC_CTX"] = exec_ctx
 
     # Emulate pushbutton cwd + sys.path[0]
     tool_dir = os.path.dirname(tool_path)
@@ -193,39 +182,52 @@ def execute_tool_script(tool_name, ctx):
         os.chdir(old_cwd)
         if inserted_path0 and sys.path and sys.path[0] == tool_dir:
             sys.path.pop(0)
-        # polite cleanup
+        # cleanup
         for k in ("__revit__", "__uidoc__", "__doc__", "__context__", "revit", "script", "forms", "HOST_APP"):
             if hasattr(_builtins, k):
                 try: delattr(_builtins, k)
                 except: pass
 
 # --- Agent-side selection helpers (no tool edits needed) ---
-def _collect_spaces(doc, mode="all"):
+# --- Selection helpers (IronPython-friendly) ---
+def _save_selection(uidoc):
+    # returns a plain Python list of ElementId
+    return list(uidoc.Selection.GetElementIds())
+
+def _restore_selection(uidoc, saved_ids):
+    from System.Collections.Generic import List
+    from Autodesk.Revit.DB import ElementId
+    uidoc.Selection.SetElementIds(List[ElementId](saved_ids))
+
+def _set_selection_elements(uidoc, elements):
+    from System.Collections.Generic import List
+    from Autodesk.Revit.DB import ElementId
+    uidoc.Selection.SetElementIds(List[ElementId]([e.Id for e in elements]))
+
+def _collect_spaces(doc, scope="all"):
     from Autodesk.Revit.DB import FilteredElementCollector, BuiltInCategory
     elems = FilteredElementCollector(doc).OfCategory(
         BuiltInCategory.OST_MEPSpaces
     ).WhereElementIsNotElementType().ToElements()
-    if mode == "active_view_level":
+    if scope == "active_view_level":
         try:
             view = doc.ActiveView
-            if hasattr(view, "GenLevel") and view.GenLevel:
-                lvlid = view.GenLevel.Id
+            genlvl = getattr(view, "GenLevel", None)
+            if genlvl:
+                lvlid = genlvl.Id
                 elems = [e for e in elems if getattr(e, "LevelId", None) == lvlid]
         except:
             pass
     return elems
 
-def _select_elements(uidoc, elements):
-    # IronPython-friendly: convert to List[ElementId]
-    from System.Collections.Generic import List
-    from Autodesk.Revit.DB import ElementId
-    ids = List[ElementId]([e.Id for e in elements])
-    uidoc.Selection.SetElementIds(ids)
+# Optional: default selection policy per tool (extend as you add tools)
+SELECTION_POLICIES = {
+    # run with Spaces preselected so the tool takes the same branch as manual use
+    "place_receptacles": {"type": "spaces", "scope": "all"},   # or "active_view_level"
+    # "some_other_tool": {"type": "rooms", "scope": "active_view_level"},
+}
 
-def _clear_selection(uidoc):
-    from System.Collections.Generic import List
-    from Autodesk.Revit.DB import ElementId
-    uidoc.Selection.SetElementIds(List[ElementId]())
+
 # ------------------------------------------------------------------------
 # Main agent logic
 # ------------------------------------------------------------------------
@@ -246,25 +248,33 @@ def run_agent():
 
     results = []
     for i, step in enumerate(plan):
-        tool_name = step.get("tool")
+        # step may be {"tool":"name"} or richer; normalize
+        tool_name = step.get("tool") if isinstance(step, dict) else str(step)
         log("Step {0}/{1}: executing '{2}'".format(i + 1, len(plan), tool_name))
 
-        preselected = False
-        try:
-            # Preselect Spaces for place_receptacles (so the tool runs the same as when you click by hand)
-            if tool_name == "place_receptacles":
-                spaces = _collect_spaces(ctx["doc"], mode="all")  # or "active_view_level"
-                log("[DIAG] Preselecting {0} Space(s) for place_receptacles.".format(len(spaces)))
-                if spaces:
-                    _select_elements(ctx["uidoc"], spaces)
-                    preselected = True
-                else:
-                    log("[HINT] No MEP Spaces found; the tool may no-op.")
+        # --- selection push ---
+        saved_ids = _save_selection(ctx["uidoc"])
+        exec_ctx = "project"  # default
 
-            execute_tool_script(tool_name, ctx)
+        # Decide selection based on per-tool policy (or per-step override if you add one)
+        policy = SELECTION_POLICIES.get(tool_name)
+        try:
+            if policy:
+                if policy.get("type") == "spaces":
+                    spaces = _collect_spaces(ctx["doc"], scope=policy.get("scope", "all"))
+                    log("[DIAG] Preselecting {0} Space(s) for {1}.".format(len(spaces), tool_name))
+                    if spaces:
+                        _set_selection_elements(ctx["uidoc"], spaces)
+                        exec_ctx = "selection"
+                    else:
+                        log("[HINT] No MEP Spaces found; {0} may no-op.".format(tool_name))
+
+            # run the tool with the appropriate context
+            execute_tool_script(tool_name, ctx, exec_ctx=exec_ctx)
             results.append({"tool": tool_name, "ok": True})
 
         except Exception as e:
+            import traceback
             tb = traceback.format_exc()
             log("!! '{0}' failed: {1}\n{2}".format(tool_name, e, tb))
             results.append({"tool": tool_name, "ok": False, "error": str(e)})
@@ -272,8 +282,8 @@ def run_agent():
                 log("STOP_ON_FAIL=True. Halting.")
                 break
         finally:
-            if tool_name == "place_receptacles" and preselected:
-                _clear_selection(ctx["uidoc"])
+            # --- selection pop (always restore) ---
+            _restore_selection(ctx["uidoc"], saved_ids)
 
     ok_ct   = sum(1 for r in results if r.get("ok"))
     fail_ct = sum(1 for r in results if not r.get("ok"))
