@@ -91,6 +91,32 @@ def build_ctx():
 # ------------------------------------------------------------------------
 # Execute a tool script directly
 # ------------------------------------------------------------------------
+def execute_tool(tool_name, ctx, exec_ctx="project", params=None):
+    import sys, os
+    # try function-call path first
+    try:
+        if TOOLS_DIR not in sys.path:
+            sys.path.insert(0, TOOLS_DIR)
+            remove_after = True
+        else:
+            remove_after = False
+        mod = __import__(tool_name)
+        if hasattr(mod, "run") and callable(mod.run):
+            log("Running tool function: {}.run(...)".format(tool_name))
+            result = mod.run(ctx, params or {})
+            log("Completed (function): {} -> {}".format(tool_name, result))
+            return result
+    except Exception as e:
+        log("WARN: {}.run(...) failed or missing; falling back to script exec: {}".format(tool_name, e))
+    finally:
+        try:
+            if remove_after and sys.path and sys.path[0] == TOOLS_DIR:
+                sys.path.pop(0)
+        except:
+            pass
+    # fall back to old path
+    return execute_tool_script(tool_name, ctx, exec_ctx=exec_ctx)
+
 def execute_tool_script(tool_name, ctx, exec_ctx="project"):
     """Run tools/<tool_name>.py as if launched by a pyRevit pushbutton."""
     import os, sys, runpy
@@ -270,7 +296,7 @@ def run_agent():
                         log("[HINT] No MEP Spaces found; {0} may no-op.".format(tool_name))
 
             # run the tool with the appropriate context
-            execute_tool_script(tool_name, ctx, exec_ctx=exec_ctx)
+            execute_tool(tool_name, ctx, exec_ctx=exec_ctx)
             results.append({"tool": tool_name, "ok": True})
 
         except Exception as e:

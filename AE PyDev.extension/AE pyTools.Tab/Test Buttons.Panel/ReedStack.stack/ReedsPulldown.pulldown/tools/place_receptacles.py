@@ -1035,6 +1035,24 @@ def do_all():
         print("[RECEPT] Placed {} receptacles in {} {}".format(placed, nm, num))
 
     print("[RESULT] Placed {} instances across {} space(s).".format(total_placed, len(spaces)))
+    return total_placed
+
+def run(ctx=None, params=None):
+    """Agent-friendly entrypoint. Optional params: {'dry_run': bool, 'verbose': bool}"""
+    global DRY_RUN, VERBOSE, uiapp, uidoc, doc, app, active_view
+    try:
+        if params:
+            if 'dry_run' in params: DRY_RUN = bool(params['dry_run'])
+            if 'verbose' in params: VERBOSE = bool(params['verbose'])
+        # bind from ctx if provided
+        if ctx:
+            uidoc = ctx.get('uidoc', uidoc)
+            doc   = ctx.get('doc', doc)
+            app   = (doc.Application if doc else app)
+            active_view = (doc.ActiveView if doc else active_view)
+    except:
+        pass
+    return run_as_single_undo(doc, "Place Receptacles", do_all)
 
 # ---------------- Single Undo wrapper call ----------------
 if __name__ == "__main__":

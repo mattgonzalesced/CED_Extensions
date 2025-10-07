@@ -491,6 +491,8 @@ def do_all():
     else:
         print("[RESULT] Total new circuits created:", total_made)
 
+    return total_made
+
 # small helper used above
 def _device_has_circuit(inst):
     try:
@@ -505,6 +507,22 @@ def _device_has_circuit(inst):
     except:
         pass
     return False
+
+def run(ctx=None, params=None):
+    """Agent-friendly entrypoint. Optional params: {'dry_run': bool, 'verbose': bool}"""
+    global DRY_RUN, VERBOSE, uiapp, uidoc, doc, app, active_view
+    try:
+        if params:
+            if 'dry_run' in params: DRY_RUN = bool(params['dry_run'])
+            if 'verbose' in params: VERBOSE = bool(params['verbose'])
+        if ctx:
+            uidoc = ctx.get('uidoc', uidoc)
+            doc   = ctx.get('doc', doc)
+            app   = (doc.Application if doc else app)
+            active_view = (doc.ActiveView if doc else active_view)
+    except:
+        pass
+    return run_as_single_undo(doc, "Circuit Spaces (Nearest Panels)", do_all)
 
 # ---------------- Single Undo wrapper call ----------------
 if __name__ == "__main__":
