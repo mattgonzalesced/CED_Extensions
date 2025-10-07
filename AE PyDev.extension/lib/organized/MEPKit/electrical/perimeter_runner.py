@@ -103,7 +103,7 @@ def place_perimeter_recepts(doc, logger=None):
 
                 for p in pts:
                     try:
-                        inst = place_hosted(doc, wall, sym, p) if wall else place_free(doc, sym, p)
+                        inst = place_hosted(doc, wall, sym, p, mounting_height_ft=mh_ft) if wall else place_free(doc, sym, p, mounting_height_ft=mh_ft)
                         if mh_ft is not None:
                             set_param_value(inst, "Mounting Height", mh_ft)
                         placed_here += 1
