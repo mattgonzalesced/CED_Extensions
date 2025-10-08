@@ -16,8 +16,6 @@ from organized.MEPKit.revit.params import set_param_value  # optional for mounti
 from Autodesk.Revit.DB import (
     RevitLinkInstance, Opening, BuiltInCategory, FilteredElementCollector, XYZ, Wall, LocationCurve
 )
-from System import Double
-from Autodesk.Revit.DB import HostObjectUtils, ShellLayerType, PlanarFace, Plane
 
 
 # ---------Helpers to place recepts in small spaces-----------
@@ -163,24 +161,7 @@ def _collect_wall_curves_linked(doc):
         pass
     return curves
 
-def _nearest_wall_xy_distance(point_xyz, wall_curves):
-    """Horizontal distance (ft) to nearest wall curve in host coords."""
-    min_d = 1e30
-    for crv in wall_curves:
-        try:
-            res = crv.Project(point_xyz)
-            if res is None:
-                continue
-            q = res.XYZPoint if hasattr(res, "XYZPoint") else getattr(res, "Point", None)
-            if q is None:
-                continue
-            dx, dy = (point_xyz.X - q.X), (point_xyz.Y - q.Y)
-            d = (dx*dx + dy*dy) ** 0.5
-            if d < min_d:
-                min_d = d
-        except:
-            pass
-    return min_d
+
 
 #--------------Avoid those doors-------------
 
@@ -198,12 +179,6 @@ def get_linked_open_aabbs(doc, pad_ft):
     _linked_open_aabbs_cache[key] = aabbs
     return aabbs
 
-def _get_link_transform(link_inst):
-    try:
-        return link_inst.GetTotalTransform()
-    except:
-        try: return link_inst.GetTransform()
-        except: return None
 
 def _bbox_to_xy_aabb(bb, tf, pad_ft):
     """Return (xmin, ymin, xmax, ymax) in HOST coords, padded by pad_ft."""
@@ -274,398 +249,41 @@ def _filter_points_by_linked_openings(pts, aabbs):
             out.append(p)
     return out
 
-#------------Avoid placing on thin boundaries------------
 
-def _isfinite(x):
-    try:
-        return (not Double.IsNaN(x)) and (not Double.IsInfinity(x))
-    except:
-        # ultra-safe fallback
-        try:
-            import math
-            return math.isfinite(float(x))
-        except:
-            return (x == x) and (abs(x) < 1e300)
+#------------That window between diary and sales-----------
 
 
-
-def _seg_key_geom(seg, curve_fn):
-    """Stable-ish key if ElementId is missing; uses rounded endpoints."""
-    crv = curve_fn(seg)
-    if not crv:
-        return None
-    p0 = crv.GetEndPoint(0); p1 = crv.GetEndPoint(1)
-    return ("G",
-            round(p0.X, 3), round(p0.Y, 3), round(p0.Z, 3),
-            round(p1.X, 3), round(p1.Y, 3), round(p1.Z, 3))
-
-def _seg_key(doc, seg, host_wall_fn, curve_fn):
-    """Prefer a *non-wall* ElementId (separation line). Fall back to geometry key.
-       Walls are allowed; we won't use their keys to exclude."""
-    wall = host_wall_fn(doc, seg)
-    if not wall:
-        # non-wall: try element id (e.g., Space/Room Separation Line)
-        try:
-            eid = getattr(seg, "ElementId", None)
-            if eid and eid.IntegerValue > 0:
-                return ("E", eid.IntegerValue)
-        except:
-            pass
-    # fallback
-    return _seg_key_geom(seg, curve_fn)
-
-def _collect_wall_curves_host(doc):
-    curves = []
-    try:
-        for w in FilteredElementCollector(doc).OfClass(Wall):
-            lc = w.Location
-            if isinstance(lc, LocationCurve) and lc.Curve:
-                curves.append(lc.Curve)
-    except:
-        pass
-    return curves
-
-def _get_link_transform(link_inst):
-    try:
-        return link_inst.GetTotalTransform()
-    except:
-        try: return link_inst.GetTransform()
-        except: return None
-
-def _collect_wall_curves_linked(doc):
-    curves = []
-    try:
-        for inst in FilteredElementCollector(doc).OfClass(RevitLinkInstance):
-            ldoc = inst.GetLinkDocument()
-            if ldoc is None:
-                continue
-            tf = _get_link_transform(inst)
-            for w in FilteredElementCollector(ldoc).OfClass(Wall):
-                lc = w.Location
-                if isinstance(lc, LocationCurve) and lc.Curve:
-                    try:
-                        crv = lc.Curve.CreateTransformed(tf) if tf else lc.Curve
-                    except:
-                        crv = lc.Curve
-                    if crv:
-                        curves.append(crv)
-    except:
-        pass
-    return curves
-
-def _nearest_parallel_offset_ft(curve, wall_curves, ang_tol_cos=0.98, max_search_ft=4.0):
-    """Approximate 'thickness' as the smallest perpendicular distance to a nearby
-       parallel wall curve (host or linked). Returns +inf if none are near."""
+# --- geometry key for a boundary segment (stable per segment) ---
+def _seg_gkey(curve, prec=3):
     if not curve:
-        return float("inf")
-    try:
-        # tangent as vector from endpoints (fast enough)
-        a = curve.GetEndPoint(0); b = curve.GetEndPoint(1)
-        vx, vy = (b.X - a.X), (b.Y - a.Y)
-        vlen = (vx*vx + vy*vy) ** 0.5
-        if vlen < 1e-6:
-            return float("inf")
-        ux, uy = vx / vlen, vy / vlen  # unit tangent
-        min_d = float("inf")
-        mid = curve.Evaluate(0.5, True)
-        for crv in wall_curves:
-            try:
-                a2 = crv.GetEndPoint(0); b2 = crv.GetEndPoint(1)
-                wx, wy = (b2.X - a2.X), (b2.Y - a2.Y)
-                wlen = (wx*wx + wy*wy) ** 0.5
-                if wlen < 1e-6:
-                    continue
-                # parallel check in XY
-                dot = (ux*wx + uy*wy) / wlen
-                c = abs(dot) / 1.0  # since ux,uy is unit
-                if c < ang_tol_cos:
-                    continue  # directions differ too much
-                proj = crv.Project(mid)
-                if not proj:
-                    continue
-                q = getattr(proj, "XYZPoint", None) or getattr(proj, "Point", None)
-                if not q:
-                    continue
-                dx, dy = (mid.X - q.X), (mid.Y - q.Y)
-                d = (dx*dx + dy*dy) ** 0.5
-                if d < min_d:
-                    min_d = d
-            except:
-                pass
-        return min_d if min_d <= max_search_ft else float("inf")
-    except:
-        return float("inf")
-
-def estimate_boundary_thickness_ft(doc, seg, host_wall_fn, curve_fn,
-                                   wall_curves_host, wall_curves_linked):
-    """
-    Heuristic 'thickness' for a boundary segment:
-      - If hosted by a Wall: use Wall.Width (robust and fast).
-      - Else if the boundary element is a Room/Space Separation Line: 0.0 (very thin).
-      - Else: estimate by nearest parallel wall curve (host+linked) distance.
-    """
-    wall = host_wall_fn(doc, seg)
-    if wall:
-        try:
-            w = float(wall.Width)  # in feet
-            if w > 1e-6:
-                return w
-        except:
-            pass
-
-    # separation lines → zero “thickness”
-    try:
-        eid = getattr(seg, "ElementId", None)
-        if eid and eid.IntegerValue > 0:
-            el = doc.GetElement(eid)
-            if el is not None and el.Category:
-                bic = el.Category.Id.IntegerValue
-                if bic in (int(BuiltInCategory.OST_SpaceSeparationLines),
-                           int(BuiltInCategory.OST_RoomSeparationLines)):
-                    return 0.0
-    except:
-        pass
-
-    # fallback: look for a nearby parallel wall curve (host or linked)
-    d_host  = _nearest_parallel_offset_ft(curve_fn(seg), wall_curves_host)
-    d_link  = _nearest_parallel_offset_ft(curve_fn(seg), wall_curves_linked)
-    d = min(d_host, d_link)
-    return d if _isfinite(d) else float("inf")
-
-def compute_thin_boundary_keys(doc, spaces, boundary_loops_fn, segment_host_wall, segment_curve,
-                               per_space_factor=0.25,
-                               min_abs_ft=0.14,
-                               max_consider_ft=2.0,
-                               include_host_walls=False,     # <-- default off
-                               include_linked_walls=True,    # <-- default on
-                               include_nonwalls=True,        # separation lines, etc.
-                               logger=None):
-
-    linked_refs = _collect_linked_wall_refs(doc)  # once
-
-    thin_keys = set()
-    for sp in spaces:
-        loops = boundary_loops_fn(sp)
-        if not loops:
-            continue
-
-        per_seg = []  # (key, t, is_host_wall, is_linked_wall)
-
-        wall_t = []
-        all_t  = []
-
-        for loop in loops:
-            for seg in loop or ():
-                # gkey for skipping this segment geometry later
-                gkey = _seg_key_geom(seg, segment_curve)
-                if gkey is None:
-                    continue
-
-                # classify & measure thickness
-                host_w = (segment_host_wall(doc, seg) is not None)
-                crv = segment_curve(seg)
-                is_l, linked_w = _segment_is_on_linked_wall(crv, linked_refs)
-
-                t = estimate_boundary_lineband_ft(doc, seg, segment_host_wall, segment_curve, linked_refs)
-                if (t != t) or (t == float('inf')) or (t > max_consider_ft):
-                    t = max_consider_ft
-
-                per_seg.append((gkey, t, host_w, is_l))
-                all_t.append(t)
-                if host_w or is_l:
-                    wall_t.append(t)  # “wall-like” for median
-
-        # --- threshold ---
-        if per_space_factor <= 0.0:
-            thresh = float(min_abs_ft)  # fixed floor only (e.g., 0.10 ft)
-        else:
-            src = wall_t if wall_t else all_t
-            m = sorted(src)[len(src) // 2]
-            thresh = max(min_abs_ft, per_space_factor * m)
-
-        # --- add thin keys (use gkey) ---
-        for gkey, t, host_w, link_w in per_seg:
-            consider = ((host_w and include_host_walls) or
-                        (link_w and include_linked_walls) or
-                        ((not host_w and not link_w) and include_nonwalls))
-            if not consider:
-                continue
-            if t < thresh:
-                thin_keys.add(gkey)  # geometry key, not ("E", id)
-                if logger:
-                    logger.debug(u"[THIN] gkey={} t≈{:.3f}ft < thresh≈{:.3f}ft (host={}, linked={})"
-                                 .format(gkey, t, thresh, host_w, link_w))
-
-    if logger:
-        logger.info("Thin boundary segments (to skip): {}".format(len(thin_keys)))
-    return thin_keys
-
-#-----------Avoid THIN BOUNDARIES 2----------
-
-def _plane_from_face(face):
-    # PlanarFace -> Plane (normal, origin)
-    try:
-        pl = face.GetSurface()  # Plane
-        return pl  # has .Normal (XYZ) and .Origin (XYZ)
-    except:
         return None
+    p0 = curve.GetEndPoint(0); p1 = curve.GetEndPoint(1)
+    r = lambda v: round(v, prec)
+    return ("G", r(p0.X), r(p0.Y), r(p0.Z), r(p1.X), r(p1.Y), r(p1.Z))
 
-def _parallel_plane_gap_ft(pA, pB):
-    # distance between two (roughly parallel) planes
-    if pA is None or pB is None:
-        return float('inf')
-    nA, oA = pA.Normal, pA.Origin
-    nB, oB = pB.Normal, pB.Origin
-    # make normals co-directional
-    dot = nA.X*nB.X + nA.Y*nB.Y + nA.Z*nB.Z
-    if dot < 0.0:
-        nB = -nB
-    # gap = | nA · (oB - oA) |
-    dx, dy, dz = (oB.X - oA.X), (oB.Y - oA.Y), (oB.Z - oA.Z)
-    gap = abs(nA.X*dx + nA.Y*dy + nA.Z*dz)
-    return gap
+# --- read the pair rules from bc_rules.general ---
+def _load_skip_pair_set(bc_rules):
+    gen = (bc_rules or {}).get('general', {})
+    pairs = gen.get('skip_shared_boundary_pairs', []) or []
+    out = set()
+    for pair in pairs:
+        if isinstance(pair, (list, tuple)) and len(pair) == 2:
+            a = (pair[0] or "").strip(); b = (pair[1] or "").strip()
+            if a and b:
+                out.add(tuple(sorted((a, b))))
+    return out
 
-def _wall_lineband_thickness_ft(wall):
-    faces = []
-    try:
-        for side in (ShellLayerType.Exterior, ShellLayerType.Interior):
-            for rf in HostObjectUtils.GetSideFaces(wall, side) or []:
-                f = wall.GetGeometryObjectFromReference(rf)
-                if isinstance(f, PlanarFace):
-                    pl = f.GetSurface()  # Plane
-                    if pl: faces.append(pl)
-    except:
-        pass
-    if len(faces) < 2:
-        return float('inf')
-    # max separation of (roughly) parallel planes
-    best = 0.0
-    for i in range(len(faces)):
-        for j in range(i+1, len(faces)):
-            nA, oA = faces[i].Normal, faces[i].Origin
-            nB, oB = faces[j].Normal, faces[j].Origin
-            dot = nA.X*nB.X + nA.Y*nB.Y + nA.Z*nB.Z
-            if dot < 0.0:
-                nB = -nB
-            dx, dy, dz = (oB.X - oA.X), (oB.Y - oA.Y), (oB.Z - oA.Z)
-            d = abs(nA.X*dx + nA.Y*dy + nA.Z*dz)
-            if d > best:
-                best = d
-    return best if best > 0 else float('inf')
-
-def estimate_boundary_lineband_ft(doc, seg, segment_host_wall, segment_curve,
-                                  linked_wall_refs):
-    """Return thickness of the drawn band:
-       - host wall: face-to-face distance
-       - linked wall: width (proxy for face-to-face)
-       - separation line: 0.0
-       - other: +inf
-    """
-    # host wall?
-    wall = segment_host_wall(doc, seg)
-    if wall:
-        t = _wall_lineband_thickness_ft(wall)
-        if t != float('inf'):
-            return t
-
-    # linked wall?
-    crv = segment_curve(seg)
-    is_l, w = _segment_is_on_linked_wall(crv, linked_wall_refs)
-    if is_l and w > 0.0:
-        return w
-
-    # separation line?
-    try:
-        eid = getattr(seg, "ElementId", None)
-        if eid and eid.IntegerValue > 0:
-            el = doc.GetElement(eid)
-            if el is not None and el.Category:
-                bic = el.Category.Id.IntegerValue
-                if bic in (int(BuiltInCategory.OST_SpaceSeparationLines),
-                           int(BuiltInCategory.OST_RoomSeparationLines)):
-                    return 0.0
-    except:
-        pass
-
-    return float('inf')
-
-#-----------------Check for THIN LINKED WALLS------------------
-
-
-def _collect_linked_wall_refs(doc):
-    """Return [(curve_in_host_coords, width_ft, wall_id_int), ...] for all linked walls."""
-    refs = []
-    try:
-        for inst in FilteredElementCollector(doc).OfClass(RevitLinkInstance):
-            ldoc = inst.GetLinkDocument()
-            if not ldoc:
-                continue
-            # get transform into host coords
-            try:
-                tf = inst.GetTotalTransform()
-            except:
-                try: tf = inst.GetTransform()
-                except: tf = None
-
-            for w in FilteredElementCollector(ldoc).OfClass(Wall):
-                lc = w.Location
-                if not isinstance(lc, LocationCurve) or lc.Curve is None:
-                    continue
-                crv = lc.Curve
-                try:
-                    if tf: crv = crv.CreateTransformed(tf)
-                except:
-                    pass
-                width = float(getattr(w, "Width", 0.0) or 0.0)
-                refs.append((crv, width, w.Id.IntegerValue))
-    except:
-        pass
-    return refs
-
-def _segment_is_on_linked_wall(seg_curve, linked_refs, ang_tol_cos=0.98, dist_tol_ft=0.5):
-    """
-    Returns (True, width_ft) if seg_curve aligns with any linked wall curve:
-      - near-parallel in XY (cos ≥ ang_tol_cos),
-      - mid-point XY distance ≤ dist_tol_ft.
-    """
-    if not seg_curve:
-        return (False, 0.0)
-    try:
-        a = seg_curve.GetEndPoint(0); b = seg_curve.GetEndPoint(1)
-        vx, vy = (b.X - a.X), (b.Y - a.Y)
-        vlen = (vx*vx + vy*vy) ** 0.5
-        if vlen < 1e-6:
-            return (False, 0.0)
-        ux, uy = vx / vlen, vy / vlen
-        mid = seg_curve.Evaluate(0.5, True)
-
-        for crv, width, _ in linked_refs:
-            try:
-                a2 = crv.GetEndPoint(0); b2 = crv.GetEndPoint(1)
-                wx, wy = (b2.X - a2.X), (b2.Y - a2.Y)
-                wlen = (wx*wx + wy*wy) ** 0.5
-                if wlen < 1e-6:
-                    continue
-                # parallel check in XY
-                cosang = abs((ux*wx + uy*wy) / wlen)
-                if cosang < ang_tol_cos:
-                    continue
-                # XY distance from mid to linked wall
-                proj = crv.Project(mid)
-                if not proj:
-                    continue
-                q = getattr(proj, "XYZPoint", None) or getattr(proj, "Point", None)
-                if not q:
-                    continue
-                dx, dy = (mid.X - q.X), (mid.Y - q.Y)
-                d = (dx*dx + dy*dy) ** 0.5
-                if d <= dist_tol_ft:
-                    return (True, float(width))
-            except:
-                pass
-    except:
-        pass
-    return (False, 0.0)
+# --- build an index: segment geometry -> [(space_id, category), ...] ---
+def _build_shared_boundary_index(doc, spaces, id_rules):
+    ix = {}  # gkey -> list of (space_id, category)
+    for sp in spaces:
+        cat = categorize_space_by_name(space_match_text(sp), id_rules)
+        for loop in (boundary_loops(sp) or []):
+            for seg in loop or []:
+                gk = _seg_gkey(segment_curve(seg))
+                if gk:
+                    ix.setdefault(gk, []).append((sp.Id.IntegerValue, cat))
+    return ix
 
 #-----------------Main Function---------------------
 
@@ -675,8 +293,11 @@ def place_perimeter_recepts(doc, logger=None):
 
     id_rules = load_identify_rules()
     bc_rules = load_branch_rules()
-
     spaces = collect_spaces_or_rooms(doc)
+    skip_pair_set = _load_skip_pair_set(bc_rules)
+    shared_ix = _build_shared_boundary_index(doc, spaces, id_rules)
+
+
     log.info("Spaces/Rooms found: {}".format(len(spaces)))
     if not spaces:
         return 0
@@ -690,20 +311,6 @@ def place_perimeter_recepts(doc, logger=None):
     linked_open_aabbs = _collect_linked_opening_aabbs(doc, pad_ft=2.0)
     log.info("Linked doors/openings (AABBs): {}".format(len(linked_open_aabbs)))
 
-    # compute thin boundary keys once (uses walls from host + links under the hood)
-    thin_keys = compute_thin_boundary_keys(
-        doc, spaces,
-        boundary_loops_fn=boundary_loops,
-        segment_host_wall=segment_host_wall,
-        segment_curve=segment_curve,
-        per_space_factor=0.0,  # ← disables median logic
-        min_abs_ft=0.32,  # ← fixed floor: 0.10 ft
-        max_consider_ft=2.0,
-        include_host_walls=False,
-        include_linked_walls=True,
-        include_nonwalls=True,
-        logger=log
-    )
 
     total = 0
     for sp in spaces:
@@ -773,17 +380,30 @@ def place_perimeter_recepts(doc, logger=None):
         for loop in loops:
             for seg in loop:
                 seg_count += 1
-
-                # NEW:
-                gkey = _seg_key_geom(seg, segment_curve)
-                if gkey and gkey in thin_keys:
-                    continue
-
-
-
                 curve = segment_curve(seg)
                 if not curve:
                     continue
+                # shared-boundary pair check (skip only this segment if categories match a rule)
+                if skip_pair_set:
+                    gk = _seg_gkey(curve)
+                    if gk:
+                        neigh = shared_ix.get(gk, [])
+                        if neigh:
+                            this_id = sp.Id.IntegerValue
+                            # current space category already computed as `cat`
+                            should_skip = False
+                            for sid, ncat in neigh:
+                                if sid == this_id:
+                                    continue
+                                pair = tuple(sorted((cat, ncat)))
+                                if pair in skip_pair_set:
+                                    should_skip = True
+                                    break
+                            if should_skip:
+                                # optional: log.debug("Skip shared pair {} on segment {}".format(pair, gk))
+                                continue
+
+
 
                 # sample along the segment with corner inset
                 pts = sample_points_on_segment(curve, first_ft, next_ft, avoid_corners_ft, inset_ft)

@@ -9,7 +9,10 @@
         "avoid_linked_openings_ft": 2.0
       },
       "min_per_space_default": 2,
-      "min_separation_ft_default": 6.0
+      "min_separation_ft_default": 6.0,
+      "skip_shared_boundary_pairs": [
+        ["Dairy/ Produce Cooler", "Sales Floor"]
+      ]
     },
     "receptacle_rules_by_category": {
       "L shape space": {
