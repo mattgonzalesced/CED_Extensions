@@ -13,7 +13,8 @@ from organized.MEPKit.revit.placement import place_hosted, place_free
 from organized.MEPKit.revit.symbols import resolve_or_load_symbol
 from organized.MEPKit.revit.params import set_param_value  # optional for mounting height
 
-from Autodesk.Revit.DB import Wall, FilteredElementCollector
+from Autodesk.Revit.DB import Wall, RevitLinkInstance, LocationCurve, FilteredElementCollector
+
 
 
 # ---------Helpers to place recepts in small spaces-----------
@@ -79,7 +80,7 @@ def _host_for_point(p, wall_segments, tol=1e-3):
 def _xy_key(p, eps=1e-4):
     return (round(p.X/eps), round(p.Y/eps))
 
-
+#---------------Wall collectors------------------
 
 def _collect_walls(doc):
     try:
@@ -113,6 +114,72 @@ def _nearest_wall_xy_distance(point_xyz, walls):
             pass
     return min_d
 
+#-----------------Linked wall collectors-------------------
+
+def _get_link_transform(link_inst):
+    try:
+        return link_inst.GetTotalTransform()  # newer API
+    except:
+        try:
+            return link_inst.GetTransform()    # older API
+        except:
+            return None
+
+def _collect_wall_curves_host(doc):
+    curves = []
+    try:
+        for w in FilteredElementCollector(doc).OfClass(Wall):
+            lc = w.Location
+            if isinstance(lc, LocationCurve):
+                crv = lc.Curve
+                if crv: curves.append(crv)
+    except:
+        pass
+    return curves
+
+def _collect_wall_curves_linked(doc):
+    curves = []
+    try:
+        for inst in FilteredElementCollector(doc).OfClass(RevitLinkInstance):
+            linkdoc = inst.GetLinkDocument()
+            if linkdoc is None:
+                continue
+            tf = _get_link_transform(inst)
+            for w in FilteredElementCollector(linkdoc).OfClass(Wall):
+                lc = w.Location
+                if isinstance(lc, LocationCurve):
+                    crv = lc.Curve
+                    if crv:
+                        try:
+                            if tf is not None:
+                                crv = crv.CreateTransformed(tf)  # into host coords
+                        except:
+                            pass
+                        curves.append(crv)
+    except:
+        pass
+    return curves
+
+def _nearest_wall_xy_distance(point_xyz, wall_curves):
+    """Horizontal distance (ft) to nearest wall curve in host coords."""
+    min_d = 1e30
+    for crv in wall_curves:
+        try:
+            res = crv.Project(point_xyz)
+            if res is None:
+                continue
+            q = res.XYZPoint if hasattr(res, "XYZPoint") else getattr(res, "Point", None)
+            if q is None:
+                continue
+            dx, dy = (point_xyz.X - q.X), (point_xyz.Y - q.Y)
+            d = (dx*dx + dy*dy) ** 0.5
+            if d < min_d:
+                min_d = d
+        except:
+            pass
+    return min_d
+
+
 
 @RunInTransaction("Electrical::PerimeterReceptsByRules")
 def place_perimeter_recepts(doc, logger=None):
@@ -126,7 +193,10 @@ def place_perimeter_recepts(doc, logger=None):
     if not spaces:
         return 0
 
-    all_walls = _collect_walls(doc)
+    # NEW: host + linked wall curves (already in host coordinates)
+    host_wall_curves = _collect_wall_curves_host(doc)
+    linked_wall_curves = _collect_wall_curves_linked(doc)
+    all_wall_curves = host_wall_curves + linked_wall_curves
 
 
     total = 0
@@ -217,17 +287,19 @@ def place_perimeter_recepts(doc, logger=None):
                             inst = place_hosted(doc, wall, sym, p, mounting_height_ft=mh_ft, logger=log)
                         else:
                             inst = place_free(doc, sym, p, mounting_height_ft=mh_ft, logger=log)
+                            # NEW: delete if this free-placed device is not near any wall (0.5 ft)
+                            try:
+                                d = _nearest_wall_xy_distance(p, all_wall_curves)
+                                if d > 0.5:
+                                    doc.Delete(inst.Id)
+                                    placed_here -= 1
+                                    log.info(u"Deleted (no wall within 0.5 ft): d≈{:.2f} ft".format(d))
+                                    continue
+                            except Exception as ex:
+                                log.warning(u"Proximity check/delete failed: {}".format(ex))
+
                         if mh_ft is not None:
                             set_param_value(inst, "Mounting Height", mh_ft)
-                        # NEW: delete if not near any wall (0.5 ft threshold)
-                        try:
-                            d = _nearest_wall_xy_distance(p, all_walls)
-                            if d > 0.5:
-                                doc.Delete(inst.Id)
-                                placed_here -= 1
-                                log.info(u"Deleted receptacle (> 0.5 ft from wall): d≈{:.2f} ft".format(d))
-                        except Exception as ex:
-                            log.warning(u"Proximity check/delete failed: {}".format(ex))
 
                         placed_here += 1
                     except Exception as ex:
