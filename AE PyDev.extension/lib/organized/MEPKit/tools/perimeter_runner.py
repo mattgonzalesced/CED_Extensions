@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 # lib/organized/MEPKit/electrical/perimeter_runner.py
+
+from Autodesk.Revit.DB import Wall, FilteredElementCollector
+
 from __future__ import absolute_import
-from Autodesk.Revit.DB import BuiltInCategory
 from organized.MEPKit.core.log import get_logger
 from organized.MEPKit.core.rules import (
     load_identify_rules, load_branch_rules, normalize_constraints,
@@ -79,41 +81,39 @@ def _xy_key(p, eps=1e-4):
     return (round(p.X/eps), round(p.Y/eps))
 
 
-def _is_space_or_room_separation(doc, eid):
-    """True iff element id is a Room/Space Separation Line."""
-    try:
-        el = doc.GetElement(eid)
-        if not el or not el.Category:
-            return False
-        bic_int = el.Category.Id.IntegerValue
-        return bic_int in (
-            int(BuiltInCategory.OST_RoomSeparationLines),
-            int(BuiltInCategory.OST_SpaceSeparationLines),
-        )
-    except:
-        return False
 
-def _compute_shared_separation_ids(doc, spaces):
-    """
-    Count how many spaces reference each *separation line* (non-wall) element.
-    Return the set of ElementId.IntegerValue used by 2+ spaces.
-    """
-    counts = {}
-    for sp in spaces:
-        loops = boundary_loops(sp)
-        for loop in loops or ():
-            for seg in loop or ():
-                try:
-                    eid = getattr(seg, "ElementId", None)
-                    if not (eid and eid.IntegerValue > 0):
-                        continue
-                    if not _is_space_or_room_separation(doc, eid):
-                        continue
-                    key = eid.IntegerValue
-                    counts[key] = counts.get(key, 0) + 1
-                except:
-                    pass
-    return {k for k, c in counts.items() if c >= 2}
+def _collect_walls(doc):
+    try:
+        return list(FilteredElementCollector(doc).OfClass(Wall))
+    except:
+        return []
+
+def _nearest_wall_xy_distance(point_xyz, walls):
+    """Return horizontal (XY) distance in feet from point to nearest wall location curve."""
+    min_d = 1e30
+    for w in walls:
+        try:
+            lc = w.Location
+            if lc is None:
+                continue
+            crv = getattr(lc, "Curve", None)
+            if crv is None:
+                continue
+            res = crv.Project(point_xyz)
+            if res is None:
+                continue
+            # IntersectionResult has XYZPoint; fall back to Point if needed
+            q = res.XYZPoint if hasattr(res, "XYZPoint") else getattr(res, "Point", None)
+            if q is None:
+                continue
+            dx, dy = (point_xyz.X - q.X), (point_xyz.Y - q.Y)
+            d = (dx*dx + dy*dy) ** 0.5
+            if d < min_d:
+                min_d = d
+        except:
+            pass
+    return min_d
+
 
 @RunInTransaction("Electrical::PerimeterReceptsByRules")
 def place_perimeter_recepts(doc, logger=None):
@@ -127,9 +127,8 @@ def place_perimeter_recepts(doc, logger=None):
     if not spaces:
         return 0
 
-    # precise: only separation lines (not walls)
-    shared_sep_ids = _compute_shared_separation_ids(doc, spaces)
-    log.info("Shared space boundary segments detected: {}".format(len(shared_sep_ids)))
+    all_walls = _collect_walls(doc)
+
 
     total = 0
     for sp in spaces:
@@ -195,15 +194,6 @@ def place_perimeter_recepts(doc, logger=None):
         for loop in loops:
             for seg in loop:
                 seg_count += 1
-                # skip only if this boundary segment is a shared separation line
-                try:
-                    eid = getattr(seg, "ElementId", None)
-                    if eid and eid.IntegerValue in shared_sep_ids:
-                        # optional debug:
-                        # log.debug("Skip shared separation line: {}".format(eid.IntegerValue))
-                        continue
-                except:
-                    pass
                 curve = segment_curve(seg)
                 if not curve:
                     continue
@@ -230,6 +220,16 @@ def place_perimeter_recepts(doc, logger=None):
                             inst = place_free(doc, sym, p, mounting_height_ft=mh_ft, logger=log)
                         if mh_ft is not None:
                             set_param_value(inst, "Mounting Height", mh_ft)
+                        # NEW: delete if not near any wall (0.5 ft threshold)
+                        try:
+                            d = _nearest_wall_xy_distance(p, all_walls)
+                            if d > 0.5:
+                                doc.Delete(inst.Id)
+                                placed_here -= 1
+                                log.info(u"Deleted receptacle (> 0.5 ft from wall): d≈{:.2f} ft".format(d))
+                        except Exception as ex:
+                            log.warning(u"Proximity check/delete failed: {}".format(ex))
+
                         placed_here += 1
                     except Exception as ex:
                         log.warning(u"Placement failed at point → {}".format(ex))
