@@ -310,32 +310,31 @@ def _filter_points_by_linked_openings(pts, aabbs):
 
 # --- read the pair rules from bc_rules.general ---
 def _load_skip_pair_set(bc_rules):
-    """Return a set of normalized 2-tuples (catA, catB) we should skip on a shared boundary.
-       Accepts several key spellings and supports root-level or under 'general'."""
+    """Return a set of normalized 2-tuples (catA, catB) to skip on a shared boundary."""
     pairs = set()
     if not bc_rules:
         return pairs
 
-    # keys we accept (root or inside 'general')
-    KEY_CANDIDATES = (
+    # Accept both root and general locations
+    KEY_CANDIDATES = ("skip_shared_boundary_pairs",)  # <-- 1-tuple, not a string!
 
-        "skip_shared_boundary_pairs"
+    # If load_branch_rules() returns the outer object, unwrap it
+    root = bc_rules.get("branch_circuits", bc_rules)
 
-    )
-
-    # collect candidate list from root
     found_key = None
     cand_list = None
+
+    # Look at root first…
     for k in KEY_CANDIDATES:
-        v = bc_rules.get(k)
+        v = root.get(k)
         if v:
             cand_list = v
             found_key = k
             break
 
-    # or from general
+    # …then under 'general'
     if cand_list is None:
-        gen = bc_rules.get("general") or {}
+        gen = (root.get("general") or {})
         for k in KEY_CANDIDATES:
             v = gen.get(k)
             if v:
@@ -344,14 +343,17 @@ def _load_skip_pair_set(bc_rules):
                 break
 
     if cand_list is None:
-        # nothing found; keep empty set
+        # nothing found
+        try:
+            log.info(u"[PAIR] loaded 0 pairs (key not found)")
+        except Exception:
+            pass
         return pairs
 
     def norm(s):
         return (s or u"").strip().lower()
 
     for item in cand_list:
-        # allow ["A","B"] or {"a":"A","b":"B"} etc; be tolerant
         if isinstance(item, (list, tuple)) and len(item) >= 2:
             a, b = norm(item[0]), norm(item[1])
         elif isinstance(item, dict):
@@ -361,9 +363,10 @@ def _load_skip_pair_set(bc_rules):
         if a and b:
             pairs.add(tuple(sorted((a, b))))
 
-    # helpful log
     try:
-        log.info(u"[PAIR] loaded {} pairs from '{}'".format(len(pairs), found_key))
+        log.info(u"[PAIR] loaded {} pairs from '{}' → {}".format(
+            len(pairs), found_key, sorted(list(pairs))
+        ))
     except Exception:
         pass
     return pairs
