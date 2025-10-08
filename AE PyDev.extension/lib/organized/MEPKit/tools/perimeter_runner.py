@@ -307,24 +307,6 @@ def _filter_points_by_linked_openings(pts, aabbs):
 
 #------------That window between diary and sales-----------
 
-
-def _pt2d_key(p, prec=3):
-    r = lambda v: round(v, prec)
-    return (r(p.X), r(p.Y))   # ignore Z for space boundaries
-
-def _seg_gkey2d(curve, prec=3):
-    """Orientation-agnostic 2D key for a boundary segment."""
-    if not curve:
-        return None
-    p0 = curve.GetEndPoint(0); p1 = curve.GetEndPoint(1)
-    a = _pt2d_key(p0, prec)
-    b = _pt2d_key(p1, prec)
-    # orientation-insensitive: sort endpoints
-    if a <= b:
-        return ("G2",) + a + b
-    else:
-        return ("G2",) + b + a
-
 # --- read the pair rules from bc_rules.general ---
 def _load_skip_pair_set(bc_rules):
     gen = (bc_rules or {}).get('general', {})
@@ -338,16 +320,40 @@ def _load_skip_pair_set(bc_rules):
     return out
 
 # --- build an index: segment geometry -> [(space_id, category), ...] ---
-def _build_shared_boundary_index(doc, spaces, id_rules):
-    ix = {}  # gkey -> [(space_id, category), ...]
+def _build_shared_boundary_indexes(doc, spaces, id_rules):
+    ix_g, ix_m = {}, {}
     for sp in spaces:
-        cat = categorize_space_by_name(space_match_text(sp), id_rules)
+        cat = (categorize_space_by_name(space_match_text(sp), id_rules) or "").strip()
         for loop in (boundary_loops(sp) or []):
             for seg in loop or []:
-                gk = _seg_gkey2d(segment_curve(seg))   # <— here
-                if gk:
-                    ix.setdefault(gk, []).append((sp.Id.IntegerValue, (cat or "").strip()))
-    return ix
+                crv = segment_curve(seg)
+                if not crv: continue
+                gk = _seg_gkey2d(crv); mk = _seg_mkey2d(crv)
+                if gk: ix_g.setdefault(gk, []).append((sp.Id.IntegerValue, cat))
+                if mk: ix_m.setdefault(mk, []).append((sp.Id.IntegerValue, cat))
+    return ix_g, ix_m
+
+
+#------------------More to handle that window between Dairy and sales--------------------
+
+def _pt2d_key(p, prec=3):
+    r = lambda v: round(v, prec)
+    return (r(p.X), r(p.Y))
+
+def _seg_gkey2d(curve, prec=3):
+    if not curve: return None
+    p0, p1 = curve.GetEndPoint(0), curve.GetEndPoint(1)
+    a, b = _pt2d_key(p0, prec), _pt2d_key(p1, prec)
+    return ("G2",) + (a + b if a <= b else b + a)
+
+def _seg_mkey2d(curve, prec=2):
+    if not curve: return None
+    try:
+        pm = curve.Evaluate(0.5, True)
+    except:
+        p0, p1 = curve.GetEndPoint(0), curve.GetEndPoint(1)
+        pm = type(p0)((p0.X+p1.X)/2.0, (p0.Y+p1.Y)/2.0, (p0.Z+p1.Z)/2.0)
+    return ("M2",) + _pt2d_key(pm, prec)
 
 #-----------------Main Function---------------------
 
@@ -364,7 +370,7 @@ def place_perimeter_recepts(doc, logger=None):
     # new at 1:19 10/8/25
     gen = (bc_rules or {}).get('general', {})
     constraints = gen.get('placement_constraints', {}) or {}
-    near_wall_ft = float(constraints.get('near_wall_threshold_ft', 1.0))  # <- default 1.0'
+    near_wall_ft = float(constraints.get('near_wall_threshold_ft'))
     log.info("Near-wall threshold: {:.2f} ft".format(near_wall_ft))
 
 
@@ -448,30 +454,20 @@ def place_perimeter_recepts(doc, logger=None):
         for loop in loops:
             for seg in loop:
                 seg_count += 1
-                curve = segment_curve(seg)
-                if not curve:
-                    continue
-                # shared-boundary pair check (skip only this segment if categories match a rule)
+                crv = segment_curve(seg)
                 if skip_pair_set:
-                    gk = _seg_gkey2d(curve)
-                    if gk:
-                        neigh = shared_ix.get(gk, [])
-                        log.info("Shared-boundary index built with {} unique segments".format(len(shared_ix)))
-                        if neigh:
-                            this_id = sp.Id.IntegerValue
-                            # current space category already computed as `cat`
-                            should_skip = False
-                            for sid, ncat in neigh:
-                                if sid == this_id:
-                                    continue
-                                pair = tuple(sorted((cat, ncat)))
-                                if pair in skip_pair_set:
-                                    should_skip = True
-                                    break
-                            if should_skip:
-                                # optional: log.debug("Skip shared pair {} on segment {}".format(pair, gk))
-                                log.debug("Skip shared pair {} on segment {}".format(pair, gk))
-                                continue
+                    this_id = sp.Id.IntegerValue
+                    this_cat = (cat or "").strip()
+                    gk = _seg_gkey2d(crv);
+                    mk = _seg_mkey2d(crv)
+                    neigh = (shared_ix_g.get(gk) if gk in shared_ix_g else shared_ix_m.get(mk, []))
+                    for sid, ncat in (neigh or []):
+                        if sid == this_id: continue
+                        pair = tuple(sorted((this_cat, (ncat or "").strip())))
+                        if pair in skip_pair_set:
+                            # skip this boundary segment entirely
+                            # e.g. continue to next segment
+                            continue  # (inside your seg loop)
 
 
 
