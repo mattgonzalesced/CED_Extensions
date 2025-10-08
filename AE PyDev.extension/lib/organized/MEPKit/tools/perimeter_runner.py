@@ -435,51 +435,127 @@ def _segment_is_from_linked_wall(curve, linked_wall_curves, tol_ft=0.2):
                 pass
     return False
 
-# ----- build a point-in-space locator (XY only) -----
-def _mk_point_in_space_locator(spaces, space_loops_by_id, cat_by_spaceid):
-    # Precompute polygons (outer loop only is good enough for adjacency test)
-    polys = []  # list of (space_id, [(x,y),... outer loop], category)
-    for sp in spaces:
-        sid = sp.Id.IntegerValue
-        loops = space_loops_by_id.get(sid) or []
-        if not loops:
-            continue
-        # pick the largest loop as outer
-        outer = max(loops, key=lambda lp: abs(lp.get("perimeter_ft", 0.0))) if isinstance(loops[0], dict) else loops[0]
-        xy = outer.get("xy") if isinstance(outer, dict) else outer  # expect [(x,y),...]
-        if not xy:
-            continue
-        cat = (cat_by_spaceid.get(sid) or u"").strip().lower()
-        polys.append((sid, xy, cat))
 
-    def _pt_in_poly(pt, poly_xy):
-        # standard ray-casting in XY
+def _ray_cast_point_in_poly(pt, poly_xy):
+    """Return True if (x,y) is inside polygon poly_xy using ray casting (XY only)."""
+    x, y = pt
+    inside = False
+    j = len(poly_xy) - 1
+    for i in range(len(poly_xy)):
+        xi, yi = poly_xy[i]
+        xj, yj = poly_xy[j]
+        # edge crosses horizontal ray?
+        if ((yi > y) != (yj > y)):
+            # x-intersection of the edge with the ray
+            xint = xi + (y - yi) * (xj - xi) / (yj - yi)
+            if xint >= x:
+                inside = not inside
+        j = i
+    return inside
+
+
+def _bbox_of_xy(poly_xy):
+    xs = [p[0] for p in poly_xy]
+    ys = [p[1] for p in poly_xy]
+    return (min(xs), min(ys), max(xs), max(ys))
+
+
+class SpaceLocator(object):
+    """
+    Fast-ish XY point → (space_id, category) lookup built from space boundary loops.
+
+    Expect space_loops_by_id[sid] to contain either:
+      - list of dicts with keys {'xy': [(x,y),...], 'perimeter_ft': float}, or
+      - list of [(x,y), ...] (outer loop should be first/only).
+    Categories should be pre-lowered strings in cat_by_spaceid.
+    """
+
+    __slots__ = ("_polys",)
+
+    def __init__(self, polys):
+        # polys: list of dicts: {'sid': int, 'xy': [(x,y)...], 'bbox': (xmin,ymin,xmax,ymax), 'cat': str}
+        self._polys = polys
+
+    @classmethod
+    def from_space_loops(cls, spaces, space_loops_by_id, cat_by_spaceid):
+        polys = []
+        for sp in spaces:
+            sid = sp.Id.IntegerValue
+            loops = space_loops_by_id.get(sid) or []
+            if not loops:
+                continue
+
+            # choose outer loop: largest perimeter if dict form, else first loop
+            if loops and isinstance(loops[0], dict):
+                outer = max(loops, key=lambda lp: abs(lp.get("perimeter_ft", 0.0)))
+                xy = outer.get("xy") or []
+            else:
+                outer = loops[0] if loops else []
+                xy = outer or []
+
+            if not xy:
+                continue
+
+            cat = (cat_by_spaceid.get(sid) or u"").strip().lower()
+            bbox = _bbox_of_xy(xy)
+            polys.append({'sid': sid, 'xy': xy, 'bbox': bbox, 'cat': cat})
+
+        return cls(polys)
+
+    def category_at_xy(self, pt):
+        """Return (space_id, category) for XY point, or (None, None) if not inside any space."""
         x, y = pt
-        inside = False
-        j = len(poly_xy) - 1
-        for i in range(len(poly_xy)):
-            xi, yi = poly_xy[i]
-            xj, yj = poly_xy[j]
-            # edge crosses the horizontal ray?
-            if ((yi > y) != (yj > y)):
-                # x-intersect of the edge with the ray
-                xint = xi + (y - yi) * (xj - xi) / (yj - yi)
-                if xint >= x:
-                    inside = not inside
-            j = i
-        return inside
-
-    def category_at_xy(pt):
-        for sid, xy, cat in polys:
+        for item in self._polys:
+            xmin, ymin, xmax, ymax = item['bbox']
+            if x < xmin or x > xmax or y < ymin or y > ymax:
+                continue
             try:
-                if _pt_in_poly(pt, xy):
-                    return sid, cat
+                if _ray_cast_point_in_poly((x, y), item['xy']):
+                    return item['sid'], item['cat']
             except:
                 pass
         return None, None
 
-    return category_at_xy
 
+def should_skip_segment_by_pair(space_id, this_cat, p1, p2, outward_normal_xy, locator, skip_pairs, probe_ft=0.25, logger=None):
+    """
+    Decide if a boundary segment should be skipped because the *other* space forms
+    a prohibited pair with this space's category.
+
+    - p1, p2: Revit XYZ (only X,Y used).
+    - outward_normal_xy: tuple (nx, ny) pointing *out of* the current space.
+    - locator: SpaceLocator
+    - skip_pairs: set of 2-tuples, already lowercased and sorted.
+    """
+    if not skip_pairs:
+        return False
+
+    # midpoint in XY
+    mx = 0.5 * (p1.X + p2.X)
+    my = 0.5 * (p1.Y + p2.Y)
+
+    # sample just outside this space
+    ox = mx + outward_normal_xy[0] * probe_ft
+    oy = my + outward_normal_xy[1] * probe_ft
+
+    _, other_cat = locator.category_at_xy((ox, oy))
+    if not other_cat:
+        return False
+
+    a = (this_cat or u"").strip().lower()
+    b = (other_cat or u"").strip().lower()
+    if not a or not b:
+        return False
+
+    pair = tuple(sorted((a, b)))
+    if pair in skip_pairs:
+        if logger:
+            try:
+                logger.debug(u"[PAIRHIT] space={} pair={}".format(space_id, pair))
+            except:
+                pass
+        return True
+    return False
 
 def _should_skip_segment_by_pair(space_id, this_cat, p1, p2, outward_normal_xy, category_at_xy, skip_pairs, probe_ft=0.25):
     """
@@ -550,9 +626,11 @@ def place_perimeter_recepts(doc, logger=None):
     linked_open_aabbs = _collect_linked_opening_aabbs(doc, pad_ft=2.0)
     log.info("Linked doors/openings (AABBs): {}".format(len(linked_open_aabbs)))
 
-    # later in your setup:
-    cat_by_spaceid = {sp.Id.IntegerValue: (space_category_string(sp).strip().lower()) for sp in spaces}
-    category_at_xy = _mk_point_in_space_locator(spaces, space_loops_by_id, cat_by_spaceid)
+    # make a {space_id: category_string_lower} map
+    cat_by_spaceid = {sp.Id.IntegerValue: (space_category_string(sp) or u"").strip().lower() for sp in spaces}
+
+    # build locator once
+    locator = SpaceLocator.from_space_loops(spaces, space_loops_by_id, cat_by_spaceid)
 
     total = 0
     for sp in spaces:
@@ -655,11 +733,12 @@ def place_perimeter_recepts(doc, logger=None):
                         if blocked:
                             continue  # skip this boundary segment entirely
 
-                if skip_pairs:
+                if skip_shared_pairs:
+                    # outward_normal should be a unit XY vector pointing out of THIS space
                     out_xy = (outward_normal.X, outward_normal.Y) if hasattr(outward_normal, "X") else outward_normal
-                    if _should_skip_segment_by_pair(space_id, this_cat, p1, p2, out_xy, category_at_xy, skip_pairs,
-                                                    probe_ft=0.25):
-                        continue  # skip sampling on this segment entirely
+                    if should_skip_segment_by_pair(space_id, this_cat, p1, p2, out_xy, locator, skip_shared_pairs,
+                                                   probe_ft=constraints.get("pair_probe_ft", 0.25), logger=log):
+                        continue  # skip this segment entirely
 
                 # sample along the segment with corner inset
                 pts = sample_points_on_segment(curve, first_ft, next_ft, avoid_corners_ft, inset_ft)
