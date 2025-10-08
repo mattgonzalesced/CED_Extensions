@@ -12,6 +12,7 @@ from organized.MEPKit.revit.doors import door_points_on_wall, filter_points_by_d
 from organized.MEPKit.revit.placement import place_hosted, place_free
 from organized.MEPKit.revit.symbols import resolve_or_load_symbol
 from organized.MEPKit.revit.params import set_param_value  # optional for mounting height
+from organized.MEPKit.electrical.naming import space_category_string
 
 from Autodesk.Revit.DB import (
     RevitLinkInstance, Opening, BuiltInCategory, FilteredElementCollector, XYZ, Wall, LocationCurve
