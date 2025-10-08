@@ -435,6 +435,82 @@ def _segment_is_from_linked_wall(curve, linked_wall_curves, tol_ft=0.2):
                 pass
     return False
 
+# ----- build a point-in-space locator (XY only) -----
+def _mk_point_in_space_locator(spaces, space_loops_by_id, cat_by_spaceid):
+    # Precompute polygons (outer loop only is good enough for adjacency test)
+    polys = []  # list of (space_id, [(x,y),... outer loop], category)
+    for sp in spaces:
+        sid = sp.Id.IntegerValue
+        loops = space_loops_by_id.get(sid) or []
+        if not loops:
+            continue
+        # pick the largest loop as outer
+        outer = max(loops, key=lambda lp: abs(lp.get("perimeter_ft", 0.0))) if isinstance(loops[0], dict) else loops[0]
+        xy = outer.get("xy") if isinstance(outer, dict) else outer  # expect [(x,y),...]
+        if not xy:
+            continue
+        cat = (cat_by_spaceid.get(sid) or u"").strip().lower()
+        polys.append((sid, xy, cat))
+
+    def _pt_in_poly(pt, poly_xy):
+        # standard ray-casting in XY
+        x, y = pt
+        inside = False
+        j = len(poly_xy) - 1
+        for i in range(len(poly_xy)):
+            xi, yi = poly_xy[i]
+            xj, yj = poly_xy[j]
+            # edge crosses the horizontal ray?
+            if ((yi > y) != (yj > y)):
+                # x-intersect of the edge with the ray
+                xint = xi + (y - yi) * (xj - xi) / (yj - yi)
+                if xint >= x:
+                    inside = not inside
+            j = i
+        return inside
+
+    def category_at_xy(pt):
+        for sid, xy, cat in polys:
+            try:
+                if _pt_in_poly(pt, xy):
+                    return sid, cat
+            except:
+                pass
+        return None, None
+
+    return category_at_xy
+
+def _should_skip_segment_by_pair(space_id, this_cat, p1, p2, outward_normal_xy, category_at_xy, skip_pairs, probe_ft=0.25):
+    """
+    p1, p2: endpoints (XYZ or 2D with .X/.Y); we only use XY.
+    outward_normal_xy: normalized XY vector pointing *out* of the current space.
+    Returns True if the other side's space category paired with this_cat is in skip_pairs.
+    """
+    # Midpoint in XY
+    mx = 0.5 * (p1.X + p2.X)
+    my = 0.5 * (p1.Y + p2.Y)
+
+    # Sample just outside this space
+    ox = mx + outward_normal_xy[0] * probe_ft
+    oy = my + outward_normal_xy[1] * probe_ft
+
+    other_sid, other_cat = category_at_xy((ox, oy))
+    if not other_cat:
+        return False  # corridor/void/outside → no pair to match
+
+    a = (this_cat or u"").strip().lower()
+    b = (other_cat or u"").strip().lower()
+    if not a or not b:
+        return False
+
+    pair = tuple(sorted((a, b)))
+    if pair in skip_pairs:
+        try:
+            log.debug(u"[PAIRHIT] skip seg at space={} pair={}".format(space_id, pair))
+        except:
+            pass
+        return True
+    return False
 
 #-----------------Main Function---------------------
 
@@ -473,6 +549,9 @@ def place_perimeter_recepts(doc, logger=None):
     linked_open_aabbs = _collect_linked_opening_aabbs(doc, pad_ft=2.0)
     log.info("Linked doors/openings (AABBs): {}".format(len(linked_open_aabbs)))
 
+    # later in your setup:
+    cat_by_spaceid = {sp.Id.IntegerValue: (space_category_string(sp).strip().lower()) for sp in all_spaces}
+    category_at_xy = _mk_point_in_space_locator(all_spaces, space_loops_by_id, cat_by_spaceid)
 
     total = 0
     for sp in spaces:
@@ -575,7 +654,11 @@ def place_perimeter_recepts(doc, logger=None):
                         if blocked:
                             continue  # skip this boundary segment entirely
 
-
+                if skip_pairs:
+                    out_xy = (outward_normal.X, outward_normal.Y) if hasattr(outward_normal, "X") else outward_normal
+                    if _should_skip_segment_by_pair(space_id, this_cat, p1, p2, out_xy, category_at_xy, skip_pairs,
+                                                    probe_ft=0.25):
+                        continue  # skip sampling on this segment entirely
 
                 # sample along the segment with corner inset
                 pts = sample_points_on_segment(curve, first_ft, next_ft, avoid_corners_ft, inset_ft)
