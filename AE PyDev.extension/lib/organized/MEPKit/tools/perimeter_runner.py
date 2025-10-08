@@ -12,7 +12,6 @@ from organized.MEPKit.revit.doors import door_points_on_wall, filter_points_by_d
 from organized.MEPKit.revit.placement import place_hosted, place_free
 from organized.MEPKit.revit.symbols import resolve_or_load_symbol
 from organized.MEPKit.revit.params import set_param_value  # optional for mounting height
-from organized.MEPKit.electrical.naming import space_category_string
 
 from Autodesk.Revit.DB import (
     RevitLinkInstance, Opening, BuiltInCategory, FilteredElementCollector, XYZ, Wall, LocationCurve
@@ -589,6 +588,51 @@ def _should_skip_segment_by_pair(space_id, this_cat, p1, p2, outward_normal_xy, 
             pass
         return True
     return False
+
+def space_category_string(sp):
+    """
+    Returns a category string for a Space/Room. Tries your electrical.naming
+    helper first, then falls back to the element's name.
+    """
+    # 1) your real categorizer (supports either 1-arg or (sp, rules) signatures)
+    if _space_cat:
+        try:
+            return _space_cat(sp)
+        except TypeError:
+            # try passing rules if your implementation needs them
+            rules_obj = (globals().get("identify_rules")
+                         or globals().get("rules_identify")
+                         or None)
+            if rules_obj is not None:
+                try:
+                    return _space_cat(sp, rules_obj)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    # 2) fallback: pull name from Space/Room
+    try:
+        name = getattr(sp, "Name", None)
+        if name:
+            return name
+    except Exception:
+        pass
+    try:
+        # try built-in params for room/space name
+        from Autodesk.Revit.DB import BuiltInParameter
+        for bip in (getattr(BuiltInParameter, "ROOM_NAME", None),
+                    getattr(BuiltInParameter, "SPACE_NAME", None)):
+            if bip is None:
+                continue
+            p = sp.get_Parameter(bip)
+            if p:
+                n = p.AsString()
+                if n:
+                    return n
+    except Exception:
+        pass
+    return u""
 
 #-----------------Main Function---------------------
 
