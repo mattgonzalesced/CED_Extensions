@@ -18,6 +18,7 @@ from Autodesk.Revit.DB import (
     RevitLinkInstance, Opening, BuiltInCategory, FilteredElementCollector, XYZ, Wall, LocationCurve
 )
 import math
+from Autodesk.Revit.DB import SpatialElementBoundaryOptions, SpatialElementBoundaryLocation
 
 
 # ---------Helpers to place recepts in small spaces-----------
@@ -590,6 +591,62 @@ def _should_skip_segment_by_pair(space_id, this_cat, p1, p2, outward_normal_xy, 
         return True
     return False
 
+
+
+
+
+
+
+def _loop_to_xy(loop):
+    """Convert a Revit boundary loop (IList<BoundarySegment>) to XY poly + perimeter (ft)."""
+    pts = []
+    perim = 0.0
+    for bs in loop:
+        crv = bs.GetCurve()
+        p0 = crv.GetEndPoint(0)
+        p1 = crv.GetEndPoint(1)
+        if not pts:
+            pts.append((p0.X, p0.Y))
+        pts.append((p1.X, p1.Y))
+        try:
+            perim += crv.Length
+        except:
+            pass
+    # remove duplicate closing point if present
+    if len(pts) >= 2 and pts[0] == pts[-1]:
+        pts = pts[:-1]
+    return {"xy": pts, "perimeter_ft": perim}
+
+def build_space_loops_by_id(doc, spaces, boundary_location="Finish"):
+    """
+    Returns: { space_id:int : [ {"xy":[(x,y)...], "perimeter_ft":float}, ... ] }
+    """
+    opt = SpatialElementBoundaryOptions()
+    if (boundary_location or "").lower().startswith("center"):
+        opt.SpatialElementBoundaryLocation = SpatialElementBoundaryLocation.Center
+    else:
+        opt.SpatialElementBoundaryLocation = SpatialElementBoundaryLocation.Finish
+
+    loops_map = {}
+    for sp in spaces:
+        sid = sp.Id.IntegerValue
+        try:
+            segloops = sp.GetBoundarySegments(opt)
+        except:
+            segloops = None
+        if not segloops:
+            continue
+
+        loops = []
+        for loop in segloops:
+            try:
+                loops.append(_loop_to_xy(loop))
+            except:
+                pass
+        if loops:
+            loops_map[sid] = loops
+    return loops_map
+
 #-----------------Main Function---------------------
 
 @RunInTransaction("Electrical::PerimeterReceptsByRules")
@@ -630,6 +687,7 @@ def place_perimeter_recepts(doc, logger=None):
     # make a {space_id: category_string_lower} map
     cat_by_spaceid = {sp.Id.IntegerValue: (space_category_string(sp, id_rules) or u"").strip().lower() for sp in spaces}
 
+    space_loops_by_id = build_space_loops_by_id(doc, spaces, boundary_location="Finish")
     # build locator once
     locator = SpaceLocator.from_space_loops(spaces, space_loops_by_id, cat_by_spaceid)
 
