@@ -365,7 +365,6 @@ def place_perimeter_recepts(doc, logger=None):
     bc_rules = load_branch_rules()
     spaces = collect_spaces_or_rooms(doc)
     skip_pair_set = _load_skip_pair_set(bc_rules)
-    shared_ix = _build_shared_boundary_index(doc, spaces, id_rules)
 
     # new at 1:19 10/8/25
     gen = (bc_rules or {}).get('general', {})
