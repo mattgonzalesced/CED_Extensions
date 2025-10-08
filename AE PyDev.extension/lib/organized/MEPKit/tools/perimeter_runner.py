@@ -33,7 +33,6 @@ def _seg_mid_xy(curve):
     return (p.X, p.Y)
 
 def _seg_tan_xy(curve):
-    # unit tangent in XY at mid
     try:
         der = curve.ComputeDerivatives(0.5, True)
         v = der.BasisX
@@ -41,7 +40,25 @@ def _seg_tan_xy(curve):
         p0 = curve.GetEndPoint(0); p1 = curve.GetEndPoint(1)
         v = XYZ(p1.X-p0.X, p1.Y-p0.Y, 0.0)
     mag = math.hypot(v.X, v.Y) or 1.0
-    return (v.X/mag, v.Y/mag)
+    return (v.X/mag, v.Y/mag)  # unit tangent (XY)
+
+def _space_sides_for_segment(space_id, curve, category_at_xy, probe_ft):
+    """Return (cat_left, cat_right, which_side_is_self: 'L'|'R'|None)."""
+    mx, my = _seg_mid_xy(curve)
+    tx, ty = _seg_tan_xy(curve)
+    nx, ny = -ty, tx  # perpendicular to segment (XY)
+
+    a = (mx + nx*probe_ft, my + ny*probe_ft)  # “left” side
+    b = (mx - nx*probe_ft, my - ny*probe_ft)  # “right” side
+
+    sid_a, cat_a = category_at_xy(a)
+    sid_b, cat_b = category_at_xy(b)
+
+    which = None
+    if sid_a == space_id: which = 'L'
+    elif sid_b == space_id: which = 'R'
+
+    return (cat_a or None, cat_b or None, which)
 
 def _curve_len(curve):
     try: return float(curve.ApproximateLength)
@@ -681,8 +698,11 @@ def place_perimeter_recepts(doc, logger=None):
     # NEW: build shared-boundary indexes (geom & midpoint keys)
     shared_ix_g, shared_ix_m = _build_shared_boundary_indexes(doc, spaces, id_rules)
 
-
-    skip_pair_set = _load_skip_pair_set(bc_rules)
+    raw_pairs = (rules_general.get("skip_shared_boundary_pairs") or []) + \
+                (rcfg.get("skip_shared_boundary_pairs") or [])
+    skip_pair_set = set()
+    for a, b in raw_pairs:
+        skip_pair_set.add(tuple(sorted(((a or "").strip().lower(), (b or "").strip().lower()))))
     log.info(u"[PAIR] Skip shared pairs: {}".format(sorted(list(skip_pair_set))))
 
     # new at 1:19 10/8/25
@@ -786,28 +806,30 @@ def place_perimeter_recepts(doc, logger=None):
                 # ── Pair rule (linked shared boundary) ─────────────────────────────────────────
                 # ── Pair rule via midpoint probe (works for host/linked/separation) ────────────
                 if skip_pair_set:
-                    # probe small offset to each side of the segment
-                    mx, my = _seg_mid_xy(curve)
-                    tx, ty = _seg_tan_xy(curve)
-                    nx, ny = -ty, tx  # perpendicular to segment
-                    probe_ft = constraints.get("pair_probe_ft", 0.5)  # rule-driven, default 0.5'
+                    base_probe = constraints.get("pair_probe_ft", 0.5)  # default 0.5'
+                    pair_hit = False
 
-                    a = (mx + nx * probe_ft, my + ny * probe_ft)
-                    b = (mx - nx * probe_ft, my - ny * probe_ft)
+                    # Try larger offsets in case the space boundary is offset from the linked wall
+                    for scale in (1.0, 1.5, 2.0, 3.0):
+                        catL, catR, which_self = _space_sides_for_segment(space_id, curve, category_at_xy,
+                                                                          base_probe * scale)
 
-                    _sid_a, cat_a = category_at_xy(a)
-                    _sid_b, cat_b = category_at_xy(b)
+                        if PAIR_DIAG:
+                            log.debug(u"[PAIRCHK] space={} scale={:.2f}ft L={} R={} self={}"
+                                      .format(space_id, base_probe * scale, catL, catR, which_self))
 
-                    if cat_a and cat_b:
-                        # normalize
-                        pa = (cat_a or u"").strip().lower()
-                        pb = (cat_b or u"").strip().lower()
-                        if tuple(sorted((pa, pb))) in skip_pair_set:
-                            if PAIR_DIAG:
-                                log.info(u"[PAIRCHK] mid=({:.2f},{:.2f}) sides=({}, {}) → SKIP".format(mx, my, pa, pb))
-                            continue
-                        elif PAIR_DIAG:
-                            log.debug(u"[PAIRCHK] mid=({:.2f},{:.2f}) sides=({}, {})".format(mx, my, pa, pb))
+                        if catL and catR:
+                            pa = (catL or u"").strip().lower()
+                            pb = (catR or u"").strip().lower()
+                            if tuple(sorted((pa, pb))) in skip_pair_set:
+                                if PAIR_DIAG:
+                                    log.info(u"[PAIRHIT] space={} seg → {} | {} (probe≈{:.2f}ft) → SKIP"
+                                             .format(space_id, pa, pb, base_probe * scale))
+                                pair_hit = True
+                                break
+
+                    if pair_hit:
+                        continue
 
 
                 # sample along the segment with corner inset
