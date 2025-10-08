@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 # lib/organized/MEPKit/electrical/perimeter_runner.py
-
-from Autodesk.Revit.DB import Wall, FilteredElementCollector
-
 from __future__ import absolute_import
 from organized.MEPKit.core.log import get_logger
 from organized.MEPKit.core.rules import (
@@ -15,6 +12,8 @@ from organized.MEPKit.revit.doors import door_points_on_wall, filter_points_by_d
 from organized.MEPKit.revit.placement import place_hosted, place_free
 from organized.MEPKit.revit.symbols import resolve_or_load_symbol
 from organized.MEPKit.revit.params import set_param_value  # optional for mounting height
+
+from Autodesk.Revit.DB import Wall, FilteredElementCollector
 
 
 # ---------Helpers to place recepts in small spaces-----------
