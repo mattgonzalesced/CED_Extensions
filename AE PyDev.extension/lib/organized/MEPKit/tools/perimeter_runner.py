@@ -399,6 +399,7 @@ def place_perimeter_recepts(doc, logger=None):
 
 
     skip_pair_set = _load_skip_pair_set(bc_rules)
+    log.info(u"Skip shared pairs: {}".format(sorted(list(skip_pair_set))))
 
     # new at 1:19 10/8/25
     gen = (bc_rules or {}).get('general', {})
@@ -414,6 +415,7 @@ def place_perimeter_recepts(doc, logger=None):
     all_wall_curves, _host_n, _link_n = _collect_all_wall_curves(doc)
     linked_wall_curves = _collect_linked_wall_curves(doc)  # NEW dedicated list
     log.info("Wall curve cache → host:{} linked:{}".format(_host_n, _link_n))
+    log.info(u"[PAIRDBG] linked_wall_curves count: {}".format(len(linked_wall_curves or [])))
 
     # NEW: collect linked doors & openings as XY AABBs (2 ft pad)
     linked_open_aabbs = _collect_linked_opening_aabbs(doc, pad_ft=2.0)
@@ -483,7 +485,7 @@ def place_perimeter_recepts(doc, logger=None):
         seg_count = 0
         pre_pts_total = 0
         post_pts_total = 0
-
+        wall = None
         # Strict pass: apply corner/door rules; no “relax plan”
         for loop in loops:
             for seg in loop:
@@ -497,8 +499,16 @@ def place_perimeter_recepts(doc, logger=None):
                         this_cat = (cat or "").strip()
                         gk = _seg_gkey2d(curve)
                         mk = _seg_mkey2d(curve)
+
+                        # Only get chatty if relevant categories or it is a linked boundary
+                        is_linked_boundary = (wall is None) and _segment_is_from_linked_wall(curve, linked_wall_curves,
+                                                                                             tol_ft=0.2)
+
+                        log.info(u"[PAIRCHK] space={} cat='{}' seg-mid={} gk={} mk={} linked={}".format(
+                            sp.Id.IntegerValue, (cat or u"").strip(), _fmt_xy(pm), gk, mk, is_linked_boundary))
                         # find neighbors via either geom-key or midpoint-key
                         neigh = (shared_ix_g.get(gk) if gk in shared_ix_g else shared_ix_m.get(mk, []))
+                        log.info(u"[PAIRCHK] neighbors via key → {}".format(_dump_neighbors(neigh, this_id)))
                         # If the other side belongs to a category in the skip pair set, skip this segment.
                         blocked = False
                         for sid, ncat in (neigh or []):
