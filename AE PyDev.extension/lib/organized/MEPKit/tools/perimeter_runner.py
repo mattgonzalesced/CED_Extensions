@@ -399,7 +399,7 @@ def place_perimeter_recepts(doc, logger=None):
 
 
     skip_pair_set = _load_skip_pair_set(bc_rules)
-    log.info(u"Skip shared pairs: {}".format(sorted(list(skip_pair_set))))
+    log.info(u"[PAIR] Skip shared pairs: {}".format(sorted(list(skip_pair_set))))
 
     # new at 1:19 10/8/25
     gen = (bc_rules or {}).get('general', {})
@@ -504,11 +504,11 @@ def place_perimeter_recepts(doc, logger=None):
                         is_linked_boundary = (wall is None) and _segment_is_from_linked_wall(curve, linked_wall_curves,
                                                                                              tol_ft=0.2)
 
-                        log.debug(u"[PAIRCHK] space={} cat='{}' seg-mid={} gk={} mk={} linked={}".format(
+                        log.info(u"[PAIR] space={} cat='{}' seg-mid={} gk={} mk={} linked={}".format(
                             sp.Id.IntegerValue, (cat or u"").strip(), _fmt_xy(pm), gk, mk, is_linked_boundary))
                         # find neighbors via either geom-key or midpoint-key
                         neigh = (shared_ix_g.get(gk) if gk in shared_ix_g else shared_ix_m.get(mk, []))
-                        log.debug(u"[PAIRCHK] neighbors via key → {}".format(_dump_neighbors(neigh, this_id)))
+                        log.info(u"[PAIR] neighbors via key → {}".format(_dump_neighbors(neigh, this_id)))
                         # If the other side belongs to a category in the skip pair set, skip this segment.
                         blocked = False
                         for sid, ncat in (neigh or []):
