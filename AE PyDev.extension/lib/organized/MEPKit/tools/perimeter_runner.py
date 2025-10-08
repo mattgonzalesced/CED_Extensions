@@ -526,7 +526,7 @@ def place_perimeter_recepts(doc, logger=None):
         host_wall_fn=segment_host_wall,
         curve_fn=segment_curve,
         per_space_factor=0.25,  # 25% of per-space median
-        min_abs_ft=0.05,  # never thinner than ~1.8"
+        min_abs_ft=0.10,  # mess with this if the walls are too thin/thick
         max_consider_ft=2.0,  # cap unknowns
         logger=log
     )
