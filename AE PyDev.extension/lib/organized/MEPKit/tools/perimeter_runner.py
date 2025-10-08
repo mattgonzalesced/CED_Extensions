@@ -17,6 +17,7 @@ from Autodesk.Revit.DB import (
     RevitLinkInstance, Opening, BuiltInCategory, FilteredElementCollector, XYZ, Wall, LocationCurve
 )
 from System import Double
+from Autodesk.Revit.DB import HostObjectUtils, ShellLayerType, PlanarFace, Plane
 
 
 # ---------Helpers to place recepts in small spaces-----------
@@ -431,6 +432,34 @@ def estimate_boundary_thickness_ft(doc, seg, host_wall_fn, curve_fn,
     d = min(d_host, d_link)
     return d if _isfinite(d) else float("inf")
 
+def estimate_boundary_lineband_ft(doc, seg, host_wall_fn, curve_fn,
+                                  fallback_gap_func=None):
+    wall = host_wall_fn(doc, seg)
+    if wall:
+        t = _wall_lineband_thickness_ft(wall)
+        if t != float('inf'):
+            return t  # this is the “thickness of the lines on either side”
+    # separation lines → zero “line thickness”
+    try:
+        eid = getattr(seg, "ElementId", None)
+        if eid and eid.IntegerValue > 0:
+            el = doc.GetElement(eid)
+            if el is not None and el.Category:
+                bic = el.Category.Id.IntegerValue
+                from Autodesk.Revit.DB import BuiltInCategory
+                if bic in (int(BuiltInCategory.OST_SpaceSeparationLines),
+                           int(BuiltInCategory.OST_RoomSeparationLines)):
+                    return 0.0
+    except:
+        pass
+    # last resort (rare non-wall edges): optional fallback
+    if fallback_gap_func:
+        try:
+            return fallback_gap_func(seg)
+        except:
+            pass
+    return float('inf')
+
 def compute_thin_boundary_keys(doc, spaces, boundary_loops_fn, host_wall_fn, curve_fn,
                                per_space_factor=0.25, min_abs_ft=0.15, max_consider_ft=2.0, logger=None):
     """
@@ -458,8 +487,10 @@ def compute_thin_boundary_keys(doc, spaces, boundary_loops_fn, host_wall_fn, cur
                 key  = _seg_key(doc, seg, host_wall_fn, curve_fn)
                 if key is None:
                     continue
-                t = estimate_boundary_thickness_ft(doc, seg, host_wall_fn, curve_fn,
-                                                   host_curves, link_curves)
+                t = estimate_boundary_lineband_ft(
+                    doc, seg, host_wall_fn, curve_fn,
+                    fallback_gap_func=None  # or pass a tiny gap estimator if you like
+                )
                 # clamp infinities (unknown) to a large number so they don't drive median to 0
                 if (not _isfinite(t)) or (t > max_consider_ft):
                     t = max_consider_ft
@@ -493,7 +524,54 @@ def compute_thin_boundary_keys(doc, spaces, boundary_loops_fn, host_wall_fn, cur
         logger.info("Thin boundary segments (to skip): {}".format(len(thin_keys)))
     return thin_keys
 
+#-----------Avoid THIN BOUNDARIES 2----------
 
+def _plane_from_face(face):
+    # PlanarFace -> Plane (normal, origin)
+    try:
+        pl = face.GetSurface()  # Plane
+        return pl  # has .Normal (XYZ) and .Origin (XYZ)
+    except:
+        return None
+
+def _parallel_plane_gap_ft(pA, pB):
+    # distance between two (roughly parallel) planes
+    if pA is None or pB is None:
+        return float('inf')
+    nA, oA = pA.Normal, pA.Origin
+    nB, oB = pB.Normal, pB.Origin
+    # make normals co-directional
+    dot = nA.X*nB.X + nA.Y*nB.Y + nA.Z*nB.Z
+    if dot < 0.0:
+        nB = -nB
+    # gap = | nA · (oB - oA) |
+    dx, dy, dz = (oB.X - oA.X), (oB.Y - oA.Y), (oB.Z - oA.Z)
+    gap = abs(nA.X*dx + nA.Y*dy + nA.Z*dz)
+    return gap
+
+def _wall_lineband_thickness_ft(wall):
+    """Return face-to-face distance between the wall's exterior/interior side faces.
+       If faces are not planar/available, return +inf to let the caller fall back."""
+    faces = []
+    try:
+        for side in (ShellLayerType.Exterior, ShellLayerType.Interior):
+            for rf in HostObjectUtils.GetSideFaces(wall, side) or []:
+                f = wall.GetGeometryObjectFromReference(rf)
+                if isinstance(f, PlanarFace):
+                    pl = _plane_from_face(f)
+                    if pl: faces.append(pl)
+    except:
+        pass
+    if len(faces) < 2:
+        return float('inf')
+    # choose the two most separated parallel-ish planes
+    best = 0.0
+    for i in range(len(faces)):
+        for j in range(i+1, len(faces)):
+            d = _parallel_plane_gap_ft(faces[i], faces[j])
+            if d > best:
+                best = d
+    return best if best > 0 else float('inf')
 
 
 #-----------------Main Function---------------------
@@ -525,8 +603,8 @@ def place_perimeter_recepts(doc, logger=None):
         boundary_loops_fn=boundary_loops,
         host_wall_fn=segment_host_wall,
         curve_fn=segment_curve,
-        per_space_factor=0.50,  # mess with this if the walls are too thin/thick
-        min_abs_ft=0.15,  # mess with this if the walls are too thin/thick
+        per_space_factor=0.25,  # mess with this if the walls are too thin/thick
+        min_abs_ft=0.10,  # mess with this if the walls are too thin/thick
         max_consider_ft=2.0,  # cap unknowns
         logger=log
     )
