@@ -432,7 +432,7 @@ def estimate_boundary_thickness_ft(doc, seg, host_wall_fn, curve_fn,
     return d if _isfinite(d) else float("inf")
 
 def compute_thin_boundary_keys(doc, spaces, boundary_loops_fn, host_wall_fn, curve_fn,
-                               per_space_factor=0.25, min_abs_ft=0.05, max_consider_ft=2.0, logger=None):
+                               per_space_factor=0.25, min_abs_ft=0.15, max_consider_ft=2.0, logger=None):
     """
     For each space, compute thickness for each segment, then mark as 'thin'
     any segment whose thickness < max(min_abs_ft, per_space_factor * median_thickness_of_space).
@@ -526,7 +526,7 @@ def place_perimeter_recepts(doc, logger=None):
         host_wall_fn=segment_host_wall,
         curve_fn=segment_curve,
         per_space_factor=0.25,  # 25% of per-space median
-        min_abs_ft=0.15,  # never thinner than ~1.8"
+        min_abs_ft=0.05,  # never thinner than ~1.8"
         max_consider_ft=2.0,  # cap unknowns
         logger=log
     )
