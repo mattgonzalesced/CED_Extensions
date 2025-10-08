@@ -20,6 +20,7 @@ from Autodesk.Revit.DB import (
 import math
 from Autodesk.Revit.DB import SpatialElementBoundaryOptions, SpatialElementBoundaryLocation
 
+PAIR_DIAG = True
 
 # ---------Helpers to place recepts in small spaces-----------
 
