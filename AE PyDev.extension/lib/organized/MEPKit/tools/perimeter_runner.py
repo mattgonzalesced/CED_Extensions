@@ -65,6 +65,7 @@ def _refilter_with(base_constraints, overrides, wall_segments, doc, first_ft, ne
         re_pts.extend(pts)
     return _unique_by_xy(re_pts)
 
+
 def _host_for_point(p, wall_segments, tol=1e-3):
     # try to find the segment whose curve this point lies on
     for curve, wall in wall_segments:
@@ -309,15 +310,63 @@ def _filter_points_by_linked_openings(pts, aabbs):
 
 # --- read the pair rules from bc_rules.general ---
 def _load_skip_pair_set(bc_rules):
-    gen = (bc_rules or {}).get('general', {})
-    pairs = gen.get('skip_shared_boundary_pairs', []) or []
-    out = set()
-    for pair in pairs:
-        if isinstance(pair, (list, tuple)) and len(pair) == 2:
-            a = (pair[0] or "").strip(); b = (pair[1] or "").strip()
-            if a and b:
-                out.add(tuple(sorted((a, b))))
-    return out
+    """Return a set of normalized 2-tuples (catA, catB) we should skip on a shared boundary.
+       Accepts several key spellings and supports root-level or under 'general'."""
+    pairs = set()
+    if not bc_rules:
+        return pairs
+
+    # keys we accept (root or inside 'general')
+    KEY_CANDIDATES = (
+
+        "skip_shared_boundary_pairs"
+
+    )
+
+    # collect candidate list from root
+    found_key = None
+    cand_list = None
+    for k in KEY_CANDIDATES:
+        v = bc_rules.get(k)
+        if v:
+            cand_list = v
+            found_key = k
+            break
+
+    # or from general
+    if cand_list is None:
+        gen = bc_rules.get("general") or {}
+        for k in KEY_CANDIDATES:
+            v = gen.get(k)
+            if v:
+                cand_list = v
+                found_key = "general." + k
+                break
+
+    if cand_list is None:
+        # nothing found; keep empty set
+        return pairs
+
+    def norm(s):
+        return (s or u"").strip().lower()
+
+    for item in cand_list:
+        # allow ["A","B"] or {"a":"A","b":"B"} etc; be tolerant
+        if isinstance(item, (list, tuple)) and len(item) >= 2:
+            a, b = norm(item[0]), norm(item[1])
+        elif isinstance(item, dict):
+            a, b = norm(item.get("a")), norm(item.get("b"))
+        else:
+            continue
+        if a and b:
+            pairs.add(tuple(sorted((a, b))))
+
+    # helpful log
+    try:
+        log.info(u"[PAIR] loaded {} pairs from '{}'".format(len(pairs), found_key))
+    except Exception:
+        pass
+    return pairs
 
 # --- build an index: segment geometry -> [(space_id, category), ...] ---
 def _build_shared_boundary_indexes(doc, spaces, id_rules):
@@ -511,14 +560,15 @@ def place_perimeter_recepts(doc, logger=None):
                         log.info(u"[PAIR] neighbors via key → {}".format(_dump_neighbors(neigh, this_id)))
                         # If the other side belongs to a category in the skip pair set, skip this segment.
                         blocked = False
+                        this_cat = (cat or u"").strip()
                         for sid, ncat in (neigh or []):
-                            if sid == this_id:
+                            if sid == sp.Id.IntegerValue:
                                 continue
-                            pair = tuple(sorted((this_cat, (ncat or "").strip())))
-                            if pair in skip_pair_set:
-                                log.debug("[SKIP-PAIR] linked boundary '{}' | '{}' → skipping segment".format(this_cat,
-                                                                                                              (
-                                                                                                                          ncat or "").strip()))
+                            a = this_cat.strip().lower()
+                            b = (ncat or u"").strip().lower()
+                            if tuple(sorted((a, b))) in skip_pair_set:
+                                if PAIR_DIAG:
+                                    log.info(u"[PAIRCHK] VETO match: ({}, {})".format(this_cat, ncat))
                                 blocked = True
                                 break
                         if blocked:
