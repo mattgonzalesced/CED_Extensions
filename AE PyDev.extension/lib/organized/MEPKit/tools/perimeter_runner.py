@@ -432,86 +432,73 @@ def estimate_boundary_thickness_ft(doc, seg, host_wall_fn, curve_fn,
     d = min(d_host, d_link)
     return d if _isfinite(d) else float("inf")
 
-def compute_thin_boundary_keys(
-    doc, spaces,
-    boundary_loops_fn, segment_host_wall, segment_curve,
-    per_space_factor=0.25, min_abs_ft=0.14, max_consider_ft=2.0,
-    include_host_walls=False, include_linked_walls=True, include_nonwalls=True,
-    skip_only_thinnest=True,     # <- pick exactly one thin segment per space
-    logger=None
-):
-    linked_refs = _collect_linked_wall_refs(doc)  # you already have this
+def compute_thin_boundary_keys(doc, spaces, boundary_loops_fn, segment_host_wall, segment_curve,
+                               per_space_factor=0.25,
+                               min_abs_ft=0.14,
+                               max_consider_ft=2.0,
+                               include_host_walls=False,     # <-- default off
+                               include_linked_walls=True,    # <-- default on
+                               include_nonwalls=True,        # separation lines, etc.
+                               logger=None):
 
-    thin_by_space = {}  # { space_id: set(geometry_keys) }
+    linked_refs = _collect_linked_wall_refs(doc)  # once
 
+    thin_keys = set()
     for sp in spaces:
-        space_id = sp.Id.IntegerValue
         loops = boundary_loops_fn(sp)
         if not loops:
-            thin_by_space[space_id] = set()
             continue
 
-        per_seg = []    # (gkey, t, host_wall?, linked_wall?)
-        wall_like = []  # t values for walls/linked walls
-        all_t = []
+        per_seg = []  # (key, t, is_host_wall, is_linked_wall)
+
+        wall_t = []
+        all_t  = []
 
         for loop in loops:
             for seg in loop or ():
-                gkey = _seg_key_geom(seg, segment_curve)  # <— geometry key (not element id!)
+                # gkey for skipping this segment geometry later
+                gkey = _seg_key_geom(seg, segment_curve)
                 if gkey is None:
                     continue
 
+                # classify & measure thickness
                 host_w = (segment_host_wall(doc, seg) is not None)
                 crv = segment_curve(seg)
-                is_linked, _w = _segment_is_on_linked_wall(crv, linked_refs)
+                is_l, linked_w = _segment_is_on_linked_wall(crv, linked_refs)
 
-                # your face-to-face / linked-width estimator
                 t = estimate_boundary_lineband_ft(doc, seg, segment_host_wall, segment_curve, linked_refs)
                 if (t != t) or (t == float('inf')) or (t > max_consider_ft):
                     t = max_consider_ft
 
-                per_seg.append((gkey, t, host_w, is_linked))
+                per_seg.append((gkey, t, host_w, is_l))
                 all_t.append(t)
-                if host_w or is_linked:
-                    wall_like.append(t)
+                if host_w or is_l:
+                    wall_t.append(t)  # “wall-like” for median
 
-        if not per_seg:
-            thin_by_space[space_id] = set()
-            continue
-
-        # median for threshold (based on wall-like if present)
-        src = wall_like if wall_like else all_t
-        m = sorted(src)[len(src)//2]
-        thresh = max(min_abs_ft, per_space_factor * m)
-
-        # Build the eligible candidate list per your include flags
-        candidates = [
-            (gkey, t) for (gkey, t, host_w, link_w) in per_seg
-            if ((host_w and include_host_walls)
-                or (link_w and include_linked_walls)
-                or ((not host_w and not link_w) and include_nonwalls))
-        ]
-
-        chosen = set()
-        if skip_only_thinnest and candidates:
-            gmin, tmin = min(candidates, key=lambda kt: kt[1])
-            chosen.add(gmin)
-            if logger:
-                logger.debug(u"[THIN-ONE] space={} tmin≈{:.3f}ft key={}".format(space_id, tmin, gmin))
+        # --- threshold ---
+        if per_space_factor <= 0.0:
+            thresh = float(min_abs_ft)  # fixed floor only (e.g., 0.10 ft)
         else:
-            for gkey, t in candidates:
-                if t < thresh:
-                    chosen.add(gkey)
-                    if logger:
-                        logger.debug(u"[THIN] space={} key={} t≈{:.3f}ft < thresh≈{:.3f}ft"
-                                     .format(space_id, gkey, t, thresh))
+            src = wall_t if wall_t else all_t
+            m = sorted(src)[len(src) // 2]
+            thresh = max(min_abs_ft, per_space_factor * m)
 
-        thin_by_space[space_id] = chosen
+        # --- add thin keys (use gkey) ---
+        for gkey, t, host_w, link_w in per_seg:
+            consider = ((host_w and include_host_walls) or
+                        (link_w and include_linked_walls) or
+                        ((not host_w and not link_w) and include_nonwalls))
+            if not consider:
+                continue
+            if t < thresh:
+                thin_keys.add(gkey)  # geometry key, not ("E", id)
+                if logger:
+                    logger.debug(u"[THIN] gkey={} t≈{:.3f}ft < thresh≈{:.3f}ft (host={}, linked={})"
+                                 .format(gkey, t, thresh, host_w, link_w))
 
     if logger:
-        total = sum(len(v) for v in thin_by_space.values())
-        logger.info("Thin boundary segments (to skip): {}".format(total))
-    return thin_by_space
+        logger.info("Thin boundary segments (to skip): {}".format(len(thin_keys)))
+    return thin_keys
 
 #-----------Avoid THIN BOUNDARIES 2----------
 
@@ -704,18 +691,17 @@ def place_perimeter_recepts(doc, logger=None):
     log.info("Linked doors/openings (AABBs): {}".format(len(linked_open_aabbs)))
 
     # compute thin boundary keys once (uses walls from host + links under the hood)
-    thin_by_space = compute_thin_boundary_keys(
+    thin_keys = compute_thin_boundary_keys(
         doc, spaces,
         boundary_loops_fn=boundary_loops,
         segment_host_wall=segment_host_wall,
         segment_curve=segment_curve,
-        per_space_factor=0.20,  # tune
-        min_abs_ft=0.10,  # tune
+        per_space_factor=0.0,  # ← disables median logic
+        min_abs_ft=0.10,  # ← fixed floor: 0.10 ft
         max_consider_ft=2.0,
-        include_host_walls=False,  # only linked walls + separation lines
+        include_host_walls=False,
         include_linked_walls=True,
         include_nonwalls=True,
-        skip_only_thinnest=True,  # <-- only one per space
         logger=log
     )
 
@@ -788,10 +774,9 @@ def place_perimeter_recepts(doc, logger=None):
             for seg in loop:
                 seg_count += 1
 
-                space_id = sp.Id.IntegerValue
+                # NEW:
                 gkey = _seg_key_geom(seg, segment_curve)
-                if gkey and gkey in thin_by_space.get(space_id, set()):
-                    # log.debug("Skip thin seg: {}".format(gkey))
+                if gkey and gkey in thin_keys:
                     continue
 
 
