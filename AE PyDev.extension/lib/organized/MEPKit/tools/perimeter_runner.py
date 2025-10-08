@@ -461,13 +461,12 @@ def estimate_boundary_lineband_ft(doc, seg, host_wall_fn, curve_fn,
     return float('inf')
 
 def compute_thin_boundary_keys(doc, spaces, boundary_loops_fn, host_wall_fn, curve_fn,
-                               per_space_factor=0.25, min_abs_ft=0.15, max_consider_ft=2.0, logger=None):
-    """
-    For each space, compute thickness for each segment, then mark as 'thin'
-    any segment whose thickness < max(min_abs_ft, per_space_factor * median_thickness_of_space).
-    Returns a set of segment keys to skip (non-wall keys only).
-    """
-    # Precollect wall curves (host + links) once
+                               per_space_factor=0.25,
+                               min_abs_ft=0.14,
+                               max_consider_ft=2.0,
+                               include_walls=True,          # ← NEW: consider wall segments
+                               logger=None):
+    # Precollect once
     host_curves  = _collect_wall_curves_host(doc)
     link_curves  = _collect_wall_curves_linked(doc)
 
@@ -478,45 +477,49 @@ def compute_thin_boundary_keys(doc, spaces, boundary_loops_fn, host_wall_fn, cur
         if not loops:
             continue
 
-        # collect thicknesses for this space
-        thick_vals = []
-        per_seg = []  # (key, thickness, is_wall?)
+        per_seg = []          # (key, t, is_wall)
+        wall_thicks = []      # for median on walls
+        all_thicks  = []      # fallback median if no walls
+
         for loop in loops:
             for seg in loop or ():
-                wall = host_wall_fn(doc, seg)
-                key  = _seg_key(doc, seg, host_wall_fn, curve_fn)
+                key = _seg_key(doc, seg, host_wall_fn, curve_fn)
                 if key is None:
                     continue
                 t = estimate_boundary_lineband_ft(
-                    doc, seg, host_wall_fn, curve_fn,
-                    fallback_gap_func=None  # or pass a tiny gap estimator if you like
-                )
-                # clamp infinities (unknown) to a large number so they don't drive median to 0
+                        doc, seg, host_wall_fn, curve_fn,
+                        fallback_gap_func=None
+                    )
+                # clamp unknowns before stats
                 if (not _isfinite(t)) or (t > max_consider_ft):
                     t = max_consider_ft
-                per_seg.append((key, t, wall is not None))
-                if t > 0.0:
-                    thick_vals.append(t)
 
-        if not thick_vals:
+                is_wall = (host_wall_fn(doc, seg) is not None)
+                per_seg.append((key, t, is_wall))
+                all_thicks.append(t)
+                if is_wall:
+                    wall_thicks.append(t)
+
+        if not per_seg:
             continue
 
-        # robust median
-        thick_vals_sorted = sorted(thick_vals)
-        m = thick_vals_sorted[len(thick_vals_sorted)//2]
+        # median based on walls if possible (more stable), else all
+        src = wall_thicks if wall_thicks else all_thicks
+        src_sorted = sorted(src)
+        m = src_sorted[len(src_sorted)//2]
 
-        # dynamic threshold
         thresh = max(min_abs_ft, per_space_factor * m)
 
-        # mark thin segments (non-wall keys only)
+        # mark thin segments (including walls if requested)
         for key, t, is_wall in per_seg:
-            if is_wall:
-                continue  # walls are allowed
+            if (not include_walls) and is_wall:
+                continue
             if t < thresh:
                 thin_keys.add(key)
                 if logger:
                     try:
-                        logger.debug(u"[THIN] key={} t≈{:.2f}ft < thresh≈{:.2f}ft".format(key, t, thresh))
+                        logger.debug(u"[THIN] key={} t≈{:.3f}ft < thresh≈{:.3f}ft (wall={})"
+                                     .format(key, t, thresh, is_wall))
                     except:
                         pass
 
@@ -603,9 +606,10 @@ def place_perimeter_recepts(doc, logger=None):
         boundary_loops_fn=boundary_loops,
         host_wall_fn=segment_host_wall,
         curve_fn=segment_curve,
-        per_space_factor=0.25,  # mess with this if the walls are too thin/thick
-        min_abs_ft=0.50,  # mess with this if the walls are too thin/thick
-        max_consider_ft=2.0,  # cap unknowns
+        per_space_factor=0.20,  # fewer flagged; tune as you like
+        min_abs_ft=0.15,  # your new floor
+        max_consider_ft=2.0,
+        include_walls=True,  # ← now walls can be skipped if “thin”
         logger=log
     )
 
