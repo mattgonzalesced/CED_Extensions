@@ -355,6 +355,35 @@ def _seg_mkey2d(curve, prec=2):
         pm = type(p0)((p0.X+p1.X)/2.0, (p0.Y+p1.Y)/2.0, (p0.Z+p1.Z)/2.0)
     return ("M2",) + _pt2d_key(pm, prec)
 
+def _segment_is_from_linked_wall(curve, linked_wall_curves, tol_ft=0.2):
+    """Returns True if the boundary curve sits on any LINKED wall curve within tol."""
+    if not curve or not linked_wall_curves:
+        return False
+    try:
+        pm = curve.Evaluate(0.5, True)
+    except:
+        p0, p1 = curve.GetEndPoint(0), curve.GetEndPoint(1)
+        pm = type(p0)((p0.X+p1.X)/2.0, (p0.Y+p1.Y)/2.0, (p0.Z+p1.Z)/2.0)
+    for lc in linked_wall_curves:
+        try:
+            pr = lc.Project(pm)
+            if pr and pr.Distance <= tol_ft:
+                return True
+        except:
+            # fallback to endpoints if Project fails
+            try:
+                q0, q1 = lc.GetEndPoint(0), lc.GetEndPoint(1)
+                # 2D distance
+                import math
+                d0 = math.hypot(pm.X - q0.X, pm.Y - q0.Y)
+                d1 = math.hypot(pm.X - q1.X, pm.Y - q1.Y)
+                if min(d0, d1) <= tol_ft:
+                    return True
+            except:
+                pass
+    return False
+
+
 #-----------------Main Function---------------------
 
 @RunInTransaction("Electrical::PerimeterReceptsByRules")
@@ -364,6 +393,11 @@ def place_perimeter_recepts(doc, logger=None):
     id_rules = load_identify_rules()
     bc_rules = load_branch_rules()
     spaces = collect_spaces_or_rooms(doc)
+
+    # NEW: build shared-boundary indexes (geom & midpoint keys)
+    shared_ix_g, shared_ix_m = _build_shared_boundary_indexes(doc, spaces, id_rules)
+
+
     skip_pair_set = _load_skip_pair_set(bc_rules)
 
     # new at 1:19 10/8/25
@@ -378,6 +412,7 @@ def place_perimeter_recepts(doc, logger=None):
         return 0
 
     all_wall_curves, _host_n, _link_n = _collect_all_wall_curves(doc)
+    linked_wall_curves = _collect_linked_wall_curves(doc)  # NEW dedicated list
     log.info("Wall curve cache → host:{} linked:{}".format(_host_n, _link_n))
 
     # NEW: collect linked doors & openings as XY AABBs (2 ft pad)
@@ -454,19 +489,30 @@ def place_perimeter_recepts(doc, logger=None):
             for seg in loop:
                 seg_count += 1
                 curve = segment_curve(seg)
-                if skip_pair_set:
-                    this_id = sp.Id.IntegerValue
-                    this_cat = (cat or "").strip()
-                    gk = _seg_gkey2d(curve)
-                    mk = _seg_mkey2d(curve)
-                    neigh = (shared_ix_g.get(gk) if gk in shared_ix_g else shared_ix_m.get(mk, []))
-                    for sid, ncat in (neigh or []):
-                        if sid == this_id: continue
-                        pair = tuple(sorted((this_cat, (ncat or "").strip())))
-                        if pair in skip_pair_set:
-                            # skip this boundary segment entirely
-                            # e.g. continue to next segment
-                            continue  # (inside your seg loop)
+                # ── NEW: only if this is a LINKED wall boundary, check the neighbor pair rule
+                if skip_pair_set and wall is None:
+                    # ensure this boundary lies on a linked wall curve
+                    if _segment_is_from_linked_wall(curve, linked_wall_curves, tol_ft=0.2):
+                        this_id = sp.Id.IntegerValue
+                        this_cat = (cat or "").strip()
+                        gk = _seg_gkey2d(curve)
+                        mk = _seg_mkey2d(curve)
+                        # find neighbors via either geom-key or midpoint-key
+                        neigh = (shared_ix_g.get(gk) if gk in shared_ix_g else shared_ix_m.get(mk, []))
+                        # If the other side belongs to a category in the skip pair set, skip this segment.
+                        blocked = False
+                        for sid, ncat in (neigh or []):
+                            if sid == this_id:
+                                continue
+                            pair = tuple(sorted((this_cat, (ncat or "").strip())))
+                            if pair in skip_pair_set:
+                                log.debug("[SKIP-PAIR] linked boundary '{}' | '{}' → skipping segment".format(this_cat,
+                                                                                                              (
+                                                                                                                          ncat or "").strip()))
+                                blocked = True
+                                break
+                        if blocked:
+                            continue  # skip this boundary segment entirely
 
 
 
