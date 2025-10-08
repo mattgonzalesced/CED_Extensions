@@ -13,8 +13,9 @@ from organized.MEPKit.revit.placement import place_hosted, place_free
 from organized.MEPKit.revit.symbols import resolve_or_load_symbol
 from organized.MEPKit.revit.params import set_param_value  # optional for mounting height
 
-from Autodesk.Revit.DB import Wall, RevitLinkInstance, LocationCurve, FilteredElementCollector
-
+from Autodesk.Revit.DB import (
+    RevitLinkInstance, Opening, BuiltInCategory, FilteredElementCollector, XYZ, Wall, LocationCurve
+)
 
 
 # ---------Helpers to place recepts in small spaces-----------
@@ -179,7 +180,85 @@ def _nearest_wall_xy_distance(point_xyz, wall_curves):
             pass
     return min_d
 
+#--------------Avoid those doors-------------
 
+def _get_link_transform(link_inst):
+    try:
+        return link_inst.GetTotalTransform()
+    except:
+        try: return link_inst.GetTransform()
+        except: return None
+
+def _bbox_to_xy_aabb(bb, tf, pad_ft):
+    """Return (xmin, ymin, xmax, ymax) in HOST coords, padded by pad_ft."""
+    if bb is None:
+        return None
+    # 8 corners -> transform -> project to XY AABB
+    pts = []
+    for x in (bb.Min.X, bb.Max.X):
+        for y in (bb.Min.Y, bb.Max.Y):
+            for z in (bb.Min.Z, bb.Max.Z):
+                p = XYZ(x, y, z)
+                try:
+                    if tf is not None: p = tf.OfPoint(p)
+                except:
+                    pass
+                pts.append(p)
+    xs = [p.X for p in pts]; ys = [p.Y for p in pts]
+    return (min(xs)-pad_ft, min(ys)-pad_ft, max(xs)+pad_ft, max(ys)+pad_ft)
+
+def _collect_linked_opening_aabbs(doc, pad_ft=avoid_linked_openings_ft):
+    """Doors + Openings from all links → XY AABBs in host coords (padded)."""
+    aabbs = []
+    try:
+        for inst in FilteredElementCollector(doc).OfClass(RevitLinkInstance):
+            ldoc = inst.GetLinkDocument()
+            if ldoc is None:
+                continue
+            tf = _get_link_transform(inst)
+
+            # Doors in link
+            try:
+                for el in FilteredElementCollector(ldoc)\
+                        .OfCategory(BuiltInCategory.OST_Doors)\
+                        .WhereElementIsNotElementType():
+                    bb = el.get_BoundingBox(None)
+                    a = _bbox_to_xy_aabb(bb, tf, pad_ft)
+                    if a: aabbs.append(a)
+            except:
+                pass
+
+            # Architectural openings / arches (Opening class)
+            try:
+                for el in FilteredElementCollector(ldoc).OfClass(Opening):
+                    bb = el.get_BoundingBox(None)
+                    a = _bbox_to_xy_aabb(bb, tf, pad_ft)
+                    if a: aabbs.append(a)
+            except:
+                pass
+    except:
+        pass
+    return aabbs
+
+def _filter_points_by_linked_openings(pts, aabbs):
+    """Remove points whose XY falls inside any linked opening AABB."""
+    if not aabbs:
+        return pts
+    out = []
+    for p in pts:
+        inside = False
+        for (xmin, ymin, xmax, ymax) in aabbs:
+            try:
+                if (xmin <= p.X <= xmax) and (ymin <= p.Y <= ymax):
+                    inside = True
+                    break
+            except:
+                pass
+        if not inside:
+            out.append(p)
+    return out
+
+#-----------------Main Function---------------------
 
 @RunInTransaction("Electrical::PerimeterReceptsByRules")
 def place_perimeter_recepts(doc, logger=None):
@@ -197,6 +276,10 @@ def place_perimeter_recepts(doc, logger=None):
     host_wall_curves = _collect_wall_curves_host(doc)
     linked_wall_curves = _collect_wall_curves_linked(doc)
     all_wall_curves = host_wall_curves + linked_wall_curves
+
+    # NEW: collect linked doors & openings as XY AABBs (2 ft pad)
+    linked_open_aabbs = _collect_linked_opening_aabbs(doc, pad_ft=2.0)
+    log.info("Linked doors/openings (AABBs): {}".format(len(linked_open_aabbs)))
 
 
     total = 0
@@ -277,6 +360,10 @@ def place_perimeter_recepts(doc, logger=None):
                 if wall and (avoid_doors_radius_ft > 0.0 or door_edge_margin_ft > 0.0):
                     doors = door_points_on_wall(doc, wall)
                     pts = filter_points_by_doors(pts, doors, avoid_doors_radius_ft, door_edge_margin_ft)
+
+                # NEW: linked doors/arches (works whether this seg has a host wall or not)
+                if linked_open_aabbs:
+                    pts = _filter_points_by_linked_openings(pts, linked_open_aabbs)
 
                 post_pts_total += len(pts)
 
