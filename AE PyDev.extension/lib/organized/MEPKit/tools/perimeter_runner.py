@@ -369,7 +369,7 @@ def place_perimeter_recepts(doc, logger=None):
     # new at 1:19 10/8/25
     gen = (bc_rules or {}).get('general', {})
     constraints = gen.get('placement_constraints', {}) or {}
-    near_wall_ft = float(constraints.get('near_wall_threshold_ft'))
+    near_wall_ft = float(constraints.get('near_wall_threshold_ft', 0.5))
     log.info("Near-wall threshold: {:.2f} ft".format(near_wall_ft))
 
 
