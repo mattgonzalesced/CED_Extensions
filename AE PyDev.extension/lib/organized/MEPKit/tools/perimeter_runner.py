@@ -16,6 +16,7 @@ from organized.MEPKit.revit.params import set_param_value  # optional for mounti
 from Autodesk.Revit.DB import (
     RevitLinkInstance, Opening, BuiltInCategory, FilteredElementCollector, XYZ, Wall, LocationCurve
 )
+import math
 
 
 # ---------Helpers to place recepts in small spaces-----------
@@ -89,31 +90,85 @@ def _collect_walls(doc):
     except:
         return []
 
-def _nearest_wall_xy_distance(point_xyz, walls):
-    """Return horizontal (XY) distance in feet from point to nearest wall location curve."""
-    min_d = 1e30
-    for w in walls:
+def _nearest_wall_xy_distance(p, curves):
+    """Return 2D distance (feet) from point p (XYZ) to nearest wall curve in host coords.
+       Returns None if curves is empty or projection fails everywhere."""
+    if not curves:
+        return None
+    best = float('inf')
+    for c in curves:
         try:
-            lc = w.Location
-            if lc is None:
-                continue
-            crv = getattr(lc, "Curve", None)
-            if crv is None:
-                continue
-            res = crv.Project(point_xyz)
-            if res is None:
-                continue
-            # IntersectionResult has XYZPoint; fall back to Point if needed
-            q = res.XYZPoint if hasattr(res, "XYZPoint") else getattr(res, "Point", None)
+            # Try curve.Project first (works on most Revit curves)
+            pr = c.Project(p)
+            q = getattr(pr, "XYZPoint", None) or getattr(pr, "Point", None)
             if q is None:
-                continue
-            dx, dy = (point_xyz.X - q.X), (point_xyz.Y - q.Y)
-            d = (dx*dx + dy*dy) ** 0.5
-            if d < min_d:
-                min_d = d
+                # Fallback: closest endpoint
+                q0 = c.GetEndPoint(0); q1 = c.GetEndPoint(1)
+                d0 = math.hypot(p.X - q0.X, p.Y - q0.Y)
+                d1 = math.hypot(p.X - q1.X, p.Y - q1.Y)
+                d = min(d0, d1)
+            else:
+                d = math.hypot(p.X - q.X, p.Y - q.Y)
+            if d < best:
+                best = d
         except:
-            pass
-    return min_d
+            # Last-resort fallback to endpoints
+            try:
+                q0 = c.GetEndPoint(0); q1 = c.GetEndPoint(1)
+                d0 = math.hypot(p.X - q0.X, p.Y - q0.Y)
+                d1 = math.hypot(p.X - q1.X, p.Y - q1.Y)
+                d = min(d0, d1)
+                if d < best:
+                    best = d
+            except:
+                pass
+    return None if best == float('inf') else best
+
+#---------------Collect hosted AND linked walls----------------
+
+def _collect_host_wall_curves(doc):
+    curves = []
+    try:
+        for w in FilteredElementCollector(doc).OfClass(Wall):
+            lc = w.Location
+            if isinstance(lc, LocationCurve) and lc.Curve is not None:
+                curves.append(lc.Curve)
+    except:
+        pass
+    return curves
+
+def _collect_linked_wall_curves(doc):
+    curves = []
+    try:
+        for inst in FilteredElementCollector(doc).OfClass(RevitLinkInstance):
+            ldoc = inst.GetLinkDocument()
+            if not ldoc:
+                continue
+            # robust transform (works across Revit versions)
+            try:
+                tf = inst.GetTotalTransform()
+            except:
+                try: tf = inst.GetTransform()
+                except: tf = None
+
+            for w in FilteredElementCollector(ldoc).OfClass(Wall):
+                lc = w.Location
+                if isinstance(lc, LocationCurve) and lc.Curve is not None:
+                    crv = lc.CCurve if hasattr(lc, "CCurve") else lc.Curve  # safety
+                    try:
+                        if tf:
+                            crv = crv.CreateTransformed(tf)
+                    except:
+                        pass
+                    curves.append(crv)
+    except:
+        pass
+    return curves
+
+def _collect_all_wall_curves(doc):
+    host = _collect_host_wall_curves(doc)
+    linked = _collect_linked_wall_curves(doc)
+    return host + linked, len(host), len(linked)
 
 #-----------------Linked wall collectors-------------------
 
@@ -302,10 +357,8 @@ def place_perimeter_recepts(doc, logger=None):
     if not spaces:
         return 0
 
-    # NEW: host + linked wall curves (already in host coordinates)
-    host_wall_curves = _collect_wall_curves_host(doc)
-    linked_wall_curves = _collect_wall_curves_linked(doc)
-    all_wall_curves = host_wall_curves + linked_wall_curves
+    all_wall_curves, _host_n, _link_n = _collect_all_wall_curves(doc)
+    log.info("Wall curve cache → host:{} linked:{}".format(_host_n, _link_n))
 
     # NEW: collect linked doors & openings as XY AABBs (2 ft pad)
     linked_open_aabbs = _collect_linked_opening_aabbs(doc, pad_ft=2.0)
@@ -432,16 +485,27 @@ def place_perimeter_recepts(doc, logger=None):
                             inst = place_hosted(doc, wall, sym, p, mounting_height_ft=mh_ft, logger=log)
                         else:
                             inst = place_free(doc, sym, p, mounting_height_ft=mh_ft, logger=log)
-                            # NEW: delete if this free-placed device is not near any wall (0.5 ft)
+                            # If the family is actually hosted to a wall face, skip the near-wall cleanup.
                             try:
-                                d = _nearest_wall_xy_distance(p, all_wall_curves)
-                                if d > 0.5:
-                                    doc.Delete(inst.Id)
-                                    placed_here -= 1
-                                    log.info(u"Deleted (no wall within 0.5 ft): d≈{:.2f} ft".format(d))
-                                    continue
+                                if getattr(inst, "Host", None) is not None:
+                                    # hosted: do not delete based on near-wall distance
+                                    pass
+                                else:
+                                    d = _nearest_wall_xy_distance(p, all_wall_curves)
+                                    # If we couldn’t measure (no curves), do NOT delete.
+                                    if d is None:
+                                        log.warning("Near-wall check skipped (no wall curves). Keeping instance.")
+                                    else:
+                                        NEAR_WALL_FT = constraints.get("near_wall_threshold_ft",
+                                                                       1.0)  # rule-driven; default 1.0'
+                                        if d > NEAR_WALL_FT:
+                                            doc.Delete(inst.Id)
+                                            placed_here -= 1
+                                            log.info(
+                                                u"Deleted (no wall within {:.2f} ft): d≈{:.2f} ft".format(NEAR_WALL_FT,
+                                                                                                          d))
                             except Exception as ex:
-                                log.warning(u"Proximity check/delete failed: {}".format(ex))
+                                log.warning("Near-wall cleanup error: {}".format(ex))
 
                         if mh_ft is not None:
                             set_param_value(inst, "Mounting Height", mh_ft)
