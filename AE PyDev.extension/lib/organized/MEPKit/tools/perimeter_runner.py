@@ -16,7 +16,7 @@ from organized.MEPKit.revit.params import set_param_value  # optional for mounti
 from Autodesk.Revit.DB import (
     RevitLinkInstance, Opening, BuiltInCategory, FilteredElementCollector, XYZ, Wall, LocationCurve
 )
-from System import Math
+from System import Double
 
 
 # ---------Helpers to place recepts in small spaces-----------
@@ -274,6 +274,20 @@ def _filter_points_by_linked_openings(pts, aabbs):
     return out
 
 #------------Avoid placing on thin boundaries------------
+
+def _isfinite(x):
+    try:
+        return (not Double.IsNaN(x)) and (not Double.IsInfinity(x))
+    except:
+        # ultra-safe fallback
+        try:
+            import math
+            return math.isfinite(float(x))
+        except:
+            return (x == x) and (abs(x) < 1e300)
+
+
+
 def _seg_key_geom(seg, curve_fn):
     """Stable-ish key if ElementId is missing; uses rounded endpoints."""
     crv = curve_fn(seg)
@@ -415,7 +429,7 @@ def estimate_boundary_thickness_ft(doc, seg, host_wall_fn, curve_fn,
     d_host  = _nearest_parallel_offset_ft(curve_fn(seg), wall_curves_host)
     d_link  = _nearest_parallel_offset_ft(curve_fn(seg), wall_curves_linked)
     d = min(d_host, d_link)
-    return d if Math.IsFinite(d) else float("inf")
+    return d if _isfinite(d) else float("inf")
 
 def compute_thin_boundary_keys(doc, spaces, boundary_loops_fn, host_wall_fn, curve_fn,
                                per_space_factor=0.25, min_abs_ft=0.15, max_consider_ft=2.0, logger=None):
@@ -447,7 +461,7 @@ def compute_thin_boundary_keys(doc, spaces, boundary_loops_fn, host_wall_fn, cur
                 t = estimate_boundary_thickness_ft(doc, seg, host_wall_fn, curve_fn,
                                                    host_curves, link_curves)
                 # clamp infinities (unknown) to a large number so they don't drive median to 0
-                if not Math.IsFinite(t) or t > max_consider_ft:
+                if (not _isfinite(t)) or (t > max_consider_ft):
                     t = max_consider_ft
                 per_seg.append((key, t, wall is not None))
                 if t > 0.0:
