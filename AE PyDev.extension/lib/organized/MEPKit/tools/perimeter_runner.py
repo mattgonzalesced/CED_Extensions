@@ -480,6 +480,7 @@ def _mk_point_in_space_locator(spaces, space_loops_by_id, cat_by_spaceid):
 
     return category_at_xy
 
+
 def _should_skip_segment_by_pair(space_id, this_cat, p1, p2, outward_normal_xy, category_at_xy, skip_pairs, probe_ft=0.25):
     """
     p1, p2: endpoints (XYZ or 2D with .X/.Y); we only use XY.
@@ -550,8 +551,8 @@ def place_perimeter_recepts(doc, logger=None):
     log.info("Linked doors/openings (AABBs): {}".format(len(linked_open_aabbs)))
 
     # later in your setup:
-    cat_by_spaceid = {sp.Id.IntegerValue: (space_category_string(sp).strip().lower()) for sp in all_spaces}
-    category_at_xy = _mk_point_in_space_locator(all_spaces, space_loops_by_id, cat_by_spaceid)
+    cat_by_spaceid = {sp.Id.IntegerValue: (space_category_string(sp).strip().lower()) for sp in spaces}
+    category_at_xy = _mk_point_in_space_locator(spaces, space_loops_by_id, cat_by_spaceid)
 
     total = 0
     for sp in spaces:
