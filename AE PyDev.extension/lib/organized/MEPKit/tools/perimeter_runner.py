@@ -589,6 +589,8 @@ def _should_skip_segment_by_pair(space_id, this_cat, p1, p2, outward_normal_xy, 
         return True
     return False
 
+_space_cat = None
+
 def space_category_string(sp):
     """
     Returns a category string for a Space/Room. Tries your electrical.naming
