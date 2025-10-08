@@ -182,6 +182,20 @@ def _nearest_wall_xy_distance(point_xyz, wall_curves):
 
 #--------------Avoid those doors-------------
 
+
+
+
+_linked_open_aabbs_cache = {}
+
+def get_linked_open_aabbs(doc, pad_ft):
+    key = round(float(pad_ft or 0.0), 3)
+    hit = _linked_open_aabbs_cache.get(key)
+    if hit is not None:
+        return hit
+    aabbs = _collect_linked_opening_aabbs(doc, pad_ft=key)
+    _linked_open_aabbs_cache[key] = aabbs
+    return aabbs
+
 def _get_link_transform(link_inst):
     try:
         return link_inst.GetTotalTransform()
@@ -207,7 +221,7 @@ def _bbox_to_xy_aabb(bb, tf, pad_ft):
     xs = [p.X for p in pts]; ys = [p.Y for p in pts]
     return (min(xs)-pad_ft, min(ys)-pad_ft, max(xs)+pad_ft, max(ys)+pad_ft)
 
-def _collect_linked_opening_aabbs(doc, pad_ft=avoid_linked_openings_ft):
+def _collect_linked_opening_aabbs(doc, pad_ft=2.0):
     """Doors + Openings from all links → XY AABBs in host coords (padded)."""
     aabbs = []
     try:
@@ -314,6 +328,10 @@ def place_perimeter_recepts(doc, logger=None):
         avoid_corners_ft      = float(ccon.get('avoid_corners_ft', gcon.get('avoid_corners_ft', 2.0)))
         avoid_doors_radius_ft = float(ccon.get('avoid_doors_radius_ft', gcon.get('avoid_doors_radius_ft', 0.0)))
         door_edge_margin_ft   = float(ccon.get('door_edge_margin_ft', gcon.get('door_edge_margin_ft', 0.0)))
+        avoid_linked_openings_ft = float(
+            ccon.get('avoid_linked_openings_ft',
+                     gcon.get('avoid_linked_openings_ft', 2.0))
+        )
 
         # IMPORTANT: keep perimeter inset tiny & stable; do NOT use door snap tolerance here
         inset_ft = 0.05
@@ -361,9 +379,12 @@ def place_perimeter_recepts(doc, logger=None):
                     doors = door_points_on_wall(doc, wall)
                     pts = filter_points_by_doors(pts, doors, avoid_doors_radius_ft, door_edge_margin_ft)
 
-                # NEW: linked doors/arches (works whether this seg has a host wall or not)
-                if linked_open_aabbs:
-                    pts = _filter_points_by_linked_openings(pts, linked_open_aabbs)
+
+                # NEW: linked doors / arches filter (rule-driven buffer)
+                if avoid_linked_openings_ft > 0.0:
+                    linked_open_aabbs = get_linked_open_aabbs(doc, avoid_linked_openings_ft)
+                    if linked_open_aabbs:
+                        pts = _filter_points_by_linked_openings(pts, linked_open_aabbs)
 
                 post_pts_total += len(pts)
 
