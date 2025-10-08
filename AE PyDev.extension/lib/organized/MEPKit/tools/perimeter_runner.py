@@ -432,94 +432,71 @@ def estimate_boundary_thickness_ft(doc, seg, host_wall_fn, curve_fn,
     d = min(d_host, d_link)
     return d if _isfinite(d) else float("inf")
 
-def estimate_boundary_lineband_ft(doc, seg, host_wall_fn, curve_fn,
-                                  fallback_gap_func=None):
-    wall = host_wall_fn(doc, seg)
-    if wall:
-        t = _wall_lineband_thickness_ft(wall)
-        if t != float('inf'):
-            return t  # this is the “thickness of the lines on either side”
-    # separation lines → zero “line thickness”
-    try:
-        eid = getattr(seg, "ElementId", None)
-        if eid and eid.IntegerValue > 0:
-            el = doc.GetElement(eid)
-            if el is not None and el.Category:
-                bic = el.Category.Id.IntegerValue
-                from Autodesk.Revit.DB import BuiltInCategory
-                if bic in (int(BuiltInCategory.OST_SpaceSeparationLines),
-                           int(BuiltInCategory.OST_RoomSeparationLines)):
-                    return 0.0
-    except:
-        pass
-    # last resort (rare non-wall edges): optional fallback
-    if fallback_gap_func:
-        try:
-            return fallback_gap_func(seg)
-        except:
-            pass
-    return float('inf')
-
-def compute_thin_boundary_keys(doc, spaces, boundary_loops_fn, host_wall_fn, curve_fn,
+def compute_thin_boundary_keys(doc, spaces, boundary_loops_fn, segment_host_wall, segment_curve,
                                per_space_factor=0.25,
                                min_abs_ft=0.14,
                                max_consider_ft=2.0,
-                               include_walls=True,          # ← NEW: consider wall segments
+                               include_host_walls=False,     # <-- default off
+                               include_linked_walls=True,    # <-- default on
+                               include_nonwalls=True,        # separation lines, etc.
                                logger=None):
-    # Precollect once
-    host_curves  = _collect_wall_curves_host(doc)
-    link_curves  = _collect_wall_curves_linked(doc)
+
+    linked_refs = _collect_linked_wall_refs(doc)  # once
 
     thin_keys = set()
-
     for sp in spaces:
         loops = boundary_loops_fn(sp)
         if not loops:
             continue
 
-        per_seg = []          # (key, t, is_wall)
-        wall_thicks = []      # for median on walls
-        all_thicks  = []      # fallback median if no walls
+        per_seg = []  # (key, t, is_host_wall, is_linked_wall)
+
+        wall_t = []
+        all_t  = []
 
         for loop in loops:
             for seg in loop or ():
-                key = _seg_key(doc, seg, host_wall_fn, curve_fn)
+                # key for skipping this segment later
+                key = _seg_key(doc, seg, segment_host_wall, segment_curve)
                 if key is None:
                     continue
-                t = estimate_boundary_lineband_ft(
-                        doc, seg, host_wall_fn, curve_fn,
-                        fallback_gap_func=None
-                    )
-                # clamp unknowns before stats
-                if (not _isfinite(t)) or (t > max_consider_ft):
+
+                # classify & measure thickness
+                host_w = (segment_host_wall(doc, seg) is not None)
+                crv = segment_curve(seg)
+                is_l, linked_w = _segment_is_on_linked_wall(crv, linked_refs)
+
+                t = estimate_boundary_lineband_ft(doc, seg, segment_host_wall, segment_curve, linked_refs)
+                if (t != t) or (t == float('inf')) or (t > max_consider_ft):
                     t = max_consider_ft
 
-                is_wall = (host_wall_fn(doc, seg) is not None)
-                per_seg.append((key, t, is_wall))
-                all_thicks.append(t)
-                if is_wall:
-                    wall_thicks.append(t)
+                per_seg.append((key, t, host_w, is_l))
+                all_t.append(t)
+                if host_w or is_l:
+                    wall_t.append(t)  # “wall-like” for median
 
         if not per_seg:
             continue
 
-        # median based on walls if possible (more stable), else all
-        src = wall_thicks if wall_thicks else all_thicks
+        # median from wall-like if present, else from all
+        src = wall_t if wall_t else all_t
         src_sorted = sorted(src)
         m = src_sorted[len(src_sorted)//2]
-
         thresh = max(min_abs_ft, per_space_factor * m)
 
-        # mark thin segments (including walls if requested)
-        for key, t, is_wall in per_seg:
-            if (not include_walls) and is_wall:
+        # decide which segments to consider for skipping
+        for key, t, host_w, link_w in per_seg:
+            consider = ((host_w and include_host_walls) or
+                        (link_w and include_linked_walls) or
+                        ((not host_w and not link_w) and include_nonwalls))
+            if not consider:
                 continue
             if t < thresh:
                 thin_keys.add(key)
                 if logger:
                     try:
-                        logger.debug(u"[THIN] key={} t≈{:.3f}ft < thresh≈{:.3f}ft (wall={})"
-                                     .format(key, t, thresh, is_wall))
+                        logger.debug(u"[THIN] key={} t≈{:.3f}ft < thresh≈{:.3f}ft (host={}, linked={})"
+                                     .format(key, t, thresh, host_w, link_w))
                     except:
                         pass
 
@@ -553,29 +530,146 @@ def _parallel_plane_gap_ft(pA, pB):
     return gap
 
 def _wall_lineband_thickness_ft(wall):
-    """Return face-to-face distance between the wall's exterior/interior side faces.
-       If faces are not planar/available, return +inf to let the caller fall back."""
     faces = []
     try:
         for side in (ShellLayerType.Exterior, ShellLayerType.Interior):
             for rf in HostObjectUtils.GetSideFaces(wall, side) or []:
                 f = wall.GetGeometryObjectFromReference(rf)
                 if isinstance(f, PlanarFace):
-                    pl = _plane_from_face(f)
+                    pl = f.GetSurface()  # Plane
                     if pl: faces.append(pl)
     except:
         pass
     if len(faces) < 2:
         return float('inf')
-    # choose the two most separated parallel-ish planes
+    # max separation of (roughly) parallel planes
     best = 0.0
     for i in range(len(faces)):
         for j in range(i+1, len(faces)):
-            d = _parallel_plane_gap_ft(faces[i], faces[j])
+            nA, oA = faces[i].Normal, faces[i].Origin
+            nB, oB = faces[j].Normal, faces[j].Origin
+            dot = nA.X*nB.X + nA.Y*nB.Y + nA.Z*nB.Z
+            if dot < 0.0:
+                nB = -nB
+            dx, dy, dz = (oB.X - oA.X), (oB.Y - oA.Y), (oB.Z - oA.Z)
+            d = abs(nA.X*dx + nA.Y*dy + nA.Z*dz)
             if d > best:
                 best = d
     return best if best > 0 else float('inf')
 
+def estimate_boundary_lineband_ft(doc, seg, segment_host_wall, segment_curve,
+                                  linked_wall_refs):
+    """Return thickness of the drawn band:
+       - host wall: face-to-face distance
+       - linked wall: width (proxy for face-to-face)
+       - separation line: 0.0
+       - other: +inf
+    """
+    # host wall?
+    wall = segment_host_wall(doc, seg)
+    if wall:
+        t = _wall_lineband_thickness_ft(wall)
+        if t != float('inf'):
+            return t
+
+    # linked wall?
+    crv = segment_curve(seg)
+    is_l, w = _segment_is_on_linked_wall(crv, linked_wall_refs)
+    if is_l and w > 0.0:
+        return w
+
+    # separation line?
+    try:
+        eid = getattr(seg, "ElementId", None)
+        if eid and eid.IntegerValue > 0:
+            el = doc.GetElement(eid)
+            if el is not None and el.Category:
+                bic = el.Category.Id.IntegerValue
+                if bic in (int(BuiltInCategory.OST_SpaceSeparationLines),
+                           int(BuiltInCategory.OST_RoomSeparationLines)):
+                    return 0.0
+    except:
+        pass
+
+    return float('inf')
+
+#-----------------Check for THIN LINKED WALLS------------------
+
+
+def _collect_linked_wall_refs(doc):
+    """Return [(curve_in_host_coords, width_ft, wall_id_int), ...] for all linked walls."""
+    refs = []
+    try:
+        for inst in FilteredElementCollector(doc).OfClass(RevitLinkInstance):
+            ldoc = inst.GetLinkDocument()
+            if not ldoc:
+                continue
+            # get transform into host coords
+            try:
+                tf = inst.GetTotalTransform()
+            except:
+                try: tf = inst.GetTransform()
+                except: tf = None
+
+            for w in FilteredElementCollector(ldoc).OfClass(Wall):
+                lc = w.Location
+                if not isinstance(lc, LocationCurve) or lc.Curve is None:
+                    continue
+                crv = lc.Curve
+                try:
+                    if tf: crv = crv.CreateTransformed(tf)
+                except:
+                    pass
+                width = float(getattr(w, "Width", 0.0) or 0.0)
+                refs.append((crv, width, w.Id.IntegerValue))
+    except:
+        pass
+    return refs
+
+def _segment_is_on_linked_wall(seg_curve, linked_refs, ang_tol_cos=0.98, dist_tol_ft=0.5):
+    """
+    Returns (True, width_ft) if seg_curve aligns with any linked wall curve:
+      - near-parallel in XY (cos ≥ ang_tol_cos),
+      - mid-point XY distance ≤ dist_tol_ft.
+    """
+    if not seg_curve:
+        return (False, 0.0)
+    try:
+        a = seg_curve.GetEndPoint(0); b = seg_curve.GetEndPoint(1)
+        vx, vy = (b.X - a.X), (b.Y - a.Y)
+        vlen = (vx*vx + vy*vy) ** 0.5
+        if vlen < 1e-6:
+            return (False, 0.0)
+        ux, uy = vx / vlen, vy / vlen
+        mid = seg_curve.Evaluate(0.5, True)
+
+        for crv, width, _ in linked_refs:
+            try:
+                a2 = crv.GetEndPoint(0); b2 = crv.GetEndPoint(1)
+                wx, wy = (b2.X - a2.X), (b2.Y - a2.Y)
+                wlen = (wx*wx + wy*wy) ** 0.5
+                if wlen < 1e-6:
+                    continue
+                # parallel check in XY
+                cosang = abs((ux*wx + uy*wy) / wlen)
+                if cosang < ang_tol_cos:
+                    continue
+                # XY distance from mid to linked wall
+                proj = crv.Project(mid)
+                if not proj:
+                    continue
+                q = getattr(proj, "XYZPoint", None) or getattr(proj, "Point", None)
+                if not q:
+                    continue
+                dx, dy = (mid.X - q.X), (mid.Y - q.Y)
+                d = (dx*dx + dy*dy) ** 0.5
+                if d <= dist_tol_ft:
+                    return (True, float(width))
+            except:
+                pass
+    except:
+        pass
+    return (False, 0.0)
 
 #-----------------Main Function---------------------
 
@@ -604,12 +698,14 @@ def place_perimeter_recepts(doc, logger=None):
     thin_keys = compute_thin_boundary_keys(
         doc, spaces,
         boundary_loops_fn=boundary_loops,
-        host_wall_fn=segment_host_wall,
-        curve_fn=segment_curve,
-        per_space_factor=0.25,  # fewer flagged; tune as you like
-        min_abs_ft=1.0,  # your new floor
+        segment_host_wall=segment_host_wall,
+        segment_curve=segment_curve,
+        per_space_factor=0.20,  # tune
+        min_abs_ft=0.50,  # tune
         max_consider_ft=2.0,
-        include_walls=True,  # ← now walls can be skipped if “thin”
+        include_host_walls=False,  # don't flag host walls
+        include_linked_walls=True,  # DO flag linked walls
+        include_nonwalls=True,  # still flag separation lines if thin
         logger=log
     )
 
