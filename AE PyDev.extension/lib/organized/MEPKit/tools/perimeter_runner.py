@@ -78,6 +78,53 @@ def _xy_key(p, eps=1e-4):
     return (round(p.X/eps), round(p.Y/eps))
 
 
+# --- shared *non-wall* boundary detection -----------------------
+def _seg_boundary_key_nonwall(doc, seg):
+    """
+    Return a stable key for a boundary segment only if it is NOT a wall.
+    We’ll use this to detect shared space/room separation lines.
+    """
+    wall = segment_host_wall(doc, seg)
+    if wall:
+        return None  # walls are allowed
+
+    # Prefer actual element id (e.g., Space/Room Separation Line)
+    try:
+        eid = getattr(seg, "ElementId", None)
+        if eid and eid.IntegerValue > 0:
+            return ("SEP", eid.IntegerValue)
+    except:
+        pass
+
+    # Fallback: geometric signature of the curve endpoints (rounded)
+    try:
+        crv = segment_curve(seg)
+        if crv:
+            p0 = crv.GetEndPoint(0); p1 = crv.GetEndPoint(1)
+            return ("G",
+                    round(p0.X, 3), round(p0.Y, 3), round(p0.Z, 3),
+                    round(p1.X, 3), round(p1.Y, 3), round(p1.Z, 3))
+    except:
+        pass
+    return None
+
+def _compute_shared_nonwall_keys(doc, spaces):
+    """
+    Count how many spaces reference each *non-wall* boundary segment.
+    Return keys referenced by 2 or more spaces.
+    """
+    counts = {}
+    for sp in spaces:
+        loops = boundary_loops(sp)
+        for loop in loops or ():
+            for seg in loop or ():
+                key = _seg_boundary_key_nonwall(doc, seg)
+                if not key:
+                    continue
+                counts[key] = counts.get(key, 0) + 1
+    # shared if seen in 2+ spaces
+    return {k for k, c in counts.items() if c >= 2}
+
 @RunInTransaction("Electrical::PerimeterReceptsByRules")
 def place_perimeter_recepts(doc, logger=None):
     log = logger or get_logger("MEPKit")
@@ -89,6 +136,9 @@ def place_perimeter_recepts(doc, logger=None):
     log.info("Spaces/Rooms found: {}".format(len(spaces)))
     if not spaces:
         return 0
+
+    shared_nonwall_keys = _compute_shared_nonwall_keys(doc, spaces)
+    log.info("Shared space boundary segments detected: {}".format(len(shared_nonwall_keys)))
 
     total = 0
     for sp in spaces:
@@ -154,6 +204,12 @@ def place_perimeter_recepts(doc, logger=None):
         for loop in loops:
             for seg in loop:
                 seg_count += 1
+                # NEW: skip segments that are a shared boundary between two spaces
+                key = _seg_boundary_key_nonwall(doc, seg)
+                if key and key in shared_nonwall_keys:
+                    # optional: uncomment to see what’s skipped
+                    # log.debug("Skip shared boundary seg key={}".format(key))
+                    continue
                 curve = segment_curve(seg)
                 if not curve:
                     continue

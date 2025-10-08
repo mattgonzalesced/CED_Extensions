@@ -10,7 +10,7 @@ if org not in sys.path:
 # RP button: Place Perimeter Recepts.pushbutton/script.py
 from organized.MEPKit.revit.appdoc import get_doc
 from organized.MEPKit.core.log import get_logger, alert
-from organized.MEPKit.electrical.perimeter_runner import place_perimeter_recepts
+from organized.MEPKit.tools.perimeter_runner import place_perimeter_recepts
 
 log = get_logger("PerimeterRecepts", level="DEBUG", title="Perimeter Recepts Log")
 
