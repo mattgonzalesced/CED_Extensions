@@ -157,6 +157,135 @@ def next_mark_with_prefix(doc, prefix="REC", width=3):
             return cand
         n += 1
 
+def _get_bip(sp, bip_name):
+    """Lazy BuiltInParameter access; avoids import at module import time."""
+    try:
+        from Autodesk.Revit.DB import BuiltInParameter
+        bip = getattr(BuiltInParameter, bip_name, None)
+        if not bip:
+            return None
+        p = sp.get_Parameter(bip)
+        return p.AsString() if p else None
+    except Exception:
+        return None
+
+def _first_non_empty(*vals):
+    for v in vals:
+        if v:
+            v = u"{}".format(v).strip()
+            if v:
+                return v
+    return u""
+
+def space_display_name(sp):
+    """Best-effort human label for a Space/Room."""
+    # Try common properties (works on Room too)
+    name = _first_non_empty(getattr(sp, "Name", None),
+                            _get_bip(sp, "SPACE_NAME"),
+                            _get_bip(sp, "ROOM_NAME"))
+    number = _first_non_empty(_get_bip(sp, "SPACE_NUMBER"),
+                              _get_bip(sp, "ROOM_NUMBER"))
+    if number and name:
+        return u"{} {}".format(number, name)
+    return name or number or u""
+
+def space_match_text(sp):
+    """Concatenate useful fields for rule matching (lowercased)."""
+    name  = space_display_name(sp)
+    dept  = _first_non_empty(_get_bip(sp, "ROOM_DEPARTMENT"),
+                             _get_bip(sp, "SPACE_DEPARTMENT"))
+    occ   = _first_non_empty(_get_bip(sp, "ROOM_OCCUPANCY"),
+                             _get_bip(sp, "SPACE_OCCUPANCY"))
+    lvl   = _first_non_empty(_get_bip(sp, "LEVEL_NAME"))
+    num   = _first_non_empty(_get_bip(sp, "SPACE_NUMBER"),
+                             _get_bip(sp, "ROOM_NUMBER"))
+    parts = [name, dept, occ, lvl, num]
+    txt = u" ".join([p for p in parts if p]).strip().lower()
+    # normalize spaces
+    return u" ".join(txt.split())
+
+def _compile_regex(rx_text):
+    try:
+        import re
+        return re.compile(rx_text, re.IGNORECASE)
+    except Exception:
+        return None
+
+def _iter_rule_candidates(identify_rules):
+    """
+    Be flexible about JSON shape. Accepts either:
+      - {"categories":[{"name":"Sales Floor","regex":["sales\\s*floor", ...], "contains_any":[...]} , ...]}
+      - {"Sales Floor": {"regex":[...], ...}, "Back Office": {...}, ...}
+    Yields (category_name, rule_dict).
+    """
+    if not identify_rules:
+        return
+    cats = identify_rules.get("categories")
+    if isinstance(cats, list):
+        for item in cats:
+            cname = (item.get("name") or u"").strip()
+            if cname:
+                yield cname, item
+    else:
+        # dict mapping
+        for cname, item in identify_rules.items():
+            if isinstance(item, dict):
+                yield u"{}".format(cname).strip(), item
+
+def _rule_matches_text(rule_dict, text_lc):
+    """Support 'regex', 'name_regex', 'number_regex', 'department_regex', 'contains', 'contains_any'."""
+    import re
+    # Plain contains (any)
+    for key in ("contains", "contains_any", "any"):
+        vals = rule_dict.get(key)
+        if isinstance(vals, (list, tuple)):
+            for v in vals:
+                if v and u"{}".format(v).strip().lower() in text_lc:
+                    return True
+
+    # Regex buckets
+    rx_keys = ("regex", "name_regex", "number_regex", "department_regex")
+    for key in rx_keys:
+        vals = rule_dict.get(key)
+        if isinstance(vals, (list, tuple)):
+            for pat in vals:
+                rx = _compile_regex(u"{}".format(pat))
+                if rx and rx.search(text_lc):
+                    return True
+
+    # Single-string convenience
+    for key in rx_keys:
+        val = rule_dict.get(key)
+        if isinstance(val, basestring):
+            rx = _compile_regex(val)
+            if rx and rx.search(text_lc):
+                return True
+
+    return False
+
+def space_category_string(sp, identify_rules=None):
+    """
+    Return category label for a Space/Room.
+    - If identify_rules given, pick first category whose rule matches space_match_text(sp).
+    - Otherwise, fallback to the space/room name.
+    """
+    txt = space_match_text(sp)
+    if identify_rules:
+        for cat_name, rule_dict in _iter_rule_candidates(identify_rules):
+            try:
+                if _rule_matches_text(rule_dict, txt):
+                    return u"{}".format(cat_name)
+            except Exception:
+                # ignore malformed rule
+                pass
+
+    # Fallback: just the (number +) name
+    return space_display_name(sp)
+
+# Optional: tiny helper to normalize to lowercase consistently (for pair comparisons)
+def normalized_category(sp, identify_rules=None):
+    return (space_category_string(sp, identify_rules) or u"").strip().lower()
+
 @RunInTransaction("Electrical::ApplyDeviceMark")
 def set_device_mark(doc, elem, mark_text):
     """Set the 'Mark' parameter on any element."""
