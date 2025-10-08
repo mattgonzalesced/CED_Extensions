@@ -240,7 +240,33 @@ def _nearest_wall_xy_distance(p, curves):
                 pass
     return None if best == float('inf') else best
 
-
+def _nearest_curve_info_xy(p, curves):
+    """Return (curve, dist_ft, (tx,ty)) for the nearest curve to XY of p; None if not found."""
+    if not curves:
+        return (None, None, None)
+    best_curve, best_d, best_tan = (None, float('inf'), None)
+    for c in curves:
+        try:
+            pr = c.Project(p)
+            q = getattr(pr, "XYZPoint", None) or getattr(pr, "Point", None)
+            if q is None:
+                continue
+            d = math.hypot(p.X - q.X, p.Y - q.Y)
+            if d < best_d:
+                # tangent at the projected parameter if possible
+                try:
+                    der = c.ComputeDerivatives(pr.Parameter, True)
+                    v = der.BasisX
+                except:
+                    q0, q1 = c.GetEndPoint(0), c.GetEndPoint(1)
+                    v = XYZ(q1.X - q0.X, q1.Y - q0.Y, 0.0)
+                mag = math.hypot(v.X, v.Y) or 1.0
+                best_curve, best_d, best_tan = c, d, (v.X / mag, v.Y / mag)
+        except:
+            pass
+    if best_d == float('inf'):
+        return (None, None, None)
+    return (best_curve, best_d, best_tan)
 # -------------------------- “point in space” locator --------------------------
 
 def _ray_cast_point_in_poly(pt, poly_xy):
@@ -556,6 +582,31 @@ def place_perimeter_recepts(doc, logger=None):
                 for p in pts:
                     try:
                         deleted = False
+                        # --- point-level guard: skip points near a linked wall if categories form a skip pair ---
+                        if skip_pair_set and linked_wall_curves:
+                            lc, d_link, txy = _nearest_curve_info_xy(p, linked_wall_curves)
+                            pair_wall_tol = float(
+                                ccon.get('pair_linked_wall_tol_ft', gcon.get('pair_linked_wall_tol_ft', 1.5)))
+                            if lc and (d_link is not None) and (d_link <= pair_wall_tol) and txy:
+                                tx, ty = txy
+                                nx, ny = -ty, tx  # normal to linked wall in XY
+                                # escalate probe a bit to survive tiny offsets between wall line & space boundary
+                                for scale in (1.0, 1.5, 2.0, 3.0):
+                                    off = pair_probe_ft * scale
+                                    a = (p.X + nx * off, p.Y + ny * off)
+                                    b = (p.X - nx * off, p.Y - ny * off)
+                                    _sida, ca = category_at_xy(a)
+                                    _sidb, cb = category_at_xy(b)
+                                    if ca and cb:
+                                        pa = (ca or u"").strip().lower()
+                                        pb = (cb or u"").strip().lower()
+                                        if tuple(sorted((pa, pb))) in skip_pair_set:
+                                            if PAIR_DIAG:
+                                                log.info(
+                                                    u"[PAIRHIT-PT] skip point near linked wall: {} | {} (d≈{:.2f}ft, off≈{:.2f}ft)"
+                                                    .format(pa, pb, d_link, off))
+                                            # skip this candidate point entirely
+                                            raise RuntimeError("skip-point-by-shared-pair")
                         if wall:
                             inst = place_hosted(doc, wall, sym, p, mounting_height_ft=mh_ft, logger=log)
                         else:
