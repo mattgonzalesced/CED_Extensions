@@ -308,13 +308,22 @@ def _filter_points_by_linked_openings(pts, aabbs):
 #------------That window between diary and sales-----------
 
 
-# --- geometry key for a boundary segment (stable per segment) ---
-def _seg_gkey(curve, prec=3):
+def _pt2d_key(p, prec=3):
+    r = lambda v: round(v, prec)
+    return (r(p.X), r(p.Y))   # ignore Z for space boundaries
+
+def _seg_gkey2d(curve, prec=3):
+    """Orientation-agnostic 2D key for a boundary segment."""
     if not curve:
         return None
     p0 = curve.GetEndPoint(0); p1 = curve.GetEndPoint(1)
-    r = lambda v: round(v, prec)
-    return ("G", r(p0.X), r(p0.Y), r(p0.Z), r(p1.X), r(p1.Y), r(p1.Z))
+    a = _pt2d_key(p0, prec)
+    b = _pt2d_key(p1, prec)
+    # orientation-insensitive: sort endpoints
+    if a <= b:
+        return ("G2",) + a + b
+    else:
+        return ("G2",) + b + a
 
 # --- read the pair rules from bc_rules.general ---
 def _load_skip_pair_set(bc_rules):
@@ -330,14 +339,14 @@ def _load_skip_pair_set(bc_rules):
 
 # --- build an index: segment geometry -> [(space_id, category), ...] ---
 def _build_shared_boundary_index(doc, spaces, id_rules):
-    ix = {}  # gkey -> list of (space_id, category)
+    ix = {}  # gkey -> [(space_id, category), ...]
     for sp in spaces:
         cat = categorize_space_by_name(space_match_text(sp), id_rules)
         for loop in (boundary_loops(sp) or []):
             for seg in loop or []:
-                gk = _seg_gkey(segment_curve(seg))
+                gk = _seg_gkey2d(segment_curve(seg))   # <— here
                 if gk:
-                    ix.setdefault(gk, []).append((sp.Id.IntegerValue, cat))
+                    ix.setdefault(gk, []).append((sp.Id.IntegerValue, (cat or "").strip()))
     return ix
 
 #-----------------Main Function---------------------
@@ -444,9 +453,10 @@ def place_perimeter_recepts(doc, logger=None):
                     continue
                 # shared-boundary pair check (skip only this segment if categories match a rule)
                 if skip_pair_set:
-                    gk = _seg_gkey(curve)
+                    gk = _seg_gkey2d(curve)
                     if gk:
                         neigh = shared_ix.get(gk, [])
+                        log.info("Shared-boundary index built with {} unique segments".format(len(shared_ix)))
                         if neigh:
                             this_id = sp.Id.IntegerValue
                             # current space category already computed as `cat`
@@ -460,6 +470,7 @@ def place_perimeter_recepts(doc, logger=None):
                                     break
                             if should_skip:
                                 # optional: log.debug("Skip shared pair {} on segment {}".format(pair, gk))
+                                log.debug("Skip shared pair {} on segment {}".format(pair, gk))
                                 continue
 
 
