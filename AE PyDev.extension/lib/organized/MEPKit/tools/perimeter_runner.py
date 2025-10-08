@@ -22,6 +22,26 @@ from Autodesk.Revit.DB import SpatialElementBoundaryOptions, SpatialElementBound
 
 
 # ---------Helpers to place recepts in small spaces-----------
+
+def _seg_mid_xy(curve):
+    try:
+        p = curve.Evaluate(0.5, True)
+    except Exception:
+        p0 = curve.GetEndPoint(0); p1 = curve.GetEndPoint(1)
+        p = XYZ((p0.X+p1.X)/2.0, (p0.Y+p1.Y)/2.0, (p0.Z+p1.Z)/2.0)
+    return (p.X, p.Y)
+
+def _seg_tan_xy(curve):
+    # unit tangent in XY at mid
+    try:
+        der = curve.ComputeDerivatives(0.5, True)
+        v = der.BasisX
+    except Exception:
+        p0 = curve.GetEndPoint(0); p1 = curve.GetEndPoint(1)
+        v = XYZ(p1.X-p0.X, p1.Y-p0.Y, 0.0)
+    mag = math.hypot(v.X, v.Y) or 1.0
+    return (v.X/mag, v.Y/mag)
+
 def _curve_len(curve):
     try: return float(curve.ApproximateLength)
     except:
@@ -690,6 +710,7 @@ def place_perimeter_recepts(doc, logger=None):
     space_loops_by_id = build_space_loops_by_id(doc, spaces, boundary_location="Finish")
     # build locator once
     locator = SpaceLocator.from_space_loops(spaces, space_loops_by_id, cat_by_spaceid)
+    category_at_xy = locator.category_at_xy  # convenience alias
 
     total = 0
     for sp in spaces:
@@ -762,24 +783,30 @@ def place_perimeter_recepts(doc, logger=None):
                 curve = segment_curve(seg)
                 # ── NEW: only if this is a LINKED wall boundary, check the neighbor pair rule
                 # ── Pair rule (linked shared boundary) ─────────────────────────────────────────
-                if skip_pair_set and _segment_is_from_linked_wall(curve, linked_wall_curves, tol_ft=0.2):
-                    this_cat_lc = (cat or u"").strip().lower()
-                    gk = _seg_gkey2d(curve)
-                    mk = _seg_mkey2d(curve)
-                    neigh = shared_ix_g.get(gk) or shared_ix_m.get(mk) or []
-                    blocked = False
-                    for sid, ncat in neigh:
-                        if sid == sp.Id.IntegerValue:
-                            continue
-                        other_lc = (ncat or u"").strip().lower()
-                        if tuple(sorted((this_cat_lc, other_lc))) in skip_pair_set:
+                # ── Pair rule via midpoint probe (works for host/linked/separation) ────────────
+                if skip_pair_set:
+                    # probe small offset to each side of the segment
+                    mx, my = _seg_mid_xy(curve)
+                    tx, ty = _seg_tan_xy(curve)
+                    nx, ny = -ty, tx  # perpendicular to segment
+                    probe_ft = constraints.get("pair_probe_ft", 0.5)  # rule-driven, default 0.5'
+
+                    a = (mx + nx * probe_ft, my + ny * probe_ft)
+                    b = (mx - nx * probe_ft, my - ny * probe_ft)
+
+                    _sid_a, cat_a = category_at_xy(a)
+                    _sid_b, cat_b = category_at_xy(b)
+
+                    if cat_a and cat_b:
+                        # normalize
+                        pa = (cat_a or u"").strip().lower()
+                        pb = (cat_b or u"").strip().lower()
+                        if tuple(sorted((pa, pb))) in skip_pair_set:
                             if PAIR_DIAG:
-                                log.info(u"[PAIRHIT] space={} pair=({}, {})".format(sp.Id.IntegerValue, this_cat_lc,
-                                                                                    other_lc))
-                            blocked = True
-                            break
-                    if blocked:
-                        continue  # skip this boundary segment entirely
+                                log.info(u"[PAIRCHK] mid=({:.2f},{:.2f}) sides=({}, {}) → SKIP".format(mx, my, pa, pb))
+                            continue
+                        elif PAIR_DIAG:
+                            log.debug(u"[PAIRCHK] mid=({:.2f},{:.2f}) sides=({}, {})".format(mx, my, pa, pb))
 
 
                 # sample along the segment with corner inset
