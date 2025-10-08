@@ -761,43 +761,26 @@ def place_perimeter_recepts(doc, logger=None):
                 seg_count += 1
                 curve = segment_curve(seg)
                 # ── NEW: only if this is a LINKED wall boundary, check the neighbor pair rule
-                if skip_pair_set and wall is None:
-                    # ensure this boundary lies on a linked wall curve
-                    if _segment_is_from_linked_wall(curve, linked_wall_curves, tol_ft=0.2):
-                        this_id = sp.Id.IntegerValue
-                        this_cat = (cat or "").strip()
-                        gk = _seg_gkey2d(curve)
-                        mk = _seg_mkey2d(curve)
+                # ── Pair rule (linked shared boundary) ─────────────────────────────────────────
+                if skip_pair_set and _segment_is_from_linked_wall(curve, linked_wall_curves, tol_ft=0.2):
+                    this_cat_lc = (cat or u"").strip().lower()
+                    gk = _seg_gkey2d(curve)
+                    mk = _seg_mkey2d(curve)
+                    neigh = shared_ix_g.get(gk) or shared_ix_m.get(mk) or []
+                    blocked = False
+                    for sid, ncat in neigh:
+                        if sid == sp.Id.IntegerValue:
+                            continue
+                        other_lc = (ncat or u"").strip().lower()
+                        if tuple(sorted((this_cat_lc, other_lc))) in skip_pair_set:
+                            if PAIR_DIAG:
+                                log.info(u"[PAIRHIT] space={} pair=({}, {})".format(sp.Id.IntegerValue, this_cat_lc,
+                                                                                    other_lc))
+                            blocked = True
+                            break
+                    if blocked:
+                        continue  # skip this boundary segment entirely
 
-                        # Only get chatty if relevant categories or it is a linked boundary
-                        is_linked_boundary = (wall is None) and _segment_is_from_linked_wall(curve, linked_wall_curves,
-                                                                                             tol_ft=0.2)
-
-
-                        # find neighbors via either geom-key or midpoint-key
-                        neigh = (shared_ix_g.get(gk) if gk in shared_ix_g else shared_ix_m.get(mk, []))
-                        # If the other side belongs to a category in the skip pair set, skip this segment.
-                        blocked = False
-                        this_cat = (cat or u"").strip()
-                        for sid, ncat in (neigh or []):
-                            if sid == sp.Id.IntegerValue:
-                                continue
-                            a = this_cat.strip().lower()
-                            b = (ncat or u"").strip().lower()
-                            if tuple(sorted((a, b))) in skip_pair_set:
-                                if PAIR_DIAG:
-                                    log.info(u"[PAIRCHK] VETO match: ({}, {})".format(this_cat, ncat))
-                                blocked = True
-                                break
-                        if blocked:
-                            continue  # skip this boundary segment entirely
-
-                if skip_shared_pairs:
-                    # outward_normal should be a unit XY vector pointing out of THIS space
-                    out_xy = (outward_normal.X, outward_normal.Y) if hasattr(outward_normal, "X") else outward_normal
-                    if should_skip_segment_by_pair(space_id, this_cat, p1, p2, out_xy, locator, skip_shared_pairs,
-                                                   probe_ft=constraints.get("pair_probe_ft", 0.25), logger=log):
-                        continue  # skip this segment entirely
 
                 # sample along the segment with corner inset
                 pts = sample_points_on_segment(curve, first_ft, next_ft, avoid_corners_ft, inset_ft)
