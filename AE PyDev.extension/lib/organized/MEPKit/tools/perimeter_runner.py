@@ -272,6 +272,49 @@ def _filter_points_by_linked_openings(pts, aabbs):
             out.append(p)
     return out
 
+#--------------------------Avoid windows----------------------
+#------------------------Mainly for dairy area----------------
+
+# cache by pad distance so we don’t rebuild per space
+_linked_window_aabbs_cache = {}
+
+def _collect_linked_window_aabbs(doc, pad_ft=2.0):
+    """Windows in all links → XY AABBs in host coords, padded by pad_ft."""
+    aabbs = []
+    try:
+        for inst in FilteredElementCollector(doc).OfClass(RevitLinkInstance):
+            ldoc = inst.GetLinkDocument()
+            if ldoc is None:
+                continue
+            tf = _get_link_transform(inst)
+            try:
+                coll = FilteredElementCollector(ldoc)\
+                       .OfCategory(BuiltInCategory.OST_Windows)\
+                       .WhereElementIsNotElementType()
+                for el in coll:
+                    try:
+                        bb = el.get_BoundingBox(None)
+                        a = _bbox_to_xy_aabb(bb, tf, pad_ft)
+                        if a: aabbs.append(a)
+                    except:
+                        pass
+            except:
+                pass
+    except:
+        pass
+    return aabbs
+
+def get_linked_window_aabbs(doc, pad_ft):
+    key = round(float(pad_ft or 0.0), 3)
+    hit = _linked_window_aabbs_cache.get(key)
+    if hit is not None:
+        return hit
+    aabbs = _collect_linked_window_aabbs(doc, pad_ft=key)
+    _linked_window_aabbs_cache[key] = aabbs
+    return aabbs
+
+
+
 #-----------------Main Function---------------------
 
 @RunInTransaction("Electrical::PerimeterReceptsByRules")
@@ -332,6 +375,11 @@ def place_perimeter_recepts(doc, logger=None):
             ccon.get('avoid_linked_openings_ft',
                      gcon.get('avoid_linked_openings_ft', 2.0))
         )
+        # pull from category first, then general; support both *_ft and no-suffix keys
+        avoid_linked_windows_ft = float(
+            ccon.get('avoid_linked_windows_ft',
+                              gcon.get('avoid_linked_windows_ft', 2.0))
+        )
 
         # IMPORTANT: keep perimeter inset tiny & stable; do NOT use door snap tolerance here
         inset_ft = 0.05
@@ -385,6 +433,12 @@ def place_perimeter_recepts(doc, logger=None):
                     linked_open_aabbs = get_linked_open_aabbs(doc, avoid_linked_openings_ft)
                     if linked_open_aabbs:
                         pts = _filter_points_by_linked_openings(pts, linked_open_aabbs)
+
+                # NEW: linked windows filter (rule-driven buffer)
+                if avoid_linked_windows_ft > 0.0:
+                    linked_win_aabbs = get_linked_window_aabbs(doc, avoid_linked_windows_ft)
+                    if linked_win_aabbs:
+                        pts = _filter_points_by_linked_openings(pts, linked_win_aabbs)
 
                 post_pts_total += len(pts)
 
