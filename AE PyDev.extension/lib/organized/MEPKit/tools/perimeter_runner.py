@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # lib/organized/MEPKit/electrical/perimeter_runner.py
 from __future__ import absolute_import
+from Autodesk.Revit.DB import BuiltInCategory
 from organized.MEPKit.core.log import get_logger
 from organized.MEPKit.core.rules import (
     load_identify_rules, load_branch_rules, normalize_constraints,
@@ -78,51 +79,40 @@ def _xy_key(p, eps=1e-4):
     return (round(p.X/eps), round(p.Y/eps))
 
 
-# --- shared *non-wall* boundary detection -----------------------
-def _seg_boundary_key_nonwall(doc, seg):
-    """
-    Return a stable key for a boundary segment only if it is NOT a wall.
-    We’ll use this to detect shared space/room separation lines.
-    """
-    wall = segment_host_wall(doc, seg)
-    if wall:
-        return None  # walls are allowed
-
-    # Prefer actual element id (e.g., Space/Room Separation Line)
+def _is_space_or_room_separation(doc, eid):
+    """True iff element id is a Room/Space Separation Line."""
     try:
-        eid = getattr(seg, "ElementId", None)
-        if eid and eid.IntegerValue > 0:
-            return ("SEP", eid.IntegerValue)
+        el = doc.GetElement(eid)
+        if not el or not el.Category:
+            return False
+        bic_int = el.Category.Id.IntegerValue
+        return bic_int in (
+            int(BuiltInCategory.OST_RoomSeparationLines),
+            int(BuiltInCategory.OST_SpaceSeparationLines),
+        )
     except:
-        pass
+        return False
 
-    # Fallback: geometric signature of the curve endpoints (rounded)
-    try:
-        crv = segment_curve(seg)
-        if crv:
-            p0 = crv.GetEndPoint(0); p1 = crv.GetEndPoint(1)
-            return ("G",
-                    round(p0.X, 3), round(p0.Y, 3), round(p0.Z, 3),
-                    round(p1.X, 3), round(p1.Y, 3), round(p1.Z, 3))
-    except:
-        pass
-    return None
-
-def _compute_shared_nonwall_keys(doc, spaces):
+def _compute_shared_separation_ids(doc, spaces):
     """
-    Count how many spaces reference each *non-wall* boundary segment.
-    Return keys referenced by 2 or more spaces.
+    Count how many spaces reference each *separation line* (non-wall) element.
+    Return the set of ElementId.IntegerValue used by 2+ spaces.
     """
     counts = {}
     for sp in spaces:
         loops = boundary_loops(sp)
         for loop in loops or ():
             for seg in loop or ():
-                key = _seg_boundary_key_nonwall(doc, seg)
-                if not key:
-                    continue
-                counts[key] = counts.get(key, 0) + 1
-    # shared if seen in 2+ spaces
+                try:
+                    eid = getattr(seg, "ElementId", None)
+                    if not (eid and eid.IntegerValue > 0):
+                        continue
+                    if not _is_space_or_room_separation(doc, eid):
+                        continue
+                    key = eid.IntegerValue
+                    counts[key] = counts.get(key, 0) + 1
+                except:
+                    pass
     return {k for k, c in counts.items() if c >= 2}
 
 @RunInTransaction("Electrical::PerimeterReceptsByRules")
@@ -137,8 +127,9 @@ def place_perimeter_recepts(doc, logger=None):
     if not spaces:
         return 0
 
-    shared_nonwall_keys = _compute_shared_nonwall_keys(doc, spaces)
-    log.info("Shared space boundary segments detected: {}".format(len(shared_nonwall_keys)))
+    # precise: only separation lines (not walls)
+    shared_sep_ids = _compute_shared_separation_ids(doc, spaces)
+    log.info("Shared space boundary segments detected: {}".format(len(shared_sep_ids)))
 
     total = 0
     for sp in spaces:
@@ -204,12 +195,15 @@ def place_perimeter_recepts(doc, logger=None):
         for loop in loops:
             for seg in loop:
                 seg_count += 1
-                # NEW: skip segments that are a shared boundary between two spaces
-                key = _seg_boundary_key_nonwall(doc, seg)
-                if key and key in shared_nonwall_keys:
-                    # optional: uncomment to see what’s skipped
-                    # log.debug("Skip shared boundary seg key={}".format(key))
-                    continue
+                # skip only if this boundary segment is a shared separation line
+                try:
+                    eid = getattr(seg, "ElementId", None)
+                    if eid and eid.IntegerValue in shared_sep_ids:
+                        # optional debug:
+                        # log.debug("Skip shared separation line: {}".format(eid.IntegerValue))
+                        continue
+                except:
+                    pass
                 curve = segment_curve(seg)
                 if not curve:
                     continue
