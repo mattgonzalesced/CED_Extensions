@@ -453,12 +453,12 @@ def place_perimeter_recepts(doc, logger=None):
         for loop in loops:
             for seg in loop:
                 seg_count += 1
-                crv = segment_curve(seg)
+                curve = segment_curve(seg)
                 if skip_pair_set:
                     this_id = sp.Id.IntegerValue
                     this_cat = (cat or "").strip()
-                    gk = _seg_gkey2d(crv);
-                    mk = _seg_mkey2d(crv)
+                    gk = _seg_gkey2d(curve)
+                    mk = _seg_mkey2d(curve)
                     neigh = (shared_ix_g.get(gk) if gk in shared_ix_g else shared_ix_m.get(mk, []))
                     for sid, ncat in (neigh or []):
                         if sid == this_id: continue
