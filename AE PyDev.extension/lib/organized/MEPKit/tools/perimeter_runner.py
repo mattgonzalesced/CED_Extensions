@@ -352,6 +352,12 @@ def place_perimeter_recepts(doc, logger=None):
     skip_pair_set = _load_skip_pair_set(bc_rules)
     shared_ix = _build_shared_boundary_index(doc, spaces, id_rules)
 
+    # new at 1:19 10/8/25
+    gen = (bc_rules or {}).get('general', {})
+    constraints = gen.get('placement_constraints', {}) or {}
+    near_wall_ft = float(constraints.get('near_wall_threshold_ft', 1.0))  # <- default 1.0'
+    log.info("Near-wall threshold: {:.2f} ft".format(near_wall_ft))
+
 
     log.info("Spaces/Rooms found: {}".format(len(spaces)))
     if not spaces:
@@ -496,13 +502,11 @@ def place_perimeter_recepts(doc, logger=None):
                                     if d is None:
                                         log.warning("Near-wall check skipped (no wall curves). Keeping instance.")
                                     else:
-                                        NEAR_WALL_FT = constraints.get("near_wall_threshold_ft",
-                                                                       1.0)  # rule-driven; default 1.0'
-                                        if d > NEAR_WALL_FT:
+                                        if d > near_wall_ft:
                                             doc.Delete(inst.Id)
                                             placed_here -= 1
                                             log.info(
-                                                u"Deleted (no wall within {:.2f} ft): d≈{:.2f} ft".format(NEAR_WALL_FT,
+                                                u"Deleted (no wall within {:.2f} ft): d≈{:.2f} ft".format(near_wall_ft,
                                                                                                           d))
                             except Exception as ex:
                                 log.warning("Near-wall cleanup error: {}".format(ex))

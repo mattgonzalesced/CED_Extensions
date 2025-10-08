@@ -6,7 +6,8 @@
       "placement_constraints": {
         "avoid_corners_ft": 2.0,
         "avoid_doors_ft:": 2.0,
-        "avoid_linked_openings_ft": 2.0
+        "avoid_linked_openings_ft": 2.0,
+        "near_wall_threshold_ft": 0.5
       },
       "min_per_space_default": 2,
       "min_separation_ft_default": 6.0,
