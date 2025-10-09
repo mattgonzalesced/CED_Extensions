@@ -461,6 +461,38 @@ def place_perimeter_recepts(doc, logger=None):
     category_at_xy = locator.category_at_xy
 
     total = 0
+    # --- robust rules/constraints + shared-pair loading ---
+    rules = rules or {}
+    general = (rules.get('general') or {})
+    gcon = (general.get('placement_constraints') or {})
+
+    def _norm(s):
+        return (u'' if s is None else unicode(s)).strip().lower()
+
+    # Accept either:
+    #   general.skip_shared_boundary_pairs: [ ["A","B"], ["X","Y"] ]
+    # or a legacy top-level: skip_shared_boundary_pairs: [...]
+    _raw_pairs = (general.get('skip_shared_boundary_pairs')
+                  or rules.get('skip_shared_boundary_pairs')
+                  or [])
+
+    # also accept strings like "A|B"
+    _pairs = []
+    for it in _raw_pairs:
+        if isinstance(it, (list, tuple)) and len(it) >= 2:
+            _pairs.append((_norm(it[0]), _norm(it[1])))
+        elif isinstance(it, basestring) and '|' in it:
+            a, b = it.split('|', 1)
+            _pairs.append((_norm(a), _norm(b)))
+
+    skip_pair_set = set(tuple(sorted(p)) for p in _pairs if p[0] and p[1])
+
+    pair_probe_ft = float(gcon.get('pair_probe_ft', 0.5))
+    pair_linked_wall_tol_ft = float(gcon.get('pair_linked_wall_tol_ft', 1.5))
+
+    log.info(u"[PAIR] Skip shared pairs: {}".format(sorted(list(skip_pair_set))))
+
+
 
     for sp in spaces:
         space_id = sp.Id.IntegerValue
@@ -583,14 +615,12 @@ def place_perimeter_recepts(doc, logger=None):
                     try:
                         deleted = False
                         # --- point-level guard: skip points near a linked wall if categories form a skip pair ---
+                        # --- point-level guard: skip points near a linked wall if categories form a skip pair ---
                         if skip_pair_set and linked_wall_curves:
                             lc, d_link, txy = _nearest_curve_info_xy(p, linked_wall_curves)
-                            pair_wall_tol = float(
-                                ccon.get('pair_linked_wall_tol_ft', gcon.get('pair_linked_wall_tol_ft', 1.5)))
-                            if lc and (d_link is not None) and (d_link <= pair_wall_tol) and txy:
+                            if lc and (d_link is not None) and (d_link <= pair_linked_wall_tol_ft) and txy:
                                 tx, ty = txy
-                                nx, ny = -ty, tx  # normal to linked wall in XY
-                                # escalate probe a bit to survive tiny offsets between wall line & space boundary
+                                nx, ny = -ty, tx  # normal to the linked wall in XY
                                 for scale in (1.0, 1.5, 2.0, 3.0):
                                     off = pair_probe_ft * scale
                                     a = (p.X + nx * off, p.Y + ny * off)
@@ -605,8 +635,7 @@ def place_perimeter_recepts(doc, logger=None):
                                                 log.info(
                                                     u"[PAIRHIT-PT] skip point near linked wall: {} | {} (d≈{:.2f}ft, off≈{:.2f}ft)"
                                                     .format(pa, pb, d_link, off))
-                                            # skip this candidate point entirely
-                                            raise RuntimeError("skip-point-by-shared-pair")
+                                            continue  # skip this candidate point
                         if wall:
                             inst = place_hosted(doc, wall, sym, p, mounting_height_ft=mh_ft, logger=log)
                         else:
