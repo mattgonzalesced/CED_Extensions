@@ -280,8 +280,3 @@ def place_lighting_controls(doc, logger=None):
     log.info(u"Door switches placed: {}".format(switch_count))
     return {"occupancy": occ_count, "switches": switch_count}
 
-
-if __name__ == "__main__":
-    doc = get_doc()
-    logger = get_logger("LightingControls", title="Place Lighting Controls")
-    place_lighting_controls(doc, logger=logger)
