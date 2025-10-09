@@ -1,0 +1,67 @@
+{
+  "lighting_controls": {
+    "general": {
+      "placement_constraints": {
+        "avoid_corners_ft": 2.0,
+        "avoid_doors_ft:": 2.0,
+        "avoid_linked_openings_ft": 2.0,
+        "near_wall_threshold_ft": 0.5
+      }
+    },
+    "lighting_controls_rules_by_category": {
+      "L shape space": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          {
+            "family": "Duplex Receptacle - Wall",
+            "type_catalog_name": "INSERT TYPE HERE",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\INSERT LIGHT SWITCH FAMILY HERE.rfa"
+          },
+          {
+            "family": "Duplex Receptacle - Wall",
+            "type_catalog_name": "INSERT TYPE HERE",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\INSERT OCCUPANCY SENSOR FAMILY HERE.rfa"
+          }
+        ]
+      },
+      "T shape space": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          {
+            "family": "Duplex Receptacle - Wall",
+            "type_catalog_name": "INSERT TYPE HERE",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\INSERT LIGHT SWITCH FAMILY HERE.rfa"
+          },
+          {
+            "family": "Duplex Receptacle - Wall",
+            "type_catalog_name": "INSERT TYPE HERE",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\INSERT OCCUPANCY SENSOR FAMILY HERE.rfa"
+          }
+        ]
+      },
+      "Weird space": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          {
+            "family": "Duplex Receptacle - Wall",
+            "type_catalog_name": "INSERT TYPE HERE",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\INSERT LIGHT SWITCH FAMILY HERE.rfa"
+          },
+          {
+            "family": "Duplex Receptacle - Wall",
+            "type_catalog_name": "INSERT TYPE HERE",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\INSERT OCCUPANCY SENSOR FAMILY HERE.rfa"
+          }
+        ]
+      },
+      "Support": {},
+      "Special": {}
+    }
+  }
+}
