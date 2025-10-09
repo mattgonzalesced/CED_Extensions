@@ -407,13 +407,68 @@ def _segment_is_from_linked_wall(curve, linked_wall_curves, tol_ft=0.5):
                 pass
     return False
 
-def _load_skip_pair_set(bc_rules):
-    gen = (bc_rules or {}).get('general', {}) or {}
-    rcfg = (bc_rules or {}).get('rule_config', {}) or {}
-    raw = (gen.get('skip_shared_boundary_pairs') or []) + (rcfg.get('skip_shared_boundary_pairs') or [])
+
+def _deep_collect_skip_pairs(obj):
+    """Find any 'skip_shared_boundary_pairs' lists anywhere in a nested dict/list JSON."""
+    out = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if isinstance(k, basestring) and k.strip().lower() == 'skip_shared_boundary_pairs':
+                if isinstance(v, list):
+                    out.extend(v)
+            out.extend(_deep_collect_skip_pairs(v))
+    elif isinstance(obj, list):
+        for it in obj:
+            out.extend(_deep_collect_skip_pairs(it))
+    return out
+
+
+def _load_skip_pair_set(bc_rules, log=None):
+    """
+    Load pairs from:
+      - general.skip_shared_boundary_pairs
+      - rule_config.skip_shared_boundary_pairs
+      - ANYWHERE in the JSON (deep scan fallback)
+    Normalize to lower-case, stripped, and sorted tuple.
+    """
     s = set()
-    for a, b in raw:
-        s.add(tuple(sorted(((a or u'').strip().lower(), (b or u'').strip().lower()))))
+    found_where = []
+
+    def _norm_pair(p):
+        a = ((p[0] if len(p) > 0 else u'') or u'').strip().lower()
+        b = ((p[1] if len(p) > 1 else u'') or u'').strip().lower()
+        return tuple(sorted((a, b)))
+
+    try:
+        gen = (bc_rules or {}).get('general', {}) or {}
+        rcfg = (bc_rules or {}).get('rule_config', {}) or {}
+        raw = (gen.get('skip_shared_boundary_pairs') or []) + (rcfg.get('skip_shared_boundary_pairs') or [])
+        if raw:
+            for p in raw:
+                if isinstance(p, (list, tuple)) and len(p) >= 2:
+                    s.add(_norm_pair(p))
+            found_where.append('general/rule_config')
+    except:
+        pass
+
+    # Deep fallback: look anywhere in the JSON if nothing found above
+    if not s:
+        raw_any = _deep_collect_skip_pairs(bc_rules or {})
+        for p in raw_any:
+            if isinstance(p, (list, tuple)) and len(p) >= 2:
+                s.add(_norm_pair(p))
+        if raw_any:
+            found_where.append('deep-scan')
+
+    if log is not None:
+        log.debug(u"[PAIRLOAD] locations: {} → loaded {} pair(s)".format(
+            ','.join(found_where) or 'none', len(s)
+        ))
+        if s:
+            log.info(u"[PAIR] Skip shared pairs: {}".format(sorted(list(s))))
+        else:
+            log.info(u"[PAIR] Skip shared pairs: []")
+
     return s
 
 
@@ -429,7 +484,7 @@ def place_perimeter_recepts(doc, logger=None):
     spaces = collect_spaces_or_rooms(doc)
 
     # Skip-pair set (e.g., ("dairy/ produce cooler","sales floor"))
-    skip_pair_set = _load_skip_pair_set(bc_rules)
+    skip_pair_set = _load_skip_pair_set(bc_rules, log)
     log.info(u"[PAIR] Skip shared pairs: {}".format(sorted(list(skip_pair_set))))
 
     # Global/general constraints (for near-wall cleanup + default pair params)
