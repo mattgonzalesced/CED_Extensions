@@ -22,4 +22,4 @@ log.info("---- start ----")
 count = place_lighting_controls(doc, logger=log)
 log.info("---- done; placed {} ----".format(count))
 
-alert("Placed {} perimeter receptacle(s).\nCheck the pyRevit Output panel for details."
+alert("Placed {} perimeter receptacle(s).\nCheck the pyRevit Output panel for details.")
