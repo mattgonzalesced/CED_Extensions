@@ -110,8 +110,9 @@ def orient_instance_on_wall(inst, wall=None, space=None, logger=None, sample_ft=
         except Exception as ex:
             if logger:
                 try:
-                logger.debug(u"[ORIENT] space probe failed: {}".format(ex))
-            except Exception:
-                pass
+                    logger.debug(u"[ORIENT] space probe failed: {}".format(ex))
+                except Exception:
+                    pass
 
     return
+
