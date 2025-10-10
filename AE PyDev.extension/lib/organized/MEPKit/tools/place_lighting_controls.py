@@ -237,6 +237,13 @@ def _space_level(doc, space):
 def _place_switch(doc, symbol, wall, point, mounting_height_ft, logger, level=None):
     if not symbol or not point:
         return None
+    if wall is None:
+        try:
+            return place_free(doc, symbol, point, level=level, mounting_height_ft=mounting_height_ft, logger=logger)
+        except Exception as ex:
+            if logger:
+                logger.error(u"[PLACE] Switch placement failed: {}".format(ex))
+        return None
     try:
         return place_hosted(doc, wall, symbol, point, mounting_height_ft=mounting_height_ft, logger=logger)
     except Exception as ex:
@@ -312,10 +319,14 @@ def place_lighting_controls(doc, logger=None):
             for seg in loop:
                 curve = segment_curve(seg)
                 wall = segment_host_wall(doc, seg)
-                if wall is None or curve is None:
+                if curve is None:
                     continue
                 door_hits = door_points_on_wall(
-                    doc, wall, include_linked=True, link_tolerance_ft=max(near_door_ft + 1.0, 3.0)
+                    doc,
+                    wall,
+                    include_linked=True,
+                    link_tolerance_ft=max(near_door_ft + 1.0, 3.0),
+                    boundary_curve=curve,
                 )
                 for door, door_point in door_hits:
                     door_key = _door_identifier(door, door_point)

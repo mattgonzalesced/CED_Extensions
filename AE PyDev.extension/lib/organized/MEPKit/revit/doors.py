@@ -36,29 +36,57 @@ def _get_link_transform(inst):
         except Exception:
             return None
 
-def door_points_on_wall(doc, wall, include_linked=False, link_tolerance_ft=3.0):
+def _distance_to_curve(point, curve):
+    if curve is None or point is None:
+        return None
+    try:
+        res = curve.Project(point)
+        if res:
+            return res.Distance
+    except Exception:
+        pass
+    try:
+        return curve.Distance(point)
+    except Exception:
+        return None
+
+
+def door_points_on_wall(doc, wall, include_linked=False, link_tolerance_ft=3.0, boundary_curve=None):
     doors = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Doors).WhereElementIsNotElementType()
     out = []
     curve = None
     try:
-        loc = getattr(wall, "Location", None)
-        if isinstance(loc, LocationCurve):
-            curve = loc.Curve
-    except:
+        if wall is not None:
+            loc = getattr(wall, "Location", None)
+            if isinstance(loc, LocationCurve):
+                curve = loc.Curve
+    except Exception:
         curve = None
+    if curve is None and boundary_curve is not None:
+        curve = boundary_curve
+
+    tol = 3.0
+    try:
+        tol = float(link_tolerance_ft if link_tolerance_ft is not None else 3.0)
+    except Exception:
+        tol = 3.0
+
     for d in doors:
         try:
-            if getattr(d, "Host", None) and d.Host.Id == wall.Id:
-                p = _door_location_xyz(d)
-                if p:
+            host = getattr(d, "Host", None)
+            p = _door_location_xyz(d)
+            if p is None:
+                continue
+            if wall is not None and host is not None and host.Id == wall.Id:
+                out.append((d, p))
+            elif wall is None and curve is not None:
+                dist = _distance_to_curve(p, curve)
+                if dist is not None and dist <= tol:
                     out.append((d, p))
-        except:
+        except Exception:
             pass
-    if include_linked and curve is not None and link_tolerance_ft is not None:
-        try:
-            tol = float(link_tolerance_ft)
-        except:
-            tol = 3.0
+
+    if include_linked and curve is not None and tol is not None:
         try:
             for inst in FilteredElementCollector(doc).OfClass(RevitLinkInstance):
                 ldoc = inst.GetLinkDocument()
@@ -66,10 +94,10 @@ def door_points_on_wall(doc, wall, include_linked=False, link_tolerance_ft=3.0):
                     continue
                 tf = _get_link_transform(inst)
                 try:
-                    linked_doors = FilteredElementCollector(ldoc)\
-                        .OfCategory(BuiltInCategory.OST_Doors)\
+                    linked_doors = FilteredElementCollector(ldoc) \
+                        .OfCategory(BuiltInCategory.OST_Doors) \
                         .WhereElementIsNotElementType()
-                except:
+                except Exception:
                     linked_doors = []
                 for d in linked_doors:
                     p = _door_location_xyz(d)
@@ -78,23 +106,12 @@ def door_points_on_wall(doc, wall, include_linked=False, link_tolerance_ft=3.0):
                     try:
                         if tf is not None:
                             p = tf.OfPoint(p)
-                    except:
+                    except Exception:
                         pass
-                    try:
-                        proj = curve.Project(p)
-                        if proj is None:
-                            continue
-                        if proj.Distance <= tol:
-                            out.append((d, p))
-                    except:
-                        # fallback: simple XY distance to segment endpoints
-                        try:
-                            dist_vec = curve.Distance(p)
-                            if dist_vec <= tol:
-                                out.append((d, p))
-                        except:
-                            pass
-        except:
+                    dist = _distance_to_curve(p, curve)
+                    if dist is not None and dist <= tol:
+                        out.append((d, p))
+        except Exception:
             pass
     return out
 
