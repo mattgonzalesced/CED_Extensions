@@ -148,6 +148,26 @@ def _choose_catalog_type(type_names, want_exact, want_regex, logger=None):
     if logger: logger.info(u"[CATALOG] fallback first: {}".format(type_names[0]))
     return type_names[0]
 
+
+def _match_catalog_name(type_names, desired, logger=None):
+    """Return the canonical catalog entry matching desired (case/space insensitive)."""
+    if not (type_names and desired):
+        return None
+    # case-sensitive first
+    for name in type_names:
+        if name == desired:
+            if logger: logger.info(u"[CATALOG] canonical (exact): {}".format(name))
+            return name
+    # normalize whitespace/case
+    target = _norm(desired)
+    if not target:
+        return None
+    for name in type_names:
+        if _norm(name) == target:
+            if logger: logger.info(u"[CATALOG] canonical (normalized): {}".format(name))
+            return name
+    return None
+
 # ------------------------------
 # loading (family & catalog symbol)
 
@@ -180,6 +200,8 @@ def _load_symbol_from_catalog(doc, rfa_path, type_name, logger=None):
     if not (rfa_path and os.path.exists(rfa_path) and type_name):
         return None
 
+    catalog_path = os.path.splitext(rfa_path)[0] + '.txt'
+
     # Prefer StrongBox[FamilySymbol] overload; fall back if not available
     try:
         StrongBox = clr.StrongBox
@@ -188,19 +210,36 @@ def _load_symbol_from_catalog(doc, rfa_path, type_name, logger=None):
         has_strongbox = False
 
     def _do():
-        sym = None
-        if has_strongbox:
-            box = clr.StrongBox[FamilySymbol]()  # out param
-            ok = doc.LoadFamilySymbol(rfa_path, type_name, box)
-            if ok and box.Value:
-                sym = box.Value
-        else:
-            ok = doc.LoadFamilySymbol(rfa_path, type_name, _AlwaysLoad())
-            if ok:
-                # resolve by type name now present
-                for fam, typ, fs in _collect_symbols(doc, electrical_only=False):
-                    if _norm(typ) == _norm(type_name):
-                        sym = fs; break
+        attempted = set()
+
+        def load_attempt(name):
+            if not name or name in attempted:
+                return None
+            attempted.add(name)
+            sym = None
+            if has_strongbox:
+                box = clr.StrongBox[FamilySymbol]()  # out param
+                ok = doc.LoadFamilySymbol(rfa_path, name, box)
+                if ok and box.Value:
+                    sym = box.Value
+            else:
+                ok = doc.LoadFamilySymbol(rfa_path, name, _AlwaysLoad())
+                if ok:
+                    # resolve by type name now present
+                    for fam, typ, fs in _collect_symbols(doc, electrical_only=False):
+                        if _norm(typ) == _norm(name):
+                            sym = fs; break
+            return sym
+
+        sym = load_attempt(type_name)
+        if sym:
+            return sym
+
+        if os.path.exists(catalog_path):
+            names = _parse_type_catalog(catalog_path)
+            canonical = _match_catalog_name(names, type_name, logger=logger)
+            if canonical:
+                sym = load_attempt(canonical)
         return sym
 
     try:
@@ -249,17 +288,6 @@ def resolve_or_load_symbol(doc, family_name, type_name=None, load_path=None, log
         if sym:
             return sym
 
-        # 2) If that failed, read the .txt and retry with the canonical row name
-        cat_path = os.path.splitext(load_path)[0] + ".txt"
-        names = _parse_type_catalog(cat_path)  # already in your repo from receptacles
-        if names:
-            # tolerant match (case/space-insensitive), fallback to first if needed
-            canonical = _choose_catalog_type(names, want_exact=type_name, want_regex=None, strict=False)
-            if canonical and canonical != type_name:
-                if logger: logger.info(u"[CATALOG] retry with canonical name: {}".format(canonical))
-                sym = _load_symbol_from_catalog(doc, load_path, canonical, logger)
-                if sym:
-                    return sym
 
     # 2) otherwise load the family shell (non-catalog or we’ll choose later)
     fam_loaded = None
