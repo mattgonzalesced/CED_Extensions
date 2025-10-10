@@ -62,7 +62,7 @@ def _resolve_candidate_symbol(doc, candidate, logger):
     if not candidate:
         return None
     fam = candidate.get('family')
-    typ = candidate.get('type_catalog_name')
+    typ = candidate.get('type')
     load_path = candidate.get('load_from')
     key = (fam or u"", typ or u"", load_path or u"")
     hit = _SYMBOL_CACHE.get(key)
