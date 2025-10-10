@@ -4,7 +4,7 @@ from __future__ import absolute_import
 
 import math
 
-from Autodesk.Revit.DB import XYZ, LocationPoint, ElementTransformUtils, Line
+from Autodesk.Revit.DB import XYZ, LocationPoint
 
 
 def _normalize(vec):
@@ -50,52 +50,48 @@ def _offset(point, direction, distance):
         return None
 
 
+def _wall_tangent_xy(wall, near_point=None):
+    if wall is None:
+        return None
+    try:
+        loc = getattr(wall, "Location", None)
+        curve = getattr(loc, "Curve", None)
+        if curve is None:
+            return None
+        t = 0.5
+        if near_point is not None:
+            try:
+                res = curve.Project(near_point)
+                if res:
+                    t = res.Parameter
+            except Exception:
+                pass
+        try:
+            der = curve.ComputeDerivatives(t, True)
+            return _normalize_xy(der.BasisX)
+        except Exception:
+            p0 = curve.GetEndPoint(0)
+            p1 = curve.GetEndPoint(1)
+            return _normalize_xy(XYZ(p1.X - p0.X, p1.Y - p0.Y, p1.Z - p0.Z))
+    except Exception:
+        return None
+
+
 def orient_instance_on_wall(inst, wall=None, space=None, logger=None, sample_ft=0.5):
-    """Rotate and/or flip a wall-hosted instance so it faces the space interior."""
+    """Flip facing/hand so wall devices align with the interior."""
     if inst is None:
         return
 
-    doc = getattr(inst, "Document", None)
-    if doc is None:
-        return
-
     origin = _instance_origin(inst)
-    if origin is None:
-        return
 
     facing = _normalize(getattr(inst, "FacingOrientation", None))
     if facing is None:
         return
 
-    can_flip = bool(getattr(inst, "CanFlipFacing", False))
+    can_flip_facing = bool(getattr(inst, "CanFlipFacing", False))
 
-    # Align with wall interior normal first
-    if wall is not None:
-        wall_orient = _normalize(getattr(wall, "Orientation", None))
-        desired_xy = _normalize_xy(XYZ(-wall_orient.X, -wall_orient.Y, 0.0)) if wall_orient else None
-        current_xy = _normalize_xy(facing)
-        if desired_xy and current_xy:
-            try:
-                dot = current_xy.X * desired_xy.X + current_xy.Y * desired_xy.Y
-                cross = current_xy.X * desired_xy.Y - current_xy.Y * desired_xy.X
-                angle = math.atan2(cross, dot)
-            except Exception:
-                angle = None
-            if angle is not None and abs(angle) > 1e-3:
-                try:
-                    axis = Line.CreateBound(origin, XYZ(origin.X, origin.Y, origin.Z + 1.0))
-                    ElementTransformUtils.RotateElement(doc, inst.Id, axis, angle)
-                    facing = _normalize(getattr(inst, "FacingOrientation", None)) or facing
-                    current_xy = _normalize_xy(facing)
-                except Exception as ex:
-                    if logger:
-                        try:
-                            logger.debug(u"[ORIENT] rotate failed: {}".format(ex))
-                        except Exception:
-                            pass
-
-    # After rotation, if space is available ensure facing points inward
-    if space is not None and can_flip:
+    # Prefer the provided space for determining front/back
+    if space is not None and origin is not None and can_flip_facing:
         try:
             front_pt = _offset(origin, facing, sample_ft)
             back_pt = _offset(origin, facing, -sample_ft)
@@ -104,9 +100,9 @@ def orient_instance_on_wall(inst, wall=None, space=None, logger=None, sample_ft=
 
             if inside_back and not inside_front:
                 inst.FlipFacing()
-                return
-            if inside_front and not inside_back:
-                return
+                facing = _normalize(getattr(inst, "FacingOrientation", None)) or facing
+            elif inside_front:
+                pass
         except Exception as ex:
             if logger:
                 try:
@@ -114,5 +110,42 @@ def orient_instance_on_wall(inst, wall=None, space=None, logger=None, sample_ft=
                 except Exception:
                     pass
 
-    return
+    # Fallback to wall orientation if space was unavailable
+    if wall is not None:
+        wall_orient = _normalize(getattr(wall, "Orientation", None))
+        if wall_orient is not None and can_flip_facing:
+            interior = XYZ(-wall_orient.X, -wall_orient.Y, -wall_orient.Z)
+            try:
+                dot = facing.X * interior.X + facing.Y * interior.Y + facing.Z * interior.Z
+            except Exception:
+                dot = None
+            if dot is not None and dot < 0.0:
+                try:
+                    inst.FlipFacing()
+                    facing = _normalize(getattr(inst, "FacingOrientation", None)) or facing
+                except Exception as ex:
+                    if logger:
+                        try:
+                            logger.debug(u"[ORIENT] wall flip failed: {}".format(ex))
+                        except Exception:
+                            pass
 
+    # Align hand orientation with wall tangent so the device stays orthogonal to the face
+    hand = _normalize_xy(getattr(inst, "HandOrientation", None))
+    wall_tangent = _wall_tangent_xy(wall, origin) if wall is not None else None
+    if hand is not None and wall_tangent is not None and getattr(inst, "CanFlipHand", False):
+        try:
+            dot = hand.X * wall_tangent.X + hand.Y * wall_tangent.Y
+        except Exception:
+            dot = None
+        if dot is not None and dot < 0.0:
+            try:
+                inst.FlipHand()
+            except Exception as ex:
+                if logger:
+                    try:
+                        logger.debug(u"[ORIENT] hand flip failed: {}".format(ex))
+                    except Exception:
+                        pass
+
+    return
