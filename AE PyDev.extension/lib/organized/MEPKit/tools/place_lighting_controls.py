@@ -162,6 +162,16 @@ def _space_inward_normal(space, door_point, dir_xy, probe_ft=0.5):
     return None
 
 
+def _wall_face_offset_ft(wall, pad_ft=0.1):
+    try:
+        width = getattr(wall, "Width", None)
+        if width is not None:
+            return max(pad_ft, float(width) * 0.5 + pad_ft)
+    except Exception:
+        pass
+    return pad_ft
+
+
 def _switch_point_for_door(space, wall, door_point, near_door_ft):
     if not wall or not door_point:
         return None
@@ -173,13 +183,17 @@ def _switch_point_for_door(space, wall, door_point, near_door_ft):
     inward_xy = _space_inward_normal(space, door_point, dir_xy)
     if inward_xy is None:
         return None
+    face_offset = _wall_face_offset_ft(wall)
 
     for sign in (1.0, -1.0):
         dx = dir_xy[0] * near_door_ft * sign
         dy = dir_xy[1] * near_door_ft * sign
-        candidate = XYZ(door_point.X + dx, door_point.Y + dy, door_point.Z)
-        probe = XYZ(candidate.X + inward_xy[0] * 0.5,
-                    candidate.Y + inward_xy[1] * 0.5,
+        base = XYZ(door_point.X + dx, door_point.Y + dy, door_point.Z)
+        candidate = XYZ(base.X + inward_xy[0] * face_offset,
+                        base.Y + inward_xy[1] * face_offset,
+                        base.Z)
+        probe = XYZ(candidate.X + inward_xy[0] * 0.2,
+                    candidate.Y + inward_xy[1] * 0.2,
                     candidate.Z)
         try:
             if space.IsPointInSpace(probe):
@@ -187,8 +201,8 @@ def _switch_point_for_door(space, wall, door_point, near_door_ft):
         except Exception:
             continue
 
-    fallback = XYZ(door_point.X + inward_xy[0] * 0.25,
-                   door_point.Y + inward_xy[1] * 0.25,
+    fallback = XYZ(door_point.X + inward_xy[0] * face_offset,
+                   door_point.Y + inward_xy[1] * face_offset,
                    door_point.Z)
     try:
         if space.IsPointInSpace(fallback):
