@@ -23,6 +23,7 @@ from organized.MEPKit.revit.spaces import (
 from organized.MEPKit.revit.placement import place_free, place_hosted
 from organized.MEPKit.revit.symbols import resolve_or_load_symbol
 from organized.MEPKit.revit.doors import door_points_on_wall
+from organized.MEPKit.revit.orientation3D import orient_instance_on_wall
 from organized.MEPKit.electrical.selection import active_phase
 
 
@@ -320,6 +321,7 @@ def place_lighting_controls(doc, logger=None):
                                          mounting_height_ft=mounting_height_ft,
                                          logger=log, level=level)
                     if inst:
+                        orient_instance_on_wall(inst, wall=wall, space=space, logger=log)
                         processed_doors.add(door_key)
                         switch_count += 1
                     else:
