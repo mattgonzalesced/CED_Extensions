@@ -23,7 +23,6 @@ from organized.MEPKit.revit.spaces import (
 from organized.MEPKit.revit.placement import place_free, place_hosted
 from organized.MEPKit.revit.symbols import resolve_or_load_symbol
 from organized.MEPKit.revit.doors import door_points_on_wall
-from organized.MEPKit.revit.orientation3D import orient_instance_on_wall
 from organized.MEPKit.electrical.selection import active_phase
 
 
@@ -173,6 +172,18 @@ def _wall_face_offset_ft(wall, pad_ft=0.1):
     return pad_ft
 
 
+def _wall_inward_xy(wall):
+    try:
+        orient = getattr(wall, "Orientation", None)
+        if orient:
+            mag = math.hypot(orient.X, orient.Y)
+            if mag > 1e-6:
+                return (-orient.X / mag, -orient.Y / mag)
+    except Exception:
+        pass
+    return None
+
+
 def _switch_point_for_door(space, wall, door_point, near_door_ft):
     if not wall or not door_point:
         return None
@@ -183,8 +194,11 @@ def _switch_point_for_door(space, wall, door_point, near_door_ft):
     dir_xy = _unit_xy_from_curve(curve)
     inward_xy = _space_inward_normal(space, door_point, dir_xy)
     if inward_xy is None:
-        return None
+        inward_xy = _wall_inward_xy(wall)
+    if inward_xy is None:
+        inward_xy = (0.0, 1.0)
     face_offset = _wall_face_offset_ft(wall)
+    fallback_point = None
 
     for sign in (1.0, -1.0):
         dx = dir_xy[0] * near_door_ft * sign
@@ -193,23 +207,20 @@ def _switch_point_for_door(space, wall, door_point, near_door_ft):
         candidate = XYZ(base.X + inward_xy[0] * face_offset,
                         base.Y + inward_xy[1] * face_offset,
                         base.Z)
-        probe = XYZ(candidate.X + inward_xy[0] * 0.2,
-                    candidate.Y + inward_xy[1] * 0.2,
-                    candidate.Z)
-        try:
-            if space.IsPointInSpace(probe):
-                return candidate
-        except Exception:
-            continue
+        if fallback_point is None:
+            fallback_point = candidate
+        if space is not None:
+            probe = XYZ(candidate.X + inward_xy[0] * 0.2,
+                        candidate.Y + inward_xy[1] * 0.2,
+                        candidate.Z)
+            try:
+                if space.IsPointInSpace(probe):
+                    return candidate
+            except Exception:
+                pass
 
-    fallback = XYZ(door_point.X + inward_xy[0] * face_offset,
-                   door_point.Y + inward_xy[1] * face_offset,
-                   door_point.Z)
-    try:
-        if space.IsPointInSpace(fallback):
-            return fallback
-    except Exception:
-        pass
+    if fallback_point is not None:
+        return fallback_point
     return None
 
 
@@ -304,7 +315,7 @@ def place_lighting_controls(doc, logger=None):
                 if wall is None or curve is None:
                     continue
                 door_hits = door_points_on_wall(
-                    doc, wall, include_linked=True, link_tolerance_ft=max(near_door_ft, 2.0)
+                    doc, wall, include_linked=True, link_tolerance_ft=max(near_door_ft + 1.0, 3.0)
                 )
                 for door, door_point in door_hits:
                     door_key = _door_identifier(door, door_point)
@@ -321,7 +332,6 @@ def place_lighting_controls(doc, logger=None):
                                          mounting_height_ft=mounting_height_ft,
                                          logger=log, level=level)
                     if inst:
-                        orient_instance_on_wall(inst, wall=wall, space=space, logger=log)
                         processed_doors.add(door_key)
                         switch_count += 1
                     else:
@@ -331,3 +341,4 @@ def place_lighting_controls(doc, logger=None):
     log.info(u"Occupancy-style devices placed: {}".format(occ_count))
     log.info(u"Door switches placed: {}".format(switch_count))
     return {"occupancy": occ_count, "switches": switch_count}
+

@@ -18,7 +18,6 @@ from organized.MEPKit.revit.doors import door_points_on_wall, filter_points_by_d
 from organized.MEPKit.revit.placement import place_hosted, place_free
 from organized.MEPKit.revit.symbols import resolve_or_load_symbol
 from organized.MEPKit.revit.params import set_param_value  # optional for mounting height
-from organized.MEPKit.revit.orientation3D import orient_instance_on_wall
 
 from Autodesk.Revit.DB import (
     RevitLinkInstance, Opening, BuiltInCategory, FilteredElementCollector,
@@ -670,7 +669,6 @@ def place_perimeter_recepts(doc, logger=None):
                         deleted = False
                         if wall:
                             inst = place_hosted(doc, wall, sym, p, mounting_height_ft=mh_ft, logger=log)
-                            orient_instance_on_wall(inst, wall=wall, space=space, logger=log)
                         else:
                             inst = place_free(doc, sym, p, mounting_height_ft=mh_ft, logger=log)
                             # near-wall cleanup only for truly free instances
