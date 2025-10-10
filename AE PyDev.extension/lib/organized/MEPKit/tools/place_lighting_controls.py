@@ -83,6 +83,46 @@ def _resolve_candidate_symbol(doc, candidate, logger):
     return sym
 
 
+def _door_identifier(door, point):
+    if door is None:
+        return ('link-point', round(point.X, 3), round(point.Y, 3), round(point.Z, 3))
+    try:
+        uid = getattr(door, "UniqueId", None)
+        if uid:
+            return ('uid', uid)
+    except Exception:
+        pass
+    try:
+        did = door.Id.IntegerValue
+    except Exception:
+        did = id(door)
+    doc_label = None
+    try:
+        doc = getattr(door, "Document", None)
+        if doc:
+            doc_label = getattr(doc, "Title", None) or getattr(doc, "PathName", None)
+    except Exception:
+        doc_label = None
+    return ('id', doc_label, did)
+
+
+def _door_label(door, point):
+    if door is None:
+        return u"linked@({:.2f},{:.2f})".format(point.X, point.Y)
+    try:
+        name = getattr(door, "Name", None)
+        uid = getattr(door, "UniqueId", None)
+        if name and uid:
+            return u"{} [{}]".format(name, uid)
+        if name:
+            return name
+        if uid:
+            return uid
+    except Exception:
+        pass
+    return u"door@({:.2f},{:.2f})".format(point.X, point.Y)
+
+
 def _resolve_first_available_symbol(doc, candidates, logger):
     for cand in (candidates or []):
         sym = _resolve_candidate_symbol(doc, cand, logger)
@@ -120,23 +160,6 @@ def _space_inward_normal(space, door_point, dir_xy, probe_ft=0.5):
         except Exception:
             continue
     return None
-
-
-def _door_belongs_to_space(door, space, phase):
-    if not door or not space:
-        return False
-    if phase is None:
-        return True
-    for attr in ("ToRoom", "FromRoom"):
-        try:
-            accessor = getattr(door, attr, None)
-            if accessor:
-                room = accessor[phase]
-                if room and room.Id == space.Id:
-                    return True
-        except Exception:
-            continue
-    return False
 
 
 def _switch_point_for_door(space, wall, door_point, near_door_ft):
@@ -265,28 +288,29 @@ def place_lighting_controls(doc, logger=None):
                 wall = segment_host_wall(doc, seg)
                 if wall is None or curve is None:
                     continue
-                for door, door_point in door_points_on_wall(doc, wall):
-                    door_id = door.Id.IntegerValue if door else None
-                    if door_id in processed_doors:
-                        continue
-                    if not _door_belongs_to_space(door, space, phase):
+                door_hits = door_points_on_wall(
+                    doc, wall, include_linked=True, link_tolerance_ft=max(near_door_ft, 2.0)
+                )
+                for door, door_point in door_hits:
+                    door_key = _door_identifier(door, door_point)
+                    if door_key in processed_doors:
                         continue
 
                     point = _switch_point_for_door(space, wall, door_point, near_door_ft)
                     if not point:
-                        log.debug(u"[SKIP] No valid switch point near door {} for space '{}'".format(
-                            door_id, getattr(space, "Name", u"<unnamed>")))
+                        log.debug(u"[SKIP] No valid switch point near {} for space '{}'".format(
+                            _door_label(door, door_point), getattr(space, "Name", u"<unnamed>")))
                         continue
 
                     inst = _place_switch(doc, switch_symbol, wall, point,
                                          mounting_height_ft=mounting_height_ft,
                                          logger=log, level=level)
                     if inst:
-                        processed_doors.add(door_id)
+                        processed_doors.add(door_key)
                         switch_count += 1
                     else:
-                        log.warning(u"[PLACE] Switch placement failed for door {} in space '{}'".format(
-                            door_id, getattr(space, "Name", u"<unnamed>")))
+                        log.warning(u"[PLACE] Switch placement failed near {} in space '{}'".format(
+                            _door_label(door, door_point), getattr(space, "Name", u"<unnamed>")))
 
     log.info(u"Occupancy-style devices placed: {}".format(occ_count))
     log.info(u"Door switches placed: {}".format(switch_count))
