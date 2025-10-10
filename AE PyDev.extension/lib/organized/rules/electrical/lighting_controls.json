@@ -15,14 +15,14 @@
         },
         "device_candidates": [
           {
-            "family": "Duplex Receptacle - Wall",
-            "type_catalog_name": "Single Pole",
-            "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
-          },
-          {
-            "family": "Duplex Receptacle - Wall",
+            "family": "Downlight - Rectangle - LED",
             "type_catalog_name": "18W Square",
             "load_from": "C:\\Users\\reed.pinterich\\Documents\\Downlight - Rectangle - LED.rfa"
+          },
+          {
+            "family": "Lighting Switches",
+            "type_catalog_name": "Single Pole",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
           }
         ]
       },
@@ -32,14 +32,14 @@
         },
         "device_candidates": [
           {
-            "family": "Duplex Receptacle - Wall",
-            "type_catalog_name": "Single Pole",
-            "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
-          },
-          {
-            "family": "Duplex Receptacle - Wall",
+            "family": "Downlight - Rectangle - LED",
             "type_catalog_name": "18W Square",
             "load_from": "C:\\Users\\reed.pinterich\\Documents\\Downlight - Rectangle - LED.rfa"
+          },
+          {
+            "family": "Lighting Switches",
+            "type_catalog_name": "Single Pole",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
           }
         ]
       },
@@ -49,14 +49,14 @@
         },
         "device_candidates": [
           {
-            "family": "Duplex Receptacle - Wall",
-            "type_catalog_name": "Single Pole",
-            "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
-          },
-          {
-            "family": "Duplex Receptacle - Wall",
+            "family": "Downlight - Rectangle - LED",
             "type_catalog_name": "18W Square",
             "load_from": "C:\\Users\\reed.pinterich\\Documents\\Downlight - Rectangle - LED.rfa"
+          },
+          {
+            "family": "Lighting Switches",
+            "type_catalog_name": "Single Pole",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
           }
         ]
       },
