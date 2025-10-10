@@ -149,24 +149,26 @@ def _choose_catalog_type(type_names, want_exact, want_regex, logger=None):
     return type_names[0]
 
 
-def _match_catalog_name(type_names, desired, logger=None):
-    """Return the canonical catalog entry matching desired (case/space insensitive)."""
+def _matching_catalog_names(type_names, desired, logger=None):
+    """Return catalog entries that match desired, preferring case-sensitive first."""
     if not (type_names and desired):
-        return None
-    # case-sensitive first
+        return []
+    matches = []
     for name in type_names:
         if name == desired:
-            if logger: logger.info(u"[CATALOG] canonical (exact): {}".format(name))
-            return name
-    # normalize whitespace/case
+            matches.append(name)
+    if matches:
+        if logger: logger.info(u"[CATALOG] canonical (exact): {}".format(matches[0]))
+        return matches
     target = _norm(desired)
     if not target:
-        return None
+        return []
     for name in type_names:
         if _norm(name) == target:
-            if logger: logger.info(u"[CATALOG] canonical (normalized): {}".format(name))
-            return name
-    return None
+            matches.append(name)
+    if matches and logger:
+        logger.info(u"[CATALOG] canonical (normalized): {}".format(matches[0]))
+    return matches
 
 # ------------------------------
 # loading (family & catalog symbol)
@@ -237,9 +239,19 @@ def _load_symbol_from_catalog(doc, rfa_path, type_name, logger=None):
 
         if os.path.exists(catalog_path):
             names = _parse_type_catalog(catalog_path)
-            canonical = _match_catalog_name(names, type_name, logger=logger)
-            if canonical:
-                sym = load_attempt(canonical)
+            matches = _matching_catalog_names(names, type_name, logger=logger)
+            for alt in matches:
+                sym = load_attempt(alt)
+                if sym:
+                    return sym
+            if names and not matches:
+                # no direct match; try case-insensitive contains
+                fallback = [n for n in names if _norm(type_name) in _norm(n)]
+                for alt in fallback:
+                    if logger: logger.info(u"[CATALOG] fuzzy fallback: {}".format(alt))
+                    sym = load_attempt(alt)
+                    if sym:
+                        return sym
         return sym
 
     try:
