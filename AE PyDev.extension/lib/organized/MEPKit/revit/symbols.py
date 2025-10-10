@@ -314,6 +314,8 @@ def resolve_or_load_symbol(doc, family_name, type_name=None, load_path=None, log
                 fam_loaded = fam_obj
                 if logger: logger.info(u"[LOAD] Loaded family from: {}".format(load_path))
                 _log_loaded_types(doc, fam_loaded, logger)
+            else:
+                fam_loaded = None
         except Exception as ex:
             if logger: logger.warning(u"[LOAD] Family load failed: {}".format(ex))
 
@@ -339,6 +341,11 @@ def resolve_or_load_symbol(doc, family_name, type_name=None, load_path=None, log
                         return sym
             except:
                 pass
+        # If still no type, try catalog load again now that the family shell is in the project
+        if typ_req:
+            sym = _load_symbol_from_catalog(doc, load_path, typ_req, logger=logger)
+            if sym:
+                return sym
 
     # 3) fuzzy contains matching in project (family+type, then type-only among electrical)
     famn = _norm(fam_req) if fam_req else None
