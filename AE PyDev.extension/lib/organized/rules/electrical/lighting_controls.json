@@ -21,7 +21,7 @@
           },
           {
             "family": "Lighting Switches",
-            "type_catalog_name": "Single Pole",
+            "type": "Single Pole",
             "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
           }
         ]
@@ -38,7 +38,7 @@
           },
           {
             "family": "Lighting Switches",
-            "type_catalog_name": "Single Pole",
+            "type": "Single Pole",
             "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
           }
         ]
@@ -55,7 +55,7 @@
           },
           {
             "family": "Lighting Switches",
-            "type_catalog_name": "Single Pole",
+            "type": "Single Pole",
             "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
           }
         ]
