@@ -57,6 +57,7 @@
         "device_candidates": [
       
           {
+            "family": "Lighting Switches",
             "type_catalog_name": "Three Way",
             "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
           }
@@ -69,6 +70,7 @@
         "device_candidates": [
           
           {
+            "family": "Lighting Switches",
             "type_catalog_name": "Single Pole",
             "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
           }
@@ -81,6 +83,7 @@
         "device_candidates": [
           
           {
+            "family": "Lighting Switches",
             "type_catalog_name": "Single Pole",
             "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
           }
