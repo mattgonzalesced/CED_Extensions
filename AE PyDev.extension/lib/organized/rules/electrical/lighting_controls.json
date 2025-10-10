@@ -46,6 +46,174 @@
           
         ]
       },
+      "Back Office": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          {
+            "family": "LD-U_General Lighting Device_CED",
+            "type_catalog_name": "Occupancy Sensor - Ceiling Circle",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_General Lighting Device_CED.rfa"
+          }
+        ]
+      },
+      "Device Check": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          {
+            "family": "LD-U_General Lighting Device_CED",
+            "type_catalog_name": "Occupancy Sensor - Ceiling Circle",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_General Lighting Device_CED.rfa"
+          }
+        ]
+      },
+      "CO2 Device Check": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          {
+            "family": "LD-U_General Lighting Device_CED",
+            "type_catalog_name": "Occupancy Sensor - Ceiling Circle",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_General Lighting Device_CED.rfa"
+          }
+        ]
+      },
+      "Break Room": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          {
+            "family": "LD-U_General Lighting Device_CED",
+            "type_catalog_name": "Occupancy Sensor - Ceiling Circle",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_General Lighting Device_CED.rfa"
+          }
+        ]
+      },
+      "Dairy/ Produce Cooler": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          {
+            "family": "LD-U_General Lighting Device_CED",
+            "type_catalog_name": "Occupancy Sensor - Ceiling Circle",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_General Lighting Device_CED.rfa"
+          }
+        ]
+      },
+      "Freezer": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          {
+            "family": "LD-U_General Lighting Device_CED",
+            "type_catalog_name": "Occupancy Sensor - Ceiling Circle",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_General Lighting Device_CED.rfa"
+          }
+        ]
+      },
+      "Front Office": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          {
+            "family": "LD-U_General Lighting Device_CED",
+            "type_catalog_name": "Occupancy Sensor - Ceiling Circle",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_General Lighting Device_CED.rfa"
+          }
+        ]
+      },
+      "Hallway": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          {
+            "family": "LD-U_General Lighting Device_CED",
+            "type_catalog_name": "Occupancy Sensor - Ceiling Circle",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_General Lighting Device_CED.rfa"
+          }
+        ]
+      },
+      "Meat Cooler": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          {
+            "family": "LD-U_General Lighting Device_CED",
+            "type_catalog_name": "Occupancy Sensor - Ceiling Circle",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_General Lighting Device_CED.rfa"
+          }
+        ]
+      },
+      "Receiving Area": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          {
+            "family": "LD-U_General Lighting Device_CED",
+            "type_catalog_name": "Occupancy Sensor - Ceiling Circle",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_General Lighting Device_CED.rfa"
+          }
+        ]
+      },
+      "Restroom": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          {
+            "family": "LD-U_General Lighting Device_CED",
+            "type_catalog_name": "Occupancy Sensor - Ceiling Circle",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_General Lighting Device_CED.rfa"
+          }
+        ]
+      },
+      "Sales Floor": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          {
+            "family": "LD-U_General Lighting Device_CED",
+            "type_catalog_name": "Occupancy Sensor - Ceiling Circle",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_General Lighting Device_CED.rfa"
+          }
+        ]
+      },
+      "Stock Room": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          {
+            "family": "LD-U_General Lighting Device_CED",
+            "type_catalog_name": "Occupancy Sensor - Ceiling Circle",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_General Lighting Device_CED.rfa"
+          }
+        ]
+      },
+      "Vestibule": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          {
+            "family": "LD-U_General Lighting Device_CED",
+            "type_catalog_name": "Occupancy Sensor - Ceiling Circle",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_General Lighting Device_CED.rfa"
+          }
+        ]
+      },
       "Support": {},
       "Special": {}
     },
@@ -58,7 +226,7 @@
       
           {
             "family": "Lighting Switches",
-            "type_catalog_name": "Three Way",
+            "type_catalog_name": "Single Pole",
             "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
           }
         ]
@@ -86,6 +254,188 @@
             "family": "Lighting Switches",
             "type_catalog_name": "Single Pole",
             "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
+          }
+        ]
+      },
+      "Back Office": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+      
+          {
+            "family": "LD-U_Light Switch_CED",
+            "type_catalog_name": "Light Switch - Occupancy Sensor",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_Light Switch_CED.rfa"
+          }
+        ]
+      },
+      "Device Check": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+      
+          {
+            "family": "LD-U_Light Switch_CED",
+            "type_catalog_name": "Light Switch - Occupancy Sensor",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_Light Switch_CED.rfa"
+          }
+        ]
+      },
+      "CO2 Device Check": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+      
+          {
+            "family": "LD-U_Light Switch_CED",
+            "type_catalog_name": "Light Switch - Occupancy Sensor",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_Light Switch_CED.rfa"
+          }
+        ]
+      },
+      "Break Room": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+      
+          {
+            "family": "LD-U_Light Switch_CED",
+            "type_catalog_name": "Light Switch - Occupancy Sensor",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_Light Switch_CED.rfa"
+          }
+        ]
+      },
+      "Dairy/ Produce Cooler": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+      
+          {
+            "family": "LD-U_Light Switch_CED",
+            "type_catalog_name": "Light Switch - Occupancy Sensor",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_Light Switch_CED.rfa"
+          }
+        ]
+      },
+      "Freezer": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+      
+          {
+            "family": "LD-U_Light Switch_CED",
+            "type_catalog_name": "Light Switch - Occupancy Sensor",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_Light Switch_CED.rfa"
+          }
+        ]
+      },
+      "Front Office": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+      
+          {
+            "family": "LD-U_Light Switch_CED",
+            "type_catalog_name": "Light Switch - Occupancy Sensor",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_Light Switch_CED.rfa"
+          }
+        ]
+      },
+      "Hallway": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+      
+          {
+            "family": "LD-U_Light Switch_CED",
+            "type_catalog_name": "Light Switch - Occupancy Sensor",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_Light Switch_CED.rfa"
+          }
+        ]
+      },
+      "Meat Cooler": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+      
+          {
+            "family": "LD-U_Light Switch_CED",
+            "type_catalog_name": "Light Switch - Occupancy Sensor",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_Light Switch_CED.rfa"
+          }
+        ]
+      },
+      "Receiving Area": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+      
+          {
+            "family": "LD-U_Light Switch_CED",
+            "type_catalog_name": "Light Switch - Occupancy Sensor",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_Light Switch_CED.rfa"
+          }
+        ]
+      },
+      "Restroom": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+      
+          {
+            "family": "LD-U_Light Switch_CED",
+            "type_catalog_name": "Light Switch - Occupancy Sensor",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_Light Switch_CED.rfa"
+          }
+        ]
+      },
+      "Sales Floor": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+      
+          {
+            "family": "LD-U_Light Switch_CED",
+            "type_catalog_name": "Light Switch - Occupancy Sensor",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_Light Switch_CED.rfa"
+          }
+        ]
+      },
+      "Stock Room": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+      
+          {
+            "family": "LD-U_Light Switch_CED",
+            "type_catalog_name": "Light Switch - Occupancy Sensor",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_Light Switch_CED.rfa"
+          }
+        ]
+      },
+      "Vestibule": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+      
+          {
+            "family": "LD-U_Light Switch_CED",
+            "type_catalog_name": "Light Switch - Occupancy Sensor",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\LD-U_Light Switch_CED.rfa"
           }
         ]
       },
