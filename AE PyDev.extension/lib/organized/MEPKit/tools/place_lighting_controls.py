@@ -45,14 +45,18 @@ def _space_center_point(space):
     return None
 
 
-def _category_rule(rules, category, fallback="Support"):
+def _category_rules(rules, category, fallback="Support"):
     lighting = rules.get('lighting_controls') or {}
-    by_cat = lighting.get('lighting_controls_rules_by_category') or {}
-    rule = (by_cat.get(category) or {})
-    if not rule and fallback:
-        rule = by_cat.get(fallback) or {}
+    sensor_rules = lighting.get('lighting_controls_rules_by_sensors') or {}
+    switch_rules = lighting.get('lighting_controls_rules_by_switches') or {}
+    sensor_rule = sensor_rules.get(category) or {}
+    switch_rule = switch_rules.get(category) or {}
+    if not sensor_rule and fallback:
+        sensor_rule = sensor_rules.get(fallback) or {}
+    if not switch_rule and fallback:
+        switch_rule = switch_rules.get(fallback) or {}
     general = lighting.get('general') or {}
-    return rule, general
+    return sensor_rule, switch_rule, general
 
 
 _SYMBOL_CACHE = {}
@@ -62,7 +66,7 @@ def _resolve_candidate_symbol(doc, candidate, logger):
     if not candidate:
         return None
     fam = candidate.get('family')
-    typ = candidate.get('type')
+    typ = candidate.get('type_catalog_name')
     load_path = candidate.get('load_from')
     key = (fam or u"", typ or u"", load_path or u"")
     hit = _SYMBOL_CACHE.get(key)
@@ -77,6 +81,14 @@ def _resolve_candidate_symbol(doc, candidate, logger):
     if sym:
         _SYMBOL_CACHE[key] = sym
     return sym
+
+
+def _resolve_first_available_symbol(doc, candidates, logger):
+    for cand in (candidates or []):
+        sym = _resolve_candidate_symbol(doc, cand, logger)
+        if sym:
+            return sym
+    return None
 
 
 def _unit_xy_from_curve(curve):
@@ -205,19 +217,19 @@ def place_lighting_controls(doc, logger=None):
     for space in spaces:
         match_text = space_match_text(space)
         category = categorize_space_by_name(match_text, id_rules)
-        rule, general = _category_rule(rules, category)
-        candidates = (rule.get('device_candidates') or [])
+        sensor_rule, switch_rule, general = _category_rules(rules, category)
+        sensor_candidates = (sensor_rule.get('device_candidates') or [])
+        switch_candidates = (switch_rule.get('device_candidates') or [])
 
-        if len(candidates) < 2:
-            log.debug(u"Skip space '{}' [{}] -> insufficient device candidates".format(
+        if not sensor_candidates:
+            log.debug(u"No occupancy device candidates for '{}' [{}]".format(
                 getattr(space, "Name", u"<unnamed>"), category))
-            continue
+        if not switch_candidates:
+            log.debug(u"No switch device candidates for '{}' [{}]".format(
+                getattr(space, "Name", u"<unnamed>"), category))
 
-        occ_candidate = candidates[0]
-        switch_candidate = candidates[1]
-
-        occ_symbol = _resolve_candidate_symbol(doc, occ_candidate, log)
-        switch_symbol = _resolve_candidate_symbol(doc, switch_candidate, log)
+        occ_symbol = _resolve_first_available_symbol(doc, sensor_candidates, log)
+        switch_symbol = _resolve_first_available_symbol(doc, switch_candidates, log)
 
         level = _space_level(doc, space)
 
@@ -238,7 +250,7 @@ def place_lighting_controls(doc, logger=None):
                 getattr(space, "Name", u"<unnamed>")))
             continue
 
-        constraints = rule.get('placement_constraints', {}) or {}
+        constraints = switch_rule.get('placement_constraints', {}) or {}
         general_constraints = (general.get('placement_constraints') or {}) if general else {}
         near_door_ft = float(constraints.get('place_near_door_ft',
                                              general_constraints.get('place_near_door_ft', 2.0)))
@@ -279,4 +291,3 @@ def place_lighting_controls(doc, logger=None):
     log.info(u"Occupancy-style devices placed: {}".format(occ_count))
     log.info(u"Door switches placed: {}".format(switch_count))
     return {"occupancy": occ_count, "switches": switch_count}
-

@@ -8,7 +8,7 @@
         "near_wall_threshold_ft": 0.5
       }
     },
-    "lighting_controls_rules_by_category": {
+    "lighting_controls_rules_by_sensors": {
       "L shape space": {
         "placement_constraints": {
         "place_near_door_ft": 2.0
@@ -18,11 +18,6 @@
             "family": "Downlight - Rectangle - LED",
             "type_catalog_name": "18W Square",
             "load_from": "C:\\Users\\reed.pinterich\\Documents\\Downlight - Rectangle - LED.rfa"
-          },
-          {
-            "family": "Lighting Switches",
-            "type": "Single Pole",
-            "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
           }
         ]
       },
@@ -35,11 +30,6 @@
             "family": "Downlight - Rectangle - LED",
             "type_catalog_name": "18W Square",
             "load_from": "C:\\Users\\reed.pinterich\\Documents\\Downlight - Rectangle - LED.rfa"
-          },
-          {
-            "family": "Lighting Switches",
-            "type": "Single Pole",
-            "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
           }
         ]
       },
@@ -52,10 +42,49 @@
             "family": "Downlight - Rectangle - LED",
             "type_catalog_name": "18W Square",
             "load_from": "C:\\Users\\reed.pinterich\\Documents\\Downlight - Rectangle - LED.rfa"
-          },
+          }
+          
+        ]
+      },
+      "Support": {},
+      "Special": {}
+    },
+    "lighting_controls_rules_by_switches": {
+      "L shape space": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+      
           {
             "family": "Lighting Switches",
-            "type": "Single Pole",
+            "type_catalog_name": "Single Pole",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
+          }
+        ]
+      },
+      "T shape space": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          
+          {
+            "family": "Lighting Switches",
+            "type_catalog_name": "Single Pole",
+            "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
+          }
+        ]
+      },
+      "Weird space": {
+        "placement_constraints": {
+        "place_near_door_ft": 2.0
+        },
+        "device_candidates": [
+          
+          {
+            "family": "Lighting Switches",
+            "type_catalog_name": "Single Pole",
             "load_from": "C:\\Users\\reed.pinterich\\Documents\\Lighting Switches.rfa"
           }
         ]
