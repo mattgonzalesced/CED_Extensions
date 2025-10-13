@@ -221,8 +221,13 @@ def _switch_point_for_door(space, wall, door_point, near_door_ft, wall_orientati
 
     dir_xy = _unit_xy_from_curve(curve)
     inward_xy = _space_inward_normal(space, door_point, dir_xy) if space is not None else None
+    use_linked_fallback = False
     if inward_xy is None:
         inward_xy = _wall_inward_xy(wall, orientation_override=wall_orientation)
+        if inward_xy is None and wall_curve is not None:
+            tangent = _unit_xy_from_curve(wall_curve)
+            inward_xy = (-tangent[1], tangent[0])
+            use_linked_fallback = True
     if inward_xy is None:
         inward_xy = (0.0, 1.0)
 
@@ -239,7 +244,8 @@ def _switch_point_for_door(space, wall, door_point, near_door_ft, wall_orientati
         if fallback_point is None:
             fallback_point = candidate
         if space is not None:
-            for offset in (0.2, 0.4, 0.6):
+            offsets = (0.2, 0.4, 0.6, 1.0, 1.5) if use_linked_fallback else (0.2, 0.4, 0.6)
+            for offset in offsets:
                 probe = XYZ(candidate.X + inward_xy[0] * offset,
                             candidate.Y + inward_xy[1] * offset,
                             candidate.Z)
@@ -253,22 +259,28 @@ def _switch_point_for_door(space, wall, door_point, near_door_ft, wall_orientati
         fallback_point = XYZ(door_point.X + inward_xy[0] * face_offset,
                              door_point.Y + inward_xy[1] * face_offset,
                              door_point.Z)
+
     if space is not None:
-        probes = [
-            fallback_point,
-            XYZ(fallback_point.X + inward_xy[0] * 0.5,
-                fallback_point.Y + inward_xy[1] * 0.5,
-                fallback_point.Z),
-            XYZ(fallback_point.X + inward_xy[0] * 1.0,
-                fallback_point.Y + inward_xy[1] * 1.0,
-                fallback_point.Z),
-        ]
-        for probe in probes:
+        offsets = (0.0, 0.5, 1.0, 1.5, 2.0) if use_linked_fallback else (0.0, 0.5, 1.0)
+        for offset in offsets:
+            probe = XYZ(fallback_point.X + inward_xy[0] * offset,
+                        fallback_point.Y + inward_xy[1] * offset,
+                        fallback_point.Z)
             try:
                 if space.IsPointInSpace(probe):
+                    # if we had to push deep for linked walls, walk the final point inside as well
+                    if use_linked_fallback and offset > 1.0:
+                        return XYZ(door_point.X + inward_xy[0] * max(face_offset, offset),
+                                   door_point.Y + inward_xy[1] * max(face_offset, offset),
+                                   door_point.Z)
                     return fallback_point
             except Exception:
                 pass
+
+    if use_linked_fallback:
+        return XYZ(door_point.X + inward_xy[0] * max(face_offset, near_door_ft + 2.0),
+                   door_point.Y + inward_xy[1] * max(face_offset, near_door_ft + 2.0),
+                   door_point.Z)
 
     return fallback_point
 
@@ -375,7 +387,7 @@ def place_lighting_controls(doc, logger=None):
                     doc,
                     wall,
                     include_linked=True,
-                    link_tolerance_ft=max(near_door_ft + 1.0, 3.0),
+                    link_tolerance_ft=max(near_door_ft + 2.0, 4.0),
                     boundary_curve=curve,
                 )
                 for door, door_point in door_hits:
