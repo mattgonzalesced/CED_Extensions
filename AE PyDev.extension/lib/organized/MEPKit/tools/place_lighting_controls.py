@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # lib/organized/MEPKit/tools/place_lighting_controls.py
 from __future__ import absolute_import
 
@@ -149,6 +149,29 @@ def _unit_xy_from_curve(curve):
 
 
 
+
+def _curve_length(curve):
+    try:
+        return curve.ApproximateLength
+    except Exception:
+        try:
+            return curve.Length
+        except Exception:
+            return 0.0
+
+def _curve_midpoint(curve):
+    try:
+        return curve.Evaluate(0.5, True)
+    except Exception:
+        try:
+            p0 = curve.GetEndPoint(0)
+            p1 = curve.GetEndPoint(1)
+            return XYZ((p0.X + p1.X) * 0.5,
+                      (p0.Y + p1.Y) * 0.5,
+                      (p0.Z + p1.Z) * 0.5)
+        except Exception:
+            return None
+
 def _vector_xy(vec):
     if vec is None:
         return None
@@ -285,6 +308,34 @@ def _switch_point_for_door(space, wall, door_point, near_door_ft, wall_orientati
     return fallback_point
 
 
+
+def _point_on_shortest_linked_wall(space, linked_curves, min_inset_ft=2.0):
+    if not linked_curves:
+        return None
+    min_inset = max(float(min_inset_ft), 0.5)
+    for length, curve in sorted(linked_curves, key=lambda x: x[0]):
+        if curve is None:
+            continue
+        midpoint = _curve_midpoint(curve)
+        if midpoint is None:
+            continue
+        dir_xy = _unit_xy_from_curve(curve)
+        inward_xy = _space_inward_normal(space, midpoint, dir_xy) if space is not None else None
+        if inward_xy is None:
+            inward_xy = (-dir_xy[1], dir_xy[0])
+        for inset in (min_inset, min_inset + 0.5, min_inset + 1.0, min_inset + 2.0):
+            candidate = XYZ(midpoint.X + inward_xy[0] * inset,
+                            midpoint.Y + inward_xy[1] * inset,
+                            midpoint.Z)
+            if space is None:
+                return candidate
+            try:
+                if space.IsPointInSpace(candidate):
+                    return candidate
+            except Exception:
+                continue
+    return None
+
 def _space_level(doc, space):
     try:
         lvl_id = getattr(space, "LevelId", None)
@@ -376,13 +427,19 @@ def place_lighting_controls(doc, logger=None):
 
         loops = boundary_loops(space) or []
         processed_doors = set()
+        linked_wall_curves = []
+        space_switches = 0
 
         for loop in loops:
             for seg in loop:
                 curve = segment_curve(seg)
-                wall = segment_host_wall(doc, seg)
                 if curve is None:
                     continue
+                wall = segment_host_wall(doc, seg)
+                if wall is None:
+                    length = _curve_length(curve)
+                    if length > 1e-3:
+                        linked_wall_curves.append((length, curve))
                 door_hits = door_points_on_wall(
                     doc,
                     wall,
@@ -412,21 +469,45 @@ def place_lighting_controls(doc, logger=None):
                         wall_width=wall_width,
                         wall_curve=curve,
                     )
+
+                    point_valid = point is not None
+                    if point_valid and space is not None:
+                        try:
+                            if not space.IsPointInSpace(point):
+                                point_valid = False
+                        except Exception:
+                            point_valid = True
+
+                    placement_wall = wall
+                    if not point_valid:
+                        point = _point_on_shortest_linked_wall(space, linked_wall_curves, min_inset_ft=2.0)
+                        placement_wall = wall if wall is not None else None
+
                     if not point:
                         log.debug(u"[SKIP] No valid switch point near {} for space '{}'".format(
                             _door_label(door, door_point), getattr(space, "Name", u"<unnamed>")))
                         continue
 
-                    inst = _place_switch(doc, switch_symbol, wall, point,
+                    inst = _place_switch(doc, switch_symbol, placement_wall, point,
                                          mounting_height_ft=mounting_height_ft,
                                          logger=log, level=level)
                     if inst:
                         processed_doors.add(door_key)
                         global_processed_doors.add(door_key)
+                        space_switches += 1
                         switch_count += 1
                     else:
                         log.warning(u"[PLACE] Switch placement failed near {} in space '{}'".format(
                             _door_label(door, door_point), getattr(space, "Name", u"<unnamed>")))
+
+        if space_switches == 0 and linked_wall_curves:
+            fallback_point = _point_on_shortest_linked_wall(space, linked_wall_curves, min_inset_ft=2.0)
+            if fallback_point:
+                inst = _place_switch(doc, switch_symbol, None, fallback_point,
+                                     mounting_height_ft=mounting_height_ft,
+                                     logger=log, level=level)
+                if inst:
+                    switch_count += 1
 
     log.info(u"Occupancy-style devices placed: {}".format(occ_count))
     log.info(u"Door switches placed: {}".format(switch_count))
