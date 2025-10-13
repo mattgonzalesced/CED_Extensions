@@ -7,6 +7,9 @@ from Autodesk.Revit.DB import (
 )
 from organized.MEPKit.revit.params import get_param_value
 
+_DOOR_META_CACHE = {}
+
+
 def _door_location_xyz(door):
     loc = getattr(door, "Location", None)
     if isinstance(loc, LocationPoint):
@@ -27,6 +30,37 @@ def _door_location_xyz(door):
         return XYZ(0.5*(bb.Min.X+bb.Max.X), 0.5*(bb.Min.Y+bb.Max.Y), 0.5*(bb.Min.Z+bb.Max.Z))
     return None
 
+
+def _store_door_meta(door, orient, width):
+    if door is None:
+        return
+    key = getattr(door, "UniqueId", None)
+    if not key:
+        return
+    ovec = None
+    try:
+        if orient is not None:
+            mag = (orient.X ** 2 + orient.Y ** 2) ** 0.5
+            if mag > 1e-6:
+                ovec = XYZ(orient.X / mag, orient.Y / mag, 0.0)
+    except Exception:
+        ovec = None
+    w = None
+    try:
+        if width is not None:
+            w = float(width)
+    except Exception:
+        w = None
+    _DOOR_META_CACHE[key] = (ovec, w)
+
+
+def door_wall_meta(door):
+    key = getattr(door, "UniqueId", None)
+    if not key:
+        return (None, None)
+    return _DOOR_META_CACHE.get(key, (None, None))
+
+
 def _get_link_transform(inst):
     try:
         return inst.GetTotalTransform()
@@ -35,6 +69,7 @@ def _get_link_transform(inst):
             return inst.GetTransform()
         except Exception:
             return None
+
 
 def _distance_to_curve(point, curve):
     if curve is None or point is None:
@@ -78,10 +113,18 @@ def door_points_on_wall(doc, wall, include_linked=False, link_tolerance_ft=3.0, 
             if p is None:
                 continue
             if wall is not None and host is not None and host.Id == wall.Id:
+                if host is not None:
+                    orient = getattr(host, "Orientation", None)
+                    width = getattr(host, "Width", None)
+                    _store_door_meta(d, orient, width)
                 out.append((d, p))
             elif wall is None and curve is not None:
                 dist = _distance_to_curve(p, curve)
                 if dist is not None and dist <= tol:
+                    if host is not None:
+                        orient = getattr(host, "Orientation", None)
+                        width = getattr(host, "Width", None)
+                        _store_door_meta(d, orient, width)
                     out.append((d, p))
         except Exception:
             pass
@@ -110,10 +153,26 @@ def door_points_on_wall(doc, wall, include_linked=False, link_tolerance_ft=3.0, 
                         pass
                     dist = _distance_to_curve(p, curve)
                     if dist is not None and dist <= tol:
+                        host = getattr(d, "Host", None)
+                        orient = None
+                        width = None
+                        if host is not None:
+                            try:
+                                orient = getattr(host, "Orientation", None)
+                                if orient is not None and tf is not None:
+                                    orient = tf.OfVector(orient)
+                            except Exception:
+                                orient = getattr(host, "Orientation", None)
+                            try:
+                                width = getattr(host, "Width", None)
+                            except Exception:
+                                width = None
+                        _store_door_meta(d, orient, width)
                         out.append((d, p))
         except Exception:
             pass
     return out
+
 
 def _door_dynamic_radius_ft(door_elem, base_radius_ft, edge_margin_ft):
     """Use door width when available to widen the keepout: max(base, width/2 + edge_margin)."""
@@ -125,6 +184,7 @@ def _door_dynamic_radius_ft(door_elem, base_radius_ft, edge_margin_ft):
     except:
         pass
     return r
+
 
 def filter_points_by_doors(points, door_tuples, base_radius_ft, edge_margin_ft):
     if not points or not door_tuples: return points

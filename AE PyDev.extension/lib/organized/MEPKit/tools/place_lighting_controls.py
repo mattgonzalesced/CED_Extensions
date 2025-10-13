@@ -22,7 +22,7 @@ from organized.MEPKit.revit.spaces import (
 )
 from organized.MEPKit.revit.placement import place_free, place_hosted
 from organized.MEPKit.revit.symbols import resolve_or_load_symbol
-from organized.MEPKit.revit.doors import door_points_on_wall
+from organized.MEPKit.revit.doors import door_points_on_wall, door_wall_meta
 from organized.MEPKit.electrical.selection import active_phase
 
 
@@ -148,6 +148,19 @@ def _unit_xy_from_curve(curve):
     return (vec.X / mag, vec.Y / mag)
 
 
+
+def _vector_xy(vec):
+    if vec is None:
+        return None
+    try:
+        mag = math.hypot(vec.X, vec.Y)
+        if mag > 1e-6:
+            return (vec.X / mag, vec.Y / mag)
+    except Exception:
+        pass
+    return None
+
+
 def _space_inward_normal(space, door_point, dir_xy, probe_ft=0.5):
     normals = [(-dir_xy[1], dir_xy[0]), (dir_xy[1], -dir_xy[0])]
     for nx, ny in normals:
@@ -162,7 +175,12 @@ def _space_inward_normal(space, door_point, dir_xy, probe_ft=0.5):
     return None
 
 
-def _wall_face_offset_ft(wall, pad_ft=0.1):
+def _wall_face_offset_ft(wall, pad_ft=0.1, width_override=None):
+    try:
+        if width_override is not None:
+            return max(pad_ft, float(width_override) * 0.5 + pad_ft)
+    except Exception:
+        pass
     try:
         width = getattr(wall, "Width", None)
         if width is not None:
@@ -172,32 +190,43 @@ def _wall_face_offset_ft(wall, pad_ft=0.1):
     return pad_ft
 
 
-def _wall_inward_xy(wall):
-    try:
-        orient = getattr(wall, "Orientation", None)
-        if orient:
-            mag = math.hypot(orient.X, orient.Y)
-            if mag > 1e-6:
-                return (-orient.X / mag, -orient.Y / mag)
-    except Exception:
-        pass
+def _wall_inward_xy(wall, orientation_override=None):
+    vec = orientation_override
+    if vec is None and wall is not None:
+        try:
+            vec = getattr(wall, "Orientation", None)
+        except Exception:
+            vec = None
+    xy = _vector_xy(vec)
+    if xy:
+        return (-xy[0], -xy[1])
     return None
 
 
-def _switch_point_for_door(space, wall, door_point, near_door_ft):
-    if not wall or not door_point:
+def _switch_point_for_door(space, wall, door_point, near_door_ft, wall_orientation=None,
+                            wall_width=None, wall_curve=None):
+    if not door_point:
         return None
-    loc = getattr(wall, "Location", None)
-    curve = getattr(loc, "Curve", None)
+    curve = None
+    if wall is not None:
+        try:
+            loc = getattr(wall, "Location", None)
+            curve = getattr(loc, "Curve", None)
+        except Exception:
+            curve = None
+    if curve is None:
+        curve = wall_curve
     if curve is None:
         return None
+
     dir_xy = _unit_xy_from_curve(curve)
-    inward_xy = _space_inward_normal(space, door_point, dir_xy)
+    inward_xy = _space_inward_normal(space, door_point, dir_xy) if space is not None else None
     if inward_xy is None:
-        inward_xy = _wall_inward_xy(wall)
+        inward_xy = _wall_inward_xy(wall, orientation_override=wall_orientation)
     if inward_xy is None:
         inward_xy = (0.0, 1.0)
-    face_offset = _wall_face_offset_ft(wall)
+
+    face_offset = _wall_face_offset_ft(wall, width_override=wall_width)
     fallback_point = None
 
     for sign in (1.0, -1.0):
@@ -207,6 +236,19 @@ def _switch_point_for_door(space, wall, door_point, near_door_ft):
         candidate = XYZ(base.X + inward_xy[0] * face_offset,
                         base.Y + inward_xy[1] * face_offset,
                         base.Z)
+        if fallback_point is None:
+            fallback_point = candidate
+        if space is not None:
+            probe = XYZ(candidate.X + inward_xy[0] * 0.2,
+                        candidate.Y + inward_xy[1] * 0.2,
+                        candidate.Z)
+            try:
+                if space.IsPointInSpace(probe):
+                    return candidate
+            except Exception:
+                pass
+
+    return fallback_point
         if fallback_point is None:
             fallback_point = candidate
         if space is not None:
@@ -333,7 +375,23 @@ def place_lighting_controls(doc, logger=None):
                     if door_key in processed_doors:
                         continue
 
-                    point = _switch_point_for_door(space, wall, door_point, near_door_ft)
+                    wall_orientation = getattr(wall, "Orientation", None) if wall is not None else None
+                    wall_width = getattr(wall, "Width", None) if wall is not None else None
+                    meta_orient, meta_width = door_wall_meta(door)
+                    if wall_orientation is None and meta_orient is not None:
+                        wall_orientation = meta_orient
+                    if wall_width is None and meta_width is not None:
+                        wall_width = meta_width
+
+                    point = _switch_point_for_door(
+                        space,
+                        wall,
+                        door_point,
+                        near_door_ft,
+                        wall_orientation=wall_orientation,
+                        wall_width=wall_width,
+                        wall_curve=curve,
+                    )
                     if not point:
                         log.debug(u"[SKIP] No valid switch point near {} for space '{}'".format(
                             _door_label(door, door_point), getattr(space, "Name", u"<unnamed>")))
