@@ -249,15 +249,6 @@ def _switch_point_for_door(space, wall, door_point, near_door_ft, wall_orientati
                 pass
 
     return fallback_point
-        if fallback_point is None:
-            fallback_point = candidate
-        if space is not None:
-            probe = XYZ(candidate.X + inward_xy[0] * 0.2,
-                        candidate.Y + inward_xy[1] * 0.2,
-                        candidate.Z)
-            try:
-                if space.IsPointInSpace(probe):
-                    return candidate
             except Exception:
                 pass
 
