@@ -296,6 +296,7 @@ def place_lighting_controls(doc, logger=None):
 
     occ_count = 0
     switch_count = 0
+    global_processed_doors = set()
 
     for space in spaces:
         match_text = space_match_text(space)
@@ -357,7 +358,7 @@ def place_lighting_controls(doc, logger=None):
                 )
                 for door, door_point in door_hits:
                     door_key = _door_identifier(door, door_point)
-                    if door_key in processed_doors:
+                    if door_key in processed_doors or door_key in global_processed_doors:
                         continue
 
                     wall_orientation = getattr(wall, "Orientation", None) if wall is not None else None
@@ -387,6 +388,7 @@ def place_lighting_controls(doc, logger=None):
                                          logger=log, level=level)
                     if inst:
                         processed_doors.add(door_key)
+                        global_processed_doors.add(door_key)
                         switch_count += 1
                     else:
                         log.warning(u"[PLACE] Switch placement failed near {} in space '{}'".format(
