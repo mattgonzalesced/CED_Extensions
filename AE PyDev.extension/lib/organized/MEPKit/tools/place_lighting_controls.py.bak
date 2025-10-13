@@ -239,34 +239,12 @@ def _switch_point_for_door(space, wall, door_point, near_door_ft, wall_orientati
         if fallback_point is None:
             fallback_point = candidate
         if space is not None:
-            for offset in (0.2, 0.4, 0.6):
-                probe = XYZ(candidate.X + inward_xy[0] * offset,
-                            candidate.Y + inward_xy[1] * offset,
-                            candidate.Z)
-                try:
-                    if space.IsPointInSpace(probe):
-                        return candidate
-                except Exception:
-                    pass
-
-    if fallback_point is None:
-        fallback_point = XYZ(door_point.X + inward_xy[0] * face_offset,
-                             door_point.Y + inward_xy[1] * face_offset,
-                             door_point.Z)
-    if space is not None:
-        probes = [
-            fallback_point,
-            XYZ(fallback_point.X + inward_xy[0] * 0.5,
-                fallback_point.Y + inward_xy[1] * 0.5,
-                fallback_point.Z),
-            XYZ(fallback_point.X + inward_xy[0] * 1.0,
-                fallback_point.Y + inward_xy[1] * 1.0,
-                fallback_point.Z),
-        ]
-        for probe in probes:
+            probe = XYZ(candidate.X + inward_xy[0] * 0.2,
+                        candidate.Y + inward_xy[1] * 0.2,
+                        candidate.Z)
             try:
                 if space.IsPointInSpace(probe):
-                    return fallback_point
+                    return candidate
             except Exception:
                 pass
 
