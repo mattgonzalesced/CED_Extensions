@@ -259,7 +259,7 @@
       },
       "Back Office": {
         "placement_constraints": {
-        "place_near_door_ft": 4.0
+        "place_near_door_ft": 2.0
         },
         "device_candidates": [
       
@@ -272,7 +272,7 @@
       },
       "Device Check": {
         "placement_constraints": {
-        "place_near_door_ft": 4.0
+        "place_near_door_ft": 2.0
         },
         "device_candidates": [
       
@@ -285,7 +285,7 @@
       },
       "CO2 Device Check": {
         "placement_constraints": {
-        "place_near_door_ft": 4.0
+        "place_near_door_ft": 2.0
         },
         "device_candidates": [
       
@@ -298,7 +298,7 @@
       },
       "Break Room": {
         "placement_constraints": {
-        "place_near_door_ft": 4.0
+        "place_near_door_ft": 2.0
         },
         "device_candidates": [
       
@@ -311,7 +311,7 @@
       },
       "Dairy/ Produce Cooler": {
         "placement_constraints": {
-        "place_near_door_ft": 4.0
+        "place_near_door_ft": 2.0
         },
         "device_candidates": [
       
@@ -324,7 +324,7 @@
       },
       "Freezer": {
         "placement_constraints": {
-        "place_near_door_ft": 4.0
+        "place_near_door_ft": 2.0
         },
         "device_candidates": [
       
@@ -337,7 +337,7 @@
       },
       "Front Office": {
         "placement_constraints": {
-        "place_near_door_ft": 4.0
+        "place_near_door_ft": 2.0
         },
         "device_candidates": [
       
@@ -350,7 +350,7 @@
       },
       "Hallway": {
         "placement_constraints": {
-        "place_near_door_ft": 4.0
+        "place_near_door_ft": 2.0
         },
         "device_candidates": [
       
@@ -363,7 +363,7 @@
       },
       "Meat Cooler": {
         "placement_constraints": {
-        "place_near_door_ft": 4.0
+        "place_near_door_ft": 2.0
         },
         "device_candidates": [
       
@@ -376,7 +376,7 @@
       },
       "Receiving Area": {
         "placement_constraints": {
-        "place_near_door_ft": 4.0
+        "place_near_door_ft": 2.0
         },
         "device_candidates": [
       
@@ -389,7 +389,7 @@
       },
       "Restroom": {
         "placement_constraints": {
-        "place_near_door_ft": 4.0
+        "place_near_door_ft": 2.0
         },
         "device_candidates": [
       
@@ -402,7 +402,7 @@
       },
       "Sales Floor": {
         "placement_constraints": {
-        "place_near_door_ft": 4.0
+        "place_near_door_ft": 2.0
         },
         "device_candidates": [
       
@@ -415,7 +415,7 @@
       },
       "Stock Room": {
         "placement_constraints": {
-        "place_near_door_ft": 4.0
+        "place_near_door_ft": 2.0
         },
         "device_candidates": [
       
@@ -428,7 +428,7 @@
       },
       "Vestibule": {
         "placement_constraints": {
-        "place_near_door_ft": 4.0
+        "place_near_door_ft": 2.0
         },
         "device_candidates": [
       
