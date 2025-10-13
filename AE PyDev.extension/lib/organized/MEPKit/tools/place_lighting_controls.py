@@ -249,12 +249,6 @@ def _switch_point_for_door(space, wall, door_point, near_door_ft, wall_orientati
                 pass
 
     return fallback_point
-            except Exception:
-                pass
-
-    if fallback_point is not None:
-        return fallback_point
-    return None
 
 
 def _space_level(doc, space):
