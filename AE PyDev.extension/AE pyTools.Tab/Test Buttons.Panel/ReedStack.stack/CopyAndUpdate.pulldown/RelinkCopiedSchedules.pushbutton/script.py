@@ -30,6 +30,7 @@ SAFE_SKIP_DELETE_IF_NO_PLACEMENTS = True
 
 _SUFFIX_PATTERNS = [
     re.compile(r'^(?P<base>.+?)(?P<num>\d+)$'),         # "Name1"
+    re.compile(r'^(?P<base>.+?)\s+(?P<num>\d+)$'),      # "Name 1"
 ]
 
 # -----------------------------
