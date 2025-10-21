@@ -1,8 +1,0 @@
-{
-  "ocpd": {
-    "breaker_types_allowed": ["MCB", "MCCB"],
-    "series_rating_allowed": false,
-    "arc_energy_reduction_minA": 1200
-  }
-}
-

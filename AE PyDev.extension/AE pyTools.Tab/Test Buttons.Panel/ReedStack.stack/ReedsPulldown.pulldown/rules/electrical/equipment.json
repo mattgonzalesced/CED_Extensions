@@ -1,5 +1,0 @@
-{ "equipment": {
-  "motor_defaults": { "size_by": "FLA_table", "ocpd_rule": "inverse_time", "conductors_temp_rating": "75C" },
-  "hvac": { "read_params": ["MCA","MOCP"], "disconnect_visible": true }
-}}
-

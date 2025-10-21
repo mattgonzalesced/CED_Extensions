@@ -1,8 +1,0 @@
-{
-  "emergency_systems": {
-    "ats": [],
-    "selective_coordination": { "apply_to": ["700", "701"] },
-    "emergency_panel_prefix": "ELP-"
-  }
-}
-

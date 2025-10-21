@@ -1,7 +1,0 @@
-{
-  "working_clearance": {
-    "≤150V_to_ground": { "depth_in": 36, "width_in": ">=30in_or_equipment_width", "height_ft": 6.5 },
-    ">150V_to_ground": { "depth_in": 42, "width_in": ">=30in_or_equipment_width", "height_ft": 6.5 }
-  }
-}
-
