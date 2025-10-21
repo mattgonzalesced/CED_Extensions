@@ -2,7 +2,7 @@
   "emergency_lighting": {
     "general": {
       "spacing_ft_default": 30.0,
-      "start_offset_ft": 10.0,
+      "start_offset_ft": 14.1,
       "device_candidates": [
         {
           "family": "LF-U_Rectangular Fixture_CED",
@@ -13,7 +13,7 @@
     },
     "rules_by_category": {
       "Sales Floor": {
-        "spacing_ft": 24.0,
+        "spacing_ft": 20.0,
         "device_candidates": [
         {
           "family": "EF-U_Receptacle_CED",
