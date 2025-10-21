@@ -16,9 +16,9 @@
         "spacing_ft": 24.0,
         "device_candidates": [
         {
-          "family": "Duplex Receptacle",
-          "type_catalog_name": "Standard",
-          "load_from": "C:\\Users\\reed.pinterich\\Documents\\Duplex Receptacle.rfa"
+          "family": "EF-U_Receptacle_CED",
+          "type_catalog_name": "Duplex Wall",
+          "load_from": "C:\\Users\\reed.pinterich\\Documents\\EF-U_Receptacle_CED.rfa"
         }
       ]
       },
