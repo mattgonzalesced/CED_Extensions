@@ -5,9 +5,9 @@
       "start_offset_ft": 10.0,
       "device_candidates": [
         {
-          "family": "Downlight - Rectangle - LED",
-          "type_catalog_name": "18W Square",
-          "load_from": "C:\\Users\\reed.pinterich\\Documents\\Downlight - Rectangle - LED.rfa"
+          "family": "Plain Surface Lighting Fixture",
+          "type_catalog_name": "1x4 - 120",
+          "load_from": "C:\\Users\\reed.pinterich\\Documents\\Plain Surface Lighting Fixture.rfa"
         }
       ]
     },
@@ -16,9 +16,9 @@
         "spacing_ft": 24.0,
         "device_candidates": [
         {
-          "family": "Downlight - Rectangle - LED",
-          "type_catalog_name": "18W Square",
-          "load_from": "C:\\Users\\reed.pinterich\\Documents\\Downlight - Rectangle - LED.rfa"
+          "family": "Plain Surface Lighting Fixture",
+          "type_catalog_name": "1x4 - 120",
+          "load_from": "C:\\Users\\reed.pinterich\\Documents\\Plain Surface Lighting Fixture.rfa"
         }
       ]
       },
