@@ -21,7 +21,7 @@ from organized.MEPKit.revit.spaces import (
     segment_host_wall,
 )
 from organized.MEPKit.revit.placement import place_free, place_hosted
-from organized.MEPKit.revit.symbols import resolve_or_load_symbol
+from organized.MEPKit.revit.symbol_candidates import resolve_first_available_symbol
 from organized.MEPKit.revit.doors import door_points_on_wall, door_wall_meta
 from organized.MEPKit.electrical.selection import active_phase
 
@@ -57,30 +57,6 @@ def _category_rules(rules, category, fallback="Support"):
         switch_rule = switch_rules.get(fallback) or {}
     general = lighting.get('general') or {}
     return sensor_rule, switch_rule, general
-
-
-_SYMBOL_CACHE = {}
-
-
-def _resolve_candidate_symbol(doc, candidate, logger):
-    if not candidate:
-        return None
-    fam = candidate.get('family')
-    typ = candidate.get('type_catalog_name')
-    load_path = candidate.get('load_from')
-    key = (fam or u"", typ or u"", load_path or u"")
-    hit = _SYMBOL_CACHE.get(key)
-    if hit:
-        return hit
-    path = load_path
-    if path and not os.path.exists(path):
-        if logger:
-            logger.warning(u"[LOAD] Family path missing -> {} (continuing without load)".format(path))
-        path = None
-    sym = resolve_or_load_symbol(doc, fam, typ, load_path=path, logger=logger)
-    if sym:
-        _SYMBOL_CACHE[key] = sym
-    return sym
 
 
 def _door_identifier(door, point):
@@ -124,11 +100,7 @@ def _door_label(door, point):
 
 
 def _resolve_first_available_symbol(doc, candidates, logger):
-    for cand in (candidates or []):
-        sym = _resolve_candidate_symbol(doc, cand, logger)
-        if sym:
-            return sym
-    return None
+    return resolve_first_available_symbol(doc, candidates, logger=logger)
 
 
 def _unit_xy_from_curve(curve):
