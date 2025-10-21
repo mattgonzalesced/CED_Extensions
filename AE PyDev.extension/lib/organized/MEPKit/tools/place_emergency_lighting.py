@@ -59,10 +59,25 @@ def _resolve_candidate_symbol(doc, candidate, logger):
         return None
     if cached:
         return cached
-    sym = resolve_or_load_symbol(doc, family, type_name or None, load_path=load_path or None, logger=logger)
-    if sym:
-        _SYMBOL_CACHE[key] = sym
-        return sym
+
+    attempts = []
+    if family or type_name:
+        attempts.append((family, type_name or None))
+    attempts.append((family, None))
+
+    for fam_name, typ_name in attempts:
+        sym = resolve_or_load_symbol(doc, fam_name, typ_name, load_path=load_path or None, logger=logger)
+        if sym:
+            if typ_name is None and type_name:
+                logger.warning(
+                    u"Emergency lighting rule requested type '{}', but only '{}' was found; "
+                    u"verify the type catalog or update the rules JSON."
+                    .format(type_name, getattr(sym, "Name", u"<unnamed>"))
+                )
+            _SYMBOL_CACHE[key] = sym
+            return sym
+        # if a specific type failed, continue to generic attempt
+
     _SYMBOL_CACHE[key] = _SYMBOL_FAIL
     return None
 
