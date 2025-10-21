@@ -5,9 +5,9 @@
       "start_offset_ft": 10.0,
       "device_candidates": [
         {
-          "family": "Plain Surface Lighting Fixture",
-          "type_catalog_name": "1x4 - 120",
-          "load_from": "C:\\Users\\reed.pinterich\\Documents\\Plain Surface Lighting Fixture.rfa"
+          "family": "LF-U_Rectangular Fixture_CED",
+          "type_catalog_name": "2x4 - Recessed",
+          "load_from": "C:\\Users\\reed.pinterich\\Documents\\LF-U_Rectangular Fixture_CED.rfa"
         }
       ]
     },
@@ -16,9 +16,9 @@
         "spacing_ft": 24.0,
         "device_candidates": [
         {
-          "family": "Plain Surface Lighting Fixture",
-          "type_catalog_name": "1x4 - 120",
-          "load_from": "C:\\Users\\reed.pinterich\\Documents\\Plain Surface Lighting Fixture.rfa"
+          "family": "LF-U_Rectangular Fixture_CED",
+          "type_catalog_name": "2x4 - Recessed",
+          "load_from": "C:\\Users\\reed.pinterich\\Documents\\LF-U_Rectangular Fixture_CED.rfa"
         }
       ]
       },
