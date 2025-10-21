@@ -5,9 +5,9 @@
       "start_offset_ft": 10.0,
       "device_candidates": [
         {
-          "family": "Downlight - Rectangle - LED",
+          "family": "",
           "type_catalog_name": "18W Square",
-          "load_from": ""
+          "load_from": "C:\\Users\\reed.pinterich\\Documents\\Downlight - Rectangle - LED.rfa"
         }
       ]
     },
