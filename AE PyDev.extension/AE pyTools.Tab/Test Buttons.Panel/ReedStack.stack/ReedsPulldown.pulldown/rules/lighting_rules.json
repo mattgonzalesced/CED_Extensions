@@ -83,7 +83,7 @@
         "zones": "per_room"
       }
     },
-    "Hallway": {
+    "Weird space": {
       "fixture_candidates": [
         {
           "family": "Downlight - Rectangle - LED",
