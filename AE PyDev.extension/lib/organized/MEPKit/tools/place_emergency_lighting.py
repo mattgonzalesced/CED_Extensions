@@ -44,6 +44,7 @@ def _load_emergency_rules():
 
 
 _SYMBOL_CACHE = {}
+_SYMBOL_FAIL = object()
 
 
 def _resolve_candidate_symbol(doc, candidate, logger):
@@ -54,12 +55,16 @@ def _resolve_candidate_symbol(doc, candidate, logger):
     load_path = (candidate.get('load_from') or u"").strip()
     key = (family, type_name, load_path)
     cached = _SYMBOL_CACHE.get(key)
+    if cached is _SYMBOL_FAIL:
+        return None
     if cached:
         return cached
     sym = resolve_or_load_symbol(doc, family, type_name or None, load_path=load_path or None, logger=logger)
     if sym:
         _SYMBOL_CACHE[key] = sym
-    return sym
+        return sym
+    _SYMBOL_CACHE[key] = _SYMBOL_FAIL
+    return None
 
 
 def _resolve_symbol_for_rule(doc, rule_candidates, general_candidates, logger):
@@ -68,6 +73,45 @@ def _resolve_symbol_for_rule(doc, rule_candidates, general_candidates, logger):
             sym = _resolve_candidate_symbol(doc, candidate, logger)
             if sym:
                 return sym
+    sym = _fallback_emergency_symbol(doc, logger)
+    if sym:
+        return sym
+    return None
+
+
+_FALLBACK_SYMBOL = None
+
+
+def _fallback_emergency_symbol(doc, logger):
+    global _FALLBACK_SYMBOL
+    if _FALLBACK_SYMBOL is not None:
+        return _FALLBACK_SYMBOL
+    hints = ('emergency', 'egress', 'backup', 'night', 'exit')
+    col = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_LightingFixtures).WhereElementIsElementType()
+    best = None
+    for sym in col:
+        try:
+            fam = getattr(sym, "Family", None)
+            fam_name = getattr(fam, "Name", u"") or u""
+        except Exception:
+            fam_name = u""
+        sym_name = getattr(sym, "Name", u"") or u""
+        text = (fam_name + u" " + sym_name).strip().lower()
+        if best is None and (fam_name or sym_name):
+            best = sym
+        if text and any(h in text for h in hints):
+            _FALLBACK_SYMBOL = sym
+            if logger:
+                logger.warning(u"Using existing symbol '{}' for emergency lighting placements."
+                               .format(sym_name or fam_name))
+            return _FALLBACK_SYMBOL
+    if best is not None:
+        _FALLBACK_SYMBOL = best
+        if logger:
+            logger.warning(u"No emergency-labelled symbol found; using '{}' as fallback. Update rules JSON to "
+                           u"target a specific family."
+                           .format(getattr(best, "Name", u"<unnamed>")))
+        return _FALLBACK_SYMBOL
     return None
 
 
