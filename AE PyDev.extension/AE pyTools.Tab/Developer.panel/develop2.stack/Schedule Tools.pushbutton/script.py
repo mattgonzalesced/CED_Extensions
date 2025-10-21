@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
 
+from System.Collections.Generic import List
 from pyrevit import revit, DB, forms, script
 
 doc = revit.doc
@@ -46,8 +47,9 @@ FIELDS_TO_ADD = [
     # "Circuit 2 MCA_CED",
     # "Circuit 2 MOCP_CED",
     # "Circuit 2 Apparent Load_CED",
-    # "Circuit 2 Remarks_CEDT",
-]
+    # "Circuit 2 Remarks_CEDT"
+    ]
+
 
 FIELDS_TO_REMOVE = [
     "FLA_CED",
@@ -60,6 +62,7 @@ FIELDS_TO_REMOVE = [
     "Number of Poles_CED",
     "Voltage_CED",
     "Watts_CED",
+    "Electric Heat Load"
     "Rated Voltage",
     "System Voltage",
     "Phase"
@@ -69,7 +72,8 @@ FIELDS_TO_UNHIDE = [
     "Identity Type Mark",
     "Identity Label Separator",
     "Identity Mark",
-    "Interlock Identity Mark"
+    "Installed Location",
+    # "Interlock Identity Mark"
 ]
 
 FIELDS_TO_HIDE = [
@@ -150,13 +154,38 @@ def get_definition_by_name(name):
 
 
 # Get schedulable instance fields for a given schedule
-def get_schedulable_instance_fields(schedule):
+def get_schedulable_fields(schedule, param_type="all"):
+    """
+    Returns a dictionary of schedulable fields from a schedule by parameter type.
+
+    Args:
+        schedule (DB.ViewSchedule): The schedule to inspect.
+        param_type (str): Filter by "all", "type", or "instance".
+
+    Returns:
+        dict[int, DB.SchedulableField]: Dictionary keyed by ParameterId.Value
+    """
     fields = schedule.Definition.GetSchedulableFields()
+
+    if param_type.lower() == "all":
+        return {
+            schedulable_field.ParameterId.Value: schedulable_field
+            for schedulable_field in fields
+        }
+
+    elif param_type.lower() == "type":
+        target_type = DB.ScheduleFieldType.Type
+    elif param_type.lower() == "instance":
+        target_type = DB.ScheduleFieldType.Instance
+    else:
+        raise ValueError("param_type must be one of: 'all', 'type', or 'instance'")
+
     return {
         schedulable_field.ParameterId.Value: schedulable_field
         for schedulable_field in fields
-        if schedulable_field.FieldType == DB.ScheduleFieldType.Instance
+        if schedulable_field.FieldType == target_type
     }
+
 
 
 # Add a list of schedulable fields to a schedule
@@ -209,7 +238,51 @@ def remove_schedulable_fields_from_schedule(schedule, field_names_to_remove):
     if removed_names:
         output.print_md("- 🗑 Removed from `{}`: {}".format(schedule.Name, ", ".join(removed_names)))
 
+def combine_schedule_field_parameters(schedule_field, param_names, category_id,
+                                      prefix=None, separator=" ", suffix=None):
+    """
+    Combines multiple parameters into a single schedule field using SetCombinedParameters.
 
+    Args:
+        schedule_field (DB.ScheduleField): The schedule field to apply combination to.
+        param_names (list[str]): List of parameter names to combine.
+        category_id (DB.ElementId): The ElementId of the target category (e.g. PlumbingEquipment).
+        prefix (str, optional): Optional prefix for the first parameter.
+        separator (str, optional): Separator to use between parameters. Default is space.
+        suffix (str, optional): Optional suffix for the last parameter.
+
+    Note:
+        This assumes that all param_names are valid and schedulable from the same category.
+    """
+    combined_data = List[DB.TableCellCombinedParameterData]()
+
+    for i, param_name in enumerate(param_names):
+        param_element = get_definition_by_name(param_name)
+        if not param_element:
+            output.print_md("- ⚠️ Could not find parameter: `{}`".format(param_name))
+            continue
+
+        param_id = param_element.Id
+
+        data = DB.TableCellCombinedParameterData()
+        data.CategoryId = category_id
+        data.ParamId = param_id
+
+        # Only apply prefix to first and suffix to last
+        if i == 0 and prefix:
+            data.Prefix = prefix
+        if i < len(param_names) - 1:
+            data.Separator = separator
+        if i == len(param_names) - 1 and suffix:
+            data.Suffix = suffix
+
+        combined_data.Add(data)
+
+    if combined_data.Count > 1:
+        schedule_field.SetCombinedParameters(combined_data)
+        output.print_md("- ✅ Combined parameters: {}".format(" + ".join(param_names)))
+    else:
+        output.print_md("- ⚠️ Not enough valid parameters to combine.")
 
 
 def replace_schedule_fields(schedules, field_replacement_map):
@@ -247,7 +320,7 @@ def replace_schedule_fields(schedules, field_replacement_map):
             fields_to_remove_ids = []
             fields_to_add = []
 
-            schedulable_map = get_schedulable_instance_fields(schedule)
+            schedulable_map = get_schedulable_fields(schedule)
 
             for field_id in current_field_ids:
                 field = definition.GetField(field_id)
@@ -347,7 +420,7 @@ def get_schedulable_field_name(schedulable_field):
 
 # Reorder schedule fields to match a preferred list exactly
 def reorder_fields(sched_definition, field_names,
-                            position="end", after_name=None):
+                   position="end", anchor_name=None):
     """
     Reorder schedule fields relative to the current field order.
 
@@ -360,11 +433,12 @@ def reorder_fields(sched_definition, field_names,
             Where to place the specified fields. Options are:
             - "start": move fields to the beginning.
             - "end": move fields to the end.
-            - "after": insert fields immediately after `after_name`.
+            - "after": insert fields immediately after `anchor_name`.
+            - "before": insert fields immediately before `anchor_name`.
             Defaults to "end".
-        after_name (str, optional):
-            The field name after which the reordered fields will be inserted.
-            Required if position="after".
+        anchor_name (str, optional):
+            The field name used as a reference for "before"/"after" insertions.
+            Required if position is "after" or "before".
 
     Behavior:
         - Only reorders fields whose names match items in `field_names`.
@@ -373,7 +447,7 @@ def reorder_fields(sched_definition, field_names,
     """
     current_fields = sched_definition.GetFieldOrder()
 
-    # Collect matching field ids
+    # Collect field IDs to move
     to_move = []
     for name in field_names:
         for field_id in current_fields:
@@ -382,7 +456,6 @@ def reorder_fields(sched_definition, field_names,
                 to_move.append(field_id)
                 break
 
-    # Build base order without moved fields
     base_order = [fid for fid in current_fields if fid not in to_move]
 
     if position == "start":
@@ -391,25 +464,29 @@ def reorder_fields(sched_definition, field_names,
     elif position == "end":
         new_order = base_order + to_move
 
-    elif position == "after":
-        if not after_name:
-            raise ValueError("`after_name` must be provided when position='after'")
-        insert_index = None
+    elif position in ["after", "before"]:
+        if not anchor_name:
+            raise ValueError("`anchor_name` must be provided when position is '{}'".format(position))
+
+        anchor_index = None
         for idx, fid in enumerate(base_order):
             field = sched_definition.GetField(fid)
-            if field and field.GetName() == after_name:
-                insert_index = idx + 1
+            if field and field.GetName() == anchor_name:
+                anchor_index = idx
                 break
-        if insert_index is None:
-            # If target not found, just append to end
+
+        if anchor_index is None:
+            # Fallback: just append to end
             new_order = base_order + to_move
         else:
+            insert_index = anchor_index + 1 if position == "after" else anchor_index
             new_order = base_order[:insert_index] + to_move + base_order[insert_index:]
 
     else:
-        raise ValueError("Invalid position '{}'. Use 'start', 'end', or 'after'.".format(position))
+        raise ValueError("Invalid position '{}'. Use 'start', 'end', 'after', or 'before'.".format(position))
 
     sched_definition.SetFieldOrder(new_order)
+
 
 
 def hide_fields(schedule, field_names_to_hide):
@@ -776,6 +853,93 @@ def batch_update_schedule_headers(schedules, replacements=None, uppercase=True, 
 
 
 
+# --- Tunables ---
+EXCLUDE_REVISION_SCHEDULES = True
+SNAP_X_INCHES = 0.25  # schedules within 1/4" on X are treated as same column
+DEBUG = False
+# ----------------
+
+SNAP_X_FEET = SNAP_X_INCHES / 12.0  # Revit internal units are feet
+
+
+def get_schedule_instances(sheet):
+    """All schedule instances placed on the given sheet."""
+    return DB.FilteredElementCollector(doc, sheet.Id) \
+             .OfClass(DB.ScheduleSheetInstance) \
+             .ToElements()
+
+
+def order_by_schedule_points(instances, tol_x_feet):
+    """Column-major ordering using ScheduleSheetInstance.Point.
+
+    Columns are detected by grouping X within a tolerance.
+    Within each column, sort Y DESC (top -> bottom).
+    Columns traverse left -> right.
+    """
+    pts = []
+    for inst in instances:
+        if EXCLUDE_REVISION_SCHEDULES and inst.IsTitleblockRevisionSchedule:
+            continue
+        p = inst.Point
+        pts.append((p.X, p.Y, inst))
+
+    if not pts:
+        return []
+
+    # sort left -> right by X to build columns
+    pts.sort(key=lambda t: t[0])
+
+    columns = []
+    current_col = [pts[0]]
+    current_x = pts[0][0]
+
+    for x, y, inst in pts[1:]:
+        if abs(x - current_x) <= tol_x_feet:
+            current_col.append((x, y, inst))
+        else:
+            columns.append(current_col)
+            current_col = [(x, y, inst)]
+            current_x = x
+    columns.append(current_col)
+
+    # within each column: top -> bottom (Y DESC)
+    ordered = []
+    for col in columns:
+        col_sorted = sorted(col, key=lambda t: t[1], reverse=True)
+        ordered.extend([t[2] for t in col_sorted])
+
+    return ordered
+
+
+
+def main2():
+    sheets = forms.select_sheets(title='Select Sheets to Process', use_selection=True)
+    if not sheets:
+        forms.alert('No sheets selected.', exitscript=True)
+
+    for sheet in sheets:
+        header = '{} - {}'.format(sheet.SheetNumber, sheet.Name)
+        print('\n=== SHEET: {} ==='.format(header))
+
+        sched_insts = list(get_schedule_instances(sheet))
+        if not sched_insts:
+            print('   (no schedules found)')
+            continue
+
+        ordered_insts = order_by_schedule_points(sched_insts, SNAP_X_FEET)
+
+        for i, inst in enumerate(ordered_insts):
+            vs = doc.GetElement(inst.ScheduleId)  # ViewSchedule
+            if DEBUG:
+                p = inst.Point
+                print('   {0}. {1}  (x={2:.3f}, y={3:.3f})'.format(
+                    i + 1, vs.Name, p.X, p.Y
+                ))
+            else:
+                print('   {0}. {1}'.format(i + 1, vs.Name))
+
+
+
 def main():
     schedules = get_selected_schedules(multiselect=True)
     if not schedules:
@@ -796,7 +960,7 @@ def main():
 
 
             # --- Add desired fields ---
-            schedulable_map = get_schedulable_instance_fields(schedule)
+            schedulable_map = get_schedulable_fields(schedule)
             fields_to_add = []
             for name in FIELDS_TO_ADD:
                 for sf in schedulable_map.values():
@@ -812,7 +976,7 @@ def main():
 
             # --- Reorder ---
             with revit.Transaction("Reorder Fields", doc=doc):
-                reorder_fields(definition, FIELDS_TO_ADD, position="after", after_name="Interlock Identity Mark")
+                reorder_fields(definition, FIELDS_TO_ADD, position="after", anchor_name="Phase")
 
             # --- Remove unwanted fields ---
             with revit.Transaction("Remove Fields", doc=doc):
@@ -835,7 +999,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main2()
 
 
 """Remove/Add/Reorder Example

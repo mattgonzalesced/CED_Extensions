@@ -8,17 +8,51 @@ logger = script.get_logger()
 doc = revit.doc
 uidoc = revit.uidoc
 active_view = doc.ActiveView
+output = script.get_output()
+output.close_others()
+accepted_views = [
+    DB.ViewType.FloorPlan,
+    DB.ViewType.CeilingPlan,
+    DB.ViewType.DraftingView,
+    DB.ViewType.ThreeD,
+    DB.ViewType.Section
+]
 
-
+# ------------------------------------------------------------
+# CATEGORY SELECTION
+# ------------------------------------------------------------
 def get_selected_categories():
-    """Prompt user to select categories (model + annotation)."""
+    """Prompt user to select categories (model + annotation + import)."""
     all_cats = []
-    for cat in doc.Settings.Categories:
-        if cat.AllowsVisibilityControl:
-            all_cats.append(cat)
 
-    # prompt user
-    names = [c.Name for c in all_cats]
+    for cat in doc.Settings.Categories:
+        if not cat.AllowsVisibilityControl:
+            continue
+
+        # Determine category type
+        try:
+            bic = cat.BuiltInCategory
+            is_valid = int(bic) != -1
+        except Exception:
+            is_valid = False
+
+        if not is_valid:
+            cat_type = "Import"
+        elif cat.CategoryType == DB.CategoryType.Model:
+            cat_type = "Model"
+        elif cat.CategoryType == DB.CategoryType.Annotation:
+            cat_type = "Anno"
+        else:
+            cat_type = "Other"
+
+        all_cats.append((cat, cat_type))
+
+    # Sort alphabetically
+    all_cats = sorted(all_cats, key=lambda x: x[0].Name.lower())
+
+    # Build display names
+    names = ["{} [{}]".format(c.Name, t) for c, t in all_cats]
+
     picked = forms.SelectFromList.show(
         names,
         title="Select Categories to Copy V/G Settings",
@@ -27,56 +61,47 @@ def get_selected_categories():
     if not picked:
         return []
 
-    return [c for c in all_cats if c.Name in picked]
+    return [c for c, t in all_cats if "{} [{}]".format(c.Name, t) in picked]
 
 
+# ------------------------------------------------------------
+# COLLECTOR FUNCTION
+# ------------------------------------------------------------
 def collect_overrides_and_hiding(view, categories):
     """Collect OverrideGraphicSettings and hidden states for categories + subcats."""
     overrides = {}
-    hidden_cats = []
-    hidden_subcats = []
+    hidden_ids = []
 
     for cat in categories:
         try:
-            print("---- Checking Category: {}".format(cat.Name))
-
-            # category level
+            # --- Main category ---
             ogs = view.GetCategoryOverrides(cat.Id)
             if ogs:
                 overrides[cat.Id] = ogs
-                print("  Collected override for: {}".format(cat.Name))
             if view.GetCategoryHidden(cat.Id):
-                hidden_cats.append(cat.Id)
-                print("  Category is hidden: {}".format(cat.Name))
+                hidden_ids.append(cat.Id)
 
-            # subcategories
-            if cat.SubCategories and cat.SubCategories.Size > 0:
-                for subcat in cat.SubCategories:
-                    try:
-                        ogs = view.GetCategoryHidden(subcat.Id)
-                        if view.GetCategoryHidden(subcat.Id):
-                            hidden_subcats.append(subcat.Id)
-                            print("    Subcategory: {} is hidden -> will be copied".format(subcat.Name))
-                        else:
-                            print("    Subcategory: {} is visible".format(subcat.Name))
-                        if ogs:
-                            overrides[subcat.Id] = ogs
-                    except Exception as e:
-                        print("    Error checking subcategory {}: {}".format(subcat.Name, e))
-            else:
-                print("    No subcategories for: {}".format(cat.Name))
+            # --- Subcategories ---
+            for subcat in cat.SubCategories:
+                try:
+                    sub_ogs = view.GetCategoryOverrides(subcat.Id)
+                    if sub_ogs:
+                        overrides[subcat.Id] = sub_ogs
+                    if view.GetCategoryHidden(subcat.Id):
+                        hidden_ids.append(subcat.Id)
+                except Exception as e:
+                    logger.warning("Subcategory error for {} › {}: {}".format(cat.Name, subcat.Name, e))
 
         except Exception as e:
-            msg = "Could not collect settings for {0}: {1}".format(cat.Name, e)
-            print(msg)
-            logger.debug(msg)
+            logger.warning("Failed collecting settings for {}: {}".format(cat.Name, e))
             continue
 
-    print("Summary: {} overrides, {} hidden cats, {} hidden subcats".format(
-        len(overrides), len(hidden_cats), len(hidden_subcats)
+    logger.debug("Collected {} overrides, {} hidden categories/subcategories".format(
+        len(overrides), len(hidden_ids)
     ))
 
-    return overrides, hidden_cats, hidden_subcats
+    return overrides, hidden_ids
+
 
 
 
@@ -90,7 +115,7 @@ def get_view_templates():
     for view in all_templates:
         if not view.IsTemplate:
             continue
-
+        logger.info("getting view: {}".format(view.Name))
         if view.ViewType == DB.ViewType.FloorPlan:
             dict_views["[FLOOR] {}".format(view.Name)] = view
         elif view.ViewType == DB.ViewType.CeilingPlan:
@@ -103,44 +128,94 @@ def get_view_templates():
             dict_views["[EL] {}".format(view.Name)] = view
         elif view.ViewType == DB.ViewType.DraftingView:
             dict_views["[DRAFT] {}".format(view.Name)] = view
+        elif view.ViewType == DB.ViewType.Schedule:
+            logger.info("skipping Schedule view type...")
+            continue
         else:
-            dict_views["[?] {}".format(view.Name)] = view
+            logger.info("skipping unknown view type...")
+            continue
 
     return dict_views
 
+# ------------------------------------------------------------
+# APPLY FUNCTION (modular, with optional reporting)
+# ------------------------------------------------------------
+def apply_vg_to_view(view, overrides, hidden_ids):
+    """Apply category visibility/graphics to one view (template). Returns results list."""
+    results = []
 
-def apply_to_templates(view_templates, overrides, hidden_cats, hidden_subcats):
-    """Apply collected settings to the selected view templates."""
+    all_ids = set(overrides.keys() + hidden_ids)
+    for catid in all_ids:
+        result = {'id': catid, 'override': False, 'hidden': False, 'failed': False}
+
+        try:
+            if catid in overrides:
+                view.SetCategoryOverrides(catid, overrides[catid])
+                result['override'] = True
+        except Exception as e:
+            result['override'] = 'FAILED'
+            result['failed'] = True
+            logger.warning("Override failed in {}: {}, Category:{}".format(view.Name, e,))
+
+        try:
+            if catid in hidden_ids:
+                view.SetCategoryHidden(catid, True)
+                result['hidden'] = True
+        except Exception as e:
+            result['hidden'] = 'FAILED'
+            result['failed'] = True
+            logger.warning("Hide failed in {}: {}".format(view.Name, e))
+
+        results.append(result)
+
+    return results
+
+
+def apply_to_templates(view_templates, overrides, hidden_ids, show_report=False):
+    """Apply collected settings to all templates. Markdown summary optional."""
+
+
     with revit.Transaction("Copy V/G Settings to View Templates"):
+        summary = {}
+
         for vt in view_templates:
-            logger.debug("Applying to template: {0}".format(vt.Name))
-            # apply category overrides
-            for catid, ogs in overrides.items():
-                try:
-                    vt.SetCategoryOverrides(catid, ogs)
-                except Exception as e:
-                    logger.debug("Could not apply override to {0}: {1}".format(catid, e))
-            # apply hidden categories
-            for catid in hidden_cats:
-                try:
-                    vt.SetCategoryHidden(catid, True)
-                except Exception as e:
-                    logger.debug("Could not hide category {0}: {1}".format(catid, e))
-            # apply hidden subcategories
-            for subid in hidden_subcats:
-                try:
-                    vt.SetCategoryHidden(subid, True)
-                except Exception as e:
-                    logger.debug("Could not hide subcategory {0}: {1}".format(subid, e))
+            logger.debug("Applying to template: {}".format(vt.Name))
+            results = apply_vg_to_view(vt, overrides, hidden_ids)
+            summary[vt.Name] = results
+
+    if show_report:
+        output.print_md("# Copy V/G Settings Report\n")
+        for vt_name, results in summary.items():
+            output.print_md("## {}".format(vt_name))
+            output.print_md("| Category ID | Hidden | Override |")
+            output.print_md("|--------------|--------|-----------|")
+
+            for r in results:
+                output.print_md("| {} | {} | {} |".format(r['id'], r['hidden'], r['override']))
+
+    return summary
 
 
+
+# ------------------------------------------------------------
+# MAIN EXECUTION
+# ------------------------------------------------------------
 def main():
+    if active_view.ViewType not in accepted_views:
+        forms.alert("Active View must be:\n"
+                    "       Floor Plan/RCP\n"
+                    "       3D View\n"
+                    "       Section/Elevation\n"
+                    "       or Drafting View.",
+                    title= "Incompatible View Type!",
+                    exitscript=True
+                    )
     categories = get_selected_categories()
     if not categories:
         forms.alert("No categories selected.")
         return
 
-    overrides, hidden_cats, hidden_subcats = collect_overrides_and_hiding(active_view, categories)
+    overrides, hidden_ids = collect_overrides_and_hiding(active_view, categories)
 
     vt_dict = get_view_templates()
     if not vt_dict:
@@ -157,7 +232,7 @@ def main():
 
     templates = [vt_dict[name] for name in picked]
 
-    apply_to_templates(templates, overrides, hidden_cats, hidden_subcats)
+    apply_to_templates(templates, overrides, hidden_ids, show_report=False)
     forms.alert("Copy V/G Settings complete.")
 
 
