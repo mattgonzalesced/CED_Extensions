@@ -16,9 +16,9 @@
         "spacing_ft": 24.0,
         "device_candidates": [
         {
-          "family": "LF-U_Rectangular Fixture_CED",
-          "type_catalog_name": "2x4 - Recessed",
-          "load_from": "C:\\Users\\reed.pinterich\\Documents\\LF-U_Rectangular Fixture_CED.rfa"
+          "family": "Duplex Receptacle",
+          "type_catalog_name": "Standard",
+          "load_from": "C:\\Users\\reed.pinterich\\Documents\\Duplex Receptacle.rfa"
         }
       ]
       },
