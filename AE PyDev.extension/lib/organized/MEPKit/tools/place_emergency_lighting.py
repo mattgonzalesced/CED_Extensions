@@ -26,7 +26,7 @@ from organized.MEPKit.core.rules import (
 )
 from organized.MEPKit.revit.appdoc import get_uidoc
 from organized.MEPKit.revit.placement import place_free, place_hosted
-from organized.MEPKit.revit.symbols import resolve_or_load_symbol
+from organized.MEPKit.revit.symbol_candidates import resolve_first_available_symbol
 from organized.MEPKit.revit.spaces import (
     boundary_loops,
     collect_spaces_or_rooms,
@@ -43,36 +43,12 @@ def _load_emergency_rules():
     return data.get('emergency_lighting') or {}
 
 
-_SYMBOL_CACHE = {}
-_SYMBOL_FAIL = object()
-
-
-def _resolve_candidate_symbol(doc, candidate, logger):
-    if not candidate:
-        return None
-    family = (candidate.get('family') or u"").strip()
-    type_name = (candidate.get('type_catalog_name') or u"").strip()
-    load_path = (candidate.get('load_from') or u"").strip()
-    key = (family, type_name, load_path)
-    cached = _SYMBOL_CACHE.get(key)
-    if cached is _SYMBOL_FAIL:
-        return None
-    if cached:
-        return cached
-    sym = resolve_or_load_symbol(doc, family, type_name or None, load_path=load_path or None, logger=logger)
-    if sym:
-        _SYMBOL_CACHE[key] = sym
-        return sym
-    _SYMBOL_CACHE[key] = _SYMBOL_FAIL
-    return None
-
-
 def _resolve_symbol_for_rule(doc, rule_candidates, general_candidates, logger):
-    for bucket in (rule_candidates, general_candidates):
-        for candidate in bucket or []:
-            sym = _resolve_candidate_symbol(doc, candidate, logger)
-            if sym:
-                return sym
+    symbol = resolve_first_available_symbol(doc, rule_candidates, logger=logger)
+    if not symbol:
+        symbol = resolve_first_available_symbol(doc, general_candidates, logger=logger)
+    if symbol:
+        return symbol
     sym = _fallback_emergency_symbol(doc, logger)
     if sym:
         return sym
