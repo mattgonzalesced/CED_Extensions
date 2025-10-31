@@ -48,8 +48,7 @@ FIELDS_TO_ADD = [
     # "Circuit 2 MOCP_CED",
     # "Circuit 2 Apparent Load_CED",
     # "Circuit 2 Remarks_CEDT"
-    ]
-
+]
 
 FIELDS_TO_REMOVE = [
     "FLA_CED",
@@ -69,17 +68,25 @@ FIELDS_TO_REMOVE = [
 ]
 
 FIELDS_TO_UNHIDE = [
-    "Identity Type Mark",
-    "Identity Label Separator",
-    "Identity Mark",
-    "Installed Location",
+    "Circuit 1 Apparent Load_CED"
+    # "Identity Type Mark",
+    # "Identity Label Separator",
+    # "Identity Mark",
+    # "Installed Location",
+    # "Circuit 1 Description_CEDT",
+    # "Circuit 2 Description_CEDT"
     # "Interlock Identity Mark"
 ]
 
 FIELDS_TO_HIDE = [
     "Circuit 1 Number of Poles_CED",
-    "Identity Label Separator",
-    "Identity Mark"
+    "Circuit 1 Remarks_CEDT",
+    "Circuit 1 Description_CEDT",
+    "Circuit 2 Number of Poles_CED",
+    "Circuit 2 Remarks_CEDT"
+    # "Circuit 2 Apparent Load_CED",
+    # "Circuit 1 Apparent Load_CED"
+
 ]
 
 field_replacement_map = {
@@ -115,6 +122,8 @@ def get_selected_schedules(multiselect=True):
                 sched = doc.GetElement(el.ScheduleId)
                 if sched and isinstance(sched, DB.ViewSchedule):
                     schedules.append(sched)
+            elif isinstance(el, DB.ViewSchedule):
+                schedules.append(el)
         if schedules:
             return schedules
 
@@ -141,6 +150,7 @@ def get_all_project_params():
         if isinstance(definition, DB.InternalDefinition):
             param_names.append(definition.Name)
     return sorted(param_names)
+
 
 # Get parameter definition by name
 def get_definition_by_name(name):
@@ -174,9 +184,10 @@ def get_schedulable_fields(schedule, param_type="all"):
         }
 
     elif param_type.lower() == "type":
-        target_type = DB.ScheduleFieldType.Type
+        target_type = DB.ScheduleFieldType.ElementType
     elif param_type.lower() == "instance":
         target_type = DB.ScheduleFieldType.Instance
+
     else:
         raise ValueError("param_type must be one of: 'all', 'type', or 'instance'")
 
@@ -185,7 +196,6 @@ def get_schedulable_fields(schedule, param_type="all"):
         for schedulable_field in fields
         if schedulable_field.FieldType == target_type
     }
-
 
 
 # Add a list of schedulable fields to a schedule
@@ -237,6 +247,7 @@ def remove_schedulable_fields_from_schedule(schedule, field_names_to_remove):
 
     if removed_names:
         output.print_md("- 🗑 Removed from `{}`: {}".format(schedule.Name, ", ".join(removed_names)))
+
 
 def combine_schedule_field_parameters(schedule_field, param_names, category_id,
                                       prefix=None, separator=" ", suffix=None):
@@ -488,7 +499,6 @@ def reorder_fields(sched_definition, field_names,
     sched_definition.SetFieldOrder(new_order)
 
 
-
 def hide_fields(schedule, field_names_to_hide):
     definition = schedule.Definition
     hidden = []
@@ -503,6 +513,7 @@ def hide_fields(schedule, field_names_to_hide):
     if hidden:
         output.print_md("- 👻 Hidden fields in `{}`: {}".format(schedule.Name, ", ".join(hidden)))
 
+
 def unhide_fields(schedule, field_names_to_unhide):
     definition = schedule.Definition
     unhidden = []
@@ -515,7 +526,8 @@ def unhide_fields(schedule, field_names_to_unhide):
                 field.IsHidden = False
                 unhidden.append(field.GetName())
     if unhidden:
-        output.print_md("- 👻 Hidden fields in `{}`: {}".format(schedule.Name, ", ".join(unhidden)))
+        output.print_md("- 👻 Unhidden fields in `{}`: {}".format(schedule.Name, ", ".join(unhidden)))
+
 
 # Hide specified parameters in all schedules
 def hide_fields_in_all_schedules(param_names_to_hide):
@@ -574,7 +586,6 @@ def get_schedulable_field_name_map(schedule):
                 except:
                     field_map["Param_{}".format(param_id.IntegerValue)] = sf
     return field_map
-
 
 
 # Create a schedule for each selected category and let user pick fields to add
@@ -671,14 +682,88 @@ def get_schedulable_instance_fields_from_category(category):
     return {
         f.ParameterId.Value: f
         for f in schedulable_fields
-        if f.FieldType == DB.ScheduleFieldType.Instance
     }
+
+def get_grouped_header_cells(schedule):
+    data = schedule.GetTableData()
+    header = data.GetSectionData(DB.SectionType.Header)
+    results = []
+    for row in range(header.NumberOfRows):
+        for col in range(header.NumberOfColumns):
+            try:
+                merge_count = header.GetCellMergedColumnCount(row, col)
+                if merge_count > 1:
+                    results.append((row, col, header.GetCellText(row, col)))
+            except:
+                continue
+    return results
+
+def set_grouped_header_text(schedule, row, col, new_text):
+    data = schedule.GetTableData()
+    header = data.GetSectionData(DB.SectionType.Header)
+    header.SetCellText(row, col, new_text)
+
+
+def modify_schedule_field_format_options(field_name, schedule, unit_type_id=None, accuracy=None,
+                                         symbol_type_id=None, suppress_trailing_zeros=None,
+                                         suppress_spaces=None, use_default=None,
+                                         use_digit_grouping=None):
+    """
+    Modifies the FormatOptions of a given schedule field and schedule.
+
+    Args:
+        field_name (str): Name of the field to target (e.g. "Circuit 1 Apparent Load_CED").
+        schedules (list[ViewSchedule]): List of schedules to process.
+        unit_type_id (ForgeTypeId, optional): New unit type (e.g. kilowatts ForgeTypeId).
+        accuracy (float, optional): Decimal accuracy (e.g. 0.1).
+        symbol_type_id (ForgeTypeId, optional): Optional unit symbol override.
+        suppress_trailing_zeros (bool, optional): Whether to suppress trailing zeros.
+        suppress_spaces (bool, optional): Whether to suppress spaces between unit and value.
+        use_default (bool, optional): Whether to use default formatting.
+
+    Notes:
+        - Only modifies options that are explicitly passed in.
+        - Skips any schedules where the field isn't found.
+    """
+
+    definition = schedule.Definition
+    matched = False
+    for field_id in definition.GetFieldOrder():
+        field = definition.GetField(field_id)
+        if field and field.GetName() == field_name:
+            try:
+                fmt = field.GetFormatOptions()
+
+                if use_default is not None:
+                    fmt.UseDefault = use_default
+                if unit_type_id:
+                    fmt.SetUnitTypeId(unit_type_id)
+                if accuracy is not None:
+                    fmt.Accuracy = accuracy
+                if symbol_type_id:
+                    fmt.SetSymbolTypeId(symbol_type_id)
+                if suppress_trailing_zeros is not None:
+                    fmt.SuppressTrailingZeros = suppress_trailing_zeros
+                if suppress_spaces is not None:
+                    fmt.SuppressSpaces = suppress_spaces
+                if use_digit_grouping is not None:
+                    fmt.UseDigitGrouping = use_digit_grouping
+
+                field.SetFormatOptions(fmt)
+                output.print_md("- ✅ Modified format for `{}` in `{}`".format(field_name, schedule.Name))
+                matched = True
+            except Exception as ex:
+                output.print_md(
+                    "- ⚠️ Could not modify format for `{}` in `{}` → {}".format(field_name, schedule.Name, ex))
+            break
+    if not matched:
+        output.print_md("- ⚠️ Field `{}` not found in `{}`".format(field_name, schedule.Name))
 
 
 def convert_to_new_category(source_schedule, new_prefix="PE_",
-                                 include_space_fields=True,
-                                 target_category=DB.BuiltInCategory.OST_PlumbingEquipment,
-                                 space_category=DB.BuiltInCategory.OST_MEPSpaces):
+                            include_space_fields=True,
+                            target_category=DB.BuiltInCategory.OST_PlumbingEquipment,
+                            space_category=DB.BuiltInCategory.OST_MEPSpaces):
     """
     Duplicate a source schedule (typically mechanical) into a Plumbing Equipment schedule.
 
@@ -787,7 +872,6 @@ def convert_to_new_category(source_schedule, new_prefix="PE_",
     return new_schedule, skipped_fields
 
 
-
 def apply_find_replace_to_header(header_text, replacements, uppercase=True, strip_suffixes=True):
     """
     Process a schedule header string.
@@ -852,7 +936,6 @@ def batch_update_schedule_headers(schedules, replacements=None, uppercase=True, 
                     output.print_md("- '{}' → '{}'".format(old, new))
 
 
-
 # --- Tunables ---
 EXCLUDE_REVISION_SCHEDULES = True
 SNAP_X_INCHES = 0.25  # schedules within 1/4" on X are treated as same column
@@ -861,12 +944,77 @@ DEBUG = False
 
 SNAP_X_FEET = SNAP_X_INCHES / 12.0  # Revit internal units are feet
 
+def create_combined_schedule_field(schedule, param_names, custom_data_map=None, combined_name=None, insert_index=None):
+    """
+    Creates a combined parameter field in a schedule, placing it after the last matching field.
+
+    Args:
+        schedule (DB.ViewSchedule): The target schedule view.
+        param_names (list[str]): Names of the fields (in order) to combine.
+        custom_data_map (dict[str, DB.TableCellCombinedParameterData], optional):
+            Dictionary with param name as key and TableCellCombinedParameterData as value
+            (optional) to customize prefixes, suffixes, separators, etc.
+        combined_name (str, optional): Name of the combined field (display name). Auto-generated if None.
+        insert_index (int, optional): If provided, overrides auto-insertion and forces placement at this index.
+
+    Returns:
+        DB.ScheduleField: The newly inserted combined field, or None if failed.
+    """
+    definition = schedule.Definition
+    field_order = definition.GetFieldOrder()
+    combined_params = []
+    last_match_index = -1
+
+    # Build combined param objects
+    for name in param_names:
+        field_id = get_schedule_field_id_by_name(schedule, name)
+        if not field_id:
+            output.print_md("- ⚠️ Field `{}` not found in `{}`. Skipping.".format(name, schedule.Name))
+            continue
+
+        # Track position for insertion
+        try:
+            idx = field_order.IndexOf(field_id)
+            if idx > last_match_index:
+                last_match_index = idx
+        except:
+            pass
+
+        if custom_data_map and name in custom_data_map:
+            param_data = custom_data_map[name]
+        else:
+            param_data = DB.TableCellCombinedParameterData.Create()
+            schedule_field = definition.GetField(field_id)
+            param_data.ParamId = schedule_field.ParameterId
+
+        combined_params.append(param_data)
+
+    if not combined_params:
+        output.print_md("- ❌ No valid parameters to combine in `{}`.".format(schedule.Name))
+        return None
+
+    if not combined_name:
+        combined_name = "Combined - param"
+
+    # Auto placement if not overridden
+    final_index = insert_index if insert_index is not None else (last_match_index+1)
+
+    try:
+        new_field = definition.InsertCombinedParameterField(combined_params, combined_name, final_index)
+        output.print_md("- ✅ Created combined field `{}` in `{}` after index `{}`".format(
+            combined_name, schedule.Name, last_match_index))
+        return new_field
+    except Exception as ex:
+        output.print_md("- ❌ Failed to insert combined field in `{}` → {}".format(schedule.Name, ex))
+        return None
+
+
 
 def get_schedule_instances(sheet):
     """All schedule instances placed on the given sheet."""
     return DB.FilteredElementCollector(doc, sheet.Id) \
-             .OfClass(DB.ScheduleSheetInstance) \
-             .ToElements()
+        .OfClass(DB.ScheduleSheetInstance) \
+        .ToElements()
 
 
 def order_by_schedule_points(instances, tol_x_feet):
@@ -911,6 +1059,54 @@ def order_by_schedule_points(instances, tol_x_feet):
     return ordered
 
 
+def main_change_units():
+    schedules = get_selected_schedules(multiselect=True)
+    if not schedules:
+        forms.alert("No schedules selected.")
+        return
+
+    unit_type = DB.ForgeTypeId
+    display_units = DB.ForgeTypeId("autodesk.unit.unit:kilowatts-1.0.1")
+    display_symbol = DB.ForgeTypeId("autodesk.unit.symbol:kW-1.0.1")
+
+    modify_schedule_field_format_options("Circuit 1 Apparent Load_CED", schedules, display_units, 0.1, display_symbol,
+                                         True, False, False)
+
+def main_create_combined_param():
+    schedules = get_selected_schedules(multiselect=True)
+    if not schedules:
+        forms.alert("No schedules selected.")
+        return
+    combine_fields = ["Phase Symbol", "Identity Type Mark", "Identity Label Separator", "Identity Mark",]
+    combined_name = "ID (Combined)"
+
+    with DB.TransactionGroup(doc, "Modify Schedule Fields") as tg:
+        tg.Start()
+
+        for schedule in schedules:
+            definition = schedule.Definition
+            output.print_md("### ✏ Modifying `{}`".format(schedule.Name))
+            # --- Add desired fields ---
+            schedulable_map = get_schedulable_fields(schedule)
+            fields_to_add = []
+            for name in combine_fields:
+                for sf in schedulable_map.values():
+                    if get_schedulable_field_name(sf) == name:
+                        fields_to_add.append(sf)
+                        break
+
+            with revit.Transaction("Add Fields", doc=doc):
+                add_schedulable_fields_to_schedule(schedule, fields_to_add)
+
+            # --- Reorder ---
+            with revit.Transaction("Reorder Fields", doc=doc):
+                reorder_fields(definition, combine_fields, position="after", anchor_name="Appears in Schedule")
+
+
+            with revit.Transaction("Create Combined Schedule Field", doc=doc):
+                create_combined_schedule_field(schedule,combine_fields,None,combined_name)
+
+        tg.Assimilate()
 
 def main2():
     sheets = forms.select_sheets(title='Select Sheets to Process', use_selection=True)
@@ -939,26 +1135,28 @@ def main2():
                 print('   {0}. {1}'.format(i + 1, vs.Name))
 
 
-
 def main():
     schedules = get_selected_schedules(multiselect=True)
     if not schedules:
         forms.alert("No schedules selected.")
         return
 
-    # with revit.Transaction("Add Fields", doc=doc):
+    # with revit.Transaction("CONVERT CAT", doc=doc):
     #     for sched in schedules:
     #         convert_to_new_category(sched)
     #
     with DB.TransactionGroup(doc, "Modify Schedule Fields") as tg:
         tg.Start()
 
+        unit_type = DB.ForgeTypeId
+        display_units = DB.ForgeTypeId("autodesk.unit.unit:watts-1.0.1")
+        display_symbol = DB.ForgeTypeId("autodesk.unit.symbol:watt-1.0.1")
+
         for schedule in schedules:
+
+
             definition = schedule.Definition
             output.print_md("### ✏ Modifying `{}`".format(schedule.Name))
-
-
-
             # --- Add desired fields ---
             schedulable_map = get_schedulable_fields(schedule)
             fields_to_add = []
@@ -967,12 +1165,15 @@ def main():
                     if get_schedulable_field_name(sf) == name:
                         fields_to_add.append(sf)
                         break
-
+            #
             with revit.Transaction("Add Fields", doc=doc):
                 add_schedulable_fields_to_schedule(schedule, fields_to_add)
 
             with revit.Transaction("Unhide Fields", doc=doc):
                 unhide_fields(schedule, FIELDS_TO_UNHIDE)
+
+            # with revit.Transaction("Hide Fields", doc=doc):
+            #     hide_fields(schedule, FIELDS_TO_HIDE)
 
             # --- Reorder ---
             with revit.Transaction("Reorder Fields", doc=doc):
@@ -982,6 +1183,13 @@ def main():
             with revit.Transaction("Remove Fields", doc=doc):
                 remove_schedulable_fields_from_schedule(schedule, FIELDS_TO_REMOVE)
 
+            with revit.Transaction("Modify Field Format Options"):
+
+                modify_schedule_field_format_options("Circuit 1 Apparent Load_CED", schedule, display_units, 0.1,
+                                                 display_symbol,
+                                                 True, False, False, True)
+
+
              # Example 2: With find/replace rules
             find_replace_rules = {"Circuit 1 Description_CEDT":"Circuit Description",
                                     "Circuit 1 Voltage_CED":  "Voltage",
@@ -990,17 +1198,17 @@ def main():
                                     "Circuit 1 FLA_CED":  "FLA",
                                     "Circuit 1 MCA_CED":  "MCA",
                                     "Circuit 1 MOCP_CED":  "MOCP",
-                                    "Circuit 1 Apparent Load_CED":  "Apparent Load",
+                                    "Circuit 1 Apparent Load_CED":  "Watts",
                                     "Circuit 1 Remarks_CEDT":  "Circuit Remarks"
             }
+
 
             batch_update_schedule_headers(schedules, replacements=find_replace_rules,uppercase=False, strip_suffixes=False)
         tg.Assimilate()
 
 
 if __name__ == '__main__':
-    main2()
-
+    main_create_combined_param()
 
 """Remove/Add/Reorder Example
 
@@ -1040,7 +1248,6 @@ if __name__ == '__main__':
 
     forms.alert("Field modifications complete.")
     """
-
 
 """Find and replace example
     schedules = get_selected_schedules()
