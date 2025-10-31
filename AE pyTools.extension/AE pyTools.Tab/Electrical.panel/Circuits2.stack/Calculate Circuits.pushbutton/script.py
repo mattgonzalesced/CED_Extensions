@@ -148,7 +148,7 @@ def main():
         branch = CircuitBranch(circuit)
         if not branch.is_power_circuit:
             continue
-        if reasonable_user_overrides(branch):
+        if branch.reasonable_user_overrides:
             continue
         branch.calculate_breaker_size()
         branch.calculate_hot_wire_size()
