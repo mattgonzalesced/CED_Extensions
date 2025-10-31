@@ -7,22 +7,19 @@ from pyrevit import revit, forms, script
 
 # Local imports
 from utils import (feet_inch_to_inches, create_safe_control_name,
-                   read_xyz_csv, read_matchings_csv, organize_symbols_by_category,
-                   determine_family_category, set_instance_parameters, organize_model_groups)
+                   read_xyz_csv, read_matchings_json, organize_symbols_by_category,
+                   determine_family_category, organize_model_groups)
 
 # Revit API imports
-from Autodesk.Revit.DB import (
-    FilteredElementCollector,
-    FamilySymbol,
-    Structure,
-    XYZ,
-    Transaction,
-    BuiltInCategory,
-    BuiltInParameter,
-    ElementTransformUtils,
-    Line
-)
-from Autodesk.Revit.Exceptions import InvalidOperationException
+from Autodesk.Revit.DB import (FilteredElementCollector, FamilySymbol, Structure, XYZ, Transaction, ElementTransformUtils, Line, ForgeTypeId, UnitUtils)
+from pyrevit import DB
+
+# Try to import annotation-specific types (may not exist in older Revit versions)
+try:
+    from Autodesk.Revit.DB import FamilyPlacementType, ViewType
+    SUPPORTS_ANNOTATION_PLACEMENT = True
+except ImportError:
+    SUPPORTS_ANNOTATION_PLACEMENT = False
 
 import clr
 clr.AddReference("PresentationFramework")
@@ -30,17 +27,13 @@ clr.AddReference("PresentationCore")
 clr.AddReference("WindowsBase")
 
 # Import required WPF types.
-from System.Windows import Application, Window, WindowStartupLocation, Thickness, HorizontalAlignment, VerticalAlignment, GridLength, GridUnitType, TextWrapping, FontWeights, Visibility
-from System.Windows.Controls import StackPanel, ComboBox, TextBox, Button, ScrollViewer, ScrollBarVisibility, Border, Grid, ColumnDefinition, Label, TextBlock
+from System.Windows import Thickness, HorizontalAlignment, VerticalAlignment, GridLength, GridUnitType, TextWrapping, FontWeights, Visibility
+from System.Windows.Controls import StackPanel, ComboBox, Button, Border, Grid, ColumnDefinition, TextBlock
 import System.Windows.Controls as swc  # For Orientation
-from System.Windows.Interop import WindowInteropHelper
 from System.Windows.Media import Brushes
 from System.Windows.Markup import XamlReader
 from System.IO import FileStream, FileMode
-import System
 
-
-#------------------------------------------------------------------------------
 # Get active Revit document.
 doc = revit.doc
 
@@ -50,9 +43,9 @@ xyz_csv_path = forms.pick_file(file_ext='csv', title='Select the XYZ Locations C
 if not xyz_csv_path:
     script.exit()  # Exit if no file is selected
 
-# 2. Prompt the user to select Structured Matchings CSV file.
-matchings_csv_path = forms.pick_file(file_ext='csv', title='Select the Structured Matchings CSV')
-if not matchings_csv_path:
+# 2. Prompt the user to select Structured Matchings JSON file.
+matchings_json_path = forms.pick_file(file_ext='json', title='Select the Structured Matchings JSON')
+if not matchings_json_path:
     script.exit()  # Exit if no file is selected
 
 #------------------------------------------------------------------------------
@@ -63,26 +56,22 @@ if not unique_names:
     script.exit("No valid 'Name' column found in XYZ CSV or CSV is empty.")
 
 #------------------------------------------------------------------------------
-# 4. Read Structured Matchings CSV to create automatic mappings.
-matchings_dict, groups_dict, parameters_dict = read_matchings_csv(matchings_csv_path)
+# 4. Read Structured Matchings JSON to create automatic mappings.
+matchings_dict, groups_dict, parameters_dict, offsets_dict = read_matchings_json(matchings_json_path)
 
 #------------------------------------------------------------------------------
 # 5. Collect all FamilySymbols from the project and organize by category.
-fixture_symbols = FilteredElementCollector(doc) \
-    .OfClass(FamilySymbol) \
-    .ToElements()
+fixture_symbols = FilteredElementCollector(doc).OfClass(FamilySymbol).ToElements()
+
+
+# print("FIXTURE_SYMBOLS {}".format(fixture_symbols))
+
 
 # Organize symbols by category using utility function
 (symbol_label_map, symbols_by_category, families_by_category,
  types_by_family, family_symbols) = organize_symbols_by_category(fixture_symbols)
 
 symbol_labels_sorted = sorted(symbol_label_map.keys())
-
-# DEBUG: Print all Generic Annotations families
-if "Generic Annotations" in symbols_by_category:
-    print("DEBUG: Generic Annotations families in project:")
-    for label in symbols_by_category["Generic Annotations"]:
-        print("  - '{}'".format(label))
 
 #------------------------------------------------------------------------------
 # 5b. Collect and organize Model Groups
@@ -109,6 +98,16 @@ divisor_textbox = window.FindName("DivisorTextBox")
 ok_button = window.FindName("OkButton")
 cancel_button = window.FindName("CancelButton")
 
+# Learning stuff
+import webbrowser
+def on_secret_click(sender, args):
+    webbrowser.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+
+ruler_icon = window.FindName("Rulericon")
+Lightbulb_icon = window.FindName("Lightbulbicon")
+
+ruler_icon.MouseLeftButtonDown += on_secret_click
+Lightbulb_icon.MouseLeftButtonDown += on_secret_click
 #------------------------------------------------------------------------------
 # Add a header row for the columns.
 headerGrid = Grid()
@@ -134,6 +133,7 @@ headerGrid.Children.Add(headerText1)
 
 # Create sub-header for the dropdown area
 subHeaderGrid = Grid()
+subHeaderGrid.Background = Brushes.WhiteSmoke  # Light gray, almost white
 subHeaderCol1 = ColumnDefinition()
 subHeaderCol1.Width = GridLength(120, GridUnitType.Pixel)  # Category column
 subHeaderCol2 = ColumnDefinition()
@@ -256,13 +256,13 @@ def create_dropdown_row(cad_name, preselected_family=None, is_first=True, catego
     # Populate the Family ComboBox with families filtered by category
     if category and category in families_by_category:
         # Use category-filtered family list
-        print("DEBUG: Family dropdown - Filtering by category '{}', found {} families".format(category, len(families_by_category[category])))
+        ## print("DEBUG: Family dropdown - Filtering by category '{}', found {} families".format(category, len(families_by_category[category])))
         for family in families_by_category[category]:
             familyCmb.Items.Add(family)
     else:
         # Use all families if no category specified
         all_families = sorted(types_by_family.keys())
-        print("DEBUG: Family dropdown - No category filter, showing all {} families".format(len(all_families)))
+        ## print("DEBUG: Family dropdown - No category filter, showing all {} families".format(len(all_families)))
         for family in all_families:
             familyCmb.Items.Add(family)
 
@@ -382,7 +382,7 @@ def add_dropdown_to_container(cad_name, container, preselected_family=None, cate
         if selected_category:
             # SelectFromList returns a list, so get the first item
             selected_cat = selected_category[0] if isinstance(selected_category, list) else str(selected_category)
-            print("DEBUG: Plus button clicked, selected category: '{}'".format(selected_cat))
+            ## print("DEBUG: Plus button clicked, selected category: '{}'".format(selected_cat))
             add_dropdown_to_container(cad_name, container, category=selected_cat)
 
     x_btn.Click += x_clicked
@@ -433,7 +433,7 @@ for name in sorted(unique_names):
             # Determine which category this family belongs to using utility function
             family_category = determine_family_category(family, symbols_by_category)
 
-            print("DEBUG: CSV family '{}' assigned to category '{}'".format(family, family_category))
+            ## print("DEBUG: CSV family '{}' assigned to category '{}'".format(family, family_category))
             familyCmb, typeCmb = add_dropdown_to_container(name, dropdownContainer, family, family_category)
             dropdown_controls.append((familyCmb, typeCmb))
 
@@ -442,14 +442,14 @@ for name in sorted(unique_names):
         # Create one dropdown for each pre-mapped group (model group + detail group combo)
         for i, group in enumerate(auto_groups):
             # Model groups are in the "Model Groups" category
-            print("DEBUG: CSV group '{}' assigned to category 'Model Groups'".format(group))
+            ## print("DEBUG: CSV group '{}' assigned to category 'Model Groups'".format(group))
             familyCmb, typeCmb = add_dropdown_to_container(name, dropdownContainer, group, "Model Groups")
             dropdown_controls.append((familyCmb, typeCmb))
 
     # If no pre-mappings, create one empty dropdown
     if not auto_families and not auto_groups:
         # Create one empty dropdown with all categories (pass None for category to show all)
-        print("DEBUG: CAD block '{}' has no pre-mapped families or groups, creating dropdown with all options".format(name))
+        ## print("DEBUG: CAD block '{}' has no pre-mapped families or groups, creating dropdown with all options".format(name))
         familyCmb, typeCmb = add_dropdown_to_container(name, dropdownContainer, category=None)
         dropdown_controls.append((familyCmb, typeCmb))
 
@@ -523,26 +523,36 @@ selected_level = forms.select_levels(multiple=False)
 dialog_result = window.ShowDialog()
 
 if not dialog_result:
-    print("User canceled fixture mapping.")
+    # print("User canceled fixture mapping.")
+    pass
 else:
     try:
         divisor = float(result["divisor"])
     except ValueError:
-        print("Invalid divisor value entered.")
+        # print("Invalid divisor value entered.")
+        pass
     else:
         # Build a mapping for CAD blocks to lists of items to place (family symbols OR group tuples)
         name_to_items_map = {}
         for name, item_labels in result["selections"].items():
             items_to_place = []
+            # Track occurrence count for each label to handle duplicates
+            label_occurrence_count = {}
+
             for label in item_labels:
+                # Determine occurrence index for this label
+                occurrence_index = label_occurrence_count.get(label, 0)
+                label_occurrence_count[label] = occurrence_index + 1
+
                 # Check if it's a family symbol
                 if label in symbol_label_map:
-                    items_to_place.append(symbol_label_map[label])
+                    items_to_place.append((symbol_label_map[label], label, occurrence_index))
                 # Check if it's a model group
                 elif label in group_label_map:
-                    items_to_place.append(group_label_map[label])
+                    items_to_place.append((group_label_map[label], label, occurrence_index))
                 else:
-                    print("WARNING: Item '{}' not found in project. Skipping.".format(label))
+                    # print("WARNING: Item '{}' not found in project. Skipping.".format(label))
+                    pass
             if items_to_place:
                 name_to_items_map[name] = items_to_place
 
@@ -559,20 +569,20 @@ else:
                 z_str = row.get("Position Z", "").strip()
 
                 if not x_str or not y_str or not z_str:
-                    print("Skipping row due to missing coordinate:", row)
+                    # print("Skipping row due to missing coordinate:", row)
                     continue
 
                 x_inches = feet_inch_to_inches(x_str)
                 y_inches = feet_inch_to_inches(y_str)
                 z_inches = feet_inch_to_inches(z_str)
                 if x_inches is None or y_inches is None or z_inches is None:
-                    print("Skipping row due to conversion error:", row)
+                    # print("Skipping row due to conversion error:", row)
                     continue
 
                 try:
                     rot_deg = float(row.get("Rotation", 0.0))
                 except ValueError:
-                    print("Skipping row with invalid rotation:", row)
+                    ## print("Skipping row with invalid rotation:", row)
                     continue
 
                 x = x_inches / divisor
@@ -583,26 +593,71 @@ else:
                 # Get all items mapped to this CAD block name (families OR groups)
                 items = name_to_items_map.get(cad_name, [])
                 if not items:
-                    print("No items mapped for '{}'. Skipping row.".format(cad_name))
+                    ## print("No items mapped for '{}'. Skipping row.".format(cad_name))
                     continue
 
                 # Place each item at the same location
-                for item in items:
-                    # Check if item is a FamilySymbol or a Group tuple
-                    if isinstance(item, tuple):
+                for item_wrapper in items:
+                    # Safely unpack the 3-tuple (item, label, occurrence_index)
+                    if isinstance(item_wrapper, tuple) and len(item_wrapper) == 3:
+                        actual_item, label_from_ui, occurrence_index = item_wrapper
+                    else:
+                        # Backward compatibility: old format without occurrence tracking
+                        actual_item = item_wrapper
+                        label_from_ui = None
+                        occurrence_index = 0
+
+                    # Check if actual_item is a FamilySymbol or a Group tuple
+                    if isinstance(actual_item, tuple) and len(actual_item) == 2:
                         # This is a model group: (model_group_type, detail_group_type or None)
                         from Autodesk.Revit.DB import Element
-                        model_group_type, detail_group_type = item
+                        model_group_type, detail_group_type = actual_item
 
-                        # Place model group
+                        # Use label from UI if available, otherwise find it
+                        if label_from_ui:
+                            group_label = label_from_ui
+                        else:
+                            # Fallback: reverse lookup in group_label_map
+                            group_label = None
+                            for label, grp_tuple in group_label_map.items():
+                                if grp_tuple[0].Id == model_group_type.Id:
+                                    group_label = label
+                                    break
+
+                        # Get offset from JSON (default to 0)
+                        offset_x_inches = 0.0
+                        offset_y_inches = 0.0
+                        if group_label and cad_name in offsets_dict:
+                            label_offsets_array = offsets_dict[cad_name].get(group_label, [])
+
+                            # Use occurrence index to get the correct offset
+                            if isinstance(label_offsets_array, list) and occurrence_index < len(label_offsets_array):
+                                label_offsets = label_offsets_array[occurrence_index]
+                            elif isinstance(label_offsets_array, dict):
+                                # Backward compatibility: old single-offset format
+                                label_offsets = label_offsets_array
+                            else:
+                                label_offsets = {}
+
+                            offset_x_inches = label_offsets.get("x", 0.0)
+                            offset_y_inches = label_offsets.get("y", 0.0)
+
+                        # Convert offset from inches to feet
+                        offset_x_feet = offset_x_inches / 12.0
+                        offset_y_feet = offset_y_inches / 12.0
+
+                        # Apply offset to base location
+                        offset_loc = XYZ(x + offset_x_feet, y + offset_y_feet, z)
+
+                        # Place model group at offset location
                         model_group_name = Element.Name.__get__(model_group_type)
-                        print("DEBUG: Placing model group '{}' at location {}".format(model_group_name, loc))
-                        model_group_instance = doc.Create.PlaceGroup(loc, model_group_type)
+                        ## print("DEBUG: Placing model group '{}' at offset location {}".format(model_group_name, offset_loc))
+                        model_group_instance = doc.Create.PlaceGroup(offset_loc, model_group_type)
 
-                        # Apply rotation to model group if needed (do this BEFORE showing detail groups)
+                        # Apply rotation to model group around BASE location
                         if abs(rot_deg) > 1e-6:
                             angle_radians = math.radians(rot_deg)
-                            axis = Line.CreateBound(loc, loc + XYZ(0, 0, 1))
+                            axis = Line.CreateBound(loc, loc + XYZ(0, 0, 1))  # loc is BASE
                             ElementTransformUtils.RotateElement(doc, model_group_instance.Id, axis, angle_radians)
 
                         # Show the detail group in the active view if specified
@@ -616,41 +671,153 @@ else:
                                 if detail_group_type.Id in available_detail_ids:
                                     # Show the detail group in the active view
                                     model_group_instance.ShowAttachedDetailGroups(doc.ActiveView, detail_group_type.Id)
-                                    print("DEBUG: Showed attached detail group '{}' in active view".format(detail_group_name))
+                                    ## print("DEBUG: Showed attached detail group '{}' in active view".format(detail_group_name))
                                 else:
-                                    print("WARNING: Detail group '{}' is not attached to model group '{}'. Available detail groups: {}".format(
-                                        detail_group_name, model_group_name, len(available_detail_ids)))
+                                    # print("WARNING: Detail group '{}' is not attached to model group '{}'. Available detail groups: {}".format(detail_group_name, model_group_name, len(available_detail_ids)))
+                                    pass
                             except Exception as ex:
-                                print("ERROR: Failed to show detail group '{}': {}".format(detail_group_name, ex))
+                                # print("ERROR: Failed to show detail group '{}': {}".format(detail_group_name, ex))
+                                pass
 
                     else:
                         # This is a FamilySymbol (existing logic)
-                        symbol = item
+                        symbol = actual_item
                         if not symbol.IsActive:
                             symbol.Activate()
                             doc.Regenerate()
 
-                        instance = doc.Create.NewFamilyInstance(loc, symbol, selected_level, Structure.StructuralType.NonStructural)
-
-                        # Set parameters if they exist for this CAD block and family
-                        if cad_name in parameters_dict:
-                            # Find the matching symbol label for this symbol
+                        # Use label from UI if available, otherwise find it
+                        if label_from_ui:
+                            symbol_label = label_from_ui
+                        else:
+                            # Fallback: reverse lookup in symbol_label_map
                             symbol_label = None
                             for label, sym in symbol_label_map.items():
                                 if sym.Id == symbol.Id:
                                     symbol_label = label
                                     break
 
-                            if symbol_label:
-                                set_instance_parameters(instance, parameters_dict[cad_name], symbol_label)
+                        # Get offset from JSON (default to 0)
+                        offset_x_inches = 0.0
+                        offset_y_inches = 0.0
+                        if symbol_label and cad_name in offsets_dict:
+                            label_offsets_array = offsets_dict[cad_name].get(symbol_label, [])
 
-                        # Apply rotation if needed
-                        if abs(rot_deg) > 1e-6:
-                            angle_radians = math.radians(rot_deg)
-                            axis = Line.CreateBound(loc, loc + XYZ(0, 0, 1))
-                            ElementTransformUtils.RotateElement(doc, instance.Id, axis, angle_radians)
+                            # Use occurrence index to get the correct offset
+                            if isinstance(label_offsets_array, list) and occurrence_index < len(label_offsets_array):
+                                label_offsets = label_offsets_array[occurrence_index]
+                            elif isinstance(label_offsets_array, dict):
+                                # Backward compatibility: old single-offset format
+                                label_offsets = label_offsets_array
+                            else:
+                                label_offsets = {}
+
+                            offset_x_inches = label_offsets.get("x", 0.0)
+                            offset_y_inches = label_offsets.get("y", 0.0)
+
+                        # Convert offset from inches to feet
+                        offset_x_feet = offset_x_inches / 12.0
+                        offset_y_feet = offset_y_inches / 12.0
+
+                        # Apply offset to base location
+                        offset_loc = XYZ(x + offset_x_feet, y + offset_y_feet, z)
+
+                        # Place instance at offset location
+                        instance = None
+                        placement_succeeded = False
+
+                        try:
+                            # Check if this is an annotation family that requires view-based placement
+                            requires_view_placement = False
+
+                            if SUPPORTS_ANNOTATION_PLACEMENT:
+                                try:
+                                    if hasattr(symbol, 'Family') and hasattr(symbol.Family, 'FamilyPlacementType'):
+                                        if symbol.Family.FamilyPlacementType == FamilyPlacementType.ViewBased:
+                                            requires_view_placement = True
+                                except:
+                                    # If check fails, assume it's a model family
+                                    pass
+
+                            if requires_view_placement:
+                                # Annotation families need to be placed in a view
+                                current_view = doc.ActiveView
+                                if not current_view:
+                                    # print("ERROR: No active view available to place annotation '{}'. Skipping.".format(symbol_label))
+                                    pass
+                                elif current_view.ViewType == ViewType.ThreeD:
+                                    # print("WARNING: Cannot place annotation '{}' at ({}, {}) - active view is 3D. Switch to a 2D view.".format(symbol_label, x, y))
+                                    pass
+                                else:
+                                    instance = doc.Create.NewFamilyInstance(offset_loc, symbol, current_view)
+                                    placement_succeeded = True
+                            else:
+                                # Model families use level-based placement
+                                instance = doc.Create.NewFamilyInstance(offset_loc, symbol, selected_level, Structure.StructuralType.NonStructural)
+                                placement_succeeded = True
+
+                        except Exception as ex:
+                            # print("ERROR: Failed to place '{}' at ({}, {}): {}".format(symbol_label, x, y, ex))
+                            pass
+
+                        # Only set parameters and apply rotation if placement succeeded
+                        if placement_succeeded and instance is not None:
+                            # Set parameters if they exist
+                            if symbol_label and cad_name in parameters_dict:
+                                params_array = parameters_dict.get(cad_name, {}).get(symbol_label, [])
+
+                                # Use occurrence index to get the correct parameters
+                                if isinstance(params_array, list) and occurrence_index < len(params_array):
+                                    params = params_array[occurrence_index]
+                                elif isinstance(params_array, dict):
+                                    # Backward compatibility: old single-parameter format
+                                    params = params_array
+                                else:
+                                    params = {}
+
+                                # Apply parameters directly to instance
+                                if params:
+                                    for param_name, param_value in params.items():
+                                        try:
+                                            param = instance.LookupParameter(param_name) or instance.get_Parameter(param_name)
+
+                                            if not param or param.IsReadOnly:
+                                                continue
+
+                                            storage_type = param.StorageType.ToString()
+
+                                            # Debug output
+                                            # # print("DEBUG: Setting '{}' = '{}' (storage type: {})".format(param_name, param_value, storage_type))
+
+                                            # Type conversion handlers
+                                            if storage_type == "Integer":
+                                                param.Set(int(param_value))
+                                            elif storage_type == "Double":
+                                                # Special handling for Apparent Load parameters (electrical VA units)
+                                                if "Apparent Load" in param_name:
+                                                    forge_type_va = ForgeTypeId("autodesk.unit.unit:voltAmperes-1.0.1")
+                                                    converted = UnitUtils.ConvertToInternalUnits(float(param_value), forge_type_va)
+                                                    param.Set(converted)
+                                                else:
+                                                    param.Set(float(param_value))
+                                            else:
+                                                param.Set(str(param_value))
+
+                                        except Exception as ex:
+                                            # print("ERROR: Failed to set parameter '{}' = '{}': {}".format(param_name, param_value, ex))
+                                            pass
+
+                            # Apply rotation around BASE location (not offset location)
+                            if abs(rot_deg) > 1e-6:
+                                try:
+                                    angle_radians = math.radians(rot_deg)
+                                    axis = Line.CreateBound(loc, loc + XYZ(0, 0, 1))  # loc is BASE
+                                    ElementTransformUtils.RotateElement(doc, instance.Id, axis, angle_radians)
+                                except Exception as ex:
+                                    # print("ERROR: Failed to rotate '{}': {}".format(symbol_label, ex))
+                                    pass
             t.Commit()
-            print("Finished placing families from CSV.")
+            # print("Finished placing families from CSV.")
         except InvalidOperationException as ex:
             t.RollBack()
-            print("Transaction rolled back. Error:", ex)
+            # print("Transaction rolled back. Error:", ex)

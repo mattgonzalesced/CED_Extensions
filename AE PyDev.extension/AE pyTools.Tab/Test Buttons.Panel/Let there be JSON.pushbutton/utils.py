@@ -65,8 +65,6 @@ def read_xyz_csv(csv_path):
 
     with codecs.open(csv_path, 'r', encoding='utf-8-sig') as f:
         reader = csv.DictReader(f, delimiter=',')
-        reader.fieldnames = [h.strip() for h in reader.fieldnames or []]
-
         for row in reader:
             # Skip invalid rows
             if row.get("Count", "").strip() != "1" or not row.get("Position X", "").strip():
@@ -80,89 +78,104 @@ def read_xyz_csv(csv_path):
     return xyz_rows, unique_names
 
 
-def read_matchings_csv(csv_path):
-    """Read Structured Matchings CSV and return mapping and parameter dictionaries.
+def read_matchings_json(json_path):
+    """Read JSON matchings and return mapping and parameter dictionaries.
 
     Returns:
-        matchings_dict: CAD_Block_Name -> list of family labels ("Type : Family")
+        matchings_dict: CAD_Block_Name -> list of family labels ("Type : Family") for example {'HM62B_Up tanning': ['Fused - 30A : EF-U_Disconnect Switch_CED']
         groups_dict: CAD_Block_Name -> list of group labels ("DetailGroup : ModelGroup" or "None : ModelGroup")
-        parameters_dict: CAD_Block_Name -> {label -> {param_name -> param_value}}
+        parameters_dict: CAD_Block_Name -> {label -> {param_name -> param_value}} for example {'43 tv': {'Duplex Floor : EF-U_Receptacle_CED': {'dev-Group ID': '43 tv'}}, 'HM62B_Up tanning': {'Fused - 30A : EF-U_Disconnect Switch_CED': {'dev-Group ID': 'HM62B_Up tanning'}},
     """
-    import csv
+    import json
     import codecs
 
     matchings_dict = {}
     groups_dict = {}
     parameters_dict = {}
+    offsets_dict = {}
 
-    with codecs.open(csv_path, 'r', encoding='utf-8-sig') as f:
-        reader = csv.DictReader(f, delimiter=',')
-        reader.fieldnames = [h.strip() for h in reader.fieldnames or []]
+    with codecs.open(json_path, 'r', encoding='utf-8-sig') as f:
+        data = json.load(f)
 
-        # Separate columns once (not per row)
-        excluded = {"CAD_Block_Name", "Notes", "Model_Groups"}
-        family_columns = [c for c in reader.fieldnames if c not in excluded and not c.endswith("_Parameters")]
-        parameter_columns = [c for c in reader.fieldnames if c.endswith("_Parameters")]
-        has_model_groups_col = "Model_Groups" in reader.fieldnames
+    for cad_name, categories in data.items():
+        families = []
+        groups = []
 
-        for row in reader:
-            cad_name = row.get("CAD_Block_Name", "").strip()
-            if not cad_name:
+        # Ensure categories is a dictionary
+        if not isinstance(categories, dict):
+            print("WARNING: CAD block '{}' value is not a dictionary (type: {}). Skipping.".format(cad_name, type(categories).__name__))
+            continue
+
+        # Process each category
+        for category_name, category_data in categories.items():
+            # Skip Notes field (Notes is a string, not a list)
+            if category_name == "Notes":
                 continue
 
-            families = []
-            groups = []
+            # category_data should be an array (skip if not)
+            if not isinstance(category_data, list):
+                print("WARNING: Category '{}' for CAD block '{}' is not an array. Skipping.".format(category_name, cad_name))
+                continue
 
-            # Process family columns (existing logic)
-            for col in family_columns:
-                data = row.get(col, "").strip()
-                if data:
-                    for entry in data.split(","):
-                        parts = entry.strip().split(":", 1)
-                        if len(parts) == 2:
-                            family_name, type_name = parts[0].strip(), parts[1].strip()
-                            if family_name and type_name:
-                                families.append("{} : {}".format(type_name, family_name))
+            # Iterate through array of fixture objects
+            for fixture_obj in category_data:
+                # fixture_obj is a dict with one key (the family name)
+                for family_name, types_dict in fixture_obj.items():
+                    # types_dict contains type names as keys
+                    for type_name, type_data in types_dict.items():
+                        # Construct the label in "Type : Family" format
+                        label = "{} : {}".format(type_name, family_name)
 
-            # Process Model_Groups column (NEW)
-            if has_model_groups_col:
-                data = row.get("Model_Groups", "").strip()
-                if data:
-                    for entry in data.split(","):
-                        parts = entry.strip().split(":", 1)
-                        if len(parts) == 2:
-                            model_group_name, detail_group_name = parts[0].strip(), parts[1].strip()
-                            if model_group_name and detail_group_name:
-                                # Format: "DetailGroup : ModelGroup" (matching the organize_model_groups output)
-                                groups.append("{} : {}".format(detail_group_name, model_group_name))
-                        elif len(parts) == 1:
-                            # Just model group name, no detail group
-                            model_group_name = parts[0].strip()
-                            if model_group_name:
-                                groups.append("None : {}".format(model_group_name))
+                        # Check if this is a Model Group
+                        if category_name == "Model_Groups":
+                            groups.append(label)
+                        else:
+                            families.append(label)
 
-            # Process parameter columns
-            for col in parameter_columns:
-                data = row.get(col, "").strip()
-                if data:
-                    for entry in data.split(","):
-                        parts = entry.strip().split(":", 3)
-                        if len(parts) == 4:
-                            family_name, type_name, param_name, param_value = [p.strip() for p in parts]
-                            if all([family_name, type_name, param_name, param_value]):
-                                family_label = "{} : {}".format(type_name, family_name)
-                                parameters_dict.setdefault(cad_name, {}).setdefault(family_label, {})[param_name] = param_value
+                        # Extract OFFSET if it exists
+                        if "OFFSET" in type_data:
+                            offset_data = type_data.get("OFFSET", {})
+                            if offset_data:
+                                try:
+                                    offset_x = float(offset_data.get("x", 0.0))
+                                    offset_y = float(offset_data.get("y", 0.0))
+                                    offsets_dict.setdefault(cad_name, {}).setdefault(label, []).append({"x": offset_x, "y": offset_y})
+                                except (ValueError, TypeError):
+                                    # If conversion fails, just skip (defaults to no offset)
+                                    pass
 
-            if families:
-                matchings_dict[cad_name] = families
-            if groups:
-                groups_dict[cad_name] = groups
+                        # Extract parameters if they exist
+                        if "PARAMETERS" in type_data and type_data["PARAMETERS"]:
+                            params = type_data["PARAMETERS"]
+                            parameters_dict.setdefault(cad_name, {}).setdefault(label, []).append(params)
 
-    return matchings_dict, groups_dict, parameters_dict
+        # Store results
+        if families:
+            matchings_dict[cad_name] = families
+            #print("DEBUG JSON: CAD block '{}' has {} families: {}".format(cad_name, len(families), families[:2]))
+        if groups:
+            groups_dict[cad_name] = groups
+            #print("DEBUG JSON: CAD block '{}' has {} groups: {}".format(cad_name, len(groups), groups[:2]))
+    
+    print('ORGANIZE SYMBOLS BY CATEGORY FUNCTION')
+    print("MATCHINGS_DICT {}".format(matchings_dict))
+    print("GROUPS_DICT {}".format(groups_dict))
+    print("PARAMETERS_DICT {}".format(parameters_dict))
+    print("OFFSETS_DICT {}".format(offsets_dict))
+
+    return matchings_dict, groups_dict, parameters_dict, offsets_dict
 
 
 def organize_symbols_by_category(fixture_symbols):
-    """Organize family symbols by Revit category and create lookup dictionaries."""
+    """Organize family symbols by Revit category and create lookup dictionaries.
+    
+    symbol_label_map = {}  # "Type : Family" -> symbol THIS IS EVERY FAMILY AND TYPE MAP 
+    symbols_by_category = {}  # category -> ["Type : Family", ...]
+    families_by_category = {}  # category -> [family_name, ...]
+    types_by_family = {}  # family_name -> [type_name, ...]
+    family_symbols = {}  # (family_name, type_name) -> symbol
+
+    """
     from Autodesk.Revit.DB import BuiltInParameter
 
     symbol_label_map = {}  # "Type : Family" -> symbol
@@ -199,10 +212,17 @@ def organize_symbols_by_category(fixture_symbols):
     for category in symbols_by_category:
         symbols_by_category[category].sort()
         families_by_category[category].sort()
-        print("DEBUG: Category '{}' has {} families".format(category, len(families_by_category[category])))
+        #print("DEBUG: Category '{}' has {} families".format(category, len(families_by_category[category])))
 
     for family in types_by_family:
         types_by_family[family].sort()
+    
+    print('ORGANIZE SYMBOLS BY CATEGORY FUNCTION')
+    print("symbol_label_map {}".format(symbol_label_map))
+    print("symbols_by_category {}".format(symbols_by_category))
+    print("families_by_category {}".format(families_by_category))
+    print("types_by_family {}".format(types_by_family))
+    print("family_symbols {}".format(family_symbols))
 
     return (symbol_label_map, symbols_by_category, families_by_category,
             types_by_family, family_symbols)
@@ -215,30 +235,6 @@ def determine_family_category(family, symbols_by_category):
         if family in families:
             return cat
     return None
-
-    # # Try to guess category based on keywords
-    # family_lower = family.lower()
-    # keyword_map = {
-    #     'light': ['light'],
-    #     'luminaire': ['light'],
-    #     'receptacle': ['electrical'],
-    #     'switch': ['electrical'],
-    #     'equipment': ['equipment', 'mechanical'],
-    #     'mechanical': ['mechanical', 'equipment'],
-    #     'plumbing': ['plumbing']
-    # }
-
-    # for keyword, category_keywords in keyword_map.items():
-    #     if keyword in family_lower:
-    #         for cat_name in symbols_by_category.keys():
-    #             cat_lower = cat_name.lower()
-    #             if any(cat_kw in cat_lower for cat_kw in category_keywords):
-    #                 return cat_name
-
-    # # Fallback: use category with most families, or "Unknown Category"
-    # if symbols_by_category:
-    #     return max(symbols_by_category.keys(), key=lambda k: len(symbols_by_category[k]))
-    # return "Unknown Category"
 
 
 def organize_model_groups(doc):
@@ -267,16 +263,16 @@ def organize_model_groups(doc):
         try:
             detail_name = Element.Name.__get__(detail_group_type)
             detail_groups_dict[detail_group_type.Id] = detail_group_type
-            print("DEBUG: Found detail group: '{}'".format(detail_name))
+            #print("DEBUG: Found detail group: '{}'".format(detail_name))
         except Exception as ex:
-            print("DEBUG: Error processing detail group: {}".format(ex))
+            #print("DEBUG: Error processing detail group: {}".format(ex))
             continue
 
     # Now organize model groups and find their attached detail groups
     for model_group_type in model_groups:
         try:
             model_group_name = Element.Name.__get__(model_group_type)
-            print("DEBUG: Found model group: '{}'".format(model_group_name))
+            #print("DEBUG: Found model group: '{}'".format(model_group_name))
 
             model_group_names.append(model_group_name)
 
@@ -302,7 +298,7 @@ def organize_model_groups(doc):
                 if detail_name not in details_by_model_group[model_group_name]:
                     details_by_model_group[model_group_name].append(detail_name)
         except Exception as ex:
-            print("DEBUG: Error organizing model group: {}".format(ex))
+            #print("DEBUG: Error organizing model group: {}".format(ex))
             continue
 
     # Sort lists
@@ -310,45 +306,8 @@ def organize_model_groups(doc):
     for model_group in details_by_model_group:
         details_by_model_group[model_group].sort()
 
-    print("DEBUG: Found {} model groups".format(len(model_group_names)))
+    #print("DEBUG: Found {} model groups".format(len(model_group_names)))
     for mg_name in model_group_names:
         print("DEBUG: Model group '{}' has {} detail options".format(mg_name, len(details_by_model_group[mg_name])))
 
     return group_label_map, details_by_model_group, model_group_names
-
-
-def set_instance_parameters(instance, parameters, symbol_label):
-    """Set parameters on a family instance based on the parameters dictionary."""
-    if not parameters or symbol_label not in parameters:
-        return
-
-    for param_name, param_value in parameters[symbol_label].items():
-        try:
-            param = instance.LookupParameter(param_name) or instance.get_Parameter(param_name)
-
-            if not param or param.IsReadOnly:
-                print("WARNING: Parameter '{}' not found or is read-only on family '{}'".format(param_name, symbol_label))
-                continue
-
-            storage_type = param.StorageType.ToString()
-
-            # Type conversion handlers
-            if storage_type == "Integer":
-                try:
-                    param.Set(int(param_value))
-                except ValueError:
-                    print("WARNING: Could not convert '{}' to integer for parameter '{}'".format(param_value, param_name))
-                    continue
-            elif storage_type == "Double":
-                try:
-                    param.Set(float(param_value))
-                except ValueError:
-                    print("WARNING: Could not convert '{}' to double for parameter '{}'".format(param_value, param_name))
-                    continue
-            else:
-                param.Set(str(param_value))
-
-            print("DEBUG: Set parameter '{}' = '{}' on instance".format(param_name, param_value))
-
-        except Exception as ex:
-            print("ERROR: Failed to set parameter '{}' = '{}': {}".format(param_name, param_value, ex))

@@ -1,0 +1,1803 @@
+{
+    "27TV": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "27TV",
+                            "Load Classification_CED" : "C",
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Panel_CEDT" : "L3"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "27TV",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "11"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 18,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "TV outlet"
+    },
+    "43 tv": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "43 tv",
+                            "Load Classification_CED" : "C",
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Panel_CEDT" : "L3"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "43 tv",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "11"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 26,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "TV outlet"
+    },
+    "65tv": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "65tv",
+                            "Load Classification_CED" : "C",
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Panel_CEDT" : "L3"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "65tv",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "11"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 26,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "TV outlet"
+    },
+    "70tv": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "70tv",
+                            "Load Classification_CED" : "C",
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Panel_CEDT" : "L3"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "70tv",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "13"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "TV outlet"
+    },
+    "75TV": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "75TV",
+                            "Load Classification_CED" : "C",
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Panel_CEDT" : "L3"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "75TV",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "13"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "TV outlet"
+    },
+    "BCS Speaker": {
+        "Data_Devices": [
+            {
+                "DD-U_General Low Voltage Device_CED" : {
+                    "Speaker": {
+                        "PARAMETERS" : {
+                            "dev-Group ID" : "BEAUTYANGEL - Speaker"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Speaker with electrical"
+    },
+    "BEAUTYANGEL": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Disconnect Switch_CED": {
+                    "Fused - 30A": {
+                        "PARAMETERS": {
+                            "dev-Group ID" : "BEAUTYANGEL",
+                            "Apparent Load Input_CED" : "1500",
+                            "Voltage_CED" : "240",
+                            "Number of Poles_CED" : "3"
+
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "BEAUTYANGEL"
+                        }
+                    }
+                }
+            }
+        ],
+        "Data_Devices": [
+            {
+                "DD-U_General Low Voltage Device_CED": {
+                    "Junction Box - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "BEAUTYANGEL - PULLBOX"
+
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "BEAUTYANGEL"
+
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_General Low Voltage Device_CED" : {
+                    "Speaker": {
+                        "PARAMETERS" : {
+                            "dev-Group ID" : "BEAUTYANGEL - Speaker"
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "5"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "BEAUTYANGEL"
+    },
+    "CRYO": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "CRYO",
+                            "Apparent Load Input_CED" : "1440",
+                            "CKT_Panel_CEDT" : "L4"
+                        }
+                    }
+                }
+            }
+        ],
+        "Data_Devices" : [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "CRYO"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 0
+                        }
+                    }
+                }                
+            }
+        ],
+
+        "Notes" : "Cryo Chambers"
+    },
+    "Locker-Sink-Sloan-Trough-Enclosure": {
+        "Electrical_Fixture" : [
+            {
+                "EF-U_Receptacle_CED" : {
+                    "Duplex Wall" : {
+                        "PARAMETERS" : { 
+                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
+                            "Apparent Load Input_CED" : "180"
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED" : {
+                    "Duplex Wall" : {
+                        "PARAMETERS" : { 
+                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
+                            "Apparent Load Input_CED" : "180"
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED" : {
+                    "Duplex Wall" : {
+                        "PARAMETERS" : { 
+                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
+                            "Apparent Load Input_CED" : "180"
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED" : {
+                    "Duplex Wall" : {
+                        "PARAMETERS" : { 
+                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
+                            "Apparent Load Input_CED" : "180"
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED" : {
+                    "Duplex Wall" : {
+                        "PARAMETERS" : { 
+                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
+                            "Apparent Load Input_CED" : "180"
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Junction Box_CED": {
+                    "Wall - With Stem": {
+                        "PARAMETERS": {
+                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
+                            "Apparent Load Input_CED" : "180"
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Junction Box_CED": {
+                    "Wall - With Stem": {
+                        "PARAMETERS": {
+                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
+                            "Apparent Load Input_CED" : "180"
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "E1": {
+        "Lighting_Fixture": [
+            {
+                "Emergency_Exit_Light": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Emergency lighting"
+    },
+    "E2": {
+        "Lighting_Fixture": [
+            {
+                "Emergency_Exit_Light": {
+                    "With Arrows": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Emergency lighting with arrows"
+    },
+    "E5": {
+        "Lighting_Fixture": [
+            {
+                "Smoke_Detector": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Smoke detector"
+    },
+    "Exit Sign": {
+        "Lighting_Fixture": [
+            {
+                "Emergency_Exit_Light": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Exit sign"
+    },
+    "F1": {
+        "Lighting_Fixture": [
+            {
+                "Lighting_Fixture": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "General lighting"
+    },
+    "F12C": {
+        "Lighting_Fixture": [
+            {
+                "Lighting_Fixture": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "General lighting"
+    },
+    "F13": {
+        "Lighting_Fixture": [
+            {
+                "Lighting_Fixture": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "General lighting"
+    },
+    "F3": {
+        "Lighting_Fixture": [
+            {
+                "Lighting_Fixture": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "General lighting"
+    },
+    "F6-1": {
+        "Lighting_Fixture": [
+            {
+                "Lighting_Fixture": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "General lighting"
+    },
+    "F9": {
+        "Lighting_Fixture": [
+            {
+                "Lighting_Fixture": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "General lighting"
+    },
+    "FAN 1": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Disconnect Switch_CED": {
+                    "Fused - 30A": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Fan 1",
+                            "Apparent Load Input_CED": "1500",
+                            "Voltage_CED" : "208",
+                            "Number of Poles_CED" : "3",
+                            "CKT_Panel_CEDT" : "L3"
+                        }
+                    }
+                }
+            }
+        ],
+        "Data_Devices" : [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Ceiling": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Fan 1"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes" : {
+                    "Square":{
+                        "PARAMETERS" :{
+                            "CED-G-NOTE #": "19"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+
+                "Manual Key Note- All Shapes" : {
+                    "Square":{
+                        "PARAMETERS" :{
+                            "CED-G-NOTE #": "10"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Fan disconnect"
+    },
+    "HM5A": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM5A",
+                            "Apparent Load Input_CED": "1920",
+                            "CKT_Panel_CEDT" : "L1",
+                            "Load Classification_CED" : "NC"
+                        },
+                        "OFFSET": {
+                            "x" : -36,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes" :{
+                    "Square":{
+                        "PARAMETERS":{
+                            "CED-G-NOTE #": "13"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+
+        ],
+        "Notes": "HM5A"
+    },
+    "HM62A": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Disconnect Switch_CED": {
+                    "Fused - 60A": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62A",
+                            "Apparent Load Input_CED" : "11223.00"
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62A",
+                            "Apparent Load Input_CED" : "180"
+                        }
+                    }
+                }
+            }
+        ],
+        "Data_Devices": [
+            {
+                "DD-U_General Low Voltage Device_CED": {
+                    "Junction Box - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62A"
+
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62A"
+
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_General Low Voltage Device_CED" : {
+                    "Speaker": {
+                        "PARAMETERS" : {
+                            "dev-Group ID" : "HM62A"
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "5"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "5"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Tanning with speaker and data"
+    },
+    "PF Tanning 42-3 TLT PLT": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Disconnect Switch_CED": {
+                    "Fused - 60A": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF Tanning 42-3 TLT PLT",
+                            "Apparent Load Input_CED" : "11223.00"
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF Tanning 42-3 TLT PLT",
+                            "Apparent Load Input_CED" : "180"
+                        }
+                    }
+                }
+            }
+        ],
+        "Data_Devices": [
+            {
+                "DD-U_General Low Voltage Device_CED": {
+                    "Junction Box - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF Tanning 42-3 TLT PLT"
+
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF Tanning 42-3 TLT PLT"
+
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_General Low Voltage Device_CED" : {
+                    "Speaker": {
+                        "PARAMETERS" : {
+                            "dev-Group ID" : "PF Tanning 42-3 TLT PLT"
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "5"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "5"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Tanning with speaker and data"
+    },
+    "HM5A (Indoor Cycle)": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM5A (Indoor Cycle)",
+                            "Apparent Load Input_CED" : "1920",
+                            "CKT_Panel_CEDT" : "L1"
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "HM62B_Up tanning": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Disconnect Switch_CED": {
+                    "Fused - 60A": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62B_Up tanning",
+                            "Apparent Load Input_CED" : "10392.00"
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62B_Up tanning",
+                            "Apparent Load Input_CED" : "180"
+                        }
+                    }
+                }
+            }
+        ],
+        "Data_Devices": [
+            {
+                "DD-U_General Low Voltage Device_CED": {
+                    "Junction Box - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62B_Up tanning"
+
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62B_Up tanning"
+
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_General Low Voltage Device_CED" : {
+                    "Speaker": {
+                        "PARAMETERS" : {
+                            "dev-Group ID" : "HM62B_Up tanning"
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "5"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "5"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Tanning with speaker and data"
+    },
+    "HM63C": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Specialty Wall - 208V/1Ph": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM63C (Hydromassage)",
+                            "Apparent Load Input_CED" : "180"
+                        },
+                        "OFFSET" :{
+                            "x" : 0,
+                            "y" : 0
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM63C (Hydromassage)",
+                            "Apparent Load Input_CED" : "180"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Data_Devices": [
+            {
+                "DD-U_General Low Voltage Device_CED": {
+                    "Junction Box - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM63C (Hydromassage)"
+                        },
+                        "OFFSET" :{
+                            "x" : 12,
+                            "y" : 0
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "4"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "4"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Tanning with speaker and data"
+    },
+    "HM62E Hybrid Tanning Booth": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Disconnect Switch_CED": {
+                    "Fused - 60A": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62E Hybrid Tanning Booth",
+                            "Apparent Load Input_CED" : "11640.00"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 0
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62E Hybrid Tanning Booth",
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Panel_CEDT" : "L1",
+                            "Load Classification_CED" : "C"
+                        },
+                        "OFFSET" :{
+                            "x" : 12,
+                            "y" : 1
+                        }
+                    }
+                }
+            }
+        ],
+        "Data_Devices": [
+            {
+                "DD-U_General Low Voltage Device_CED": {
+                    "Junction Box - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62E Hybrid Tanning Booth"
+
+                        },
+                        "OFFSET" :{
+                            "x" : 18,
+                            "y" : 0
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62E Hybrid Tanning Booth"
+                        },
+                        "OFFSET" :{
+                            "x" : 24,
+                            "y" : 0
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_General Low Voltage Device_CED" : {
+                    "Speaker": {
+                        "PARAMETERS" : {
+                            "dev-Group ID" : "HM62E Hybrid Tanning Booth"
+                        },
+                        "OFFSET" :{
+                            "x" : 30,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "5",
+                            "Plan" : "LV"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "5"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }                        
+                    }
+                }
+            }
+        ],
+        "Notes": "Tanning with speaker and data"
+    },
+    "Hybrid Light Bed HM62D": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Disconnect Switch_CED": {
+                    "Fused - 60A": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Hybrid Light Bed HM62D",
+                            "Apparent Load Input_CED" : "11223.00"
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Hybrid Light Bed HM62D",
+                            "Apparent Load Input_CED" : "180"
+                        },
+                        "OFFSET" :{
+                            "x" : 10,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Data_Devices": [
+            {
+                "DD-U_General Low Voltage Device_CED": {
+                    "Junction Box - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Hybrid Light Bed HM62D"
+                        },
+                        "OFFSET" :{
+                            "x" : 20,
+                            "y" : 0
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Hybrid Light Bed HM62D"
+                        },
+                        "OFFSET" :{
+                            "x" : 30,
+                            "y" : 0
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_General Low Voltage Device_CED" : {
+                    "Speaker": {
+                        "PARAMETERS" : {
+                            "dev-Group ID" : "Hybrid Light Bed HM62D"
+                        },
+                        "OFFSET" :{
+                            "x" : 40,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "5"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "5"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Tanning with speaker and data"
+    },
+    "it": {
+        "Lighting_Fixture": [
+            {
+                "Lighting_Fixture": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "it"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Lighting and power"
+    },
+    "Stepmill (C5X-5PL-PF)": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Stepmill (C5X-5PL-PF)",
+                            "Apparent Load Input_CED" : 1920,
+                            "CKT_Panel_CEDT" : "L1"
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" :[
+            {
+                "Manual Key Note- All Shapes" : {
+                    "Square" : {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "13",
+                            "dev-Group ID" : "Stepmill"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],       
+        "Notes": "Exercise equipment power"
+    },
+    "PF_Plan Computer": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan Computer",
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Panel_CEDT" : "L3",
+                            "Load Classification_CED" : "C"
+                        }
+                    }
+                }
+            }
+        ],
+            "Data_Devices": [
+                {
+                    "DD-U_Tele & Data Outlet_CED" : {
+                        "Data - Wall" : {
+                            "PARAMETERS": {
+                                "dev-Group ID": "PF_Plan Computer"
+                            },
+                        "OFFSET" :{
+                            "x" : 10,
+                            "y" : 0
+                        }
+                        }
+                    }
+                }
+            ],
+            "Generic_Annotations": [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "7"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "3"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Exercise equipment power"
+    },
+
+        "PF_Plan Phone": {
+            "Data_Devices": [
+                {
+                    "DD-U_Tele & Data Outlet_CED" : {
+                        "Data - Wall" : {
+                            "PARAMETERS": {
+                                "dev-Group ID": "PF_Plan Phone"
+                            }
+                        }
+                    }
+                }
+            ],
+
+        "Notes": "PF_Plan Phone"
+    },
+        "PF_Plan TMAX": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TMAX",
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Panel_CEDT" : "L3",
+                            "Load Classification_CED" : "C"
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TMAX",
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Panel_CEDT" : "L3",
+                            "Load Classification_CED" : "C"
+                        },
+                        "OFFSET" :{
+                            "x" : 0,
+                            "y" : -10
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TMAX",
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Panel_CEDT" : "L3",
+                            "Load Classification_CED" : "C"
+                        },
+                        "OFFSET" :{
+                            "x" : 0,
+                            "y" : -20
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TMAX",
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Panel_CEDT" : "L3",
+                            "Load Classification_CED" : "C"
+                        },
+                        "OFFSET" :{
+                            "x" : 0,
+                            "y" : -30
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TMAX",
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Panel_CEDT" : "L3",
+                            "Load Classification_CED" : "C"
+                        },
+                        "OFFSET" :{
+                            "x" : 0,
+                            "y" : -40
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TMAX",
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Panel_CEDT" : "L3",
+                            "Load Classification_CED" : "C"
+                        },
+                        "OFFSET" :{
+                            "x" : 0,
+                            "y" : -50
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Junction Box_CED": {
+                    "Wall - With Stem": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TMAX",
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Panel_CEDT" : "L3",
+                            "Load Classification_CED" : "C"
+                        },
+                        "OFFSET" :{
+                            "x" : 0,
+                            "y" : -60
+                        }
+                    }
+                }
+            }
+        ],
+            "Data_Devices": [
+                {
+                    "DD-U_Tele & Data Outlet_CED" : {
+                        "Data - Wall" : {
+                            "PARAMETERS": {
+                                "dev-Group ID": "PF_Plan TMAX"
+                            },
+                        "OFFSET" :{
+                            "x" : 0,
+                            "y" : -70
+                        }
+                        }
+                    }
+                }
+            ],
+            "Generic_Annotations": [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "8"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "4"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "First receptacle is for the actual PF plan block, remaining recepts are for signage if applicable"
+    },
+    "Treadmill (T5X-5PL-PF)": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Treadmill (T5X-5PL-PF)",
+                            "Apparent Load Input_CED" : "1920",
+                            "CKT_Panel_CEDT": "L1",
+                            "Load Classification_CED" : "NC"
+                        },
+                        "OFFSET":{
+                            "x" : -48,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations": [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "13"
+                        },
+                        "OFFSET":{
+                            "x" : 5,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Exercise equipment power"
+    },
+    "SmarteCarte Massage Chair": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "SmarteCarte Massage Chair",
+                            "Apparent Load Input_CED" : "500",
+                            "CKT_Panel_CEDT": "L4",
+                            "Load Classification_CED" : "NC"
+                        },
+                        "OFFSET":{
+                            "x" : 0,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Data_Devices" : [
+            {
+                "DD-U_Tele & Data Outlet_CED" : {
+                    "Data - Floor" : {
+                        "PARAMETERS" : {
+                        "dev-group ID": "SmarteCarte Massage Chair"
+                        },
+                        "OFFSET" :{
+                            "x" : 10,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations": [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "13"
+                        },
+                        "OFFSET":{
+                            "x" : 5,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Exercise equipment power"
+    },
+    "TV TRUSS": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Quad Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "TV TRUSS"
+                        },
+                        "OFFSET":{
+                            "x": 28,
+                            "y": 0
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Quad Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "CAUTION SECOND TV TRUSS"
+                        },
+                        "OFFSET":{
+                            "x": -28,
+                            "y": 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "14"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square" : {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #": "6"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square" : {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #": "15"
+                        },
+                        "OFFSET" :{
+                            "x" : 26,
+                            "y" : 8
+                        }
+                    }
+                }
+            }            
+        ],
+        "Notes": "TV mounting power"
+    },
+    "vending machine": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "vending machine",
+                            "Apparent Load Input_CED" : "1000",
+                            "CKT_Panel_CEDT" : "L3",
+                            "Load Classification_CED" : "NC"
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations": [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "16"
+                        },
+                        "OFFSET":{
+                            "x" : 5,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],        
+        "Notes": "Vending machine power is a GFI Breaker not a GFI Receptacle"
+    },
+    "EX'G ADA DF": {
+        "Notes": "Existing ADA fountain"
+    }
+}

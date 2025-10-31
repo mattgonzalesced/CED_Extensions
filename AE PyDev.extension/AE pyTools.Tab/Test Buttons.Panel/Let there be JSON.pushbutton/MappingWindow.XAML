@@ -1,0 +1,697 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="⚡ Fixture Mapping" Height="800" Width="1200"
+        WindowStartupLocation="CenterScreen">
+
+  <Window.Background>
+    <SolidColorBrush Color="#000000"/>
+  </Window.Background>
+
+  <Window.Resources>
+    <!-- Matrix Falling Animation - Multiple speeds -->
+    <Storyboard x:Key="MatrixFall1" RepeatBehavior="Forever">
+      <DoubleAnimation Storyboard.TargetProperty="(Canvas.Top)"
+                       From="-800" To="800" Duration="0:0:8"/>
+    </Storyboard>
+    <Storyboard x:Key="MatrixFall2" RepeatBehavior="Forever">
+      <DoubleAnimation Storyboard.TargetProperty="(Canvas.Top)"
+                       From="-800" To="800" Duration="0:0:10"/>
+    </Storyboard>
+    <Storyboard x:Key="MatrixFall3" RepeatBehavior="Forever">
+      <DoubleAnimation Storyboard.TargetProperty="(Canvas.Top)"
+                       From="-800" To="800" Duration="0:0:12"/>
+    </Storyboard>
+    <Storyboard x:Key="MatrixFall4" RepeatBehavior="Forever">
+      <DoubleAnimation Storyboard.TargetProperty="(Canvas.Top)"
+                       From="-800" To="800" Duration="0:0:9"/>
+    </Storyboard>
+    <Storyboard x:Key="MatrixFall5" RepeatBehavior="Forever">
+      <DoubleAnimation Storyboard.TargetProperty="(Canvas.Top)"
+                       From="-800" To="800" Duration="0:0:11"/>
+    </Storyboard>
+
+    <!-- Animated Gradient Background for Cards -->
+    <Storyboard x:Key="PulseAnimation" RepeatBehavior="Forever" AutoReverse="True">
+      <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                       From="0.15" To="0.3" Duration="0:0:3"
+                       AccelerationRatio="0.5" DecelerationRatio="0.5"/>
+    </Storyboard>
+
+    <!-- Modern Button Style with Gradient -->
+    <Style x:Key="ModernButton" TargetType="Button">
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="24,10"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="border" CornerRadius="6" BorderThickness="0">
+              <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                  <GradientStop Color="#0078D4" Offset="0"/>
+                  <GradientStop Color="#005A9E" Offset="1"/>
+                </LinearGradientBrush>
+              </Border.Background>
+              <Border.Effect>
+                <DropShadowEffect Color="#0078D4" Direction="270" ShadowDepth="3" BlurRadius="10" Opacity="0.4"/>
+              </Border.Effect>
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="border" Property="Effect">
+                  <Setter.Value>
+                    <DropShadowEffect Color="#0078D4" Direction="270" ShadowDepth="5" BlurRadius="15" Opacity="0.6"/>
+                  </Setter.Value>
+                </Setter>
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="border" Property="RenderTransform">
+                  <Setter.Value>
+                    <ScaleTransform ScaleX="0.97" ScaleY="0.97"/>
+                  </Setter.Value>
+                </Setter>
+                <Setter TargetName="border" Property="RenderTransformOrigin" Value="0.5,0.5"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- Cancel Button Style with Border -->
+    <Style x:Key="CancelButton" TargetType="Button">
+      <Setter Property="Background" Value="White"/>
+      <Setter Property="Foreground" Value="#1D1D1F"/>
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="BorderThickness" Value="2"/>
+      <Setter Property="BorderBrush" Value="#D1D1D6"/>
+      <Setter Property="Padding" Value="24,10"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="border"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="6">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="border" Property="Background" Value="#F5F5F7"/>
+                <Setter TargetName="border" Property="BorderBrush" Value="#0078D4"/>
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="border" Property="Background" Value="#E8E8EA"/>
+                <Setter TargetName="border" Property="RenderTransform">
+                  <Setter.Value>
+                    <ScaleTransform ScaleX="0.97" ScaleY="0.97"/>
+                  </Setter.Value>
+                </Setter>
+                <Setter TargetName="border" Property="RenderTransformOrigin" Value="0.5,0.5"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- Modern TextBox Style with Glow Effect -->
+    <Style x:Key="ModernTextBox" TargetType="TextBox">
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="Padding" Value="12,10"/>
+      <Setter Property="BorderThickness" Value="2"/>
+      <Setter Property="BorderBrush" Value="#D1D1D6"/>
+      <Setter Property="Background" Value="White"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TextBox">
+            <Border x:Name="border"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="6">
+              <ScrollViewer x:Name="PART_ContentHost" Margin="4"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="border" Property="BorderBrush" Value="#0078D4"/>
+              </Trigger>
+              <Trigger Property="IsFocused" Value="True">
+                <Setter TargetName="border" Property="BorderBrush" Value="#0078D4"/>
+                <Setter TargetName="border" Property="Effect">
+                  <Setter.Value>
+                    <DropShadowEffect Color="#0078D4" Direction="0" ShadowDepth="0" BlurRadius="8" Opacity="0.3"/>
+                  </Setter.Value>
+                </Setter>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
+
+  <!-- Main Grid Container -->
+  <Grid Background="Black">
+    <!-- Matrix Background Layer - Behind everything -->
+    <Canvas ClipToBounds="False" IsHitTestVisible="False" Background="Transparent"
+            HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Panel.ZIndex="-1">
+      <!-- Column 1 -->
+      <TextBlock Canvas.Left="40" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>ﾊ&#x0A;ﾐ&#x0A;ﾋ&#x0A;ｰ&#x0A;ｳ&#x0A;ｼ&#x0A;ﾅ&#x0A;ﾓ&#x0A;1&#x0A;0&#x0A;ﾆ&#x0A;ｻ&#x0A;ﾗ&#x0A;2&#x0A;3</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 2 -->
+      <TextBlock Canvas.Left="120" Canvas.Top="-200" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>0&#x0A;ﾘ&#x0A;1&#x0A;ｴ&#x0A;ﾁ&#x0A;ﾏ&#x0A;ﾄ&#x0A;5&#x0A;ﾗ&#x0A;ﾝ&#x0A;8&#x0A;ﾀ&#x0A;ｲ&#x0A;ﾂ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 3 -->
+      <TextBlock Canvas.Left="200" Canvas.Top="-400" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>ｸ&#x0A;ﾎ&#x0A;ﾃ&#x0A;4&#x0A;ﾜ&#x0A;ｶ&#x0A;ｷ&#x0A;0&#x0A;ﾑ&#x0A;1&#x0A;ﾒ&#x0A;ｾ&#x0A;9&#x0A;ﾓ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 4 -->
+      <TextBlock Canvas.Left="280" Canvas.Top="-100" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>7&#x0A;ﾕ&#x0A;ｹ&#x0A;ﾔ&#x0A;2&#x0A;ｺ&#x0A;ｻ&#x0A;1&#x0A;ﾈ&#x0A;ﾉ&#x0A;6&#x0A;ｿ&#x0A;3&#x0A;ﾀ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 5 -->
+      <TextBlock Canvas.Left="360" Canvas.Top="-300" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>ﾁ&#x0A;8&#x0A;ﾂ&#x0A;ﾃ&#x0A;0&#x0A;ﾄ&#x0A;5&#x0A;ﾅ&#x0A;ﾆ&#x0A;4&#x0A;ﾇ&#x0A;1&#x0A;ﾈ&#x0A;ﾉ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 6 -->
+      <TextBlock Canvas.Left="440" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>ﾊ&#x0A;9&#x0A;ﾋ&#x0A;ﾌ&#x0A;2&#x0A;ﾍ&#x0A;ﾎ&#x0A;7&#x0A;ﾏ&#x0A;0&#x0A;ﾐ&#x0A;3&#x0A;ﾑ&#x0A;ﾒ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 7 -->
+      <TextBlock Canvas.Left="520" Canvas.Top="-250" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>6&#x0A;ﾓ&#x0A;1&#x0A;ﾔ&#x0A;ﾕ&#x0A;4&#x0A;ﾖ&#x0A;ﾗ&#x0A;8&#x0A;ﾘ&#x0A;0&#x0A;ﾙ&#x0A;5&#x0A;ﾚ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 8 -->
+      <TextBlock Canvas.Left="600" Canvas.Top="-350" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>ﾛ&#x0A;3&#x0A;ﾜ&#x0A;0&#x0A;ｦ&#x0A;7&#x0A;ﾝ&#x0A;1&#x0A;ｱ&#x0A;ｲ&#x0A;9&#x0A;ｳ&#x0A;2&#x0A;ｴ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 9 -->
+      <TextBlock Canvas.Left="680" Canvas.Top="-150" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>5&#x0A;ｵ&#x0A;ｶ&#x0A;4&#x0A;ｷ&#x0A;0&#x0A;ｸ&#x0A;6&#x0A;ｹ&#x0A;1&#x0A;ｺ&#x0A;8&#x0A;ｻ&#x0A;ｼ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 10 -->
+      <TextBlock Canvas.Left="760" Canvas.Top="-450" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>ｽ&#x0A;2&#x0A;ｾ&#x0A;ｿ&#x0A;9&#x0A;ﾀ&#x0A;0&#x0A;ﾁ&#x0A;3&#x0A;ﾂ&#x0A;7&#x0A;ﾃ&#x0A;1&#x0A;ﾄ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 11 -->
+      <TextBlock Canvas.Left="840" Canvas.Top="-200" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>4&#x0A;ﾅ&#x0A;0&#x0A;ﾆ&#x0A;8&#x0A;ﾇ&#x0A;1&#x0A;ﾈ&#x0A;ﾉ&#x0A;5&#x0A;ﾊ&#x0A;2&#x0A;ﾋ&#x0A;6</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 12 -->
+      <TextBlock Canvas.Left="920" Canvas.Top="-300" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>ﾌ&#x0A;3&#x0A;ﾍ&#x0A;7&#x0A;ﾎ&#x0A;0&#x0A;ﾏ&#x0A;9&#x0A;ﾐ&#x0A;1&#x0A;ﾑ&#x0A;4&#x0A;ﾒ&#x0A;ﾓ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 13 -->
+      <TextBlock Canvas.Left="1000" Canvas.Top="-100" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>6&#x0A;ﾔ&#x0A;2&#x0A;ﾕ&#x0A;ﾖ&#x0A;8&#x0A;0&#x0A;ﾗ&#x0A;ﾘ&#x0A;5&#x0A;1&#x0A;ﾙ&#x0A;3&#x0A;ﾚ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 14 -->
+      <TextBlock Canvas.Left="1080" Canvas.Top="-400" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>ﾛ&#x0A;9&#x0A;ﾜ&#x0A;0&#x0A;4&#x0A;ｦ&#x0A;ﾝ&#x0A;7&#x0A;1&#x0A;ｱ&#x0A;ｲ&#x0A;3&#x0A;ｳ&#x0A;ｴ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 15 -->
+      <TextBlock Canvas.Left="1160" Canvas.Top="-250" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>8&#x0A;ｵ&#x0A;ｶ&#x0A;2&#x0A;ｷ&#x0A;0&#x0A;5&#x0A;ｸ&#x0A;ｹ&#x0A;ｺ&#x0A;6&#x0A;1&#x0A;ｻ&#x0A;9</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 16 -->
+      <TextBlock Canvas.Left="80" Canvas.Top="-500" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>ﾜ&#x0A;4&#x0A;ﾝ&#x0A;ｱ&#x0A;7&#x0A;ｲ&#x0A;0&#x0A;ｳ&#x0A;3&#x0A;ｴ&#x0A;9&#x0A;ｵ&#x0A;1&#x0A;ｶ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 17 -->
+      <TextBlock Canvas.Left="160" Canvas.Top="-150" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>5&#x0A;ｷ&#x0A;ｸ&#x0A;2&#x0A;ｹ&#x0A;8&#x0A;ｺ&#x0A;0&#x0A;ｻ&#x0A;6&#x0A;ｼ&#x0A;1&#x0A;ｽ&#x0A;ｾ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 18 -->
+      <TextBlock Canvas.Left="240" Canvas.Top="-600" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>ｿ&#x0A;9&#x0A;ﾀ&#x0A;3&#x0A;ﾁ&#x0A;ﾂ&#x0A;7&#x0A;0&#x0A;ﾃ&#x0A;4&#x0A;ﾄ&#x0A;1&#x0A;ﾅ&#x0A;6</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 19 -->
+      <TextBlock Canvas.Left="320" Canvas.Top="-350" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>ﾆ&#x0A;2&#x0A;ﾇ&#x0A;8&#x0A;ﾈ&#x0A;0&#x0A;ﾉ&#x0A;5&#x0A;ﾊ&#x0A;ﾋ&#x0A;3&#x0A;ﾌ&#x0A;9&#x0A;ﾍ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 20 -->
+      <TextBlock Canvas.Left="400" Canvas.Top="-50" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>7&#x0A;ﾎ&#x0A;1&#x0A;ﾏ&#x0A;4&#x0A;ﾐ&#x0A;ﾑ&#x0A;0&#x0A;6&#x0A;ﾒ&#x0A;ﾓ&#x0A;9&#x0A;2&#x0A;ﾔ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 21 -->
+      <TextBlock Canvas.Left="480" Canvas.Top="-400" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>ﾕ&#x0A;8&#x0A;ﾖ&#x0A;0&#x0A;3&#x0A;ﾗ&#x0A;ﾘ&#x0A;5&#x0A;ﾙ&#x0A;1&#x0A;ﾚ&#x0A;7&#x0A;ﾛ&#x0A;4</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 22 -->
+      <TextBlock Canvas.Left="560" Canvas.Top="-200" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>6&#x0A;ﾜ&#x0A;ｦ&#x0A;9&#x0A;0&#x0A;ﾝ&#x0A;2&#x0A;ｱ&#x0A;ｲ&#x0A;5&#x0A;ｳ&#x0A;1&#x0A;8&#x0A;ｴ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 23 -->
+      <TextBlock Canvas.Left="640" Canvas.Top="-550" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>ｵ&#x0A;3&#x0A;ｶ&#x0A;7&#x0A;ｷ&#x0A;0&#x0A;ｸ&#x0A;4&#x0A;ｹ&#x0A;ｺ&#x0A;9&#x0A;1&#x0A;ｻ&#x0A;6</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 24 -->
+      <TextBlock Canvas.Left="720" Canvas.Top="-300" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>ｼ&#x0A;2&#x0A;ｽ&#x0A;8&#x0A;ｾ&#x0A;0&#x0A;5&#x0A;ｿ&#x0A;ﾀ&#x0A;3&#x0A;ﾁ&#x0A;7&#x0A;1&#x0A;ﾂ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 25 -->
+      <TextBlock Canvas.Left="800" Canvas.Top="-100" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>4&#x0A;ﾃ&#x0A;9&#x0A;ﾄ&#x0A;ﾅ&#x0A;0&#x0A;6&#x0A;ﾆ&#x0A;1&#x0A;ﾇ&#x0A;ﾈ&#x0A;8&#x0A;ﾉ&#x0A;2</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 26 -->
+      <TextBlock Canvas.Left="880" Canvas.Top="-450" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>ﾊ&#x0A;5&#x0A;ﾋ&#x0A;0&#x0A;ﾌ&#x0A;3&#x0A;ﾍ&#x0A;7&#x0A;ﾎ&#x0A;1&#x0A;ﾏ&#x0A;9&#x0A;ﾐ&#x0A;4</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 27 -->
+      <TextBlock Canvas.Left="960" Canvas.Top="-250" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>6&#x0A;ﾑ&#x0A;ﾒ&#x0A;8&#x0A;0&#x0A;ﾓ&#x0A;2&#x0A;ﾔ&#x0A;ﾕ&#x0A;5&#x0A;ﾖ&#x0A;1&#x0A;9&#x0A;ﾗ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 28 -->
+      <TextBlock Canvas.Left="1040" Canvas.Top="-500" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>ﾘ&#x0A;3&#x0A;ﾙ&#x0A;7&#x0A;ﾚ&#x0A;0&#x0A;4&#x0A;ﾛ&#x0A;ﾜ&#x0A;8&#x0A;ｦ&#x0A;1&#x0A;6&#x0A;ﾝ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 29 -->
+      <TextBlock Canvas.Left="1120" Canvas.Top="-350" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>9&#x0A;ｱ&#x0A;2&#x0A;ｲ&#x0A;0&#x0A;5&#x0A;ｳ&#x0A;ｴ&#x0A;7&#x0A;ｵ&#x0A;1&#x0A;4&#x0A;ｶ&#x0A;8</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Column 30 -->
+      <TextBlock Canvas.Left="1200" Canvas.Top="-150" FontFamily="Consolas" FontSize="18" Foreground="#00FF41" Opacity="1.0">
+        <TextBlock.Text>ｷ&#x0A;3&#x0A;ｸ&#x0A;9&#x0A;ｹ&#x0A;0&#x0A;6&#x0A;ｺ&#x0A;2&#x0A;ｻ&#x0A;ｼ&#x0A;7&#x0A;1&#x0A;ｽ</TextBlock.Text>
+        <TextBlock.Triggers>
+          <EventTrigger RoutedEvent="TextBlock.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/>
+          </EventTrigger>
+        </TextBlock.Triggers>
+      </TextBlock>
+      <!-- Columns 31-300: Dense Matrix coverage -->
+      <TextBlock Canvas.Left="10" Canvas.Top="-220" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>ﾊ&#x0A;1&#x0A;ﾐ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="25" Canvas.Top="-580" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>0&#x0A;ﾋ&#x0A;2</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="50" Canvas.Top="-390" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>ｰ&#x0A;3&#x0A;ｳ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="65" Canvas.Top="-470" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>ｼ&#x0A;4&#x0A;ﾅ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="90" Canvas.Top="-120" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>5&#x0A;ﾓ&#x0A;ﾆ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="105" Canvas.Top="-310" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>ｻ&#x0A;6&#x0A;ﾗ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="130" Canvas.Top="-650" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>7&#x0A;ﾘ&#x0A;8</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="145" Canvas.Top="-180" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>ｴ&#x0A;9&#x0A;ﾁ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="170" Canvas.Top="-520" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>ﾏ&#x0A;0&#x0A;ﾄ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="185" Canvas.Top="-280" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>1&#x0A;ﾗ&#x0A;ﾝ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="210" Canvas.Top="-430" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>2&#x0A;ﾀ&#x0A;ｲ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="225" Canvas.Top="-90" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>ﾂ&#x0A;3&#x0A;ｸ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="250" Canvas.Top="-560" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>4&#x0A;ﾎ&#x0A;ﾃ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="265" Canvas.Top="-340" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>ﾜ&#x0A;5&#x0A;ｶ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="290" Canvas.Top="-190" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>6&#x0A;ｷ&#x0A;ﾑ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="305" Canvas.Top="-480" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>7&#x0A;ﾒ&#x0A;0</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="330" Canvas.Top="-270" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>ｾ&#x0A;8&#x0A;1</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="345" Canvas.Top="-610" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>9&#x0A;ﾓ&#x0A;2</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="370" Canvas.Top="-140" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>ﾔ&#x0A;3&#x0A;ﾕ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="385" Canvas.Top="-540" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>4&#x0A;ﾖ&#x0A;ﾗ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="410" Canvas.Top="-230" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>5&#x0A;ﾘ&#x0A;0</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="425" Canvas.Top="-410" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>ﾙ&#x0A;6&#x0A;ﾚ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="450" Canvas.Top="-110" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>7&#x0A;ﾛ&#x0A;ﾜ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="465" Canvas.Top="-590" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>8&#x0A;ｦ&#x0A;ﾝ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="490" Canvas.Top="-320" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>9&#x0A;ｱ&#x0A;ｲ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="505" Canvas.Top="-170" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>0&#x0A;ｳ&#x0A;ｴ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="530" Canvas.Top="-460" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>1&#x0A;ｵ&#x0A;ｶ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="545" Canvas.Top="-640" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>2&#x0A;ｷ&#x0A;ｸ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="570" Canvas.Top="-290" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>3&#x0A;ｹ&#x0A;ｺ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="585" Canvas.Top="-500" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>4&#x0A;ｻ&#x0A;ｼ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="610" Canvas.Top="-150" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>5&#x0A;ｽ&#x0A;ｾ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="625" Canvas.Top="-380" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>6&#x0A;ｿ&#x0A;ﾀ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="650" Canvas.Top="-210" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>7&#x0A;ﾁ&#x0A;ﾂ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="665" Canvas.Top="-570" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>8&#x0A;ﾃ&#x0A;ﾄ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="690" Canvas.Top="-330" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>9&#x0A;ﾅ&#x0A;ﾆ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="705" Canvas.Top="-490" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>0&#x0A;ﾇ&#x0A;ﾈ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="730" Canvas.Top="-130" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>1&#x0A;ﾉ&#x0A;ﾊ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="745" Canvas.Top="-620" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>2&#x0A;ﾋ&#x0A;ﾌ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="770" Canvas.Top="-260" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>3&#x0A;ﾍ&#x0A;ﾎ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="785" Canvas.Top="-420" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>4&#x0A;ﾏ&#x0A;ﾐ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="810" Canvas.Top="-190" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>5&#x0A;ﾑ&#x0A;ﾒ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="825" Canvas.Top="-550" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>6&#x0A;ﾓ&#x0A;ﾔ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="850" Canvas.Top="-310" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>7&#x0A;ﾕ&#x0A;ﾖ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="865" Canvas.Top="-160" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>8&#x0A;ﾗ&#x0A;ﾘ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="890" Canvas.Top="-510" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>9&#x0A;ﾙ&#x0A;ﾚ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="905" Canvas.Top="-370" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>0&#x0A;ﾛ&#x0A;ﾜ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="930" Canvas.Top="-240" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>1&#x0A;ｦ&#x0A;ﾝ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="945" Canvas.Top="-600" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>2&#x0A;ｱ&#x0A;ｲ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="970" Canvas.Top="-180" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>3&#x0A;ｳ&#x0A;ｴ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="985" Canvas.Top="-440" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>4&#x0A;ｵ&#x0A;ｶ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="1010" Canvas.Top="-270" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>5&#x0A;ｷ&#x0A;ｸ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="1025" Canvas.Top="-530" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>6&#x0A;ｹ&#x0A;ｺ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="1050" Canvas.Top="-120" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>7&#x0A;ｻ&#x0A;ｼ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="1065" Canvas.Top="-360" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>8&#x0A;ｽ&#x0A;ｾ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="1090" Canvas.Top="-470" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>9&#x0A;ｿ&#x0A;ﾀ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="1105" Canvas.Top="-220" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>0&#x0A;ﾁ&#x0A;ﾂ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall1}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="1130" Canvas.Top="-580" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>1&#x0A;ﾃ&#x0A;ﾄ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall2}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="1145" Canvas.Top="-340" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>2&#x0A;ﾅ&#x0A;ﾆ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall3}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="1170" Canvas.Top="-160" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>3&#x0A;ﾇ&#x0A;ﾈ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall4}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+      <TextBlock Canvas.Left="1185" Canvas.Top="-490" FontFamily="Consolas" FontSize="16" Foreground="#00FF41" Opacity="1.0"><TextBlock.Text>4&#x0A;ﾉ&#x0A;ﾊ</TextBlock.Text><TextBlock.Triggers><EventTrigger RoutedEvent="TextBlock.Loaded"><BeginStoryboard Storyboard="{StaticResource MatrixFall5}"/></EventTrigger></TextBlock.Triggers></TextBlock>
+    </Canvas>
+
+    <!-- Light Overlay to dim the Matrix and restore original color scheme -->
+    <Border Background="#F0F4F8" Opacity="0.92" IsHitTestVisible="False" Panel.ZIndex="0"/>
+
+    <!-- Content Layer on Top -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Background="Transparent" Panel.ZIndex="1">
+      <StackPanel Margin="20">
+
+      <!-- Header Section with Gradient, Icon and Glassmorphism -->
+      <Border CornerRadius="12" Margin="0,0,0,24">
+        <Border.Background>
+          <SolidColorBrush Color="White" Opacity="0.85"/>
+        </Border.Background>
+        <Border.Effect>
+          <DropShadowEffect Color="#0078D4" Direction="270" ShadowDepth="4" BlurRadius="20" Opacity="0.25"/>
+        </Border.Effect>
+        <Grid>
+          <!-- Animated accent gradient overlay -->
+          <Border CornerRadius="12,12,0,0" Opacity="0.2">
+            <Border.Background>
+              <RadialGradientBrush x:Name="AccentGlow" Center="0.5,0.5" RadiusX="1" RadiusY="1">
+                <GradientStop Color="#00BCF2" Offset="0"/>
+                <GradientStop Color="Transparent" Offset="1"/>
+              </RadialGradientBrush>
+            </Border.Background>
+            <Border.Triggers>
+              <EventTrigger RoutedEvent="Border.Loaded">
+                <BeginStoryboard Storyboard="{StaticResource PulseAnimation}"/>
+              </EventTrigger>
+            </Border.Triggers>
+          </Border>
+
+          <Border CornerRadius="12,12,0,0" Padding="30,24" BorderBrush="White" BorderThickness="0,0,0,1">
+            <Border.Background>
+              <LinearGradientBrush StartPoint="0,0" EndPoint="1,0.5">
+                <GradientStop Color="#0078D4" Offset="0"/>
+                <GradientStop Color="#00BCF2" Offset="0.5"/>
+                <GradientStop Color="#0078D4" Offset="1"/>
+              </LinearGradientBrush>
+            </Border.Background>
+            <StackPanel Orientation="Horizontal">
+              <TextBlock x:Name="Lightbulbicon" Text="💡" FontSize="32" VerticalAlignment="Center" Margin="0,0,15,0">
+                <TextBlock.RenderTransform>
+                  <RotateTransform x:Name="LightbulbRotate" Angle="0" CenterX="16" CenterY="16"/>
+                </TextBlock.RenderTransform>
+                <TextBlock.Triggers>
+                  <EventTrigger RoutedEvent="TextBlock.MouseEnter">
+                    <BeginStoryboard>
+                      <Storyboard>
+                        <DoubleAnimation Storyboard.TargetName="LightbulbRotate"
+                                       Storyboard.TargetProperty="Angle"
+                                       From="0" To="360" Duration="0:0:0.6"
+                                       AccelerationRatio="0.3" DecelerationRatio="0.3"/>
+                      </Storyboard>
+                    </BeginStoryboard>
+                  </EventTrigger>
+                </TextBlock.Triggers>
+              </TextBlock>
+              <Label x:Name="HeaderLabel"
+                     Content="Match each CAD Fixture to a Revit Family and Type"
+                     Foreground="White"
+                     FontSize="22"
+                     FontWeight="Bold"
+                     VerticalAlignment="Center">
+                <Label.Effect>
+                  <DropShadowEffect Color="Black" Direction="270" ShadowDepth="1" BlurRadius="3" Opacity="0.5"/>
+                </Label.Effect>
+              </Label>
+            </StackPanel>
+          </Border>
+        </Grid>
+      </Border>
+
+      <!-- Mapping Section Container with Glassmorphism -->
+      <Border CornerRadius="12" Padding="24" Margin="0,0,0,20"
+              BorderBrush="White" BorderThickness="1">
+        <Border.Background>
+          <SolidColorBrush Color="White" Opacity="0.7"/>
+        </Border.Background>
+        <Border.Effect>
+          <DropShadowEffect Color="#B0C4DE" Direction="270" ShadowDepth="3" BlurRadius="15" Opacity="0.2"/>
+        </Border.Effect>
+        <Grid>
+          <!-- Subtle animated background pattern -->
+          <Border CornerRadius="12" Opacity="0.08">
+            <Border.Background>
+              <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#0078D4" Offset="0"/>
+                <GradientStop Color="Transparent" Offset="0.5"/>
+                <GradientStop Color="#00BCF2" Offset="1"/>
+              </LinearGradientBrush>
+            </Border.Background>
+          </Border>
+
+          <StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+              <TextBlock Text="🔗" FontSize="20" VerticalAlignment="Center" Margin="0,0,8,0">
+                <TextBlock.RenderTransform>
+                  <ScaleTransform x:Name="LinkScale" ScaleX="1" ScaleY="1" CenterX="10" CenterY="10"/>
+                </TextBlock.RenderTransform>
+                <TextBlock.Triggers>
+                  <EventTrigger RoutedEvent="TextBlock.MouseEnter">
+                    <BeginStoryboard>
+                      <Storyboard>
+                        <DoubleAnimation Storyboard.TargetName="LinkScale"
+                                       Storyboard.TargetProperty="ScaleX"
+                                       From="1" To="1.2" Duration="0:0:0.2" AutoReverse="True"/>
+                        <DoubleAnimation Storyboard.TargetName="LinkScale"
+                                       Storyboard.TargetProperty="ScaleY"
+                                       From="1" To="1.2" Duration="0:0:0.2" AutoReverse="True"/>
+                      </Storyboard>
+                    </BeginStoryboard>
+                  </EventTrigger>
+                </TextBlock.Triggers>
+              </TextBlock>
+              <TextBlock Text="Fixture Mappings"
+                       FontSize="18"
+                       FontWeight="Bold"
+                       Foreground="#0078D4"
+                       VerticalAlignment="Center"/>
+            </StackPanel>
+            <!-- Mapping rows are added to this StackPanel -->
+            <StackPanel x:Name="MappingStackPanel" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- Divisor Section with Glassmorphism -->
+      <Border CornerRadius="12" Padding="24" Margin="0,0,0,20"
+              BorderBrush="White" BorderThickness="1">
+        <Border.Background>
+          <SolidColorBrush Color="White" Opacity="0.7"/>
+        </Border.Background>
+        <Border.Effect>
+          <DropShadowEffect Color="#B0C4DE" Direction="270" ShadowDepth="3" BlurRadius="15" Opacity="0.2"/>
+        </Border.Effect>
+        <Grid>
+          <!-- Subtle animated background -->
+          <Border CornerRadius="12" Opacity="0.06">
+            <Border.Background>
+              <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                <GradientStop Color="#00BCF2" Offset="0"/>
+                <GradientStop Color="Transparent" Offset="1"/>
+              </LinearGradientBrush>
+            </Border.Background>
+          </Border>
+
+          <StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+              <TextBlock x:Name="Rulericon" Text="📐" FontSize="22" VerticalAlignment="Center" Margin="0,0,10,0">
+                <TextBlock.RenderTransform>
+                  <RotateTransform x:Name="RulerRotate" Angle="0" CenterX="11" CenterY="11"/>
+                </TextBlock.RenderTransform>
+                <TextBlock.Triggers>
+                  <EventTrigger RoutedEvent="TextBlock.MouseEnter">
+                    <BeginStoryboard>
+                      <Storyboard>
+                        <DoubleAnimation Storyboard.TargetName="RulerRotate"
+                                       Storyboard.TargetProperty="Angle"
+                                       From="0" To="-15" Duration="0:0:0.15" AutoReverse="True"
+                                       RepeatBehavior="2x"/>
+                      </Storyboard>
+                    </BeginStoryboard>
+                  </EventTrigger>
+                </TextBlock.Triggers>
+              </TextBlock>
+              <Label Content="Coordinate Divisor (XYZ values will be divided by this):"
+                     FontSize="16"
+                     FontWeight="Bold"
+                     Foreground="#1D1D1F"
+                     VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBox x:Name="DivisorTextBox"
+                     Text="12"
+                     Width="400"
+                     HorizontalAlignment="Left"
+                     Style="{StaticResource ModernTextBox}"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- Action Buttons -->
+      <StackPanel Orientation="Horizontal"
+                  HorizontalAlignment="Right"
+                  Margin="0,10,0,0">
+        <Button x:Name="CancelButton"
+                Content="Cancel"
+                Width="100"
+                Margin="0,0,10,0"
+                Style="{StaticResource CancelButton}"/>
+        <Button x:Name="OkButton"
+                Content="OK"
+                Width="100"
+                Style="{StaticResource ModernButton}"/>
+      </StackPanel>
+
+    </StackPanel>
+  </ScrollViewer>
+  </Grid>
+</Window>
