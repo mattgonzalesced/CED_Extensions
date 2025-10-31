@@ -1,0 +1,483 @@
+{
+    "27TV": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Floor": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "27TV"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "TV outlet"
+    },
+    "43 tv": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Floor": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "43 tv"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "TV outlet"
+    },
+    "65tv": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Floor": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "65tv"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "TV outlet"
+    },
+    "70tv": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Floor": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "70tv"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "TV outlet"
+    },
+    "75TV": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Floor": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "75tv",
+                            "Elevation" : "66"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "TV outlet"
+    },
+    "BCS Speaker": {
+        "Electrical_Fixture": [
+            {
+                "Speaker Family": {
+                    "(unspecified)": {
+                        "PARAMETERS": {}
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Floor": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "BCS speaker"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Speaker with electrical"
+    },
+    "BEAUTYANGEL": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Disconnect Switch_CED": {
+                    "Fused - 30A": {
+                        "PARAMETERS": {}
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Floor": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "BEAUTYANGEL"
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "CRYO": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "BEAUTYANGEL"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes" : "Cryo Chambers"
+    },
+    "E1": {
+        "Lighting_Fixture": [
+            {
+                "Emergency_Exit_Light": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Emergency lighting"
+    },
+    "E2": {
+        "Lighting_Fixture": [
+            {
+                "Emergency_Exit_Light": {
+                    "With Arrows": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Emergency lighting with arrows"
+    },
+    "E5": {
+        "Lighting_Fixture": [
+            {
+                "Smoke_Detector": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Smoke detector"
+    },
+    "Exit Sign": {
+        "Lighting_Fixture": [
+            {
+                "Emergency_Exit_Light": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Exit sign"
+    },
+    "F1": {
+        "Lighting_Fixture": [
+            {
+                "Lighting_Fixture": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "General lighting"
+    },
+    "F12C": {
+        "Lighting_Fixture": [
+            {
+                "Lighting_Fixture": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "General lighting"
+    },
+    "F13": {
+        "Lighting_Fixture": [
+            {
+                "Lighting_Fixture": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "General lighting"
+    },
+    "F3": {
+        "Lighting_Fixture": [
+            {
+                "Lighting_Fixture": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "General lighting"
+    },
+    "F6-1": {
+        "Lighting_Fixture": [
+            {
+                "Lighting_Fixture": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "General lighting"
+    },
+    "F9": {
+        "Lighting_Fixture": [
+            {
+                "Lighting_Fixture": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "General lighting"
+    },
+    "FAN 1": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Disconnect Switch_CED": {
+                    "Fused - 30A": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Fan ID"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Fan disconnect"
+    },
+    "HM5A": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Floor": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM5A"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Floor receptacle"
+    },
+    "HM62A": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Disconnect Switch_CED": {
+                    "Fused - 30A": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62A"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Equipment disconnect"
+    },
+    "HM62B_Up tanning": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Disconnect Switch_CED": {
+                    "Fused - 30A": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62B_Up tanning"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Tanning equipment disconnect"
+    },
+    "HM62E Hybrid Tanning Booth": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Disconnect Switch_CED": {
+                    "Fused - 30A": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62E Hybrid Tanning Booth"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Tanning with speaker and data"
+    },
+    "HM63C": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Floor": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM63C"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Multiple receptacles"
+    },
+    "Hybrid Light Bed HM62D": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Disconnect Switch_CED": {
+                    "Fused - 30A": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Hybrid Light Bed HM62D"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Tanning bed disconnect"
+    },
+    "it": {
+        "Lighting_Fixture": [
+            {
+                "Lighting_Fixture": {
+                    "Standard": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Floor": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "it"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Lighting and power"
+    },
+    "Stepmill (C5X-5PL-PF)": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Floor": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Stepmill (C5X-5PL-PF)"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Exercise equipment power"
+    },
+    "Treadmill (T5X-5PL-PF)": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Floor": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Treadmill (T5X-5PL-PF)"
+                        },
+                        "OFFSET":{
+                            "x" : "0",
+                            "y" : "0"
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Disconnect Switch_CED": {
+                    "Fused - 30A": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Treadmill (T5X-5PL-PF)"
+                        },
+                        "OFFSET":{
+                            "x" : "0",
+                            "y" : "0"
+                        }
+                    }
+                }
+            }
+        ],
+                "Mechanical_Equipment": [
+            {
+                "ME_Gas-Fired Water Heater - Tankless_CED": {
+                    "AO Smith - ATI-540H-N": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Treadmill (T5X-5PL-PF)"
+                        }
+                    }
+                }
+            }
+        ],
+        "_DISABLED_Model_Groups": [
+            {
+                "_DISABLED_P_Gas-fired Water Heater Plant": {
+                    "_DISABLED_Group 1": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations": [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Exercise equipment power"
+    },
+    "TV TRUSS": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Floor": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "TV TRUSS"
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Floor": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "TV TRUSS"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "TV mounting power"
+    },
+    "vending machine": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Floor": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "vending machine"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Vending machine power"
+    },
+    "EX'G ADA DF": {
+        "Notes": "Existing ADA fountain"
+    }
+}
