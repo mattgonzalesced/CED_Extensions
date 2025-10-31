@@ -1039,13 +1039,6 @@ class CircuitBranch(object):
         return "{}{}-({})".format(prefix, conduit, wire_callout)
 
     def print_info(self, include_wire_info=True, include_all_properties=False):
-
-        if self.reasonable_user_overrides():
-            pass
-        else:
-            self.log_info("Skipping print_info due to unreasonable user overrides.")
-            return
-
         print("\n=== CircuitBranch: {} (ID: {}) ===".format(self.name, self.circuit_id))
 
         # Wire Info

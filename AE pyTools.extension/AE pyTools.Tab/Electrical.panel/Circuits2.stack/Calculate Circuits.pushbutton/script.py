@@ -148,6 +148,11 @@ def main():
         branch = CircuitBranch(circuit)
         if not branch.is_power_circuit:
             continue
+        if not branch.reasonable_user_overrides():
+            branch.log_info("Skipping print_info due to unreasonable user overrides.")
+            return
+        if branch.reasonable_user_overrides():
+            continue
         branch.calculate_breaker_size()
         branch.calculate_hot_wire_size()
         branch.calculate_ground_wire_size()
