@@ -1003,6 +1003,7 @@ class CircuitBranch(object):
     #  a separate chunk, cant just be number of wires.
     #  example if 3 hots and 1 neutral, and hot_size = neutral_size: 4#12
     #  example if 3 hots and 1 neutral, and hot_size not = neutral_size: 3#12H + 1#10N
+
     def get_wire_set_string(self):
         wp = self.settings.wire_size_prefix or ''
         parts = []
@@ -1012,7 +1013,13 @@ class CircuitBranch(object):
 
         hot_size = self._normalize_wire_size(self.hot_wire_size)
         neutral_size = self._normalize_wire_size(self.neutral_wire_size)
-
+        
+        if hot_size == neutral_size:
+            combined_qty = total_hot_qty + total_neutral_qty
+            if combined_qty and hot_size:
+                parts.append("{}{}{}".format(combined_qty, wp, hot_size))
+            total_hot_qty = 0
+            total_neutral_qty = 0
         if total_hot_qty and hot_size:
             parts.append("{}{}{}H".format(total_hot_qty, wp, hot_size))
 
