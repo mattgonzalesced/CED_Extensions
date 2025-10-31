@@ -182,8 +182,8 @@ class CircuitBranch(object):
                 reasonable = False
         
         if self._conduit_size_override:
-            normalized = self._normalize_conduit_size(self._conduit_size_override)
-            if normalized not in CONDUIT_AREA_TABLE.keys():
+            size = self._conduit_size_override
+            if size not in CONDUIT_AREA_TABLE.keys():
                 self.log_warning("Unreasonable conduit size override: {}. Resetting to None.".format(
                     self._conduit_size_override))
                 self._conduit_size_override = None
