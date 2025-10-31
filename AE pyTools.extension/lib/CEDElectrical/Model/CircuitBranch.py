@@ -183,7 +183,7 @@ class CircuitBranch(object):
         
         if self._conduit_type_override:
             contype = self._conduit_type_override
-            if contype not in CONDUIT_AREA_TABLE.keys():
+            if contype not in CONDUIT_AREA_TABLE['Magnetic'].keys() or contype not in CONDUIT_AREA_TABLE['Non-Magnetic'].keys():
                 self.log_warning("Unreasonable conduit type override: {}. Resetting to None.".format(
                     self._conduit_type_override))
                 self._conduit_type_override = None
