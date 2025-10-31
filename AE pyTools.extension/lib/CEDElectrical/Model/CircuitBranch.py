@@ -118,7 +118,7 @@ class CircuitBranch(object):
     def reasonable_user_overrides(self):
         reasonable = True
 
-        if self._wire_sets_override and self._wire_sets_override.isinstance(self._wire_sets_override, int):
+        if self._wire_sets_override and isinstance(self._wire_sets_override, int):
             if self._wire_sets_override < 1 or self._wire_sets_override > 7:
                 self.log_warning("Unreasonable wire sets override: {}. Resetting to None.".format(
                     self._wire_sets_override))
