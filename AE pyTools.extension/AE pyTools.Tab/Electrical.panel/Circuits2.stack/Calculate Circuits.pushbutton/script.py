@@ -149,8 +149,8 @@ def main():
         if not branch.is_power_circuit:
             continue
         if branch.reasonable_user_overrides is False:
-            logger.info("{}⚠️ Skipping circuit with ridiculous user overrides.".format(branch.name))
-            return
+            logger.info("{}⚠️ Check circuits with ridiculous user overrides.".format(branch.name))
+            continue
         branch.calculate_breaker_size()
         branch.calculate_hot_wire_size()
         branch.calculate_ground_wire_size()
