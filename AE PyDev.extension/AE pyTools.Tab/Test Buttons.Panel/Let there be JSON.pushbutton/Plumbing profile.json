@@ -1,0 +1,75 @@
+{
+    "27TV": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "27TV",
+                            "Load Classification_CED" : "C",
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Panel_CEDT" : "L3"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "27TV",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "11"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 18,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "TV outlet"
+    }
