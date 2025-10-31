@@ -158,7 +158,7 @@ class CircuitBranch(object):
                 reasonable = False
 
         if self._wire_hot_size_override:
-            normalized = self._normalize_wire_size(self._wire_hot_size_override):
+            normalized = self._normalize_wire_size(self._wire_hot_size_override)
             if normalized not in CONDUCTOR_AREA_TABLE.keys():
                 self.log_warning("Unreasonable hot wire size override: {}. Resetting to None.".format(
                     self._wire_hot_size_override))
