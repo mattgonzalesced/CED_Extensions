@@ -181,19 +181,19 @@ class CircuitBranch(object):
                 self._wire_ground_size_override = None
                 reasonable = False
         
-        if self._conduit_size_override:
-            size = self._conduit_size_override
-            if size not in CONDUIT_AREA_TABLE.keys():
-                self.log_warning("Unreasonable conduit size override: {}. Resetting to None.".format(
-                    self._conduit_size_override))
-                self._conduit_size_override = None
-                reasonable = False
-
         if self._conduit_type_override:
-            if self._conduit_type_override not in CONDUIT_SIZE_INDEX:
+            contype = self._conduit_type_override
+            if contype not in CONDUIT_AREA_TABLE.keys():
                 self.log_warning("Unreasonable conduit type override: {}. Resetting to None.".format(
                     self._conduit_type_override))
                 self._conduit_type_override = None
+                reasonable = False
+
+        if self._conduit_size_override:
+            if self._conduit_size_override not in CONDUIT_SIZE_INDEX:
+                self.log_warning("Unreasonable conduit size override: {}. Resetting to None.".format(
+                    self._conduit_size_override))
+                self._conduit_size_override = None
                 reasonable = False
 
         
