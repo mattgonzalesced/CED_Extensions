@@ -190,7 +190,7 @@ class CircuitBranch(object):
                 reasonable = False
 
         if self._conduit_type_override:
-            if self._conduit_type_override not in CONDUIT_SIZE_INDEX.keys():
+            if self._conduit_type_override not in CONDUIT_SIZE_INDEX:
                 self.log_warning("Unreasonable conduit type override: {}. Resetting to None.".format(
                     self._conduit_type_override))
                 self._conduit_type_override = None
