@@ -190,7 +190,7 @@ class CircuitBranch(object):
                 reasonable = False
 
         if self._conduit_size_override:
-            size = str(self._conduit_size_override).replace('C', '').strip())
+            size = str(self._conduit_size_override).replace('C', '').strip()
             if size not in CONDUIT_SIZE_INDEX:
                 self.log_warning("Unreasonable conduit size override: {}. Resetting to None.".format(
                     self._conduit_size_override))
