@@ -122,8 +122,7 @@ class CircuitBranch(object):
             if self._wire_sets_override < 1 or self._wire_sets_override > 7:
                 self.log_warning("Unreasonable wire sets override: {}. Resetting to None.".format(
                     self._wire_sets_override))
-                self._wire_sets_override = ""
-                #instead of setting the override to "None" here, let's set it to "" and do this for all of them.
+                self._wire_sets_override = None
                 reasonable = False
         else:
             self._wire_sets_override = None
@@ -133,7 +132,7 @@ class CircuitBranch(object):
             if self._wire_material_override not in WIRE_AMPACITY_TABLE.keys():
                 self.log_warning("Unreasonable wire material override: {}. Resetting to None.".format(
                     self._wire_material_override))
-                self._wire_material_override = ""
+                self._wire_material_override = None
                 reasonable = False
 
         if self._wire_temp_rating_override:
@@ -142,12 +141,12 @@ class CircuitBranch(object):
                 if temp not in [60, 75, 90]:
                     self.log_warning("Unreasonable wire temperature rating override: {}. Resetting to None.".format(
                         self._wire_temp_rating_override))
-                    self._wire_temp_rating_override = ""
+                    self._wire_temp_rating_override = None
                     reasonable = False
             except Exception as e:
                 self.log_warning("Invalid wire temperature rating override: {}. Resetting to None.".format(
                     self._wire_temp_rating_override))
-                self._wire_temp_rating_override = ""
+                self._wire_temp_rating_override = None
                 reasonable = False
 
         if self._wire_insulation_override:
@@ -155,7 +154,7 @@ class CircuitBranch(object):
             if not isinstance(self._wire_insulation_override, str) or not self._wire_insulation_override.strip():
                 self.log_warning("Unreasonable wire insulation override: {}. Resetting to None.".format(
                     self._wire_insulation_override))
-                self._wire_insulation_override = ""
+                self._wire_insulation_override = None
                 reasonable = False
 
         if self._wire_hot_size_override:
@@ -163,7 +162,7 @@ class CircuitBranch(object):
             if normalized not in CONDUCTOR_AREA_TABLE.keys():
                 self.log_warning("Unreasonable hot wire size override: {}. Resetting to None.".format(
                     self._wire_hot_size_override))
-                self._wire_hot_size_override = ""
+                self._wire_hot_size_override = self._calculated_hot_wire
                 reasonable = False 
 
         if self._wire_neutral_size_override:
@@ -171,7 +170,7 @@ class CircuitBranch(object):
             if normalized not in CONDUCTOR_AREA_TABLE.keys():
                 self.log_warning("Unreasonable neutral wire size override: {}. Resetting to None.".format(
                     self._wire_neutral_size_override))
-                self._wire_neutral_size_override = ""
+                self._wire_neutral_size_override = None
                 reasonable = False
         
         if self._wire_ground_size_override:
@@ -179,7 +178,7 @@ class CircuitBranch(object):
             if normalized not in CONDUCTOR_AREA_TABLE.keys():
                 self.log_warning("Unreasonable ground wire size override: {}. Resetting to None.".format(
                     self._wire_ground_size_override))
-                self._wire_ground_size_override = ""
+                self._wire_ground_size_override = None
                 reasonable = False
         
         if self._conduit_type_override:
@@ -187,7 +186,7 @@ class CircuitBranch(object):
             if contype not in CONDUIT_AREA_TABLE['Magnetic'].keys() and contype not in CONDUIT_AREA_TABLE['Non-Magnetic'].keys():
                 self.log_warning("Unreasonable conduit type override: {}. Resetting to None.".format(
                     self._conduit_type_override))
-                self._conduit_type_override = ""
+                self._conduit_type_override = None
                 reasonable = False
 
         if self._conduit_size_override:
@@ -195,7 +194,7 @@ class CircuitBranch(object):
             if size not in CONDUIT_SIZE_INDEX:
                 self.log_warning("Unreasonable conduit size override: {}. Resetting to None.".format(
                     self._conduit_size_override))
-                self._conduit_size_override = ""
+                self._conduit_size_override = None
                 reasonable = False
 
         
