@@ -346,7 +346,12 @@ def _assemble_groups(items):
         groups.extend(_create_nongroupedblock_groups(nongrouped))
 
     if tvtruss:
-        groups.extend(_group_by_position(tvtruss, POSITION_GROUP_SIZE, even_first=True))
+        tv_groups = _group_by_position(tvtruss, POSITION_GROUP_SIZE, even_first=True)
+        even_slots = [2 * (i + 1) for i in range(len(tv_groups))]
+        for group, circuit_number in zip(tv_groups, even_slots):
+            group["circuit_number"] = str(circuit_number)
+            group["key"] = "{}{}".format(group.get("panel_name") or "", group["circuit_number"])
+        groups.extend(tv_groups)
 
     if CIRCUITBYPOSITION:
         groups.extend(_group_by_position(normal, POSITION_GROUP_SIZE))
