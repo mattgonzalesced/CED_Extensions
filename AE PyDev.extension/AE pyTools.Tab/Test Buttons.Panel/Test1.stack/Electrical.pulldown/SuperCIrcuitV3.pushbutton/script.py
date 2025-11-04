@@ -254,17 +254,8 @@ def _create_nongroupedblock_groups(items):
     return groups
 
 
-def _circuit_sort_key(circuit_number):
-    val = _try_parse_int(circuit_number)
-    if val is None:
-        normalized = circuit_number or ""
-        return (2, normalized.lower())
-    odd_priority = 0 if val % 2 == 1 else 1  # odd circuits first, then even
-    return (odd_priority, val)
-
-
 def _group_by_key(items):
-    grouped = defaultdict(lambda: defaultdict(list))
+    grouped = defaultdict(list)
     for item in items:
         panel_name = item.get("panel_name")
         circuit_number = item.get("circuit_number")
@@ -275,14 +266,18 @@ def _group_by_key(items):
                 )
             )
             continue
-        grouped[panel_name][circuit_number].append(item)
+        grouped[(panel_name, circuit_number)].append(item)
 
     groups = []
-    for panel_name in sorted(grouped.keys(), key=lambda x: (x or "").lower()):
-        circuits_for_panel = grouped[panel_name]
-        for circuit_number in sorted(circuits_for_panel.keys(), key=_circuit_sort_key):
-            key = "{}{}".format(panel_name, circuit_number)
-            groups.append(_make_group(key, circuits_for_panel[circuit_number]))
+    for panel_name, circuit_number in sorted(
+        grouped.keys(),
+        key=lambda k: (
+            (k[0] or "").lower(),
+            _try_parse_int(k[1]) if _try_parse_int(k[1]) is not None else (k[1] or "").lower(),
+        ),
+    ):
+        key = "{}{}".format(panel_name, circuit_number)
+        groups.append(_make_group(key, grouped[(panel_name, circuit_number)]))
     return groups
 
 
@@ -299,7 +294,7 @@ def _sanitize_for_key(value):
     return "".join(ch for ch in value if ch.isalnum())
 
 
-def _group_by_position(items, group_size, even_first=False):
+def _group_by_position(items, group_size):
     buckets = defaultdict(list)
     for item in items:
         panel_name = item.get("panel_name")
@@ -324,15 +319,7 @@ def _group_by_position(items, group_size, even_first=False):
             key = "{}{}_POS{}".format(panel_name, _sanitize_for_key(load_name), index + 1)
             groups.append(_make_group(key, chunk))
 
-    if even_first:
-        return sorted(
-            groups,
-            key=lambda grp: (
-                0 if (_try_parse_int(grp.get("circuit_number")) or 0) % 2 == 0 else 1,
-                _circuit_sort_key(grp.get("circuit_number")),
-            ),
-        )
-    return sorted(groups, key=lambda grp: _circuit_sort_key(grp.get("circuit_number")))
+    return groups
 
 
 def _assemble_groups(items):
@@ -346,12 +333,7 @@ def _assemble_groups(items):
         groups.extend(_create_nongroupedblock_groups(nongrouped))
 
     if tvtruss:
-        tv_groups = _group_by_position(tvtruss, POSITION_GROUP_SIZE, even_first=True)
-        even_slots = [2 * (i + 1) for i in range(len(tv_groups))]
-        for group, circuit_number in zip(tv_groups, even_slots):
-            group["circuit_number"] = str(circuit_number)
-            group["key"] = "{}{}".format(group.get("panel_name") or "", group["circuit_number"])
-        groups.extend(tv_groups)
+        groups.extend(_group_by_position(tvtruss, POSITION_GROUP_SIZE))
 
     if CIRCUITBYPOSITION:
         groups.extend(_group_by_position(normal, POSITION_GROUP_SIZE))

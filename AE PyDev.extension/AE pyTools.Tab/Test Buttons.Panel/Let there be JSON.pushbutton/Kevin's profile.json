@@ -366,7 +366,8 @@
                             "dev-Group ID" : "BEAUTYANGEL",
                             "Apparent Load Input_CED" : "1500",
                             "Voltage_CED" : "240",
-                            "Number of Poles_CED" : "3"
+                            "Number of Poles_CED" : "3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED"
 
                         }
                     }
@@ -376,7 +377,8 @@
                 "EF-U_Receptacle_CED": {
                     "Duplex Wall": {
                         "PARAMETERS": {
-                            "dev-Group ID": "BEAUTYANGEL"
+                            "dev-Group ID": "BEAUTYANGEL",
+                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK"
                         }
                     }
                 }
@@ -680,7 +682,8 @@
                             "Apparent Load Input_CED": "1500",
                             "Voltage_CED" : "208",
                             "Number of Poles_CED" : "3",
-                            "CKT_Panel_CEDT" : "L3"
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED"
                         }
                     }
                 }
@@ -772,7 +775,8 @@
                     "Fused - 60A": {
                         "PARAMETERS": {
                             "dev-Group ID": "HM62A",
-                            "Apparent Load Input_CED" : "11223.00"
+                            "Apparent Load Input_CED" : "11223.00",
+                            "CKT_Circuit Number_CEDT": "DEDICATED"
                         }
                     }
                 }
@@ -782,7 +786,8 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "HM62A",
-                            "Apparent Load Input_CED" : "180"
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK"
                         }
                     }
                 }
@@ -857,7 +862,8 @@
                     "Fused - 60A": {
                         "PARAMETERS": {
                             "dev-Group ID": "PF Tanning 42-3 TLT PLT",
-                            "Apparent Load Input_CED" : "11223.00"
+                            "Apparent Load Input_CED" : "11223.00",
+                            "CKT_Circuit Number_CEDT": "DEDICATED"
                         }
                     }
                 }
@@ -867,7 +873,8 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "PF Tanning 42-3 TLT PLT",
-                            "Apparent Load Input_CED" : "180"
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK"
                         }
                     }
                 }
@@ -957,7 +964,8 @@
                     "Fused - 60A": {
                         "PARAMETERS": {
                             "dev-Group ID": "HM62B_Up tanning",
-                            "Apparent Load Input_CED" : "10392.00"
+                            "Apparent Load Input_CED" : "10392.00",
+                            "CKT_Circuit Number_CEDT": "DEDICATED"
                         }
                     }
                 }
@@ -967,7 +975,8 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "HM62B_Up tanning",
-                            "Apparent Load Input_CED" : "180"
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK"
                         }
                     }
                 }
@@ -1119,7 +1128,8 @@
                     "Fused - 60A": {
                         "PARAMETERS": {
                             "dev-Group ID": "HM62E Hybrid Tanning Booth",
-                            "Apparent Load Input_CED" : "11640.00"
+                            "Apparent Load Input_CED" : "11640.00",
+                            "CKT_Circuit Number_CEDT": "DEDICATED"
                         },
                         "OFFSET" :{
                             "x" : 6,
@@ -1135,7 +1145,8 @@
                             "dev-Group ID": "HM62E Hybrid Tanning Booth",
                             "Apparent Load Input_CED" : "180",
                             "CKT_Panel_CEDT" : "L1",
-                            "Load Classification_CED" : "C"
+                            "Load Classification_CED" : "C",
+                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK"
                         },
                         "OFFSET" :{
                             "x" : 12,
@@ -1226,7 +1237,8 @@
                     "Fused - 60A": {
                         "PARAMETERS": {
                             "dev-Group ID": "Hybrid Light Bed HM62D",
-                            "Apparent Load Input_CED" : "11223.00"
+                            "Apparent Load Input_CED" : "11223.00",
+                            "CKT_Circuit Number_CEDT": "DEDICATED"
                         }
                     }
                 }
@@ -1236,7 +1248,8 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "Hybrid Light Bed HM62D",
-                            "Apparent Load Input_CED" : "180"
+                            "Apparent Load Input_CED" : "180",
+                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK"
                         },
                         "OFFSET" :{
                             "x" : 10,
@@ -1699,7 +1712,8 @@
                 "EF-U_Receptacle_CED": {
                     "Quad Wall": {
                         "PARAMETERS": {
-                            "dev-Group ID": "TV TRUSS"
+                            "dev-Group ID": "TV TRUSS",
+                            "CKT_Circuit Number_CEDT": "TVTRUSS"
                         },
                         "OFFSET":{
                             "x": 28,
@@ -1712,7 +1726,8 @@
                 "EF-U_Receptacle_CED": {
                     "Quad Wall": {
                         "PARAMETERS": {
-                            "dev-Group ID": "CAUTION SECOND TV TRUSS"
+                            "dev-Group ID": "CAUTION SECOND TV TRUSS",
+                            "CKT_Circuit Number_CEDT": "TVTRUSS"
                         },
                         "OFFSET":{
                             "x": -28,
@@ -1774,7 +1789,8 @@
                             "dev-Group ID": "vending machine",
                             "Apparent Load Input_CED" : "1000",
                             "CKT_Panel_CEDT" : "L3",
-                            "Load Classification_CED" : "NC"
+                            "Load Classification_CED" : "NC",
+                            "CKT_Circuit Number_CEDT": "DEDICATED"
                         }
                     }
                 }
