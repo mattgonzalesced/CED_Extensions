@@ -367,7 +367,8 @@
                             "Apparent Load Input_CED" : "1500",
                             "Voltage_CED" : "240",
                             "Number of Poles_CED" : "3",
-                            "CKT_Circuit Number_CEDT": "DEDICATED"
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Panel_CEDT" : "L4"
 
                         }
                     }
@@ -776,7 +777,8 @@
                         "PARAMETERS": {
                             "dev-Group ID": "HM62A",
                             "Apparent Load Input_CED" : "11223.00",
-                            "CKT_Circuit Number_CEDT": "DEDICATED"
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Panel_CEDT" : "L4"
                         }
                     }
                 }
@@ -863,7 +865,8 @@
                         "PARAMETERS": {
                             "dev-Group ID": "PF Tanning 42-3 TLT PLT",
                             "Apparent Load Input_CED" : "11223.00",
-                            "CKT_Circuit Number_CEDT": "DEDICATED"
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Panel_CEDT" : "L4"
                         }
                     }
                 }
@@ -965,7 +968,8 @@
                         "PARAMETERS": {
                             "dev-Group ID": "HM62B_Up tanning",
                             "Apparent Load Input_CED" : "10392.00",
-                            "CKT_Circuit Number_CEDT": "DEDICATED"
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Panel_CEDT" : "L4"
                         }
                     }
                 }
@@ -1129,7 +1133,8 @@
                         "PARAMETERS": {
                             "dev-Group ID": "HM62E Hybrid Tanning Booth",
                             "Apparent Load Input_CED" : "11640.00",
-                            "CKT_Circuit Number_CEDT": "DEDICATED"
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Panel_CEDT" : "L4"
                         },
                         "OFFSET" :{
                             "x" : 6,
@@ -1238,7 +1243,8 @@
                         "PARAMETERS": {
                             "dev-Group ID": "Hybrid Light Bed HM62D",
                             "Apparent Load Input_CED" : "11223.00",
-                            "CKT_Circuit Number_CEDT": "DEDICATED"
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Panel_CEDT" : "L4"
                         }
                     }
                 }
