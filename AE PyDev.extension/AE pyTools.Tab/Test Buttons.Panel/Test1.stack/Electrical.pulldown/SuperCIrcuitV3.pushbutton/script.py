@@ -255,9 +255,55 @@ def _remove_from_existing_systems(item):
             logger.warning("Failed removing {} from system {}: {}".format(element.Id, system.Id, ex))
 
 
+def _supports_power_circuit(element):
+    mep_model = getattr(element, "MEPModel", None)
+    if not mep_model:
+        return False
+
+    connector_manager = getattr(mep_model, "ConnectorManager", None)
+    if not connector_manager:
+        return False
+
+    connectors = getattr(connector_manager, "Connectors", None)
+    if not connectors:
+        return False
+
+    for connector in connectors:
+        try:
+            system_types = getattr(connector, "AllSystemTypes", None)
+            if system_types and system_types.Contains(DB.Electrical.ElectricalSystemType.PowerCircuit):
+                return True
+        except AttributeError:
+            pass
+
+        try:
+            if getattr(connector, "ElectricalSystemType", None) == DB.Electrical.ElectricalSystemType.PowerCircuit:
+                return True
+        except AttributeError:
+            continue
+
+    return False
+
+
 def _create_circuit(doc, group):
-    element_ids = []
+    valid_members = []
+    skipped = []
+
     for member in group["members"]:
+        element = member["element"]
+        if _supports_power_circuit(element):
+            valid_members.append(member)
+        else:
+            skipped.append(element.Id)
+            logger.debug("Skipping element {} in group {} (no power connector).".format(element.Id, group["key"]))
+
+    if skipped:
+        logger.warning(
+            "Group {} had {} element(s) without power connectors; they were skipped.".format(group["key"], len(skipped))
+        )
+
+    element_ids = []
+    for member in valid_members:
         _remove_from_existing_systems(member)
         element_ids.append(member["element"].Id)
 
@@ -305,7 +351,7 @@ def _parse_rating(value):
 
 
 def _set_string_param(param, value):
-    if param and value:
+    if param and value and not param.IsReadOnly:
         try:
             param.Set(str(value))
         except Exception as ex:
@@ -313,7 +359,7 @@ def _set_string_param(param, value):
 
 
 def _set_double_param(param, value):
-    if param and value is not None:
+    if param and value is not None and not param.IsReadOnly:
         try:
             param.Set(value)
         except Exception as ex:
