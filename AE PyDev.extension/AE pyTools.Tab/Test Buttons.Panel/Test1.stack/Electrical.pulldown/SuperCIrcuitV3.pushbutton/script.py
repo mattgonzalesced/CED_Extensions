@@ -75,6 +75,19 @@ def _try_parse_int(value):
         return None
 
 
+def _compute_slot_targets(slot_number):
+    one_based = max(slot_number, 1)
+    zero_based = one_based - 1
+    row_index = zero_based // 2
+    column_index = zero_based % 2
+    return {
+        "one_based": one_based,
+        "zero_based": zero_based,
+        "row_index": row_index,
+        "column_index": column_index
+    }
+
+
 def _collect_target_elements(doc):
     selection = revit.get_selection()
     if selection:
@@ -465,7 +478,10 @@ def _try_move_to_slot_methods(system, slot_index):
 
 
 def _set_slot_parameters(system, slot_index):
+    targets = _compute_slot_targets(slot_index)
+    zero_based = targets["zero_based"]
     success = False
+
     slot_params = [
         DB.BuiltInParameter.RBS_ELEC_CIRCUIT_START_SLOT,
         DB.BuiltInParameter.RBS_ELEC_CIRCUIT_SLOT_INDEX,
@@ -482,7 +498,7 @@ def _set_slot_parameters(system, slot_index):
             continue
 
         try:
-            param.Set(int(slot_index))
+            param.Set(int(zero_based))
             success = True
         except Exception as ex:
             logger.debug("Setting parameter {} for circuit {} failed: {}".format(builtin, system.Id.IntegerValue, ex))
@@ -499,11 +515,17 @@ def _set_slot_parameters(system, slot_index):
 
 
 def _allocate_panel_slot(system, circuit_number):
-    slot_index = _try_parse_int(circuit_number)
-    if slot_index is None:
+    slot_number = _try_parse_int(circuit_number)
+    if slot_number is None:
         return
 
+    targets = _compute_slot_targets(slot_number)
+    zero_based = targets["zero_based"]
+    row_index = targets["row_index"]
+    column_index = targets["column_index"]
+
     logger.debug("ElectricalSystem slot-related members: {}".format([attr for attr in dir(system) if "Slot" in attr or "Number" in attr]))
+    logger.debug("Desired slot {} (zero_based {}), row {}, column {}".format(slot_number, zero_based, row_index, column_index))
 
     panel = system.BaseEquipment
     if not panel:
@@ -511,10 +533,10 @@ def _allocate_panel_slot(system, circuit_number):
 
     doc = system.Document
 
-    if _try_move_to_slot_methods(system, slot_index):
+    if _try_move_to_slot_methods(system, slot_number):
         return
 
-    direct_success = _set_slot_parameters(system, slot_index)
+    direct_success = _set_slot_parameters(system, slot_number)
     if direct_success:
         try:
             doc.Regenerate()
@@ -522,8 +544,8 @@ def _allocate_panel_slot(system, circuit_number):
             pass
         try:
             start_slot = getattr(system, "StartSlot", None)
-            if start_slot == slot_index:
-                logger.debug("Slot {} applied via direct parameter/method set.".format(slot_index))
+            if start_slot == zero_based:
+                logger.debug("Slot {} applied via direct parameter/method set.".format(slot_number))
                 return
         except Exception:
             pass
@@ -572,14 +594,14 @@ def _allocate_panel_slot(system, circuit_number):
                 if not callable(add_method):
                     continue
                 try:
-                    result = add_method(panel_schedule_view, slot_index, system.Id)
+                    result = add_method(panel_schedule_view, row_index, system.Id)
                     doc.Regenerate()
                     start_slot = getattr(system, "StartSlot", None)
-                    if start_slot == slot_index:
-                        logger.debug("Allocated slot {} using {}.".format(slot_index, method_name))
+                    if start_slot == zero_based:
+                        logger.debug("Allocated slot {} using {}.".format(slot_number, method_name))
                         return
                     if isinstance(result, bool) and result:
-                        logger.debug("{} returned True for slot {} but StartSlot={}, circuit {}.".format(method_name, slot_index, start_slot, system.Id.IntegerValue))
+                        logger.debug("{} returned True for slot {} but StartSlot={}, circuit {}.".format(method_name, slot_number, start_slot, system.Id.IntegerValue))
                         return
                 except Exception as ex:
                     logger.debug("{} failed for circuit {}: {}".format(method_name, system.Id.IntegerValue, ex))
@@ -587,8 +609,8 @@ def _allocate_panel_slot(system, circuit_number):
     panelboard_utils = getattr(DB.Electrical, "PanelboardUtils", None)
     if panelboard_utils:
         try:
-            panelboard_utils.AllocateCircuitSlots(doc, panel.Id, system.Id, slot_index)
-            logger.debug("Allocated slot {} using PanelboardUtils.".format(slot_index))
+            panelboard_utils.AllocateCircuitSlots(doc, panel.Id, system.Id, slot_number)
+            logger.debug("Allocated slot {} using PanelboardUtils.".format(slot_number))
             return
         except Exception as ex:
             logger.debug("PanelboardUtils allocation failed: {}".format(ex))
