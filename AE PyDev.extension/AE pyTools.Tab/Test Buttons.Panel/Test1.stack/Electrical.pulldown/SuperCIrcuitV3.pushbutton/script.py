@@ -254,8 +254,17 @@ def _create_nongroupedblock_groups(items):
     return groups
 
 
+def _circuit_sort_key(circuit_number):
+    val = _try_parse_int(circuit_number)
+    if val is None:
+        normalized = circuit_number or ""
+        return (2, normalized.lower())
+    odd_priority = 0 if val % 2 == 1 else 1  # odd circuits first, then even
+    return (odd_priority, val)
+
+
 def _group_by_key(items):
-    grouped = defaultdict(list)
+    grouped = defaultdict(lambda: defaultdict(list))
     for item in items:
         panel_name = item.get("panel_name")
         circuit_number = item.get("circuit_number")
@@ -266,12 +275,14 @@ def _group_by_key(items):
                 )
             )
             continue
-        key = "{}{}".format(panel_name, circuit_number)
-        grouped[key].append(item)
+        grouped[panel_name][circuit_number].append(item)
 
     groups = []
-    for key in sorted(grouped.keys(), key=lambda x: x.lower()):
-        groups.append(_make_group(key, grouped[key]))
+    for panel_name in sorted(grouped.keys(), key=lambda x: (x or "").lower()):
+        circuits_for_panel = grouped[panel_name]
+        for circuit_number in sorted(circuits_for_panel.keys(), key=_circuit_sort_key):
+            key = "{}{}".format(panel_name, circuit_number)
+            groups.append(_make_group(key, circuits_for_panel[circuit_number]))
     return groups
 
 
