@@ -6,6 +6,8 @@ import math
 
 from System.Collections.Generic import List
 
+from System import Type
+
 from pyrevit import revit, DB, script, forms
 from pyrevit.revit.db import query
 
@@ -439,19 +441,71 @@ def _allocate_panel_slot(system, circuit_number):
     if slot_index is None:
         return
 
+    logger.debug("DB members (panel-related): {}".format([attr for attr in dir(DB) if "Panel" in attr or "Slot" in attr]))
+    logger.debug("DB.Electrical members (panel-related): {}".format([attr for attr in dir(DB.Electrical) if "Panel" in attr or "Slot" in attr]))
+
+    panel_sched_utils = getattr(DB.Electrical, "PanelScheduleUtils", None)
+    panel_sched_view_cls = getattr(DB.Electrical, "PanelScheduleView", None)
+    logger.debug("PanelScheduleUtils available: {}".format(panel_sched_utils is not None))
+    logger.debug("PanelScheduleView available: {}".format(panel_sched_view_cls is not None))
+    if panel_sched_utils:
+        logger.debug("PanelScheduleUtils members: {}".format([attr for attr in dir(panel_sched_utils) if "Slot" in attr or "Add" in attr or "Panel" in attr]))
+    if panel_sched_view_cls:
+        logger.debug("PanelScheduleView static members: {}".format([attr for attr in dir(panel_sched_view_cls) if "Panel" in attr or "Slot" in attr or "View" in attr]))
+
     panel = system.BaseEquipment
     if not panel:
         return
 
     doc = system.Document
-    try:
-        DB.Electrical.PanelboardUtils.AllocateCircuitSlots(doc, panel.Id, system.Id, slot_index)
-    except Exception as ex:
-        logger.warning(
-            "Unable to allocate slot {} for circuit {}: {}".format(
-                slot_index, system.Id.IntegerValue, ex
-            )
+
+    # Try Revit 2024+ API (PanelboardUtils via Electrical namespace)
+    panelboard_utils = getattr(DB.Electrical, "PanelboardUtils", None)
+    if panelboard_utils:
+        try:
+            panelboard_utils.AllocateCircuitSlots(doc, panel.Id, system.Id, slot_index)
+            logger.debug("Allocated slot {} using PanelboardUtils.".format(slot_index))
+            return
+        except Exception as ex:
+            logger.debug("PanelboardUtils allocation failed: {}".format(ex))
+
+    # Try panel schedule utilities
+    panel_schedule_utils = getattr(DB.Electrical, "PanelScheduleUtils", None) or getattr(DB, "PanelScheduleUtils", None)
+    panel_schedule_view_cls = getattr(DB.Electrical, "PanelScheduleView", None) or getattr(DB, "PanelScheduleView", None)
+
+    if panel_schedule_utils and panel_schedule_view_cls:
+        view_ids = []
+        get_ids = getattr(panel_schedule_view_cls, "GetPanelScheduleViewIds", None)
+        if callable(get_ids):
+            try:
+                view_ids = list(get_ids(doc, panel.Id))
+            except Exception as ex:
+                logger.debug("GetPanelScheduleViewIds failed: {}".format(ex))
+
+        panel_schedule_view = None
+        if view_ids:
+            panel_schedule_view = doc.GetElement(view_ids[0])
+
+        if panel_schedule_view:
+            add_to_slot = getattr(panel_schedule_utils, "AddToSlot", None)
+            if callable(add_to_slot):
+                try:
+                    add_to_slot(panel_schedule_view, slot_index, system.Id)
+                    logger.debug("Allocated slot {} using PanelScheduleUtils.".format(slot_index))
+                    return
+                except Exception as ex:
+                    logger.warning(
+                        "Unable to allocate slot {} for circuit {} via PanelScheduleUtils: {}".format(
+                            slot_index, system.Id.IntegerValue, ex
+                        )
+                    )
+                    return
+
+    logger.warning(
+        "Unable to allocate slot {} for circuit {}: no supported API found.".format(
+            slot_index, system.Id.IntegerValue
         )
+    )
 
 
 def _create_circuit(doc, group):
