@@ -319,6 +319,31 @@ def _create_circuit(doc, group):
         )
     except Exception as ex:
         logger.error("Circuit creation failed for {}: {}".format(group["key"], ex))
+        for member in valid_members:
+            element = member["element"]
+            category = element.Category.Name if element.Category else "No Category"
+            family_name = getattr(element, "Name", None)
+            can_assign = getattr(getattr(element, "MEPModel", None), "CanAssignToElectricalCircuit", None)
+            if callable(can_assign):
+                try:
+                    can_assign_value = bool(can_assign())
+                except TypeError:
+                    try:
+                        can_assign_value = bool(can_assign(DB.Electrical.ElectricalSystemType.PowerCircuit))
+                    except Exception:
+                        can_assign_value = "error"
+                except Exception:
+                    can_assign_value = "error"
+            else:
+                can_assign_value = can_assign
+            try:
+                logger.error(
+                    "  Element {} | {} | {} | CanAssignToElectricalCircuit: {}".format(
+                        element.Id.IntegerValue, category, family_name, can_assign_value
+                    )
+                )
+            except Exception:
+                logger.error("  Element {} failed during diagnostics.".format(element.Id.IntegerValue))
         return None
 
     panel_element = group.get("panel_element")
