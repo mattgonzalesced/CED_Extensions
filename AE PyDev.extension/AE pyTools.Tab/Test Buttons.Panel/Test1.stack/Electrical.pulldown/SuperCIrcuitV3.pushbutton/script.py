@@ -136,47 +136,70 @@ def _gather_element_info(doc, elements, panel_lookup):
     return info_items
 
 
-def _ensure_not_already_circuited(info_items):
-    for item in info_items:
-        circuit_element = item.get("circuit_element")
-        if not circuit_element:
-            continue
+def _has_circuit_assigned(element):
+    if not element:
+        return False
 
-        mep_model = getattr(circuit_element, "MEPModel", None)
-        if not mep_model:
-            continue
+    mep_model = getattr(element, "MEPModel", None)
+    if not mep_model:
+        return False
 
-        systems = getattr(mep_model, "ElectricalSystems", None)
+    for attr in ("AssociatedElectricalSystems", "ElectricalSystems"):
+        systems = getattr(mep_model, attr, None)
         if not systems:
             continue
 
-        has_system = False
+        try:
+            # Try direct iteration (pyRevit wraps .NET IEnumerable nicely)
+            for sys in systems:
+                if sys:
+                    return True
+        except Exception:
+            pass
+
         try:
             count = getattr(systems, "Count", None)
-            if count is not None:
-                has_system = count > 0
-            else:
-                size = getattr(systems, "Size", None)
-                if size is not None:
-                    has_system = size > 0
+            if count is not None and count > 0:
+                return True
         except Exception:
-            has_system = False
+            pass
 
-        if not has_system:
-            try:
-                for _ in systems:
-                    has_system = True
-                    break
-            except Exception:
-                has_system = False
+        try:
+            size = getattr(systems, "Size", None)
+            if size is not None and size > 0:
+                return True
+        except Exception:
+            pass
 
-        if has_system:
-            host = item.get("element") or circuit_element
-            display_name = getattr(host, "Name", None)
+    return False
+
+
+def _ensure_not_already_circuited(info_items):
+    blocked = []
+
+    for item in info_items:
+        circuit_element = item.get("circuit_element")
+        host_element = item.get("element")
+
+        already_circuited = False
+        if _has_circuit_assigned(circuit_element):
+            already_circuited = True
+        elif host_element is not circuit_element and _has_circuit_assigned(host_element):
+            already_circuited = True
+
+        if already_circuited:
+            display_source = host_element or circuit_element
+            display_name = getattr(display_source, "Name", None)
             if not display_name:
-                display_name = "Element {}".format(circuit_element.Id.IntegerValue)
-            message = "Super Circuit has already circuited {}, you cannot run it again for this element.".format(display_name)
-            forms.alert(message, exitscript=True)
+                display_name = "Element {}".format(display_source.Id.IntegerValue)
+            blocked.append(display_name)
+
+    if blocked:
+        unique = sorted(set(blocked))
+        message = "Super Circuit has already circuited {}.\nYou cannot run it again for these element(s).".format(
+            ", ".join(unique)
+        )
+        forms.alert(message, exitscript=True)
 
 
 def _separate_dedicated(items):
@@ -436,6 +459,40 @@ def _get_power_connectors(element, log_details=True):
     return connectors_result
 
 
+def _set_slot_parameters(system, slot_index):
+    success = False
+    slot_params = [
+        DB.BuiltInParameter.RBS_ELEC_CIRCUIT_START_SLOT,
+        DB.BuiltInParameter.RBS_ELEC_CIRCUIT_SLOT_INDEX,
+    ]
+
+    for builtin in slot_params:
+        try:
+            param = system.get_Parameter(builtin)
+        except Exception as ex:
+            logger.debug("Failed retrieving parameter {}: {}".format(builtin, ex))
+            continue
+
+        if not param or param.IsReadOnly:
+            continue
+
+        try:
+            param.Set(int(slot_index))
+            success = True
+        except Exception as ex:
+            logger.debug("Setting parameter {} for circuit {} failed: {}".format(builtin, system.Id.IntegerValue, ex))
+
+    set_circuit_number = getattr(system, "SetCircuitNumber", None)
+    if callable(set_circuit_number):
+        try:
+            set_circuit_number(str(slot_index))
+            success = True
+        except Exception as ex:
+            logger.debug("SetCircuitNumber call failed for circuit {}: {}".format(system.Id.IntegerValue, ex))
+
+    return success
+
+
 def _allocate_panel_slot(system, circuit_number):
     slot_index = _try_parse_int(circuit_number)
     if slot_index is None:
@@ -459,36 +516,39 @@ def _allocate_panel_slot(system, circuit_number):
 
     doc = system.Document
 
-    # Try Revit 2024+ API (PanelboardUtils via Electrical namespace)
-    panelboard_utils = getattr(DB.Electrical, "PanelboardUtils", None)
-    if panelboard_utils:
+    direct_success = _set_slot_parameters(system, slot_index)
+    if direct_success:
         try:
-            panelboard_utils.AllocateCircuitSlots(doc, panel.Id, system.Id, slot_index)
-            logger.debug("Allocated slot {} using PanelboardUtils.".format(slot_index))
-            return
-        except Exception as ex:
-            logger.debug("PanelboardUtils allocation failed: {}".format(ex))
+            doc.Regenerate()
+        except Exception:
+            pass
+        try:
+            start_slot = getattr(system, "StartSlot", None)
+            if start_slot == slot_index:
+                logger.debug("Slot {} applied via direct parameter/method set.".format(slot_index))
+                return
+        except Exception:
+            pass
 
-    # Try panel schedule utilities
+    # Try panel schedule utilities first
     panel_schedule_utils = getattr(DB.Electrical, "PanelScheduleUtils", None) or getattr(DB, "PanelScheduleUtils", None)
     panel_schedule_view_cls = getattr(DB.Electrical, "PanelScheduleView", None) or getattr(DB, "PanelScheduleView", None)
 
     if panel_schedule_utils and panel_schedule_view_cls:
-        view_ids = []
         get_ids = getattr(panel_schedule_view_cls, "GetPanelScheduleViewIds", None)
         if callable(get_ids):
             try:
                 view_ids = list(get_ids(doc, panel.Id))
             except Exception as ex:
                 logger.debug("GetPanelScheduleViewIds failed: {}".format(ex))
+                view_ids = []
+        else:
+            view_ids = []
 
-        panel_schedule_view = None
         if view_ids:
             panel_schedule_view = doc.GetElement(view_ids[0])
-
-        if panel_schedule_view:
             add_to_slot = getattr(panel_schedule_utils, "AddToSlot", None)
-            if callable(add_to_slot):
+            if panel_schedule_view and callable(add_to_slot):
                 try:
                     add_to_slot(panel_schedule_view, slot_index, system.Id)
                     logger.debug("Allocated slot {} using PanelScheduleUtils.".format(slot_index))
@@ -501,11 +561,14 @@ def _allocate_panel_slot(system, circuit_number):
                     )
                     return
 
-    logger.warning(
-        "Unable to allocate slot {} for circuit {}: no supported API found.".format(
-            slot_index, system.Id.IntegerValue
-        )
-    )
+    panelboard_utils = getattr(DB.Electrical, "PanelboardUtils", None)
+    if panelboard_utils:
+        try:
+            panelboard_utils.AllocateCircuitSlots(doc, panel.Id, system.Id, slot_index)
+            logger.debug("Allocated slot {} using PanelboardUtils.".format(slot_index))
+            return
+        except Exception as ex:
+            logger.debug("PanelboardUtils allocation failed: {}".format(ex))
 
 
 def _create_circuit(doc, group):
@@ -630,7 +693,7 @@ def _parse_rating(value):
 
 
 def _set_string_param(param, value):
-    if param and value and not param.IsReadOnly:
+    if param and value is not None and not param.IsReadOnly:
         try:
             param.Set(str(value))
         except Exception as ex:
