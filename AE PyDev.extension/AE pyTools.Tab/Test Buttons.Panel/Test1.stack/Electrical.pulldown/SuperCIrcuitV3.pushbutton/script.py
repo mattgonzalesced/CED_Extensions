@@ -27,31 +27,6 @@ POSITION_GROUP_SIZE = 3  # how many devices to lump together when grouping by pr
 logger = script.get_logger()
 
 
-PROCESSED_IDS_KEY = "SuperCircuitV3_ProcessedElementIds"
-
-
-def _load_processed_ids():
-    config = script.get_config()
-    stored = getattr(config, PROCESSED_IDS_KEY, "")
-    ids = set()
-    if stored:
-        for token in stored.split(","):
-            token = token.strip()
-            if not token:
-                continue
-            try:
-                ids.add(int(token))
-            except ValueError:
-                continue
-    return config, ids
-
-
-def _save_processed_ids(config, processed_ids):
-    value = ",".join(str(i) for i in sorted(processed_ids))
-    setattr(config, PROCESSED_IDS_KEY, value)
-    script.save_config()
-
-
 def _safe_strip(value):
     return value.strip() if isinstance(value, basestring) else value
 
@@ -198,44 +173,7 @@ def _has_circuit_assigned(element):
 
 
 def _ensure_not_already_circuited(info_items):
-    config, processed_ids = _load_processed_ids()
-    blocked = []
-
-    for item in info_items:
-        circuit_element = item.get("circuit_element")
-        host_element = item.get("element")
-
-        candidates = []
-        if circuit_element:
-            candidates.append(circuit_element)
-        if host_element and host_element is not circuit_element:
-            candidates.append(host_element)
-
-        already_circuited = False
-        for candidate in candidates:
-            if _has_circuit_assigned(candidate):
-                already_circuited = True
-                break
-
-        if not already_circuited:
-            for candidate in candidates:
-                if candidate and candidate.Id.IntegerValue in processed_ids:
-                    already_circuited = True
-                    break
-
-        if already_circuited:
-            display_source = host_element or circuit_element
-            display_name = getattr(display_source, "Name", None)
-            if not display_name:
-                display_name = "Element {}".format(display_source.Id.IntegerValue)
-            blocked.append(display_name)
-
-    if blocked:
-        unique = sorted(set(blocked))
-        message = "You cannot circuit things twice.\nAlready circuited element(s): {}".format(", ".join(unique))
-        forms.alert(message, exitscript=True)
-
-    return config, processed_ids
+    return
 
 
 def _separate_dedicated(items):
@@ -828,7 +766,7 @@ def main():
         logger.info("No elements with circuit data were found.")
         return
 
-    config, processed_ids = _ensure_not_already_circuited(info_items)
+    _ensure_not_already_circuited(info_items)
 
     groups = _assemble_groups(info_items)
     if not groups:
@@ -857,17 +795,6 @@ def main():
                 logger.warning("Could not locate system {} for data application.".format(system_id))
                 continue
             _apply_circuit_data(system, group)
-
-    updated_ids = set(processed_ids)
-    for group in created_systems.values():
-        for member in group["members"]:
-            for candidate in (member.get("circuit_element"), member.get("element")):
-                if candidate:
-                    try:
-                        updated_ids.add(candidate.Id.IntegerValue)
-                    except Exception:
-                        continue
-    _save_processed_ids(config, updated_ids)
 
     logger.info("Created {} circuits.".format(len(created_systems)))
 
