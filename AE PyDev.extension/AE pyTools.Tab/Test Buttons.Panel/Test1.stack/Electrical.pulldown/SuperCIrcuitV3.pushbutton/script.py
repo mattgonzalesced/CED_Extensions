@@ -399,25 +399,26 @@ def _create_circuit(doc, group):
     element_ids = []
     for member in valid_members:
         _remove_from_existing_systems(member)
-        element_ids.append(member["circuit_element"].Id)
+        element_ids.append(member["element"].Id)
 
     if not element_ids:
         return None
 
-    id_list = List[DB.ElementId](element_ids)
+    # Regenerate to flush removal state before we create a new circuit.
+    doc.Regenerate()
+
+    primary_id = List[DB.ElementId]([element_ids[0]])
     try:
         system = DB.Electrical.ElectricalSystem.Create(
-            doc, id_list, DB.Electrical.ElectricalSystemType.PowerCircuit
+            doc, primary_id, DB.Electrical.ElectricalSystemType.PowerCircuit
         )
     except Exception as ex:
         logger.error("Circuit creation failed for {}: {}".format(group["key"], ex))
         for member in valid_members:
             host = member["element"]
             circuit_element = member.get("circuit_element")
-            category = circuit_element.Category.Name if circuit_element and circuit_element.Category else (
-                host.Category.Name if host and host.Category else "No Category"
-            )
-            family_name = getattr(circuit_element or host, "Name", None)
+            category = host.Category.Name if host and host.Category else "No Category"
+            family_name = getattr(host, "Name", None)
             can_assign = getattr(getattr(circuit_element or host, "MEPModel", None), "CanAssignToElectricalCircuit", None)
             if callable(can_assign):
                 try:
@@ -434,16 +435,27 @@ def _create_circuit(doc, group):
             try:
                 logger.error(
                     "  Element {} | {} | {} | CanAssignToElectricalCircuit: {}".format(
-                        (circuit_element or host).Id.IntegerValue, category, family_name, can_assign_value
+                        host.Id.IntegerValue, category, family_name, can_assign_value
                     )
                 )
             except Exception:
                 logger.error(
                     "  Element {} failed during diagnostics.".format(
-                        (circuit_element or host).Id.IntegerValue
+                        host.Id.IntegerValue
                     )
                 )
         return None
+
+    # Add any remaining members after the system exists.
+    for member in valid_members[1:]:
+        try:
+            system.Add(member["element"].Id)
+        except Exception as ex:
+            logger.warning(
+                "Unable to add element {} to circuit {}: {}".format(
+                    member["element"].Id.IntegerValue, group["key"], ex
+                )
+            )
 
     panel_element = group.get("panel_element")
     if panel_element:
