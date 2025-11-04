@@ -75,19 +75,6 @@ def _try_parse_int(value):
         return None
 
 
-def _compute_slot_targets(slot_number):
-    one_based = max(slot_number, 1)
-    zero_based = one_based - 1
-    row_index = zero_based // 2
-    column_index = zero_based % 2
-    return {
-        "one_based": one_based,
-        "zero_based": zero_based,
-        "row_index": row_index,
-        "column_index": column_index
-    }
-
-
 def _collect_target_elements(doc):
     selection = revit.get_selection()
     if selection:
@@ -189,16 +176,26 @@ def _ensure_not_already_circuited(info_items):
     return
 
 
-def _separate_dedicated(items):
+def _classify_items(items):
     dedicated = []
+    nongrouped = []
+    tvtruss = []
     normal = []
+
     for item in items:
-        circuit_number = item.get("circuit_number")
-        if circuit_number and circuit_number.upper() == "DEDICATED":
+        circuit_number = _safe_strip(item.get("circuit_number"))
+        circuit_upper = circuit_number.upper() if circuit_number else ""
+
+        if circuit_upper == "DEDICATED":
             dedicated.append(item)
+        elif circuit_upper == "NONGROUPEDBLOCK":
+            nongrouped.append(item)
+        elif circuit_upper == "TVTRUSS":
+            tvtruss.append(item)
         else:
             normal.append(item)
-    return dedicated, normal
+
+    return dedicated, nongrouped, tvtruss, normal
 
 
 def _make_group(key, members):
@@ -240,6 +237,20 @@ def _create_dedicated_groups(items):
         counters[panel_name] += 1
         key = "{}DEDICATED{}".format(panel_name, counters[panel_name])
         groups.append(_make_group(key, [item]))
+    return groups
+
+
+def _create_nongroupedblock_groups(items):
+    groups_by_panel = defaultdict(list)
+    for item in items:
+        panel_name = item.get("panel_name") or "NO_PANEL"
+        groups_by_panel[panel_name].append(item)
+
+    groups = []
+    for panel_name in sorted(groups_by_panel.keys(), key=lambda x: x or ""):
+        members = groups_by_panel[panel_name]
+        key = "{}NONGROUPEDBLOCK".format(panel_name)
+        groups.append(_make_group(key, members))
     return groups
 
 
@@ -305,8 +316,17 @@ def _group_by_position(items, group_size):
 
 
 def _assemble_groups(items):
-    dedicated, normal = _separate_dedicated(items)
-    groups = _create_dedicated_groups(dedicated)
+    dedicated, nongrouped, tvtruss, normal = _classify_items(items)
+    groups = []
+
+    if dedicated:
+        groups.extend(_create_dedicated_groups(dedicated))
+
+    if nongrouped:
+        groups.extend(_create_nongroupedblock_groups(nongrouped))
+
+    if tvtruss:
+        groups.extend(_group_by_position(tvtruss, POSITION_GROUP_SIZE))
 
     if CIRCUITBYPOSITION:
         groups.extend(_group_by_position(normal, POSITION_GROUP_SIZE))
@@ -446,176 +466,6 @@ def _get_power_connectors(element, log_details=True):
     return connectors_result
 
 
-def _try_move_to_slot_methods(system, slot_index):
-    doc = getattr(system, "Document", None)
-    if doc is None:
-        return False
-
-    candidate_method_names = [
-        "MoveToSlot",
-        "SetSlot",
-        "SetSlotNumber",
-        "SetSlotIndex",
-        "SetStartSlot",
-        "AssignToSlot",
-        "RelocateToSlot",
-    ]
-
-    for name in candidate_method_names:
-        method = getattr(system, name, None)
-        if not callable(method):
-            continue
-        try:
-            method(slot_index)
-            doc.Regenerate()
-            start_slot = getattr(system, "StartSlot", None)
-            if start_slot == slot_index:
-                logger.debug("Slot {} applied via {}.".format(slot_index, name))
-                return True
-        except Exception as ex:
-            logger.debug("{} failed for circuit {}: {}".format(name, system.Id.IntegerValue, ex))
-    return False
-
-
-def _set_slot_parameters(system, slot_index):
-    targets = _compute_slot_targets(slot_index)
-    zero_based = targets["zero_based"]
-    success = False
-
-    slot_params = [
-        DB.BuiltInParameter.RBS_ELEC_CIRCUIT_START_SLOT,
-        DB.BuiltInParameter.RBS_ELEC_CIRCUIT_SLOT_INDEX,
-    ]
-
-    for builtin in slot_params:
-        try:
-            param = system.get_Parameter(builtin)
-        except Exception as ex:
-            logger.debug("Failed retrieving parameter {}: {}".format(builtin, ex))
-            continue
-
-        if not param or param.IsReadOnly:
-            continue
-
-        try:
-            param.Set(int(zero_based))
-            success = True
-        except Exception as ex:
-            logger.debug("Setting parameter {} for circuit {} failed: {}".format(builtin, system.Id.IntegerValue, ex))
-
-    set_circuit_number = getattr(system, "SetCircuitNumber", None)
-    if callable(set_circuit_number):
-        try:
-            set_circuit_number(str(slot_index))
-            success = True
-        except Exception as ex:
-            logger.debug("SetCircuitNumber call failed for circuit {}: {}".format(system.Id.IntegerValue, ex))
-
-    return success
-
-
-def _allocate_panel_slot(system, circuit_number):
-    slot_number = _try_parse_int(circuit_number)
-    if slot_number is None:
-        return
-
-    targets = _compute_slot_targets(slot_number)
-    zero_based = targets["zero_based"]
-    row_index = targets["row_index"]
-    column_index = targets["column_index"]
-
-    logger.debug("ElectricalSystem slot-related members: {}".format([attr for attr in dir(system) if "Slot" in attr or "Number" in attr]))
-    logger.debug("Desired slot {} (zero_based {}), row {}, column {}".format(slot_number, zero_based, row_index, column_index))
-
-    panel = system.BaseEquipment
-    if not panel:
-        return
-
-    doc = system.Document
-
-    if _try_move_to_slot_methods(system, slot_number):
-        return
-
-    direct_success = _set_slot_parameters(system, slot_number)
-    if direct_success:
-        try:
-            doc.Regenerate()
-        except Exception:
-            pass
-        try:
-            start_slot = getattr(system, "StartSlot", None)
-            if start_slot == zero_based:
-                logger.debug("Slot {} applied via direct parameter/method set.".format(slot_number))
-                return
-        except Exception:
-            pass
-
-    # Try panel schedule utilities first
-    panel_schedule_utils = getattr(DB.Electrical, "PanelScheduleUtils", None) or getattr(DB, "PanelScheduleUtils", None)
-    panel_schedule_view_cls = getattr(DB.Electrical, "PanelScheduleView", None) or getattr(DB, "PanelScheduleView", None)
-
-    if panel_schedule_utils and panel_schedule_view_cls:
-        get_ids = getattr(panel_schedule_view_cls, "GetPanelScheduleViewIds", None)
-        if callable(get_ids):
-            try:
-                view_ids = list(get_ids(doc, panel.Id))
-            except Exception as ex:
-                logger.debug("GetPanelScheduleViewIds failed: {}".format(ex))
-                view_ids = []
-        else:
-            view_ids = []
-
-        panel_schedule_view = None
-        if view_ids:
-            panel_schedule_view = doc.GetElement(view_ids[0])
-        else:
-            create_view = getattr(panel_schedule_view_cls, "Create", None)
-            if callable(create_view):
-                templates = DB.FilteredElementCollector(doc).OfClass(DB.Electrical.PanelScheduleTemplate).ToElementIds()
-                for template_id in templates:
-                    try:
-                        view_id = create_view(doc, template_id, panel.Id)
-                        panel_schedule_view = doc.GetElement(view_id)
-                        logger.debug("Created panel schedule view {} for panel {}.".format(view_id.IntegerValue, panel.Id.IntegerValue))
-                        break
-                    except Exception as ex:
-                        logger.debug("PanelScheduleView.Create failed for template {}: {}".format(template_id.IntegerValue, ex))
-
-        if panel_schedule_view:
-            remove_from_slot = getattr(panel_schedule_utils, "RemoveFromSlot", None)
-            if callable(remove_from_slot):
-                try:
-                    remove_from_slot(panel_schedule_view, system.Id)
-                except Exception as ex:
-                    logger.debug("RemoveFromSlot failed for circuit {}: {}".format(system.Id.IntegerValue, ex))
-
-            for method_name in ("AddToSlot", "AssignToSlot"):
-                add_method = getattr(panel_schedule_utils, method_name, None)
-                if not callable(add_method):
-                    continue
-                try:
-                    result = add_method(panel_schedule_view, row_index, system.Id)
-                    doc.Regenerate()
-                    start_slot = getattr(system, "StartSlot", None)
-                    if start_slot == zero_based:
-                        logger.debug("Allocated slot {} using {}.".format(slot_number, method_name))
-                        return
-                    if isinstance(result, bool) and result:
-                        logger.debug("{} returned True for slot {} but StartSlot={}, circuit {}.".format(method_name, slot_number, start_slot, system.Id.IntegerValue))
-                        return
-                except Exception as ex:
-                    logger.debug("{} failed for circuit {}: {}".format(method_name, system.Id.IntegerValue, ex))
-
-    panelboard_utils = getattr(DB.Electrical, "PanelboardUtils", None)
-    if panelboard_utils:
-        try:
-            panelboard_utils.AllocateCircuitSlots(doc, panel.Id, system.Id, slot_number)
-            logger.debug("Allocated slot {} using PanelboardUtils.".format(slot_number))
-            return
-        except Exception as ex:
-            logger.debug("PanelboardUtils allocation failed: {}".format(ex))
-
-
 def _create_circuit(doc, group):
     candidates = []
     skipped_ids = set()
@@ -709,7 +559,6 @@ def _create_circuit(doc, group):
         try:
             system.SelectPanel(panel_element)
             doc.Regenerate()
-            _allocate_panel_slot(system, group.get("circuit_number"))
         except Exception as ex:
             logger.warning(
                 "Unable to select panel {} for circuit {}: {}".format(
