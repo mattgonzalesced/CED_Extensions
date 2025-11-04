@@ -276,13 +276,57 @@ def _supports_power_circuit(element):
     connector_manager = getattr(mep_model, "ConnectorManager", None)
     connectors = getattr(connector_manager, "Connectors", None) if connector_manager else None
 
-    if connectors:
+    if connectors and connectors.Size > 0:
         for connector in connectors:
             try:
-                if getattr(connector, "ElectricalSystemType", None) == DB.Electrical.ElectricalSystemType.PowerCircuit:
+                system_type = getattr(connector, "ElectricalSystemType", None)
+                if system_type == DB.Electrical.ElectricalSystemType.PowerCircuit:
                     return True
             except Exception:
-                continue
+                pass
+
+            try:
+                all_types = getattr(connector, "AllSystemTypes", None)
+                if all_types:
+                    for sys_type in all_types:
+                        if sys_type == DB.Electrical.ElectricalSystemType.PowerCircuit:
+                            return True
+            except Exception:
+                pass
+
+        # If connectors exist but none matched, dump diagnostic information for the element.
+        connector_details = []
+        try:
+            for connector in connectors:
+                try:
+                    domain = getattr(connector, "Domain", None)
+                except Exception:
+                    domain = None
+                try:
+                    ctype = getattr(connector, "ConnectorType", None)
+                except Exception:
+                    ctype = None
+
+                system_type = getattr(connector, "ElectricalSystemType", None)
+                types_list = []
+                try:
+                    all_types = getattr(connector, "AllSystemTypes", None)
+                    if all_types:
+                        types_list = [str(t) for t in all_types]
+                except Exception:
+                    types_list = []
+
+                connector_details.append(
+                    "domain={} type={} sys={} all={}".format(domain, ctype, system_type, types_list)
+                )
+        except Exception:
+            connector_details.append("failed to inspect connectors")
+
+        logger.warning(
+            "Element {} has connectors but none advertise PowerCircuit. Details: {}".format(
+                element.Id.IntegerValue, "; ".join(connector_details)
+            )
+        )
 
     return False
 
