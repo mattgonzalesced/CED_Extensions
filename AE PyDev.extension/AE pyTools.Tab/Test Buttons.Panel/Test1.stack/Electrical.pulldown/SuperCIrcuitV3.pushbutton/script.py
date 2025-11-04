@@ -299,7 +299,7 @@ def _sanitize_for_key(value):
     return "".join(ch for ch in value if ch.isalnum())
 
 
-def _group_by_position(items, group_size):
+def _group_by_position(items, group_size, even_first=False):
     buckets = defaultdict(list)
     for item in items:
         panel_name = item.get("panel_name")
@@ -323,7 +323,16 @@ def _group_by_position(items, group_size):
                 continue
             key = "{}{}_POS{}".format(panel_name, _sanitize_for_key(load_name), index + 1)
             groups.append(_make_group(key, chunk))
-    return groups
+
+    if even_first:
+        return sorted(
+            groups,
+            key=lambda grp: (
+                0 if (_try_parse_int(grp.get("circuit_number")) or 0) % 2 == 0 else 1,
+                _circuit_sort_key(grp.get("circuit_number")),
+            ),
+        )
+    return sorted(groups, key=lambda grp: _circuit_sort_key(grp.get("circuit_number")))
 
 
 def _assemble_groups(items):
@@ -337,7 +346,7 @@ def _assemble_groups(items):
         groups.extend(_create_nongroupedblock_groups(nongrouped))
 
     if tvtruss:
-        groups.extend(_group_by_position(tvtruss, POSITION_GROUP_SIZE))
+        groups.extend(_group_by_position(tvtruss, POSITION_GROUP_SIZE, even_first=True))
 
     if CIRCUITBYPOSITION:
         groups.extend(_group_by_position(normal, POSITION_GROUP_SIZE))
