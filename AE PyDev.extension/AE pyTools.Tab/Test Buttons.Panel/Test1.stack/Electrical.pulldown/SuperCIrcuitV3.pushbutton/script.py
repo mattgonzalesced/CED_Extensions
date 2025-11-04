@@ -4,6 +4,8 @@ __title__ = "SUPER CIRCUIT V3"
 from collections import defaultdict, OrderedDict
 import math
 
+from System.Collections.Generic import List
+
 from pyrevit import revit, DB, script
 from pyrevit.revit.db import query
 
@@ -385,7 +387,24 @@ def _create_circuit(doc, group):
             )
             continue
 
+        if not _supports_power_circuit(circuit_element):
+            _get_power_connectors(circuit_element, log_details=True)
+            skipped_ids.add(circuit_element.Id.IntegerValue)
+            logger.warning(
+                "Element {} in group {} does not expose a PowerCircuit connector.".format(
+                    circuit_element.Id, group["key"]
+                )
+            )
+            continue
+
         candidates.append(member)
+
+    if skipped_ids:
+        logger.warning(
+            "Group {} had {} element(s) without power connectors; they were skipped.".format(
+                group["key"], len(skipped_ids)
+            )
+        )
 
     if not candidates:
         return None
@@ -395,60 +414,25 @@ def _create_circuit(doc, group):
 
     doc.Regenerate()
 
-    prepared_members = []
+    element_ids = List[DB.ElementId]()
     for member in candidates:
         circuit_element = member.get("circuit_element")
-        connectors = _get_power_connectors(circuit_element, log_details=True)
-        if connectors:
-            member["connectors"] = connectors
-            prepared_members.append(member)
-        else:
-            host = member["element"]
-            skipped_ids.add(host.Id.IntegerValue)
-            logger.warning(
-                "Element {} in group {} has no available power connectors after cleanup.".format(
-                    host.Id, group["key"]
-                )
-            )
+        element_ids.Add(circuit_element.Id)
 
-    if skipped_ids:
-        logger.warning(
-            "Group {} had {} element(s) without power connectors; they were skipped.".format(
-                group["key"], len(skipped_ids)
-            )
-        )
-
-    if not prepared_members:
-        return None
-
-    connector_set = DB.ConnectorSet()
-    connectors_added = False
-    for member in prepared_members:
-        for connector in member["connectors"]:
-            try:
-                if hasattr(connector, "IsConnected") and connector.IsConnected:
-                    continue
-            except Exception:
-                pass
-            connector_set.Insert(connector)
-            connectors_added = True
-
-    if not connectors_added:
-        logger.warning("No available connectors remained for group {}; skipping.".format(group["key"]))
+    if element_ids.Count == 0:
         return None
 
     try:
         system = DB.Electrical.ElectricalSystem.Create(
-            doc, connector_set, DB.Electrical.ElectricalSystemType.PowerCircuit
+            doc, element_ids, DB.Electrical.ElectricalSystemType.PowerCircuit
         )
     except Exception as ex:
         logger.error("Circuit creation failed for {}: {}".format(group["key"], ex))
-        for member in prepared_members:
-            host = member["element"]
+        for member in candidates:
             circuit_element = member.get("circuit_element")
-            category = host.Category.Name if host and host.Category else "No Category"
-            family_name = getattr(host, "Name", None)
-            can_assign = getattr(getattr(circuit_element or host, "MEPModel", None), "CanAssignToElectricalCircuit", None)
+            category = circuit_element.Category.Name if circuit_element and circuit_element.Category else "No Category"
+            family_name = getattr(circuit_element, "Name", None)
+            can_assign = getattr(getattr(circuit_element, "MEPModel", None), "CanAssignToElectricalCircuit", None)
             if callable(can_assign):
                 try:
                     can_assign_value = bool(can_assign())
@@ -464,13 +448,13 @@ def _create_circuit(doc, group):
             try:
                 logger.error(
                     "  Element {} | {} | {} | CanAssignToElectricalCircuit: {}".format(
-                        host.Id.IntegerValue, category, family_name, can_assign_value
+                        circuit_element.Id.IntegerValue, category, family_name, can_assign_value
                     )
                 )
             except Exception:
                 logger.error(
                     "  Element {} failed during diagnostics.".format(
-                        host.Id.IntegerValue
+                        circuit_element.Id.IntegerValue
                     )
                 )
         return None
