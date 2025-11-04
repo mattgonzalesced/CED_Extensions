@@ -260,27 +260,29 @@ def _supports_power_circuit(element):
     if not mep_model:
         return False
 
+    can_assign = getattr(mep_model, "CanAssignToElectricalCircuit", None)
+    if isinstance(can_assign, bool):
+        return can_assign
+
+    if callable(can_assign):
+        try:
+            return bool(can_assign())
+        except TypeError:
+            try:
+                return bool(can_assign(DB.Electrical.ElectricalSystemType.PowerCircuit))
+            except Exception:
+                pass
+
     connector_manager = getattr(mep_model, "ConnectorManager", None)
-    if not connector_manager:
-        return False
+    connectors = getattr(connector_manager, "Connectors", None) if connector_manager else None
 
-    connectors = getattr(connector_manager, "Connectors", None)
-    if not connectors:
-        return False
-
-    for connector in connectors:
-        try:
-            system_types = getattr(connector, "AllSystemTypes", None)
-            if system_types and system_types.Contains(DB.Electrical.ElectricalSystemType.PowerCircuit):
-                return True
-        except AttributeError:
-            pass
-
-        try:
-            if getattr(connector, "ElectricalSystemType", None) == DB.Electrical.ElectricalSystemType.PowerCircuit:
-                return True
-        except AttributeError:
-            continue
+    if connectors:
+        for connector in connectors:
+            try:
+                if getattr(connector, "ElectricalSystemType", None) == DB.Electrical.ElectricalSystemType.PowerCircuit:
+                    return True
+            except Exception:
+                continue
 
     return False
 
