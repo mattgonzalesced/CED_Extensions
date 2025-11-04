@@ -619,7 +619,7 @@ def _allocate_panel_slot(system, circuit_number):
                         logger.debug("Created panel schedule view {} for panel {}.".format(view_id.IntegerValue, panel.Id.IntegerValue))
                         break
                     except Exception as ex:
-                logger.debug("PanelScheduleView.Create failed for template {}: {}".format(template_id.IntegerValue, ex))
+                        logger.debug("PanelScheduleView.Create failed for template {}: {}".format(template_id.IntegerValue, ex))
 
         if panel_schedule_view:
             remove_from_slot = getattr(panel_schedule_utils, "RemoveFromSlot", None)
