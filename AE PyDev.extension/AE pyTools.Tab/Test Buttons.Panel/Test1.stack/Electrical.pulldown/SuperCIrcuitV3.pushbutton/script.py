@@ -27,6 +27,22 @@ POSITION_GROUP_SIZE = 3  # how many devices to lump together when grouping by pr
 logger = script.get_logger()
 
 
+RUN_COUNT_KEY = "SuperCircuitV3_RunCount"
+
+
+def _check_run_count():
+    stored = script.get_document_data(RUN_COUNT_KEY)
+    try:
+        count = int(stored)
+    except (TypeError, ValueError):
+        count = 0
+
+    if count >= 1:
+        forms.alert("You cannot circuit things twice.", exitscript=True)
+
+    script.set_document_data(RUN_COUNT_KEY, count + 1)
+
+
 def _safe_strip(value):
     return value.strip() if isinstance(value, basestring) else value
 
