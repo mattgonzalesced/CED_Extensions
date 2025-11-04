@@ -324,15 +324,23 @@ def _group_by_position(items, group_size, even_first=False):
             key = "{}{}_POS{}".format(panel_name, _sanitize_for_key(load_name), index + 1)
             groups.append(_make_group(key, chunk))
 
-    if even_first:
-        return sorted(
-            groups,
-            key=lambda grp: (
-                0 if (_try_parse_int(grp.get("circuit_number")) or 0) % 2 == 0 else 1,
-                _circuit_sort_key(grp.get("circuit_number")),
-            ),
-        )
     return sorted(groups, key=lambda grp: _circuit_sort_key(grp.get("circuit_number")))
+
+
+def _assign_odd_circuit_numbers(groups):
+    groups_by_panel = defaultdict(list)
+    for group in groups:
+        panel_name = group.get("panel_name") or ""
+        groups_by_panel[panel_name].append(group)
+
+    for panel_name, panel_groups in groups_by_panel.items():
+        for idx, group in enumerate(panel_groups):
+            new_number = str(2 * idx + 1)
+            group["circuit_number"] = new_number
+            key_prefix = panel_name or ""
+            group["key"] = "{}{}".format(key_prefix, new_number) if key_prefix else new_number
+
+    return groups
 
 
 def _assemble_groups(items):
@@ -346,12 +354,7 @@ def _assemble_groups(items):
         groups.extend(_create_nongroupedblock_groups(nongrouped))
 
     if tvtruss:
-        tv_groups = _group_by_position(tvtruss, POSITION_GROUP_SIZE, even_first=True)
-        even_slots = [2 * (i + 1) for i in range(len(tv_groups))]
-        for group, circuit_number in zip(tv_groups, even_slots):
-            group["circuit_number"] = str(circuit_number)
-            group["key"] = "{}{}".format(group.get("panel_name") or "", group["circuit_number"])
-        groups.extend(tv_groups)
+        groups.extend(_group_by_position(tvtruss, POSITION_GROUP_SIZE))
 
     if CIRCUITBYPOSITION:
         groups.extend(_group_by_position(normal, POSITION_GROUP_SIZE))
@@ -360,7 +363,7 @@ def _assemble_groups(items):
     else:
         logger.warning("No grouping mode selected. Enable CIRCUITBYKEY or CIRCUITBYPOSITION.")
 
-    return groups
+    return _assign_odd_circuit_numbers(groups)
 
 
 def _remove_from_existing_systems(item):
