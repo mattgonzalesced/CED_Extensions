@@ -162,7 +162,7 @@ class CircuitBranch(object):
             if normalized not in CONDUCTOR_AREA_TABLE.keys():
                 self.log_warning("Unreasonable hot wire size override: {}. Resetting to None.".format(
                     self._wire_hot_size_override))
-                self._wire_hot_size_override = self._calculated_hot_wire
+                self._wire_hot_size_override = None
                 reasonable = False 
 
         if self._wire_neutral_size_override:
@@ -648,6 +648,8 @@ class CircuitBranch(object):
                 wire_set = WIRE_AMPACITY_TABLE.get(material, {}).get(temp, [])
 
                 for wire, ampacity in wire_set:
+                    # need to call self.reasonableUserOverrides right here and if False 
+                    # set the self._calculated_hot_wire = None 
                     if wire == self._normalize_wire_size(self._wire_hot_size_override):
                         self._calculated_hot_wire = wire
                         self._calculated_wire_sets = sets
