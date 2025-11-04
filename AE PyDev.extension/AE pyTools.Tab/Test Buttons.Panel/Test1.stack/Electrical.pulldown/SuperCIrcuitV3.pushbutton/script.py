@@ -6,7 +6,7 @@ import math
 
 from System.Collections.Generic import List
 
-from pyrevit import revit, DB, script
+from pyrevit import revit, DB, script, forms
 from pyrevit.revit.db import query
 
 from Snippets._elecutils import (
@@ -53,6 +53,26 @@ def _get_element_location(element):
             (bbox.Min.Z + bbox.Max.Z) * 0.5,
         )
     return DB.XYZ.Zero
+
+
+def _try_parse_int(value):
+    if value is None:
+        return None
+    if isinstance(value, (int, long)):
+        return int(value)
+    try:
+        text = str(value).strip()
+        digits = []
+        for ch in text:
+            if ch.isdigit():
+                digits.append(ch)
+            elif digits:
+                break
+        if not digits:
+            return None
+        return int("".join(digits))
+    except Exception:
+        return None
 
 
 def _collect_target_elements(doc):
@@ -112,6 +132,49 @@ def _gather_element_info(doc, elements, panel_lookup):
             }
         )
     return info_items
+
+
+def _ensure_not_already_circuited(info_items):
+    for item in info_items:
+        circuit_element = item.get("circuit_element")
+        if not circuit_element:
+            continue
+
+        mep_model = getattr(circuit_element, "MEPModel", None)
+        if not mep_model:
+            continue
+
+        systems = getattr(mep_model, "ElectricalSystems", None)
+        if not systems:
+            continue
+
+        has_system = False
+        try:
+            count = getattr(systems, "Count", None)
+            if count is not None:
+                has_system = count > 0
+            else:
+                size = getattr(systems, "Size", None)
+                if size is not None:
+                    has_system = size > 0
+        except Exception:
+            has_system = False
+
+        if not has_system:
+            try:
+                for _ in systems:
+                    has_system = True
+                    break
+            except Exception:
+                has_system = False
+
+        if has_system:
+            host = item.get("element") or circuit_element
+            display_name = getattr(host, "Name", None)
+            if not display_name:
+                display_name = "Element {}".format(circuit_element.Id.IntegerValue)
+            message = "Super Circuit has already circuited {}, you cannot run it again for this element.".format(display_name)
+            forms.alert(message, exitscript=True)
 
 
 def _separate_dedicated(items):
@@ -371,6 +434,26 @@ def _get_power_connectors(element, log_details=True):
     return connectors_result
 
 
+def _allocate_panel_slot(system, circuit_number):
+    slot_index = _try_parse_int(circuit_number)
+    if slot_index is None:
+        return
+
+    panel = system.BaseEquipment
+    if not panel:
+        return
+
+    doc = system.Document
+    try:
+        DB.Electrical.PanelboardUtils.AllocateCircuitSlots(doc, panel.Id, system.Id, slot_index)
+    except Exception as ex:
+        logger.warning(
+            "Unable to allocate slot {} for circuit {}: {}".format(
+                slot_index, system.Id.IntegerValue, ex
+            )
+        )
+
+
 def _create_circuit(doc, group):
     candidates = []
     skipped_ids = set()
@@ -463,6 +546,8 @@ def _create_circuit(doc, group):
     if panel_element:
         try:
             system.SelectPanel(panel_element)
+            doc.Regenerate()
+            _allocate_panel_slot(system, group.get("circuit_number"))
         except Exception as ex:
             logger.warning(
                 "Unable to select panel {} for circuit {}: {}".format(
@@ -533,6 +618,8 @@ def main():
     if not info_items:
         logger.info("No elements with circuit data were found.")
         return
+
+    _ensure_not_already_circuited(info_items)
 
     groups = _assemble_groups(info_items)
     if not groups:
