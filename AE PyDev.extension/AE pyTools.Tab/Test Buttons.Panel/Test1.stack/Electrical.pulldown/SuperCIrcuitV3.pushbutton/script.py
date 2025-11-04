@@ -85,7 +85,7 @@ def _build_panel_lookup(panels):
     return lookup
 
 
-def _gather_element_info(elements, panel_lookup):
+def _gather_element_info(doc, elements, panel_lookup):
     info_items = []
     for element in elements:
         panel_name = _get_param_value(element, "CKT_Panel_CEDT")
@@ -96,9 +96,13 @@ def _gather_element_info(elements, panel_lookup):
         if not panel_name and not circuit_number:
             continue
 
+        circuit_element, circuit_reason = _find_assignable_element(doc, element)
+
         info_items.append(
             {
                 "element": element,
+                "circuit_element": circuit_element,
+                "assignment_reason": circuit_reason,
                 "panel_name": panel_name,
                 "panel_element": panel_lookup.get(panel_name),
                 "circuit_number": circuit_number,
@@ -240,7 +244,10 @@ def _assemble_groups(items):
 
 
 def _remove_from_existing_systems(item):
-    element = item.get("element")
+    element = item.get("circuit_element") or item.get("element")
+    if not element:
+        return
+
     mep_model = getattr(element, "MEPModel", None)
     if not mep_model:
         return
@@ -253,6 +260,42 @@ def _remove_from_existing_systems(item):
             system.Remove(element.Id)
         except Exception as ex:
             logger.warning("Failed removing {} from system {}: {}".format(element.Id, system.Id, ex))
+
+
+def _find_assignable_element(doc, element):
+    doc = doc or element.Document
+    to_process = [element]
+    visited = set()
+
+    while to_process:
+        current = to_process.pop()
+        if not current:
+            continue
+
+        current_id = current.Id.IntegerValue if hasattr(current, "Id") else id(current)
+        if current_id in visited:
+            continue
+        visited.add(current_id)
+
+        if _supports_power_circuit(current):
+            return current, "direct"
+
+        if isinstance(current, DB.FamilyInstance):
+            try:
+                sub_ids = current.GetSubComponentIds()
+            except Exception:
+                sub_ids = []
+
+            if sub_ids:
+                for sid in sub_ids:
+                    try:
+                        sub_elem = doc.GetElement(sid)
+                        if sub_elem:
+                            to_process.append(sub_elem)
+                    except Exception:
+                        continue
+
+    return None, "no power connector"
 
 
 def _supports_power_circuit(element):
@@ -336,12 +379,17 @@ def _create_circuit(doc, group):
     skipped = []
 
     for member in group["members"]:
-        element = member["element"]
-        if _supports_power_circuit(element):
+        circuit_element = member.get("circuit_element")
+        if circuit_element:
             valid_members.append(member)
         else:
-            skipped.append(element.Id)
-            logger.debug("Skipping element {} in group {} (no power connector).".format(element.Id, group["key"]))
+            host = member["element"]
+            skipped.append(host.Id)
+            logger.debug(
+                "Skipping element {} in group {} ({}).".format(
+                    host.Id, group["key"], member.get("assignment_reason")
+                )
+            )
 
     if skipped:
         logger.warning(
@@ -351,7 +399,7 @@ def _create_circuit(doc, group):
     element_ids = []
     for member in valid_members:
         _remove_from_existing_systems(member)
-        element_ids.append(member["element"].Id)
+        element_ids.append(member["circuit_element"].Id)
 
     if not element_ids:
         return None
@@ -364,10 +412,13 @@ def _create_circuit(doc, group):
     except Exception as ex:
         logger.error("Circuit creation failed for {}: {}".format(group["key"], ex))
         for member in valid_members:
-            element = member["element"]
-            category = element.Category.Name if element.Category else "No Category"
-            family_name = getattr(element, "Name", None)
-            can_assign = getattr(getattr(element, "MEPModel", None), "CanAssignToElectricalCircuit", None)
+            host = member["element"]
+            circuit_element = member.get("circuit_element")
+            category = circuit_element.Category.Name if circuit_element and circuit_element.Category else (
+                host.Category.Name if host and host.Category else "No Category"
+            )
+            family_name = getattr(circuit_element or host, "Name", None)
+            can_assign = getattr(getattr(circuit_element or host, "MEPModel", None), "CanAssignToElectricalCircuit", None)
             if callable(can_assign):
                 try:
                     can_assign_value = bool(can_assign())
@@ -383,11 +434,15 @@ def _create_circuit(doc, group):
             try:
                 logger.error(
                     "  Element {} | {} | {} | CanAssignToElectricalCircuit: {}".format(
-                        element.Id.IntegerValue, category, family_name, can_assign_value
+                        (circuit_element or host).Id.IntegerValue, category, family_name, can_assign_value
                     )
                 )
             except Exception:
-                logger.error("  Element {} failed during diagnostics.".format(element.Id.IntegerValue))
+                logger.error(
+                    "  Element {} failed during diagnostics.".format(
+                        (circuit_element or host).Id.IntegerValue
+                    )
+                )
         return None
 
     panel_element = group.get("panel_element")
@@ -459,7 +514,7 @@ def main():
     panel_lookup = _build_panel_lookup(panels)
 
     elements = _collect_target_elements(doc)
-    info_items = _gather_element_info(elements, panel_lookup)
+    info_items = _gather_element_info(doc, elements, panel_lookup)
 
     if not info_items:
         logger.info("No elements with circuit data were found.")
