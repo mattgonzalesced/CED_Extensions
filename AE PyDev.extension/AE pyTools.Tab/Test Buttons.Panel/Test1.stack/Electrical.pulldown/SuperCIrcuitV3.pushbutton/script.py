@@ -448,8 +448,9 @@ def _create_circuit(doc, group):
 
     # Add any remaining members after the system exists.
     for member in valid_members[1:]:
+        add_ids = List[DB.ElementId]([member["element"].Id])
         try:
-            system.Add(member["element"].Id)
+            system.Add(add_ids)
         except Exception as ex:
             logger.warning(
                 "Unable to add element {} to circuit {}: {}".format(
