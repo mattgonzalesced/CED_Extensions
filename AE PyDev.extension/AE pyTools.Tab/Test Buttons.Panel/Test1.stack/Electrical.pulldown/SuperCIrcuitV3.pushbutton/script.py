@@ -6,8 +6,6 @@ import math
 
 from System.Collections.Generic import List
 
-from System import Type
-
 from pyrevit import revit, DB, script, forms
 from pyrevit.revit.db import query
 
@@ -196,9 +194,7 @@ def _ensure_not_already_circuited(info_items):
 
     if blocked:
         unique = sorted(set(blocked))
-        message = "Super Circuit has already circuited {}.\nYou cannot run it again for these element(s).".format(
-            ", ".join(unique)
-        )
+        message = "You cannot circuit things twice.\nAlready circuited element(s): {}".format(", ".join(unique))
         forms.alert(message, exitscript=True)
 
 
@@ -498,17 +494,7 @@ def _allocate_panel_slot(system, circuit_number):
     if slot_index is None:
         return
 
-    logger.debug("DB members (panel-related): {}".format([attr for attr in dir(DB) if "Panel" in attr or "Slot" in attr]))
-    logger.debug("DB.Electrical members (panel-related): {}".format([attr for attr in dir(DB.Electrical) if "Panel" in attr or "Slot" in attr]))
-
-    panel_sched_utils = getattr(DB.Electrical, "PanelScheduleUtils", None)
-    panel_sched_view_cls = getattr(DB.Electrical, "PanelScheduleView", None)
-    logger.debug("PanelScheduleUtils available: {}".format(panel_sched_utils is not None))
-    logger.debug("PanelScheduleView available: {}".format(panel_sched_view_cls is not None))
-    if panel_sched_utils:
-        logger.debug("PanelScheduleUtils members: {}".format([attr for attr in dir(panel_sched_utils) if "Slot" in attr or "Add" in attr or "Panel" in attr]))
-    if panel_sched_view_cls:
-        logger.debug("PanelScheduleView static members: {}".format([attr for attr in dir(panel_sched_view_cls) if "Panel" in attr or "Slot" in attr or "View" in attr]))
+    logger.debug("ElectricalSystem slot-related members: {}".format([attr for attr in dir(system) if "Slot" in attr or "Number" in attr]))
 
     panel = system.BaseEquipment
     if not panel:
@@ -545,21 +531,35 @@ def _allocate_panel_slot(system, circuit_number):
         else:
             view_ids = []
 
+        panel_schedule_view = None
         if view_ids:
             panel_schedule_view = doc.GetElement(view_ids[0])
-            add_to_slot = getattr(panel_schedule_utils, "AddToSlot", None)
-            if panel_schedule_view and callable(add_to_slot):
-                try:
-                    add_to_slot(panel_schedule_view, slot_index, system.Id)
-                    logger.debug("Allocated slot {} using PanelScheduleUtils.".format(slot_index))
-                    return
-                except Exception as ex:
-                    logger.warning(
-                        "Unable to allocate slot {} for circuit {} via PanelScheduleUtils: {}".format(
-                            slot_index, system.Id.IntegerValue, ex
-                        )
+        else:
+            create_view = getattr(panel_schedule_view_cls, "Create", None)
+            if callable(create_view):
+                templates = DB.FilteredElementCollector(doc).OfClass(DB.Electrical.PanelScheduleTemplate).ToElementIds()
+                for template_id in templates:
+                    try:
+                        view_id = create_view(doc, template_id, panel.Id)
+                        panel_schedule_view = doc.GetElement(view_id)
+                        logger.debug("Created panel schedule view {} for panel {}.".format(view_id.IntegerValue, panel.Id.IntegerValue))
+                        break
+                    except Exception as ex:
+                        logger.debug("PanelScheduleView.Create failed for template {}: {}".format(template_id.IntegerValue, ex))
+
+        add_to_slot = getattr(panel_schedule_utils, "AddToSlot", None)
+        if panel_schedule_view and callable(add_to_slot):
+            try:
+                add_to_slot(panel_schedule_view, slot_index, system.Id)
+                logger.debug("Allocated slot {} using PanelScheduleUtils.".format(slot_index))
+                return
+            except Exception as ex:
+                logger.warning(
+                    "Unable to allocate slot {} for circuit {} via PanelScheduleUtils: {}".format(
+                        slot_index, system.Id.IntegerValue, ex
                     )
-                    return
+                )
+                return
 
     panelboard_utils = getattr(DB.Electrical, "PanelboardUtils", None)
     if panelboard_utils:
@@ -713,6 +713,14 @@ def _apply_circuit_data(system, group):
     circuit_number = group.get("circuit_number")
     rating_value = _parse_rating(group.get("rating"))
 
+    if circuit_number is not None:
+        setter = getattr(system, "SetCircuitNumber", None)
+        if callable(setter):
+            try:
+                setter(str(circuit_number))
+            except Exception as ex:
+                logger.debug("SetCircuitNumber failed during data apply for circuit {}: {}".format(system.Id.IntegerValue, ex))
+
     name_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME)
     notes_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NOTES_PARAM)
     number_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER)
@@ -726,6 +734,7 @@ def _apply_circuit_data(system, group):
 
 def main():
     doc = revit.doc
+    _check_run_count()
     panels = list(get_all_panels(doc))
     panel_lookup = _build_panel_lookup(panels)
 
