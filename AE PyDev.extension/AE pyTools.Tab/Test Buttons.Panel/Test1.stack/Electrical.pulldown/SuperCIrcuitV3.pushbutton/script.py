@@ -31,16 +31,14 @@ RUN_COUNT_KEY = "SuperCircuitV3_RunCount"
 
 
 def _check_run_count():
-    stored = script.get_script_data(RUN_COUNT_KEY)
-    try:
-        count = int(stored)
-    except (TypeError, ValueError):
-        count = 0
+    config = script.get_config()
+    run_count = getattr(config, RUN_COUNT_KEY, 0)
 
-    if count >= 1:
+    if run_count >= 1:
         forms.alert("You cannot circuit things twice.", exitscript=True)
 
-    script.set_script_data(RUN_COUNT_KEY, count + 1)
+    setattr(config, RUN_COUNT_KEY, run_count + 1)
+    script.save_config()
 
 
 def _safe_strip(value):
@@ -744,7 +742,6 @@ def _apply_circuit_data(system, group):
 
     _set_string_param(name_param, load_name)
     _set_string_param(notes_param, group.get("panel_name"))
-    _set_string_param(number_param, circuit_number)
     _set_double_param(rating_param, rating_value)
 
 
