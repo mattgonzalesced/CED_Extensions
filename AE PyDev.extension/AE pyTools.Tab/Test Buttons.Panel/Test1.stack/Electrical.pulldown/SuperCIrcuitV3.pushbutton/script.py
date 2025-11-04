@@ -31,7 +31,7 @@ RUN_COUNT_KEY = "SuperCircuitV3_RunCount"
 
 
 def _check_run_count():
-    stored = script.get_document_data(RUN_COUNT_KEY)
+    stored = script.get_script_data(RUN_COUNT_KEY)
     try:
         count = int(stored)
     except (TypeError, ValueError):
@@ -40,7 +40,7 @@ def _check_run_count():
     if count >= 1:
         forms.alert("You cannot circuit things twice.", exitscript=True)
 
-    script.set_document_data(RUN_COUNT_KEY, count + 1)
+    script.set_script_data(RUN_COUNT_KEY, count + 1)
 
 
 def _safe_strip(value):
