@@ -4,8 +4,6 @@ __title__ = "SUPER CIRCUIT V3"
 from collections import defaultdict, OrderedDict
 import math
 
-from System.Collections.Generic import List
-
 from pyrevit import revit, DB, script
 from pyrevit.revit.db import query
 
@@ -299,48 +297,47 @@ def _find_assignable_element(doc, element):
 
 
 def _supports_power_circuit(element):
+    return bool(_get_power_connectors(element, log_details=False))
+
+
+def _get_power_connectors(element, log_details=True):
+    connectors_result = []
+    if not element:
+        return connectors_result
+
     mep_model = getattr(element, "MEPModel", None)
     if not mep_model:
-        return False
-
-    can_assign = getattr(mep_model, "CanAssignToElectricalCircuit", None)
-    if isinstance(can_assign, bool):
-        return can_assign
-
-    if callable(can_assign):
-        try:
-            return bool(can_assign())
-        except TypeError:
-            try:
-                return bool(can_assign(DB.Electrical.ElectricalSystemType.PowerCircuit))
-            except Exception:
-                pass
+        return connectors_result
 
     connector_manager = getattr(mep_model, "ConnectorManager", None)
     connectors = getattr(connector_manager, "Connectors", None) if connector_manager else None
 
-    if connectors and connectors.Size > 0:
-        for connector in connectors:
-            try:
-                system_type = getattr(connector, "ElectricalSystemType", None)
-                if system_type == DB.Electrical.ElectricalSystemType.PowerCircuit:
-                    return True
-            except Exception:
-                pass
+    if not connectors:
+        return connectors_result
 
-            try:
-                all_types = getattr(connector, "AllSystemTypes", None)
-                if all_types:
-                    for sys_type in all_types:
-                        if sys_type == DB.Electrical.ElectricalSystemType.PowerCircuit:
-                            return True
-            except Exception:
-                pass
+    all_connectors = []
+    try:
+        iterator = connectors.ForwardIterator()
+        while iterator.MoveNext():
+            all_connectors.append(iterator.Current)
+    except AttributeError:
+        for conn in connectors:
+            all_connectors.append(conn)
 
-        # If connectors exist but none matched, dump diagnostic information for the element.
+    for connector in all_connectors:
+        try:
+            if (
+                connector.Domain == DB.Domain.DomainElectrical
+                and connector.ElectricalSystemType == DB.Electrical.ElectricalSystemType.PowerCircuit
+            ):
+                connectors_result.append(connector)
+        except Exception:
+            continue
+
+    if log_details and not connectors_result and all_connectors:
         connector_details = []
         try:
-            for connector in connectors:
+            for connector in all_connectors:
                 try:
                     domain = getattr(connector, "Domain", None)
                 except Exception:
@@ -349,7 +346,6 @@ def _supports_power_circuit(element):
                     ctype = getattr(connector, "ConnectorType", None)
                 except Exception:
                     ctype = None
-
                 system_type = getattr(connector, "ElectricalSystemType", None)
                 types_list = []
                 try:
@@ -358,7 +354,6 @@ def _supports_power_circuit(element):
                         types_list = [str(t) for t in all_types]
                 except Exception:
                     types_list = []
-
                 connector_details.append(
                     "domain={} type={} sys={} all={}".format(domain, ctype, system_type, types_list)
                 )
@@ -371,50 +366,84 @@ def _supports_power_circuit(element):
             )
         )
 
-    return False
+    return connectors_result
 
 
 def _create_circuit(doc, group):
-    valid_members = []
-    skipped = []
+    candidates = []
+    skipped_ids = set()
 
     for member in group["members"]:
         circuit_element = member.get("circuit_element")
-        if circuit_element:
-            valid_members.append(member)
-        else:
+        if not circuit_element:
             host = member["element"]
-            skipped.append(host.Id)
+            skipped_ids.add(host.Id.IntegerValue)
             logger.debug(
                 "Skipping element {} in group {} ({}).".format(
                     host.Id, group["key"], member.get("assignment_reason")
                 )
             )
+            continue
 
-    if skipped:
-        logger.warning(
-            "Group {} had {} element(s) without power connectors; they were skipped.".format(group["key"], len(skipped))
-        )
+        candidates.append(member)
 
-    element_ids = []
-    for member in valid_members:
-        _remove_from_existing_systems(member)
-        element_ids.append(member["element"].Id)
-
-    if not element_ids:
+    if not candidates:
         return None
 
-    # Regenerate to flush removal state before we create a new circuit.
+    for member in candidates:
+        _remove_from_existing_systems(member)
+
     doc.Regenerate()
 
-    primary_id = List[DB.ElementId]([element_ids[0]])
+    prepared_members = []
+    for member in candidates:
+        circuit_element = member.get("circuit_element")
+        connectors = _get_power_connectors(circuit_element, log_details=True)
+        if connectors:
+            member["connectors"] = connectors
+            prepared_members.append(member)
+        else:
+            host = member["element"]
+            skipped_ids.add(host.Id.IntegerValue)
+            logger.warning(
+                "Element {} in group {} has no available power connectors after cleanup.".format(
+                    host.Id, group["key"]
+                )
+            )
+
+    if skipped_ids:
+        logger.warning(
+            "Group {} had {} element(s) without power connectors; they were skipped.".format(
+                group["key"], len(skipped_ids)
+            )
+        )
+
+    if not prepared_members:
+        return None
+
+    connector_set = DB.ConnectorSet()
+    connectors_added = False
+    for member in prepared_members:
+        for connector in member["connectors"]:
+            try:
+                if hasattr(connector, "IsConnected") and connector.IsConnected:
+                    continue
+            except Exception:
+                pass
+            connector_set.Insert(connector)
+            connectors_added = True
+
+    if not connectors_added:
+        logger.warning("No available connectors remained for group {}; skipping.".format(group["key"]))
+        return None
+
     try:
         system = DB.Electrical.ElectricalSystem.Create(
-            doc, primary_id, DB.Electrical.ElectricalSystemType.PowerCircuit
+            doc, connector_set, DB.Electrical.ElectricalSystemType.PowerCircuit
         )
     except Exception as ex:
         logger.error("Circuit creation failed for {}: {}".format(group["key"], ex))
-        for member in valid_members:
+        for member in prepared_members:
             host = member["element"]
             circuit_element = member.get("circuit_element")
             category = host.Category.Name if host and host.Category else "No Category"
@@ -445,18 +474,6 @@ def _create_circuit(doc, group):
                     )
                 )
         return None
-
-    # Add any remaining members after the system exists.
-    for member in valid_members[1:]:
-        add_ids = List[DB.ElementId]([member["element"].Id])
-        try:
-            system.Add(add_ids)
-        except Exception as ex:
-            logger.warning(
-                "Unable to add element {} to circuit {}: {}".format(
-                    member["element"].Id.IntegerValue, group["key"], ex
-                )
-            )
 
     panel_element = group.get("panel_element")
     if panel_element:
