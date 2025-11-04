@@ -27,17 +27,28 @@ POSITION_GROUP_SIZE = 3  # how many devices to lump together when grouping by pr
 logger = script.get_logger()
 
 
-RUN_COUNT_KEY = "SuperCircuitV3_RunCount"
+PROCESSED_IDS_KEY = "SuperCircuitV3_ProcessedElementIds"
 
 
-def _check_run_count():
+def _load_processed_ids():
     config = script.get_config()
-    run_count = getattr(config, RUN_COUNT_KEY, 0)
+    stored = getattr(config, PROCESSED_IDS_KEY, "")
+    ids = set()
+    if stored:
+        for token in stored.split(","):
+            token = token.strip()
+            if not token:
+                continue
+            try:
+                ids.add(int(token))
+            except ValueError:
+                continue
+    return config, ids
 
-    if run_count >= 1:
-        forms.alert("You cannot circuit things twice.", exitscript=True)
 
-    setattr(config, RUN_COUNT_KEY, run_count + 1)
+def _save_processed_ids(config, processed_ids):
+    value = ",".join(str(i) for i in sorted(processed_ids))
+    setattr(config, PROCESSED_IDS_KEY, value)
     script.save_config()
 
 
@@ -187,17 +198,30 @@ def _has_circuit_assigned(element):
 
 
 def _ensure_not_already_circuited(info_items):
+    config, processed_ids = _load_processed_ids()
     blocked = []
 
     for item in info_items:
         circuit_element = item.get("circuit_element")
         host_element = item.get("element")
 
+        candidates = []
+        if circuit_element:
+            candidates.append(circuit_element)
+        if host_element and host_element is not circuit_element:
+            candidates.append(host_element)
+
         already_circuited = False
-        if _has_circuit_assigned(circuit_element):
-            already_circuited = True
-        elif host_element is not circuit_element and _has_circuit_assigned(host_element):
-            already_circuited = True
+        for candidate in candidates:
+            if _has_circuit_assigned(candidate):
+                already_circuited = True
+                break
+
+        if not already_circuited:
+            for candidate in candidates:
+                if candidate and candidate.Id.IntegerValue in processed_ids:
+                    already_circuited = True
+                    break
 
         if already_circuited:
             display_source = host_element or circuit_element
@@ -210,6 +234,8 @@ def _ensure_not_already_circuited(info_items):
         unique = sorted(set(blocked))
         message = "You cannot circuit things twice.\nAlready circuited element(s): {}".format(", ".join(unique))
         forms.alert(message, exitscript=True)
+
+    return config, processed_ids
 
 
 def _separate_dedicated(items):
@@ -469,6 +495,37 @@ def _get_power_connectors(element, log_details=True):
     return connectors_result
 
 
+def _try_move_to_slot_methods(system, slot_index):
+    doc = getattr(system, "Document", None)
+    if doc is None:
+        return False
+
+    candidate_method_names = [
+        "MoveToSlot",
+        "SetSlot",
+        "SetSlotNumber",
+        "SetSlotIndex",
+        "SetStartSlot",
+        "AssignToSlot",
+        "RelocateToSlot",
+    ]
+
+    for name in candidate_method_names:
+        method = getattr(system, name, None)
+        if not callable(method):
+            continue
+        try:
+            method(slot_index)
+            doc.Regenerate()
+            start_slot = getattr(system, "StartSlot", None)
+            if start_slot == slot_index:
+                logger.debug("Slot {} applied via {}.".format(slot_index, name))
+                return True
+        except Exception as ex:
+            logger.debug("{} failed for circuit {}: {}".format(name, system.Id.IntegerValue, ex))
+    return False
+
+
 def _set_slot_parameters(system, slot_index):
     success = False
     slot_params = [
@@ -516,6 +573,9 @@ def _allocate_panel_slot(system, circuit_number):
 
     doc = system.Document
 
+    if _try_move_to_slot_methods(system, slot_index):
+        return
+
     direct_success = _set_slot_parameters(system, slot_index)
     if direct_success:
         try:
@@ -559,21 +619,32 @@ def _allocate_panel_slot(system, circuit_number):
                         logger.debug("Created panel schedule view {} for panel {}.".format(view_id.IntegerValue, panel.Id.IntegerValue))
                         break
                     except Exception as ex:
-                        logger.debug("PanelScheduleView.Create failed for template {}: {}".format(template_id.IntegerValue, ex))
+                logger.debug("PanelScheduleView.Create failed for template {}: {}".format(template_id.IntegerValue, ex))
 
-        add_to_slot = getattr(panel_schedule_utils, "AddToSlot", None)
-        if panel_schedule_view and callable(add_to_slot):
-            try:
-                add_to_slot(panel_schedule_view, slot_index, system.Id)
-                logger.debug("Allocated slot {} using PanelScheduleUtils.".format(slot_index))
-                return
-            except Exception as ex:
-                logger.warning(
-                    "Unable to allocate slot {} for circuit {} via PanelScheduleUtils: {}".format(
-                        slot_index, system.Id.IntegerValue, ex
-                    )
-                )
-                return
+        if panel_schedule_view:
+            remove_from_slot = getattr(panel_schedule_utils, "RemoveFromSlot", None)
+            if callable(remove_from_slot):
+                try:
+                    remove_from_slot(panel_schedule_view, system.Id)
+                except Exception as ex:
+                    logger.debug("RemoveFromSlot failed for circuit {}: {}".format(system.Id.IntegerValue, ex))
+
+            for method_name in ("AddToSlot", "AssignToSlot"):
+                add_method = getattr(panel_schedule_utils, method_name, None)
+                if not callable(add_method):
+                    continue
+                try:
+                    result = add_method(panel_schedule_view, slot_index, system.Id)
+                    doc.Regenerate()
+                    start_slot = getattr(system, "StartSlot", None)
+                    if start_slot == slot_index:
+                        logger.debug("Allocated slot {} using {}.".format(slot_index, method_name))
+                        return
+                    if isinstance(result, bool) and result:
+                        logger.debug("{} returned True for slot {} but StartSlot={}, circuit {}.".format(method_name, slot_index, start_slot, system.Id.IntegerValue))
+                        return
+                except Exception as ex:
+                    logger.debug("{} failed for circuit {}: {}".format(method_name, system.Id.IntegerValue, ex))
 
     panelboard_utils = getattr(DB.Electrical, "PanelboardUtils", None)
     if panelboard_utils:
@@ -747,7 +818,6 @@ def _apply_circuit_data(system, group):
 
 def main():
     doc = revit.doc
-    _check_run_count()
     panels = list(get_all_panels(doc))
     panel_lookup = _build_panel_lookup(panels)
 
@@ -758,7 +828,7 @@ def main():
         logger.info("No elements with circuit data were found.")
         return
 
-    _ensure_not_already_circuited(info_items)
+    config, processed_ids = _ensure_not_already_circuited(info_items)
 
     groups = _assemble_groups(info_items)
     if not groups:
@@ -787,6 +857,17 @@ def main():
                 logger.warning("Could not locate system {} for data application.".format(system_id))
                 continue
             _apply_circuit_data(system, group)
+
+    updated_ids = set(processed_ids)
+    for group in created_systems.values():
+        for member in group["members"]:
+            for candidate in (member.get("circuit_element"), member.get("element")):
+                if candidate:
+                    try:
+                        updated_ids.add(candidate.Id.IntegerValue)
+                    except Exception:
+                        continue
+    _save_processed_ids(config, updated_ids)
 
     logger.info("Created {} circuits.".format(len(created_systems)))
 
