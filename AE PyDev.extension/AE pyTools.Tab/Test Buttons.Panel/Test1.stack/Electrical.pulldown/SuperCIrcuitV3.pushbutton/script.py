@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 __title__ = "SUPER CIRCUIT V3"
 
 from collections import defaultdict, OrderedDict
@@ -285,6 +285,51 @@ def _create_nongroupedblock_groups(items):
     return groups
 
 
+def _split_combined_circuit(panel_name, circuit_number, members):
+    if not circuit_number or "&" not in circuit_number:
+        return None
+
+    parts = [part.strip() for part in circuit_number.split("&") if part.strip()]
+    if len(parts) < 2:
+        return None
+
+    total = len(members)
+    segment_count = len(parts)
+    base = total // segment_count
+    remainder = total % segment_count
+
+    special_load_names = None
+    try:
+        normalized_parts = [str(int(part)) for part in parts]
+    except ValueError:
+        normalized_parts = parts[:]
+
+    if set(normalized_parts) == {"6", "9"} and len(normalized_parts) == 2:
+        special_load_names = {"6": "MEN'S SINK", "9": "WOMEN'S SINK"}
+
+    groups = []
+    index = 0
+    for i, part in enumerate(parts):
+        size = base + (1 if i < remainder else 0)
+        if i == segment_count - 1:
+            group_members = members[index:]
+        else:
+            group_members = members[index:index + size]
+        index += size
+
+        if special_load_names:
+            normalized_part = str(_try_parse_int(part) or part)
+            label = special_load_names.get(normalized_part)
+            if label:
+                for member in group_members:
+                    member["load_name"] = label
+
+        key = "{}{}".format(panel_name, part)
+        groups.append(_make_group(key, group_members))
+
+    return groups
+
+
 def _group_by_key(items):
     grouped = defaultdict(list)
     for item in items:
@@ -307,8 +352,13 @@ def _group_by_key(items):
             _try_parse_int(k[1]) if _try_parse_int(k[1]) is not None else (k[1] or "").lower(),
         ),
     ):
-        key = "{}{}".format(panel_name, circuit_number)
-        groups.append(_make_group(key, grouped[(panel_name, circuit_number)]))
+        members = grouped[(panel_name, circuit_number)]
+        split_groups = _split_combined_circuit(panel_name, circuit_number, members)
+        if split_groups:
+            groups.extend(split_groups)
+        else:
+            key = "{}{}".format(panel_name, circuit_number)
+            groups.append(_make_group(key, members))
     return groups
 
 
@@ -592,43 +642,80 @@ def _create_circuit(doc, group):
                 )
         return None
 
-    panel_element = group.get("panel_element")
-    if panel_element:
-        try:
-            system.SelectPanel(panel_element)
-            doc.Regenerate()
-        except Exception as ex:
-            logger.warning(
-                "Unable to select panel {} for circuit {}: {}".format(
-                    panel_element.Id, group["key"], ex
-                )
-            )
-    else:
-        logger.warning("No panel found for group {}; circuit left unassigned.".format(group["key"]))
-
     poles_value = _try_parse_int(group.get("number_of_poles"))
-    if poles_value and poles_value in (1, 2, 3):
-        set_poles = getattr(system, "SetNumberOfPoles", None)
+    actual_poles = getattr(system, "PolesNumber", None)
+    if poles_value and poles_value > 1:
         poles_applied = False
+        set_poles = getattr(system, "SetNumberOfPoles", None)
         if callable(set_poles):
             try:
                 set_poles(poles_value)
                 poles_applied = True
             except Exception as ex:
-                logger.debug("SetNumberOfPoles failed for circuit {}: {}".format(system.Id.IntegerValue, ex))
-        poles_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUM_POLES)
-        if poles_param and not poles_param.IsReadOnly:
+                logger.debug(
+                    "SetNumberOfPoles({}) failed for circuit {}: {}".format(
+                        poles_value, group["key"], ex
+                    )
+                )
+
+        if not poles_applied:
             try:
-                poles_param.Set(poles_value)
-                poles_applied = True
+                poles_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES)
+                if poles_param and not poles_param.IsReadOnly:
+                    poles_param.Set(poles_value)
+                    poles_applied = True
             except Exception as ex:
-                logger.debug("Setting pole parameter failed for circuit {}: {}".format(system.Id.IntegerValue, ex))
+                logger.debug("Failed to set pole parameter for circuit {}: {}".format(system.Id.IntegerValue, ex))
+
         if not poles_applied:
             logger.warning(
-                "Unable to set pole count {} for circuit {}. Using Revit default.".format(
-                    poles_value, group["key"]
+                "Unable to set pole count {} for circuit {}. Revit default will be used (system poles currently {}).".format(
+                    poles_value, group["key"], actual_poles if actual_poles is not None else "unknown"
                 )
             )
+        else:
+            actual_poles = getattr(system, "PolesNumber", None)
+
+    panel_element = group.get("panel_element")
+    if panel_element:
+        can_assign = True
+        can_assign_method = getattr(system, "CanAssignToPanel", None)
+        if callable(can_assign_method):
+            try:
+                can_assign = bool(can_assign_method(panel_element))
+            except Exception as ex:
+                logger.debug(
+                    "CanAssignToPanel check failed for panel {} and circuit {}: {}".format(
+                        panel_element.Id, group["key"], ex
+                    )
+                )
+        if can_assign:
+            try:
+                system.SelectPanel(panel_element)
+                doc.Regenerate()
+            except Exception as ex:
+                logger.warning(
+                    "Unable to select panel {} for circuit {}: {}".format(
+                        panel_element.Id, group["key"], ex
+                    )
+                )
+        else:
+            panel_phases = None
+            panel_name = getattr(panel_element, "Name", None)
+            try:
+                phases_param = panel_element.get_Parameter(DB.BuiltInParameter.RBS_ELEC_PANEL_NUMPHASES_PARAM)
+                if phases_param and phases_param.HasValue:
+                    panel_phases = phases_param.AsInteger()
+            except Exception:
+                panel_phases = None
+            logger.warning(
+                "Panel {} (Id {}) is not compatible with circuit {} (requested poles: {}, system poles: {}, panel phases: {}). Leaving circuit unassigned.".format(
+                    panel_name or "Unnamed", panel_element.Id, group["key"], poles_value or "unknown",
+                    actual_poles if actual_poles is not None else "unknown", panel_phases or "unknown"
+                )
+            )
+    else:
+        logger.warning("No panel found for group {}; circuit left unassigned.".format(group["key"]))
 
     return system
 

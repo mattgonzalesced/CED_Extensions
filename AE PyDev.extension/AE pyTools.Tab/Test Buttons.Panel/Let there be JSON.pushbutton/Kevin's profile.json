@@ -9,14 +9,13 @@
                             "FLA Input_CED": "0",
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
-                            "CKT_Circuit_Number_CEDT": "24",
+                            "CKT_Circuit Number_CEDT": "24",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "TV & Radiance Monitor - Check In 102",
+                            "CKT_Load Name_CEDT": "TV & RADIANCE MONITOR - CHECK-IN 102",
                             "CKT_Schedule Notes_CEDT": "",
                             "Load Classification_CED" : "C",
                             "Apparent Load Input_CED" : "250",
-                            "CKT_Panel_CEDT" : "L3",
-                            "CKT_Circuit Number_CEDT" : "Dedicated"
+                            "CKT_Panel_CEDT" : "L3"
                         },
                         "OFFSET" :{
                             "x" : 6,
@@ -94,7 +93,7 @@
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
                             "CKT_Panel_CEDT": "L3",
-                            "CKT_Circuit_Number_CEDT": "12",
+                            "CKT_Circuit Number_CEDT": "12",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "TV - MEN/WOMEN LOCKER ROOM",
                             "CKT_Schedule Notes_CEDT": ""
@@ -175,7 +174,7 @@
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
                             "CKT_Panel_CEDT": "L3",
-                            "CKT_Circuit_Number_CEDT": "5",
+                            "CKT_Circuit Number_CEDT": "5",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "TV - BLACK CARD SUITE",
                             "CKT_Schedule Notes_CEDT": ""
@@ -256,7 +255,7 @@
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
                             "CKT_Panel_CEDT": "L3",
-                            "CKT_Circuit_Number_CEDT": "32",
+                            "CKT_Circuit Number_CEDT": "32",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "TV - DIGITAL MEDIA",
                             "CKT_Schedule Notes_CEDT": ""
@@ -324,9 +323,9 @@
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
                             "CKT_Panel_CEDT": "L3",
-                            "CKT_Circuit_Number_CEDT": "33",
+                            "CKT_Circuit Number_CEDT": "33",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "TV - Mission Statement",
+                            "CKT_Load Name_CEDT": "TV - MISSION STATEMENT",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
@@ -552,7 +551,7 @@
                             "CKT_Panel_CEDT": "L3",
                             "CKT_Circuit Number_CEDT": "6 & 9",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
+                            "CKT_Load Name_CEDT": "BATHROOM SINK",
                             "CKT_Schedule Notes_CEDT": ""
                         }
                     }
@@ -853,7 +852,7 @@
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L1",
-                            "CKT_Circuit Number_CEDT": "23",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "POWERED BIKE",
                             "CKT_Schedule Notes_CEDT": ""
@@ -1105,7 +1104,7 @@
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L1",
-                            "CKT_Circuit Number_CEDT": "24",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "POWERED BIKE",
                             "CKT_Schedule Notes_CEDT": ""
@@ -1599,7 +1598,7 @@
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L1",
-                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "STAIRMASTER",
                             "CKT_Schedule Notes_CEDT": ""
@@ -1723,7 +1722,7 @@
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L3",
-                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Circuit Number_CEDT": "4",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "TMAX RECEPT",
                             "CKT_Schedule Notes_CEDT": ""
@@ -1742,7 +1741,7 @@
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L3",
-                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Circuit Number_CEDT": "4",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "TMAX RECEPT",
                             "CKT_Schedule Notes_CEDT": ""
@@ -1765,7 +1764,7 @@
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L3",
-                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Circuit Number_CEDT": "4",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "TMAX RECEPT",
                             "CKT_Schedule Notes_CEDT": ""
@@ -1788,7 +1787,7 @@
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L3",
-                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Circuit Number_CEDT": "4",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "TMAX RECEPT",
                             "CKT_Schedule Notes_CEDT": ""
@@ -1811,7 +1810,7 @@
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L3",
-                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Circuit Number_CEDT": "4",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "TMAX RECEPT",
                             "CKT_Schedule Notes_CEDT": ""
@@ -1834,7 +1833,7 @@
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L3",
-                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Circuit Number_CEDT": "4",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "TMAX RECEPT",
                             "CKT_Schedule Notes_CEDT": ""
@@ -1920,7 +1919,7 @@
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L1",
-                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "TREADMILL",
                             "CKT_Schedule Notes_CEDT": ""
