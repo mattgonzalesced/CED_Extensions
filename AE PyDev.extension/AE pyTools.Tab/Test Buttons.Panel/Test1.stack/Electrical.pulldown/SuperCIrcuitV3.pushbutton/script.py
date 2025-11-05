@@ -101,6 +101,37 @@ def _try_parse_float(value):
         return None
 
 
+def _convert_voltage_to_internal(value):
+    if value is None:
+        return None
+    try:
+        numeric = float(value)
+    except Exception:
+        return None
+
+    try:
+        unit_id = getattr(DB.UnitTypeId, "Volts", None)
+        if unit_id:
+            return DB.UnitUtils.ConvertToInternalUnits(numeric, unit_id)
+    except Exception:
+        pass
+
+    try:
+        display_unit = getattr(DB.DisplayUnitType, "DUT_VOLTS", None)
+        if display_unit is not None:
+            return DB.UnitUtils.ConvertToInternalUnits(numeric, display_unit)
+    except Exception:
+        pass
+
+    try:
+        forge_id = DB.ForgeTypeId("autodesk.unit.unit:volts-1.0.1")
+        return DB.UnitUtils.ConvertToInternalUnits(numeric, forge_id)
+    except Exception:
+        pass
+
+    return numeric
+
+
 def _collect_target_elements(doc):
     selection = revit.get_selection()
     if selection:
@@ -675,9 +706,6 @@ def _set_voltage_from_panel(doc, system, group, panel_element):
     except Exception:
         current_voltage = None
 
-    if current_voltage and current_voltage > 0:
-        return False
-
     panel_info = get_panel_dist_system(panel_element, doc)
     if not panel_info:
         panel_info = {}
@@ -694,8 +722,15 @@ def _set_voltage_from_panel(doc, system, group, panel_element):
     if not selected_voltage or selected_voltage <= 0:
         return False
 
+    converted_voltage = _convert_voltage_to_internal(selected_voltage)
+    if converted_voltage is None or converted_voltage <= 0:
+        return False
+
+    if current_voltage and abs(current_voltage - converted_voltage) < 1e-6:
+        return False
+
     try:
-        voltage_param.Set(selected_voltage)
+        voltage_param.Set(converted_voltage)
         logger.debug(
             "Applied voltage {} to circuit {} using panel {}.".format(
                 selected_voltage, group.get("key"), panel_element.Id
@@ -706,6 +741,52 @@ def _set_voltage_from_panel(doc, system, group, panel_element):
         logger.debug(
             "Failed to set system voltage from panel {} for circuit {}: {}".format(
                 panel_element.Id, group.get("key"), ex
+            )
+        )
+        return False
+
+
+def _set_voltage_from_group(system, group):
+    if not system:
+        return False
+
+    voltage_value = _try_parse_float(group.get("voltage"))
+    if voltage_value is None or voltage_value <= 0:
+        return False
+
+    converted = _convert_voltage_to_internal(voltage_value)
+    if converted is None or converted <= 0:
+        return False
+
+    try:
+        voltage_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_VOLTAGE)
+    except Exception:
+        voltage_param = None
+
+    if not voltage_param or voltage_param.IsReadOnly:
+        return False
+
+    current_voltage = None
+    try:
+        current_voltage = voltage_param.AsDouble()
+    except Exception:
+        current_voltage = None
+
+    if current_voltage and abs(current_voltage - converted) < 1e-6:
+        return False
+
+    try:
+        voltage_param.Set(converted)
+        logger.info(
+            "Set circuit {} voltage from element data: {} (internal {})".format(
+                group.get("key"), voltage_value, converted
+            )
+        )
+        return True
+    except Exception as ex:
+        logger.warning(
+            "Failed to set circuit {} voltage from element value {}: {}".format(
+                group.get("key"), voltage_value, ex
             )
         )
         return False
@@ -796,8 +877,10 @@ def _create_circuit(doc, group):
                     "  Element {} failed during diagnostics.".format(
                         circuit_element.Id.IntegerValue
                     )
-                )
+                  )
         return None
+
+    _set_voltage_from_group(system, group)
 
     desired_poles = _try_parse_int(group.get("number_of_poles"))
     initial_poles = getattr(system, "PolesNumber", None)
