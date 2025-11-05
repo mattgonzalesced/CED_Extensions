@@ -812,12 +812,17 @@ else:
                                                 param.Set(int(param_value))
                                                 print("DEBUG: Set '{}' as INTEGER: {}".format(param_name, int(param_value)))
                                             elif storage_type == "Double":
-                                                # Special handling for Apparent Load parameters (electrical VA units)
+                                                # Special handling for electrical unit parameters
                                                 if "Apparent Load" in param_name:
                                                     forge_type_va = ForgeTypeId("autodesk.unit.unit:voltAmperes-1.0.1")
                                                     converted = UnitUtils.ConvertToInternalUnits(float(param_value), forge_type_va)
                                                     param.Set(converted)
                                                     print("DEBUG: Set '{}' as APPARENT LOAD: {} (converted to {})".format(param_name, param_value, converted))
+                                                elif "Voltage_CED" in param_name:
+                                                    forge_type_volts = ForgeTypeId("autodesk.unit.unit:volts-1.0.1")
+                                                    converted = UnitUtils.ConvertToInternalUnits(float(param_value), forge_type_volts)
+                                                    param.Set(converted)
+                                                    print("DEBUG: Set '{}' as VOLTAGE: {} (converted to {})".format(param_name, param_value, converted))
                                                 else:
                                                     param.Set(float(param_value))
                                                     print("DEBUG: Set '{}' as DOUBLE: {}".format(param_name, float(param_value)))
