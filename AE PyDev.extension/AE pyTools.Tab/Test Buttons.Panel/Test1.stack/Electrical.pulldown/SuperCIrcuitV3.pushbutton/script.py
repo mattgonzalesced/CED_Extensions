@@ -15,6 +15,7 @@ from Snippets._elecutils import (
     get_all_light_devices,
     get_all_light_fixtures,
     get_all_panels,
+    get_panel_dist_system,
 )
 
 # Global switches that determine how circuits will be grouped.
@@ -75,6 +76,31 @@ def _try_parse_int(value):
         return None
 
 
+def _try_parse_float(value):
+    if value is None:
+        return None
+    if isinstance(value, (int, long, float)):
+        return float(value)
+    try:
+        text = str(value).strip()
+        cleaned = []
+        decimal_found = False
+        for ch in text:
+            if ch.isdigit():
+                cleaned.append(ch)
+            elif ch in (".", ","):
+                if not decimal_found:
+                    cleaned.append(".")
+                    decimal_found = True
+            elif cleaned:
+                break
+        if not cleaned:
+            return None
+        return float("".join(cleaned))
+    except Exception:
+        return None
+
+
 def _collect_target_elements(doc):
     selection = revit.get_selection()
     if selection:
@@ -115,6 +141,8 @@ def _gather_element_info(doc, elements, panel_lookup):
         circuit_notes = _get_param_value(element, "CKT_Schedule Notes_CEDT")
         poles_value = _get_param_value(element, "Number of Poles_CED")
         number_of_poles = _try_parse_int(poles_value)
+        voltage_value = _get_param_value(element, "Voltage_CED")
+        voltage = _try_parse_float(voltage_value)
 
 
         if not panel_name and not circuit_number:
@@ -131,12 +159,13 @@ def _gather_element_info(doc, elements, panel_lookup):
                 "panel_element": panel_lookup.get(panel_name),
                 "circuit_number": circuit_number,
                 "rating": rating,
-                "load_name": load_name,
-                "location": _get_element_location(element),
-                "circuit_notes": circuit_notes,
-                "number_of_poles": number_of_poles or 1
-            }
-        )
+                  "load_name": load_name,
+                  "location": _get_element_location(element),
+                  "circuit_notes": circuit_notes,
+                  "number_of_poles": number_of_poles or 1,
+                  "voltage": voltage
+              }
+          )
     return info_items
 
 
@@ -211,6 +240,7 @@ def _make_group(key, members):
     circuit_number = sample.get("circuit_number")
     circuit_notes = sample.get("circuit_notes")
     number_of_poles = sample.get("number_of_poles")
+    voltage = sample.get("voltage")
 
     # Prefer the first non-empty rating/load name within the group.
     if not rating:
@@ -227,6 +257,11 @@ def _make_group(key, members):
         for item in members:
             if item.get("circuit_notes"):
                 circuit_notes = item["circuit_notes"]
+                break
+    if voltage is None:
+        for item in members:
+            if item.get("voltage") is not None:
+                voltage = item["voltage"]
                 break
 
     poles_candidates = [
@@ -252,12 +287,13 @@ def _make_group(key, members):
             ("panel_name", sample.get("panel_name")),
             ("panel_element", sample.get("panel_element")),
             ("circuit_number", circuit_number),
-            ("rating", rating),
-            ("load_name", load_name),
-            ("circuit_notes", circuit_notes),
-            ("number_of_poles", number_of_poles)
-        ]
-    )
+              ("rating", rating),
+              ("load_name", load_name),
+              ("circuit_notes", circuit_notes),
+              ("number_of_poles", number_of_poles),
+              ("voltage", voltage)
+          ]
+      )
 
 
 def _create_dedicated_groups(items):
@@ -554,6 +590,127 @@ def _get_power_connectors(element, log_details=True):
     return connectors_result
 
 
+def _align_distribution_system(doc, system, panel_element):
+    if not panel_element:
+        return False
+
+    doc = doc or panel_element.Document
+
+    dist_system_id = None
+    for attr in ("RBS_FAMILY_CONTENT_SECONDARY_DISTRIBSYS", "RBS_FAMILY_CONTENT_DISTRIBUTION_SYSTEM"):
+        bip = getattr(DB.BuiltInParameter, attr, None)
+        if not bip:
+            continue
+        try:
+            param = panel_element.get_Parameter(bip)
+        except Exception:
+            param = None
+        if param and param.HasValue:
+            candidate = param.AsElementId()
+            if candidate and candidate.IntegerValue > 0:
+                dist_system_id = candidate
+                break
+
+    if not dist_system_id:
+        return False
+
+    dist_elem = None
+    try:
+        dist_elem = doc.GetElement(dist_system_id)
+    except Exception:
+        dist_elem = None
+
+    applied = False
+    set_ds = getattr(system, "SetDistributionSystem", None)
+    if callable(set_ds) and dist_elem:
+        try:
+            set_ds(dist_elem)
+            applied = True
+        except Exception as ex:
+            logger.debug(
+                "SetDistributionSystem failed for circuit {}: {}".format(system.Id.IntegerValue, ex)
+            )
+
+    if not applied:
+        for enum_name in ("RBS_ELEC_DISTRIBUTION_SYSTEM", "RBS_ELEC_CIRCUIT_DISTRIBUTION_SYSTEM"):
+            bip = getattr(DB.BuiltInParameter, enum_name, None)
+            if not bip:
+                continue
+            try:
+                param = system.get_Parameter(bip)
+            except Exception:
+                param = None
+            if param and not param.IsReadOnly:
+                try:
+                    param.Set(dist_system_id)
+                    applied = True
+                    break
+                except Exception as ex:
+                    logger.debug(
+                        "Failed to set distribution system parameter {} for circuit {}: {}".format(
+                            enum_name, system.Id.IntegerValue, ex
+                        )
+                    )
+
+    return applied
+
+
+def _set_voltage_from_panel(doc, system, group, panel_element):
+    if not panel_element or not system:
+        return False
+
+    desired_poles = _try_parse_int(group.get("number_of_poles"))
+    group_voltage = _try_parse_float(group.get("voltage"))
+    try:
+        voltage_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_VOLTAGE)
+    except Exception:
+        voltage_param = None
+
+    if not voltage_param or voltage_param.IsReadOnly:
+        return False
+
+    current_voltage = None
+    try:
+        current_voltage = voltage_param.AsDouble()
+    except Exception:
+        current_voltage = None
+
+    if current_voltage and current_voltage > 0:
+        return False
+
+    panel_info = get_panel_dist_system(panel_element, doc)
+    if not panel_info:
+        panel_info = {}
+
+    selected_voltage = None
+    if desired_poles and desired_poles > 1:
+        selected_voltage = panel_info.get("ll_voltage") or panel_info.get("lg_voltage")
+    else:
+        selected_voltage = panel_info.get("lg_voltage") or panel_info.get("ll_voltage")
+
+    if not selected_voltage or selected_voltage <= 0:
+        selected_voltage = group_voltage
+
+    if not selected_voltage or selected_voltage <= 0:
+        return False
+
+    try:
+        voltage_param.Set(selected_voltage)
+        logger.debug(
+            "Applied voltage {} to circuit {} using panel {}.".format(
+                selected_voltage, group.get("key"), panel_element.Id
+            )
+        )
+        return True
+    except Exception as ex:
+        logger.debug(
+            "Failed to set system voltage from panel {} for circuit {}: {}".format(
+                panel_element.Id, group.get("key"), ex
+            )
+        )
+        return False
+
+
 def _create_circuit(doc, group):
     candidates = []
     skipped_ids = set()
@@ -642,19 +799,19 @@ def _create_circuit(doc, group):
                 )
         return None
 
-    poles_value = _try_parse_int(group.get("number_of_poles"))
-    actual_poles = getattr(system, "PolesNumber", None)
-    if poles_value and poles_value > 1:
+    desired_poles = _try_parse_int(group.get("number_of_poles"))
+    initial_poles = getattr(system, "PolesNumber", None)
+    if desired_poles and desired_poles > 1:
         poles_applied = False
         set_poles = getattr(system, "SetNumberOfPoles", None)
         if callable(set_poles):
             try:
-                set_poles(poles_value)
+                set_poles(desired_poles)
                 poles_applied = True
             except Exception as ex:
                 logger.debug(
                     "SetNumberOfPoles({}) failed for circuit {}: {}".format(
-                        poles_value, group["key"], ex
+                        desired_poles, group["key"], ex
                     )
                 )
 
@@ -662,22 +819,33 @@ def _create_circuit(doc, group):
             try:
                 poles_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES)
                 if poles_param and not poles_param.IsReadOnly:
-                    poles_param.Set(poles_value)
+                    poles_param.Set(desired_poles)
                     poles_applied = True
             except Exception as ex:
                 logger.debug("Failed to set pole parameter for circuit {}: {}".format(system.Id.IntegerValue, ex))
 
+        if not poles_applied and initial_poles == desired_poles:
+            poles_applied = True
+
         if not poles_applied:
+            current_poles = getattr(system, "PolesNumber", None)
             logger.warning(
                 "Unable to set pole count {} for circuit {}. Revit default will be used (system poles currently {}).".format(
-                    poles_value, group["key"], actual_poles if actual_poles is not None else "unknown"
+                    desired_poles,
+                    group["key"],
+                    current_poles if current_poles is not None else (initial_poles or "unknown"),
                 )
             )
-        else:
-            actual_poles = getattr(system, "PolesNumber", None)
 
     panel_element = group.get("panel_element")
     if panel_element:
+        _align_distribution_system(doc, system, panel_element)
+        voltage_set = _set_voltage_from_panel(doc, system, group, panel_element)
+        if voltage_set:
+            try:
+                doc.Regenerate()
+            except Exception:
+                pass
         can_assign = True
         can_assign_method = getattr(system, "CanAssignToPanel", None)
         if callable(can_assign_method):
@@ -694,9 +862,10 @@ def _create_circuit(doc, group):
                 system.SelectPanel(panel_element)
                 doc.Regenerate()
             except Exception as ex:
+                panel_name = group.get("panel_name") or getattr(panel_element, "Name", None) or panel_element.Id
                 logger.warning(
-                    "Unable to select panel {} for circuit {}: {}".format(
-                        panel_element.Id, group["key"], ex
+                    "Unable to select panel {} (Id {}) for circuit {}: {}. Verify distribution system, voltage, and pole settings.".format(
+                        panel_name, panel_element.Id, group["key"], ex
                     )
                 )
         else:
