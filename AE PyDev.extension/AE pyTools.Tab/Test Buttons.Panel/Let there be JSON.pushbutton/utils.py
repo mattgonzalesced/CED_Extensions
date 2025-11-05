@@ -139,7 +139,8 @@ def read_matchings_json(json_path):
                                 try:
                                     offset_x = float(offset_data.get("x", 0.0))
                                     offset_y = float(offset_data.get("y", 0.0))
-                                    offsets_dict.setdefault(cad_name, {}).setdefault(label, []).append({"x": offset_x, "y": offset_y})
+                                    offset_z = float(offset_data.get("z", 0.0))
+                                    offsets_dict.setdefault(cad_name, {}).setdefault(label, []).append({"x": offset_x, "y": offset_y, "z": offset_z})
                                 except (ValueError, TypeError):
                                     # If conversion fails, just skip (defaults to no offset)
                                     pass
@@ -157,11 +158,6 @@ def read_matchings_json(json_path):
             groups_dict[cad_name] = groups
             #print("DEBUG JSON: CAD block '{}' has {} groups: {}".format(cad_name, len(groups), groups[:2]))
     
-    print('ORGANIZE SYMBOLS BY CATEGORY FUNCTION')
-    print("MATCHINGS_DICT {}".format(matchings_dict))
-    print("GROUPS_DICT {}".format(groups_dict))
-    print("PARAMETERS_DICT {}".format(parameters_dict))
-    print("OFFSETS_DICT {}".format(offsets_dict))
 
     return matchings_dict, groups_dict, parameters_dict, offsets_dict
 
@@ -217,12 +213,6 @@ def organize_symbols_by_category(fixture_symbols):
     for family in types_by_family:
         types_by_family[family].sort()
     
-    print('ORGANIZE SYMBOLS BY CATEGORY FUNCTION')
-    print("symbol_label_map {}".format(symbol_label_map))
-    print("symbols_by_category {}".format(symbols_by_category))
-    print("families_by_category {}".format(families_by_category))
-    print("types_by_family {}".format(types_by_family))
-    print("family_symbols {}".format(family_symbols))
 
     return (symbol_label_map, symbols_by_category, families_by_category,
             types_by_family, family_symbols)

@@ -8,7 +8,8 @@
                             "dev-Group ID": "27TV",
                             "Load Classification_CED" : "C",
                             "Apparent Load Input_CED" : "180",
-                            "CKT_Panel_CEDT" : "L3"
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT" : "Dedicated"
                         },
                         "OFFSET" :{
                             "x" : 6,

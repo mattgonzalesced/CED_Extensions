@@ -11,7 +11,7 @@ from utils import (feet_inch_to_inches, create_safe_control_name,
                    determine_family_category, organize_model_groups)
 
 # Revit API imports
-from Autodesk.Revit.DB import (FilteredElementCollector, FamilySymbol, Structure, XYZ, Transaction, ElementTransformUtils, Line, ForgeTypeId, UnitUtils)
+from Autodesk.Revit.DB import (FilteredElementCollector, FamilySymbol, Structure, XYZ, Transaction, ElementTransformUtils, Line, ForgeTypeId, UnitUtils, GlobalParametersManager, ViewSchedule, BuiltInParameter)
 from pyrevit import DB
 
 # Try to import annotation-specific types (may not exist in older Revit versions)
@@ -627,6 +627,7 @@ else:
                         # Get offset from JSON (default to 0)
                         offset_x_inches = 0.0
                         offset_y_inches = 0.0
+                        offset_z_inches = 0.0
                         if group_label and cad_name in offsets_dict:
                             label_offsets_array = offsets_dict[cad_name].get(group_label, [])
 
@@ -641,13 +642,15 @@ else:
 
                             offset_x_inches = label_offsets.get("x", 0.0)
                             offset_y_inches = label_offsets.get("y", 0.0)
+                            offset_z_inches = label_offsets.get("z", 0.0)
 
                         # Convert offset from inches to feet
                         offset_x_feet = offset_x_inches / 12.0
                         offset_y_feet = offset_y_inches / 12.0
+                        offset_z_feet = offset_z_inches / 12.0
 
                         # Apply offset to base location
-                        offset_loc = XYZ(x + offset_x_feet, y + offset_y_feet, z)
+                        offset_loc = XYZ(x + offset_x_feet, y + offset_y_feet, z + offset_z_feet)
 
                         # Place model group at offset location
                         model_group_name = Element.Name.__get__(model_group_type)
@@ -700,6 +703,8 @@ else:
                         # Get offset from JSON (default to 0)
                         offset_x_inches = 0.0
                         offset_y_inches = 0.0
+                        offset_z_inches = 0.0
+
                         if symbol_label and cad_name in offsets_dict:
                             label_offsets_array = offsets_dict[cad_name].get(symbol_label, [])
 
@@ -711,16 +716,18 @@ else:
                                 label_offsets = label_offsets_array
                             else:
                                 label_offsets = {}
-
                             offset_x_inches = label_offsets.get("x", 0.0)
                             offset_y_inches = label_offsets.get("y", 0.0)
+                            offset_z_inches = label_offsets.get("z", 0.0)
 
                         # Convert offset from inches to feet
                         offset_x_feet = offset_x_inches / 12.0
                         offset_y_feet = offset_y_inches / 12.0
+                        offset_z_feet = offset_z_inches / 12.0
 
                         # Apply offset to base location
-                        offset_loc = XYZ(x + offset_x_feet, y + offset_y_feet, z)
+                        # Z coordinate represents "Elevation from Level" for level-based families
+                        offset_loc = XYZ(x + offset_x_feet, y + offset_y_feet, z + offset_z_feet)
 
                         # Place instance at offset location
                         instance = None
@@ -756,6 +763,12 @@ else:
                                 instance = doc.Create.NewFamilyInstance(offset_loc, symbol, selected_level, Structure.StructuralType.NonStructural)
                                 placement_succeeded = True
 
+                                # Override elevation if there's a Z offset (family types may have default elevations)
+                                if offset_z_feet != 0.0:
+                                    elev_param = instance.get_Parameter(BuiltInParameter.INSTANCE_ELEVATION_PARAM)
+                                    if elev_param and not elev_param.IsReadOnly:
+                                        elev_param.Set(offset_z_feet)
+
                         except Exception as ex:
                             # print("ERROR: Failed to place '{}' at ({}, {}): {}".format(symbol_label, x, y, ex))
                             pass
@@ -777,35 +790,78 @@ else:
 
                                 # Apply parameters directly to instance
                                 if params:
+                                    print("DEBUG: Found {} parameters to set for symbol '{}'".format(len(params), symbol_label))
                                     for param_name, param_value in params.items():
                                         try:
+                                            print("DEBUG: Attempting to set parameter '{}' = '{}'".format(param_name, param_value))
                                             param = instance.LookupParameter(param_name) or instance.get_Parameter(param_name)
 
-                                            if not param or param.IsReadOnly:
+                                            if not param:
+                                                print("DEBUG: Parameter '{}' NOT FOUND on instance".format(param_name))
+                                                continue
+
+                                            if param.IsReadOnly:
+                                                print("DEBUG: Parameter '{}' is READ-ONLY, skipping".format(param_name))
                                                 continue
 
                                             storage_type = param.StorageType.ToString()
-
-                                            # Debug output
-                                            # # print("DEBUG: Setting '{}' = '{}' (storage type: {})".format(param_name, param_value, storage_type))
+                                            print("DEBUG: Parameter '{}' storage type: {}".format(param_name, storage_type))
 
                                             # Type conversion handlers
                                             if storage_type == "Integer":
                                                 param.Set(int(param_value))
+                                                print("DEBUG: Set '{}' as INTEGER: {}".format(param_name, int(param_value)))
                                             elif storage_type == "Double":
                                                 # Special handling for Apparent Load parameters (electrical VA units)
                                                 if "Apparent Load" in param_name:
                                                     forge_type_va = ForgeTypeId("autodesk.unit.unit:voltAmperes-1.0.1")
                                                     converted = UnitUtils.ConvertToInternalUnits(float(param_value), forge_type_va)
                                                     param.Set(converted)
+                                                    print("DEBUG: Set '{}' as APPARENT LOAD: {} (converted to {})".format(param_name, param_value, converted))
                                                 else:
                                                     param.Set(float(param_value))
+                                                    print("DEBUG: Set '{}' as DOUBLE: {}".format(param_name, float(param_value)))
+                                            elif storage_type == "ElementId":
+                                                # ElementId parameters - likely from key schedule
+                                                # Find all key schedules in the project
+                                                key_schedules = FilteredElementCollector(doc).OfClass(ViewSchedule).ToElements()
+                                                key_schedules = [ks for ks in key_schedules if ks.Definition.IsKeySchedule]
+
+                                                found_element_id = None
+
+                                                # Search through all key schedules to find matching value
+                                                for key_schedule in key_schedules:
+                                                    # Get all rows (elements) in this key schedule
+                                                    schedule_elements = FilteredElementCollector(doc, key_schedule.Id).ToElements()
+
+                                                    for schedule_elem in schedule_elements:
+                                                        # Check all parameters on this schedule element
+                                                        for schedule_param in schedule_elem.Parameters:
+                                                            if schedule_param.HasValue:
+                                                                param_val = schedule_param.AsString() or str(schedule_param.AsValueString())
+                                                                if param_val == str(param_value):
+                                                                    found_element_id = schedule_elem.Id
+                                                                    print("DEBUG: Found key schedule row with value '{}' in schedule '{}'".format(param_value, key_schedule.Name))
+                                                                    break
+                                                        if found_element_id:
+                                                            break
+                                                    if found_element_id:
+                                                        break
+
+                                                if found_element_id:
+                                                    param.Set(found_element_id)
+                                                    print("DEBUG: Set '{}' to key schedule ElementId for value: {}".format(param_name, param_value))
+                                                else:
+                                                    print("ERROR: Could not find key schedule entry with value '{}' for parameter '{}'".format(param_value, param_name))
                                             else:
+                                                # For string/text parameters
                                                 param.Set(str(param_value))
+                                                print("DEBUG: Set '{}' as STRING: '{}'".format(param_name, str(param_value)))
 
                                         except Exception as ex:
-                                            # print("ERROR: Failed to set parameter '{}' = '{}': {}".format(param_name, param_value, ex))
-                                            pass
+                                            print("ERROR: Failed to set parameter '{}' = '{}': {}".format(param_name, param_value, ex))
+                                else:
+                                    print("DEBUG: NO parameters to set for symbol '{}'".format(symbol_label))
 
                             # Apply rotation around BASE location (not offset location)
                             if abs(rot_deg) > 1e-6:
