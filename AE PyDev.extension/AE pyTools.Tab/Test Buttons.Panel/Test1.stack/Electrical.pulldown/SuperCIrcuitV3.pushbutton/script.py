@@ -112,6 +112,8 @@ def _gather_element_info(doc, elements, panel_lookup):
         circuit_number = _get_param_value(element, "CKT_Circuit Number_CEDT")
         rating = _get_param_value(element, "CKT_Rating_CED")
         load_name = _get_param_value(element, "CKT_Load Name_CEDT")
+        circuit_notes = _get_param_value(element, "CKT_Schedule Notes_CEDT")
+
 
         if not panel_name and not circuit_number:
             continue
@@ -129,6 +131,7 @@ def _gather_element_info(doc, elements, panel_lookup):
                 "rating": rating,
                 "load_name": load_name,
                 "location": _get_element_location(element),
+                "circuit_notes": circuit_notes
             }
         )
     return info_items
@@ -203,6 +206,7 @@ def _make_group(key, members):
     rating = sample.get("rating")
     load_name = sample.get("load_name")
     circuit_number = sample.get("circuit_number")
+    circuit_notes = sample.get("circuit_notes")
 
     # Prefer the first non-empty rating/load name within the group.
     if not rating:
@@ -215,6 +219,11 @@ def _make_group(key, members):
             if item.get("load_name"):
                 load_name = item["load_name"]
                 break
+    if not circuit_notes:
+        for item in members:
+            if item.get("circuit_notes")
+                circuit_notes = item["circuit_notes"]
+                break
 
     return OrderedDict(
         [
@@ -225,6 +234,7 @@ def _make_group(key, members):
             ("circuit_number", circuit_number),
             ("rating", rating),
             ("load_name", load_name),
+            ("circuit_notes", circuit_notes)
         ]
     )
 
@@ -613,6 +623,7 @@ def _apply_circuit_data(system, group):
     load_name = group.get("load_name")
     circuit_number = group.get("circuit_number")
     rating_value = _parse_rating(group.get("rating"))
+    circuit_notes = group.get("circuit_notes")
 
     if circuit_number is not None:
         setter = getattr(system, "SetCircuitNumber", None)
@@ -628,7 +639,7 @@ def _apply_circuit_data(system, group):
     rating_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM)
 
     _set_string_param(name_param, load_name)
-    _set_string_param(notes_param, group.get("panel_name"))
+    _set_string_param(notes_param, circuit_notes)
     _set_double_param(rating_param, rating_value)
 
 
