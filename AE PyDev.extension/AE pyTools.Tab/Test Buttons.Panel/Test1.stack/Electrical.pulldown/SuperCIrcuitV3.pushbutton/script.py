@@ -305,7 +305,7 @@ def _split_combined_circuit(panel_name, circuit_number, members):
         normalized_parts = parts[:]
 
     if set(normalized_parts) == {"6", "9"} and len(normalized_parts) == 2:
-        special_load_names = {"6": "MEN'S SINK", "9": "WOMEN'S SINK"}
+        special_load_names = {"6": "SINK 1", "9": "SINK 2"}
 
     groups = []
     index = 0

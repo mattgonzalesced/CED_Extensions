@@ -25,18 +25,6 @@
                 }
             }
         ],
-        "Data_Devices": [
-            {
-                "DD-U_Tele & Data Outlet_CED": {
-                    "Data - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "27TV",
-                            "Symbol Label_CEDT": "TV"
-                        }
-                    }
-                }                
-            }
-        ],
         "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
@@ -46,32 +34,6 @@
                         },
                         "OFFSET" :{
                             "x" : 6,
-                            "y" : 8
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : "2"
-                        },
-                        "OFFSET" :{
-                            "x" :16,
-                            "y" : 8
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : "6"
-                        },
-                        "OFFSET" :{
-                            "x" : 18,
                             "y" : 8
                         }
                     }
@@ -106,18 +68,6 @@
                 }
             }
         ],
-        "Data_Devices": [
-            {
-                "DD-U_Tele & Data Outlet_CED": {
-                    "Data - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "43 tv",
-                            "Symbol Label_CEDT": "TV"
-                        }
-                    }
-                }                
-            }
-        ],
         "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
@@ -127,32 +77,6 @@
                         },
                         "OFFSET" :{
                             "x" : 6,
-                            "y" : 8
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : "2"
-                        },
-                        "OFFSET" :{
-                            "x" : 16,
-                            "y" : 8
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : "6"
-                        },
-                        "OFFSET" :{
-                            "x" : 26,
                             "y" : 8
                         }
                     }
@@ -187,18 +111,6 @@
                 }
             }
         ],
-        "Data_Devices": [
-            {
-                "DD-U_Tele & Data Outlet_CED": {
-                    "Data - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "65tv",
-                            "Symbol Label_CEDT": "TV"
-                        }
-                    }
-                }                
-            }
-        ],
         "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
@@ -208,32 +120,6 @@
                         },
                         "OFFSET" :{
                             "x" : 6,
-                            "y" : 8
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : "2"
-                        },
-                        "OFFSET" :{
-                            "x" : 16,
-                            "y" : 8
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : "6"
-                        },
-                        "OFFSET" :{
-                            "x" : 26,
                             "y" : 8
                         }
                     }
@@ -268,40 +154,15 @@
                 }
             }
         ],
-        "Data_Devices": [
-            {
-                "DD-U_Tele & Data Outlet_CED": {
-                    "Data - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "70tv",
-                            "Symbol Label_CEDT": "TV"
-                        }
-                    }
-                }                
-            }
-        ],
         "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
-                            "CED-G-NOTE #" : "13"
+                            "CED-G-NOTE #" : "11"
                         },
                         "OFFSET" :{
                             "x" : 6,
-                            "y" : 8
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : "6"
-                        },
-                        "OFFSET" :{
-                            "x" : 16,
                             "y" : 8
                         }
                     }
@@ -336,24 +197,12 @@
                 }
             }
         ],
-        "Data_Devices": [
-            {
-                "DD-U_Tele & Data Outlet_CED": {
-                    "Data - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "75TV",
-                            "Symbol Label_CEDT": "TV"
-                        }
-                    }
-                }                
-            }
-        ],
         "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
-                            "CED-G-NOTE #" : "13"
+                            "CED-G-NOTE #" : "11"
                         },
                         "OFFSET" :{
                             "x" : 6,
@@ -361,36 +210,9 @@
                         }
                     }
                 }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : "6"
-                        },
-                        "OFFSET" :{
-                            "x" : 16,
-                            "y" : 8
-                        }
-                    }
-                }
             }
         ],
         "Notes": "TV outlet"
-    },
-    "BCS Speaker": {
-        "Data_Devices": [
-            {
-                "DD-U_General Low Voltage Device_CED" : {
-                    "Speaker": {
-                        "PARAMETERS" : {
-                            "dev-Group ID" : "BEAUTYANGEL - Speaker"
-                        }
-                    }
-                }
-            }
-        ],
-        "Notes": "Speaker with electrical"
     },
     "BEAUTYANGEL": {
         "Electrical_Fixture": [
@@ -434,37 +256,6 @@
                 }
             }
         ],
-        "Data_Devices": [
-            {
-                "DD-U_General Low Voltage Device_CED": {
-                    "Junction Box - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "BEAUTYANGEL - PULLBOX"
-
-                        }
-                    }
-                }                
-            },
-            {
-                "DD-U_Tele & Data Outlet_CED": {
-                    "Data - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "BEAUTYANGEL"
-
-                        }
-                    }
-                }                
-            },
-            {
-                "DD-U_General Low Voltage Device_CED" : {
-                    "Speaker": {
-                        "PARAMETERS" : {
-                            "dev-Group ID" : "BEAUTYANGEL - Speaker"
-                        }
-                    }
-                }
-            }
-        ],
         "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
@@ -475,19 +266,6 @@
                         },
                         "OFFSET" :{
                             "x" : 6,
-                            "y" : 8
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : "5"
-                        },
-                        "OFFSET" :{
-                            "x" : 16,
                             "y" : 8
                         }
                     }
@@ -518,22 +296,6 @@
                 }
             }
         ],
-        "Data_Devices" : [
-            {
-                "DD-U_Tele & Data Outlet_CED": {
-                    "Data - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "CRYO"
-                        },
-                        "OFFSET" :{
-                            "x" : 6,
-                            "y" : 0
-                        }
-                    }
-                }                
-            }
-        ],
-
         "Notes" : "Cryo Chambers"
     },
     "Locker-Sink-Sloan-Trough-Enclosure": {
@@ -553,6 +315,10 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "BATHROOM SINK",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : 12,
+                            "y" : 0
                         }
                     }
                 }
@@ -572,6 +338,10 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "BATHROOM SINKS",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : 24,
+                            "y" : 12
                         }
                     }
                 }
@@ -591,6 +361,10 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "BATHROOM SINKS",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : -12,
+                            "y" : 0
                         }
                     }
                 }
@@ -610,6 +384,10 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "BATHROOM SINKS",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : -24,
+                            "y" : 12
                         }
                     }
                 }
@@ -639,6 +417,10 @@
                         "PARAMETERS": {
                             "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
                             "Apparent Load Input_CED" : "180"
+                        },
+                        "OFFSET" :{
+                            "x" : 48,
+                            "y" : 12
                         }
                     }
                 }
@@ -649,6 +431,10 @@
                         "PARAMETERS": {
                             "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
                             "Apparent Load Input_CED" : "180"
+                        },
+                        "OFFSET" :{
+                            "x" : -48,
+                            "y" : 12
                         }
                     }
                 }
@@ -797,17 +583,6 @@
                 }
             }
         ],
-        "Data_Devices" : [
-            {
-                "DD-U_Tele & Data Outlet_CED": {
-                    "Data - Ceiling": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "Fan 1"
-                        }
-                    }
-                }                
-            }
-        ],
         "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes" : {
@@ -817,20 +592,6 @@
                         },
                         "OFFSET" :{
                             "x" : 6,
-                            "y" : 8
-                        }
-                    }
-                }
-            },
-            {
-
-                "Manual Key Note- All Shapes" : {
-                    "Square":{
-                        "PARAMETERS" :{
-                            "CED-G-NOTE #": "10"
-                        },
-                        "OFFSET" :{
-                            "x" :16,
                             "y" : 8
                         }
                     }
@@ -926,37 +687,6 @@
                 }
             }
         ],
-        "Data_Devices": [
-            {
-                "DD-U_General Low Voltage Device_CED": {
-                    "Junction Box - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "HM62A"
-
-                        }
-                    }
-                }                
-            },
-            {
-                "DD-U_Tele & Data Outlet_CED": {
-                    "Data - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "HM62A"
-
-                        }
-                    }
-                }                
-            },
-            {
-                "DD-U_General Low Voltage Device_CED" : {
-                    "Speaker": {
-                        "PARAMETERS" : {
-                            "dev-Group ID" : "HM62A"
-                        }
-                    }
-                }
-            }
-        ],
         "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
@@ -967,19 +697,6 @@
                         },
                         "OFFSET" :{
                             "x" : 6,
-                            "y" : 8
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : "5"
-                        },
-                        "OFFSET" :{
-                            "x" : 16,
                             "y" : 8
                         }
                     }
@@ -1029,37 +746,6 @@
                 }
             }
         ],
-        "Data_Devices": [
-            {
-                "DD-U_General Low Voltage Device_CED": {
-                    "Junction Box - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "PF Tanning 42-3 TLT PLT"
-
-                        }
-                    }
-                }                
-            },
-            {
-                "DD-U_Tele & Data Outlet_CED": {
-                    "Data - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "PF Tanning 42-3 TLT PLT"
-
-                        }
-                    }
-                }                
-            },
-            {
-                "DD-U_General Low Voltage Device_CED" : {
-                    "Speaker": {
-                        "PARAMETERS" : {
-                            "dev-Group ID" : "PF Tanning 42-3 TLT PLT"
-                        }
-                    }
-                }
-            }
-        ],
         "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
@@ -1070,19 +756,6 @@
                         },
                         "OFFSET" :{
                             "x" : 6,
-                            "y" : 8
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : "5"
-                        },
-                        "OFFSET" :{
-                            "x" : 16,
                             "y" : 8
                         }
                     }
@@ -1155,37 +828,6 @@
                 }
             }
         ],
-        "Data_Devices": [
-            {
-                "DD-U_General Low Voltage Device_CED": {
-                    "Junction Box - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "HM62B_Up tanning"
-
-                        }
-                    }
-                }                
-            },
-            {
-                "DD-U_Tele & Data Outlet_CED": {
-                    "Data - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "HM62B_Up tanning"
-
-                        }
-                    }
-                }                
-            },
-            {
-                "DD-U_General Low Voltage Device_CED" : {
-                    "Speaker": {
-                        "PARAMETERS" : {
-                            "dev-Group ID" : "HM62B_Up tanning"
-                        }
-                    }
-                }
-            }
-        ],
         "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
@@ -1196,19 +838,6 @@
                         },
                         "OFFSET" :{
                             "x" : 6,
-                            "y" : 8
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : "5"
-                        },
-                        "OFFSET" :{
-                            "x" : 16,
                             "y" : 8
                         }
                     }
@@ -1266,21 +895,6 @@
                 }
             }
         ],
-        "Data_Devices": [
-            {
-                "DD-U_General Low Voltage Device_CED": {
-                    "Junction Box - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "HM63C (Hydromassage)"
-                        },
-                        "OFFSET" :{
-                            "x" : 12,
-                            "y" : 0
-                        }
-                    }
-                }                
-            }
-        ],
         "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
@@ -1291,19 +905,6 @@
                         },
                         "OFFSET" :{
                             "x" : 6,
-                            "y" : 8
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : "4"
-                        },
-                        "OFFSET" :{
-                            "x" : 16,
                             "y" : 8
                         }
                     }
@@ -1361,48 +962,6 @@
                 }
             }
         ],
-        "Data_Devices": [
-            {
-                "DD-U_General Low Voltage Device_CED": {
-                    "Junction Box - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "HM62E Hybrid Tanning Booth"
-
-                        },
-                        "OFFSET" :{
-                            "x" : 18,
-                            "y" : 0
-                        }
-                    }
-                }                
-            },
-            {
-                "DD-U_Tele & Data Outlet_CED": {
-                    "Data - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "HM62E Hybrid Tanning Booth"
-                        },
-                        "OFFSET" :{
-                            "x" : 24,
-                            "y" : 0
-                        }
-                    }
-                }                
-            },
-            {
-                "DD-U_General Low Voltage Device_CED" : {
-                    "Speaker": {
-                        "PARAMETERS" : {
-                            "dev-Group ID" : "HM62E Hybrid Tanning Booth"
-                        },
-                        "OFFSET" :{
-                            "x" : 30,
-                            "y" : 0
-                        }
-                    }
-                }
-            }
-        ],
         "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
@@ -1416,19 +975,6 @@
                             "x" : 6,
                             "y" : 8
                         }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : "5"
-                        },
-                        "OFFSET" :{
-                            "x" :16,
-                            "y" : 8
-                        }                        
                     }
                 }
             }
@@ -1480,47 +1026,6 @@
                 }
             }
         ],
-        "Data_Devices": [
-            {
-                "DD-U_General Low Voltage Device_CED": {
-                    "Junction Box - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "Hybrid Light Bed HM62D"
-                        },
-                        "OFFSET" :{
-                            "x" : 20,
-                            "y" : 0
-                        }
-                    }
-                }                
-            },
-            {
-                "DD-U_Tele & Data Outlet_CED": {
-                    "Data - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "Hybrid Light Bed HM62D"
-                        },
-                        "OFFSET" :{
-                            "x" : 30,
-                            "y" : 0
-                        }
-                    }
-                }                
-            },
-            {
-                "DD-U_General Low Voltage Device_CED" : {
-                    "Speaker": {
-                        "PARAMETERS" : {
-                            "dev-Group ID" : "Hybrid Light Bed HM62D"
-                        },
-                        "OFFSET" :{
-                            "x" : 40,
-                            "y" : 0
-                        }
-                    }
-                }
-            }
-        ],
         "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
@@ -1531,19 +1036,6 @@
                         },
                         "OFFSET" :{
                             "x" : 6,
-                            "y" : 8
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : "5"
-                        },
-                        "OFFSET" :{
-                            "x" :16,
                             "y" : 8
                         }
                     }
@@ -1648,22 +1140,7 @@
                 }
             }
         ],
-            "Data_Devices": [
-                {
-                    "DD-U_Tele & Data Outlet_CED" : {
-                        "Data - Wall" : {
-                            "PARAMETERS": {
-                                "dev-Group ID": "PF_Plan Computer"
-                            },
-                        "OFFSET" :{
-                            "x" : 10,
-                            "y" : 0
-                        }
-                        }
-                    }
-                }
-            ],
-            "Generic_Annotations": [
+        "Generic_Annotations": [
             {
                 "Manual Key Note- All Shapes": {
                     "Square": {
@@ -1676,38 +1153,9 @@
                         }
                     }
                 }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : "3"
-                        },
-                        "OFFSET" :{
-                            "x" :16,
-                            "y" : 8
-                        }
-                    }
-                }
             }
         ],
         "Notes": "Exercise equipment power"
-    },
-
-        "PF_Plan Phone": {
-            "Data_Devices": [
-                {
-                    "DD-U_Tele & Data Outlet_CED" : {
-                        "Data - Wall" : {
-                            "PARAMETERS": {
-                                "dev-Group ID": "PF_Plan Phone"
-                            }
-                        }
-                    }
-                }
-            ],
-
-        "Notes": "PF_Plan Phone"
     },
     "PF_Plan TMAX": {
         "Electrical_Fixture": [
@@ -1860,22 +1308,7 @@
                 }
             }
         ],
-            "Data_Devices": [
-                {
-                    "DD-U_Tele & Data Outlet_CED" : {
-                        "Data - Wall" : {
-                            "PARAMETERS": {
-                                "dev-Group ID": "PF_Plan TMAX"
-                            },
-                        "OFFSET" :{
-                            "x" : 0,
-                            "y" : -70
-                        }
-                        }
-                    }
-                }
-            ],
-            "Generic_Annotations": [
+        "Generic_Annotations": [
             {
                 "Manual Key Note- All Shapes": {
                     "Square": {
@@ -1884,20 +1317,6 @@
                         },
                         "OFFSET" :{
                             "x" : 6,
-                            "y" : 8
-                        }
-                    }
-                }
-            },
-
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : "4"
-                        },
-                        "OFFSET" :{
-                            "x" : 16,
                             "y" : 8
                         }
                     }
@@ -1975,27 +1394,12 @@
                 }
             }
         ],
-        "Data_Devices" : [
-            {
-                "DD-U_Tele & Data Outlet_CED" : {
-                    "Data - Floor" : {
-                        "PARAMETERS" : {
-                        "dev-group ID": "SmarteCarte Massage Chair"
-                        },
-                        "OFFSET" :{
-                            "x" : 10,
-                            "y" : 0
-                        }
-                    }
-                }
-            }
-        ],
         "Generic_Annotations": [
             {
                 "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
-                            "CED-G-NOTE #" : "13"
+                            "CED-G-NOTE #" : "20"
                         },
                         "OFFSET":{
                             "x" : 5,
@@ -2065,32 +1469,6 @@
                         },
                         "OFFSET" :{
                             "x" : 6,
-                            "y" : 8
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square" : {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #": "6"
-                        },
-                        "OFFSET" :{
-                            "x" :16,
-                            "y" : 8
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square" : {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #": "15"
-                        },
-                        "OFFSET" :{
-                            "x" : 26,
                             "y" : 8
                         }
                     }
