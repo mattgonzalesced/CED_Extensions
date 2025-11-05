@@ -6,9 +6,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "27TV",
-                            "Load Classification_CED" : "C",
-                            "Apparent Load Input_CED" : "180",
-                            "CKT_Panel_CEDT" : "L3"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "250",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit_Number_CEDT": "24",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TV & Radiance Monitor - Check In 102",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
                             "x" : 6,
@@ -80,9 +87,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "43 tv",
-                            "Load Classification_CED" : "C",
-                            "Apparent Load Input_CED" : "180",
-                            "CKT_Panel_CEDT" : "L3"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "250",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit_Number_CEDT": "12",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TV - MEN/WOMEN LOCKER ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
                             "x" : 6,
@@ -154,9 +168,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "65tv",
-                            "Load Classification_CED" : "C",
-                            "Apparent Load Input_CED" : "180",
-                            "CKT_Panel_CEDT" : "L3"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "250",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit_Number_CEDT": "5",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TV - BLACK CARD SUITE",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
                             "x" : 6,
@@ -228,9 +249,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "70tv",
-                            "Load Classification_CED" : "C",
-                            "Apparent Load Input_CED" : "180",
-                            "CKT_Panel_CEDT" : "L3"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "250",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit_Number_CEDT": "32",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TV - DIGITAL MEDIA",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
                             "x" : 6,
@@ -289,9 +317,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "75TV",
-                            "Load Classification_CED" : "C",
-                            "Apparent Load Input_CED" : "180",
-                            "CKT_Panel_CEDT" : "L3"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "250",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit_Number_CEDT": "33",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TV - Mission Statement",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
                             "x" : 6,
@@ -364,12 +399,16 @@
                     "Fused - 30A": {
                         "PARAMETERS": {
                             "dev-Group ID" : "BEAUTYANGEL",
-                            "Apparent Load Input_CED" : "1500",
-                            "Voltage_CED" : "240",
-                            "Number of Poles_CED" : "3",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "1500",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED": "240",
+                            "Number of Poles_CED": "3",
+                            "CKT_Panel_CEDT": "L4",
                             "CKT_Circuit Number_CEDT": "DEDICATED",
-                            "CKT_Panel_CEDT" : "L4"
-
+                            "CKT_Rating_CED": "30",
+                            "CKT_Load Name_CEDT": "BEAUTY ANGEL - 103D",
+                            "CKT_Schedule Notes_CEDT": ""
                         }
                     }
                 }
@@ -379,7 +418,17 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "BEAUTYANGEL",
-                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "RECEPT - BCS",
+                            "CKT_Schedule Notes_CEDT": ""
+                            
                         }
                     }
                 }
@@ -454,8 +503,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "CRYO",
-                            "Apparent Load Input_CED" : "1440",
-                            "CKT_Panel_CEDT" : "L4"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "1440",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L4",
+                            "CKT_Circuit Number_CEDT": "5",
+                            "CKT_Rating_CED": "40",
+                            "CKT_Load Name_CEDT": "CRYOLOUNGE - 103",
+                            "CKT_Schedule Notes_CEDT": "GFI"
                         }
                     }
                 }
@@ -486,7 +543,16 @@
                     "Duplex Wall" : {
                         "PARAMETERS" : { 
                             "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
-                            "Apparent Load Input_CED" : "180"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
+                            "CKT_Schedule Notes_CEDT": ""
                         }
                     }
                 }
@@ -496,7 +562,16 @@
                     "Duplex Wall" : {
                         "PARAMETERS" : { 
                             "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
-                            "Apparent Load Input_CED" : "180"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
+                            "CKT_Schedule Notes_CEDT": ""
                         }
                     }
                 }
@@ -506,7 +581,16 @@
                     "Duplex Wall" : {
                         "PARAMETERS" : { 
                             "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
-                            "Apparent Load Input_CED" : "180"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
+                            "CKT_Schedule Notes_CEDT": ""
                         }
                     }
                 }
@@ -516,7 +600,16 @@
                     "Duplex Wall" : {
                         "PARAMETERS" : { 
                             "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
-                            "Apparent Load Input_CED" : "180"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
+                            "CKT_Schedule Notes_CEDT": ""
                         }
                     }
                 }
@@ -526,7 +619,16 @@
                     "Duplex Wall" : {
                         "PARAMETERS" : { 
                             "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
-                            "Apparent Load Input_CED" : "180"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
+                            "CKT_Schedule Notes_CEDT": ""
                         }
                     }
                 }
@@ -680,11 +782,16 @@
                     "Fused - 30A": {
                         "PARAMETERS": {
                             "dev-Group ID": "Fan 1",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED": "1500",
+                            "Load Classification_CED": "C",
                             "Voltage_CED" : "208",
                             "Number of Poles_CED" : "3",
                             "CKT_Panel_CEDT" : "L3",
-                            "CKT_Circuit Number_CEDT": "DEDICATED"
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "BIG FAN",
+                            "CKT_Schedule Notes_CEDT": ""
                         }
                     }
                 }
@@ -739,9 +846,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "HM5A",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED": "1920",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L1",
-                            "Load Classification_CED" : "NC"
+                            "CKT_Circuit Number_CEDT": "23",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "POWERED BIKE",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
                             "x" : -36,
@@ -776,9 +890,17 @@
                     "Fused - 60A": {
                         "PARAMETERS": {
                             "dev-Group ID": "HM62A",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "11223.00",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "240",
+                            "Number of Poles_CED" : "3",
+                            "CKT_Panel_CEDT" : "L4",
                             "CKT_Circuit Number_CEDT": "DEDICATED",
-                            "CKT_Panel_CEDT" : "L4"
+                            "CKT_Rating_CED": "40",
+                            "CKT_Load Name_CEDT": "TLT TANNING - 103F",
+                            "CKT_Schedule Notes_CEDT": ""
+                            
                         }
                     }
                 }
@@ -788,8 +910,17 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "HM62A",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "180",
-                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK"
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "RECEPT - BCS",
+                            "CKT_Schedule Notes_CEDT": ""
+
                         }
                     }
                 }
@@ -864,9 +995,16 @@
                     "Fused - 60A": {
                         "PARAMETERS": {
                             "dev-Group ID": "PF Tanning 42-3 TLT PLT",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "11223.00",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "240",
+                            "Number of Poles_CED" : "3",
+                            "CKT_Panel_CEDT" : "L4",
                             "CKT_Circuit Number_CEDT": "DEDICATED",
-                            "CKT_Panel_CEDT" : "L4"
+                            "CKT_Rating_CED": "40",
+                            "CKT_Load Name_CEDT": "LAY-DOWN TANNING - 103G",
+                            "CKT_Schedule Notes_CEDT": ""
                         }
                     }
                 }
@@ -876,8 +1014,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "PF Tanning 42-3 TLT PLT",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "180",
-                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK"
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "RECEPT - BCS",
+                            "CKT_Schedule Notes_CEDT": ""
                         }
                     }
                 }
@@ -952,8 +1098,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "HM5A (Indoor Cycle)",
-                            "Apparent Load Input_CED" : "1920",
-                            "CKT_Panel_CEDT" : "L1"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "1920",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L1",
+                            "CKT_Circuit Number_CEDT": "24",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "POWERED BIKE",
+                            "CKT_Schedule Notes_CEDT": ""
                         }
                     }
                 }
@@ -967,9 +1121,16 @@
                     "Fused - 60A": {
                         "PARAMETERS": {
                             "dev-Group ID": "HM62B_Up tanning",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "10392.00",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "240",
+                            "Number of Poles_CED" : "3",
+                            "CKT_Panel_CEDT" : "L4",
                             "CKT_Circuit Number_CEDT": "DEDICATED",
-                            "CKT_Panel_CEDT" : "L4"
+                            "CKT_Rating_CED": "40",
+                            "CKT_Load Name_CEDT": "STAND-UP TANNER - 103C",
+                            "CKT_Schedule Notes_CEDT": ""
                         }
                     }
                 }
@@ -979,8 +1140,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "HM62B_Up tanning",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "180",
-                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK"
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "RECEPT - BCS",
+                            "CKT_Schedule Notes_CEDT": ""
                         }
                     }
                 }
@@ -1055,7 +1224,16 @@
                     "Specialty Wall - 208V/1Ph": {
                         "PARAMETERS": {
                             "dev-Group ID": "HM63C (Hydromassage)",
-                            "Apparent Load Input_CED" : "180"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "4320.00",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "240",
+                            "Number of Poles_CED" : "2",
+                            "CKT_Panel_CEDT" : "L4",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "30",
+                            "CKT_Load Name_CEDT": "HYDROMASSAGE - 103A",
+                            "CKT_Schedule Notes_CEDT": "GFI"
                         },
                         "OFFSET" :{
                             "x" : 0,
@@ -1069,7 +1247,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "HM63C (Hydromassage)",
-                            "Apparent Load Input_CED" : "180"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "38",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "HYDROMASSAGE RECEPT - 103A",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
                             "x" : 6,
@@ -1132,9 +1319,16 @@
                     "Fused - 60A": {
                         "PARAMETERS": {
                             "dev-Group ID": "HM62E Hybrid Tanning Booth",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "11640.00",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "240",
+                            "Number of Poles_CED" : "3",
+                            "CKT_Panel_CEDT" : "L4",
                             "CKT_Circuit Number_CEDT": "DEDICATED",
-                            "CKT_Panel_CEDT" : "L4"
+                            "CKT_Rating_CED": "40",
+                            "CKT_Load Name_CEDT": "HYBRID TANNER - 103B",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
                             "x" : 6,
@@ -1148,10 +1342,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "HM62E Hybrid Tanning Booth",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "180",
-                            "CKT_Panel_CEDT" : "L1",
-                            "Load Classification_CED" : "C",
-                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK"
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "RECEPT - BCS",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
                             "x" : 12,
@@ -1242,9 +1442,16 @@
                     "Fused - 60A": {
                         "PARAMETERS": {
                             "dev-Group ID": "Hybrid Light Bed HM62D",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "11223.00",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "240",
+                            "Number of Poles_CED" : "3",
+                            "CKT_Panel_CEDT" : "L4",
                             "CKT_Circuit Number_CEDT": "DEDICATED",
-                            "CKT_Panel_CEDT" : "L4"
+                            "CKT_Rating_CED": "40",
+                            "CKT_Load Name_CEDT": "HYBRID LIGHT BED - 103E",
+                            "CKT_Schedule Notes_CEDT": ""
                         }
                     }
                 }
@@ -1254,8 +1461,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "Hybrid Light Bed HM62D",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "180",
-                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK"
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "NONGROUPEDBLOCK",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "RECEPT - BCS",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
                             "x" : 10,
@@ -1352,7 +1567,17 @@
                 "EF-U_Receptacle_CED": {
                     "Duplex Wall": {
                         "PARAMETERS": {
-                            "dev-Group ID": "it"
+                            "dev-Group ID": "it",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "IT RACK",
+                            "CKT_Schedule Notes_CEDT": ""
                         }
                     }
                 }
@@ -1367,8 +1592,17 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "Stepmill (C5X-5PL-PF)",
-                            "Apparent Load Input_CED" : 1920,
-                            "CKT_Panel_CEDT" : "L1"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1920",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L1",
+                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "STAIRMASTER",
+                            "CKT_Schedule Notes_CEDT": ""
+
                         }
                     }
                 }
@@ -1399,9 +1633,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "PF_Plan Computer",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L3",
-                            "Load Classification_CED" : "C"
+                            "CKT_Circuit Number_CEDT": "25",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "CHECK-IN RECEPT",
+                            "CKT_Schedule Notes_CEDT": ""
                         }
                     }
                 }
@@ -1468,16 +1709,23 @@
 
         "Notes": "PF_Plan Phone"
     },
-        "PF_Plan TMAX": {
+    "PF_Plan TMAX": {
         "Electrical_Fixture": [
             {
                 "EF-U_Receptacle_CED": {
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "PF_Plan TMAX",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L3",
-                            "Load Classification_CED" : "C"
+                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TMAX RECEPT",
+                            "CKT_Schedule Notes_CEDT": ""
                         }
                     }
                 }
@@ -1487,9 +1735,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "PF_Plan TMAX",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L3",
-                            "Load Classification_CED" : "C"
+                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TMAX RECEPT",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
                             "x" : 0,
@@ -1503,9 +1758,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "PF_Plan TMAX",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L3",
-                            "Load Classification_CED" : "C"
+                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TMAX RECEPT",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
                             "x" : 0,
@@ -1519,9 +1781,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "PF_Plan TMAX",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L3",
-                            "Load Classification_CED" : "C"
+                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TMAX RECEPT",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
                             "x" : 0,
@@ -1535,9 +1804,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "PF_Plan TMAX",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L3",
-                            "Load Classification_CED" : "C"
+                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TMAX RECEPT",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
                             "x" : 0,
@@ -1551,9 +1827,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "PF_Plan TMAX",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L3",
-                            "Load Classification_CED" : "C"
+                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TMAX RECEPT",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
                             "x" : 0,
@@ -1568,8 +1851,6 @@
                         "PARAMETERS": {
                             "dev-Group ID": "PF_Plan TMAX",
                             "Apparent Load Input_CED" : "180",
-                            "CKT_Panel_CEDT" : "L3",
-                            "Load Classification_CED" : "C"
                         },
                         "OFFSET" :{
                             "x" : 0,
@@ -1632,9 +1913,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "Treadmill (T5X-5PL-PF)",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "1920",
-                            "CKT_Panel_CEDT": "L1",
-                            "Load Classification_CED" : "NC"
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L1",
+                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TREADMILL",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET":{
                             "x" : -48,
@@ -1668,9 +1956,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "SmarteCarte Massage Chair",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "500",
-                            "CKT_Panel_CEDT": "L4",
-                            "Load Classification_CED" : "NC"
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L4",
+                            "CKT_Circuit Number_CEDT": "1",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "MASSAGE CHAIRS - 103",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET":{
                             "x" : 0,
@@ -1719,7 +2014,16 @@
                     "Quad Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "TV TRUSS",
-                            "CKT_Circuit Number_CEDT": "TVTRUSS"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L2",
+                            "CKT_Circuit Number_CEDT": "TVTRUSS",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TV TRUSS",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET":{
                             "x": 28,
@@ -1733,7 +2037,16 @@
                     "Quad Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "CAUTION SECOND TV TRUSS",
-                            "CKT_Circuit Number_CEDT": "TVTRUSS"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L2",
+                            "CKT_Circuit Number_CEDT": "TVTRUSS",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TV TRUSS",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET":{
                             "x": -28,
@@ -1793,10 +2106,16 @@
                     "Duplex Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "vending machine",
+                            "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L3",
-                            "Load Classification_CED" : "NC",
-                            "CKT_Circuit Number_CEDT": "DEDICATED"
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "VENDING MACHINE",
+                            "CKT_Schedule Notes_CEDT": ""
                         }
                     }
                 }

@@ -113,6 +113,8 @@ def _gather_element_info(doc, elements, panel_lookup):
         rating = _get_param_value(element, "CKT_Rating_CED")
         load_name = _get_param_value(element, "CKT_Load Name_CEDT")
         circuit_notes = _get_param_value(element, "CKT_Schedule Notes_CEDT")
+        poles_value = _get_param_value(element, "Number of Poles_CED")
+        number_of_poles = _try_parse_int(poles_value)
 
 
         if not panel_name and not circuit_number:
@@ -131,7 +133,8 @@ def _gather_element_info(doc, elements, panel_lookup):
                 "rating": rating,
                 "load_name": load_name,
                 "location": _get_element_location(element),
-                "circuit_notes": circuit_notes
+                "circuit_notes": circuit_notes,
+                "number_of_poles": number_of_poles or 1
             }
         )
     return info_items
@@ -207,6 +210,7 @@ def _make_group(key, members):
     load_name = sample.get("load_name")
     circuit_number = sample.get("circuit_number")
     circuit_notes = sample.get("circuit_notes")
+    number_of_poles = sample.get("number_of_poles")
 
     # Prefer the first non-empty rating/load name within the group.
     if not rating:
@@ -221,9 +225,25 @@ def _make_group(key, members):
                 break
     if not circuit_notes:
         for item in members:
-            if item.get("circuit_notes")
+            if item.get("circuit_notes"):
                 circuit_notes = item["circuit_notes"]
                 break
+
+    poles_candidates = [
+        item.get("number_of_poles")
+        for item in members
+        if item.get("number_of_poles")
+    ]
+    if poles_candidates:
+        unique_poles = sorted({int(p) for p in poles_candidates})
+        number_of_poles = unique_poles[-1]
+        if len(unique_poles) > 1:
+            logger.warning(
+                "Group {} has mixed pole counts {}; using {}.".format(
+                    key, unique_poles, number_of_poles
+                )
+            )
+    number_of_poles = int(number_of_poles) if number_of_poles else 1
 
     return OrderedDict(
         [
@@ -234,7 +254,8 @@ def _make_group(key, members):
             ("circuit_number", circuit_number),
             ("rating", rating),
             ("load_name", load_name),
-            ("circuit_notes", circuit_notes)
+            ("circuit_notes", circuit_notes),
+            ("number_of_poles", number_of_poles)
         ]
     )
 
@@ -584,6 +605,30 @@ def _create_circuit(doc, group):
             )
     else:
         logger.warning("No panel found for group {}; circuit left unassigned.".format(group["key"]))
+
+    poles_value = _try_parse_int(group.get("number_of_poles"))
+    if poles_value and poles_value in (1, 2, 3):
+        set_poles = getattr(system, "SetNumberOfPoles", None)
+        poles_applied = False
+        if callable(set_poles):
+            try:
+                set_poles(poles_value)
+                poles_applied = True
+            except Exception as ex:
+                logger.debug("SetNumberOfPoles failed for circuit {}: {}".format(system.Id.IntegerValue, ex))
+        poles_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUM_POLES)
+        if poles_param and not poles_param.IsReadOnly:
+            try:
+                poles_param.Set(poles_value)
+                poles_applied = True
+            except Exception as ex:
+                logger.debug("Setting pole parameter failed for circuit {}: {}".format(system.Id.IntegerValue, ex))
+        if not poles_applied:
+            logger.warning(
+                "Unable to set pole count {} for circuit {}. Using Revit default.".format(
+                    poles_value, group["key"]
+                )
+            )
 
     return system
 
