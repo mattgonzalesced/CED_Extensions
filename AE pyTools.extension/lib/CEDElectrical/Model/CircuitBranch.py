@@ -303,6 +303,7 @@ class CircuitBranch(object):
         try:
             return self.circuit.LoadName
         except:
+            logger.debug("load_name property failed.")
             return None
 
     @property
@@ -311,6 +312,7 @@ class CircuitBranch(object):
             if self.is_power_circuit and not self.is_space:
                 return self.circuit.Rating
         except:
+            logger.debug("rating property failed.")
             return None
 
     @property
@@ -318,6 +320,7 @@ class CircuitBranch(object):
         try:
             return self.circuit.Frame
         except:
+            logger.debug("frame property failed.")
             return None
 
     @property
@@ -336,6 +339,7 @@ class CircuitBranch(object):
             if self.is_power_circuit and not self.is_spare and not self.is_space:
                 return self.circuit.Length
         except:
+            logger.debug("length property failed.")
             return None
 
     @property
@@ -356,6 +360,7 @@ class CircuitBranch(object):
         try:
             return DBE.ElectricalSystem.ApparentLoad.__get__(self.circuit)
         except:
+            logger.debug("apparent_power property failed.")
             return None
 
     @property
@@ -363,6 +368,7 @@ class CircuitBranch(object):
         try:
             return DBE.ElectricalSystem.ApparentCurrent.__get__(self.circuit)
         except:
+            logger.debug("apparent_current property failed.")
             return None
 
     @property
@@ -372,12 +378,14 @@ class CircuitBranch(object):
                 return self.get_downstream_demand_current()
             else:
                 return self.apparent_current
-
+        else:
+            logger.debug("circuit_load_current: Not a load circuit.")
     @property
     def poles(self):
         try:
             return DBE.ElectricalSystem.PolesNumber.__get__(self.circuit)
         except:
+            logger.debug("poles property failed.")
             return None
 
     @property
@@ -395,6 +403,7 @@ class CircuitBranch(object):
         try:
             return DBE.ElectricalSystem.PowerFactor.__get__(self.circuit)
         except:
+            logger.debug("power_factor property failed.")
             return None
 
     # ----------- Override Setters -----------
@@ -639,6 +648,8 @@ class CircuitBranch(object):
                 wire_set = WIRE_AMPACITY_TABLE.get(material, {}).get(temp, [])
 
                 for wire, ampacity in wire_set:
+                    # need to call self.reasonableUserOverrides right here and if False 
+                    # set the self._calculated_hot_wire = None 
                     if wire == self._normalize_wire_size(self._wire_hot_size_override):
                         self._calculated_hot_wire = wire
                         self._calculated_wire_sets = sets
@@ -994,15 +1005,28 @@ class CircuitBranch(object):
     #  a separate chunk, cant just be number of wires.
     #  example if 3 hots and 1 neutral, and hot_size = neutral_size: 4#12
     #  example if 3 hots and 1 neutral, and hot_size not = neutral_size: 3#12H + 1#10N
+
     def get_wire_set_string(self):
         wp = self.settings.wire_size_prefix or ''
         parts = []
 
-        total_hn_qty = self.number_of_wires  # hot + neutral quantity
-        hot_size = self._normalize_wire_size(self.hot_wire_size)
+        total_hot_qty = self.hot_wire_quantity  # hot quantity
+        total_neutral_qty = self.neutral_wire_quantity # neutral quantity
 
-        if total_hn_qty and hot_size:
-            parts.append("{}{}{}".format(total_hn_qty, wp, hot_size))
+        hot_size = self._normalize_wire_size(self.hot_wire_size)
+        neutral_size = self._normalize_wire_size(self.neutral_wire_size)
+        
+        if hot_size == neutral_size:
+            combined_qty = total_hot_qty + total_neutral_qty
+            if combined_qty and hot_size:
+                parts.append("{}{}{}".format(combined_qty, wp, hot_size))
+            total_hot_qty = 0
+            total_neutral_qty = 0
+        if total_hot_qty and hot_size:
+            parts.append("{}{}{}H".format(total_hot_qty, wp, hot_size))
+
+        if total_neutral_qty and neutral_size:
+            parts.append("{}{}{}N".format(total_neutral_qty, wp, neutral_size))
 
         if self.ground_wire_quantity:
             grd_size = self._normalize_wire_size(self.ground_wire_size)

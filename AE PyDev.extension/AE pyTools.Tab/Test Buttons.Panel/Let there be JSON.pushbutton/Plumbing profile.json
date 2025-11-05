@@ -1,45 +1,195 @@
 {
-    "27TV": {
-        "Electrical_Fixture": [
+    "EX'G WALL TOILET": {
+       "Generic_Annotations" : [
             {
-                "EF-U_Receptacle_CED": {
-                    "Duplex Wall": {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
                         "PARAMETERS": {
-                            "dev-Group ID": "27TV",
-                            "Load Classification_CED" : "C",
-                            "Apparent Load Input_CED" : "180",
-                            "CKT_Panel_CEDT" : "L3"
-                        },
-                        "OFFSET" :{
-                            "x" : 6,
-                            "y" : 0
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
                         }
                     }
                 }
             }
         ],
-        "Data_Devices": [
+        "Model_Groups": [
             {
-                "DD-U_Tele & Data Outlet_CED": {
-                    "Data - Wall": {
-                        "PARAMETERS": {
-                            "dev-Group ID": "27TV",
-                            "Symbol Label_CEDT": "TV"
-                        }
+                "P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
                     }
-                }                
+                }
             }
         ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Locker-Sink-Sloan-Trough-Enclosure": {
+       "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "P_Commercial Lavatory - Back to Back": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Locker-Sink-Sloan-Trough-Enclosure"
+    },
+    "NEW URINAL": {
+       "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "P_Commercial Urinal": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "NEW URINAL"
+    },
+    "EX'G MOPSINK": {
+       "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "P_Sink Fixture - Janitorial, Vertical": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G MOPSINK"
+    },
+    "EX'G ADA DF": {
+       "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "P_Electric Water Cooler - Dual Height": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G ADA DF"
+    },
+    "Floor Drain 1": {
+        "Model_Groups": [
+            {
+                "P_Floor Drain 111111111111111111111111111111111111111111 edit this": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Floor Drain 1"
+    },
+    "Floor Drain 2": {
+        "Model_Groups": [
+            {
+                "P_Floor Drain 222222222222222222222222222222222222222222 edit this": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Floor Drain 2"
+    },
+    "Shower 1": {
         "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
-                            "CED-G-NOTE #" : "11"
-                        },
-                        "OFFSET" :{
-                            "x" : 6,
-                            "y" : 8
+                            "CED-G-NOTE #" : ""
                         }
                     }
                 }
@@ -48,11 +198,7 @@
                 "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
-                            "CED-G-NOTE #" : "2"
-                        },
-                        "OFFSET" :{
-                            "x" :16,
-                            "y" : 8
+                            "CED-G-NOTE #" : ""
                         }
                     }
                 }
@@ -61,15 +207,121 @@
                 "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
-                            "CED-G-NOTE #" : "6"
-                        },
-                        "OFFSET" :{
-                            "x" : 18,
-                            "y" : 8
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
                         }
                     }
                 }
             }
         ],
-        "Notes": "TV outlet"
+        "Model_Groups": [
+            {
+                "P_Shower Rough-In 1": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Shower 1"
+    },
+    "Shower 2": {
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "P_Shower Rough-In 2": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Shower 2"
+    },
+    "Water Heater Assembly": {
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "P_Lavatory Sink with Electric WH": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Water Heater Assembly"
     }
+}
