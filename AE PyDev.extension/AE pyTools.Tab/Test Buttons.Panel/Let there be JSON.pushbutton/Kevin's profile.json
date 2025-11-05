@@ -7,15 +7,16 @@
                         "PARAMETERS": {
                             "dev-Group ID": "27TV",
                             "FLA Input_CED": "0",
-                            "Apparent Load Input_CED": "250",
-                            "Load Classification_CED": "C",
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
-                            "CKT_Panel_CEDT": "L3",
                             "CKT_Circuit_Number_CEDT": "24",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "TV & Radiance Monitor - Check In 102",
-                            "CKT_Schedule Notes_CEDT": ""
+                            "CKT_Schedule Notes_CEDT": "",
+                            "Load Classification_CED" : "C",
+                            "Apparent Load Input_CED" : "250",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT" : "Dedicated"
                         },
                         "OFFSET" :{
                             "x" : 6,
@@ -1850,7 +1851,7 @@
                     "Wall - With Stem": {
                         "PARAMETERS": {
                             "dev-Group ID": "PF_Plan TMAX",
-                            "Apparent Load Input_CED" : "180",
+                            "Apparent Load Input_CED" : "180"
                         },
                         "OFFSET" :{
                             "x" : 0,
