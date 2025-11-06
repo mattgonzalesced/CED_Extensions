@@ -856,7 +856,7 @@
                             "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "4320.00",
                             "Load Classification_CED": "NC",
-                            "Voltage_CED" : "240",
+                            "Voltage_CED" : "208",
                             "Number of Poles_CED" : "2",
                             "CKT_Panel_CEDT" : "L4",
                             "CKT_Circuit Number_CEDT": "DEDICATED",
