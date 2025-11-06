@@ -323,5 +323,649 @@
             }
         ],
         "Notes": "Water Heater Assembly"
+    },
+    "Room Name 108 CARDIO": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 109 CIRCUIT": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 105C JAN.": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 105D STORAGE": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 107 MOBILITY ROOM FUNCTIONAL TRAINING/": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 106 UTILITY/STORAGE": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 111 FREE WEIGHTS": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 105 LOCKER ROOM MEN'S": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 105A TOILET": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 110 STRENGTH": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 100 VESTIBULE": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 101A BREAK ROOM EMPLOYEE": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 101B ROOM IT": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 101 RECEPTION": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 102 CHECK-IN": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 103 CARD SPA BLACK": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 103B ANGEL BEAUTY": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 105B SHOWER": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 103C TANNING": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 103E TANNING": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 103F TANNING": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 103G TANNING": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 103A HYDROMASSAGE": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 104 LOCKER ROOM WOMEN'S": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 104B SHOWER": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 104A TOILET": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 104D STORAGE": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 103D HYBRID": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
     }
 }
