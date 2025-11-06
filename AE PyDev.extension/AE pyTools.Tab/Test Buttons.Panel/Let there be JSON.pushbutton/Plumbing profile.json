@@ -183,147 +183,6 @@
         ],
         "Notes": "Floor Drain 2"
     },
-    "Shower 1": {
-        "Generic_Annotations" : [
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model": [
-            {
-                "P_Shower Rough-In": {
-                    "None": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "Shower 1"
-    },
-    "Shower 2": {
-        "Generic_Annotations" : [
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model": [
-            {
-                "P_Shower Rough-In": {
-                    "None": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "Shower 2"
-    },
-    "Water Heater Assembly": {
-        "Generic_Annotations" : [
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model": [
-            {
-                "P_Electric Water Heater on Floor": {
-                    "None": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "Water Heater Assembly"
-    },
     "Room Name 108 CARDIO": {
        "Generic_Annotations" : [
             {
@@ -373,7 +232,25 @@
     "Room Name 105C JAN.": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -382,16 +259,16 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Model": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
+                "P_Electric Water Heater on Floor": {
+                    "None": {
                         "PARAMETERS": {}
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "Water Heater Assembly"
     },
     "Room Name 105D STORAGE": {
        "Generic_Annotations" : [
@@ -509,27 +386,16 @@
         "Notes": "EX'G WALL TOILET"
     },
     "Room Name 105A TOILET": {
-       "Generic_Annotations" : [
+       "Model group": [
             {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
+                "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
+                    "None": {
                         "PARAMETERS": {}
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "Floor Drain 2"
     },
     "Room Name 110 STRENGTH": {
        "Generic_Annotations" : [
@@ -718,7 +584,34 @@
     "Room Name 105B SHOWER": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -727,16 +620,16 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Model": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
+                "P_Shower Rough-In": {
+                    "None": {
                         "PARAMETERS": {}
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "Shower 1"
     },
     "Room Name 103C TANNING": {
        "Generic_Annotations" : [
@@ -879,7 +772,34 @@
     "Room Name 104B SHOWER": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -888,21 +808,39 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Model": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
+                "P_Shower Rough-In": {
+                    "None": {
                         "PARAMETERS": {}
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "Shower 2"
     },
-    "Room Name 104A TOILET": {
+    "Room Name 104C JAN.": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -911,16 +849,28 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Model": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
+                "P_Electric Water Heater on Floor": {
+                    "None": {
                         "PARAMETERS": {}
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "Water Heater Assembly"
+    },
+    "Room Name 104A TOILET": {
+       "Model group": [
+            {
+                "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
+                    "None": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Floor Drain 1"
     },
     "Room Name 104D STORAGE": {
        "Generic_Annotations" : [
