@@ -20,10 +20,10 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Model": [
             {
                 "P_Commercial Water Closet": {
-                    "P_Default": {
+                    "None": {
                         "PARAMETERS": {}
                     }
                 }
@@ -52,10 +52,10 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Model": [
             {
-                "P_Commercial Lavatory - Back to Back": {
-                    "P_Default": {
+                "P_Commercial Lavatory ADA": {
+                    "None": {
                         "PARAMETERS": {}
                     }
                 }
@@ -84,10 +84,10 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Model": [
             {
                 "P_Commercial Urinal": {
-                    "P_Default": {
+                    "None": {
                         "PARAMETERS": {}
                     }
                 }
@@ -116,10 +116,10 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Model": [
             {
                 "P_Sink Fixture - Janitorial, Vertical": {
-                    "P_Default": {
+                    "None": {
                         "PARAMETERS": {}
                     }
                 }
@@ -148,10 +148,10 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Model": [
             {
                 "P_Electric Water Cooler - Dual Height": {
-                    "P_Default": {
+                    "None": {
                         "PARAMETERS": {}
                     }
                 }
@@ -160,10 +160,10 @@
         "Notes": "EX'G ADA DF"
     },
     "Floor Drain 1": {
-        "Model_Groups": [
+        "Model": [
             {
                 "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
-                    "P_Default": {
+                    "None": {
                         "PARAMETERS": {}
                     }
                 }
@@ -172,10 +172,10 @@
         "Notes": "Floor Drain 1"
     },
     "Floor Drain 2": {
-        "Model_Groups": [
+        "Model group": [
             {
                 "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
-                    "P_Default": {
+                    "None": {
                         "PARAMETERS": {}
                     }
                 }
@@ -222,10 +222,10 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Model": [
             {
-                "P_Shower Rough-In 1": {
-                    "P_Default": {
+                "P_Shower Rough-In": {
+                    "None": {
                         "PARAMETERS": {}
                     }
                 }
@@ -272,10 +272,10 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Model": [
             {
-                "P_Shower Rough-In 2": {
-                    "P_Default": {
+                "P_Shower Rough-In": {
+                    "None": {
                         "PARAMETERS": {}
                     }
                 }
@@ -313,10 +313,10 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Model": [
             {
-                "P_Lavatory Sink with Electric WH": {
-                    "P_Default": {
+                "P_Electric Water Heater on Floor": {
+                    "None": {
                         "PARAMETERS": {}
                     }
                 }
