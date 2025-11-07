@@ -628,6 +628,7 @@ else:
                         offset_x_inches = 0.0
                         offset_y_inches = 0.0
                         offset_z_inches = 0.0
+                        offset_rotation_deg = 0.0
                         if group_label and cad_name in offsets_dict:
                             label_offsets_array = offsets_dict[cad_name].get(group_label, [])
 
@@ -643,6 +644,7 @@ else:
                             offset_x_inches = label_offsets.get("x", 0.0)
                             offset_y_inches = label_offsets.get("y", 0.0)
                             offset_z_inches = label_offsets.get("z", 0.0)
+                            offset_rotation_deg = label_offsets.get("r", 0.0)
 
                         # Convert offset from inches to feet
                         offset_x_feet = offset_x_inches / 12.0
@@ -658,7 +660,8 @@ else:
                         model_group_instance = doc.Create.PlaceGroup(offset_loc, model_group_type)
 
                         # Apply rotation to model group around BASE location
-                        if abs(rot_deg) > 1e-6:
+                        total_rotation = rot_deg + offset_rotation_deg
+                        if abs(total_rotation) > 1e-6:
                             angle_radians = math.radians(rot_deg)
                             axis = Line.CreateBound(loc, loc + XYZ(0, 0, 1))  # loc is BASE
                             ElementTransformUtils.RotateElement(doc, model_group_instance.Id, axis, angle_radians)
@@ -704,6 +707,7 @@ else:
                         offset_x_inches = 0.0
                         offset_y_inches = 0.0
                         offset_z_inches = 0.0
+                        offset_rotation_deg = 0.0
 
                         if symbol_label and cad_name in offsets_dict:
                             label_offsets_array = offsets_dict[cad_name].get(symbol_label, [])
@@ -719,6 +723,7 @@ else:
                             offset_x_inches = label_offsets.get("x", 0.0)
                             offset_y_inches = label_offsets.get("y", 0.0)
                             offset_z_inches = label_offsets.get("z", 0.0)
+                            offset_rotation_deg = label_offsets.get("r", 0.0)
 
                         # Convert offset from inches to feet
                         offset_x_feet = offset_x_inches / 12.0
@@ -869,9 +874,10 @@ else:
                                     print("DEBUG: NO parameters to set for symbol '{}'".format(symbol_label))
 
                             # Apply rotation around BASE location (not offset location)
+                            total_rotation = rot_deg + offset_rotation_deg
                             if abs(rot_deg) > 1e-6:
                                 try:
-                                    angle_radians = math.radians(rot_deg)
+                                    angle_radians = math.radians(total_rotation)
                                     axis = Line.CreateBound(loc, loc + XYZ(0, 0, 1))  # loc is BASE
                                     ElementTransformUtils.RotateElement(doc, instance.Id, axis, angle_radians)
                                 except Exception as ex:
