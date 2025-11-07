@@ -317,7 +317,7 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 12,
+                            "x" : 30,
                             "y" : 0
                         }
                     }
@@ -340,8 +340,8 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 24,
-                            "y" : 12
+                            "x" : 50,
+                            "y" : -8
                         }
                     }
                 }
@@ -363,7 +363,7 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : -12,
+                            "x" : -30,
                             "y" : 0
                         }
                     }
@@ -386,8 +386,8 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : -24,
-                            "y" : 12
+                            "x" : -50,
+                            "y" : -8
                         }
                     }
                 }
@@ -419,8 +419,8 @@
                             "Apparent Load Input_CED" : "180"
                         },
                         "OFFSET" :{
-                            "x" : 48,
-                            "y" : 12
+                            "x" : 72,
+                            "y" : -18
                         }
                     }
                 }
@@ -433,8 +433,8 @@
                             "Apparent Load Input_CED" : "180"
                         },
                         "OFFSET" :{
-                            "x" : -48,
-                            "y" : 12
+                            "x" : -72,
+                            "y" : -18
                         }
                     }
                 }
