@@ -662,7 +662,7 @@ else:
                         # Apply rotation to model group around BASE location
                         total_rotation = rot_deg + offset_rotation_deg
                         if abs(total_rotation) > 1e-6:
-                            angle_radians = math.radians(rot_deg)
+                            angle_radians = math.radians(total_rotation)
                             axis = Line.CreateBound(loc, loc + XYZ(0, 0, 1))  # loc is BASE
                             ElementTransformUtils.RotateElement(doc, model_group_instance.Id, axis, angle_radians)
 
@@ -875,7 +875,7 @@ else:
 
                             # Apply rotation around BASE location (not offset location)
                             total_rotation = rot_deg + offset_rotation_deg
-                            if abs(rot_deg) > 1e-6:
+                            if abs(total_rotation) > 1e-6:
                                 try:
                                     angle_radians = math.radians(total_rotation)
                                     axis = Line.CreateBound(loc, loc + XYZ(0, 0, 1))  # loc is BASE

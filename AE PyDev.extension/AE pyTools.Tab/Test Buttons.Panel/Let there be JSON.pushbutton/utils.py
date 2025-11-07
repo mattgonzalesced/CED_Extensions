@@ -141,7 +141,7 @@ def read_matchings_json(json_path):
                                     offset_y = float(offset_data.get("y", 0.0))
                                     offset_z = float(offset_data.get("z", 0.0))
                                     offset_rotation = float(offset_data.get("r", 0.0))
-                                    offsets_dict.setdefault(cad_name, {}).setdefault(label, []).append({"x": offset_x, "y": offset_y, "z": offset_z})
+                                    offsets_dict.setdefault(cad_name, {}).setdefault(label, []).append({"x": offset_x, "y": offset_y, "z": offset_z, "r" : offset_rotation})
                                 except (ValueError, TypeError):
                                     # If conversion fails, just skip (defaults to no offset)
                                     pass

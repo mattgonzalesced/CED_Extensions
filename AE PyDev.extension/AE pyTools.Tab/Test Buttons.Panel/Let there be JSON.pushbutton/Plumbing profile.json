@@ -24,7 +24,10 @@
             {
                 "P_Commercial Water Closet": {
                     "None": {
-                        "PARAMETERS": {}
+                        "PARAMETERS": {},
+                        "OFFSET" : {
+                            "r" : 90
+                        }
                     }
                 }
             }
@@ -88,7 +91,10 @@
             {
                 "P_Commercial Urinal": {
                     "None": {
-                        "PARAMETERS": {}
+                        "PARAMETERS": {},
+                        "OFFSET" : {
+                            "r" : 90
+                        }
                     }
                 }
             }
