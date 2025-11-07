@@ -1174,6 +1174,10 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "TMAX RECEPT",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : 8,
+                            "y" : 8
                         }
                     }
                 }
@@ -1195,8 +1199,8 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 0,
-                            "y" : -10
+                            "x" : 5,
+                            "y" : 0
                         }
                     }
                 }
@@ -1218,8 +1222,8 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 0,
-                            "y" : -20
+                            "x" : -4,
+                            "y" : -26
                         }
                     }
                 }
@@ -1241,8 +1245,8 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 0,
-                            "y" : -30
+                            "x" : 8,
+                            "y" : -128
                         }
                     }
                 }
@@ -1264,8 +1268,8 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 0,
-                            "y" : -40
+                            "x" : 5,
+                            "y" : -120
                         }
                     }
                 }
@@ -1287,8 +1291,8 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 0,
-                            "y" : -50
+                            "x" : -4,
+                            "y" : -94
                         }
                     }
                 }

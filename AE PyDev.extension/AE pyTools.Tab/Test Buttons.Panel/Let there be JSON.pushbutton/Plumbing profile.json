@@ -630,12 +630,30 @@
             {
                 "P_Shower Rough-In": {
                     "None": {
+                        "PARAMETERS": {},
+                        "OFFSET" :{
+                            "x" : 12,
+                            "y" : 108
+                        }
+                    }
+                },
+                "P_Shower Rough-In 2": {
+                    "None": {
+                        "PARAMETERS": {},
+                        "OFFSET" :{
+                            "x" : -94,
+                            "y" : 108
+                        }
+                    }
+                },
+                "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
+                    "None": {
                         "PARAMETERS": {}
                     }
                 }
-            }
+            } 
         ],
-        "Notes": "Shower 1"
+        "Notes": "Showers"
     },
     "Room Name 103C TANNING": {
        "Generic_Annotations" : [
@@ -817,13 +835,38 @@
         "Model": [
             {
                 "P_Shower Rough-In": {
-                    "P_default": {
+                    "None": {
+                        "PARAMETERS": {},
+                        "OFFSET" :{
+                            "x" : 12,
+                            "y" : -108
+                        }
+                    },
+                    "Type1": {
+                        "PARAMETERS": {},
+                        "OFFSET" :{
+                            "x" : -30,
+                            "y" : -60
+                        }
+                    }
+                },
+                "P_Shower Rough-In 2": {
+                    "None": {
+                        "PARAMETERS": {},
+                        "OFFSET" :{
+                            "x" : -94,
+                            "y" : -108
+                        }
+                    }
+                },
+                "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
+                    "None": {
                         "PARAMETERS": {}
                     }
                 }
             }
         ],
-        "Notes": "Shower 2"
+        "Notes": "Showers"
     },
     "Room Name 104C JAN.": {
        "Generic_Annotations" : [
