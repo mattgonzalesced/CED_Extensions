@@ -831,28 +831,36 @@
                 "P_Shower Rough-In": {
                     "None": {
                         "PARAMETERS": {},
-                        "OFFSET" :{
-                            "x" : 12,
-                            "y" : -108
-                        }
-                    },
-                    "Type1": {
-                        "PARAMETERS": {},
-                        "OFFSET" :{
-                            "x" : -30,
-                            "y" : -60
+                        "OFFSET": {
+                            "x": 12,
+                            "y": -108
                         }
                     }
-                },
+                }
+            },
+            {
+                "P_Shower Rough-In": {
+                    "None": {
+                        "PARAMETERS": {},
+                        "OFFSET": {
+                            "x": 0,
+                            "y": 0
+                        }
+                    }
+                }
+            },
+            {
                 "P_Shower Rough-In 2": {
                     "None": {
                         "PARAMETERS": {},
-                        "OFFSET" :{
-                            "x" : -94,
-                            "y" : -108
+                        "OFFSET": {
+                            "x": -94,
+                            "y": -108
                         }
                     }
-                },
+                }
+            },
+            {
                 "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
                     "None": {
                         "PARAMETERS": {}
