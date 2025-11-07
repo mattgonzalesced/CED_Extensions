@@ -116,13 +116,14 @@ class CircuitBranch(object):
     #------------Prevent Ridiculous User Overrides------------
     @property
     def reasonable_user_overrides(self):
-        reasonable = True
 
+
+        reasonable = True 
         if self._wire_sets_override and isinstance(self._wire_sets_override, int):
             if self._wire_sets_override < 1 or self._wire_sets_override > 7:
-                self.log_warning("Unreasonable wire sets override: {}. Resetting to None.".format(
+                self.log_warning("Unreasonable wire sets override: {}. Resetting to 1.".format(
                     self._wire_sets_override))
-                self._wire_sets_override = None
+                self._wire_sets_override = 1
                 reasonable = False
         else:
             self._wire_sets_override = None
@@ -130,74 +131,72 @@ class CircuitBranch(object):
 
         if self._wire_material_override:
             if self._wire_material_override not in WIRE_AMPACITY_TABLE.keys():
-                self.log_warning("Unreasonable wire material override: {}. Resetting to None.".format(
+                self.log_warning("Unreasonable wire material override: {}. Resetting to CU.".format(
                     self._wire_material_override))
-                self._wire_material_override = None
+                self._wire_material_override = "CU"
                 reasonable = False
 
         if self._wire_temp_rating_override:
             try:
                 temp = int(str(self._wire_temp_rating_override).replace('C', '').strip())
                 if temp not in [60, 75, 90]:
-                    self.log_warning("Unreasonable wire temperature rating override: {}. Resetting to None.".format(
+                    self.log_warning("Unreasonable wire temperature rating override: {}. Resetting to 75 C.".format(
                         self._wire_temp_rating_override))
-                    self._wire_temp_rating_override = None
+                    self._wire_temp_rating_override = "75 C"
                     reasonable = False
             except Exception as e:
-                self.log_warning("Invalid wire temperature rating override: {}. Resetting to None.".format(
+                self.log_warning("Invalid wire temperature rating override: {}. Resetting to 75 C.".format(
                     self._wire_temp_rating_override))
-                self._wire_temp_rating_override = None
+                self._wire_temp_rating_override = "75 C"
                 reasonable = False
 
         if self._wire_insulation_override:
             # For simplicity, just check if it's a non-empty string
             if not isinstance(self._wire_insulation_override, str) or not self._wire_insulation_override.strip():
-                self.log_warning("Unreasonable wire insulation override: {}. Resetting to None.".format(
+                self.log_warning("Unreasonable wire insulation override: {}. Resetting to THWN.".format(
                     self._wire_insulation_override))
-                self._wire_insulation_override = None
+                self._wire_insulation_override = "THWN"
                 reasonable = False
 
         if self._wire_hot_size_override:
             normalized = self._normalize_wire_size(self._wire_hot_size_override)
             if normalized not in CONDUCTOR_AREA_TABLE.keys():
-                self.log_warning("Unreasonable hot wire size override: {}. Resetting to None.".format(
+                self.log_warning("Unreasonable hot wire size override: {}. Resetting to Calculated.".format(
                     self._wire_hot_size_override))
-                self._wire_hot_size_override = None
+                self._wire_hot_size_override = self._calculated_hot_wire
                 reasonable = False 
 
         if self._wire_neutral_size_override:
             normalized = self._normalize_wire_size(self._wire_neutral_size_override)
             if normalized not in CONDUCTOR_AREA_TABLE.keys():
-                self.log_warning("Unreasonable neutral wire size override: {}. Resetting to None.".format(
+                self.log_warning("Unreasonable neutral wire size override: {}. Resetting to Calculated.".format(
                     self._wire_neutral_size_override))
-                self._wire_neutral_size_override = None
+                self._wire_neutral_size_override = self._calculated_hot_wire
                 reasonable = False
-        
+            
         if self._wire_ground_size_override:
             normalized = self._normalize_wire_size(self._wire_ground_size_override)
             if normalized not in CONDUCTOR_AREA_TABLE.keys():
-                self.log_warning("Unreasonable ground wire size override: {}. Resetting to None.".format(
+                self.log_warning("Unreasonable ground wire size override: {}. Resetting to Calculated.".format(
                     self._wire_ground_size_override))
-                self._wire_ground_size_override = None
+                self._wire_ground_size_override = self._calculated_ground_wire
                 reasonable = False
-        
+            
         if self._conduit_type_override:
             contype = self._conduit_type_override
             if contype not in CONDUIT_AREA_TABLE['Magnetic'].keys() and contype not in CONDUIT_AREA_TABLE['Non-Magnetic'].keys():
-                self.log_warning("Unreasonable conduit type override: {}. Resetting to None.".format(
+                self.log_warning("Unreasonable conduit type override: {}. Resetting to EMT.".format(
                     self._conduit_type_override))
-                self._conduit_type_override = None
+                self._conduit_type_override = "EMT"
                 reasonable = False
 
         if self._conduit_size_override:
             size = str(self._conduit_size_override).replace('C', '').strip()
             if size not in CONDUIT_SIZE_INDEX:
-                self.log_warning("Unreasonable conduit size override: {}. Resetting to None.".format(
+                self.log_warning("Unreasonable conduit size override: {}. Resetting to Calculated.".format(
                     self._conduit_size_override))
-                self._conduit_size_override = None
+                self._conduit_size_override = self._calculated_conduit_size
                 reasonable = False
-
-        
         return reasonable
 
     @property
