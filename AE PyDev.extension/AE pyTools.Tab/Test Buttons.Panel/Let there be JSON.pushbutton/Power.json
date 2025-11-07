@@ -850,7 +850,7 @@
         "Electrical_Fixture": [
             {
                 "EF-U_Receptacle_CED": {
-                    "Specialty Wall - 208V/1Ph": {
+                    "Specialty Wall - 240V/1Ph": {
                         "PARAMETERS": {
                             "dev-Group ID": "HM63C (Hydromassage)",
                             "FLA Input_CED": "0",
@@ -1522,7 +1522,7 @@
     "Room Name 108 CARDIO": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1531,21 +1531,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 109 CIRCUIT": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1554,21 +1566,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 105C JAN.": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1577,21 +1601,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 105D STORAGE": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1600,21 +1636,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 107 MOBILITY ROOM FUNCTIONAL TRAINING/": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1623,21 +1671,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 106 UTILITY/STORAGE": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1646,21 +1706,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 111 FREE WEIGHTS": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1669,21 +1741,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 105 LOCKER ROOM MEN'S": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1692,21 +1776,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 105A TOILET": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1715,21 +1811,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 110 STRENGTH": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1738,21 +1846,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 100 VESTIBULE": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1761,21 +1881,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 101A BREAK ROOM EMPLOYEE": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1784,21 +1916,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 101B ROOM IT": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1807,21 +1951,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 101 RECEPTION": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1830,21 +1986,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 102 CHECK-IN": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1853,21 +2021,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 103 CARD SPA BLACK": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1876,21 +2056,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 103B ANGEL BEAUTY": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1899,21 +2091,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 105B SHOWER": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1922,21 +2126,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 103C TANNING": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1945,21 +2161,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 103E TANNING": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1968,21 +2196,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 103F TANNING": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -1991,21 +2231,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 103G TANNING": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -2014,21 +2266,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 103A HYDROMASSAGE": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -2037,21 +2301,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 104 LOCKER ROOM WOMEN'S": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -2060,21 +2336,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 104B SHOWER": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -2083,21 +2371,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 104A TOILET": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -2106,21 +2406,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 104D STORAGE": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -2129,21 +2441,33 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     },
     "Room Name 103D HYBRID": {
        "Generic_Annotations" : [
             {
-                "_skip Manual Key Note- All Shapes": {
+                "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
@@ -2152,15 +2476,27 @@
                 }
             }
         ],
-        "Model_Groups": [
+        "Electrical_Fixture": [
             {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
                     }
                 }
             }
         ],
-        "Notes": "EX'G WALL TOILET"
+        "Notes": "ROOM"
     }
 }
