@@ -850,7 +850,7 @@
         "Electrical_Fixture": [
             {
                 "EF-U_Receptacle_CED": {
-                    "Specialty Wall - 208V/1Ph": {
+                    "Specialty Wall - 240V/1Ph": {
                         "PARAMETERS": {
                             "dev-Group ID": "HM63C (Hydromassage)",
                             "FLA Input_CED": "0",
