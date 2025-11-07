@@ -23,10 +23,10 @@
         "Model": [
             {
                 "P_Commercial Water Closet": {
-                    "P_default": {
+                    "P_Default": {
                         "PARAMETERS": {},
                         "OFFSET" : {
-                            "r" : 90
+                            "r" : 270
                         }
                     }
                 }
@@ -58,7 +58,7 @@
         "Model": [
             {
                 "P_Commercial Lavatory ADA": {
-                    "P_default": {
+                    "P_Default": {
                         "PARAMETERS": {}
                     }
                 }
@@ -90,10 +90,10 @@
         "Model": [
             {
                 "P_Commercial Urinal": {
-                    "P_default": {
+                    "P_Default": {
                         "PARAMETERS": {},
                         "OFFSET" : {
-                            "r" : 90
+                            "r" : 270
                         }
                     }
                 }
@@ -125,7 +125,7 @@
         "Model": [
             {
                 "P_Sink Fixture - Janitorial, Vertical": {
-                    "P_default": {
+                    "P_Default": {
                         "PARAMETERS": {}
                     }
                 }
@@ -157,7 +157,7 @@
         "Model": [
             {
                 "P_Electric Water Cooler - Dual Height": {
-                    "P_default": {
+                    "P_Default": {
                         "PARAMETERS": {}
                     }
                 }
@@ -169,7 +169,7 @@
         "Model": [
             {
                 "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
-                    "P_default": {
+                    "P_Default": {
                         "PARAMETERS": {}
                     }
                 }
@@ -181,7 +181,7 @@
         "Model group": [
             {
                 "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
-                    "P_default": {
+                    "P_Default": {
                         "PARAMETERS": {}
                     }
                 }
@@ -268,7 +268,7 @@
         "Model": [
             {
                 "P_Electric Water Heater on Floor": {
-                    "P_default": {
+                    "P_Default": {
                         "PARAMETERS": {}
                     }
                 }
@@ -395,7 +395,7 @@
        "Model group": [
             {
                 "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
-                    "P_default": {
+                    "P_Default": {
                         "PARAMETERS": {}
                     }
                 }
@@ -629,7 +629,7 @@
         "Model": [
             {
                 "P_Shower Rough-In": {
-                    "P_default": {
+                    "P_Default": {
                         "PARAMETERS": {},
                         "OFFSET" :{
                             "x" : 12,
@@ -638,7 +638,7 @@
                     }
                 },
                 "P_Shower Rough-In 2": {
-                    "P_default": {
+                    "P_Default": {
                         "PARAMETERS": {},
                         "OFFSET" :{
                             "x" : -94,
@@ -647,7 +647,7 @@
                     }
                 },
                 "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
-                    "P_default": {
+                    "P_Default": {
                         "PARAMETERS": {}
                     }
                 }
@@ -835,23 +835,25 @@
         "Model": [
             {
                 "P_Shower Rough-In": {
-                    "P_default": {
+                    "P_Default": {
                         "PARAMETERS": {},
                         "OFFSET" :{
                             "x" : 12,
                             "y" : -108
                         }
-                    },
-                    "Type1": {
+                    }
+                },
+                "P_Shower Rough-In": {
+                    "P_Default": {
                         "PARAMETERS": {},
                         "OFFSET" :{
-                            "x" : -30,
-                            "y" : -60
+                            "x" : -94,
+                            "y" : -108
                         }
                     }
                 },
                 "P_Shower Rough-In 2": {
-                    "P_default": {
+                    "P_Default": {
                         "PARAMETERS": {},
                         "OFFSET" :{
                             "x" : -94,
@@ -860,7 +862,7 @@
                     }
                 },
                 "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
-                    "P_default": {
+                    "P_Default": {
                         "PARAMETERS": {}
                     }
                 }
@@ -901,7 +903,7 @@
         "Model": [
             {
                 "P_Electric Water Heater on Floor": {
-                    "P_default": {
+                    "P_Default": {
                         "PARAMETERS": {}
                     }
                 }
@@ -913,7 +915,7 @@
        "Model group": [
             {
                 "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
-                    "P_default": {
+                    "P_Default": {
                         "PARAMETERS": {}
                     }
                 }

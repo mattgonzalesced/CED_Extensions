@@ -130,12 +130,13 @@ def read_matchings_json(json_path):
                     for type_name, type_data in types_dict.items():
                         # Check if this is a Model Group (accept both "Model_Groups" and "Model")
                         if category_name in ["Model_Groups", "Model"]:
-                            # For model groups, use "None : ModelGroupName" format to match organize_model_groups
+                            # For model groups, type_name is the detail group selection (e.g. "P_Default" or "None")
                             # The family_name is the actual model group name
-                            label = "None : {}".format(family_name)
+                            # Create label as "DetailGroup : ModelGroup" to match organize_model_groups
+                            label = "{} : {}".format(type_name, family_name)
                             groups.append(label)
                             # DEBUG: Show Model_Groups processing
-                            print("DEBUG JSON: Found Model_Group: '{}' (type: '{}')".format(family_name, type_name))
+                            print("DEBUG JSON: Found Model_Group: '{}' with detail group: '{}'".format(family_name, type_name))
                             print("  Full label for UI: '{}'".format(label))
                         else:
                             # For families, use "Type : Family" format
