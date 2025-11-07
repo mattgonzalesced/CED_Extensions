@@ -1995,7 +1995,102 @@
                 "EF-U_Receptacle_CED": {
                     "Duplex Wall": {
                         "PARAMETERS": {
-                            "dev-Group ID": "ROOM: ",
+                            "dev-Group ID": "ROOM: RECEPTION ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: RECEPTION ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: RECEPTION ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: RECEPTION ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: RECEPTION ",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1000",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "ROOM: RECEPTION ",
                             "FLA Input_CED": "0",
                             "Apparent Load Input_CED" : "1000",
                             "Load Classification_CED": "NC",
@@ -2011,7 +2106,7 @@
                 }
             }
         ],
-        "Notes": "ROOM"
+        "Notes": "ROOM: RECEPTION"
     },
     "Room Name 102 CHECK-IN": {
        "Generic_Annotations" : [

@@ -613,6 +613,12 @@ else:
                         from Autodesk.Revit.DB import Element
                         model_group_type, detail_group_type = actual_item
 
+                        print("\n=== PROCESSING MODEL GROUP PLACEMENT ===")
+                        print("CAD block: '{}'".format(cad_name))
+                        print("Label from UI: '{}'".format(label_from_ui if label_from_ui else "None"))
+                        print("Model group type ID: {}".format(model_group_type.Id if model_group_type else "None"))
+                        print("Detail group type ID: {}".format(detail_group_type.Id if detail_group_type else "None"))
+
                         # Use label from UI if available, otherwise find it
                         if label_from_ui:
                             group_label = label_from_ui
@@ -659,6 +665,25 @@ else:
                         ## print("DEBUG: Placing model group '{}' at offset location {}".format(model_group_name, offset_loc))
                         model_group_instance = doc.Create.PlaceGroup(offset_loc, model_group_type)
 
+                        # DEBUG: Check what detail groups are actually available for this placed instance
+                        print("\n=== CHECKING AVAILABLE DETAIL GROUPS ===")
+                        print("Model group: '{}' (Type ID: {})".format(model_group_name, model_group_type.Id))
+                        try:
+                            available_detail_ids = model_group_instance.GetAvailableAttachedDetailGroupTypeIds()
+                            print("GetAvailableAttachedDetailGroupTypeIds returned {} detail groups".format(len(available_detail_ids)))
+
+                            if available_detail_ids:
+                                print("Available attached detail groups:")
+                                for detail_id in available_detail_ids:
+                                    detail_type = doc.GetElement(detail_id)
+                                    if detail_type:
+                                        detail_name = Element.Name.__get__(detail_type)
+                                        print("  - '{}' (ID: {})".format(detail_name, detail_id))
+                            else:
+                                print("NO attached detail groups available for this model group")
+                        except Exception as ex:
+                            print("ERROR getting available detail groups: {}".format(ex))
+
                         # Apply rotation to model group around BASE location
                         total_rotation = rot_deg + offset_rotation_deg
                         if abs(total_rotation) > 1e-6:
@@ -669,21 +694,24 @@ else:
                         # Show the detail group in the active view if specified
                         if detail_group_type:
                             detail_group_name = Element.Name.__get__(detail_group_type)
-                            try:
-                                # Get available attached detail group type IDs for this model group
-                                available_detail_ids = model_group_instance.GetAvailableAttachedDetailGroupTypeIds()
+                            print("\n=== DETAIL GROUP ATTACHMENT ===")
+                            print("Model group: '{}' (ID: {})".format(model_group_name, model_group_instance.Id))
+                            print("Detail group to attach: '{}' (ID: {})".format(detail_group_name, detail_group_type.Id))
 
-                                # Check if the requested detail group is available
-                                if detail_group_type.Id in available_detail_ids:
-                                    # Show the detail group in the active view
-                                    model_group_instance.ShowAttachedDetailGroups(doc.ActiveView, detail_group_type.Id)
-                                    ## print("DEBUG: Showed attached detail group '{}' in active view".format(detail_group_name))
-                                else:
-                                    # print("WARNING: Detail group '{}' is not attached to model group '{}'. Available detail groups: {}".format(detail_group_name, model_group_name, len(available_detail_ids)))
-                                    pass
+                            try:
+                                # Direct approach like wmlib.py - just try to show the detail group
+                                # It will only work if the detail group is pre-attached in the Group Editor
+                                model_group_instance.ShowAttachedDetailGroups(doc.ActiveView, detail_group_type.Id)
+                                print("SUCCESS: Attached detail group '{}' to model group '{}'".format(
+                                    detail_group_name, model_group_name))
                             except Exception as ex:
-                                # print("ERROR: Failed to show detail group '{}': {}".format(detail_group_name, ex))
-                                pass
+                                # This is expected if the detail group isn't pre-attached in the Group Editor
+                                if "is not attached" in str(ex) or "not available" in str(ex):
+                                    print("INFO: Detail group '{}' is not attached to model group '{}' in the Group Editor".format(
+                                        detail_group_name, model_group_name))
+                                    print("      To fix: Edit the model group and attach the detail group in the Group Editor")
+                                else:
+                                    print("ERROR: Failed to attach detail group: {}".format(ex))
 
                     else:
                         # This is a FamilySymbol (existing logic)

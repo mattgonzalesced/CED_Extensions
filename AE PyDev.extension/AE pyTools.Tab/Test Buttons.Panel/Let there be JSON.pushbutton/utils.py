@@ -121,15 +121,25 @@ def read_matchings_json(json_path):
             for fixture_obj in category_data:
                 # fixture_obj is a dict with one key (the family name)
                 for family_name, types_dict in fixture_obj.items():
+                    # Skip entries with "_skip" prefix
+                    if family_name.startswith("_skip"):
+                        print("DEBUG: Skipping entry with '_skip' prefix: '{}'".format(family_name))
+                        continue
+
                     # types_dict contains type names as keys
                     for type_name, type_data in types_dict.items():
-                        # Construct the label in "Type : Family" format
-                        label = "{} : {}".format(type_name, family_name)
-
-                        # Check if this is a Model Group
-                        if category_name == "Model_Groups":
+                        # Check if this is a Model Group (accept both "Model_Groups" and "Model")
+                        if category_name in ["Model_Groups", "Model"]:
+                            # For model groups, use "None : ModelGroupName" format to match organize_model_groups
+                            # The family_name is the actual model group name
+                            label = "None : {}".format(family_name)
                             groups.append(label)
+                            # DEBUG: Show Model_Groups processing
+                            print("DEBUG JSON: Found Model_Group: '{}' (type: '{}')".format(family_name, type_name))
+                            print("  Full label for UI: '{}'".format(label))
                         else:
+                            # For families, use "Type : Family" format
+                            label = "{} : {}".format(type_name, family_name)
                             families.append(label)
 
                         # Extract OFFSET if it exists
@@ -154,10 +164,10 @@ def read_matchings_json(json_path):
         # Store results
         if families:
             matchings_dict[cad_name] = families
-            #print("DEBUG JSON: CAD block '{}' has {} families: {}".format(cad_name, len(families), families[:2]))
+            print("DEBUG JSON: CAD block '{}' has {} families: {}".format(cad_name, len(families), families[:2]))
         if groups:
             groups_dict[cad_name] = groups
-            #print("DEBUG JSON: CAD block '{}' has {} groups: {}".format(cad_name, len(groups), groups[:2]))
+            print("DEBUG JSON: CAD block '{}' has {} model groups: {}".format(cad_name, len(groups), groups))
     
 
     return matchings_dict, groups_dict, parameters_dict, offsets_dict
@@ -230,7 +240,7 @@ def determine_family_category(family, symbols_by_category):
 
 def organize_model_groups(doc):
     """Organize model groups and their attached detail groups."""
-    from Autodesk.Revit.DB import FilteredElementCollector, BuiltInCategory, Element
+    from Autodesk.Revit.DB import FilteredElementCollector, BuiltInCategory, Element, BuiltInParameter
 
     # Collect model groups using the correct category filter
     model_groups = FilteredElementCollector(doc) \
@@ -238,33 +248,16 @@ def organize_model_groups(doc):
         .WhereElementIsElementType() \
         .ToElements()
 
-    # Collect detail groups using the correct category filter
-    detail_groups = FilteredElementCollector(doc) \
-        .OfCategory(BuiltInCategory.OST_IOSDetailGroups) \
-        .WhereElementIsElementType() \
-        .ToElements()
-
     group_label_map = {}  # "DetailGroup : ModelGroup" -> (model_group_type, detail_group_type) OR "None : ModelGroup" -> (model_group_type, None)
     details_by_model_group = {}  # "ModelGroup" -> ["DetailGroup1", "DetailGroup2", "None"]
     model_group_names = []  # List of all model group names
-    detail_groups_dict = {}  # Store detail groups by name for lookup
 
-    # Process detail groups
-    for detail_group_type in detail_groups:
-        try:
-            detail_name = Element.Name.__get__(detail_group_type)
-            detail_groups_dict[detail_group_type.Id] = detail_group_type
-            #print("DEBUG: Found detail group: '{}'".format(detail_name))
-        except Exception as ex:
-            #print("DEBUG: Error processing detail group: {}".format(ex))
-            continue
+    print("\n=== FINDING ATTACHED DETAIL GROUPS FROM MODEL GROUP TYPES ===")
 
-    # Now organize model groups and find their attached detail groups
+    # Now organize model groups and get their attached detail groups directly from the TYPE
     for model_group_type in model_groups:
         try:
             model_group_name = Element.Name.__get__(model_group_type)
-            #print("DEBUG: Found model group: '{}'".format(model_group_name))
-
             model_group_names.append(model_group_name)
 
             # Initialize with "None" option (no detail group)
@@ -274,20 +267,32 @@ def organize_model_groups(doc):
             label_none = "None : {}".format(model_group_name)
             group_label_map[label_none] = (model_group_type, None)
 
-            # Try to find attached detail groups
-            # Note: In Revit, detail groups are typically placed separately and associated through naming or manual linking
-            # We'll make all detail groups available for all model groups
-            for detail_id, detail_group_type in detail_groups_dict.items():
-                # Get detail group name using Element.Name
-                detail_name = Element.Name.__get__(detail_group_type)
+            # Get attached detail group types directly from the model group TYPE
+            try:
+                available_detail_ids = model_group_type.GetAvailableAttachedDetailGroupTypeIds()
 
-                # Create label for this combination
-                label = "{} : {}".format(detail_name, model_group_name)
-                group_label_map[label] = (model_group_type, detail_group_type)
+                if available_detail_ids and len(available_detail_ids) > 0:
+                    print("Model group '{}' has {} attached detail groups".format(
+                        model_group_name, len(available_detail_ids)))
 
-                # Add to the list of available details for this model group
-                if detail_name not in details_by_model_group[model_group_name]:
-                    details_by_model_group[model_group_name].append(detail_name)
+                    for detail_id in available_detail_ids:
+                        detail_type = doc.GetElement(detail_id)
+                        if detail_type:
+                            detail_name = Element.Name.__get__(detail_type)
+
+                            # Create label for this combination
+                            label = "{} : {}".format(detail_name, model_group_name)
+                            group_label_map[label] = (model_group_type, detail_type)
+
+                            # Add to the list of available details for this model group
+                            if detail_name not in details_by_model_group[model_group_name]:
+                                details_by_model_group[model_group_name].append(detail_name)
+                                print("  - Added detail option: '{}'".format(detail_name))
+                else:
+                    print("Model group '{}' has NO attached detail groups".format(model_group_name))
+            except Exception as ex:
+                print("Error getting attached details for '{}': {}".format(model_group_name, ex))
+                print("Model group '{}' has NO attached detail groups".format(model_group_name))
         except Exception as ex:
             #print("DEBUG: Error organizing model group: {}".format(ex))
             continue
@@ -297,8 +302,10 @@ def organize_model_groups(doc):
     for model_group in details_by_model_group:
         details_by_model_group[model_group].sort()
 
-    #print("DEBUG: Found {} model groups".format(len(model_group_names)))
-    for mg_name in model_group_names:
-        print("DEBUG: Model group '{}' has {} detail options".format(mg_name, len(details_by_model_group[mg_name])))
+    print("\n=== MODEL GROUPS AND THEIR ATTACHED DETAIL GROUPS ===")
+    print("Found {} model groups total".format(len(model_group_names)))
+    groups_with_details = sum(1 for mg in details_by_model_group if len(details_by_model_group[mg]) > 1)
+    print("Groups with attached detail groups: {}".format(groups_with_details))
+    print("Groups without attached detail groups: {}".format(len(model_group_names) - groups_with_details))
 
     return group_label_map, details_by_model_group, model_group_names
