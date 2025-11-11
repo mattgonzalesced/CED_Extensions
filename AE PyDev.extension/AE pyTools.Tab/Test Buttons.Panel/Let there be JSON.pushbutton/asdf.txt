@@ -1,5721 +1,1539 @@
-﻿
+﻿﻿
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG JSON: Found Model_Group: 'P_Commercial Urinal' (type: 'P_default')
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+Full label for UI: 'None : P_Commercial Urinal'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG JSON: CAD block 'NEW URINAL' has 2 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+DEBUG JSON: CAD block 'NEW URINAL' has 1 model groups: ['None : P_Commercial Urinal']
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG JSON: Found Model_Group: 'P_Shower Rough-In 2' (type: 'P_default')
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+Full label for UI: 'None : P_Shower Rough-In 2'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG JSON: Found Model_Group: 'P_2 inch (50) Floor Drain, Horizontal with Trap Primer' (type: 'P_default')
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+Full label for UI: 'None : P_2 inch (50) Floor Drain, Horizontal with Trap Primer'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG JSON: Found Model_Group: 'P_Shower Rough-In' (type: 'Type1')
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+Full label for UI: 'None : P_Shower Rough-In'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG JSON: Found Model_Group: 'P_Shower Rough-In' (type: 'P_default')
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+Full label for UI: 'None : P_Shower Rough-In'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG JSON: CAD block 'Room Name 104B SHOWER' has 4 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+DEBUG JSON: CAD block 'Room Name 104B SHOWER' has 4 model groups: ['None : P_Shower Rough-In 2', 'None : P_2 inch (50) Floor Drain, Horizontal with Trap Primer', 'None : P_Shower Rough-In', 'None : P_Shower Rough-In']
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG JSON: Found Model_Group: 'P_Commercial Water Closet' (type: 'P_default')
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+Full label for UI: 'None : P_Commercial Water Closet'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG JSON: CAD block 'EX'G WALL TOILET' has 2 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+DEBUG JSON: CAD block 'EX'G WALL TOILET' has 1 model groups: ['None : P_Commercial Water Closet']
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-DEBUG JSON: Found Model_Group: '_skip P_Commercial Water Closet' -> 'P_Default'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-Full label: 'P_Default : _skip P_Commercial Water Closet'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-DEBUG: Model group 'P_2 inch (50) Floor Drain, Horizontal DWV' has 17 detail options
+DEBUG JSON: Found Model_Group: 'P_Electric Water Heater on Floor' (type: 'P_default')
 
 
 
-- Detail option: 'E_Lighting General Notes'
+Full label for UI: 'None : P_Electric Water Heater on Floor'
 
 
 
-- Detail option: 'E_Power General Notes'
+DEBUG JSON: CAD block 'Room Name 105C JAN.' has 3 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
 
 
 
-- Detail option: 'E_Systems General Notes'
+DEBUG JSON: CAD block 'Room Name 105C JAN.' has 1 model groups: ['None : P_Electric Water Heater on Floor']
 
 
 
-- Detail option: 'FA_General Notes'
+DEBUG JSON: CAD block 'Room Name 104A TOILET' has 1 families: ['P_default : P_2 inch (50) Floor Drain, Horizontal with Trap Primer']
 
 
 
-- Detail option: 'F_General Notes'
+DEBUG JSON: Found Model_Group: 'P_Electric Water Heater on Floor' (type: 'P_default')
 
 
 
-- Detail option: 'Group 1'
+Full label for UI: 'None : P_Electric Water Heater on Floor'
 
 
 
-- Detail option: 'M_General Notes'
+DEBUG JSON: CAD block 'Room Name 104C JAN.' has 3 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
 
 
 
-- Detail option: 'None'
+DEBUG JSON: CAD block 'Room Name 104C JAN.' has 1 model groups: ['None : P_Electric Water Heater on Floor']
 
 
 
-- Detail option: 'P_General Notes'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-- Detail option: 'R_General Notes'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
+DEBUG JSON: Found Model_Group: 'P_Electric Water Cooler - Dual Height' (type: 'P_default')
 
 
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
+Full label for UI: 'None : P_Electric Water Cooler - Dual Height'
 
 
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
+DEBUG JSON: CAD block 'EX'G ADA DF' has 2 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
 
 
 
-- Detail option: 'Speaker Symbol'
+DEBUG JSON: CAD block 'EX'G ADA DF' has 1 model groups: ['None : P_Electric Water Cooler - Dual Height']
 
 
 
-- Detail option: 'TV Symbol'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-DEBUG: Model group 'P_2 inch (50) Floor Drain, Horizontal with Trap Primer' has 17 detail options
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-- Detail option: 'E_Lighting General Notes'
+DEBUG JSON: Found Model_Group: 'P_2 inch (50) Floor Drain, Horizontal with Trap Primer' (type: 'P_default')
 
 
 
-- Detail option: 'E_Power General Notes'
+Full label for UI: 'None : P_2 inch (50) Floor Drain, Horizontal with Trap Primer'
 
 
 
-- Detail option: 'E_Systems General Notes'
+DEBUG JSON: CAD block 'Floor Drain 1' has 1 model groups: ['None : P_2 inch (50) Floor Drain, Horizontal with Trap Primer']
 
 
 
-- Detail option: 'FA_General Notes'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-- Detail option: 'F_General Notes'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-- Detail option: 'Group 1'
+DEBUG JSON: CAD block 'Floor Drain 2' has 1 families: ['P_default : P_2 inch (50) Floor Drain, Horizontal with Trap Primer']
 
 
 
-- Detail option: 'M_General Notes'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-- Detail option: 'None'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-- Detail option: 'P_General Notes'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-- Detail option: 'R_General Notes'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
+DEBUG JSON: Found Model_Group: 'P_Shower Rough-In 2' (type: 'P_default')
 
 
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
+Full label for UI: 'None : P_Shower Rough-In 2'
 
 
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
+DEBUG JSON: Found Model_Group: 'P_2 inch (50) Floor Drain, Horizontal with Trap Primer' (type: 'P_default')
 
 
 
-- Detail option: 'Speaker Symbol'
+Full label for UI: 'None : P_2 inch (50) Floor Drain, Horizontal with Trap Primer'
 
 
 
-- Detail option: 'TV Symbol'
+DEBUG JSON: Found Model_Group: 'P_Shower Rough-In' (type: 'P_default')
 
 
 
-DEBUG: Model group 'P_2 inch (50) Floor Drain, Vertical DWV' has 17 detail options
+Full label for UI: 'None : P_Shower Rough-In'
 
 
 
-- Detail option: 'E_Lighting General Notes'
+DEBUG JSON: CAD block 'Room Name 105B SHOWER' has 4 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
 
 
 
-- Detail option: 'E_Power General Notes'
+DEBUG JSON: CAD block 'Room Name 105B SHOWER' has 3 model groups: ['None : P_Shower Rough-In 2', 'None : P_2 inch (50) Floor Drain, Horizontal with Trap Primer', 'None : P_Shower Rough-In']
 
 
 
-- Detail option: 'E_Systems General Notes'
+DEBUG JSON: Found Model_Group: 'P_Sink Fixture - Janitorial, Vertical' (type: 'P_default')
 
 
 
-- Detail option: 'FA_General Notes'
+Full label for UI: 'None : P_Sink Fixture - Janitorial, Vertical'
 
 
 
-- Detail option: 'F_General Notes'
+DEBUG JSON: CAD block 'EX'G MOPSINK' has 2 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
 
 
 
-- Detail option: 'Group 1'
+DEBUG JSON: CAD block 'EX'G MOPSINK' has 1 model groups: ['None : P_Sink Fixture - Janitorial, Vertical']
 
 
 
-- Detail option: 'M_General Notes'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-- Detail option: 'None'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-- Detail option: 'P_General Notes'
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
 
 
 
-- Detail option: 'R_General Notes'
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
 
 
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
+DEBUG JSON: CAD block 'Room Name 105A TOILET' has 1 families: ['P_default : P_2 inch (50) Floor Drain, Horizontal with Trap Primer']
 
 
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
+DEBUG JSON: Found Model_Group: 'P_Commercial Lavatory ADA' (type: 'none')
 
 
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
+Full label for UI: 'None : P_Commercial Lavatory ADA'
 
 
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
+DEBUG JSON: CAD block 'Locker-Sink-Sloan-Trough-Enclosure' has 2 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
 
 
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
+DEBUG JSON: CAD block 'Locker-Sink-Sloan-Trough-Enclosure' has 1 model groups: ['None : P_Commercial Lavatory ADA']
 
 
 
-- Detail option: 'Speaker Symbol'
 
+=== FINDING ATTACHED DETAIL GROUPS ===
 
 
-- Detail option: 'TV Symbol'
 
+Model group 'P_Gas-fired Water Heater Plant' has NO attached detail groups
 
 
-DEBUG: Model group 'P_2 inch (50) Floor Drain, Vertical with Trap Primer' has 17 detail options
 
+Model group 'P_Kitchen Filtration System' has NO attached detail groups
 
 
-- Detail option: 'E_Lighting General Notes'
 
+Model group 'P_Kitchen Ice Maker' has NO attached detail groups
 
 
-- Detail option: 'E_Power General Notes'
 
+Model group 'P_Kitchen Sink - Direct Connection' has NO attached detail groups
 
 
-- Detail option: 'E_Systems General Notes'
 
+Model group 'P_Kitchen Sink - Indirect Waste' has NO attached detail groups
 
 
-- Detail option: 'FA_General Notes'
 
+Model group 'P_Kitchen Sink - Island Vent' has NO attached detail groups
 
 
-- Detail option: 'F_General Notes'
 
+Model group 'P_Kids Sink Fixture - 2 Faucets' has NO attached detail groups
 
 
-- Detail option: 'Group 1'
 
+Model group 'P_Kids Floor Mount Toilet' has NO attached detail groups
 
 
-- Detail option: 'M_General Notes'
 
+Model group 'P_2 inch (50) Floor Drain, Horizontal DWV' has NO attached detail groups
 
 
-- Detail option: 'None'
 
+Model group 'P_2 inch (50) Floor Drain, Vertical DWV' has NO attached detail groups
 
 
-- Detail option: 'P_General Notes'
 
+Model group 'P_2 inch (50) Floor Drain, Horizontal with Trap Primer' has NO attached detail groups
 
 
-- Detail option: 'R_General Notes'
 
+Model group 'P_2 inch (50) Recessed Outlet Box' has NO attached detail groups
 
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
 
+Model group 'P_2 inch (50) Floor Drain, Vertical with Trap Primer' has NO attached detail groups
 
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
 
+Model group 'P_2 inch (50) Standpipe Drain' has NO attached detail groups
 
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
 
+Model group 'P_2 inch (50) Trap, 3 inch (80) Standpipe' has NO attached detail groups
 
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
 
+Model group 'P_3 inch (80) Floor Drain, Horizontal DWV' has NO attached detail groups
 
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
 
+Model group 'P_3 inch (80) Floor Drain, Vertical DWV' has NO attached detail groups
 
 
-- Detail option: 'Speaker Symbol'
 
+Model group 'P_3 inch (80) Floor Sink, Horizontal DWV' has NO attached detail groups
 
 
-- Detail option: 'TV Symbol'
 
+Model group 'P_3 inch (80) Floor Sink, Vertical DWV' has NO attached detail groups
 
 
-DEBUG: Model group 'P_2 inch (50) Recessed Outlet Box' has 17 detail options
 
+Model group 'P_3 inch (80) Trap, 4 inch (100) Standpipe' has NO attached detail groups
 
 
-- Detail option: 'E_Lighting General Notes'
 
+Model group 'P_4 inch (100) Floor Drain, Horizontal DWV' has NO attached detail groups
 
 
-- Detail option: 'E_Power General Notes'
 
+Model group 'P_4 inch (100) Floor Drain, Vertical DWV' has NO attached detail groups
 
 
-- Detail option: 'E_Systems General Notes'
 
+Model group 'P_4 inch (100) Floor Sink, Vertical DWV' has NO attached detail groups
 
 
-- Detail option: 'FA_General Notes'
 
+Model group 'P_Wall Hydrant' has NO attached detail groups
 
 
-- Detail option: 'F_General Notes'
 
+Model group 'P_Interior Hose Bibb' has NO attached detail groups
 
 
-- Detail option: 'Group 1'
 
+Model group 'P_Roof Hydrant' has NO attached detail groups
 
 
-- Detail option: 'M_General Notes'
 
+Model group 'P_Domestic Supply Box' has NO attached detail groups
 
 
-- Detail option: 'None'
 
+Model group 'P_Electric Water Cooler - ADA' has NO attached detail groups
 
 
-- Detail option: 'P_General Notes'
 
+Model group 'P_Electric Water Cooler - Dual Height' has NO attached detail groups
 
 
-- Detail option: 'R_General Notes'
 
+Model group 'P_Hank Sink by Plumbing Contractor' has NO attached detail groups
 
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
 
+Model group 'P_Lavatory Sink with Electric WH' has NO attached detail groups
 
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
 
+Model group 'P_Sink Fixture - Single Bowl' has NO attached detail groups
 
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
 
+Model group 'P_Sink Fixture - Janitorial, Vertical' has NO attached detail groups
 
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
 
+Model group 'P_Sink Fixture - Janitorial, Horizontal' has NO attached detail groups
 
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
 
+Model group 'P_Sink Fixture - Dual Bowl' has NO attached detail groups
 
 
-- Detail option: 'Speaker Symbol'
 
+Model group 'P_Sink Fixture with Electric WH' has NO attached detail groups
 
 
-- Detail option: 'TV Symbol'
 
+Model group 'P_Kitchen Sink, DW, Ice Maker' has NO attached detail groups
 
 
-DEBUG: Model group 'P_2 inch (50) Standpipe Drain' has 17 detail options
 
+Model group 'P_Residential Washing Machine' has NO attached detail groups
 
 
-- Detail option: 'E_Lighting General Notes'
 
+Model group 'P_Residential Laundry/Sink Wet Vent' has NO attached detail groups
 
 
-- Detail option: 'E_Power General Notes'
 
+Model group 'P_Public Unisex Restroom Tank-Type' has NO attached detail groups
 
 
-- Detail option: 'E_Systems General Notes'
 
+Model group 'P_Public Unisex Restroom with T.P.' has NO attached detail groups
 
 
-- Detail option: 'FA_General Notes'
 
+Model group 'P_Residential Half Bathroom' has NO attached detail groups
 
 
-- Detail option: 'F_General Notes'
 
+Model group 'P_Residential Private Bathroom 1' has NO attached detail groups
 
 
-- Detail option: 'Group 1'
 
+Model group 'P_Residential Private Bathroom 2' has NO attached detail groups
 
 
-- Detail option: 'M_General Notes'
 
+Model group 'P_Water Service Assembly with DCV' has NO attached detail groups
 
 
-- Detail option: 'None'
 
+Model group 'P_Water Service Assembly with PRV' has NO attached detail groups
 
 
-- Detail option: 'P_General Notes'
 
+Model group 'P_Shower Rough-In' has NO attached detail groups
 
 
-- Detail option: 'R_General Notes'
 
+Model group 'P_Commercial Lavatory - Back to Back' has NO attached detail groups
 
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
 
+Model group 'P_Commercial Lavatory ADA - Back to Back' has NO attached detail groups
 
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
 
+Model group 'P_Commercial Lavatory ADA' has NO attached detail groups
 
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
 
+Model group 'P_Commercial Urinal' has NO attached detail groups
 
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
 
+Model group 'P_Commercial Water Closet - Back to Back' has NO attached detail groups
 
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
 
+Model group 'P_Commercial Water Closet' has NO attached detail groups
 
 
-- Detail option: 'Speaker Symbol'
 
+Model group 'P_Commercial Water Closet ADA - Back to Back' has NO attached detail groups
 
 
-- Detail option: 'TV Symbol'
 
+Model group 'P_Commercial Water Closet ADA' has NO attached detail groups
 
 
-DEBUG: Model group 'P_2 inch (50) Trap, 3 inch (80) Standpipe' has 17 detail options
 
+Model group 'P_Commercial Water Closet/ Urinal' has NO attached detail groups
 
 
-- Detail option: 'E_Lighting General Notes'
 
+Model group 'P_Commercial Unisex Restroom 1R' has NO attached detail groups
 
 
-- Detail option: 'E_Power General Notes'
 
+Model group 'P_Commercial Unisex Restroom 1L' has NO attached detail groups
 
 
-- Detail option: 'E_Systems General Notes'
 
+Model group 'P_Commercial Unisex Restrooms' has NO attached detail groups
 
 
-- Detail option: 'FA_General Notes'
 
+Model group 'P_Commercial Public Restrooms' has NO attached detail groups
 
 
-- Detail option: 'F_General Notes'
 
+Model group 'P_Electric Water Heater on Floor' has NO attached detail groups
 
 
-- Detail option: 'Group 1'
 
+Model group 'P_Electric Water Heater above Mopsink' has NO attached detail groups
 
 
-- Detail option: 'M_General Notes'
 
+Model group 'P_Gas-fired Water Heater Plant 2' has NO attached detail groups
 
 
-- Detail option: 'None'
 
+Model group 'P_Kitchen 1-Comp Sink - Indirect Waste' has NO attached detail groups
 
 
-- Detail option: 'P_General Notes'
 
+Model group 'P_Kitchen 2-Comp Sink - Indirect Waste' has NO attached detail groups
 
 
-- Detail option: 'R_General Notes'
 
+Model group 'P_Kitchen 3-Comp Sink - Indirect Waste' has NO attached detail groups
 
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
 
+Model group 'P_Kitchen Combo Pre-Rinse Faucet' has NO attached detail groups
 
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
 
+Model group 'P_Kitchen 1-Comp Sink - Tell-tale Drain' has NO attached detail groups
 
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
 
+Model group 'P_Kitchen 1-Comp Sink with Hand Sink' has NO attached detail groups
 
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
 
+Model group 'P_Kitchen 2-Comp Sink - Tell-tale Drain' has NO attached detail groups
 
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
 
+Model group 'P_Kitchen 3-Comp Sink - Tell-tale Drain' has NO attached detail groups
 
 
-- Detail option: 'Speaker Symbol'
 
+Model group 'P_Kitchen Beverage Dispenser' has NO attached detail groups
 
 
-- Detail option: 'TV Symbol'
 
+Model group 'P_Kitchen Dishwasher Machine' has NO attached detail groups
 
 
-DEBUG: Model group 'P_3 inch (80) Floor Drain, Horizontal DWV' has 17 detail options
 
+Model group 'P_Shower Rough-In 2' has NO attached detail groups
 
 
-- Detail option: 'E_Lighting General Notes'
 
 
+=== MODEL GROUPS AND THEIR ATTACHED DETAIL GROUPS ===
 
-- Detail option: 'E_Power General Notes'
 
 
+Found 74 model groups total
 
-- Detail option: 'E_Systems General Notes'
 
 
+Groups with attached detail groups: 0
 
-- Detail option: 'FA_General Notes'
 
 
+Groups without attached detail groups: 74
 
-- Detail option: 'F_General Notes'
 
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
-- Detail option: 'Group 1'
 
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
-- Detail option: 'M_General Notes'
 
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
-- Detail option: 'None'
 
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
-- Detail option: 'P_General Notes'
 
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
-- Detail option: 'R_General Notes'
 
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
 
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
 
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
 
 
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
 
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
+CAD block: 'Locker-Sink-Sloan-Trough-Enclosure'
 
 
 
-- Detail option: 'Speaker Symbol'
+Label from UI: 'None : P_Commercial Lavatory ADA'
 
 
 
-- Detail option: 'TV Symbol'
+Model group type ID: 6836263
 
 
 
-DEBUG: Model group 'P_3 inch (80) Floor Drain, Vertical DWV' has 17 detail options
+Detail group type ID: None
 
 
 
-- Detail option: 'E_Lighting General Notes'
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
 
-- Detail option: 'E_Power General Notes'
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
 
-- Detail option: 'E_Systems General Notes'
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
 
-- Detail option: 'FA_General Notes'
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
 
-- Detail option: 'F_General Notes'
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
 
-- Detail option: 'Group 1'
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
 
-- Detail option: 'M_General Notes'
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
 
-- Detail option: 'None'
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
 
-- Detail option: 'P_General Notes'
 
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
 
-- Detail option: 'R_General Notes'
 
+CAD block: 'EX'G WALL TOILET'
 
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
 
+Label from UI: 'None : P_Commercial Water Closet'
 
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
 
+Model group type ID: 6836328
 
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
 
+Detail group type ID: None
 
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
-- Detail option: 'Speaker Symbol'
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
-- Detail option: 'TV Symbol'
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
-DEBUG: Model group 'P_3 inch (80) Floor Sink, Horizontal DWV' has 17 detail options
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
-- Detail option: 'E_Lighting General Notes'
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
-- Detail option: 'E_Power General Notes'
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
-- Detail option: 'E_Systems General Notes'
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
-- Detail option: 'FA_General Notes'
 
 
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
-- Detail option: 'F_General Notes'
 
 
+CAD block: 'EX'G ADA DF'
 
-- Detail option: 'Group 1'
 
 
+Label from UI: 'None : P_Electric Water Cooler - Dual Height'
 
-- Detail option: 'M_General Notes'
 
 
+Model group type ID: 6835354
 
-- Detail option: 'None'
 
 
+Detail group type ID: None
 
-- Detail option: 'P_General Notes'
 
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
-- Detail option: 'R_General Notes'
 
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
 
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
 
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
 
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
 
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
 
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
-- Detail option: 'Speaker Symbol'
 
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
-- Detail option: 'TV Symbol'
 
 
 
-DEBUG: Model group 'P_3 inch (80) Floor Sink, Vertical DWV' has 17 detail options
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
 
 
-- Detail option: 'E_Lighting General Notes'
+CAD block: 'EX'G WALL TOILET'
 
 
 
-- Detail option: 'E_Power General Notes'
+Label from UI: 'None : P_Commercial Water Closet'
 
 
 
-- Detail option: 'E_Systems General Notes'
+Model group type ID: 6836328
 
 
 
-- Detail option: 'FA_General Notes'
+Detail group type ID: None
 
 
 
-- Detail option: 'F_General Notes'
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
 
-- Detail option: 'Group 1'
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
 
-- Detail option: 'M_General Notes'
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
 
-- Detail option: 'None'
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
 
-- Detail option: 'P_General Notes'
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
 
-- Detail option: 'R_General Notes'
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
 
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
 
+CAD block: 'EX'G WALL TOILET'
 
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
 
+Label from UI: 'None : P_Commercial Water Closet'
 
 
-- Detail option: 'Speaker Symbol'
 
+Model group type ID: 6836328
 
 
-- Detail option: 'TV Symbol'
 
+Detail group type ID: None
 
 
-DEBUG: Model group 'P_3 inch (80) Trap, 4 inch (100) Standpipe' has 17 detail options
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
-- Detail option: 'E_Lighting General Notes'
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
-- Detail option: 'E_Power General Notes'
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
-- Detail option: 'E_Systems General Notes'
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
-- Detail option: 'FA_General Notes'
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
-- Detail option: 'F_General Notes'
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
-- Detail option: 'Group 1'
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
-- Detail option: 'M_General Notes'
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
-- Detail option: 'None'
 
 
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
-- Detail option: 'P_General Notes'
 
 
+CAD block: 'EX'G MOPSINK'
 
-- Detail option: 'R_General Notes'
 
 
+Label from UI: 'None : P_Sink Fixture - Janitorial, Vertical'
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
 
 
+Model group type ID: 6835454
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
 
 
+Detail group type ID: None
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
 
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
 
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
 
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
-- Detail option: 'Speaker Symbol'
 
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
-- Detail option: 'TV Symbol'
 
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
-DEBUG: Model group 'P_4 inch (100) Floor Drain, Horizontal DWV' has 17 detail options
 
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
-- Detail option: 'E_Lighting General Notes'
 
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
-- Detail option: 'E_Power General Notes'
 
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
-- Detail option: 'E_Systems General Notes'
 
 
 
-- Detail option: 'FA_General Notes'
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
 
 
-- Detail option: 'F_General Notes'
+CAD block: 'EX'G WALL TOILET'
 
 
 
-- Detail option: 'Group 1'
+Label from UI: 'None : P_Commercial Water Closet'
 
 
 
-- Detail option: 'M_General Notes'
+Model group type ID: 6836328
 
 
 
-- Detail option: 'None'
+Detail group type ID: None
 
 
 
-- Detail option: 'P_General Notes'
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
 
-- Detail option: 'R_General Notes'
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
 
-- Detail option: 'Speaker Symbol'
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
 
-- Detail option: 'TV Symbol'
 
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
 
-DEBUG: Model group 'P_4 inch (100) Floor Drain, Vertical DWV' has 17 detail options
 
+CAD block: 'NEW URINAL'
 
 
-- Detail option: 'E_Lighting General Notes'
 
+Label from UI: 'None : P_Commercial Urinal'
 
 
-- Detail option: 'E_Power General Notes'
 
+Model group type ID: 6836288
 
 
-- Detail option: 'E_Systems General Notes'
 
+Detail group type ID: None
 
 
-- Detail option: 'FA_General Notes'
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
-- Detail option: 'F_General Notes'
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
-- Detail option: 'Group 1'
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
-- Detail option: 'M_General Notes'
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
-- Detail option: 'None'
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
-- Detail option: 'P_General Notes'
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
-- Detail option: 'R_General Notes'
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
 
 
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
 
 
+CAD block: 'NEW URINAL'
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
 
 
+Label from UI: 'None : P_Commercial Urinal'
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
 
 
+Model group type ID: 6836288
 
-- Detail option: 'Speaker Symbol'
 
 
+Detail group type ID: None
 
-- Detail option: 'TV Symbol'
 
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
-DEBUG: Model group 'P_4 inch (100) Floor Sink, Vertical DWV' has 17 detail options
 
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
-- Detail option: 'E_Lighting General Notes'
 
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
-- Detail option: 'E_Power General Notes'
 
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
-- Detail option: 'E_Systems General Notes'
 
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
-- Detail option: 'FA_General Notes'
 
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
-- Detail option: 'F_General Notes'
 
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
-- Detail option: 'Group 1'
 
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
-- Detail option: 'M_General Notes'
 
 
 
-- Detail option: 'None'
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
 
 
-- Detail option: 'P_General Notes'
+CAD block: 'Locker-Sink-Sloan-Trough-Enclosure'
 
 
 
-- Detail option: 'R_General Notes'
+Label from UI: 'None : P_Commercial Lavatory ADA'
 
 
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
+Model group type ID: 6836263
 
 
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
+Detail group type ID: None
 
 
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
 
-- Detail option: 'Speaker Symbol'
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
 
-- Detail option: 'TV Symbol'
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
 
-DEBUG: Model group 'P_Commercial Lavatory - Back to Back' has 17 detail options
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
 
-- Detail option: 'E_Lighting General Notes'
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
 
-- Detail option: 'E_Power General Notes'
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
 
-- Detail option: 'E_Systems General Notes'
 
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
 
-- Detail option: 'FA_General Notes'
 
+CAD block: 'EX'G WALL TOILET'
 
 
-- Detail option: 'F_General Notes'
 
+Label from UI: 'None : P_Commercial Water Closet'
 
 
-- Detail option: 'Group 1'
 
+Model group type ID: 6836328
 
 
-- Detail option: 'M_General Notes'
 
+Detail group type ID: None
 
 
-- Detail option: 'None'
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
-- Detail option: 'P_General Notes'
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
-- Detail option: 'R_General Notes'
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
-- Detail option: 'Speaker Symbol'
 
 
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
-- Detail option: 'TV Symbol'
 
 
+CAD block: 'EX'G MOPSINK'
 
-DEBUG: Model group 'P_Commercial Lavatory ADA' has 17 detail options
 
 
+Label from UI: 'None : P_Sink Fixture - Janitorial, Vertical'
 
-- Detail option: 'E_Lighting General Notes'
 
 
+Model group type ID: 6835454
 
-- Detail option: 'E_Power General Notes'
 
 
+Detail group type ID: None
 
-- Detail option: 'E_Systems General Notes'
 
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
-- Detail option: 'FA_General Notes'
 
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
-- Detail option: 'F_General Notes'
 
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
-- Detail option: 'Group 1'
 
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
-- Detail option: 'M_General Notes'
 
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
-- Detail option: 'None'
 
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
-- Detail option: 'P_General Notes'
 
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
-- Detail option: 'R_General Notes'
 
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
 
 
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
 
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
+CAD block: 'EX'G WALL TOILET'
 
 
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
+Label from UI: 'None : P_Commercial Water Closet'
 
 
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
+Model group type ID: 6836328
 
 
 
-- Detail option: 'Speaker Symbol'
+Detail group type ID: None
 
 
 
-- Detail option: 'TV Symbol'
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
 
-DEBUG: Model group 'P_Commercial Lavatory ADA - Back to Back' has 17 detail options
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
 
-- Detail option: 'E_Lighting General Notes'
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
 
-- Detail option: 'E_Power General Notes'
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
 
-- Detail option: 'E_Systems General Notes'
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
 
-- Detail option: 'FA_General Notes'
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
 
-- Detail option: 'F_General Notes'
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
 
-- Detail option: 'Group 1'
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
 
-- Detail option: 'M_General Notes'
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
 
-- Detail option: 'None'
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
 
-- Detail option: 'P_General Notes'
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
 
-- Detail option: 'R_General Notes'
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
 
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
 
+CAD block: 'Room Name 105C JAN.'
 
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
 
+Label from UI: 'None : P_Electric Water Heater on Floor'
 
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
 
+Model group type ID: 6836855
 
 
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
 
+Detail group type ID: None
 
 
-- Detail option: 'Speaker Symbol'
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
-- Detail option: 'TV Symbol'
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
-DEBUG: Model group 'P_Commercial Public Restrooms' has 17 detail options
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
-- Detail option: 'E_Lighting General Notes'
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
-- Detail option: 'E_Power General Notes'
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
-- Detail option: 'E_Systems General Notes'
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
-- Detail option: 'FA_General Notes'
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
-- Detail option: 'F_General Notes'
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
-- Detail option: 'Group 1'
 
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
-- Detail option: 'M_General Notes'
 
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
-- Detail option: 'None'
 
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
-- Detail option: 'P_General Notes'
 
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
-- Detail option: 'R_General Notes'
 
 
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
 
 
+CAD block: 'Room Name 104C JAN.'
 
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
 
 
+Label from UI: 'None : P_Electric Water Heater on Floor'
 
-- Detail option: 'SLD_Circuit Branch - Panelboard'
 
 
+Model group type ID: 6836855
 
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
 
 
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Commercial Unisex Restroom 1L' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Commercial Unisex Restroom 1R' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Commercial Unisex Restrooms' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Commercial Urinal' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Commercial Water Closet' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Commercial Water Closet - Back to Back' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Commercial Water Closet ADA' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Commercial Water Closet ADA - Back to Back' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Commercial Water Closet/ Urinal' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Domestic Supply Box' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Electric Water Cooler - ADA' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Electric Water Cooler - Dual Height' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Electric Water Heater above Mopsink' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Electric Water Heater on Floor' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Gas-fired Water Heater Plant' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Gas-fired Water Heater Plant 2' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Hank Sink by Plumbing Contractor' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Interior Hose Bibb' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kids Floor Mount Toilet' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kids Sink Fixture - 2 Faucets' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kitchen 1-Comp Sink - Indirect Waste' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kitchen 1-Comp Sink - Tell-tale Drain' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kitchen 1-Comp Sink with Hand Sink' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kitchen 2-Comp Sink - Indirect Waste' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kitchen 2-Comp Sink - Tell-tale Drain' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kitchen 3-Comp Sink - Indirect Waste' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kitchen 3-Comp Sink - Tell-tale Drain' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kitchen Beverage Dispenser' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kitchen Combo Pre-Rinse Faucet' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kitchen Dishwasher Machine' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kitchen Filtration System' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kitchen Ice Maker' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kitchen Sink - Direct Connection' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kitchen Sink - Indirect Waste' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kitchen Sink - Island Vent' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Kitchen Sink, DW, Ice Maker' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Lavatory Sink with Electric WH' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Public Unisex Restroom Tank-Type' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Public Unisex Restroom with T.P.' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Residential Half Bathroom' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Residential Laundry/Sink Wet Vent' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Residential Private Bathroom 1' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Residential Private Bathroom 2' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Residential Washing Machine' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Roof Hydrant' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Shower Rough-In' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Shower Rough-In 2' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Sink Fixture - Dual Bowl' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Sink Fixture - Janitorial, Horizontal' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Sink Fixture - Janitorial, Vertical' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Sink Fixture - Single Bowl' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Sink Fixture with Electric WH' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Wall Hydrant' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Water Service Assembly with DCV' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-DEBUG: Model group 'P_Water Service Assembly with PRV' has 17 detail options
-
-
-
-- Detail option: 'E_Lighting General Notes'
-
-
-
-- Detail option: 'E_Power General Notes'
-
-
-
-- Detail option: 'E_Systems General Notes'
-
-
-
-- Detail option: 'FA_General Notes'
-
-
-
-- Detail option: 'F_General Notes'
-
-
-
-- Detail option: 'Group 1'
-
-
-
-- Detail option: 'M_General Notes'
-
-
-
-- Detail option: 'None'
-
-
-
-- Detail option: 'P_General Notes'
-
-
-
-- Detail option: 'R_General Notes'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Equip Connection w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Motor w/ Disconnect'
-
-
-
-- Detail option: 'SLD_Circuit Branch - Panelboard'
-
-
-
-- Detail option: 'SLD_Circuit Branch - XFMR w/ Panel'
-
-
-
-- Detail option: 'SLD_Switchboard - 12 Circuit Top'
-
-
-
-- Detail option: 'Speaker Symbol'
-
-
-
-- Detail option: 'TV Symbol'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 100 VESTIBULE'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 101 RECEPTION'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 101A BREAK ROOM EMPLOYEE'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 101B ROOM IT'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 102 CHECK-IN'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 103 CARD SPA BLACK'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 103A HYDROMASSAGE'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 103B ANGEL BEAUTY'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 103C TANNING'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 103D HYBRID'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 103E TANNING'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 103F TANNING'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 103G TANNING'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 104 LOCKER ROOM WOMEN'S'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 104D STORAGE'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 105 LOCKER ROOM MEN'S'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 105D STORAGE'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 106 UTILITY/STORAGE'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 107 MOBILITY ROOM FUNCTIONAL TRAINING/'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 108 CARDIO'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 109 CIRCUIT'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 110 STRENGTH'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
-
-
-
-
-DEBUG: Processing auto_groups for CAD block 'Room Name 111 FREE WEIGHTS'
-
-
-
-- Group mapping: 'P_Default : _skip P_Commercial Water Closet'
+Detail group type ID: None
 
 
 
@@ -5783,83 +1601,66 @@ DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
 
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
 
 
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+CAD block: 'Room Name 105B SHOWER'
 
 
 
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+Label from UI: 'None : P_Shower Rough-In 2'
 
 
 
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+Model group type ID: 6930089
 
 
 
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+Detail group type ID: None
 
 
 
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
 
 
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+CAD block: 'Room Name 105B SHOWER'
 
 
 
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+Label from UI: 'None : P_2 inch (50) Floor Drain, Horizontal with Trap Primer'
 
 
 
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+Model group type ID: 6835072
 
 
 
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+Detail group type ID: None
 
 
 
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
 
 
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+CAD block: 'Room Name 105B SHOWER'
 
 
 
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+Label from UI: 'None : P_Shower Rough-In'
 
 
 
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+Model group type ID: 6836132
 
 
 
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+Detail group type ID: None
 
 
 
@@ -5927,432 +1728,84 @@ DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
 
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
 
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
+CAD block: 'Room Name 104B SHOWER'
 
 
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
+Label from UI: 'None : P_Shower Rough-In 2'
 
 
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
+Model group type ID: 6930089
 
 
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
+Detail group type ID: None
 
 
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
+CAD block: 'Room Name 104B SHOWER'
 
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
 
+Label from UI: 'None : P_2 inch (50) Floor Drain, Horizontal with Trap Primer'
 
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
 
+Model group type ID: 6835072
 
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
 
+Detail group type ID: None
 
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
 
 
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
 
 
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+CAD block: 'Room Name 104B SHOWER'
 
 
 
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+Label from UI: 'None : P_Shower Rough-In'
 
 
 
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+Model group type ID: 6836132
 
 
 
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+Detail group type ID: None
 
 
 
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
+=== PROCESSING MODEL GROUP PLACEMENT ===
 
 
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
 
+CAD block: 'Room Name 104B SHOWER'
 
 
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
 
+Label from UI: 'None : P_Shower Rough-In'
 
 
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
 
+Model group type ID: 6836132
 
 
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
 
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
-
-
-
-DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
-
-
-
-DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
-
-
-
-DEBUG: Parameter 'CED-G-NOTE #' storage type: String
-
-
-
-DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+Detail group type ID: None
