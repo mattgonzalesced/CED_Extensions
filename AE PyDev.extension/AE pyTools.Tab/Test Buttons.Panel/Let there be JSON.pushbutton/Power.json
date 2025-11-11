@@ -18,8 +18,9 @@
                             "CKT_Panel_CEDT" : "L3"
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 0
+                            "x" : 0,
+                            "y" : 0,
+                            "r" : 180
                         }
                     }
                 }
@@ -33,8 +34,9 @@
                             "CED-G-NOTE #" : "11"
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 8
+                            "x" : -12,
+                            "y" : -16,
+                            "r" : 90
                         }
                     }
                 }
@@ -61,8 +63,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 0
+                            "x" : 0,
+                            "y" : -12,
+                            "r" : 45
                         }
                     }
                 }
@@ -104,8 +107,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 0
+                            "x" : 0,
+                            "y" : 0,
+                            "r" : 180
                         }
                     }
                 }
@@ -119,8 +123,9 @@
                             "CED-G-NOTE #" : "11"
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 8
+                            "x" : -12,
+                            "y" : -16,
+                            "r" : 90
                         }
                     }
                 }
@@ -190,8 +195,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 0
+                            "x" : 0,
+                            "y" : 0,
+                            "r" : 180
                         }
                     }
                 }
@@ -205,8 +211,9 @@
                             "CED-G-NOTE #" : "11"
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 8
+                            "x" : -12,
+                            "y" : -16,
+                            "r" : 90
                         }
                     }
                 }
@@ -231,6 +238,11 @@
                             "CKT_Rating_CED": "30",
                             "CKT_Load Name_CEDT": "BEAUTY ANGEL - 103D",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET":{
+                            "x": 0,
+                            "y": -46,
+                            "r": 90
                         }
                     }
                 }
@@ -251,6 +263,11 @@
                             "CKT_Load Name_CEDT": "RECEPT - BCS",
                             "CKT_Schedule Notes_CEDT": ""
                             
+                        },
+                        "OFFSET":{
+                            "x": -54,
+                            "y": -37,
+                            "r": 270
                         }
                     }
                 }
@@ -265,8 +282,8 @@
                             "CED-G-NOTE #" : "6"
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 8
+                            "x" : 36,
+                            "y" : 30
                         }
                     }
                 }
@@ -291,6 +308,11 @@
                             "CKT_Rating_CED": "40",
                             "CKT_Load Name_CEDT": "CRYOLOUNGE - 103",
                             "CKT_Schedule Notes_CEDT": "GFI"
+                        },
+                        "OFFSET":{
+                            "x": 0,
+                            "y": -41,
+                            "r": 90
                         }
                     }
                 }
@@ -317,54 +339,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 30,
-                            "y" : 0
-                        }
-                    }
-                }
-            },
-            {
-                "EF-U_Receptacle_CED" : {
-                    "Duplex Wall" : {
-                        "PARAMETERS" : { 
-                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
-                            "FLA Input_CED": "0",
-                            "Apparent Load Input_CED": "180",
-                            "Load Classification_CED": "C",
-                            "Voltage_CED": "120",
-                            "Number of Poles_CED": "1",
-                            "CKT_Panel_CEDT": "L3",
-                            "CKT_Circuit Number_CEDT": "6 & 9",
-                            "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
-                            "CKT_Schedule Notes_CEDT": ""
-                        },
-                        "OFFSET" :{
-                            "x" : 50,
-                            "y" : -8
-                        }
-                    }
-                }
-            },
-            {
-                "EF-U_Receptacle_CED" : {
-                    "Duplex Wall" : {
-                        "PARAMETERS" : { 
-                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
-                            "FLA Input_CED": "0",
-                            "Apparent Load Input_CED": "180",
-                            "Load Classification_CED": "C",
-                            "Voltage_CED": "120",
-                            "Number of Poles_CED": "1",
-                            "CKT_Panel_CEDT": "L3",
-                            "CKT_Circuit Number_CEDT": "6 & 9",
-                            "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
-                            "CKT_Schedule Notes_CEDT": ""
-                        },
-                        "OFFSET" :{
                             "x" : -30,
-                            "y" : 0
+                            "y" : 0,
+                            "r" : 180
                         }
                     }
                 }
@@ -387,7 +364,8 @@
                         },
                         "OFFSET" :{
                             "x" : -50,
-                            "y" : -8
+                            "y" : 8,
+                            "r" : 180
                         }
                     }
                 }
@@ -407,6 +385,59 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "BATHROOM SINKS",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : 30,
+                            "y" : 0,
+                            "r" : 180
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED" : {
+                    "Duplex Wall" : {
+                        "PARAMETERS" : { 
+                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
+                            "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : 50,
+                            "y" : 8,
+                            "r" : 180
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED" : {
+                    "Duplex Wall" : {
+                        "PARAMETERS" : { 
+                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
+                            "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET":{
+                            "x": 0,
+                            "y": 0,
+                            "r": 180
                         }
                     }
                 }
@@ -578,6 +609,10 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "BIG FAN",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET": {
+                            "x": 124,
+                            "y": 0
                         }
                     }
                 }
@@ -591,8 +626,8 @@
                             "CED-G-NOTE #": "19"
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 8
+                            "x" : 139,
+                            "y" : 0
                         }
                     }
                 }
@@ -619,8 +654,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
-                            "x" : -36,
-                            "y" : 0
+                            "x" : 0,
+                            "y" : -36,
+                            "r" : 270
                         }
                     }
                 }
@@ -662,6 +698,11 @@
                             "CKT_Load Name_CEDT": "TLT TANNING - 103F",
                             "CKT_Schedule Notes_CEDT": ""
                             
+                        },
+                        "OFFSET":{
+                            "x": 0,
+                            "y": 54,
+                            "r": 270
                         }
                     }
                 }
@@ -682,6 +723,11 @@
                             "CKT_Load Name_CEDT": "RECEPT - BCS",
                             "CKT_Schedule Notes_CEDT": ""
 
+                        },
+                        "OFFSET":{
+                            "x": 36,
+                            "y": -58,
+                            "r": 270
                         }
                     }
                 }
@@ -696,8 +742,9 @@
                             "CED-G-NOTE #" : "5"
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 8
+                            "x" : -45,
+                            "y" : 10,
+                            "r" : 180
                         }
                     }
                 }
@@ -722,6 +769,11 @@
                             "CKT_Rating_CED": "40",
                             "CKT_Load Name_CEDT": "LAY-DOWN TANNING - 103G",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET":{
+                            "x": 0,
+                            "y": 54,
+                            "r": 270
                         }
                     }
                 }
@@ -741,6 +793,11 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "RECEPT - BCS",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET":{
+                            "x": 44,
+                            "y": -60,
+                            "r": 270
                         }
                     }
                 }
@@ -755,8 +812,9 @@
                             "CED-G-NOTE #" : "5"
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 8
+                            "x" : -46,
+                            "y" : 10,
+                            "r" : 180
                         }
                     }
                 }
@@ -804,6 +862,11 @@
                             "CKT_Rating_CED": "40",
                             "CKT_Load Name_CEDT": "STAND-UP TANNER - 103C",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET":{
+                            "x": 0,
+                            "y": -40,
+                            "r": 180
                         }
                     }
                 }
@@ -823,6 +886,11 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "RECEPT - BCS",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET":{
+                            "x": -43,
+                            "y": -43,
+                            "r": 0
                         }
                     }
                 }
@@ -837,8 +905,9 @@
                             "CED-G-NOTE #" : "5"
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 8
+                            "x" : 26,
+                            "y" : 26,
+                            "r" : 90
                         }
                     }
                 }
@@ -866,7 +935,8 @@
                         },
                         "OFFSET" :{
                             "x" : 0,
-                            "y" : 0
+                            "y" : -24,
+                            "r" : 180
                         }
                     }
                 }
@@ -888,8 +958,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 0
+                            "x" : 12,
+                            "y" : -24,
+                            "r" : 180
                         }
                     }
                 }
@@ -932,8 +1003,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 0
+                            "x" : -10,
+                            "y" : -40,
+                            "r" : 270
                         }
                     }
                 }
@@ -955,8 +1027,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 12,
-                            "y" : 1
+                            "x" : -36,
+                            "y" : -46,
+                            "r": 90
                         }
                     }
                 }
@@ -972,8 +1045,9 @@
                             "Plan" : "LV"
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 8
+                            "x" : 32,
+                            "y" : 9,
+                            "r" : 180
                         }
                     }
                 }
@@ -998,6 +1072,11 @@
                             "CKT_Rating_CED": "40",
                             "CKT_Load Name_CEDT": "HYBRID LIGHT BED - 103E",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET": {
+                            "x": 45,
+                            "y": 58,
+                            "r": 90
                         }
                     }
                 }
@@ -1020,7 +1099,8 @@
                         },
                         "OFFSET" :{
                             "x" : 10,
-                            "y" : 0
+                            "y" : -57,
+                            "r" : 90
                         }
                     }
                 }
@@ -1035,8 +1115,8 @@
                             "CED-G-NOTE #" : "5"
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 8
+                            "x" : -57,
+                            "y" : 20
                         }
                     }
                 }
@@ -1070,6 +1150,11 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "IT RACK",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET": {
+                            "x": -16,
+                            "y": -63,
+                            "r": 180
                         }
                     }
                 }
@@ -1095,6 +1180,12 @@
                             "CKT_Load Name_CEDT": "STAIRMASTER",
                             "CKT_Schedule Notes_CEDT": ""
 
+                        },
+                        "OFFSET": {
+                            "x": 0,
+                            "y": -36,
+                            "r": 180
+                        
                         }
                     }
                 }
@@ -1109,8 +1200,9 @@
                             "dev-Group ID" : "Stepmill"
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 8
+                            "x" : -11,
+                            "y" : 8,
+                            "r" : 270
                         }
                     }
                 }
@@ -1135,6 +1227,11 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "CHECK-IN RECEPT",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET":{
+                            "x": 0,
+                            "y": -13,
+                            "r": 45
                         }
                     }
                 }
@@ -1149,7 +1246,8 @@
                         },
                         "OFFSET" :{
                             "x" : 6,
-                            "y" : 8
+                            "y" : 8,
+                            "r" : 135
                         }
                     }
                 }
@@ -1176,8 +1274,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 8,
-                            "y" : 8
+                            "x" : -8,
+                            "y" : 8,
+                            "r" : 270
                         }
                     }
                 }
@@ -1199,8 +1298,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 5,
-                            "y" : 0
+                            "x" : -5,
+                            "y" : 0,
+                            "r" : 180
                         }
                     }
                 }
@@ -1222,8 +1322,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : -4,
-                            "y" : -26
+                            "x" : 26,
+                            "y" : -4,
+                            "r" : 270
                         }
                     }
                 }
@@ -1245,8 +1346,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 8,
-                            "y" : -128
+                            "x" : 128,
+                            "y" : 8,
+                            "r" : 270
                         }
                     }
                 }
@@ -1291,8 +1393,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : -4,
-                            "y" : -94
+                            "x" : 94,
+                            "y" : -4,
+                            "r" : 270
                         }
                     }
                 }
@@ -1321,7 +1424,8 @@
                         },
                         "OFFSET" :{
                             "x" : 6,
-                            "y" : 8
+                            "y" : 8,
+                            "r" : 180
                         }
                     }
                 }
@@ -1348,8 +1452,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET":{
-                            "x" : -48,
-                            "y" : 0
+                            "x" : 0,
+                            "y" : -48,
+                            "r" : 270
                         }
                     }
                 }
@@ -1407,7 +1512,8 @@
                         },
                         "OFFSET":{
                             "x" : 5,
-                            "y" : 8
+                            "y" : 8,
+                            "r" : 90
                         }
                     }
                 }
@@ -1472,8 +1578,9 @@
                             "CED-G-NOTE #" : "14"
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 8
+                            "x" : 24,
+                            "y" : 0,
+                            "r" : 270
                         }
                     }
                 }
@@ -1498,6 +1605,10 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "VENDING MACHINE",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET": {
+                            "x": 0,
+                            "y": -20
                         }
                     }
                 }
@@ -1511,8 +1622,9 @@
                             "CED-G-NOTE #" : "16"
                         },
                         "OFFSET":{
-                            "x" : 5,
-                            "y" : 8
+                            "x" : -12,
+                            "y" : 0,
+                            "r" : 270
                         }
                     }
                 }
@@ -1647,8 +1759,13 @@
                             "CKT_Panel_CEDT" : "L3",
                             "CKT_Circuit Number_CEDT": "10",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "Dry Vanity",
+                            "CKT_Load Name_CEDT": "DRY VANITY",
                             "CKT_Schedule Notes_CEDT": "GFI"
+                        },
+                        "OFFSET":{
+                            "x": 99,
+                            "y": -120,
+                            "r": 270
                         }
                     }
                 }
@@ -1666,8 +1783,13 @@
                             "CKT_Panel_CEDT" : "L3",
                             "CKT_Circuit Number_CEDT": "10",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "Dry Vanity",
+                            "CKT_Load Name_CEDT": "DRY VANITY",
                             "CKT_Schedule Notes_CEDT": "GFI"
+                        },
+                        "OFFSET":{
+                            "x": -99,
+                            "y": 46,
+                            "r": 90
                         }
                     }
                 }
@@ -1753,6 +1875,11 @@
                     "Square": {
                         "PARAMETERS": {
                             "CED-G-NOTE #" : ""
+                        },
+                        "OFFSET": {
+                            "x": -88,
+                            "y": -40,
+                            "r": 270
                         }
                     }
                 }
@@ -1774,6 +1901,11 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "ROOM",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET": {
+                            "x": -88,
+                            "y": -60,
+                            "r": 270
                         }
                     }
                 }
@@ -1793,6 +1925,11 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "ROOM",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET": {
+                            "x": -88,
+                            "y": -50,
+                            "r": 270
                         }
                     }
                 }
@@ -1812,6 +1949,11 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "ROOM",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET": {
+                            "x": 44,
+                            "y": -60,
+                            "r": 270
                         }
                     }
                 }
@@ -1831,6 +1973,11 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "ROOM",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET": {
+                            "x": 44,
+                            "y": -50,
+                            "r": 270
                         }
                     }
                 }
@@ -1850,6 +1997,11 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "ROOM",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET": {
+                            "x": -28,
+                            "y": -60,
+                            "r": 270
                         }
                     }
                 }
@@ -1869,6 +2021,11 @@
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "ROOM",
                             "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET": {
+                            "x": -28,
+                            "y": -50,
+                            "r": 270
                         }
                     }
                 }
@@ -2029,8 +2186,13 @@
                             "CKT_Panel_CEDT" : "L3",
                             "CKT_Circuit Number_CEDT": "7",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "Dry Vanity",
+                            "CKT_Load Name_CEDT": "DRY VANITY",
                             "CKT_Schedule Notes_CEDT": "GFI"
+                        },
+                        "OFFSET":{
+                            "x": -125,
+                            "y": -117,
+                            "r": 270
                         }
                     }
                 }
@@ -2048,8 +2210,13 @@
                             "CKT_Panel_CEDT" : "L3",
                             "CKT_Circuit Number_CEDT": "7",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "Dry Vanity",
+                            "CKT_Load Name_CEDT": "DRY VANITY",
                             "CKT_Schedule Notes_CEDT": "GFI"
+                        },
+                        "OFFSET":{
+                            "x": 125,
+                            "y": 43,
+                            "r": 90
                         }
                     }
                 }
