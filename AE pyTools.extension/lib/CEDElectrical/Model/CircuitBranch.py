@@ -492,7 +492,7 @@ class CircuitBranch(object):
 
     @property
     def hot_wire_size(self):
-        raw = self._wire_hot_size_override if self._auto_calculate_override else self._calculated_hot_wire
+        raw = self._wire_hot_size_override if self._auto_calculate_override and self._wire_hot_size_override else self._calculated_hot_wire
         size = self._normalize_wire_size(raw)
         if size and self.settings.wire_size_prefix:
             return "{}{}".format(self.settings.wire_size_prefix, size)
@@ -507,7 +507,7 @@ class CircuitBranch(object):
 
     @property
     def ground_wire_size(self):
-        raw = self._wire_ground_size_override if self._auto_calculate_override else self._calculated_ground_wire
+        raw = self._wire_ground_size_override if self._auto_calculate_override and self._wire_ground_size_override else self._calculated_ground_wire
         size = self._normalize_wire_size(raw)
         if size and self.settings.wire_size_prefix:
             return "{}{}".format(self.settings.wire_size_prefix, size)
@@ -549,7 +549,7 @@ class CircuitBranch(object):
         if self.neutral_wire_quantity == 0:
             return ""
 
-        if self._auto_calculate_override:
+        if self._auto_calculate_override and self._wire_neutral_size_override:
             if self._wire_neutral_size_override is not None:
                 raw = self._wire_neutral_size_override
             else:
@@ -605,7 +605,7 @@ class CircuitBranch(object):
 
     @property
     def conduit_size(self):
-        raw = self._conduit_size_override if self._auto_calculate_override else self._calculated_conduit_size
+        raw = self._conduit_size_override if self._auto_calculate_override and self._conduit_size_override else self._calculated_conduit_size
         size = self._normalize_conduit_type(raw)
         if size and self.settings.conduit_size_suffix:
             return "{}{}".format(size, self.settings.conduit_size_suffix)
@@ -1015,7 +1015,7 @@ class CircuitBranch(object):
         hot_size = self._normalize_wire_size(self.hot_wire_size)
         neutral_size = self._normalize_wire_size(self.neutral_wire_size)
         
-        if hot_size == neutral_size:
+        if hot_size == neutral_size and total_neutral_qty > 0:
             combined_qty = total_hot_qty + total_neutral_qty
             if combined_qty and hot_size:
                 parts.append("{}{}{}".format(combined_qty, wp, hot_size))

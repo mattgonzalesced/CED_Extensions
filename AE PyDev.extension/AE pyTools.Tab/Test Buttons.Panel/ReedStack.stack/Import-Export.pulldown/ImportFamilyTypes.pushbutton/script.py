@@ -18,12 +18,21 @@ Performance-minded:
 from __future__ import print_function
 
 from collections import namedtuple
+import os
 
 from pyrevit import coreutils
 from pyrevit import revit, DB, HOST_APP
 from pyrevit import forms
 from pyrevit import script
 from pyrevit.coreutils import yaml
+
+try:
+    from System.Windows import Visibility
+except Exception:
+    class _VisibilityShim(object):
+        Visible = None
+        Collapsed = None
+    Visibility = _VisibilityShim()
 
 logger = script.get_logger()
 output = script.get_output()
@@ -55,6 +64,7 @@ else:
 
 FAMILY_SYMBOL_SEPARATOR = ' : '
 TEMP_TYPENAME = "Default"
+RESOLUTION_WINDOW_XAML = os.path.join(os.path.dirname(__file__), 'resolution_window.xaml')
 
 ParamConfig = namedtuple(
     'ParamConfig',
@@ -65,6 +75,182 @@ ParamValueConfig = namedtuple('ParamValueConfig', ['name', 'value'])
 TypeConfig = namedtuple('TypeConfig', ['name', 'param_values'])
 
 failed_params = []
+
+class ImportAlertTracker(object):
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.formula_conflicts = {}      # param -> {'yaml': str, 'family': str}
+        self.yaml_formula_only = {}      # param -> yaml formula
+        self.family_formula_only = {}    # param -> family formula
+        self.missing_parameters = set()  # YAML params absent in family
+        self.extra_family_parameters = set()  # Family params absent in YAML
+        self.instance_mismatches = []    # [{parameter, yaml_isinst, family_isinst}]
+        self._reported = False
+
+    def add_formula_conflict(self, param_name, yaml_formula, family_formula):
+        self.formula_conflicts[param_name] = {
+            'yaml': yaml_formula,
+            'family': family_formula
+        }
+
+    def add_yaml_formula_only(self, param_name, yaml_formula):
+        self.yaml_formula_only[param_name] = yaml_formula
+
+    def add_family_formula_only(self, param_name, family_formula):
+        self.family_formula_only[param_name] = family_formula
+
+    def add_missing_parameter(self, param_name):
+        self.missing_parameters.add(param_name)
+
+    def add_extra_family_parameter(self, param_name):
+        self.extra_family_parameters.add(param_name)
+
+    def add_instance_mismatch(self, param_name, yaml_is_instance, family_is_instance):
+        self.instance_mismatches.append({
+            'parameter': param_name,
+            'yaml_isinst': bool(yaml_is_instance),
+            'family_isinst': bool(family_is_instance)
+        })
+
+    def has_alerts(self):
+        return bool(
+            self.formula_conflicts
+            or self.yaml_formula_only
+            or self.family_formula_only
+            or self.missing_parameters
+            or self.extra_family_parameters
+            or self.instance_mismatches
+        )
+
+    def has_actionable_alerts(self):
+        return bool(
+            self.formula_conflicts
+            or self.yaml_formula_only
+            or self.family_formula_only
+            or self.missing_parameters
+        )
+
+    def get_formula_category(self, param_name):
+        if param_name in self.formula_conflicts:
+            return 'conflict'
+        if param_name in self.yaml_formula_only:
+            return 'yaml_only'
+        if param_name in self.family_formula_only:
+            return 'family_only'
+        return None
+
+    def is_missing_parameter(self, param_name):
+        return param_name in self.missing_parameters
+
+    def report(self):
+        if self._reported or not self.has_alerts():
+            return True
+
+        self._reported = True
+        output.print_md('### Parameter Alerts')
+
+        if self.formula_conflicts:
+            output.print_md('**Formula mismatches ({})**'.format(len(self.formula_conflicts)))
+            for pname, payload in sorted(self.formula_conflicts.items()):
+                output.print_md(
+                    '- {param} -> YAML: {yaml} | Family: {family}'.format(
+                        param=self._format_inline(pname),
+                        yaml=self._format_inline(payload.get('yaml')),
+                        family=self._format_inline(payload.get('family'))
+                    )
+                )
+
+        if self.yaml_formula_only:
+            output.print_md('**YAML-only formulas ({})**'.format(len(self.yaml_formula_only)))
+            for pname, yformula in sorted(self.yaml_formula_only.items()):
+                output.print_md(
+                    '- {param} -> YAML formula: {yaml}'.format(
+                        param=self._format_inline(pname),
+                        yaml=self._format_inline(yformula)
+                    )
+                )
+
+        if self.family_formula_only:
+            output.print_md('**Family-only formulas ({})**'.format(len(self.family_formula_only)))
+            for pname, fformula in sorted(self.family_formula_only.items()):
+                output.print_md(
+                    '- {param} -> Family formula: {family}'.format(
+                        param=self._format_inline(pname),
+                        family=self._format_inline(fformula)
+                    )
+                )
+
+        if self.missing_parameters:
+            output.print_md('**YAML parameters missing from family ({})**'.format(len(self.missing_parameters)))
+            for pname in sorted(self.missing_parameters):
+                output.print_md('- {}'.format(self._format_inline(pname)))
+
+        if self.extra_family_parameters:
+            output.print_md('**Family parameters not present in YAML ({})**'.format(len(self.extra_family_parameters)))
+            for pname in sorted(self.extra_family_parameters):
+                output.print_md('- {}'.format(self._format_inline(pname)))
+
+        if self.instance_mismatches:
+            output.print_md('**Instance vs Type mismatches ({})**'.format(len(self.instance_mismatches)))
+            for alert in self.instance_mismatches:
+                output.print_md(
+                    '- {param} -> YAML: {yaml} | Family: {family}'.format(
+                        param=self._format_inline(alert['parameter']),
+                        yaml='Instance' if alert['yaml_isinst'] else 'Type',
+                        family='Instance' if alert['family_isinst'] else 'Type'
+                    )
+                )
+
+        forms.alert(
+            'Parameter discrepancies detected. See output panel for detailed lists.',
+            title='Import Parameter Alerts',
+            warn_icon=True
+        )
+        return True
+
+    @staticmethod
+    def _format_inline(value):
+        if value in (None, ''):
+            safe_value = '(none)'
+        else:
+            safe_value = str(value)
+        safe_value = safe_value.replace('`', '\\`')
+        return '`{}`'.format(safe_value)
+
+
+class ImportResolutionOptions(object):
+    ACTION_USE_YAML_FORMULA = 'use_yaml_formula'
+    ACTION_KEEP_TARGET_FORMULA = 'keep_target_formula'
+    ACTION_CLEAR_AND_USE_VALUE = 'clear_formula_use_value'
+    ACTION_USE_YAML_VALUE_ONLY = 'use_yaml_value_only'
+
+    ACTION_ADD_WITH_FORMULA = 'add_with_formula'
+    ACTION_ADD_WITH_VALUE = 'add_with_value'
+    ACTION_IGNORE_MISSING = 'ignore_missing'
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.formula_conflict_action = self.ACTION_KEEP_TARGET_FORMULA
+        self.yaml_formula_only_action = self.ACTION_USE_YAML_VALUE_ONLY
+        self.family_formula_only_action = self.ACTION_KEEP_TARGET_FORMULA
+        self.missing_parameter_action = self.ACTION_ADD_WITH_VALUE
+
+    def action_for_formula_category(self, category):
+        if category == 'conflict':
+            return self.formula_conflict_action
+        if category == 'yaml_only':
+            return self.yaml_formula_only_action
+        if category == 'family_only':
+            return self.family_formula_only_action
+        return None
+
+
+import_alerts = ImportAlertTracker()
+import_resolutions = ImportResolutionOptions()
 
 # ------------------------- Project-mode helpers ------------------------------
 
@@ -114,6 +300,40 @@ def _find_family_by_name(project_doc, name):
                 return f
         except Exception:
             pass
+    return None
+
+def _doc_signature(doc):
+    try:
+        return (doc.GetHashCode(), doc.Title)
+    except Exception:
+        return (id(doc), getattr(doc, 'Title', repr(doc)))
+
+def _get_open_doc_signatures():
+    sigs = set()
+    for open_doc in HOST_APP.app.Documents:
+        try:
+            sigs.add(_doc_signature(open_doc))
+        except Exception:
+            continue
+    return sigs
+
+def _get_open_family_doc_for(target_family):
+    """Return an already-open family document that matches the given DB.Family, if any."""
+    if not target_family:
+        return None
+    try:
+        target_id = target_family.Id.IntegerValue
+    except Exception:
+        target_id = None
+    for open_doc in HOST_APP.app.Documents:
+        try:
+            if not open_doc.IsFamilyDocument:
+                continue
+            owner_family = open_doc.FamilyManager.OwnerFamily
+            if owner_family and owner_family.Id.IntegerValue == target_id:
+                return open_doc
+        except Exception:
+            continue
     return None
 
 # ------------------------- Caches --------------------------------------------
@@ -296,6 +516,299 @@ def _values_equal(ftype, fparam, pvcfg):
         return False
     return cur == inc
 
+def _normalize_formula_text(formula_value):
+    if formula_value is None:
+        return None
+    try:
+        text_value = str(formula_value).strip()
+    except Exception:
+        return None
+    return text_value or None
+
+def _flag_formula_mismatch(pcfg, fparam):
+    yaml_formula = _normalize_formula_text(pcfg.formula)
+    try:
+        fam_formula = _normalize_formula_text(fparam.Formula)
+    except Exception:
+        fam_formula = None
+
+    if yaml_formula and fam_formula:
+        if yaml_formula != fam_formula:
+            import_alerts.add_formula_conflict(pcfg.name, yaml_formula, fam_formula)
+        return
+
+    if yaml_formula and not fam_formula:
+        import_alerts.add_yaml_formula_only(pcfg.name, yaml_formula)
+        return
+
+    if fam_formula and not yaml_formula:
+        import_alerts.add_family_formula_only(pcfg.name, fam_formula)
+
+def precheck_parameter_alerts(doc, fconfig):
+    param_cfgs = fconfig.get(PARAM_SECTION_NAME, None) or {}
+    param_map = _get_param_by_name_map(doc) or {}
+
+    yaml_param_names = set()
+    for pname, popts in param_cfgs.items():
+        if not (pname and popts):
+            continue
+
+        yaml_param_names.add(pname)
+        pcfg = get_param_config(doc, pname, popts)
+        if not pcfg:
+            continue
+
+        fparam = param_map.get(pname)
+        if not fparam:
+            import_alerts.add_missing_parameter(pname)
+            continue
+
+        if bool(fparam.IsInstance) != bool(pcfg.isinst):
+            import_alerts.add_instance_mismatch(pname, pcfg.isinst, fparam.IsInstance)
+
+        _flag_formula_mismatch(pcfg, fparam)
+
+    for fname in param_map.keys():
+        if fname not in yaml_param_names:
+            import_alerts.add_extra_family_parameter(fname)
+
+# ------------------------- Resolution helpers --------------------------------
+
+def _build_discrepancy_summary_text(alerts):
+    def _fmt(value):
+        return '(none)' if value in (None, '') else str(value)
+
+    lines = ['Discrepancies detected between YAML and the target family:', '']
+
+    if alerts.formula_conflicts:
+        lines.append('Formula differences ({}):'.format(len(alerts.formula_conflicts)))
+        for pname, payload in sorted(alerts.formula_conflicts.items()):
+            lines.append('  - {0}: YAML "{1}" vs Family "{2}"'.format(
+                pname, _fmt(payload.get('yaml')), _fmt(payload.get('family'))
+            ))
+        lines.append('')
+
+    if alerts.yaml_formula_only:
+        lines.append('YAML-only formulas ({}):'.format(len(alerts.yaml_formula_only)))
+        for pname, formula in sorted(alerts.yaml_formula_only.items()):
+            lines.append('  - {0}: YAML formula "{1}"'.format(pname, _fmt(formula)))
+        lines.append('')
+
+    if alerts.family_formula_only:
+        lines.append('Family-only formulas ({}):'.format(len(alerts.family_formula_only)))
+        for pname, formula in sorted(alerts.family_formula_only.items()):
+            lines.append('  - {0}: Family formula "{1}"'.format(pname, _fmt(formula)))
+        lines.append('')
+
+    if alerts.missing_parameters:
+        lines.append('Parameters in YAML but not in family ({}):'.format(len(alerts.missing_parameters)))
+        for pname in sorted(alerts.missing_parameters):
+            lines.append('  - {0}'.format(pname))
+        lines.append('')
+
+    if alerts.extra_family_parameters:
+        lines.append('Parameters in family but not in YAML ({}):'.format(len(alerts.extra_family_parameters)))
+        for pname in sorted(alerts.extra_family_parameters):
+            lines.append('  - {0}'.format(pname))
+        lines.append('')
+
+    if alerts.instance_mismatches:
+        lines.append('Instance vs Type mismatches ({}):'.format(len(alerts.instance_mismatches)))
+        for alert in alerts.instance_mismatches:
+            lines.append('  - {param}: YAML {yaml}, Family {family}'.format(
+                param=alert['parameter'],
+                yaml='Instance' if alert['yaml_isinst'] else 'Type',
+                family='Instance' if alert['family_isinst'] else 'Type'
+            ))
+        lines.append('')
+
+    summary_text = '\n'.join(lines).strip()
+    return summary_text or 'No discrepancies detected.'
+
+
+class DiscrepancyResolutionWindow(forms.WPFWindow):
+    def __init__(self, summary_text, alerts, resolutions):
+        forms.WPFWindow.__init__(self, RESOLUTION_WINDOW_XAML)
+        self._result = None
+        self._combo_maps = {}
+        self.summary_box.Text = summary_text
+
+        self._init_combo(
+            panel=self.conflict_panel,
+            combo=self.conflict_combo,
+            is_visible=bool(alerts.formula_conflicts),
+            option_pairs=[
+                (ImportResolutionOptions.ACTION_USE_YAML_FORMULA, 'Use YAML formula'),
+                (ImportResolutionOptions.ACTION_KEEP_TARGET_FORMULA, 'Use target formula'),
+                (ImportResolutionOptions.ACTION_CLEAR_AND_USE_VALUE, 'Clear target formula and use YAML value')
+            ],
+            current_value=resolutions.formula_conflict_action
+        )
+
+        self._init_combo(
+            panel=self.yaml_only_panel,
+            combo=self.yaml_only_combo,
+            is_visible=bool(alerts.yaml_formula_only),
+            option_pairs=[
+                (ImportResolutionOptions.ACTION_USE_YAML_FORMULA, 'Use YAML formula'),
+                (ImportResolutionOptions.ACTION_USE_YAML_VALUE_ONLY, 'Use YAML value only (no formula)')
+            ],
+            current_value=resolutions.yaml_formula_only_action
+        )
+
+        self._init_combo(
+            panel=self.family_only_panel,
+            combo=self.family_only_combo,
+            is_visible=bool(alerts.family_formula_only),
+            option_pairs=[
+                (ImportResolutionOptions.ACTION_KEEP_TARGET_FORMULA, 'Use target formula'),
+                (ImportResolutionOptions.ACTION_CLEAR_AND_USE_VALUE, 'Clear target formula and use YAML value')
+            ],
+            current_value=resolutions.family_formula_only_action
+        )
+
+        self._init_combo(
+            panel=self.missing_panel,
+            combo=self.missing_combo,
+            is_visible=bool(alerts.missing_parameters),
+            option_pairs=[
+                (ImportResolutionOptions.ACTION_ADD_WITH_FORMULA, 'Add parameters and formulas'),
+                (ImportResolutionOptions.ACTION_ADD_WITH_VALUE, 'Add parameters and values'),
+                (ImportResolutionOptions.ACTION_IGNORE_MISSING, 'Ignore parameters (do not add)')
+            ],
+            current_value=resolutions.missing_parameter_action
+        )
+
+    def _init_combo(self, panel, combo, is_visible, option_pairs, current_value):
+        if not is_visible:
+            panel.Visibility = Visibility.Collapsed
+            return
+        mapping = {}
+        default_label = None
+        for value, label in option_pairs:
+            combo.Items.Add(label)
+            mapping[label] = value
+            if value == current_value:
+                default_label = label
+        if default_label:
+            combo.SelectedItem = default_label
+        elif combo.Items.Count > 0:
+            combo.SelectedIndex = 0
+        self._combo_maps[combo.Name] = mapping
+
+    def _get_combo_value(self, combo, fallback):
+        mapping = self._combo_maps.get(combo.Name)
+        if not mapping:
+            return fallback
+        selected = combo.SelectedItem
+        return mapping.get(selected, fallback)
+
+    def on_ok(self, sender, args):
+        self._result = {
+            'formula_conflict_action': self._get_combo_value(
+                self.conflict_combo, ImportResolutionOptions.ACTION_KEEP_TARGET_FORMULA),
+            'yaml_formula_only_action': self._get_combo_value(
+                self.yaml_only_combo, ImportResolutionOptions.ACTION_USE_YAML_VALUE_ONLY),
+            'family_formula_only_action': self._get_combo_value(
+                self.family_only_combo, ImportResolutionOptions.ACTION_KEEP_TARGET_FORMULA),
+            'missing_parameter_action': self._get_combo_value(
+                self.missing_combo, ImportResolutionOptions.ACTION_ADD_WITH_VALUE)
+        }
+        self.DialogResult = True
+        self.Close()
+
+    def on_cancel(self, sender, args):
+        self._result = None
+        self.DialogResult = False
+        self.Close()
+
+    def get_result(self):
+        return self._result
+
+def _set_parameter_formula(fm, fparam, formula_text):
+    if formula_text in (None, ''):
+        _clear_parameter_formula(fm, fparam)
+        return
+    try:
+        fm.SetFormula(fparam, formula_text)
+    except Exception as ex:
+        logger.error('Failed to set formula for %s | %s', fparam.Definition.Name, ex)
+
+def _clear_parameter_formula(fm, fparam):
+    try:
+        fm.SetFormula(fparam, None)
+    except Exception:
+        try:
+            fm.SetFormula(fparam, '')
+        except Exception as ex:
+            logger.error('Failed to clear formula for %s | %s', fparam.Definition.Name, ex)
+
+def _apply_formula_resolution(pcfg, fparam, fm, was_missing):
+    current_formula = _normalize_formula_text(getattr(fparam, 'Formula', None))
+    action = None
+
+    if was_missing and import_alerts.is_missing_parameter(pcfg.name):
+        missing_action = import_resolutions.missing_parameter_action
+        if missing_action == ImportResolutionOptions.ACTION_ADD_WITH_FORMULA and pcfg.formula:
+            action = ImportResolutionOptions.ACTION_USE_YAML_FORMULA
+        elif missing_action == ImportResolutionOptions.ACTION_ADD_WITH_VALUE and pcfg.formula:
+            action = ImportResolutionOptions.ACTION_USE_YAML_VALUE_ONLY
+        elif missing_action == ImportResolutionOptions.ACTION_IGNORE_MISSING:
+            return bool(current_formula)
+
+    if not action:
+        category = import_alerts.get_formula_category(pcfg.name)
+        action = import_resolutions.action_for_formula_category(category)
+
+    if action == ImportResolutionOptions.ACTION_USE_YAML_FORMULA:
+        if pcfg.formula:
+            _set_parameter_formula(fm, fparam, pcfg.formula)
+            return True
+        return bool(current_formula)
+
+    if action == ImportResolutionOptions.ACTION_KEEP_TARGET_FORMULA:
+        return bool(current_formula)
+
+    if action in (ImportResolutionOptions.ACTION_CLEAR_AND_USE_VALUE,
+                  ImportResolutionOptions.ACTION_USE_YAML_VALUE_ONLY):
+        _clear_parameter_formula(fm, fparam)
+        return False
+
+    # default: respect whatever the family currently has
+    return bool(current_formula)
+
+def resolve_discrepancy_actions():
+    import_resolutions.reset()
+
+    if not import_alerts.has_actionable_alerts():
+        return True
+
+    summary_text = _build_discrepancy_summary_text(import_alerts)
+
+    window = DiscrepancyResolutionWindow(summary_text, import_alerts, import_resolutions)
+    dialog_result = window.ShowDialog()
+    if not dialog_result:
+        return False
+
+    selections = window.get_result()
+    if not selections:
+        return False
+
+    if import_alerts.formula_conflicts:
+        import_resolutions.formula_conflict_action = selections.get(
+            'formula_conflict_action', import_resolutions.formula_conflict_action)
+    if import_alerts.yaml_formula_only:
+        import_resolutions.yaml_formula_only_action = selections.get(
+            'yaml_formula_only_action', import_resolutions.yaml_formula_only_action)
+    if import_alerts.family_formula_only:
+        import_resolutions.family_formula_only_action = selections.get(
+            'family_formula_only_action', import_resolutions.family_formula_only_action)
+    if import_alerts.missing_parameters:
+        import_resolutions.missing_parameter_action = selections.get(
+            'missing_parameter_action', import_resolutions.missing_parameter_action)
+
+    return True
+
 # ------------------------- Setters -------------------------------------------
 
 def set_fparam_value(doc, pvcfg, fparam):
@@ -452,13 +965,23 @@ def ensure_params(doc, fconfig):
         if not pcfg:
             continue
 
+        param_was_missing = import_alerts.is_missing_parameter(pname)
+        if param_was_missing and import_resolutions.missing_parameter_action == ImportResolutionOptions.ACTION_IGNORE_MISSING:
+            logger.debug('Skipping YAML-only parameter per user choice: %s', pname)
+            continue
+
         # Skip instance parameters entirely if toggle enabled
         if SKIP_INSTANCE_PARAMS and pcfg.isinst:
             logger.debug('Skipping instance parameter by mode: %s', pname)
             continue
 
         fparam = ensure_param(doc, fm, pcfg, pname)
-        if fparam and (pcfg.default is not None or pcfg.isreport):
+        if not fparam:
+            continue
+
+        _apply_formula_resolution(pcfg, fparam, fm, param_was_missing)
+
+        if pcfg.default is not None or pcfg.isreport:
             params_with_value.append((fparam, pcfg, pname))
 
     # single pass for defaults/reporting
@@ -590,6 +1113,8 @@ if __name__ == '__main__':
         raise SystemExit
 
     family_configs = load_configs(family_cfg_file)
+    import_alerts.reset()
+    import_resolutions.reset()
     existing_sharedparam_file = HOST_APP.app.SharedParametersFilename
 
     selected_type_names = pick_types_from_yaml(family_configs)
@@ -603,6 +1128,7 @@ if __name__ == '__main__':
 
     fam_doc = None
     loader = _AlwaysOverwriteLoader(overwrite_params=True)
+    should_close_fam_doc = False
 
     try:
         yaml_family_name = _get_yaml_family_name(family_configs)
@@ -635,12 +1161,28 @@ if __name__ == '__main__':
                 )
                 raise SystemExit
 
-            # Open a temporary editable family document
-            fam_doc = project_doc.EditFamily(target_family)
+            # Re-use an already open family document if available
+            fam_doc = _get_open_family_doc_for(target_family)
+            if fam_doc:
+                should_close_fam_doc = False
+            else:
+                # Open a temporary editable family document
+                existing_doc_sigs = _get_open_doc_signatures()
+                fam_doc = project_doc.EditFamily(target_family)
+                should_close_fam_doc = _doc_signature(fam_doc) not in existing_doc_sigs
 
         if SHAREDPARAM_DEF in family_configs:
             sharedparam_file = recover_sharedparam_defs(family_cfg_file, family_configs[SHAREDPARAM_DEF])
             HOST_APP.app.SharedParametersFilename = sharedparam_file
+
+        precheck_parameter_alerts(fam_doc, family_configs)
+
+        if import_alerts.has_actionable_alerts():
+            if not resolve_discrepancy_actions():
+                logger.warning('Import cancelled before any changes were made.')
+                raise SystemExit
+        elif import_alerts.has_alerts():
+            import_alerts.report()
 
         with revit.Transaction('Import Params/Types from Config', doc=fam_doc):
             fam_mgr = fam_doc.FamilyManager
@@ -661,7 +1203,7 @@ if __name__ == '__main__':
         raise
     finally:
         HOST_APP.app.SharedParametersFilename = existing_sharedparam_file
-        if fam_doc and (fam_doc != project_doc):
+        if fam_doc and should_close_fam_doc:
             try:
                 fam_doc.Close(False)
             except Exception:
