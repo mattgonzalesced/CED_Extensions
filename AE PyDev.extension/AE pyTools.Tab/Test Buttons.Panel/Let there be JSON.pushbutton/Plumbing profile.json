@@ -267,7 +267,7 @@
         ],
         "Model": [
             {
-                "P_Electric Water Heater on Floor": {
+                "_skip P_Electric Water Heater on Floor": {
                     "P_Default": {
                         "PARAMETERS": {}
                     }
@@ -902,7 +902,7 @@
         ],
         "Model": [
             {
-                "P_Electric Water Heater on Floor": {
+                "_skip_P_Electric Water Heater on Floor": {
                     "P_Default": {
                         "PARAMETERS": {}
                     }
