@@ -1,5 +1,5 @@
 {
-    "27TV": {
+    "PF_Plan TV": {
         "Electrical_Fixture": [
             {
                 "EF-U_Receptacle_CED": {
@@ -221,7 +221,7 @@
         ],
         "Notes": "TV outlet"
     },
-    "BEAUTYANGEL": {
+    "BCS_Beauty Angel": {
         "Electrical_Fixture": [
             {
                 "EF-U_Disconnect Switch_CED": {
@@ -291,7 +291,7 @@
         ],
         "Notes": "BEAUTYANGEL"
     },
-    "CRYO": {
+    "BCS_Cryolounge": {
         "Electrical_Fixture": [
             {
                 "EF-U_Receptacle_CED": {
@@ -320,7 +320,7 @@
         ],
         "Notes" : "Cryo Chambers"
     },
-    "Locker-Sink-Sloan-Trough-Enclosure": {
+    "PF_Plan Sloan Trough Sink": {
         "Electrical_Fixture" : [
             {
                 "EF-U_Receptacle_CED" : {
@@ -472,7 +472,7 @@
             }
         ]
     },
-    "FAN 1": {
+    "PF_FAN 1": {
         "Electrical_Fixture": [
             {
                 "EF-U_Disconnect Switch_CED": {
@@ -560,7 +560,7 @@
         ],
         "Notes": "HM5A"
     },
-    "HM62A": {
+    "BCS_Tanning Bed 42.4": {
         "Electrical_Fixture": [
             {
                 "EF-U_Disconnect Switch_CED": {
@@ -725,7 +725,7 @@
             }
         ]
     },
-    "HM62B_Up tanning": {
+    "BCS_Upright Tanning": {
         "Electrical_Fixture": [
             {
                 "EF-U_Disconnect Switch_CED": {
@@ -795,7 +795,7 @@
         ],
         "Notes": "Tanning with speaker and data"
     },
-    "HM63C": {
+    "BCS_Hydro Lounge": {
         "Electrical_Fixture": [
             {
                 "EF-U_Receptacle_CED": {
@@ -864,7 +864,7 @@
         ],
         "Notes": "Tanning with speaker and data"
     },
-    "HM62E Hybrid Tanning Booth": {
+    "BCS_Hybrid Tanning Booth": {
         "Electrical_Fixture": [
             {
                 "EF-U_Disconnect Switch_CED": {
@@ -1054,7 +1054,7 @@
                         },
                         "OFFSET": {
                             "x": 0,
-                            "y": -36,
+                            "y": 0,
                             "r": 180
                         
                         }
@@ -1324,7 +1324,7 @@
                         },
                         "OFFSET":{
                             "x" : 0,
-                            "y" : -48,
+                            "y" : -7,
                             "r" : 270
                         }
                     }
@@ -1348,7 +1348,7 @@
         ],
         "Notes": "Exercise equipment power"
     },
-    "SmarteCarte Massage Chair": {
+    "BCS_SmarteCarte Massage Chair": {
         "Electrical_Fixture": [
             {
                 "EF-U_Receptacle_CED": {
@@ -1392,7 +1392,7 @@
         ],
         "Notes": "Exercise equipment power"
     },
-    "TV TRUSS": {
+    "PF_Plan TV Truss": {
         "Electrical_Fixture": [
             {
                 "EF-U_Receptacle_CED": {
@@ -1459,7 +1459,7 @@
         ],
         "Notes": "TV mounting power"
     },
-    "vending machine": {
+    "PF_Plan Vend Mach": {
         "Electrical_Fixture": [
             {
                 "EF-U_Receptacle_CED": {

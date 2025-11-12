@@ -4,12 +4,11 @@ import pandas as pd
 root = Tk()
 root.withdraw()
 
-# csv_file = filedialog.askopenfilename(
-#     title = 'Select CSV file',
-#     filetypes = [("CSV Files", ".csv")]
-# )
+csv_file = filedialog.askopenfilename(
+    title = 'Select CSV file',
+    filetypes = [("CSV Files", ".csv")]
+)
 
-csv_file = r'C:\CED_Extensions\AE PyDev.extension\AE pyTools.Tab\Test Buttons.Panel\Let there be JSON.pushbutton\ROOM TAGS PF_Bear, DE_XO REBASE BLOCKS.csv'
 if csv_file:
     df = pd.read_csv(csv_file)
 
