@@ -224,13 +224,24 @@ def get_param_typevalue(ftype, fparam):
     return fparam_value
 
 
-def include_type_configs(cfgs_dict, sparams):
+def include_type_configs(cfgs_dict, sparams, selected_type_names=None):
     '''
     add the parameter values for all types into the configs dict
     '''
     fm = revit.doc.FamilyManager
+    selected_names = None
+    if selected_type_names:
+        selected_names = set([name.strip() for name in selected_type_names if name and name.strip()])
+        if not selected_names:
+            selected_names = None
     # grab param values for each family type
     for ftype in fm.Types:
+        try:
+            fname = ftype.Name.strip()
+        except Exception:
+            fname = ftype.Name
+        if selected_names and fname not in selected_names:
+            continue
         # param value dict for this type
         type_config = {}
         # grab value from each param
@@ -286,7 +297,7 @@ def _get_family_name():
 #-------------------Added 10-27-25 to put family name at top of yaml------------------
 
 def read_configs(selected_fparam_names,
-                 include_types=False, include_defaults=False):
+                 type_names=None, include_defaults=False):
     '''
     read parameter and type configurations into a dictionary
     '''
@@ -357,8 +368,8 @@ def read_configs(selected_fparam_names,
             shared_params.append(sparam.fparam)
 
     # include type configs?
-    if include_types:
-        include_type_configs(cfgs_dict, export_sparams)
+    if type_names:
+        include_type_configs(cfgs_dict, export_sparams, type_names)
     elif include_defaults:
         add_default_values(cfgs_dict, export_sparams)
 
@@ -382,6 +393,43 @@ def get_parameters():
         title="Select Parameters",
         multiselect=True,
     ) or []
+
+
+def get_type_names_for_export():
+    '''
+    Prompt the user to select specific family types to export.
+    Returns:
+        None -> user cancelled the selection
+        [] -> user chose to skip exporting types
+        [names] -> selected family type names
+    '''
+    fm = revit.doc.FamilyManager
+    type_names = []
+    for ftype in fm.Types:
+        try:
+            name = ftype.Name.strip()
+        except Exception:
+            name = ftype.Name
+        if name:
+            type_names.append(name)
+
+    if not type_names:
+        return []
+
+    type_names = sorted(set(type_names), key=lambda n: n.lower())
+    selected = forms.SelectFromList.show(
+        type_names,
+        title='Select Family Types to Export',
+        button_name='Use Selected Types',
+        multiselect=True,
+        message='Choose one or more family types to include.\n'
+                'Leave empty to export parameters only.'
+    )
+    if selected is None:
+        return None
+
+    cleaned = [name.strip() for name in selected if name and name.strip()]
+    return cleaned
 
 
 def store_sharedparam_def(shared_params):
@@ -445,15 +493,14 @@ if __name__ == '__main__':
     if family_cfg_file:
         family_params = get_parameters()
         if family_params:
-            inctypes = incdefault = False
-            # ask user to include family type definitions
-            inctypes = forms.alert(
-                "Do you want to export family types as well?",
-                yes=True, no=True
-            )
-            # if said no, ask if the current param values should be included
-            if not inctypes:
-                incdefault = forms.alert(
+            selected_type_names = get_type_names_for_export()
+            if selected_type_names is None:
+                forms.alert('Export cancelled.', warn_icon=True)
+                raise SystemExit
+
+            include_defaults = False
+            if not selected_type_names:
+                include_defaults = forms.alert(
                     "Do you want to include the current parameter values as "
                     "default? Otherwise the parameters will not include any "
                     "value and their default value will be assigned "
@@ -463,8 +510,8 @@ if __name__ == '__main__':
 
             family_configs, shared_parameters = \
                 read_configs(family_params,
-                             include_types=inctypes,
-                             include_defaults=incdefault)
+                             type_names=selected_type_names,
+                             include_defaults=include_defaults)
 
             logger.debug(family_configs)
 
