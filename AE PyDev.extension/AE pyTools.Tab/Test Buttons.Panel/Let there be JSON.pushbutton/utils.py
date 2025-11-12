@@ -93,10 +93,11 @@ def read_matchings_json(json_path):
     groups_dict = {}
     parameters_dict = {}
     offsets_dict = {}
+    tags_dict = {}
 
     with codecs.open(json_path, 'r', encoding='utf-8-sig') as f:
         data = json.load(f)
-
+    #  "Stepmill": {  # for cad_name, categories in data.items():
     for cad_name, categories in data.items():
         families = []
         groups = []
@@ -106,7 +107,7 @@ def read_matchings_json(json_path):
             print("WARNING: CAD block '{}' value is not a dictionary (type: {}). Skipping.".format(cad_name, type(categories).__name__))
             continue
 
-        # Process each category
+        # "Electrical_Fixture": [  # for category_name, category_data in categories.items():
         for category_name, category_data in categories.items():
             # Skip Notes field (Notes is a string, not a list)
             if category_name == "Notes":
@@ -116,17 +117,16 @@ def read_matchings_json(json_path):
             if not isinstance(category_data, list):
                 print("WARNING: Category '{}' for CAD block '{}' is not an array. Skipping.".format(category_name, cad_name))
                 continue
-
-            # Iterate through array of fixture objects
+            # {     # for fixture_obj in category_data:
             for fixture_obj in category_data:
-                # fixture_obj is a dict with one key (the family name)
+                # "EF-U_Receptacle_CED": {  
                 for family_name, types_dict in fixture_obj.items():
                     # Skip entries with "_skip" prefix
                     if family_name.startswith("_skip"):
                         print("DEBUG: Skipping entry with '_skip' prefix: '{}'".format(family_name))
                         continue
 
-                    # types_dict contains type names as keys
+                    # "Duplex Wall": {
                     for type_name, type_data in types_dict.items():
                         # Check if this is a Model Group (accept both "Model_Groups" and "Model")
                         if category_name in ["Model_Groups", "Model"]:
@@ -157,10 +157,55 @@ def read_matchings_json(json_path):
                                     # If conversion fails, just skip (defaults to no offset)
                                     pass
 
-                        # Extract parameters if they exist
+                        # "PARAMETERS": { 
                         if "PARAMETERS" in type_data and type_data["PARAMETERS"]:
+                            # "dev-Group ID": "value" 
                             params = type_data["PARAMETERS"]
                             parameters_dict.setdefault(cad_name, {}).setdefault(label, []).append(params)
+
+                        if "TAGS" in type_data and type_data["TAGS"]:
+                            tags_array = type_data["TAGS"]
+                            if isinstance (tags_array, list):
+                                for tag_obj in tags_array:
+                                    for tag_family, tag_types in tag_obj.items():
+                                        for tag_type, tag_config in tag_types.items():
+                                            tag_label = "{} : {}".format(tag_type, tag_family)
+
+                                            tag_offset = {"x" : 0, "y" : 0, "z" :0, "r" : 0}
+                                            if "OFFSET" in tag_config:
+                                                offset_data = tag_config["OFFSET"]
+                                                tag_offset["x"] = float(offset_data.get("x", 0))
+                                                tag_offset["y"] = float(offset_data.get("y", 0))
+                                                tag_offset["z"] = float(offset_data.get("z", 0))
+                                                tag_offset["r"] = float(offset_data.get("r", 0))
+
+                                            tag_info = {
+                                                "tag_label" : tag_label,
+                                                "offset" : tag_offset
+                                            }
+                                            tags_dict.setdefault(cad_name,{}).setdefault(label, []).append(tag_info)
+
+
+                            else:
+
+                                for tag_family, tag_types in tags_array.items():
+                                    for tag_type, tag_config in tag_types.items():
+                                        tag_label = "{} : {}".format(tag_type, tag_family)
+
+                                        tag_offset = {"x" : 0, "y" : 0, "z" : 0, "r" : 0}
+                                        if "OFFSET" in tag_config:
+                                            offset_data = tag_config["OFFSET"]
+                                            tag_offset["x"] = float(offset_data.get("x", 0.0))
+                                            tag_offset["y"] = float(offset_data.get("y", 0.0))
+                                            tag_offset["z"] = float(offset_data.get("z", 0.0))
+                                            tag_offset["r"] = float(offset_data.get("r", 0.0))
+
+                                        tag_info = {
+                                            "tag_label" : tag_label,
+                                            "offset" : tag_offset
+                                        }
+                                    
+                                        tags_dict.setdefault(cad_name, {}).setdefault(label,[]).append(tag_info)
 
         # Store results
         if families:
@@ -171,7 +216,7 @@ def read_matchings_json(json_path):
             print("DEBUG JSON: CAD block '{}' has {} model groups: {}".format(cad_name, len(groups), groups))
     
 
-    return matchings_dict, groups_dict, parameters_dict, offsets_dict
+    return matchings_dict, groups_dict, parameters_dict, offsets_dict, tags_dict
 
 
 def organize_symbols_by_category(fixture_symbols):

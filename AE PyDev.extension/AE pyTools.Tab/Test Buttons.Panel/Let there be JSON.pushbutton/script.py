@@ -11,7 +11,7 @@ from utils import (feet_inch_to_inches, create_safe_control_name,
                    determine_family_category, organize_model_groups)
 
 # Revit API imports
-from Autodesk.Revit.DB import (FilteredElementCollector, FamilySymbol, Structure, XYZ, Transaction, ElementTransformUtils, Line, ForgeTypeId, UnitUtils, GlobalParametersManager, ViewSchedule, BuiltInParameter)
+from Autodesk.Revit.DB import (BuiltInCategory, FilteredElementCollector, FamilySymbol, Structure, XYZ, Transaction, ElementTransformUtils, Line, ForgeTypeId, UnitUtils, GlobalParametersManager, ViewSchedule, BuiltInParameter, IndependentTag, TagMode, TagOrientation, Reference)
 from pyrevit import DB
 
 # Try to import annotation-specific types (may not exist in older Revit versions)
@@ -57,14 +57,11 @@ if not unique_names:
 
 #------------------------------------------------------------------------------
 # 4. Read Structured Matchings JSON to create automatic mappings.
-matchings_dict, groups_dict, parameters_dict, offsets_dict = read_matchings_json(matchings_json_path)
+matchings_dict, groups_dict, parameters_dict, offsets_dict, tags_dict = read_matchings_json(matchings_json_path)
 
 #------------------------------------------------------------------------------
 # 5. Collect all FamilySymbols from the project and organize by category.
 fixture_symbols = FilteredElementCollector(doc).OfClass(FamilySymbol).ToElements()
-
-
-# print("FIXTURE_SYMBOLS {}".format(fixture_symbols))
 
 
 # Organize symbols by category using utility function
@@ -72,6 +69,17 @@ fixture_symbols = FilteredElementCollector(doc).OfClass(FamilySymbol).ToElements
  types_by_family, family_symbols) = organize_symbols_by_category(fixture_symbols)
 
 symbol_labels_sorted = sorted(symbol_label_map.keys())
+
+tag_symbol_map = {}
+
+for sym in fixture_symbols:
+    family_name = sym.Family.Name if hasattr(sym, 'Family') else 'Unknown'
+    try:
+        type_name = sym.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM).AsString()
+        label = "{} : {}".format(type_name, family_name)
+        tag_symbol_map[label] = sym
+    except:
+        pass
 
 #------------------------------------------------------------------------------
 # 5b. Collect and organize Model Groups
@@ -911,6 +919,45 @@ else:
                                 except Exception as ex:
                                     # print("ERROR: Failed to rotate '{}': {}".format(symbol_label, ex))
                                     pass
+                        
+                        #TAG PLACEMENT
+                        if symbol_label and cad_name in tags_dict:
+                            fixture_tags_array = tags_dict.get(cad_name, {}).get(symbol_label,[])
+
+                            for tag_info in fixture_tags_array:
+                                tag_label = tag_info["tag_label"]
+                                tag_offset = tag_info["offset"]
+
+                                if tag_label in tag_symbol_map:
+                                    tag_type  = tag_symbol_map[tag_label]
+
+                                    tag_offset_x = tag_offset["x"]/12.0
+                                    tag_offset_y = tag_offset["y"]/12.0
+                                    tag_offset_z = tag_offset["z"]/12.0
+                                    tag_loc = XYZ(x + tag_offset_x, y + tag_offset_y, z + tag_offset_z)
+
+                                    current_view = doc.ActiveView
+                                    if current_view and current_view.ViewType != ViewType.ThreeD:
+                                        try:
+                                            reference = Reference(instance)
+
+                                            tag = IndependentTag.Create(
+                                                doc, current_view.Id, reference, False, TagMode.TM_ADDBY_CATEGORY, TagOrientation.Horizontal, tag_loc
+                                            )
+
+                                            if tag:
+                                                tag.ChangeTypeId(tag_type.Id)
+                                                print("SUCCESS: Tagged '{}' with '{}'".format(symbol_label, tag_label))
+
+                                        except Exception as ex:
+                                            print("ERROR: Failed to tag '{}': {}".format(symbol_label, ex))
+                                    else:
+                                        print("WARNING: Cannot place tags in 3D view for '{}'. Switch to plan view.".format(symbol_label))
+                                else:
+                                    print("WARNING: Tag type '{}' not found in project for '{}'".format(tag_label, symbol_label))
+
+
+
             t.Commit()
             # print("Finished placing families from CSV.")
         except InvalidOperationException as ex:

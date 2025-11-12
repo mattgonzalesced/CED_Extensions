@@ -17,7 +17,37 @@
                             "CKT_Load Name_CEDT": "STAIRMASTER",
                             "CKT_Schedule Notes_CEDT": ""
 
-                        }
+                        },
+                        "OFFSET" : {
+                            "x" : 5,
+                            "y" : 5
+                        },
+                        "TAGS": [
+                            {
+                            "EF-Tag_Electrical Fixtures_CED": {
+                                "Panel & Circuit Number": {
+                                    "OFFSET": {
+                                        "x": 10,
+                                        "y": 0,
+                                        "z": 0,
+                                        "r": 0
+                                    }
+                                }
+                            }
+                        },
+                            {
+                            "EF-Tag_Electrical Fixtures_CED": {
+                                "Elevation (Feet - Inches)": {
+                                    "OFFSET": {
+                                        "x": 0,
+                                        "y": -5,
+                                        "z": 0,
+                                        "r": 45
+                                        }
+                                    }
+                                }
+                            }
+                        ]
                     }
                 }
             }
