@@ -147,7 +147,7 @@
         "Lighting Fixtures": [
             {
                 "LF-U_Rectangular Fixture_CED": {
-                    "4 ft Linear - Suspended": {
+                    "F10": {
                         "PARAMETERS": {
                             "dev-Group ID": "F10",
                             "FLA Input_CED": "0",
