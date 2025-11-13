@@ -51,7 +51,7 @@
         "Lighting Fixtures": [
             {
                 "LF-U_Universal Light Fixture_CED": {
-                    "2x4 - Recessed": {
+                    "2x2 - Recessed": {
                         "PARAMETERS": {
                             "dev-Group ID": "F1A and F1B",
                             "FLA Input_CED": "0",
