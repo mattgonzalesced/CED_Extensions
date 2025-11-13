@@ -165,10 +165,6 @@
         ],
         "Notes": "EX'G ADA DF"
     },
-<<<<<<< Updated upstream
-    "PF_Plan Rinnai HWH": {
-        "Generic_Annotations" : [
-=======
     "Floor Drain 1": {
         "Model": [
             {
@@ -264,7 +260,6 @@
     },
     "Room Name 105C JAN.": {
        "Generic_Annotations" : [
->>>>>>> Stashed changes
             {
                 "Manual Key Note- All Shapes": {
                     "Square": {
