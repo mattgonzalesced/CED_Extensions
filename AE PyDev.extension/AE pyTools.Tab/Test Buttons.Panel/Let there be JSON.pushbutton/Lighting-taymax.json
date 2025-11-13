@@ -3,7 +3,7 @@
         "Lighting Fixtures": [
             {
                 "LF-U_Exit Sign_CED": {
-                    "Exit Sign - Wall": {
+                    "E1": {
                         "PARAMETERS": {
                             "dev-Group ID": "E1",
                             "FLA Input_CED": "0",
@@ -27,7 +27,7 @@
         "Lighting Fixtures": [
             {
                 "LF-U_Exit Sign_CED": {
-                    "Exit Sign - Ceiling": {
+                    "E2": {
                         "PARAMETERS": {
                             "dev-Group ID": "E2",
                             "FLA Input_CED": "0",
@@ -51,7 +51,7 @@
         "Lighting Fixtures": [
             {
                 "LF-U_Round Fixture_CED": {
-                    "6\" Round - Recessed": {
+                    "F1A": {
                         "PARAMETERS": {
                             "dev-Group ID": "F1A and F1B",
                             "FLA Input_CED": "0",
@@ -99,7 +99,7 @@
         "Lighting Fixtures": [
             {
                 "LF-U_Rectangular Fixture_CED": {
-                    "2x2 - Surface Mounted": {
+                    "F9": {
                         "PARAMETERS": {
                             "dev-Group ID": "F9",
                             "FLA Input_CED": "0",
