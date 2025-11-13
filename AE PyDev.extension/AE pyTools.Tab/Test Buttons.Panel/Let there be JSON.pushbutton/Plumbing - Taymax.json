@@ -1,5 +1,5 @@
 {
-    "EX'G WALL TOILET": {
+    "PF_Plan WC": {
        "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
@@ -34,7 +34,7 @@
         ],
         "Notes": "EX'G WALL TOILET"
     },
-    "Locker-Sink-Sloan-Trough-Enclosure": {
+    "PF_Plan Sloan Trough Sink": {
        "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
@@ -66,7 +66,7 @@
         ],
         "Notes": "Locker-Sink-Sloan-Trough-Enclosure"
     },
-    "NEW URINAL": {
+    "PF_Plan Urinal": {
        "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
@@ -101,7 +101,7 @@
         ],
         "Notes": "NEW URINAL"
     },
-    "EX'G MOPSINK": {
+    "PF_Plan Mop Sink": {
        "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
@@ -133,7 +133,7 @@
         ],
         "Notes": "EX'G MOPSINK"
     },
-    "EX'G ADA DF": {
+    "PF_Plan DF": {
        "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
@@ -165,78 +165,8 @@
         ],
         "Notes": "EX'G ADA DF"
     },
-    "Floor Drain 1": {
-        "Model": [
-            {
-                "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "Floor Drain 1"
-    },
-    "Floor Drain 2": {
-        "Model group": [
-            {
-                "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "Floor Drain 2"
-    },
-    "Room Name 108 CARDIO": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 109 CIRCUIT": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 105C JAN.": {
-       "Generic_Annotations" : [
+    "PF_Plan Rinnai HWH": {
+        "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
                     "Square": {
@@ -267,7 +197,7 @@
         ],
         "Model": [
             {
-                "_skip P_Electric Water Heater on Floor": {
+                "P_Electric Water Heater on Floor": {
                     "P_Default": {
                         "PARAMETERS": {}
                     }
@@ -276,319 +206,8 @@
         ],
         "Notes": "Water Heater Assembly"
     },
-    "Room Name 105D STORAGE": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 107 MOBILITY ROOM FUNCTIONAL TRAINING/": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 106 UTILITY/STORAGE": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 111 FREE WEIGHTS": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 105 LOCKER ROOM MEN'S": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 105A TOILET": {
-       "Model group": [
-            {
-                "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "Floor Drain 2"
-    },
-    "Room Name 110 STRENGTH": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 100 VESTIBULE": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 101A BREAK ROOM EMPLOYEE": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 101B ROOM IT": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 101 RECEPTION": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 102 CHECK-IN": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 103 CARD SPA BLACK": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 103B ANGEL BEAUTY": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 105B SHOWER": {
-       "Generic_Annotations" : [
+    "Inpro 42x36 Shower": {
+        "Generic_Annotations" : [
             {
                 "Manual Key Note- All Shapes": {
                     "Square": {
@@ -632,300 +251,72 @@
                     "P_Default": {
                         "PARAMETERS": {},
                         "OFFSET" :{
-                            "x" : 12,
-                            "y" : 108
+                            "x" : -14,
+                            "y" : 20
+                        }
+                    }
+                }
+            } 
+        ],
+        "Notes": "Showers"
+    },
+    "Inpro 36x36 ADA Shower": {
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
                         }
                     }
                 }
             },
             {
-                    "P_Shower Rough-In": {
-                        "P_Default": {
-                            "PARAMETERS": {},
-                            "OFFSET" :{
-                                "x" : 12,
-                                "y" : -108
-                            }
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
                         }
-                    },
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model": [
+            {
                     "P_Shower Rough-In 2": {
                         "P_Default": {
                             "PARAMETERS": {},
                             "OFFSET" :{
-                                "x" : -94,
-                                "y" : 108
+                                "x" : 0,
+                                "y" : 0,
+                                "r" : 270
                             }
-                        }
-                    },
-                    "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
-                        "P_Default": {
-                            "PARAMETERS": {}
                         }
                     }
                 } 
         ],
-        "Notes": "Showers"
+        "Notes": "ADA Showers"
     },
-    "Room Name 103C TANNING": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 103E TANNING": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 103F TANNING": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 103G TANNING": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 103A HYDROMASSAGE": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 104 LOCKER ROOM WOMEN'S": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
-    },
-    "Room Name 104B SHOWER": {
-       "Generic_Annotations" : [
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
+    "PF_Plan FLoor Drain": {
         "Model": [
-                {
-                    "P_Shower Rough-In": {
-                        "P_Default": {
-                            "PARAMETERS": {},
-                            "OFFSET" :{
-                                "x" : 12,
-                                "y" : -108
-                            }
-                        }
-                    }
-                },
-                {
-                    "P_Shower Rough-In": {
-                        "P_Default": {
-                            "PARAMETERS": {},
-                            "OFFSET" :{
-                                "x" : -94,
-                                "y" : -108
-                            }
-                        }
-                    },
-                    "P_Shower Rough-In 2": {
-                        "P_Default": {
-                            "PARAMETERS": {},
-                            "OFFSET" :{
-                                "x" : -94,
-                                "y" : -108
-                            }
-                        }
-                    },
-                    "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
-                        "P_Default": {
-                            "PARAMETERS": {}
-                        }
-                    }
-                }
-        ],
-        "Notes": "Showers"
-    },
-    "Room Name 104C JAN.": {
-       "Generic_Annotations" : [
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            },
-            {
-                "Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model": [
-            {
-                "_skip_P_Electric Water Heater on Floor": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "Water Heater Assembly"
-    },
-    "Room Name 104A TOILET": {
-       "Model group": [
             {
                 "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
                     "P_Default": {
@@ -934,52 +325,93 @@
                 }
             }
         ],
-        "Notes": "Floor Drain 1"
+        "Notes": "Floor Drain"
+    },
+    "Room Name 108 CARDIO": {
+       
+    },
+    "Room Name 109 CIRCUIT": {
+       
+    },
+    "Room Name 105C JAN.": {
+       
+    },
+    "Room Name 105D STORAGE": {
+       
+    },
+    "Room Name 107 MOBILITY ROOM FUNCTIONAL TRAINING/": {
+       
+    },
+    "Room Name 106 UTILITY/STORAGE": {
+       
+    },
+    "Room Name 111 FREE WEIGHTS": {
+       
+    },
+    "Room Name 105 LOCKER ROOM MEN'S": {
+       
+    },
+    "Room Name 105A TOILET": {
+       
+    },
+    "Room Name 110 STRENGTH": {
+       
+    },
+    "Room Name 100 VESTIBULE": {
+       
+    },
+    "Room Name 101A BREAK ROOM EMPLOYEE": {
+       
+    },
+    "Room Name 101B ROOM IT": {
+       
+    },
+    "Room Name 101 RECEPTION": {
+       
+    },
+    "Room Name 102 CHECK-IN": {
+      
+    },
+    "Room Name 103 CARD SPA BLACK": {
+       
+    },
+    "Room Name 103B ANGEL BEAUTY": {
+       
+    },
+    "Room Name 105B SHOWER": {
+       
+    },
+    "Room Name 103C TANNING": {
+       
+    },
+    "Room Name 103E TANNING": {
+       
+    },
+    "Room Name 103F TANNING": {
+       
+    },
+    "Room Name 103G TANNING": {
+       
+    },
+    "Room Name 103A HYDROMASSAGE": {
+       
+    },
+    "Room Name 104 LOCKER ROOM WOMEN'S": {
+       
+    },
+    "Room Name 104B SHOWER": {
+       
+    },
+    "Room Name 104C JAN.": {
+       
+    },
+    "Room Name 104A TOILET": {
+       
     },
     "Room Name 104D STORAGE": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
+       
     },
     "Room Name 103D HYBRID": {
-       "Generic_Annotations" : [
-            {
-                "_skip Manual Key Note- All Shapes": {
-                    "Square": {
-                        "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
-                        }
-                    }
-                }
-            }
-        ],
-        "Model_Groups": [
-            {
-                "_skip P_Commercial Water Closet": {
-                    "P_Default": {
-                        "PARAMETERS": {}
-                    }
-                }
-            }
-        ],
-        "Notes": "EX'G WALL TOILET"
+       
     }
 }

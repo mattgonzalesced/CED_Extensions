@@ -1,4 +1,47 @@
 {
+    "PF_Plan TV Video Wall": {
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TV Video Wall",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 18,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+        
+    },
     "PF_Plan TV": {
         "Data_Devices": [
             {
