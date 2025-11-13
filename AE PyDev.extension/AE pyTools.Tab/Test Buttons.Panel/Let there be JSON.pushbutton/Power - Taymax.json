@@ -326,7 +326,7 @@
                 "EF-U_Receptacle_CED" : {
                     "Duplex Wall - GFCI" : {
                         "PARAMETERS" : { 
-                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
+                            "dev-Group ID" : "PF_Plan Sloan Trough Sink",
                             "FLA Input_CED": "0",
                             "Apparent Load Input_CED": "180",
                             "Load Classification_CED": "C",
@@ -350,7 +350,7 @@
                 "EF-U_Receptacle_CED" : {
                     "Duplex Wall - GFCI" : {
                         "PARAMETERS" : { 
-                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
+                            "dev-Group ID" : "PF_Plan Sloan Trough Sink",
                             "FLA Input_CED": "0",
                             "Apparent Load Input_CED": "180",
                             "Load Classification_CED": "C",
@@ -374,7 +374,7 @@
                 "EF-U_Receptacle_CED" : {
                     "Duplex Wall - GFCI" : {
                         "PARAMETERS" : { 
-                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
+                            "dev-Group ID" : "PF_Plan Sloan Trough Sink",
                             "FLA Input_CED": "0",
                             "Apparent Load Input_CED": "180",
                             "Load Classification_CED": "C",
@@ -395,58 +395,10 @@
                 }
             },
             {
-                "EF-U_Receptacle_CED" : {
-                    "Duplex Wall - GFCI" : {
-                        "PARAMETERS" : { 
-                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
-                            "FLA Input_CED": "0",
-                            "Apparent Load Input_CED": "180",
-                            "Load Classification_CED": "C",
-                            "Voltage_CED": "120",
-                            "Number of Poles_CED": "1",
-                            "CKT_Panel_CEDT": "L3",
-                            "CKT_Circuit Number_CEDT": "6 & 9",
-                            "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
-                            "CKT_Schedule Notes_CEDT": ""
-                        },
-                        "OFFSET" :{
-                            "x" : 50,
-                            "y" : 8,
-                            "r" : 180
-                        }
-                    }
-                }
-            },
-            {
-                "EF-U_Receptacle_CED" : {
-                    "Duplex Wall - GFCI" : {
-                        "PARAMETERS" : { 
-                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
-                            "FLA Input_CED": "0",
-                            "Apparent Load Input_CED": "180",
-                            "Load Classification_CED": "C",
-                            "Voltage_CED": "120",
-                            "Number of Poles_CED": "1",
-                            "CKT_Panel_CEDT": "L3",
-                            "CKT_Circuit Number_CEDT": "6 & 9",
-                            "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
-                            "CKT_Schedule Notes_CEDT": ""
-                        },
-                        "OFFSET":{
-                            "x": 0,
-                            "y": 0,
-                            "r": 180
-                        }
-                    }
-                }
-            },
-            {
                 "EF-U_Junction Box_CED": {
                     "Wall - With Stem": {
                         "PARAMETERS": {
-                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
+                            "dev-Group ID" : "PF_Plan Sloan Trough Sink",
                             "Apparent Load Input_CED" : "180"
                         },
                         "OFFSET" :{
@@ -460,12 +412,40 @@
                 "EF-U_Junction Box_CED": {
                     "Wall - With Stem": {
                         "PARAMETERS": {
-                            "dev-Group ID" : "Locker-Sink-Sloan-Trough-Enclosure",
+                            "dev-Group ID" : "PF_Plan Sloan Trough Sink",
                             "Apparent Load Input_CED" : "180"
                         },
                         "OFFSET" :{
                             "x" : -72,
                             "y" : -18
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "PF_Plan Soap Dispenser": {
+        "Electrical_Fixture" : [
+            {
+                "EF-U_Receptacle_CED" : {
+                    "Duplex Wall - GFCI" : {
+                        "PARAMETERS" : { 
+                            "dev-Group ID" : "PF_Plan Soap Dispenser",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "BATHROOM SINK",
+                            "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : -30,
+                            "y" : 0,
+                            "r" : 180
                         }
                     }
                 }
@@ -478,7 +458,7 @@
                 "EF-U_Disconnect Switch_CED": {
                     "Fused - 30A": {
                         "PARAMETERS": {
-                            "dev-Group ID": "Fan 1",
+                            "dev-Group ID": "PF_FAN 1",
                             "FLA Input_CED": "0",
                             "Apparent Load Input_CED": "1500",
                             "Load Classification_CED": "C",
@@ -1626,9 +1606,9 @@
                             "CED-G-NOTE #" : ""
                         },
                         "OFFSET": {
-                            "x": -88,
-                            "y": -40,
-                            "r": 270
+                            "x": 118,
+                            "y": 4,
+                            "r": 90
                         }
                     }
                 }
@@ -1652,9 +1632,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
-                            "x": -88,
-                            "y": -60,
-                            "r": 270
+                            "x": 118,
+                            "y": 24,
+                            "r": 90
                         }
                     }
                 }
@@ -1676,9 +1656,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
-                            "x": -88,
-                            "y": -50,
-                            "r": 270
+                            "x": 118,
+                            "y": 14,
+                            "r": 90
                         }
                     }
                 }
@@ -1700,9 +1680,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
-                            "x": 44,
-                            "y": -60,
-                            "r": 270
+                            "x": -14,
+                            "y": 24,
+                            "r": 90
                         }
                     }
                 }
@@ -1724,9 +1704,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
-                            "x": 44,
-                            "y": -50,
-                            "r": 270
+                            "x": -14,
+                            "y": 14,
+                            "r": 90
                         }
                     }
                 }
@@ -1748,9 +1728,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
-                            "x": -28,
-                            "y": -60,
-                            "r": 270
+                            "x": 58,
+                            "y": 24,
+                            "r": 90
                         }
                     }
                 }
@@ -1772,9 +1752,9 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
-                            "x": -28,
-                            "y": -50,
-                            "r": 270
+                            "x": 58,
+                            "y": 14,
+                            "r": 90
                         }
                     }
                 }
