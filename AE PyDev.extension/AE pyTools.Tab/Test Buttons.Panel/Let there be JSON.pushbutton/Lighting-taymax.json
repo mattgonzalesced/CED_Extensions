@@ -50,8 +50,8 @@
     "PF_Light Recess": {
         "Lighting Fixtures": [
             {
-                "LF-U_Universal Light Fixture_CED": {
-                    "2x2 - Recessed": {
+                "LF-U_Round Fixture_CED": {
+                    "6\" Round - Recessed": {
                         "PARAMETERS": {
                             "dev-Group ID": "F1A and F1B",
                             "FLA Input_CED": "0",
@@ -195,7 +195,7 @@
         "Lighting Fixtures": [
             {
                 "LF-U_Universal Light Fixture_CED": {
-                    "A_Highbay": {
+                    "F2": {
                         "PARAMETERS": {
                             "dev-Group ID": "F2",
                             "FLA Input_CED": "0",
