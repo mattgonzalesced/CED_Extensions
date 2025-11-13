@@ -5,17 +5,18 @@
                 "EF-U_Receptacle_CED": {
                     "Duplex Wall": {
                         "PARAMETERS": {
-                            "dev-Group ID": "27TV",
+                            "dev-Group ID": "TV TRUSS",
                             "FLA Input_CED": "0",
-                            "Voltage_CED": "120",
-                            "Number of Poles_CED": "1",
-                            "CKT_Circuit Number_CEDT": "24",
+                            "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L2",
+                            "CKT_Circuit Number_CEDT": "TVTRUSS",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "TV & RADIANCE MONITOR - CHECK-IN 102",
-                            "CKT_Schedule Notes_CEDT": "",
-                            "Load Classification_CED" : "C",
-                            "Apparent Load Input_CED" : "250",
-                            "CKT_Panel_CEDT" : "L3"
+                            "CKT_Load Name_CEDT": "TV TRUSS",
+                            "CKT_Schedule Notes_CEDT": ""
+
                         },
                         "OFFSET" :{
                             "x" : 0,
@@ -323,32 +324,8 @@
     "PF_Plan Sloan Trough Sink": {
         "Electrical_Fixture" : [
             {
-                "EF-U_Receptacle_CED" : {
-                    "Duplex Wall - GFCI" : {
-                        "PARAMETERS" : { 
-                            "dev-Group ID" : "PF_Plan Sloan Trough Sink",
-                            "FLA Input_CED": "0",
-                            "Apparent Load Input_CED": "180",
-                            "Load Classification_CED": "C",
-                            "Voltage_CED": "120",
-                            "Number of Poles_CED": "1",
-                            "CKT_Panel_CEDT": "L3",
-                            "CKT_Circuit Number_CEDT": "6 & 9",
-                            "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "BATHROOM SINK",
-                            "CKT_Schedule Notes_CEDT": ""
-                        },
-                        "OFFSET" :{
-                            "x" : -30,
-                            "y" : 0,
-                            "r" : 180
-                        }
-                    }
-                }
-            },
-            {
-                "EF-U_Receptacle_CED" : {
-                    "Duplex Wall - GFCI" : {
+                "EF-U_Junction Box_CED": {
+                    "Wall - With Stem": {
                         "PARAMETERS" : { 
                             "dev-Group ID" : "PF_Plan Sloan Trough Sink",
                             "FLA Input_CED": "0",
@@ -363,16 +340,15 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : -50,
-                            "y" : 8,
-                            "r" : 180
+                            "x" : 0,
+                            "y" : 0
                         }
                     }
                 }
             },
             {
-                "EF-U_Receptacle_CED" : {
-                    "Duplex Wall - GFCI" : {
+                "EF-U_Junction Box_CED": {
+                    "Wall - With Stem": {
                         "PARAMETERS" : { 
                             "dev-Group ID" : "PF_Plan Sloan Trough Sink",
                             "FLA Input_CED": "0",
@@ -387,9 +363,8 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 30,
-                            "y" : 0,
-                            "r" : 180
+                            "x" : 12,
+                            "y" : 0
                         }
                     }
                 }
@@ -397,27 +372,22 @@
             {
                 "EF-U_Junction Box_CED": {
                     "Wall - With Stem": {
-                        "PARAMETERS": {
+                        "PARAMETERS" : { 
                             "dev-Group ID" : "PF_Plan Sloan Trough Sink",
-                            "Apparent Load Input_CED" : "180"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 72,
-                            "y" : -18
-                        }
-                    }
-                }
-            },
-            {
-                "EF-U_Junction Box_CED": {
-                    "Wall - With Stem": {
-                        "PARAMETERS": {
-                            "dev-Group ID" : "PF_Plan Sloan Trough Sink",
-                            "Apparent Load Input_CED" : "180"
-                        },
-                        "OFFSET" :{
-                            "x" : -72,
-                            "y" : -18
+                            "x" : -12,
+                            "y" : 0
                         }
                     }
                 }
@@ -443,9 +413,37 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : -30,
+                            "x" : 0,
                             "y" : 0,
-                            "r" : 180
+                            "r" : 0
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "PF_Plan Hand Dryer": {
+        "Electrical_Fixture" : [
+            {
+                "EF-U_Receptacle_CED" : {
+                    "Duplex Wall - GFCI" : {
+                        "PARAMETERS" : { 
+                            "dev-Group ID" : "PF_Plan Hand Dryer",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "Hand Dryer",
+                            "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : 0,
+                            "y" : 0,
+                            "r" : 0
                         }
                     }
                 }
@@ -1372,7 +1370,7 @@
         ],
         "Notes": "Exercise equipment power"
     },
-    "PF_Plan TV Truss": {
+    "_skip PF_Plan TV Truss": {
         "Electrical_Fixture": [
             {
                 "EF-U_Receptacle_CED": {

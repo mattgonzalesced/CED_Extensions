@@ -74,8 +74,8 @@
     "PF_Light Exterior": {
         "Lighting Fixtures": [
             {
-                "LF-U_Wallpack Fixture_CED": {
-                    "Exterior Wallpack": {
+                "LF-U_Bug Eye Fixture_CED": {
+                    "F13": {
                         "PARAMETERS": {
                             "dev-Group ID": "F13",
                             "FLA Input_CED": "0",
@@ -123,7 +123,7 @@
         "Lighting Fixtures": [
             {
                 "LF-U_Wall Sconce Fixture_CED": {
-                    "Wall Gooseneck Downlight": {
+                    "F12": {
                         "PARAMETERS": {
                             "dev-Group ID": "F12",
                             "FLA Input_CED": "0",
@@ -171,7 +171,7 @@
         "Lighting Fixtures": [
             {
                 "LF-U_Rectangular Fixture_CED": {
-                    "8x8 - Recessed": {
+                    "F6": {
                         "PARAMETERS": {
                             "dev-Group ID": "F6",
                             "FLA Input_CED": "0",
