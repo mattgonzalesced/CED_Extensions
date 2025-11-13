@@ -165,8 +165,106 @@
         ],
         "Notes": "EX'G ADA DF"
     },
+<<<<<<< Updated upstream
     "PF_Plan Rinnai HWH": {
         "Generic_Annotations" : [
+=======
+    "Floor Drain 1": {
+        "Model": [
+            {
+                "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Floor Drain 1"
+    },
+    "Floor Drain 2": {
+        "Model group": [
+            {
+                "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Floor Drain 2"
+    },
+    "Room Name 108 CARDIO": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 109 CIRCUIT": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "PF_Plan Rinnai HWH": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model": [
+            {
+                "P_Electric Water Heater on Floor": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Water Heater Assembly"
+    },
+    "Room Name 105C JAN.": {
+       "Generic_Annotations" : [
+>>>>>>> Stashed changes
             {
                 "Manual Key Note- All Shapes": {
                     "Square": {

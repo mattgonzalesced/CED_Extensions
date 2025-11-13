@@ -45,6 +45,52 @@
         ],
         "Notes": "TV outlet"
     },
+    "PF_Plan TV Video Wall": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TV Video Wall",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L2",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "PF_Plan TV Video Wall",
+                            "CKT_Schedule Notes_CEDT": ""
+
+                        },
+                        "OFFSET" :{
+                            "x" : 0,
+                            "y" : 0,
+                            "r" : 180
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "11"
+                        },
+                        "OFFSET" :{
+                            "x" : -12,
+                            "y" : -16,
+                            "r" : 90
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "TV outlet"
+    },
     "43 tv": {
         "Electrical_Fixture": [
             {
@@ -340,6 +386,30 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
+                            "x" : 30,
+                            "y" : 0,
+                            "r" : 0
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Junction Box_CED": {
+                    "Wall - With Stem": {
+                        "PARAMETERS" : { 
+                            "dev-Group ID" : "PF_Plan Sloan Trough Sink",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
+                            "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
                             "x" : 0,
                             "y" : 0
                         }
@@ -363,17 +433,21 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 12,
+                            "x" : -30,
                             "y" : 0
                         }
                     }
                 }
-            },
+            }
+        ]
+    },
+    "PF_Plan Rinnai HWH": {
+        "Electrical_Fixture" : [
             {
                 "EF-U_Junction Box_CED": {
                     "Wall - With Stem": {
                         "PARAMETERS" : { 
-                            "dev-Group ID" : "PF_Plan Sloan Trough Sink",
+                            "dev-Group ID" : "PF_Plan Rinnai HWH",
                             "FLA Input_CED": "0",
                             "Apparent Load Input_CED": "180",
                             "Load Classification_CED": "C",
@@ -386,13 +460,81 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : -12,
+                            "x" : 26,
+                            "y" : 0,
+                            "r" : 0
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Junction Box_CED": {
+                    "Wall - With Stem": {
+                        "PARAMETERS" : { 
+                            "dev-Group ID" : "PF_Plan Rinnai HWH",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
+                            "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : 43,
+                            "y" : 0
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Junction Box_CED": {
+                    "Wall - With Stem": {
+                        "PARAMETERS" : { 
+                            "dev-Group ID" : "PF_Plan Rinnai HWH",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
+                            "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : 9,
                             "y" : 0
                         }
                     }
                 }
             }
-        ]
+        ],
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model": [
+            {
+                "_skip P_Electric Water Heater on Floor": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Water Heater Assembly"
     },
     "PF_Plan Soap Dispenser": {
         "Electrical_Fixture" : [
@@ -1518,7 +1660,7 @@
                 "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
+                            "CED-G-NOTE #" : "2"
                         }
                     }
                 }
@@ -1542,8 +1684,8 @@
                             "CKT_Schedule Notes_CEDT": "GFI"
                         },
                         "OFFSET":{
-                            "x": 99,
-                            "y": -120,
+                            "x": 0,
+                            "y": 0,
                             "r": 270
                         }
                     }
@@ -1566,8 +1708,8 @@
                             "CKT_Schedule Notes_CEDT": "GFI"
                         },
                         "OFFSET":{
-                            "x": -99,
-                            "y": 46,
+                            "x": -12,
+                            "y": 0,
                             "r": 90
                         }
                     }
@@ -1803,7 +1945,7 @@
                 "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
+                            "CED-G-NOTE #" : "1"
                         }
                     }
                 }
@@ -1827,8 +1969,8 @@
                             "CKT_Schedule Notes_CEDT": "GFI"
                         },
                         "OFFSET":{
-                            "x": -125,
-                            "y": -117,
+                            "x": 0,
+                            "y": 0,
                             "r": 270
                         }
                     }
@@ -1851,8 +1993,8 @@
                             "CKT_Schedule Notes_CEDT": "GFI"
                         },
                         "OFFSET":{
-                            "x": 125,
-                            "y": 43,
+                            "x": 12,
+                            "y": 0,
                             "r": 90
                         }
                     }
