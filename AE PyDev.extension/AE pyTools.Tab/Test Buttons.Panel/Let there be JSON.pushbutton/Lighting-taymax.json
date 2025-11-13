@@ -1,0 +1,333 @@
+{
+    "Exit Sign": {
+        "Lighting Fixtures": [
+            {
+                "LF-U_Exit Sign_CED": {
+                    "Exit Sign - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "E1",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "L",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L2",
+                            "CKT_Circuit Number_CEDT": "EMERGENCY",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "EMERGENCY - (Space)",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Emergency lighting"
+    },
+    "Exit Directional Sign": {
+        "Lighting Fixtures": [
+            {
+                "LF-U_Exit Sign_CED": {
+                    "Exit Sign - Ceiling": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "E2",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "L",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L2",
+                            "CKT_Circuit Number_CEDT": "EMERGENCY",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "EMERGENCY - (Space)",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Emergency lighting with arrows"
+    },
+    "PF_Light Recess": {
+        "Lighting Fixtures": [
+            {
+                "LF-U_Universal Light Fixture_CED": {
+                    "2x4 - Recessed": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "F1A and F1B",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "L",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L2",
+                            "CKT_Circuit Number_CEDT": "STANDARD",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "(Space)",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "General lighting"
+    },
+    "PF_Light Exterior": {
+        "Lighting Fixtures": [
+            {
+                "LF-U_Wallpack Fixture_CED": {
+                    "Exterior Wallpack": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "F13",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "L",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L2",
+                            "CKT_Circuit Number_CEDT": "STANDARD",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "(Space)",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "General lighting"
+    },
+    "PF_Light Surface Mtd": {
+        "Lighting Fixtures": [
+            {
+                "LF-U_Rectangular Fixture_CED": {
+                    "2x2 - Surface Mounted": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "F9",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "L",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L2",
+                            "CKT_Circuit Number_CEDT": "STANDARD",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "(Space)",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "General lighting"
+    },
+    "PF_Light Sconce": {
+        "Lighting Fixtures": [
+            {
+                "LF-U_Wall Sconce Fixture_CED": {
+                    "Wall Gooseneck Downlight": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "F12",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "L",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L2",
+                            "CKT_Circuit Number_CEDT": "STANDARD",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "(Space)",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Lighting and power"
+    },
+    "PF_Light Fluorescent": {
+        "Lighting Fixtures": [
+            {
+                "LF-U_Rectangular Fixture_CED": {
+                    "4 ft Linear - Suspended": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "F10",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "L",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L2",
+                            "CKT_Circuit Number_CEDT": "STANDARD",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "(Space)",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Lighting and power"
+    },
+    "PF_Light Podium Desk": {
+        "Lighting Fixtures": [
+            {
+                "LF-U_Rectangular Fixture_CED": {
+                    "8x8 - Recessed": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "F6",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "L",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L2",
+                            "CKT_Circuit Number_CEDT": "STANDARD",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "(Space)",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Lighting and power"
+    },
+    "PF_Light Linear Bay": {
+        "Lighting Fixtures": [
+            {
+                "LF-U_Universal Light Fixture_CED": {
+                    "A_Highbay": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "F2",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "L",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L2",
+                            "CKT_Circuit Number_CEDT": "STANDARD",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "(Space)",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Lighting and power"
+    },
+    "EX'G ADA DF": {
+        "Notes": "Existing ADA fountain"
+    },
+    "Room Name 108 CARDIO": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 109 CIRCUIT": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 105C JAN.": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 105D STORAGE": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 107 MOBILITY ROOM FUNCTIONAL TRAINING/": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 106 UTILITY/STORAGE": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 111 FREE WEIGHTS": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 105 LOCKER ROOM MEN'S": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 105A TOILET": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 110 STRENGTH": {
+    
+        "Notes": "ROOM"
+    },
+    "Room Name 100 VESTIBULE": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 101A BREAK ROOM EMPLOYEE": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 101B ROOM IT": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 101 RECEPTION": {
+       
+        "Notes": "ROOM: Reception"
+    },
+    "Room Name 102 CHECK-IN": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 103 CARD SPA BLACK": {
+    
+        "Notes": "ROOM"
+    },
+    "Room Name 103B ANGEL BEAUTY": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 105B SHOWER": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 103C TANNING": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 103E TANNING": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 103F TANNING": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 103G TANNING": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 103A HYDROMASSAGE": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 104 LOCKER ROOM WOMEN'S": {
+        
+        "Notes": "ROOM"
+    },
+    "Room Name 104B SHOWER": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 104A TOILET": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 104D STORAGE": {
+       
+        "Notes": "ROOM"
+    },
+    "Room Name 103D HYBRID": {
+       
+        "Notes": "ROOM"
+    }
+}
