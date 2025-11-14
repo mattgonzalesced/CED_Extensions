@@ -3,7 +3,7 @@
         "Electrical_Fixture": [
             {
                 "EF-U_Receptacle_CED": {
-                    "Duplex Wall": {
+                    "Quad Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "TV TRUSS",
                             "FLA Input_CED": "0",
@@ -1242,7 +1242,7 @@
         "Electrical_Fixture": [
             {
                 "EF-U_Receptacle_CED": {
-                    "Duplex Wall": {
+                    "Quad Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "it",
                             "FLA Input_CED": "0",
@@ -1281,7 +1281,7 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
-                            "x": 0,
+                            "x": 10,
                             "y": 0,
                             "r": 0
                         }
