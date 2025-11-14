@@ -120,7 +120,7 @@ class CircuitBranch(object):
 
         reasonable = True 
         if self._wire_sets_override and isinstance(self._wire_sets_override, int):
-            if self._wire_sets_override < 1 or self._wire_sets_override > 7:
+            if self._wire_sets_override < 1 or self._wire_sets_override > 12:
                 self.log_warning("Unreasonable wire sets override: {}. Resetting to 1.".format(
                     self._wire_sets_override))
                 self._wire_sets_override = 1
@@ -161,24 +161,24 @@ class CircuitBranch(object):
         if self._wire_hot_size_override:
             normalized = self._normalize_wire_size(self._wire_hot_size_override)
             if normalized not in CONDUCTOR_AREA_TABLE.keys():
-                self.log_warning("Unreasonable hot wire size override: {}. Resetting to Calculated.".format(
-                    self._wire_hot_size_override))
+                self.log_warning("Unreasonable hot wire size override: {}. Resetting to Calculated: {}.".format(
+                    self._wire_hot_size_override,self._calculated_hot_wire))
                 self._wire_hot_size_override = self._calculated_hot_wire
                 reasonable = False 
 
         if self._wire_neutral_size_override:
             normalized = self._normalize_wire_size(self._wire_neutral_size_override)
             if normalized not in CONDUCTOR_AREA_TABLE.keys():
-                self.log_warning("Unreasonable neutral wire size override: {}. Resetting to Calculated.".format(
-                    self._wire_neutral_size_override))
+                self.log_warning("Unreasonable neutral wire size override: {}. Resetting to Calculated Hot Size: {}.".format(
+                    self._wire_neutral_size_override,self._calculated_hot_wire))
                 self._wire_neutral_size_override = self._calculated_hot_wire
                 reasonable = False
             
         if self._wire_ground_size_override:
             normalized = self._normalize_wire_size(self._wire_ground_size_override)
             if normalized not in CONDUCTOR_AREA_TABLE.keys():
-                self.log_warning("Unreasonable ground wire size override: {}. Resetting to Calculated.".format(
-                    self._wire_ground_size_override))
+                self.log_warning("Unreasonable ground wire size override: {}. Resetting to Calculated Ground Size: {}.".format(
+                    self._wire_ground_size_override, self._calculated_ground_wire))
                 self._wire_ground_size_override = self._calculated_ground_wire
                 reasonable = False
             
@@ -193,8 +193,8 @@ class CircuitBranch(object):
         if self._conduit_size_override:
             size = str(self._conduit_size_override).replace('C', '').strip()
             if size not in CONDUIT_SIZE_INDEX:
-                self.log_warning("Unreasonable conduit size override: {}. Resetting to Calculated.".format(
-                    self._conduit_size_override))
+                self.log_warning("Unreasonable conduit size override: {}. Resetting to Calculated Conduit Size: {}.".format(
+                    self._conduit_size_override, self._calculated_conduit_size))
                 self._conduit_size_override = self._calculated_conduit_size
                 reasonable = False
         return reasonable
@@ -492,7 +492,7 @@ class CircuitBranch(object):
 
     @property
     def hot_wire_size(self):
-        raw = self._wire_hot_size_override if self._auto_calculate_override and self._wire_hot_size_override else self._calculated_hot_wire
+        raw = self._wire_hot_size_override if self._auto_calculate_override else self._calculated_hot_wire
         size = self._normalize_wire_size(raw)
         if size and self.settings.wire_size_prefix:
             return "{}{}".format(self.settings.wire_size_prefix, size)
@@ -507,7 +507,7 @@ class CircuitBranch(object):
 
     @property
     def ground_wire_size(self):
-        raw = self._wire_ground_size_override if self._auto_calculate_override and self._wire_ground_size_override else self._calculated_ground_wire
+        raw = self._wire_ground_size_override if self._auto_calculate_override else self._calculated_ground_wire
         size = self._normalize_wire_size(raw)
         if size and self.settings.wire_size_prefix:
             return "{}{}".format(self.settings.wire_size_prefix, size)
@@ -549,7 +549,7 @@ class CircuitBranch(object):
         if self.neutral_wire_quantity == 0:
             return ""
 
-        if self._auto_calculate_override and self._wire_neutral_size_override:
+        if self._auto_calculate_override:
             if self._wire_neutral_size_override is not None:
                 raw = self._wire_neutral_size_override
             else:
@@ -605,7 +605,7 @@ class CircuitBranch(object):
 
     @property
     def conduit_size(self):
-        raw = self._conduit_size_override if self._auto_calculate_override and self._conduit_size_override else self._calculated_conduit_size
+        raw = self._conduit_size_override if self._auto_calculate_override else self._calculated_conduit_size
         size = self._normalize_conduit_type(raw)
         if size and self.settings.conduit_size_suffix:
             return "{}{}".format(size, self.settings.conduit_size_suffix)
@@ -1000,45 +1000,51 @@ class CircuitBranch(object):
 
         return round(total_area / conduit_area, 5)  # ⚠️ keep as decimal
 
-    # TODO: need to handle cases where the Neutral does NOT equal hot. it needs to be
-    #  a separate chunk, cant just be number of wires.
-    #  example if 3 hots and 1 neutral, and hot_size = neutral_size: 4#12
-    #  example if 3 hots and 1 neutral, and hot_size not = neutral_size: 3#12H + 1#10N
-
     def get_wire_set_string(self):
-        wp = self.settings.wire_size_prefix or ''
         parts = []
-
-        total_hot_qty = self.hot_wire_quantity  # hot quantity
-        total_neutral_qty = self.neutral_wire_quantity # neutral quantity
+        wp = self.settings.wire_size_prefix or ''
 
         hot_size = self._normalize_wire_size(self.hot_wire_size)
-        neutral_size = self._normalize_wire_size(self.neutral_wire_size)
-        
-        if hot_size == neutral_size and total_neutral_qty > 0:
-            combined_qty = total_hot_qty + total_neutral_qty
-            if combined_qty and hot_size:
-                parts.append("{}{}{}".format(combined_qty, wp, hot_size))
-            total_hot_qty = 0
-            total_neutral_qty = 0
-        if total_hot_qty and hot_size:
-            parts.append("{}{}{}H".format(total_hot_qty, wp, hot_size))
+        neut_size = self._normalize_wire_size(self.neutral_wire_size)
+        gnd_size = self._normalize_wire_size(self.ground_wire_size)
+        ig_size = self._normalize_wire_size(self.isolated_ground_wire_size)
 
-        if total_neutral_qty and neutral_size:
-            parts.append("{}{}{}N".format(total_neutral_qty, wp, neutral_size))
+        hot_qty = self.hot_wire_quantity
+        neut_qty = self.neutral_wire_quantity
+        gnd_qty = self.ground_wire_quantity
+        ig_qty = self.isolated_ground_wire_quantity
 
-        if self.ground_wire_quantity:
-            grd_size = self._normalize_wire_size(self.ground_wire_size)
-            parts.append("{}{}{}G".format(self.ground_wire_quantity, wp, grd_size))
+        # hot + neutral logic
+        if neut_qty and hot_size and neut_size:
+            # neutral exists AND same size → combine
+            if hot_size == neut_size:
+                combined_qty = hot_qty + neut_qty
+                if combined_qty:
+                    parts.append("{}{}{}".format(combined_qty, wp, hot_size))
+            # neutral exists AND different size → separate
+            else:
+                if hot_qty:
+                    parts.append("{}{}{}H".format(hot_qty, wp, hot_size))
+                if neut_qty:
+                    parts.append("{}{}{}N".format(neut_qty, wp, neut_size))
+        else:
+            # no neutral → hot has no suffix
+            if hot_qty and hot_size:
+                parts.append("{}{}{}".format(hot_qty, wp, hot_size))
 
-        if self.isolated_ground_wire_quantity:
-            ig_size = self._normalize_wire_size(self.isolated_ground_wire_size)
-            parts.append("{}{}{}IG".format(self.isolated_ground_wire_quantity, wp, ig_size))
+        # ground wires (always gets suffix)
+        if gnd_qty and gnd_size:
+            parts.append("{}{}{}G".format(gnd_qty, wp, gnd_size))
 
-        material = self.wire_material
-        suffix = material if material != "CU" else ""
+        if ig_qty and ig_size:
+            parts.append("{}{}{}IG".format(ig_qty, wp, ig_size))
 
-        return "{} {}".format(" + ".join(parts), suffix) if suffix else " + ".join(parts)
+        # material suffix
+        material = self.wire_material or ""
+        suffix = material if material.upper() != "CU" else ""
+
+        final = " + ".join(parts)
+        return "{} {}".format(final, suffix) if suffix else final
 
     def get_wire_size_callout(self):
         sets = self.number_of_sets or 1
@@ -1051,7 +1057,7 @@ class CircuitBranch(object):
 
     def get_conduit_and_wire_size(self):
         sets = self.number_of_sets or 1
-        prefix = "{} SETS - ".format(sets) if sets > 1 else ""
+        prefix = "({}) ".format(sets) if sets > 1 else ""
 
         conduit = self._normalize_conduit_type(self.conduit_size)
         if not conduit:

@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 __title__ = "Parameter Linker"
 
-from pyrevit import script, revit, DB
+import csv
+import os
+
+from pyrevit import script, revit, DB, forms
+
 doc    = revit.doc
 output = script.get_output()
-
+logger = script.get_logger()
 def _unwrap_parameter_id(rule):
     """Return (param_name, ElementId) or ('<unknown>', None)"""
     raw = rule.GetRuleParameter()
@@ -103,19 +107,257 @@ def document_filters():
         }
     return result
 
-# —— Output —— #
-filters = document_filters()
+def report_workset_filters():
+    """Identify and report filters that reference the Workset parameter (-1002053)."""
+    target_pid = DB.ElementId(-1002053)
+    matching_filters = []
 
-output.print_md("# ParameterFilterElement Rules")
-for fname in sorted(filters):
-    info = filters[fname]
-    output.print_md("## Filter: {0}".format(fname))
-    output.print_md("**Categories**: {0}".format(
-        ", ".join(info["Categories"]) or "<none>"
-    ))
-    output.print_md("**Rules**:")
-    for rule_line in info["Rules"]:
-        output.print_md(rule_line)
+    def contains_workset_rule(filt):
+        """Recursively check if a filter or its children use the Workset parameter."""
+        # Handle logical filters
+        if isinstance(filt, (DB.LogicalAndFilter, DB.LogicalOrFilter)):
+            for sub in filt.GetFilters():
+                if contains_workset_rule(sub):
+                    return True
+            return False
+
+        # Handle element parameter filters
+        if isinstance(filt, DB.ElementParameterFilter):
+            for rule in filt.GetRules():
+                # Handle inverse rules
+                if isinstance(rule, DB.FilterInverseRule):
+                    rule = rule.GetInnerRule()
+
+                try:
+                    raw_param = rule.GetRuleParameter()
+                    if isinstance(raw_param, DB.ElementId):
+                        pid = raw_param
+                    else:
+                        pid = raw_param.ParameterId
+
+                    if pid == target_pid:
+                        return True
+                except Exception:
+                    continue
+        return False
+
+    # Collect all ParameterFilterElements
+    collector = DB.FilteredElementCollector(doc).OfClass(DB.ParameterFilterElement)
+
+    for pf in collector.ToElements():
+        try:
+            if contains_workset_rule(pf.GetElementFilter()):
+                matching_filters.append(pf.Name)
+        except Exception:
+            continue
+
+    matching_filters = sorted(set(matching_filters))
+    total = len(matching_filters)
+
+    output.print_md("# Filters Using Workset Parameter")
+    if total == 0:
+        output.print_md("_No filters reference the Workset parameter (-1002053)._")
+        return
+
+    for name in matching_filters:
+        output.print_md("- **{0}**".format(name))
+
+    output.print_md("\n**Total Filters:** {0}".format(total))
+
+# —— Output —— #
+def report_all_filters():
+    filters = document_filters()
+
+    output.print_md("# ParameterFilterElement Rules")
+    for fname in sorted(filters):
+        info = filters[fname]
+        output.print_md("## Filter: {0}".format(fname))
+        output.print_md("**Categories**: {0}".format(
+            ", ".join(info["Categories"]) or "<none>"
+        ))
+        output.print_md("**Rules**:")
+        for rule_line in info["Rules"]:
+            output.print_md(rule_line)
+
+
+# -------------------------------------------------------------
+# FILTER RULES
+# -------------------------------------------------------------
+IGNORE_BICS = [
+    DB.BuiltInCategory.OST_Cameras,
+    DB.BuiltInCategory.OST_ProjectBasePoint,
+    DB.BuiltInCategory.OST_SharedBasePoint,
+    DB.BuiltInCategory.OST_SitePoint,
+    DB.BuiltInCategory.OST_IOS_GeoLocations,
+]
+IGNORE_TYPES = (DB.RevitLinkInstance, DB.ImportInstance)
+
+# -------------------------------------------------------------
+# HELPERS
+# -------------------------------------------------------------
+def is_valid_element(el):
+    """Filter out unwanted elements."""
+    if not el or el.Id.IntegerValue < 0:
+        return False
+    cat = el.Category
+    if cat:
+        if cat.CategoryType == DB.CategoryType.Annotation:
+            return False
+        if cat.Id.IntegerValue in [int(bic) for bic in IGNORE_BICS]:
+            return False
+    if isinstance(el, IGNORE_TYPES):
+        return False
+    if isinstance(el, DB.View3D) and el.IsPerspective:
+        return False
+    return True
+
+
+def get_visible_elements(view):
+    """Return dict {ElementId: CategoryName} for valid visible elements."""
+    fec = DB.FilteredElementCollector(doc, view.Id).WhereElementIsNotElementType()
+    result = {}
+    for el in fec:
+        if is_valid_element(el):
+            cat = el.Category
+            cat_name = cat.Name if cat else "<No Category>"
+            result[el.Id.IntegerValue] = cat_name
+    return result
+
+
+def group_by_category(id_dict):
+    """Return {Category: [ElementIds]}."""
+    grouped = {}
+    for eid, cat in id_dict.items():
+        grouped.setdefault(cat, []).append(eid)
+    return grouped
+
+
+def print_category_summary(title, grouped_dict):
+    output.print_md("#### {}".format(title))
+    if not grouped_dict:
+        output.print_md("_None_")
+        return
+    for cat, ids in sorted(grouped_dict.items()):
+        output.print_md("- **{}:** {} elements".format(cat, len(ids)))
+
+
+# -------------------------------------------------------------
+# MAIN LOGIC
+# -------------------------------------------------------------
+def analyze_views(baseline_view, coord_views):
+    baseline = get_visible_elements(baseline_view)
+    baseline_ids = set(baseline.keys())
+
+    seen = set()
+    duplicates_dict = {}
+    missing_ids = set(baseline_ids)
+
+    for v in coord_views:
+        vis = get_visible_elements(v)
+        vis_ids = set(vis.keys())
+        overlap = seen.intersection(vis_ids)
+        if overlap:
+            duplicates_dict[v.Name] = dict((i, vis[i]) for i in overlap if i in vis)
+        seen.update(vis_ids)
+        missing_ids -= vis_ids
+
+    missing_dict = dict((i, baseline[i]) for i in missing_ids if i in baseline)
+    return duplicates_dict, missing_dict
+
+
+# -------------------------------------------------------------
+# CSV EXPORT
+# -------------------------------------------------------------
+def export_to_csv(coord_views, duplicates, missing):
+    """Export only element IDs to CSV (grouped by view)."""
+    # Use pyRevit temp directory instead of get_file()
+    folder = forms.pick_folder()
+    csv_path = os.path.join(folder, "Coordination_View_Analysis.csv")
+
+    with open(csv_path, "w", newline="") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["Coordination View", "Element ID"])
+
+        # All view IDs
+        for v in coord_views:
+            writer.writerow([v.Name])
+            for eid in sorted(get_visible_elements(v).keys()):
+                writer.writerow(["", eid])
+
+        if duplicates:
+            writer.writerow([])
+            writer.writerow(["Duplicate Elements Across Views"])
+            for vname, id_dict in duplicates.items():
+                writer.writerow([vname])
+                for eid in sorted(id_dict.keys()):
+                    writer.writerow(["", eid])
+
+        if missing:
+            writer.writerow([])
+            writer.writerow(["Missing Elements (not shown anywhere)"])
+            for eid in sorted(missing.keys()):
+                writer.writerow(["", eid])
+
+    output.print_md("📁 **Exported CSV:** [{}]({})".format(os.path.basename(csv_path), csv_path))
+    return csv_path
+
+
+# -------------------------------------------------------------
+# RUN
+# -------------------------------------------------------------
+def main():
+    views = DB.FilteredElementCollector(doc).OfClass(DB.View).ToElements()
+    view_dict = {v.Name: v for v in views if not v.IsTemplate and not v.Name.startswith("<")}
+
+    baseline_name = forms.SelectFromList.show(sorted(view_dict.keys()), title="Select Baseline View")
+    if not baseline_name:
+        return
+    baseline_view = view_dict[baseline_name]
+
+    coord_names = forms.SelectFromList.show(sorted(view_dict.keys()), multiselect=True, title="Select Coordination Views")
+    if not coord_names:
+        return
+    coord_views = [view_dict[n] for n in coord_names]
+
+    output.close_others()
+    output.print_md("## Coordination Coverage Report")
+    output.print_md("**Baseline:** `{}`".format(baseline_view.Name))
+    output.print_md("**Coordination Views:** {}".format(", ".join(coord_names)))
+    output.print_md("---")
+
+    duplicates, missing = analyze_views(baseline_view, coord_views)
+
+    # Per-view totals
+    for v in coord_views:
+        count = len(get_visible_elements(v))
+        output.print_md("- **{}:** {} elements".format(v.Name, count))
+    output.print_md("---")
+
+    # Duplicates section
+    total_dups = sum(len(ids) for ids in duplicates.values())
+    if total_dups:
+        output.print_md("### ⚠️ Duplicates Found: {}".format(total_dups))
+        for vname, id_dict in duplicates.items():
+            grouped = group_by_category(id_dict)
+            output.print_md("##### {}".format(vname))
+            print_category_summary("By Category", grouped)
+    else:
+        output.print_md("✅ No duplicates across coordination views.")
+
+    # Missing section
+    if missing:
+        output.print_md("---")
+        output.print_md("### ⚠️ Missing from All Coordination Views: {}".format(len(missing)))
+        grouped_missing = group_by_category(missing)
+        print_category_summary("By Category", grouped_missing)
+    else:
+        output.print_md("✅ All baseline elements accounted for.")
+
+    export_to_csv(coord_views, duplicates, missing)
+
+
+if __name__ == "__main__":
+    main()
 
 
 

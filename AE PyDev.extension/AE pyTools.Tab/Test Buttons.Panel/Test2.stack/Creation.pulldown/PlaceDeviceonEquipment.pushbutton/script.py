@@ -9,6 +9,39 @@ doc = revit.doc
 
 console = script.get_output()
 logger = script.get_logger()
+class ElementLogger(object):
+    def __init__(self, base_logger, element=None, label=None):
+        """
+        Args:
+            base_logger: The pyRevit logger to wrap.
+            element: Revit element or ElementId to associate with logs.
+            label: Optional label like "Parent" or "Child"
+        """
+        self.logger = base_logger
+        self.element = element
+        self.label = label or "Element"
+
+    def _prefix(self):
+        if isinstance(self.element, DB.ElementId):
+            el_id = self.element.IntegerValue
+        elif hasattr(self.element, "Id"):
+            el_id = self.element.Id.IntegerValue
+        else:
+            el_id = "?"
+
+        return "[{} ID={}]".format(self.label, el_id)
+
+    def info(self, message):
+        self.logger.info("{} {}".format(self._prefix(), message))
+
+    def warning(self, message):
+        self.logger.warning("{} {}".format(self._prefix(), message))
+
+    def debug(self, message):
+        self.logger.debug("{} {}".format(self._prefix(), message))
+
+    def error(self, message):
+        self.logger.error("{} {}".format(self._prefix(), message))
 
 
 # 129689 2D
@@ -21,6 +54,10 @@ class ParentElement:
         self.location_point = location_point
         self.facing_orientation = facing_orientation
         self.is_view_specific = is_view_specific
+
+    @property
+    def log(self):
+        return ElementLogger(logger, self.element_id, label="Parent")
 
     @property
     def owner_view_id(self):
@@ -44,6 +81,45 @@ class ParentElement:
             if hasattr(element, 'LevelId') and element.LevelId != DB.ElementId.InvalidElementId:
                 return element.LevelId
         return None
+
+    @property
+    def element(self):
+        """Returns the Revit element object from the stored ID."""
+        return doc.GetElement(self.element_id)
+
+    @property
+    def symbol(self):
+        """Returns the FamilySymbol (type) of the element, if it's a FamilyInstance."""
+        if isinstance(self.element, DB.FamilyInstance):
+            return self.element.Symbol
+        return None
+
+    @property
+    def instance_parameters(self):
+        """
+        Returns a dictionary of parameter name -> DB.Parameter for instance parameters.
+        """
+        if self.element:
+            return {
+                param.Definition.Name: param
+                for param in self.element.Parameters
+            }
+        else:
+            return {}
+
+    @property
+    def type_parameters(self):
+        """
+        Returns a dictionary of parameter name -> DB.Parameter for type (symbol) parameters.
+        """
+        if self.symbol:
+            return {
+                param.Definition.Name: param
+                for param in self.symbol.Parameters
+
+            }
+        else:
+            return {}
 
     @classmethod
     def from_element_id(cls, element_id):
@@ -96,7 +172,7 @@ class ParentElement:
 
     def get_parameter_value(self, parameter_name):
         """
-        Retrieve the value of a parameter from the parent element.
+        Retrieve a value from either an instance parameter or type parameter.
 
         Args:
             parameter_name (str): The name of the parameter to retrieve.
@@ -104,15 +180,36 @@ class ParentElement:
         Returns:
             The value of the parameter, or None if not found.
         """
-        # Use the Revit API to fetch the parameter value
-        param = doc.GetElement(self.element_id).LookupParameter(parameter_name)
-        if param and param.HasValue:
-            if param.StorageType == DB.StorageType.String:
-                return param.AsString()
-            elif param.StorageType == DB.StorageType.Double:
-                return param.AsDouble()
-            elif param.StorageType == DB.StorageType.Integer:
-                return param.AsInteger()
+
+        elem = doc.GetElement(self.element_id)
+
+        if elem is None:
+            logger.info("[Parent get param]: no element found")
+            return None
+
+        # Try instance parameter first
+        param = elem.LookupParameter(parameter_name)
+
+        # If not found, check type parameters
+        if not param and hasattr(elem, "Symbol"):
+            logger.info("[Parent get param]:instance param <{}> not found. trying type".format(parameter_name))
+            symbol = elem.Symbol
+            if symbol:
+                param = symbol.LookupParameter(parameter_name)
+
+        if not param:
+            logger.info("[Parent get param]: type param <{}>not found. returning none".format(parameter_name))
+            return None
+
+        if param.StorageType == DB.StorageType.String:
+            return param.AsString()
+        elif param.StorageType == DB.StorageType.Double:
+            return param.AsDouble()
+        elif param.StorageType == DB.StorageType.Integer:
+            return param.AsInteger()
+        elif param.StorageType == DB.StorageType.ElementId:
+            return param.AsElementId()
+
         return None
 
     def __repr__(self):
@@ -147,6 +244,10 @@ class ChildElement:
         self.view_specific = view_specific
         self.structural_type = structural_type
         self.child_id = None
+
+    @property
+    def log(self):
+        return ElementLogger(logger, self.child_id, label="Parent")
 
     @classmethod
     def from_parent_and_symbol(cls, parent, symbol, family_name, symbol_name, element_type="FamilyInstance"):
@@ -288,29 +389,51 @@ class ChildElement:
                 logger.warning("Failed to set child parameter '{}'.".format(child_param))
 
     def set_parameter_value(self, parameter_name, value):
-        """Set a parameter value on the placed child element."""
+        """
+        Set a parameter value on the placed child element.
+        """
         element = doc.GetElement(self.child_id)
         if not element:
             logger.warning("Child element with ID {} not found.".format(self.child_id))
             return False
 
         param = element.LookupParameter(parameter_name)
-        if param and not param.IsReadOnly:
-            try:
-                if param.StorageType == DB.StorageType.String:
-                    param.Set(str(value))
-                elif param.StorageType == DB.StorageType.Double:
-                    param.Set(float(value))
-                elif param.StorageType == DB.StorageType.Integer:
-                    param.Set(int(value))
-                elif param.StorageType == DB.StorageType.ElementId:
+        if not param:
+            logger.warning("Child element missing parameter '{}'.".format(parameter_name))
+            return False
+
+        if param.IsReadOnly:
+            logger.warning("Parameter '{}' is read-only on child.".format(parameter_name))
+            return False
+
+        try:
+            storage = param.StorageType
+            logger.debug("Setting parameter '{}' on child. StorageType: {}, Value: {}".format(
+                parameter_name, storage, value
+            ))
+
+            if storage == DB.StorageType.String:
+                param.Set(str(value))
+            elif storage == DB.StorageType.Double:
+                param.Set(float(value))
+            elif storage == DB.StorageType.Integer:
+                param.Set(int(value))
+            elif storage == DB.StorageType.ElementId:
+                if isinstance(value, DB.ElementId):
                     param.Set(value)
-                return True
-            except Exception as e:
-                logger.error("Failed to set parameter '{}': {}".format(parameter_name, e))
-        else:
-            logger.warning("Parameter '{}' is read-only or not found.".format(parameter_name))
-        return False
+                else:
+                    logger.warning(
+                        "Value for ElementId parameter '{}' is not a valid ElementId.".format(parameter_name))
+                    return False
+            else:
+                logger.warning("Unhandled StorageType '{}' for parameter '{}'.".format(storage, parameter_name))
+                return False
+
+            return True
+
+        except Exception as e:
+            logger.error("Failed to set parameter '{}': {}".format(parameter_name, e))
+            return False
 
     def __repr__(self):
         return "ChildElement(Type={}, Family={}, Symbol={}, PlacedID={}, Placement={})".format(
@@ -333,6 +456,10 @@ class PlacementInfo(object):
         return "PlacementInfo(Point={}, LevelID={}, ViewID={}, Orientation={})".format(
             self.location_point, self.level_id, self.owner_view_id, self.facing_orientation
         )
+
+# ___________________________________________________________________________
+# HELPER FUNCTIONS
+# ___________________________________________________________________________
 
 def pick_reference_elements():
     """Prompt user to select reference elements if none are selected."""
@@ -460,15 +587,48 @@ def pick_family_type(family):
     return selected_type, selected_type_name
 
 
+def inspect_parent_parameters():
+    """Prompt user to select a parent and print its instance and type parameters with values."""
+    selected_elements = pick_reference_elements()
+    if not selected_elements:
+        logger.warning("No element selected.")
+        return
+    for el in selected_elements:
+        parent = ParentElement.from_element_id(el.Id)
+        if not parent:
+            logger.error("Could not create ParentElement.")
+            return
+
+        logger.info("Inspecting ParentElement: {}".format(repr(parent)))
+
+        logger.info("---- Instance Parameters ----")
+        for name, param in parent.instance_parameters.items():
+            value = parent.get_parameter_value(name)
+            logger.info("[Instance] {} = {}".format(name, value))
+
+        logger.info("---- Type Parameters ----")
+        for name, param in parent.type_parameters.items():
+            if name in parent.instance_parameters:
+                continue  # already logged
+            value = parent.get_parameter_value(name)
+            logger.info("[Type] {} = {}".format(name, value))
+
+
+
 def main():
     parameter_mapping = {
         "Mark": "Equipment ID_CEDT",
         "Family and Type": "Equipment Remarks_CEDT",
+        "Voltage_CED":"Voltage_CED",
+        "Number of Poles_CED":"Number of Poles_CED",
+        "FLA_CED":"FLA Input_CED",
     }
 
     # Select parents
     selected_elements = pick_reference_elements()
     parent_instances = [ParentElement.from_element_id(el.Id) for el in selected_elements]
+
+
 
     # Prompt user to select Family or Group
     selected_child = pick_family_or_group()
@@ -516,7 +676,7 @@ def main():
             child.place()
             if child.element_type == "FamilyInstance":
                 child.rotate_to_match_parent()
-                # child.copy_parameters(parameter_mapping)
+                child.copy_parameters(parameter_mapping)
         trans.Commit()
 
     # Log results
@@ -527,6 +687,8 @@ def main():
     logger.info("Child Elements:")
     for child in child_instances:
         logger.info("{}".format(repr(child)))
+
+
 
 
 if __name__ == "__main__":
