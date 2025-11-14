@@ -469,9 +469,9 @@
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
                             "CKT_Panel_CEDT": "L3",
-                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Circuit Number_CEDT": "38",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
+                            "CKT_Load Name_CEDT": "HWH",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
@@ -493,9 +493,9 @@
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
                             "CKT_Panel_CEDT": "L3",
-                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Circuit Number_CEDT": "38",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
+                            "CKT_Load Name_CEDT": "HWH",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
@@ -516,9 +516,9 @@
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
                             "CKT_Panel_CEDT": "L3",
-                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Circuit Number_CEDT": "38",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "BATHROOM SINKS",
+                            "CKT_Load Name_CEDT": "HWH",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
@@ -607,9 +607,9 @@
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
                             "CKT_Panel_CEDT": "L3",
-                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Circuit Number_CEDT": "27",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "BATHROOM SINK",
+                            "CKT_Load Name_CEDT": "WATER FOUNTAIN",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
@@ -631,9 +631,9 @@
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
                             "CKT_Panel_CEDT": "L3",
-                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Circuit Number_CEDT": "27",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "BATHROOM SINK",
+                            "CKT_Load Name_CEDT": "WATER FOUNTAIN",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
@@ -1048,8 +1048,8 @@
                             "Load Classification_CED": "C",
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
-                            "CKT_Panel_CEDT" : "L3",
-                            "CKT_Circuit Number_CEDT": "38",
+                            "CKT_Panel_CEDT" : "L4",
+                            "CKT_Circuit Number_CEDT": "37",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "HYDROMASSAGE RECEPT - 103A",
                             "CKT_Schedule Notes_CEDT": ""
@@ -1493,7 +1493,16 @@
                     "Wall - With Stem": {
                         "PARAMETERS": {
                             "dev-Group ID": "PF_Plan TMAX",
-                            "Apparent Load Input_CED" : "180"
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "4",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TMAX RECEPT",
+                            "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
                             "x" : 0,
