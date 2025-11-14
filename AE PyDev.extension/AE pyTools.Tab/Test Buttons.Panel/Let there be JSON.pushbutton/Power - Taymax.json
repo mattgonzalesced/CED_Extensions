@@ -288,7 +288,7 @@
                         },
                         "OFFSET":{
                             "x": 0,
-                            "y": -46,
+                            "y": 0,
                             "r": 90
                         }
                     }
@@ -312,8 +312,8 @@
                             
                         },
                         "OFFSET":{
-                            "x": -54,
-                            "y": -37,
+                            "x": 12,
+                            "y": 0,
                             "r": 270
                         }
                     }
@@ -329,8 +329,8 @@
                             "CED-G-NOTE #" : "6"
                         },
                         "OFFSET" :{
-                            "x" : 36,
-                            "y" : 30
+                            "x" : -12,
+                            "y" : 0
                         }
                     }
                 }
@@ -358,7 +358,7 @@
                         },
                         "OFFSET":{
                             "x": 0,
-                            "y": -41,
+                            "y": 0,
                             "r": 90
                         }
                     }
@@ -434,6 +434,21 @@
                         },
                         "OFFSET" :{
                             "x" : -30,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes" : {
+                    "Square":{
+                        "PARAMETERS" :{
+                            "CED-G-NOTE #": "3"
+                        },
+                        "OFFSET" :{
+                            "x" : 0,
                             "y" : 0
                         }
                     }
@@ -562,6 +577,73 @@
                     }
                 }
             }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes" : {
+                    "Square":{
+                        "PARAMETERS" :{
+                            "CED-G-NOTE #": "1"
+                        },
+                        "OFFSET" :{
+                            "x" : 0,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "PF_Plan DF": {
+        "Electrical_Fixture" : [
+            {
+                "EF-U_Receptacle_CED" : {
+                    "Duplex Wall - GFCI" : {
+                        "PARAMETERS" : { 
+                            "dev-Group ID" : "PF_Plan DF",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "BATHROOM SINK",
+                            "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : 0,
+                            "y" : 0,
+                            "r" : 0
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED" : {
+                    "Duplex Wall - GFCI" : {
+                        "PARAMETERS" : { 
+                            "dev-Group ID" : "PF_Plan DF",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED": "120",
+                            "Number of Poles_CED": "1",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit Number_CEDT": "6 & 9",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "BATHROOM SINK",
+                            "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : 12,
+                            "y" : 0,
+                            "r" : 0
+                        }
+                    }
+                }                
+            }
         ]
     },
     "PF_Plan Hand Dryer": {
@@ -586,6 +668,21 @@
                             "x" : 0,
                             "y" : 0,
                             "r" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes" : {
+                    "Square":{
+                        "PARAMETERS" :{
+                            "CED-G-NOTE #": "2"
+                        },
+                        "OFFSET" :{
+                            "x" : 0,
+                            "y" : 0
                         }
                     }
                 }
@@ -701,7 +798,7 @@
                         },
                         "OFFSET":{
                             "x": 0,
-                            "y": 54,
+                            "y": 0,
                             "r": 270
                         }
                     }
@@ -865,7 +962,7 @@
                         },
                         "OFFSET":{
                             "x": 0,
-                            "y": -40,
+                            "y": 0,
                             "r": 180
                         }
                     }
@@ -888,8 +985,8 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET":{
-                            "x": -43,
-                            "y": -43,
+                            "x": 12,
+                            "y": 0,
                             "r": 0
                         }
                     }
@@ -905,9 +1002,9 @@
                             "CED-G-NOTE #" : "5"
                         },
                         "OFFSET" :{
-                            "x" : 26,
-                            "y" : 26,
-                            "r" : 90
+                            "x" : -12,
+                            "y" : 0,
+                            "r" : 0
                         }
                     }
                 }
@@ -1003,8 +1100,8 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : -10,
-                            "y" : -40,
+                            "x" : 0,
+                            "y" : 0,
                             "r" : 270
                         }
                     }
@@ -1027,8 +1124,8 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : -36,
-                            "y" : -46,
+                            "x" : 12,
+                            "y" : 0,
                             "r": 90
                         }
                     }
@@ -1045,8 +1142,8 @@
                             "Plan" : "LV"
                         },
                         "OFFSET" :{
-                            "x" : 32,
-                            "y" : 9,
+                            "x" : -12,
+                            "y" : 0,
                             "r" : 180
                         }
                     }
@@ -1074,8 +1171,8 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
-                            "x": 45,
-                            "y": 58,
+                            "x": 0,
+                            "y": 0,
                             "r": 90
                         }
                     }
@@ -1098,8 +1195,8 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET" :{
-                            "x" : 10,
-                            "y" : -57,
+                            "x" : 12,
+                            "y" : 0,
                             "r" : 90
                         }
                     }
@@ -1115,8 +1212,8 @@
                             "CED-G-NOTE #" : "5"
                         },
                         "OFFSET" :{
-                            "x" : -57,
-                            "y" : 20
+                            "x" : -12,
+                            "y" : 0
                         }
                     }
                 }
@@ -1660,7 +1757,7 @@
                 "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
-                            "CED-G-NOTE #" : "2"
+                            "CED-G-NOTE #" : "1"
                         }
                     }
                 }
@@ -1727,7 +1824,32 @@
         "Notes": "ROOM"
     },
     "Room Name 100 VESTIBULE": {
-       
+        "Electrical_Fixture" : [
+            {
+                "EF-U_Junction Box_CED": {
+                    "Wall - With Stem": {
+                        "PARAMETERS" : { 
+                            "dev-Group ID" : "Room Name 100 VESTIBULE",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED": "3994",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED": "208",
+                            "Number of Poles_CED": "2",
+                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "ECH-1",
+                            "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : 30,
+                            "y" : 0,
+                            "r" : 0
+                        }
+                    }
+                }
+            }
+        ],
         "Notes": "ROOM"
     },
     "Room Name 101A BREAK ROOM EMPLOYEE": {
@@ -1743,7 +1865,7 @@
                 "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
-                            "CED-G-NOTE #" : ""
+                            "CED-G-NOTE #" : "15"
                         },
                         "OFFSET": {
                             "x": 118,
@@ -1757,7 +1879,7 @@
         "Electrical_Fixture": [
             {
                 "EF-U_Receptacle_CED": {
-                    "Duplex Wall": {
+                    "Duplex Wall - USB": {
                         "PARAMETERS": {
                             "dev-Group ID": "ROOM: ",
                             "FLA Input_CED": "0",
@@ -1781,7 +1903,7 @@
             },
             {
                 "EF-U_Receptacle_CED": {
-                    "Duplex Wall": {
+                    "Duplex Wall - USB": {
                         "PARAMETERS": {
                             "dev-Group ID": "ROOM: ",
                             "FLA Input_CED": "0",
@@ -1805,7 +1927,7 @@
             },
             {
                 "EF-U_Receptacle_CED": {
-                    "Duplex Wall": {
+                    "Duplex Wall - USB": {
                         "PARAMETERS": {
                             "dev-Group ID": "ROOM: ",
                             "FLA Input_CED": "0",
@@ -1829,7 +1951,7 @@
             },
             {
                 "EF-U_Receptacle_CED": {
-                    "Duplex Wall": {
+                    "Duplex Wall - USB": {
                         "PARAMETERS": {
                             "dev-Group ID": "ROOM: ",
                             "FLA Input_CED": "0",
@@ -1853,7 +1975,7 @@
             },
             {
                 "EF-U_Receptacle_CED": {
-                    "Duplex Wall": {
+                    "Duplex Wall - USB": {
                         "PARAMETERS": {
                             "dev-Group ID": "ROOM: ",
                             "FLA Input_CED": "0",
@@ -1877,7 +1999,7 @@
             },
             {
                 "EF-U_Receptacle_CED": {
-                    "Duplex Wall": {
+                    "Duplex Wall - USB": {
                         "PARAMETERS": {
                             "dev-Group ID": "ROOM: ",
                             "FLA Input_CED": "0",
