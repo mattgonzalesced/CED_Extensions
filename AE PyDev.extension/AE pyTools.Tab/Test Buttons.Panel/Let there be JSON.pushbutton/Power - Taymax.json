@@ -379,7 +379,7 @@
                             "Load Classification_CED": "C",
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
-                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Panel_CEDT": "L2",
                             "CKT_Circuit Number_CEDT": "6 & 9",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "BATHROOM SINKS",
@@ -468,7 +468,7 @@
                             "Load Classification_CED": "C",
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
-                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Panel_CEDT": "L2",
                             "CKT_Circuit Number_CEDT": "38",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "HWH",
@@ -606,7 +606,7 @@
                             "Load Classification_CED": "C",
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
-                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Panel_CEDT": "L2",
                             "CKT_Circuit Number_CEDT": "27",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "WATER FOUNTAIN",
@@ -630,7 +630,7 @@
                             "Load Classification_CED": "C",
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
-                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Panel_CEDT": "L2",
                             "CKT_Circuit Number_CEDT": "27",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "WATER FOUNTAIN",
@@ -658,7 +658,7 @@
                             "Load Classification_CED": "NC",
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
-                            "CKT_Panel_CEDT": "L3",
+                            "CKT_Panel_CEDT": "L2",
                             "CKT_Circuit Number_CEDT": "DEDICATED",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "Hand Dryer",
@@ -1313,7 +1313,7 @@
                             "CKT_Panel_CEDT" : "L3",
                             "CKT_Circuit Number_CEDT": "25",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "CHECK-IN RECEPT",
+                            "CKT_Load Name_CEDT": "CHECK-IN RECEPT DESK",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET":{
@@ -1630,7 +1630,7 @@
                             "Load Classification_CED": "C",
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
-                            "CKT_Panel_CEDT" : "L2",
+                            "CKT_Panel_CEDT" : "L1",
                             "CKT_Circuit Number_CEDT": "TVTRUSS",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "TV TRUSS",
@@ -1783,7 +1783,7 @@
                             "Load Classification_CED": "NC",
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
-                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Panel_CEDT" : "L2",
                             "CKT_Circuit Number_CEDT": "10",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "DRY VANITY",
@@ -1807,7 +1807,7 @@
                             "Load Classification_CED": "NC",
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
-                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Panel_CEDT" : "L2",
                             "CKT_Circuit Number_CEDT": "10",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "DRY VANITY",
@@ -1899,7 +1899,7 @@
                             "CKT_Panel_CEDT" : "L3",
                             "CKT_Circuit Number_CEDT": "3",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "RECEPTION",
+                            "CKT_Load Name_CEDT": "RECEPTION USB",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
@@ -1923,7 +1923,7 @@
                             "CKT_Panel_CEDT" : "L3",
                             "CKT_Circuit Number_CEDT": "3",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "RECEPTION",
+                            "CKT_Load Name_CEDT": "RECEPTION USB",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
@@ -1947,7 +1947,7 @@
                             "CKT_Panel_CEDT" : "L3",
                             "CKT_Circuit Number_CEDT": "3",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "RECEPTION",
+                            "CKT_Load Name_CEDT": "RECEPTION USB",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
@@ -1971,7 +1971,7 @@
                             "CKT_Panel_CEDT" : "L3",
                             "CKT_Circuit Number_CEDT": "3",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "RECEPTION",
+                            "CKT_Load Name_CEDT": "RECEPTION USB",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
@@ -1995,7 +1995,7 @@
                             "CKT_Panel_CEDT" : "L3",
                             "CKT_Circuit Number_CEDT": "3",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "RECEPTION",
+                            "CKT_Load Name_CEDT": "RECEPTION USB",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
@@ -2019,7 +2019,7 @@
                             "CKT_Panel_CEDT" : "L3",
                             "CKT_Circuit Number_CEDT": "3",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "RECEPTION",
+                            "CKT_Load Name_CEDT": "RECEPTION USB",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
@@ -2093,7 +2093,7 @@
                             "Load Classification_CED": "NC",
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
-                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Panel_CEDT" : "L2",
                             "CKT_Circuit Number_CEDT": "7",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "DRY VANITY",
@@ -2117,7 +2117,7 @@
                             "Load Classification_CED": "NC",
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
-                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Panel_CEDT" : "L2",
                             "CKT_Circuit Number_CEDT": "7",
                             "CKT_Rating_CED": "20",
                             "CKT_Load Name_CEDT": "DRY VANITY",
