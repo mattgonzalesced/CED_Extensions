@@ -32,7 +32,7 @@
                 "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
-                            "CED-G-NOTE #" : "11"
+                            "CED-G-NOTE #" : "14"
                         },
                         "OFFSET" :{
                             "x" : -12,
@@ -78,7 +78,7 @@
                 "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
-                            "CED-G-NOTE #" : "11"
+                            "CED-G-NOTE #" : "14"
                         },
                         "OFFSET" :{
                             "x" : -12,
@@ -123,7 +123,7 @@
                 "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
-                            "CED-G-NOTE #" : "11"
+                            "CED-G-NOTE #" : "20"
                         },
                         "OFFSET" :{
                             "x" : 6,
@@ -388,7 +388,7 @@
                         "OFFSET" :{
                             "x" : 30,
                             "y" : 0,
-                            "r" : 0
+                            "r" : 90
                         }
                     }
                 }
@@ -411,7 +411,8 @@
                         },
                         "OFFSET" :{
                             "x" : 0,
-                            "y" : 0
+                            "y" : 0,
+                            "r" : 90
                         }
                     }
                 }
@@ -434,7 +435,8 @@
                         },
                         "OFFSET" :{
                             "x" : -30,
-                            "y" : 0
+                            "y" : 0,
+                            "r" : 90
                         }
                     }
                 }
@@ -448,8 +450,8 @@
                             "CED-G-NOTE #": "3"
                         },
                         "OFFSET" :{
-                            "x" : 0,
-                            "y" : 0
+                            "x" : 32,
+                            "y" : -62
                         }
                     }
                 }
@@ -586,7 +588,7 @@
                             "CED-G-NOTE #": "1"
                         },
                         "OFFSET" :{
-                            "x" : 0,
+                            "x" : -24,
                             "y" : 0
                         }
                     }
@@ -644,6 +646,21 @@
                     }
                 }                
             }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes" : {
+                    "Square":{
+                        "PARAMETERS" :{
+                            "CED-G-NOTE #": "12"
+                        },
+                        "OFFSET" :{
+                            "x" : 0,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
         ]
     },
     "PF_Plan Hand Dryer": {
@@ -682,7 +699,7 @@
                         },
                         "OFFSET" :{
                             "x" : 0,
-                            "y" : 0
+                            "y" : 24
                         }
                     }
                 }
@@ -720,10 +737,10 @@
                 "Manual Key Note- All Shapes" : {
                     "Square":{
                         "PARAMETERS" :{
-                            "CED-G-NOTE #": "19"
+                            "CED-G-NOTE #": "18"
                         },
                         "OFFSET" :{
-                            "x" : 139,
+                            "x" : 105,
                             "y" : 0
                         }
                     }
@@ -1221,7 +1238,7 @@
         ],
         "Notes": "Tanning with speaker and data"
     },
-    "it": {
+    "IT RACKS": {
         "Electrical_Fixture": [
             {
                 "EF-U_Receptacle_CED": {
@@ -1240,9 +1257,26 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
-                            "x": -16,
-                            "y": -63,
-                            "r": 180
+                            "x": 0,
+                            "y": 0,
+                            "r": 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" :[
+            {
+                "Manual Key Note- All Shapes" : {
+                    "Square" : {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "9",
+                            "dev-Group ID" : "IT RACKS"
+                        },
+                        "OFFSET" :{
+                            "x" : 0,
+                            "y" : 0,
+                            "r" : 0
                         }
                     }
                 }
@@ -1520,9 +1554,23 @@
                             "CED-G-NOTE #" : "8"
                         },
                         "OFFSET" :{
-                            "x" : 6,
-                            "y" : 8,
-                            "r" : 180
+                            "x" : 12,
+                            "y" : -36,
+                            "r" : 0
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "10"
+                        },
+                        "OFFSET" :{
+                            "x" : 12,
+                            "y" : -96,
+                            "r" : 0
                         }
                     }
                 }
@@ -1605,7 +1653,7 @@
                 "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
-                            "CED-G-NOTE #" : "20"
+                            "CED-G-NOTE #" : "19"
                         },
                         "OFFSET":{
                             "x" : 5,
@@ -1877,8 +1925,8 @@
                             "CED-G-NOTE #" : "15"
                         },
                         "OFFSET": {
-                            "x": 118,
-                            "y": 4,
+                            "x": 0,
+                            "y": 0,
                             "r": 90
                         }
                     }
