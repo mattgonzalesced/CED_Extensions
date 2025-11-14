@@ -78,7 +78,7 @@
                 "Manual Key Note- All Shapes": {
                     "Square": {
                         "PARAMETERS": {
-                            "CED-G-NOTE #" : "14"
+                            "CED-G-NOTE #" : "20"
                         },
                         "OFFSET" :{
                             "x" : -12,
@@ -1266,7 +1266,7 @@
             },
             {
                 "EF-U_Receptacle_CED": {
-                    "Duplex Wall": {
+                    "Quad Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "it",
                             "FLA Input_CED": "0",
@@ -1281,7 +1281,7 @@
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
-                            "x": 10,
+                            "x": 12,
                             "y": 0,
                             "r": 0
                         }
@@ -1360,7 +1360,7 @@
         "Electrical_Fixture": [
             {
                 "EF-U_Receptacle_CED": {
-                    "Duplex Wall": {
+                    "Quad Wall": {
                         "PARAMETERS": {
                             "dev-Group ID": "PF_Plan Computer",
                             "FLA Input_CED": "0",
