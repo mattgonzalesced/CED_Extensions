@@ -18,6 +18,27 @@ accepted_views = [
     DB.ViewType.Section
 ]
 
+
+def is_subcat(catid):
+    cat = DB.Category.GetCategory(doc, catid)
+    if cat and cat.Parent:
+        return True
+    return False
+
+def get_category_name(catid):
+    """Safe category name lookup from ElementId."""
+    try:
+        c = DB.Category.GetCategory(doc, catid)
+        if c:
+            return c.Name
+    except Exception:
+        pass
+    try:
+        return str(catid.IntegerValue)
+    except Exception:
+        return "<unknown>"
+
+
 # ------------------------------------------------------------
 # CATEGORY SELECTION
 # ------------------------------------------------------------
@@ -144,31 +165,45 @@ def apply_vg_to_view(view, overrides, hidden_ids):
     """Apply category visibility/graphics to one view (template). Returns results list."""
     results = []
 
-    all_ids = set(overrides.keys() + hidden_ids)
-    for catid in all_ids:
-        result = {'id': catid, 'override': False, 'hidden': False, 'failed': False}
+    # hidden_ids is a list; make a set for fast membership checks
+    hidden_set = set(hidden_ids)
 
+    # Combine all ids (overrides dict keys + hidden list) and sort with subcats first
+    all_ids = set(overrides.keys()).union(hidden_set)
+
+
+    # Subcategories first (True sorts before False if we invert)
+    all_ids = sorted(all_ids, key=lambda cid: (not is_subcat(cid), get_category_name(cid)))
+
+    for catid in all_ids:
+        cat_name = get_category_name(catid)
+        result = {'id': catid, 'name': cat_name, 'override': False, 'hidden': False, 'failed': False}
+
+        # Apply graphics override (if any)
         try:
             if catid in overrides:
-                view.SetCategoryOverrides(catid, overrides[catid])
+                view.SetCategoryOverrides(catid, overrides[catid])  # raw OGS object
                 result['override'] = True
         except Exception as e:
             result['override'] = 'FAILED'
             result['failed'] = True
-            logger.warning("Override failed in {}: {}, Category:{}".format(view.Name, e,))
+            logger.warning("Override failed in {}: {}, Category: {}".format(view.Name, e, cat_name))
 
+        # Hide category (if requested)
         try:
-            if catid in hidden_ids:
+            if catid in hidden_set:
                 view.SetCategoryHidden(catid, True)
                 result['hidden'] = True
         except Exception as e:
             result['hidden'] = 'FAILED'
             result['failed'] = True
-            logger.warning("Hide failed in {}: {}".format(view.Name, e))
+            logger.warning("Hide failed in {}: {}, Category: {}".format(view.Name, e, cat_name))
 
         results.append(result)
 
     return results
+
+
 
 
 def apply_to_templates(view_templates, overrides, hidden_ids, show_report=False):
