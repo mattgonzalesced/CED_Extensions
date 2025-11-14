@@ -34,6 +34,41 @@
         ],
         "Notes": "EX'G WALL TOILET"
     },
+    "PF_Plan ADA Toilet" : {
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model": [
+            {
+                "P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {},
+                        "OFFSET" : {
+                            "r" : 270
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "ADA TOILET"
+    },
     "PF_Plan Sloan Trough Sink": {
        "Generic_Annotations" : [
             {
@@ -321,7 +356,7 @@
         ],
         "Notes": "ADA Showers"
     },
-    "PF_Plan FLoor Drain": {
+    "PF_Plan Floor Drain": {
         "Model": [
             {
                 "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
