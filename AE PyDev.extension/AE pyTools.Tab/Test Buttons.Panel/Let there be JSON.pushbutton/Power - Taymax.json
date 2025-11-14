@@ -351,7 +351,7 @@
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
                             "CKT_Panel_CEDT": "L4",
-                            "CKT_Circuit Number_CEDT": "5",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
                             "CKT_Rating_CED": "40",
                             "CKT_Load Name_CEDT": "CRYOLOUNGE - 103",
                             "CKT_Schedule Notes_CEDT": "GFI"
