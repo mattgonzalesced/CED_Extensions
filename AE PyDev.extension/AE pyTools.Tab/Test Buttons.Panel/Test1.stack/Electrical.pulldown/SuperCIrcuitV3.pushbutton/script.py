@@ -1,13 +1,9 @@
 # -*- coding: utf-8 -*-
 __title__ = "SUPER CIRCUIT V3"
 
-from collections import defaultdict, OrderedDict
-import math
+from collections import OrderedDict
 
-from System.Collections.Generic import List
-
-from pyrevit import revit, DB, script, forms
-from pyrevit.revit.db import query
+from pyrevit import revit, script, forms, DB
 
 from Snippets._elecutils import (
     get_all_data_devices,
@@ -15,1059 +11,156 @@ from Snippets._elecutils import (
     get_all_light_devices,
     get_all_light_fixtures,
     get_all_panels,
-    get_panel_dist_system,
 )
 
-# Global switches that determine how circuits will be grouped.
-CIRCUITBYKEY = True
-CIRCUITBYPOSITION = False
-
-# Configuration for position-based grouping.
-POSITION_GROUP_SIZE = 3  # how many devices to lump together when grouping by proximity
+from libGeneral import data, grouping, circuits, transactions, common
 
 logger = script.get_logger()
+POSITION_GROUP_SIZE = 3
+CLIENT_CHOICES = OrderedDict([("Planet Fitness", "planet_fitness")])
+client_helpers = None
+EXCLUDED_CATEGORY_IDS = {
+    DB.ElementId(DB.BuiltInCategory.OST_LightingDevices).IntegerValue,
+    DB.ElementId(DB.BuiltInCategory.OST_LightingFixtures).IntegerValue,
+}
 
 
-def _safe_strip(value):
-    return value.strip() if isinstance(value, basestring) else value
-
-
-def _get_param_value(element, param_name):
-    param = query.get_param(element, param_name)
-    return _safe_strip(query.get_param_value(param)) if param else None
-
-
-def _get_element_location(element):
-    location = getattr(element, "Location", None)
-    if location is not None:
-        point = getattr(location, "Point", None)
-        if point:
-            return point
-        curve = getattr(location, "Curve", None)
-        if curve:
-            return curve.Evaluate(0.5, True)
-    bbox = element.get_BoundingBox(None)
-    if bbox:
-        return DB.XYZ(
-            (bbox.Min.X + bbox.Max.X) * 0.5,
-            (bbox.Min.Y + bbox.Max.Y) * 0.5,
-            (bbox.Min.Z + bbox.Max.Z) * 0.5,
-        )
-    return DB.XYZ.Zero
-
-
-def _try_parse_int(value):
-    if value is None:
+def _select_client():
+    selection = forms.CommandSwitchWindow.show(
+        list(CLIENT_CHOICES.keys()), message="Select client configuration"
+    )
+    if not selection:
         return None
-    if isinstance(value, (int, long)):
-        return int(value)
-    try:
-        text = str(value).strip()
-        digits = []
-        for ch in text:
-            if ch.isdigit():
-                digits.append(ch)
-            elif digits:
-                break
-        if not digits:
-            return None
-        return int("".join(digits))
-    except Exception:
-        return None
+    return CLIENT_CHOICES.get(selection)
 
 
-def _try_parse_float(value):
-    if value is None:
-        return None
-    if isinstance(value, (int, long, float)):
-        return float(value)
-    try:
-        text = str(value).strip()
-        cleaned = []
-        decimal_found = False
-        for ch in text:
-            if ch.isdigit():
-                cleaned.append(ch)
-            elif ch in (".", ","):
-                if not decimal_found:
-                    cleaned.append(".")
-                    decimal_found = True
-            elif cleaned:
-                break
-        if not cleaned:
-            return None
-        return float("".join(cleaned))
-    except Exception:
-        return None
+def _load_client_helpers(client_key):
+    if client_key == "planet_fitness":
+        try:
+            from PFlib import PFhelpers
+
+            return PFhelpers
+        except ImportError as ex:
+            logger.warning("PF helpers unavailable: {}".format(ex))
+    return None
 
 
-def _convert_voltage_to_internal(value):
-    if value is None:
-        return None
-    try:
-        numeric = float(value)
-    except Exception:
-        return None
-
-    try:
-        unit_id = getattr(DB.UnitTypeId, "Volts", None)
-        if unit_id:
-            return DB.UnitUtils.ConvertToInternalUnits(numeric, unit_id)
-    except Exception:
-        pass
-
-    try:
-        display_unit = getattr(DB.DisplayUnitType, "DUT_VOLTS", None)
-        if display_unit is not None:
-            return DB.UnitUtils.ConvertToInternalUnits(numeric, display_unit)
-    except Exception:
-        pass
-
-    try:
-        forge_id = DB.ForgeTypeId("autodesk.unit.unit:volts-1.0.1")
-        return DB.UnitUtils.ConvertToInternalUnits(numeric, forge_id)
-    except Exception:
-        pass
-
-    return numeric
-
-
-def _collect_target_elements(doc):
-    selection = revit.get_selection()
-    if selection:
-        return list(selection)
-
-    elements = []
+def _collect_elements(doc):
     collectors = (
         get_all_elec_fixtures,
         get_all_light_devices,
         get_all_light_fixtures,
         get_all_data_devices,
     )
-    for fn in collectors:
+    return data.collect_target_elements(doc, collectors, revit.get_selection, logger)
+
+
+def _filter_disallowed_elements(elements):
+    filtered = []
+    skipped = 0
+    for element in elements or []:
+        category = getattr(element, "Category", None)
+        category_id = category.Id.IntegerValue if category and category.Id else None
+        if category_id in EXCLUDED_CATEGORY_IDS:
+            skipped += 1
+            continue
+        filtered.append(element)
+
+    if skipped:
+        logger.info("Skipped {} lighting element(s); use the dedicated lighting tool.".format(skipped))
+    return filtered
+
+
+def _run_creation(doc, groups):
+    return transactions.run_creation(
+        doc,
+        groups,
+        lambda d, g: circuits.create_circuit(d, g, logger),
+        logger,
+    )
+
+
+def _run_apply_data(doc, created_systems):
+    transactions.run_apply_data(
+        doc,
+        created_systems,
+        lambda system, group: circuits.apply_circuit_data(system, group, logger),
+        logger,
+    )
+
+
+def _group_priority(group_type):
+    priority_map = {
+        "dedicated": 0,
+        "nongrouped": 1,
+        "special": 2,
+        "position": 2,  # tv truss / positional groupings stay ahead of general load order
+    }
+    return priority_map.get(group_type or "normal", 3)
+
+
+def _load_priority(group, group_priority_value):
+    if group_priority_value < 3:
+        return 0
+    if client_helpers and hasattr(client_helpers, "get_load_priority"):
         try:
-            elements.extend(list(fn(doc)))
+            return client_helpers.get_load_priority(group)
         except Exception as ex:
-            logger.warning("Collector {} failed: {}".format(fn.__name__, ex))
-    return elements
-
-
-def _build_panel_lookup(panels):
-    lookup = {}
-    for panel in panels:
-        panel_name_param = query.get_param(panel, "Panel Name")
-        panel_name = query.get_param_value(panel_name_param) if panel_name_param else None
-        if panel_name:
-            lookup[panel_name.strip()] = panel
-    return lookup
-
-
-def _gather_element_info(doc, elements, panel_lookup):
-    info_items = []
-    for element in elements:
-        panel_name = _get_param_value(element, "CKT_Panel_CEDT")
-        circuit_number = _get_param_value(element, "CKT_Circuit Number_CEDT")
-        rating = _get_param_value(element, "CKT_Rating_CED")
-        load_name = _get_param_value(element, "CKT_Load Name_CEDT")
-        circuit_notes = _get_param_value(element, "CKT_Schedule Notes_CEDT")
-        poles_value = _get_param_value(element, "Number of Poles_CED")
-        number_of_poles = _try_parse_int(poles_value)
-        voltage_value = _get_param_value(element, "Voltage_CED")
-        voltage = _try_parse_float(voltage_value)
-
-
-        if not panel_name and not circuit_number:
-            continue
-
-        circuit_element, circuit_reason = _find_assignable_element(doc, element)
-
-        info_items.append(
-            {
-                "element": element,
-                "circuit_element": circuit_element,
-                "assignment_reason": circuit_reason,
-                "panel_name": panel_name,
-                "panel_element": panel_lookup.get(panel_name),
-                "circuit_number": circuit_number,
-                "rating": rating,
-                  "load_name": load_name,
-                  "location": _get_element_location(element),
-                  "circuit_notes": circuit_notes,
-                  "number_of_poles": number_of_poles or 1,
-                  "voltage": voltage
-              }
-          )
-    return info_items
-
-
-def _has_circuit_assigned(element):
-    if not element:
-        return False
-
-    mep_model = getattr(element, "MEPModel", None)
-    if not mep_model:
-        return False
-
-    for attr in ("AssociatedElectricalSystems", "ElectricalSystems"):
-        systems = getattr(mep_model, attr, None)
-        if not systems:
-            continue
-
-        try:
-            # Try direct iteration (pyRevit wraps .NET IEnumerable nicely)
-            for sys in systems:
-                if sys:
-                    return True
-        except Exception:
-            pass
-
-        try:
-            count = getattr(systems, "Count", None)
-            if count is not None and count > 0:
-                return True
-        except Exception:
-            pass
-
-        try:
-            size = getattr(systems, "Size", None)
-            if size is not None and size > 0:
-                return True
-        except Exception:
-            pass
-
-    return False
-
-
-def _ensure_not_already_circuited(info_items):
-    return
-
-
-def _classify_items(items):
-    dedicated = []
-    nongrouped = []
-    tvtruss = []
-    normal = []
-
-    for item in items:
-        circuit_number = _safe_strip(item.get("circuit_number"))
-        circuit_upper = circuit_number.upper() if circuit_number else ""
-
-        if circuit_upper == "DEDICATED":
-            dedicated.append(item)
-        elif circuit_upper == "NONGROUPEDBLOCK":
-            nongrouped.append(item)
-        elif circuit_upper == "TVTRUSS":
-            tvtruss.append(item)
-        else:
-            normal.append(item)
-
-    return dedicated, nongrouped, tvtruss, normal
-
-
-def _make_group(key, members):
-    sample = members[0]
-    rating = sample.get("rating")
-    load_name = sample.get("load_name")
-    circuit_number = sample.get("circuit_number")
-    circuit_notes = sample.get("circuit_notes")
-    number_of_poles = sample.get("number_of_poles")
-    voltage = sample.get("voltage")
-
-    # Prefer the first non-empty rating/load name within the group.
-    if not rating:
-        for item in members:
-            if item.get("rating"):
-                rating = item["rating"]
-                break
-    if not load_name:
-        for item in members:
-            if item.get("load_name"):
-                load_name = item["load_name"]
-                break
-    if not circuit_notes:
-        for item in members:
-            if item.get("circuit_notes"):
-                circuit_notes = item["circuit_notes"]
-                break
-    if voltage is None:
-        for item in members:
-            if item.get("voltage") is not None:
-                voltage = item["voltage"]
-                break
-
-    poles_candidates = [
-        item.get("number_of_poles")
-        for item in members
-        if item.get("number_of_poles")
-    ]
-    if poles_candidates:
-        unique_poles = sorted({int(p) for p in poles_candidates})
-        number_of_poles = unique_poles[-1]
-        if len(unique_poles) > 1:
-            logger.warning(
-                "Group {} has mixed pole counts {}; using {}.".format(
-                    key, unique_poles, number_of_poles
-                )
-            )
-    number_of_poles = int(number_of_poles) if number_of_poles else 1
-
-    return OrderedDict(
-        [
-            ("key", key),
-            ("members", members),
-            ("panel_name", sample.get("panel_name")),
-            ("panel_element", sample.get("panel_element")),
-            ("circuit_number", circuit_number),
-              ("rating", rating),
-              ("load_name", load_name),
-              ("circuit_notes", circuit_notes),
-              ("number_of_poles", number_of_poles),
-              ("voltage", voltage)
-          ]
-      )
-
-
-def _create_dedicated_groups(items):
-    counters = defaultdict(int)
-    groups = []
-    for item in items:
-        panel_name = item.get("panel_name") or "NO_PANEL"
-        counters[panel_name] += 1
-        key = "{}DEDICATED{}".format(panel_name, counters[panel_name])
-        groups.append(_make_group(key, [item]))
-    return groups
-
-
-def _create_nongroupedblock_groups(items):
-    groups_by_panel = defaultdict(list)
-    for item in items:
-        panel_name = item.get("panel_name") or "NO_PANEL"
-        groups_by_panel[panel_name].append(item)
-
-    groups = []
-    for panel_name in sorted(groups_by_panel.keys(), key=lambda x: x or ""):
-        members = groups_by_panel[panel_name]
-        key = "{}NONGROUPEDBLOCK".format(panel_name)
-        groups.append(_make_group(key, members))
-    return groups
-
-
-def _split_combined_circuit(panel_name, circuit_number, members):
-    if not circuit_number or "&" not in circuit_number:
-        return None
-
-    parts = [part.strip() for part in circuit_number.split("&") if part.strip()]
-    if len(parts) < 2:
-        return None
-
-    total = len(members)
-    segment_count = len(parts)
-    base = total // segment_count
-    remainder = total % segment_count
-
-    special_load_names = None
-    try:
-        normalized_parts = [str(int(part)) for part in parts]
-    except ValueError:
-        normalized_parts = parts[:]
-
-    if set(normalized_parts) == {"6", "9"} and len(normalized_parts) == 2:
-        special_load_names = {"6": "SINK 1", "9": "SINK 2"}
-
-    groups = []
-    index = 0
-    for i, part in enumerate(parts):
-        size = base + (1 if i < remainder else 0)
-        if i == segment_count - 1:
-            group_members = members[index:]
-        else:
-            group_members = members[index:index + size]
-        index += size
-
-        if special_load_names:
-            normalized_part = str(_try_parse_int(part) or part)
-            label = special_load_names.get(normalized_part)
-            if label:
-                for member in group_members:
-                    member["load_name"] = label
-
-        key = "{}{}".format(panel_name, part)
-        groups.append(_make_group(key, group_members))
-
-    return groups
-
-
-def _group_by_key(items):
-    grouped = defaultdict(list)
-    for item in items:
-        panel_name = item.get("panel_name")
-        circuit_number = item.get("circuit_number")
-        if not panel_name or not circuit_number:
-            logger.debug(
-                "Skipping element {} missing panel or circuit number for key grouping.".format(
-                    item["element"].Id
-                )
-            )
-            continue
-        grouped[(panel_name, circuit_number)].append(item)
-
-    groups = []
-    for panel_name, circuit_number in sorted(
-        grouped.keys(),
-        key=lambda k: (
-            (k[0] or "").lower(),
-            _try_parse_int(k[1]) if _try_parse_int(k[1]) is not None else (k[1] or "").lower(),
-        ),
-    ):
-        members = grouped[(panel_name, circuit_number)]
-        split_groups = _split_combined_circuit(panel_name, circuit_number, members)
-        if split_groups:
-            groups.extend(split_groups)
-        else:
-            key = "{}{}".format(panel_name, circuit_number)
-            groups.append(_make_group(key, members))
-    return groups
-
-
-def _position_sort_key(item):
-    location = item.get("location")
-    if not location:
-        return (math.inf, math.inf, math.inf)
-    return (location.X, location.Y, location.Z)
-
-
-def _sanitize_for_key(value):
-    if not value:
-        return "UNSPECIFIED"
-    return "".join(ch for ch in value if ch.isalnum())
-
-
-def _group_by_position(items, group_size):
-    buckets = defaultdict(list)
-    for item in items:
-        panel_name = item.get("panel_name")
-        load_name = item.get("load_name") or ""
-        if not panel_name:
-            logger.debug(
-                "Skipping element {} missing panel for position grouping.".format(
-                    item["element"].Id
-                )
-            )
-            continue
-        buckets[(panel_name, load_name)].append(item)
-
-    groups = []
-    for (panel_name, load_name), members in buckets.items():
-        sorted_members = sorted(members, key=_position_sort_key)
-        chunk_count = int(math.ceil(len(sorted_members) / float(group_size)))
-        for index in range(chunk_count):
-            chunk = sorted_members[index * group_size : (index + 1) * group_size]
-            if not chunk:
-                continue
-            key = "{}{}_POS{}".format(panel_name, _sanitize_for_key(load_name), index + 1)
-            groups.append(_make_group(key, chunk))
-
-    return groups
-
-
-def _assemble_groups(items):
-    dedicated, nongrouped, tvtruss, normal = _classify_items(items)
-    groups = []
-
-    if dedicated:
-        groups.extend(_create_dedicated_groups(dedicated))
-
-    if nongrouped:
-        groups.extend(_create_nongroupedblock_groups(nongrouped))
-
-    if tvtruss:
-        groups.extend(_group_by_position(tvtruss, POSITION_GROUP_SIZE))
-
-    if CIRCUITBYPOSITION:
-        groups.extend(_group_by_position(normal, POSITION_GROUP_SIZE))
-    elif CIRCUITBYKEY:
-        groups.extend(_group_by_key(normal))
-    else:
-        logger.warning("No grouping mode selected. Enable CIRCUITBYKEY or CIRCUITBYPOSITION.")
-
-    return groups
-
-
-def _remove_from_existing_systems(item):
-    element = item.get("circuit_element") or item.get("element")
-    if not element:
-        return
-
-    mep_model = getattr(element, "MEPModel", None)
-    if not mep_model:
-        return
-    systems = getattr(mep_model, "ElectricalSystems", None)
-    if not systems:
-        return
-
-    for system in systems:
-        try:
-            system.Remove(element.Id)
-        except Exception as ex:
-            logger.warning("Failed removing {} from system {}: {}".format(element.Id, system.Id, ex))
-
-
-def _find_assignable_element(doc, element):
-    doc = doc or element.Document
-    to_process = [element]
-    visited = set()
-
-    while to_process:
-        current = to_process.pop()
-        if not current:
-            continue
-
-        current_id = current.Id.IntegerValue if hasattr(current, "Id") else id(current)
-        if current_id in visited:
-            continue
-        visited.add(current_id)
-
-        if _supports_power_circuit(current):
-            return current, "direct"
-
-        if isinstance(current, DB.FamilyInstance):
-            try:
-                sub_ids = current.GetSubComponentIds()
-            except Exception:
-                sub_ids = []
-
-            if sub_ids:
-                for sid in sub_ids:
-                    try:
-                        sub_elem = doc.GetElement(sid)
-                        if sub_elem:
-                            to_process.append(sub_elem)
-                    except Exception:
-                        continue
-
-    return None, "no power connector"
-
-
-def _supports_power_circuit(element):
-    return bool(_get_power_connectors(element, log_details=False))
-
-
-def _get_power_connectors(element, log_details=True):
-    connectors_result = []
-    if not element:
-        return connectors_result
-
-    mep_model = getattr(element, "MEPModel", None)
-    if not mep_model:
-        return connectors_result
-
-    connector_manager = getattr(mep_model, "ConnectorManager", None)
-    connectors = getattr(connector_manager, "Connectors", None) if connector_manager else None
-
-    if not connectors:
-        return connectors_result
-
-    all_connectors = []
-    try:
-        iterator = connectors.ForwardIterator()
-        while iterator.MoveNext():
-            all_connectors.append(iterator.Current)
-    except AttributeError:
-        for conn in connectors:
-            all_connectors.append(conn)
-
-    for connector in all_connectors:
-        try:
-            if (
-                connector.Domain == DB.Domain.DomainElectrical
-                and connector.ElectricalSystemType == DB.Electrical.ElectricalSystemType.PowerCircuit
-            ):
-                connectors_result.append(connector)
-        except Exception:
-            continue
-
-    if log_details and not connectors_result and all_connectors:
-        connector_details = []
-        try:
-            for connector in all_connectors:
-                try:
-                    domain = getattr(connector, "Domain", None)
-                except Exception:
-                    domain = None
-                try:
-                    ctype = getattr(connector, "ConnectorType", None)
-                except Exception:
-                    ctype = None
-                system_type = getattr(connector, "ElectricalSystemType", None)
-                types_list = []
-                try:
-                    all_types = getattr(connector, "AllSystemTypes", None)
-                    if all_types:
-                        types_list = [str(t) for t in all_types]
-                except Exception:
-                    types_list = []
-                connector_details.append(
-                    "domain={} type={} sys={} all={}".format(domain, ctype, system_type, types_list)
-                )
-        except Exception:
-            connector_details.append("failed to inspect connectors")
-
-        logger.warning(
-            "Element {} has connectors but none advertise PowerCircuit. Details: {}".format(
-                element.Id.IntegerValue, "; ".join(connector_details)
-            )
-        )
-
-    return connectors_result
-
-
-def _align_distribution_system(doc, system, panel_element):
-    if not panel_element:
-        return False
-
-    doc = doc or panel_element.Document
-
-    dist_system_id = None
-    for attr in ("RBS_FAMILY_CONTENT_SECONDARY_DISTRIBSYS", "RBS_FAMILY_CONTENT_DISTRIBUTION_SYSTEM"):
-        bip = getattr(DB.BuiltInParameter, attr, None)
-        if not bip:
-            continue
-        try:
-            param = panel_element.get_Parameter(bip)
-        except Exception:
-            param = None
-        if param and param.HasValue:
-            candidate = param.AsElementId()
-            if candidate and candidate.IntegerValue > 0:
-                dist_system_id = candidate
-                break
-
-    if not dist_system_id:
-        return False
-
-    dist_elem = None
-    try:
-        dist_elem = doc.GetElement(dist_system_id)
-    except Exception:
-        dist_elem = None
-
-    applied = False
-    set_ds = getattr(system, "SetDistributionSystem", None)
-    if callable(set_ds) and dist_elem:
-        try:
-            set_ds(dist_elem)
-            applied = True
-        except Exception as ex:
-            logger.debug(
-                "SetDistributionSystem failed for circuit {}: {}".format(system.Id.IntegerValue, ex)
-            )
-
-    if not applied:
-        for enum_name in ("RBS_ELEC_DISTRIBUTION_SYSTEM", "RBS_ELEC_CIRCUIT_DISTRIBUTION_SYSTEM"):
-            bip = getattr(DB.BuiltInParameter, enum_name, None)
-            if not bip:
-                continue
-            try:
-                param = system.get_Parameter(bip)
-            except Exception:
-                param = None
-            if param and not param.IsReadOnly:
-                try:
-                    param.Set(dist_system_id)
-                    applied = True
-                    break
-                except Exception as ex:
-                    logger.debug(
-                        "Failed to set distribution system parameter {} for circuit {}: {}".format(
-                            enum_name, system.Id.IntegerValue, ex
-                        )
-                    )
-
-    return applied
-
-
-def _set_voltage_from_panel(doc, system, group, panel_element):
-    if not panel_element or not system:
-        return False
-
-    desired_poles = _try_parse_int(group.get("number_of_poles"))
-    group_voltage = _try_parse_float(group.get("voltage"))
-    try:
-        voltage_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_VOLTAGE)
-    except Exception:
-        voltage_param = None
-
-    if not voltage_param or voltage_param.IsReadOnly:
-        return False
-
-    current_voltage = None
-    try:
-        current_voltage = voltage_param.AsDouble()
-    except Exception:
-        current_voltage = None
-
-    panel_info = get_panel_dist_system(panel_element, doc)
-    if not panel_info:
-        panel_info = {}
-
-    selected_voltage = None
-    if desired_poles and desired_poles > 1:
-        selected_voltage = panel_info.get("ll_voltage") or panel_info.get("lg_voltage")
-    else:
-        selected_voltage = panel_info.get("lg_voltage") or panel_info.get("ll_voltage")
-
-    if not selected_voltage or selected_voltage <= 0:
-        selected_voltage = group_voltage
-
-    if not selected_voltage or selected_voltage <= 0:
-        return False
-
-    converted_voltage = _convert_voltage_to_internal(selected_voltage)
-    if converted_voltage is None or converted_voltage <= 0:
-        return False
-
-    if current_voltage and abs(current_voltage - converted_voltage) < 1e-6:
-        return False
-
-    try:
-        voltage_param.Set(converted_voltage)
-        logger.debug(
-            "Applied voltage {} to circuit {} using panel {}.".format(
-                selected_voltage, group.get("key"), panel_element.Id
-            )
-        )
-        return True
-    except Exception as ex:
-        logger.debug(
-            "Failed to set system voltage from panel {} for circuit {}: {}".format(
-                panel_element.Id, group.get("key"), ex
-            )
-        )
-        return False
-
-
-def _set_voltage_from_group(system, group):
-    if not system:
-        return False
-
-    voltage_value = _try_parse_float(group.get("voltage"))
-    if voltage_value is None or voltage_value <= 0:
-        return False
-
-    converted = _convert_voltage_to_internal(voltage_value)
-    if converted is None or converted <= 0:
-        return False
-
-    try:
-        voltage_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_VOLTAGE)
-    except Exception:
-        voltage_param = None
-
-    if not voltage_param or voltage_param.IsReadOnly:
-        return False
-
-    current_voltage = None
-    try:
-        current_voltage = voltage_param.AsDouble()
-    except Exception:
-        current_voltage = None
-
-    if current_voltage and abs(current_voltage - converted) < 1e-6:
-        return False
-
-    try:
-        voltage_param.Set(converted)
-        logger.info(
-            "Set circuit {} voltage from element data: {} (internal {})".format(
-                group.get("key"), voltage_value, converted
-            )
-        )
-        return True
-    except Exception as ex:
-        logger.warning(
-            "Failed to set circuit {} voltage from element value {}: {}".format(
-                group.get("key"), voltage_value, ex
-            )
-        )
-        return False
-
-
-def _create_circuit(doc, group):
-    candidates = []
-    skipped_ids = set()
-
-    for member in group["members"]:
-        circuit_element = member.get("circuit_element")
-        if not circuit_element:
-            host = member["element"]
-            skipped_ids.add(host.Id.IntegerValue)
-            logger.debug(
-                "Skipping element {} in group {} ({}).".format(
-                    host.Id, group["key"], member.get("assignment_reason")
-                )
-            )
-            continue
-
-        if not _supports_power_circuit(circuit_element):
-            _get_power_connectors(circuit_element, log_details=True)
-            skipped_ids.add(circuit_element.Id.IntegerValue)
-            logger.warning(
-                "Element {} in group {} does not expose a PowerCircuit connector.".format(
-                    circuit_element.Id, group["key"]
-                )
-            )
-            continue
-
-        candidates.append(member)
-
-    if skipped_ids:
-        logger.warning(
-            "Group {} had {} element(s) without power connectors; they were skipped.".format(
-                group["key"], len(skipped_ids)
-            )
-        )
-
-    if not candidates:
-        return None
-
-    for member in candidates:
-        _remove_from_existing_systems(member)
-
-    doc.Regenerate()
-
-    element_ids = List[DB.ElementId]()
-    for member in candidates:
-        circuit_element = member.get("circuit_element")
-        element_ids.Add(circuit_element.Id)
-
-    if element_ids.Count == 0:
-        return None
-
-    try:
-        system = DB.Electrical.ElectricalSystem.Create(
-            doc, element_ids, DB.Electrical.ElectricalSystemType.PowerCircuit
-        )
-    except Exception as ex:
-        logger.error("Circuit creation failed for {}: {}".format(group["key"], ex))
-        for member in candidates:
-            circuit_element = member.get("circuit_element")
-            category = circuit_element.Category.Name if circuit_element and circuit_element.Category else "No Category"
-            family_name = getattr(circuit_element, "Name", None)
-            can_assign = getattr(getattr(circuit_element, "MEPModel", None), "CanAssignToElectricalCircuit", None)
-            if callable(can_assign):
-                try:
-                    can_assign_value = bool(can_assign())
-                except TypeError:
-                    try:
-                        can_assign_value = bool(can_assign(DB.Electrical.ElectricalSystemType.PowerCircuit))
-                    except Exception:
-                        can_assign_value = "error"
-                except Exception:
-                    can_assign_value = "error"
-            else:
-                can_assign_value = can_assign
-            try:
-                logger.error(
-                    "  Element {} | {} | {} | CanAssignToElectricalCircuit: {}".format(
-                        circuit_element.Id.IntegerValue, category, family_name, can_assign_value
-                    )
-                )
-            except Exception:
-                logger.error(
-                    "  Element {} failed during diagnostics.".format(
-                        circuit_element.Id.IntegerValue
-                    )
-                  )
-        return None
-
-    _set_voltage_from_group(system, group)
-
-    desired_poles = _try_parse_int(group.get("number_of_poles"))
-    initial_poles = getattr(system, "PolesNumber", None)
-    if desired_poles and desired_poles > 1:
-        poles_applied = False
-        set_poles = getattr(system, "SetNumberOfPoles", None)
-        if callable(set_poles):
-            try:
-                set_poles(desired_poles)
-                poles_applied = True
-            except Exception as ex:
-                logger.debug(
-                    "SetNumberOfPoles({}) failed for circuit {}: {}".format(
-                        desired_poles, group["key"], ex
-                    )
-                )
-
-        if not poles_applied:
-            try:
-                poles_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES)
-                if poles_param and not poles_param.IsReadOnly:
-                    poles_param.Set(desired_poles)
-                    poles_applied = True
-            except Exception as ex:
-                logger.debug("Failed to set pole parameter for circuit {}: {}".format(system.Id.IntegerValue, ex))
-
-        if not poles_applied and initial_poles == desired_poles:
-            poles_applied = True
-
-        if not poles_applied:
-            current_poles = getattr(system, "PolesNumber", None)
-            logger.warning(
-                "Unable to set pole count {} for circuit {}. Revit default will be used (system poles currently {}).".format(
-                    desired_poles,
-                    group["key"],
-                    current_poles if current_poles is not None else (initial_poles or "unknown"),
-                )
-            )
-
-    panel_element = group.get("panel_element")
-    if panel_element:
-        _align_distribution_system(doc, system, panel_element)
-        voltage_set = _set_voltage_from_panel(doc, system, group, panel_element)
-        if voltage_set:
-            try:
-                doc.Regenerate()
-            except Exception:
-                pass
-        can_assign = True
-        can_assign_method = getattr(system, "CanAssignToPanel", None)
-        if callable(can_assign_method):
-            try:
-                can_assign = bool(can_assign_method(panel_element))
-            except Exception as ex:
-                logger.debug(
-                    "CanAssignToPanel check failed for panel {} and circuit {}: {}".format(
-                        panel_element.Id, group["key"], ex
-                    )
-                )
-        if can_assign:
-            try:
-                system.SelectPanel(panel_element)
-                doc.Regenerate()
-            except Exception as ex:
-                panel_name = group.get("panel_name") or getattr(panel_element, "Name", None) or panel_element.Id
-                logger.warning(
-                    "Unable to select panel {} (Id {}) for circuit {}: {}. Verify distribution system, voltage, and pole settings.".format(
-                        panel_name, panel_element.Id, group["key"], ex
-                    )
-                )
-        else:
-            panel_phases = None
-            panel_name = getattr(panel_element, "Name", None)
-            try:
-                phases_param = panel_element.get_Parameter(DB.BuiltInParameter.RBS_ELEC_PANEL_NUMPHASES_PARAM)
-                if phases_param and phases_param.HasValue:
-                    panel_phases = phases_param.AsInteger()
-            except Exception:
-                panel_phases = None
-            logger.warning(
-                "Panel {} (Id {}) is not compatible with circuit {} (requested poles: {}, system poles: {}, panel phases: {}). Leaving circuit unassigned.".format(
-                    panel_name or "Unnamed", panel_element.Id, group["key"], poles_value or "unknown",
-                    actual_poles if actual_poles is not None else "unknown", panel_phases or "unknown"
-                )
-            )
-    else:
-        logger.warning("No panel found for group {}; circuit left unassigned.".format(group["key"]))
-
-    return system
-
-
-def _parse_rating(value):
-    if value is None:
-        return None
-    if isinstance(value, (int, float)):
-        return float(value)
-    digits = []
-    for ch in str(value):
-        if ch.isdigit() or ch == ".":
-            digits.append(ch)
-    try:
-        return float("".join(digits)) if digits else None
-    except ValueError:
-        return None
-
-
-def _set_string_param(param, value):
-    if param and value is not None and not param.IsReadOnly:
-        try:
-            param.Set(str(value))
-        except Exception as ex:
-            logger.warning("Failed to set string parameter {}: {}".format(param.Definition.Name, ex))
-
-
-def _set_double_param(param, value):
-    if param and value is not None and not param.IsReadOnly:
-        try:
-            param.Set(value)
-        except Exception as ex:
-            logger.warning("Failed to set numeric parameter {}: {}".format(param.Definition.Name, ex))
-
-
-def _apply_circuit_data(system, group):
-    load_name = group.get("load_name")
-    circuit_number = group.get("circuit_number")
-    rating_value = _parse_rating(group.get("rating"))
-    circuit_notes = group.get("circuit_notes")
-
-    if circuit_number is not None:
-        setter = getattr(system, "SetCircuitNumber", None)
-        if callable(setter):
-            try:
-                setter(str(circuit_number))
-            except Exception as ex:
-                logger.debug("SetCircuitNumber failed during data apply for circuit {}: {}".format(system.Id.IntegerValue, ex))
-
-    name_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME)
-    notes_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NOTES_PARAM)
-    number_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER)
-    rating_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM)
-
-    _set_string_param(name_param, load_name)
-    _set_string_param(notes_param, circuit_notes)
-    _set_double_param(rating_param, rating_value)
+            logger.warning("Client load priority lookup failed: {}".format(ex))
+    return 99
+
+
+def _sort_groups(groups):
+    def sort_key(group):
+        priority = _group_priority(group.get("group_type"))
+        panel = (group.get("panel_name") or "").lower()
+        load_priority = _load_priority(group, priority)
+        circuit_number = group.get("circuit_number")
+        circuit_sort = common.try_parse_int(circuit_number)
+        if circuit_sort is None:
+            circuit_sort = circuit_number or group.get("key") or ""
+        return (priority, panel, load_priority, circuit_sort, group.get("key"))
+
+    return sorted(groups, key=sort_key)
 
 
 def main():
+    client_key = _select_client()
+    if not client_key:
+        logger.info("No client selected; aborting.")
+        return
+
+    global client_helpers
+    client_helpers = _load_client_helpers(client_key)
+
     doc = revit.doc
     panels = list(get_all_panels(doc))
-    panel_lookup = _build_panel_lookup(panels)
+    panel_lookup = data.build_panel_lookup(panels)
 
-    elements = _collect_target_elements(doc)
-    info_items = _gather_element_info(doc, elements, panel_lookup)
+    elements = _collect_elements(doc)
+    elements = _filter_disallowed_elements(elements)
+    if not elements:
+        logger.info("No elements found for processing.")
+        return
 
+    info_items = data.gather_element_info(doc, elements, panel_lookup, logger)
     if not info_items:
         logger.info("No elements with circuit data were found.")
         return
 
-    _ensure_not_already_circuited(info_items)
-
-    groups = _assemble_groups(info_items)
+    groups = grouping.assemble_groups(info_items, client_helpers, POSITION_GROUP_SIZE, logger)
     if not groups:
         logger.info("Grouping produced no circuit batches.")
         return
 
-    created_systems = OrderedDict()
+    groups = _sort_groups(groups)
 
-    with revit.Transaction("SuperCircuitV3 - Create Circuits"):
-        for group in groups:
-            system = _create_circuit(doc, group)
-            if not system:
-                logger.warning("Circuit creation skipped for {}.".format(group["key"]))
-                continue
-            doc.Regenerate()
-            created_systems[system.Id] = group
-
+    created_systems = _run_creation(doc, groups)
     if not created_systems:
         logger.info("No circuits were created.")
         return
 
-    with revit.Transaction("SuperCircuitV3 - Apply Circuit Data"):
-        for system_id, group in created_systems.items():
-            system = doc.GetElement(system_id)
-            if not system:
-                logger.warning("Could not locate system {} for data application.".format(system_id))
-                continue
-            _apply_circuit_data(system, group)
+    _run_apply_data(doc, created_systems)
 
     logger.info("Created {} circuits.".format(len(created_systems)))
 

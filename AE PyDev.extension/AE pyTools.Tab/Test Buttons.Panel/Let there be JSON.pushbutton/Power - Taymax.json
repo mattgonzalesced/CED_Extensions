@@ -464,7 +464,7 @@
                         "PARAMETERS" : { 
                             "dev-Group ID" : "PF_Plan Rinnai HWH",
                             "FLA Input_CED": "0",
-                            "Apparent Load Input_CED": "180",
+                            "Apparent Load Input_CED": "1000",
                             "Load Classification_CED": "C",
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
@@ -654,8 +654,8 @@
                         "PARAMETERS" : { 
                             "dev-Group ID" : "PF_Plan Hand Dryer",
                             "FLA Input_CED": "0",
-                            "Apparent Load Input_CED": "180",
-                            "Load Classification_CED": "C",
+                            "Apparent Load Input_CED": "1000",
+                            "Load Classification_CED": "NC",
                             "Voltage_CED": "120",
                             "Number of Poles_CED": "1",
                             "CKT_Panel_CEDT": "L3",
@@ -1588,7 +1588,7 @@
                             "Number of Poles_CED" : "1",
                             "CKT_Panel_CEDT" : "L4",
                             "CKT_Circuit Number_CEDT": "1",
-                            "CKT_Rating_CED": "20",
+                            "CKT_Rating_CED": "30",
                             "CKT_Load Name_CEDT": "MASSAGE CHAIRS - 103",
                             "CKT_Schedule Notes_CEDT": ""
                         },
@@ -1899,7 +1899,7 @@
                             "CKT_Panel_CEDT" : "L3",
                             "CKT_Circuit Number_CEDT": "3",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Load Name_CEDT": "RECEPTION",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
@@ -1923,7 +1923,7 @@
                             "CKT_Panel_CEDT" : "L3",
                             "CKT_Circuit Number_CEDT": "3",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Load Name_CEDT": "RECEPTION",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
@@ -1947,7 +1947,7 @@
                             "CKT_Panel_CEDT" : "L3",
                             "CKT_Circuit Number_CEDT": "3",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Load Name_CEDT": "RECEPTION",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
@@ -1971,7 +1971,7 @@
                             "CKT_Panel_CEDT" : "L3",
                             "CKT_Circuit Number_CEDT": "3",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Load Name_CEDT": "RECEPTION",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
@@ -1995,7 +1995,7 @@
                             "CKT_Panel_CEDT" : "L3",
                             "CKT_Circuit Number_CEDT": "3",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Load Name_CEDT": "RECEPTION",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
@@ -2019,7 +2019,7 @@
                             "CKT_Panel_CEDT" : "L3",
                             "CKT_Circuit Number_CEDT": "3",
                             "CKT_Rating_CED": "20",
-                            "CKT_Load Name_CEDT": "ROOM",
+                            "CKT_Load Name_CEDT": "RECEPTION",
                             "CKT_Schedule Notes_CEDT": ""
                         },
                         "OFFSET": {
