@@ -1779,7 +1779,7 @@
                         "PARAMETERS": {
                             "dev-Group ID": "ROOM: Men's Room",
                             "FLA Input_CED": "0",
-                            "Apparent Load Input_CED" : "1000",
+                            "Apparent Load Input_CED" : "180",
                             "Load Classification_CED": "NC",
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
@@ -1803,7 +1803,7 @@
                         "PARAMETERS": {
                             "dev-Group ID": "ROOM: Men's Room",
                             "FLA Input_CED": "0",
-                            "Apparent Load Input_CED" : "1000",
+                            "Apparent Load Input_CED" : "180",
                             "Load Classification_CED": "NC",
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
@@ -2089,7 +2089,7 @@
                         "PARAMETERS": {
                             "dev-Group ID": "ROOM: Women's Room",
                             "FLA Input_CED": "0",
-                            "Apparent Load Input_CED" : "1000",
+                            "Apparent Load Input_CED" : "180",
                             "Load Classification_CED": "NC",
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
@@ -2113,7 +2113,7 @@
                         "PARAMETERS": {
                             "dev-Group ID": "ROOM: Women's Room",
                             "FLA Input_CED": "0",
-                            "Apparent Load Input_CED" : "1000",
+                            "Apparent Load Input_CED" : "180",
                             "Load Classification_CED": "NC",
                             "Voltage_CED" : "120",
                             "Number of Poles_CED" : "1",
