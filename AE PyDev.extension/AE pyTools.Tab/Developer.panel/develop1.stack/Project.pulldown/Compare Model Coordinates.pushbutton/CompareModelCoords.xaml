@@ -1,0 +1,40 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Compare Coordinate Systems" Height="550" Width="500"
+        WindowStartupLocation="CenterScreen" Background="#2D2D30" Foreground="White">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="15">
+            <!-- HOST MODEL -->
+            <TextBlock Text="Host Model Coordinate System:" FontWeight="Bold" Margin="0,0,0,5"/>
+            <ComboBox x:Name="host_combo"
+                      Margin="0,0,0,10"
+                      Background="#FFFFFF"
+                      Foreground="#000000"
+                      FontWeight="Normal"/>
+
+            <!-- LINKED MODELS -->
+            <TextBlock Text="Linked Models:" FontWeight="Bold" Margin="0,10,0,5"/>
+            <StackPanel x:Name="link_stack" Margin="0,0,0,10"/>
+
+            <!-- ACTION BUTTON -->
+            <Button Content="Compare Coordinates"
+                    Height="35"
+                    Background="#007ACC"
+                    Foreground="White"
+                    Click="compare_click"
+                    Margin="0,5,0,5"/>
+
+            <!-- RESULTS -->
+            <TextBlock Text="Results:" FontWeight="Bold" Margin="0,10,0,5"/>
+            <TextBox x:Name="result_text"
+                     Height="220"
+                     Background="#1E1E1E"
+                     Foreground="LightGray"
+                     FontFamily="Consolas"
+                     TextWrapping="Wrap"
+                     IsReadOnly="True"
+                     VerticalScrollBarVisibility="Auto"/>
+        </StackPanel>
+    </ScrollViewer>
+</Window>
