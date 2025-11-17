@@ -22,7 +22,7 @@ from Autodesk.Revit.DB import (
     Line,
     Structure,
     ElementTransformUtils,
-    Level,
+    Level
 )
 
 from pyrevit import forms
@@ -240,6 +240,7 @@ class ElementPlacementEngine(object):
         - Uses InstanceConfig.get_offset(occurrence_index) for patterned offsets
         - Applies rotation around Z
         - Applies simple instance parameters
+        - Handles both model families and Generic Annotations
         """
         profile = CAD_BLOCK_PROFILES.get(cad_name)
         if not profile:
@@ -256,7 +257,7 @@ class ElementPlacementEngine(object):
         inst_cfg = type_cfg.instance_config
         offset_cfg = inst_cfg.get_offset(occurrence_index)
 
-        # Look up the symbol by "Family : Type" label
+        # Look up the symbol by "Family : Type" label (works for ALL categories)
         symbol = self.symbol_label_map.get(label)
         if not symbol:
             return False
@@ -271,6 +272,15 @@ class ElementPlacementEngine(object):
             except Exception:
                 return False
 
+        # Determine if this is a Generic Annotation (view-based family)
+        cat = getattr(symbol, "Category", None)
+        is_generic_annotation = False
+        if cat and getattr(cat, "Name", None) == "Generic Annotations":
+            is_generic_annotation = True
+        elif getattr(type_cfg, "category_name", "") == "Generic Annotations":
+            # Fallback to profile metadata if needed
+            is_generic_annotation = True
+
         # Offsets in feet
         ox = offset_cfg.x_inches / 12.0
         oy = offset_cfg.y_inches / 12.0
@@ -283,28 +293,43 @@ class ElementPlacementEngine(object):
         )
         z_offset_feet = oz
 
-        # Place the family instance
         try:
-            level = self.default_level
-            if level is None:
-                return False
+            if is_generic_annotation:
+                # --- Generic Annotation placement: view-based ---
+                view = self.doc.ActiveView
+                if view is None:
+                    return False
 
-            instance = self.doc.Create.NewFamilyInstance(
-                loc,
-                symbol,
-                level,
-                Structure.StructuralType.NonStructural,
-            )
-
-            # Override elevation if we have a vertical offset
-            if abs(z_offset_feet) > 1e-6:
-                elev_param = instance.get_Parameter(
-                    BuiltInParameter.INSTANCE_ELEVATION_PARAM
+                instance = self.doc.Create.NewFamilyInstance(
+                    loc,
+                    symbol,
+                    view
                 )
-                if elev_param and not elev_param.IsReadOnly:
-                    elev_param.Set(z_offset_feet)
 
-            # Apply rotation
+                # No INSTANCE_ELEVATION_PARAM logic here; GA are view elements
+
+            else:
+                # --- Normal model family placement (what you already had) ---
+                level = self.default_level
+                if level is None:
+                    return False
+
+                instance = self.doc.Create.NewFamilyInstance(
+                    loc,
+                    symbol,
+                    level,
+                    Structure.StructuralType.NonStructural,
+                )
+
+                # Override elevation if we have a vertical offset
+                if abs(z_offset_feet) > 1e-6:
+                    elev_param = instance.get_Parameter(
+                        BuiltInParameter.INSTANCE_ELEVATION_PARAM
+                    )
+                    if elev_param and not elev_param.IsReadOnly:
+                        elev_param.Set(z_offset_feet)
+
+            # Apply rotation (works for both model and GA in plan views)
             total_rot_deg = base_rot_deg + offset_cfg.rotation_deg
             if abs(total_rot_deg) > 1e-6:
                 angle_rad = math.radians(total_rot_deg)
@@ -323,6 +348,7 @@ class ElementPlacementEngine(object):
             return False
 
         return True
+
 
     # ------------------------------------------------------------------ #
     #  Parameter helper

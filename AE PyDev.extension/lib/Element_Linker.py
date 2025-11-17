@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+import csv
+import json
+import os
 """
 Element_Linker
 --------------
@@ -16,13 +19,21 @@ class OffsetConfig(object):
 
 
 class TagConfig(object):
-    def __init__(self, label, offset=None):
-        """
-        label: "TagTypeName : TagFamilyName"
-        offset: OffsetConfig
-        """
-        self.label = label
-        self.offset = offset or OffsetConfig()
+    """Configuration for a single Generic Annotation (keynote) tag."""
+
+    def __init__(self,
+                 category_name,
+                 family_name,
+                 type_name,
+                 parameters=None,
+                 offsets=None):
+        self.category_name = category_name              # e.g. "Generic Annotations"
+        self.family_name = family_name                  # e.g. "Manual Key Note- All Shapes"
+        self.type_name = type_name                      # e.g. "Square"
+        self.parameters = parameters or {}
+        # single OffsetConfig; if you ever want multiple you can change this to a list
+        self.offsets = offsets or OffsetConfig(0.0, 0.0, 0.0, 0.0)
+
 
 
 class InstanceConfig(object):
@@ -82,6 +93,24 @@ class CadBlockProfile(object):
     def add_type(self, type_config):
         self._types.append(type_config)
 
+    def add_type_from_parts(self, family_name, type_name, category_name,
+                            is_group=False, parameters=None, offsets=None, tags=None):
+        """Convenience helper to build and add a TypeConfig from simple parts."""
+        label = u"{} : {}".format(family_name, type_name)
+        inst_cfg = InstanceConfig(
+            parameters=parameters or {},
+            offsets=offsets or OffsetConfig(0.0, 0.0, 0.0, 0.0),
+            tags=tags or [],
+        )
+        self._types.append(
+            TypeConfig(
+                label=label,
+                category_name=category_name,
+                is_group=is_group,
+                instance_config=inst_cfg,
+            )
+        )
+
     def get_types(self):
         return list(self._types)
 
@@ -108,278 +137,118 @@ def register_profile(profile):
     return profile
 
 
+def register_profiles_from_csv(csv_path, name_columns=None):
+    """
+    Convenience helper: read a CSV, extract CAD block names, and register
+    CadBlockProfile entries for any names not already in CAD_BLOCK_PROFILES.
+
+    csv_path: path to CSV file
+    name_columns: optional list of column names (case-insensitive) to try.
+                  Defaults to common variants: Name, CAD Name, cad_name, CAD Block, Block.
+    Returns: list of cad_name strings that were newly registered.
+    """
+    cols = name_columns or ["Name", "CAD Name", "cad_name", "CAD Block", "CADBlock", "Block"]
+    added = []
+
+    try:
+        with open(csv_path, "r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                cad_name = None
+                for col in cols:
+                    if col.lower() in [k.lower() for k in row.keys()]:
+                        # fetch value using original key casing
+                        for real_key in row.keys():
+                            if real_key.lower() == col.lower():
+                                value = row.get(real_key, "")
+                                if value:
+                                    cad_name = value.strip()
+                                break
+                    if cad_name:
+                        break
+
+                if not cad_name:
+                    continue
+
+                if cad_name not in CAD_BLOCK_PROFILES:
+                    register_profile(CadBlockProfile(cad_name))
+                    added.append(cad_name)
+    except Exception:
+        # Fail silently but return what we have
+        return added
+
+    return added
+
+
 # -------------------------------------------------------------------------
-# Example definitions
-# (You will expand these to match your real mappings)
+# Data loading from external YAML (JSON subset).
 # -------------------------------------------------------------------------
 
-# 1) Exit Sign ------------------------------------------------------------
+DATA_FILE = os.path.join(os.path.dirname(__file__), "element_data.yaml")
 
-profile_exit_sign = register_profile(CadBlockProfile("Exit Sign"))
 
-profile_exit_sign.add_type(
-    TypeConfig(
-        label="LF-U_Exit Sign_CED : E1",  # Family : Type
-        category_name="Lighting Fixtures",
-        is_group=False,
-        instance_config=InstanceConfig(
-            parameters={
-                "dev-Group ID": "E1",
-                "FLA Input_CED": "0",
-                "Apparent Load Input_CED": "180",
-                "Load Classification_CED": "L",
-                "Voltage_CED": "120",
-                "Number of Poles_CED": "1",
-                "CKT_Panel_CEDT": "L3",
-                "CKT_Circuit Number_CEDT": "EMERGENCY",
-                "CKT_Rating_CED": "20",
-                "CKT_Load Name_CEDT": "EMERGENCY - (Space)",
-                "CKT_Schedule Notes_CEDT": "",
-            },
-            offsets=OffsetConfig(0.0, 0.0, 0.0, 0.0),
-            tags=[],
-        ),
+def _offset_from_dict(data):
+    if data is None:
+        return OffsetConfig()
+    return OffsetConfig(
+        data.get("x_inches", 0.0),
+        data.get("y_inches", 0.0),
+        data.get("z_inches", 0.0),
+        data.get("rotation_deg", 0.0),
     )
-)
 
-# 2) Exit Directional Sign ------------------------------------------------
 
-profile_exit_directional_sign = register_profile(
-    CadBlockProfile("Exit Directional Sign")
-)
+def _instance_from_dict(data):
+    if data is None:
+        return InstanceConfig()
 
-profile_exit_directional_sign.add_type(
-    TypeConfig(
-        label="LF-U_Exit Sign_CED : E2",  # Family : Type
-        category_name="Lighting Fixtures",
-        is_group=False,
-        instance_config=InstanceConfig(
-            parameters={
-                "dev-Group ID": "E2",
-                "FLA Input_CED": "0",
-                "Apparent Load Input_CED": "180",
-                "Load Classification_CED": "L",
-                "Voltage_CED": "120",
-                "Number of Poles_CED": "1",
-                "CKT_Panel_CEDT": "L3",
-                "CKT_Circuit Number_CEDT": "EMERGENCY",
-                "CKT_Rating_CED": "20",
-                "CKT_Load Name_CEDT": "EMERGENCY - (Space)",
-                "CKT_Schedule Notes_CEDT": "",
-            },
-            offsets=OffsetConfig(0.0, 0.0, 0.0, 0.0),
-            tags=[],
-        ),
+    offsets_data = data.get("offsets", []) or []
+    offsets = []
+    for od in offsets_data:
+        offsets.append(_offset_from_dict(od))
+
+    tags = []
+    for tag_data in data.get("tags", []) or []:
+        tags.append(
+            TagConfig(
+                category_name=tag_data.get("category_name"),
+                family_name=tag_data.get("family_name"),
+                type_name=tag_data.get("type_name"),
+                parameters=tag_data.get("parameters") or {},
+                offsets=_offset_from_dict(tag_data.get("offsets") or {}),
+            )
+        )
+
+    return InstanceConfig(
+        parameters=data.get("parameters") or {},
+        offsets=offsets,
+        tags=tags,
     )
-)
 
-# 3) PF_Light Recess ------------------------------------------------------
 
-profile_pf_light_recess = register_profile(CadBlockProfile("PF_Light Recess"))
+def load_profiles_from_yaml(path=None):
+    """Populate CAD_BLOCK_PROFILES from element_data.yaml (stored as JSON-compatible YAML)."""
+    data_path = path or DATA_FILE
+    if not os.path.exists(data_path):
+        raise IOError("Profile data file not found: {}".format(data_path))
 
-profile_pf_light_recess.add_type(
-    TypeConfig(
-        label="LF-U_Round Fixture_CED : F1A",  # Family : Type
-        category_name="Lighting Fixtures",
-        is_group=False,
-        instance_config=InstanceConfig(
-            parameters={
-                "dev-Group ID": "F1A and F1B",
-                "FLA Input_CED": "0",
-                "Apparent Load Input_CED": "180",
-                "Load Classification_CED": "L",
-                "Voltage_CED": "120",
-                "Number of Poles_CED": "1",
-                "CKT_Panel_CEDT": "L3",
-                "CKT_Circuit Number_CEDT": "STANDARD",
-                "CKT_Rating_CED": "20",
-                "CKT_Load Name_CEDT": "(Space)",
-                "CKT_Schedule Notes_CEDT": "",
-            },
-            offsets=OffsetConfig(0.0, 0.0, 0.0, 0.0),
-            tags=[],
-        ),
-    )
-)
+    with open(data_path, "r") as f:
+        data = json.load(f)
 
-# 4) PF_Light Exterior ----------------------------------------------------
+    CAD_BLOCK_PROFILES.clear()
+    for prof_data in data.get("profiles", []):
+        profile = CadBlockProfile(prof_data.get("cad_name"))
+        for type_data in prof_data.get("types", []) or []:
+            instance_cfg = _instance_from_dict(type_data.get("instance_config") or {})
+            type_cfg = TypeConfig(
+                label=type_data.get("label"),
+                category_name=type_data.get("category_name"),
+                is_group=type_data.get("is_group", False),
+                instance_config=instance_cfg,
+            )
+            profile.add_type(type_cfg)
+        register_profile(profile)
 
-profile_pf_light_exterior = register_profile(CadBlockProfile("PF_Light Exterior"))
 
-profile_pf_light_exterior.add_type(
-    TypeConfig(
-        label="LF-U_Bug Eye Fixture_CED : F13",  # Family : Type
-        category_name="Lighting Fixtures",
-        is_group=False,
-        instance_config=InstanceConfig(
-            parameters={
-                "dev-Group ID": "F13",
-                "FLA Input_CED": "0",
-                "Apparent Load Input_CED": "180",
-                "Load Classification_CED": "L",
-                "Voltage_CED": "120",
-                "Number of Poles_CED": "1",
-                "CKT_Panel_CEDT": "L3",
-                "CKT_Circuit Number_CEDT": "STANDARD",
-                "CKT_Rating_CED": "20",
-                "CKT_Load Name_CEDT": "(Space)",
-                "CKT_Schedule Notes_CEDT": "",
-            },
-            offsets=OffsetConfig(0.0, 0.0, 0.0, 0.0),
-            tags=[],
-        ),
-    )
-)
-
-# 5) PF_Light Surface Mtd -------------------------------------------------
-
-profile_pf_light_surface_mtd = register_profile(
-    CadBlockProfile("PF_Light Surface Mtd")
-)
-
-profile_pf_light_surface_mtd.add_type(
-    TypeConfig(
-        label="LF-U_Rectangular Fixture_CED : F9",  # Family : Type
-        category_name="Lighting Fixtures",
-        is_group=False,
-        instance_config=InstanceConfig(
-            parameters={
-                "dev-Group ID": "F9",
-                "FLA Input_CED": "0",
-                "Apparent Load Input_CED": "180",
-                "Load Classification_CED": "L",
-                "Voltage_CED": "120",
-                "Number of Poles_CED": "1",
-                "CKT_Panel_CEDT": "L3",
-                "CKT_Circuit Number_CEDT": "STANDARD",
-                "CKT_Rating_CED": "20",
-                "CKT_Load Name_CEDT": "(Space)",
-                "CKT_Schedule Notes_CEDT": "",
-            },
-            offsets=OffsetConfig(0.0, 0.0, 0.0, 0.0),
-            tags=[],
-        ),
-    )
-)
-
-# 6) PF_Light Sconce ------------------------------------------------------
-
-profile_pf_light_sconce = register_profile(CadBlockProfile("PF_Light Sconce"))
-
-profile_pf_light_sconce.add_type(
-    TypeConfig(
-        label="LF-U_Wall Sconce Fixture_CED : F12",  # Family : Type
-        category_name="Lighting Fixtures",
-        is_group=False,
-        instance_config=InstanceConfig(
-            parameters={
-                "dev-Group ID": "F12",
-                "FLA Input_CED": "0",
-                "Apparent Load Input_CED": "180",
-                "Load Classification_CED": "L",
-                "Voltage_CED": "120",
-                "Number of Poles_CED": "1",
-                "CKT_Panel_CEDT": "L3",
-                "CKT_Circuit Number_CEDT": "STANDARD",
-                "CKT_Rating_CED": "20",
-                "CKT_Load Name_CEDT": "(Space)",
-                "CKT_Schedule Notes_CEDT": "",
-            },
-            offsets=OffsetConfig(0.0, 0.0, 0.0, 0.0),
-            tags=[],
-        ),
-    )
-)
-
-# 7) PF_Light Fluorescent -------------------------------------------------
-
-profile_pf_light_fluorescent = register_profile(
-    CadBlockProfile("PF_Light Fluorescent")
-)
-
-profile_pf_light_fluorescent.add_type(
-    TypeConfig(
-        label="LF-U_Rectangular Fixture_CED : F10",  # Family : Type
-        category_name="Lighting Fixtures",
-        is_group=False,
-        instance_config=InstanceConfig(
-            parameters={
-                "dev-Group ID": "F10",
-                "FLA Input_CED": "0",
-                "Apparent Load Input_CED": "180",
-                "Load Classification_CED": "L",
-                "Voltage_CED": "120",
-                "Number of Poles_CED": "1",
-                "CKT_Panel_CEDT": "L3",
-                "CKT_Circuit Number_CEDT": "STANDARD",
-                "CKT_Rating_CED": "20",
-                "CKT_Load Name_CEDT": "(Space)",
-                "CKT_Schedule Notes_CEDT": "",
-            },
-            offsets=OffsetConfig(0.0, 0.0, 0.0, 0.0),
-            tags=[],
-        ),
-    )
-)
-
-# 8) PF_Light Podium Desk -------------------------------------------------
-
-profile_pf_light_podium_desk = register_profile(
-    CadBlockProfile("PF_Light Podium Desk")
-)
-
-profile_pf_light_podium_desk.add_type(
-    TypeConfig(
-        label="LF-U_Rectangular Fixture_CED : F6",  # Family : Type
-        category_name="Lighting Fixtures",
-        is_group=False,
-        instance_config=InstanceConfig(
-            parameters={
-                "dev-Group ID": "F6",
-                "FLA Input_CED": "0",
-                "Apparent Load Input_CED": "180",
-                "Load Classification_CED": "L",
-                "Voltage_CED": "120",
-                "Number of Poles_CED": "1",
-                "CKT_Panel_CEDT": "L3",
-                "CKT_Circuit Number_CEDT": "STANDARD",
-                "CKT_Rating_CED": "20",
-                "CKT_Load Name_CEDT": "(Space)",
-                "CKT_Schedule Notes_CEDT": "",
-            },
-            offsets=OffsetConfig(0.0, 0.0, 0.0, 0.0),
-            tags=[],
-        ),
-    )
-)
-
-# 9) PF_Light Linear Bay --------------------------------------------------
-
-profile_pf_light_linear_bay = register_profile(
-    CadBlockProfile("PF_Light Linear Bay")
-)
-
-profile_pf_light_linear_bay.add_type(
-    TypeConfig(
-        label="LF-U_Universal Light Fixture_CED : F2",  # Family : Type
-        category_name="Lighting Fixtures",
-        is_group=False,
-        instance_config=InstanceConfig(
-            parameters={
-                "dev-Group ID": "F2",
-                "FLA Input_CED": "0",
-                "Apparent Load Input_CED": "180",
-                "Load Classification_CED": "L",
-                "Voltage_CED": "120",
-                "Number of Poles_CED": "1",
-                "CKT_Panel_CEDT": "L3",
-                "CKT_Circuit Number_CEDT": "STANDARD",
-                "CKT_Rating_CED": "20",
-                "CKT_Load Name_CEDT": "(Space)",
-                "CKT_Schedule Notes_CEDT": "",
-            },
-            offsets=OffsetConfig(0.0, 0.0, 0.0, 0.0),
-            tags=[],
-        ),
-    )
-)
+# Load profile data immediately on import
+load_profiles_from_yaml()

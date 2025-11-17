@@ -18,6 +18,7 @@ from Autodesk.Revit.DB import (
     FamilySymbol,
     GroupType,
     BuiltInCategory,
+    Document,
 )
 
 
@@ -122,7 +123,7 @@ def read_xyz_csv(csv_path):
 # SYMBOL ORGANIZATION
 # ---------------------------------------------------------------------------
 
-def organize_symbols_by_category(family_symbols):
+def organize_symbols_by_category(doc_or_symbols):
     """
     Build lookup tables for FamilySymbols.
 
@@ -139,7 +140,15 @@ def organize_symbols_by_category(family_symbols):
     types_by_family = {}
     family_symbols = []
 
-    for sym in family_symbols:
+    # Allow caller to pass a doc; otherwise assume already symbols
+    if isinstance(doc_or_symbols, Document) or hasattr(doc_or_symbols, "Application"):
+        family_symbols_iter = FilteredElementCollector(doc_or_symbols).OfClass(FamilySymbol).ToElements()
+    elif hasattr(doc_or_symbols, "OfClass"):
+        family_symbols_iter = doc_or_symbols.OfClass(FamilySymbol).ToElements()
+    else:
+        family_symbols_iter = doc_or_symbols
+
+    for sym in family_symbols_iter:
         try:
             cat = sym.Category
             if cat is None:

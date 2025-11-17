@@ -5,12 +5,10 @@ Entry script for Element Linker.
 Workflow:
 1. Ask user for CSV of CAD points.
 2. Collect CAD block names from CSV.
-3. Show WPF window (ElementLinkerWindow.xaml) to map each CAD name to an Element_Linker profile.
+3. Auto-map each CAD name to ALL types in its Element_Linker profile (editable popup allows add/remove).
 4. Ask user to pick a level.
 5. Run ElementPlacementEngine to place everything.
 """
-
-import os
 
 from pyrevit import revit, forms, script
 
@@ -33,13 +31,40 @@ def main():
         forms.alert("No rows in CSV.", title="Element Linker")
         return
 
-    # 2. Show mapping UI
+    # 2. Build mapping automatically: place ALL types for each CAD block profile
+    cad_selection_map = {}
+    for cad_name in cad_names:
+        profile = CAD_BLOCK_PROFILES.get(cad_name)
+        if not profile:
+            continue
+        labels = [lbl for lbl in profile.get_type_labels() if lbl]
+        if labels:
+            # keep order but drop accidental duplicates
+            seen = set()
+            distinct_labels = []
+            for lbl in labels:
+                if lbl in seen:
+                    continue
+                seen.add(lbl)
+                distinct_labels.append(lbl)
+            cad_selection_map[cad_name] = distinct_labels
+
+    if not cad_selection_map:
+        forms.alert("No CAD names have profiles with types to place.", title="Element Linker")
+        return
+
+    # 3. Allow editing via WPF popup (pre-populated with all types)
     xaml_path = script.get_bundle_file('ElementLinkerWindow.xaml')
-    if not xaml_path or not os.path.exists(xaml_path):
+    if not xaml_path:
         forms.alert("ElementLinkerWindow.xaml not found in bundle.", title="Element Linker")
         return
 
-    window = ElementLinkerWindow(xaml_path, cad_names, CAD_BLOCK_PROFILES)
+    window = ElementLinkerWindow(
+        xaml_path=xaml_path,
+        cad_names=cad_names,
+        cad_block_profiles=CAD_BLOCK_PROFILES,
+        initial_mapping=cad_selection_map,
+    )
     window.show_dialog()
 
     if not window.DialogResult:
@@ -47,10 +72,10 @@ def main():
 
     cad_selection_map = window.result_mapping
     if not cad_selection_map:
-        forms.alert("No mappings selected.", title="Element Linker")
+        forms.alert("No selections to place.", title="Element Linker")
         return
 
-    # 3. Pick placement level
+    # 4. Pick placement level
     level = None
     level_sel = forms.select_levels(multiple=False)
     if isinstance(level_sel, list) and level_sel:
@@ -58,7 +83,7 @@ def main():
     else:
         level = level_sel
 
-    # 4. Run placement engine
+    # 5. Run placement engine
     engine = ElementPlacementEngine(doc, default_level=level)
     engine.place_from_csv(csv_rows, cad_selection_map)
 
