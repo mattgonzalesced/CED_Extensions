@@ -15,6 +15,7 @@
 # Revit 2024 / IronPython 2.7
 
 from __future__ import print_function
+
 import re
 import traceback
 
@@ -102,10 +103,20 @@ def ask_targets(target_docs):
 
 
 # ---------- Copy helpers (batch per target) ----------
+from Autodesk.Revit.DB import DuplicateTypeAction
+
 class _DupTypeUseDestination(IDuplicateTypeNamesHandler):
     def OnDuplicateTypeNamesFound(self, args):
-        # Keep destination types on name collisions
-        return args.UseDestinationTypes()
+        try:
+            args.SetAction(DuplicateTypeAction.UseDestinationTypes)
+        except:
+            # Compatibility with pre-2024 Revit versions
+            try:
+                return args.UseDestinationTypes()
+            except:
+                pass
+        return
+
 
 def batch_copy_to_target(src_doc, target_doc, element_ids):
     """
