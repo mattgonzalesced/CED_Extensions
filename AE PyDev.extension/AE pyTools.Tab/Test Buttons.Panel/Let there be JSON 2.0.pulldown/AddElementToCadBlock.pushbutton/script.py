@@ -12,6 +12,8 @@ import io
 import csv
 import time
 import json
+import hashlib
+import datetime
 
 from pyrevit import forms, revit, script
 from Autodesk.Revit import DB
@@ -121,6 +123,31 @@ def _read_data_file(path):
 def _write_data_file(path, data):
     with io.open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
+
+
+def _file_hash(path):
+    if not os.path.exists(path):
+        return ""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _append_log(action, cad_name, type_labels, before_hash, after_hash):
+    log_path = os.path.join(os.path.dirname(ELEMENT_DATA_PATH), "element_data.log")
+    entry = {
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "user": os.getenv("USERNAME") or os.getenv("USER") or "unknown",
+        "action": action,
+        "cad_name": cad_name,
+        "type_labels": list(type_labels or []),
+        "before_hash": before_hash,
+        "after_hash": after_hash,
+    }
+    with io.open(log_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=True) + "\n")
 
 
 def _profile_priority(profile_dict):
@@ -294,6 +321,7 @@ def main():
         forms.alert("No entries selected.", title="Add Element To CAD Block")
         return
 
+    before_hash = _file_hash(ELEMENT_DATA_PATH)
     t = DB.Transaction(doc, "Add CAD Block Element Data")
     t.Start()
     try:
@@ -306,7 +334,11 @@ def main():
         t.RollBack()
         raise
 
-    forms.alert("Added {} type(s) to profile '{}' and persisted to element_data.yaml.\nReload Element_Linker to use them.".format(len(entries), cad_choice),
+    after_hash = _file_hash(ELEMENT_DATA_PATH)
+    new_labels = [u"{} : {}".format(fam, typ) for _, fam, typ, _, _, _, _, _, _ in entries]
+    _append_log("add", cad_choice, new_labels, before_hash, after_hash)
+
+    forms.alert("Added {} type(s) to profile '{}' and persisted to element_data.yaml.\nReload Populate Elements to use them.".format(len(entries), cad_choice),
                 title="Add Element To CAD Block")
 
 

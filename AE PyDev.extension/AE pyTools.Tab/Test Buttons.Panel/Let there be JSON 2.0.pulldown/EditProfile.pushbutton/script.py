@@ -4,6 +4,8 @@
 import io
 import json
 import os
+import hashlib
+import datetime
 
 from pyrevit import script, forms
 
@@ -120,6 +122,30 @@ def _persist_to_yaml(path, data):
         json.dump(data, f, indent=2)
 
 
+def _file_hash(path):
+    if not os.path.exists(path):
+        return ""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _append_log(action, cad_names, before_hash, after_hash):
+    log_path = os.path.join(os.path.dirname(ELEMENT_DATA_PATH), "element_data.log")
+    entry = {
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "user": os.getenv("USERNAME") or os.getenv("USER") or "unknown",
+        "action": action,
+        "cad_names": list(cad_names or []),
+        "before_hash": before_hash,
+        "after_hash": after_hash,
+    }
+    with io.open(log_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=True) + "\n")
+
+
 def main():
     xaml_path = script.get_bundle_file('ProfileEditorWindow.xaml')
     if not xaml_path:
@@ -133,9 +159,12 @@ def main():
     result = window.show_dialog()
     if result:
         try:
+            before_hash = _file_hash(ELEMENT_DATA_PATH)
             data = _serialize_profiles(CAD_BLOCK_PROFILES)
             _persist_to_yaml(ELEMENT_DATA_PATH, data)
-            forms.alert("Saved profile changes to element_data.yaml.", title="Edit Element Linker Profiles")
+            after_hash = _file_hash(ELEMENT_DATA_PATH)
+            _append_log("edit", sorted(CAD_BLOCK_PROFILES.keys()), before_hash, after_hash)
+            forms.alert("Saved profile changes to element_data.yaml.\nReload Populate Elements to see your updates.", title="Edit Element Linker Profiles")
         except Exception as ex:
             forms.alert("Failed to save to element_data.yaml:\n\n{}".format(ex), title="Edit Element Linker Profiles")
     else:
