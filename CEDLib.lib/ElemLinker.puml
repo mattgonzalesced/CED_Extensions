@@ -1,0 +1,137 @@
+@startuml ElementLinkModel
+
+' ---------------------------
+'  EQUIPMENT DEFINITION LAYER
+' ---------------------------
+
+class EquipmentDefinition {
+    +equipment_def_id : str
+    +name : str
+    +version : int
+    +schema_version : int
+    +allow_parentless : bool
+    +allow_unmatched_parents : bool
+    +prompt_on_parent_mismatch : bool
+    --
+    +parent_filters : ParentFilter
+    +equipment_properties : EquipmentProperties
+    +linked_sets : List<LinkedElementSet>
+}
+
+class ParentFilter {
+    +category : str
+    +family_name_pattern : str
+    +type_name_pattern : str
+    +parameter_filters : dict
+}
+
+class EquipmentProperties {
+    +manufacturer : str
+    +model_number : str
+    +description : str
+    +dimensions : dict
+    +electrical : dict
+    +mechanical : dict
+    +weight : float
+    +other : dict
+}
+
+' ---------------------------
+'     LINKED SET DEFINITION
+' ---------------------------
+
+class LinkedElementSet {
+    +set_def_id : str
+    +name : str
+    +elements : List<LinkedElementDefinition>
+}
+
+class LinkedElementDefinition {
+    +element_def_id : str
+    +category : str
+    +family : str
+    +type : str
+    +placement : PlacementRule
+    +static_params : dict
+    +dynamic_params : List<DynamicParamRule>
+    +allow_recreate : bool
+    +is_optional : bool
+}
+
+class PlacementRule {
+    +offset_xyz : tuple
+    +rotation_degrees : float
+    +placement_basis : PlacementBasis
+    +placement_mode : PlacementMode
+    +rotation_basis : RotationBasis
+}
+
+class DynamicParamRule {
+    +child_param : str
+    +source_type : SourceType
+    +source_value : str
+}
+
+' ---------------------------
+'     INSTANCE RUNTIME DATA
+' ---------------------------
+
+class ElementLinkInstance {
+    +equipment_def_id : str
+    +parent : ParentInstance
+    +child_links : List<ChildLinkInstance>
+}
+
+class ParentInstance {
+    +element_id : int
+    +category : str
+    +family : str
+    +type : str
+    +location : tuple
+    +is_view_specific : bool
+    +view_id : int
+}
+
+class ChildLinkInstance {
+    +element_id : int                  ' Revit ElementId of the CHILD placed in the model
+    +element_def_id : str              ' Matches LinkedElementDefinition.element_def_id
+    +set_def_id : str                  ' Matches LinkedElementSet.set_def_id
+    +last_known_location : tuple
+    +last_known_type : str
+    +warnings : List<WarningItem>
+}
+
+class WarningItem {
+    +code : str
+    +message : str
+}
+
+' ---------------------------
+'            ENUMS
+' ---------------------------
+
+enum PlacementBasis
+enum PlacementMode
+enum RotationBasis
+enum SourceType
+enum LinkReferenceType
+
+
+' ---------------------------------
+'            RELATIONSHIPS
+' ---------------------------------
+
+EquipmentDefinition --> ParentFilter
+EquipmentDefinition --> EquipmentProperties
+EquipmentDefinition --> LinkedElementSet
+
+LinkedElementSet --> LinkedElementDefinition
+LinkedElementDefinition --> PlacementRule
+LinkedElementDefinition --> DynamicParamRule
+
+ElementLinkInstance --> ParentInstance
+ElementLinkInstance --> ChildLinkInstance
+
+ChildLinkInstance --> WarningItem
+
+@enduml
