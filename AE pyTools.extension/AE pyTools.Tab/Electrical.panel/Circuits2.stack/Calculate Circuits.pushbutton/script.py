@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
+"""Circuit sizing calculator with searchable circuit picker."""
+
+from pyrevit import DB, forms, revit
 from CEDElectrical.Model.CircuitBranch import *
+from CEDElectrical.circuit_sizing.services.revit_reader import CircuitListProvider
+from CEDElectrical.circuit_sizing.ui.circuit_selector import CircuitSelectorWindow
 from Snippets import _elecutils as eu
 
-app = __revit__.Application
-uidoc = __revit__.ActiveUIDocument
+USE_SELECTION_WINDOW = True  # Toggle to False to quickly test sizing logic without the picker
+
 doc = revit.doc
 logger = script.get_logger()
 
 
-# -------------------------------------------------------------------------
-# Collects parameter values from a CircuitBranch object
-# -------------------------------------------------------------------------
 def collect_shared_param_values(branch):
     return {
         'CKT_Circuit Type_CEDT': branch.branch_type,
@@ -45,9 +47,6 @@ def collect_shared_param_values(branch):
     }
 
 
-# -------------------------------------------------------------------------
-# Write shared parameters to the electrical circuit
-# -------------------------------------------------------------------------
 def update_circuit_parameters(circuit, param_values):
     for param_name, value in param_values.items():
         if value is None:
@@ -66,9 +65,6 @@ def update_circuit_parameters(circuit, param_values):
             logger.debug("❌ Failed to write '{}' to circuit {}: {}".format(param_name, circuit.Id, e))
 
 
-# -------------------------------------------------------------------------
-# Write shared parameters to connected family instances
-# -------------------------------------------------------------------------
 def update_connected_elements(branch, param_values):
     circuit = branch.circuit
     fixture_count = 0
@@ -89,7 +85,6 @@ def update_connected_elements(branch, param_values):
         if not (is_fixture or is_equipment):
             continue
 
-        # Write all parameters
         for param_name, value in param_values.items():
             if value is None:
                 continue
@@ -114,22 +109,8 @@ def update_connected_elements(branch, param_values):
     return fixture_count, equipment_count
 
 
-# -------------------------------------------------------------------------
-# Main Execution
-# -------------------------------------------------------------------------
-def main():
-    selection = revit.get_selection()
-    test_circuits = []
-    if not selection:
-        test_circuits = eu.pick_circuits_from_list(doc, select_multiple=True)
-    else:
-        for el in selection:
-            if isinstance(el, DB.Electrical.ElectricalSystem):
-                test_circuits.append(el)
-        if not test_circuits:
-            test_circuits = eu.pick_circuits_from_list(doc, select_multiple=True)
-
-    count = len(test_circuits)
+def _calculate_and_update(circuits):
+    count = len(circuits)
     if count > 1000:
         proceed = forms.alert(
             "{} circuits selected.\n\nThis may take a while.\n\n".format(count),
@@ -137,14 +118,13 @@ def main():
             options=["Continue", "Cancel"]
         )
         if proceed != "Continue":
-            script.exit()
+            return
 
     branches = []
     total_fixtures = 0
     total_equipment = 0
 
-    # Perform all calculations first
-    for circuit in test_circuits:
+    for circuit in circuits:
         branch = CircuitBranch(circuit)
         if not branch.is_power_circuit:
             continue
@@ -155,7 +135,6 @@ def main():
         branch.calculate_conduit_fill_percentage()
         branches.append(branch)
 
-    # Write all parameters in a single transaction
     tg = DB.TransactionGroup(doc, "Calculate Circuits")
     tg.Start()
     t = DB.Transaction(doc, "Write Shared Parameters")
@@ -172,7 +151,7 @@ def main():
     except Exception as e:
         t.RollBack()
         tg.RollBack()
-        logger.error("{}❌ Transaction failed: {}".format(branch.name,e))
+        logger.error("{}❌ Transaction failed: {}".format(branch.name, e))
         return
 
     output = script.get_output()
@@ -181,6 +160,32 @@ def main():
     output.print_md("* Circuits updated: **{}**".format(len(branches)))
     output.print_md("* Electrical Fixtures updated: **{}**".format(total_fixtures))
     output.print_md("* Electrical Equipment updated: **{}**".format(total_equipment))
+
+
+def _launch_selection_window():
+    provider = CircuitListProvider(doc)
+    window = CircuitSelectorWindow(provider)
+    return window.show_dialog()
+
+
+def main():
+    selection = revit.get_selection()
+    selected_circuits = []
+
+    if selection:
+        selected_circuits = [el for el in selection if isinstance(el, DB.Electrical.ElectricalSystem)]
+
+    if not selected_circuits:
+        if USE_SELECTION_WINDOW:
+            selected_circuits = _launch_selection_window() or []
+        else:
+            selected_circuits = eu.pick_circuits_from_list(doc, select_multiple=True)
+
+    if not selected_circuits:
+        logger.info("No circuits selected. Exiting.")
+        return
+
+    _calculate_and_update(selected_circuits)
 
 
 if __name__ == "__main__":
