@@ -1,0 +1,33 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Circuit Selector" Height="500" Width="520"
+        WindowStartupLocation="CenterScreen">
+    <DockPanel Margin="10">
+        <StackPanel DockPanel.Dock="Top" Orientation="Vertical" Margin="0,0,0,10">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBox Name="SearchBox" Width="220" Margin="0,0,10,0"/>
+                <TextBlock Text="Sort:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <ComboBox Name="SortMode" Width="150">
+                    <ComboBoxItem Content="System Tree"/>
+                    <ComboBoxItem Content="Alphabetical"/>
+                </ComboBox>
+            </StackPanel>
+            <TextBlock Text="Double click a node to select it in Revit." FontStyle="Italic" Foreground="Gray" />
+        </StackPanel>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <TreeView Name="CircuitTree" Grid.Row="0" Margin="0,0,0,10"/>
+
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" >
+                <Button Name="SelectButton" Content="Select In Revit" Width="120" Margin="0,0,10,0" />
+                <Button Name="CalculateButton" Content="Calculate Selected" Width="140" />
+            </StackPanel>
+        </Grid>
+    </DockPanel>
+</Window>
