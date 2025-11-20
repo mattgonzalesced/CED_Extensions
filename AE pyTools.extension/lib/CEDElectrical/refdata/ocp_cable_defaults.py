@@ -574,5 +574,21 @@ OCP_CABLE_DEFAULTS = {
         "base_wire_ampacity_30deg": 475,
         "base_wire_x_per_1000ft": 0.038,
         "base_wire_r_per_1000ft": 0.019
+    },
+    6000: {
+        "wire_material": "CU",
+        "wire_temperature_rating": "75 C",
+        "wire_insulation": "THWN",
+        "number_of_parallel_sets": 13,
+        "wire_hot_size": "750",
+        "wire_ground_size": "800",
+        "wire_service_ground_size": "2/0",
+        "conduit_material_type": "Non-Magnetic",
+        "conduit_type": "PVC",
+        "max_lug_size": "750",
+        "max_lug_qty": 16,
+        "base_wire_ampacity_30deg": 475,
+        "base_wire_x_per_1000ft": 0.038,
+        "base_wire_r_per_1000ft": 0.019
     }
 }

@@ -1,24 +1,24 @@
-from Autodesk.Revit.DB import Electrical as DBE
 from Autodesk.Revit.DB import FilteredElementCollector, Electrical, Transaction, BuiltInCategory, BuiltInParameter
+from Autodesk.Revit.DB.Electrical import *
 from pyrevit import script, forms, DB
-from pyrevit.compat import get_elementid_value_func
 
 logger = script.get_logger()
-
-
+#design option filter
+option_filter = DB.ElementDesignOptionFilter(DB.ElementId.InvalidElementId)
 def get_all_panels(doc, el_id=False):
     collector = FilteredElementCollector(doc).OfCategory(
-        BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType()
+        BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType().WherePasses(option_filter)
     if el_id:
         collector = collector.ToElementIds()
     else:
         collector = collector.ToElements()
+
     return collector
 
 
 def get_all_panel_types(doc, el_id=False):
     collector = FilteredElementCollector(doc).OfCategory(
-        BuiltInCategory.OST_ElectricalEquipment).WhereElementIsElementType()
+        BuiltInCategory.OST_ElectricalEquipment).WhereElementIsElementType().WherePasses(option_filter)
     if el_id:
         collector = collector.ToElementIds()
     else:
@@ -28,7 +28,7 @@ def get_all_panel_types(doc, el_id=False):
 
 def get_all_circuits(doc, el_id=False):
     collector = FilteredElementCollector(doc).OfCategory(
-        BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType()
+        BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType().WherePasses(option_filter)
     if el_id:
         collector = collector.ToElementIds()
     else:
@@ -38,7 +38,7 @@ def get_all_circuits(doc, el_id=False):
 
 def get_all_elec_fixtures(doc, el_id=False):
     collector = FilteredElementCollector(doc).OfCategory(
-        BuiltInCategory.OST_ElectricalFixtures).WhereElementIsNotElementType()
+        BuiltInCategory.OST_ElectricalFixtures).WhereElementIsNotElementType().WherePasses(option_filter)
     if el_id:
         collector = collector.ToElementIds()
     else:
@@ -47,7 +47,7 @@ def get_all_elec_fixtures(doc, el_id=False):
 
 
 def get_all_data_devices(doc, el_id=False):
-    collector = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DataDevices).WhereElementIsNotElementType()
+    collector = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DataDevices).WhereElementIsNotElementType().WherePasses(option_filter)
     if el_id:
         collector = collector.ToElementIds()
     else:
@@ -57,7 +57,7 @@ def get_all_data_devices(doc, el_id=False):
 
 def get_all_light_devices(doc, el_id=False):
     collector = FilteredElementCollector(doc).OfCategory(
-        BuiltInCategory.OST_LightingDevices).WhereElementIsNotElementType()
+        BuiltInCategory.OST_LightingDevices).WhereElementIsNotElementType().WherePasses(option_filter)
     if el_id:
         collector = collector.ToElementIds()
     else:
@@ -67,7 +67,7 @@ def get_all_light_devices(doc, el_id=False):
 
 def get_all_light_fixtures(doc, el_id=False):
     collector = FilteredElementCollector(doc).OfCategory(
-        BuiltInCategory.OST_LightingFixtures).WhereElementIsNotElementType()
+        BuiltInCategory.OST_LightingFixtures).WhereElementIsNotElementType().WherePasses(option_filter)
     if el_id:
         collector = collector.ToElementIds()
     else:
@@ -221,12 +221,11 @@ def find_open_slots(target_panel):
 def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
     """Get circuits from a selected panel with sorting and inclusion of spare/space circuits."""
     circuits = []
-    panel_circuits = FilteredElementCollector(doc).OfClass(Electrical.ElectricalSystem).ToElements()
+    panel_circuits = FilteredElementCollector(doc).OfClass(Electrical.ElectricalSystem).WherePasses(option_filter).ToElements()
 
     for circuit in panel_circuits:
         if circuit.BaseEquipment and circuit.BaseEquipment.Id == panel.Id:
-            if not include_spares and circuit.CircuitType in [Electrical.CircuitType.Spare,
-                                                              Electrical.CircuitType.Space]:
+            if not include_spares and circuit.CircuitType in [Electrical.CircuitType.Spare, Electrical.CircuitType.Space]:
                 continue
 
             # Get circuit parameters
@@ -244,12 +243,9 @@ def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
             # Retrieve the panel name
             panel_name = circuit.BaseEquipment.Name if circuit.BaseEquipment else "N/A"
 
-            get_id_val = get_elementid_value_func()
-            circuit_id = get_id_val(circuit.Id)
-
             # Store data in a list of dictionaries
             circuits.append({
-                'element_id': circuit_id,
+                'element_id': circuit.Id.IntegerValue,
                 'circuit_number': circuit_number,
                 'load_name': load_name,
                 'start_slot': start_slot,
@@ -269,8 +265,8 @@ def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
 
 def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_spaces=False):
     ckts = DB.FilteredElementCollector(doc) \
-        .OfClass(DBE.ElectricalSystem) \
-        .WhereElementIsNotElementType()
+        .OfClass(ElectricalSystem) \
+        .WhereElementIsNotElementType().WherePasses(option_filter)
 
     grouped_options = {" All": []}
     ckt_lookup = {}
@@ -279,13 +275,13 @@ def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_space
 
     for ckt in ckts:
         # Skip spares/spaces if not included
-        if not include_spares_and_spaces and ckt.CircuitType in [DBE.CircuitType.Spare, DBE.CircuitType.Space]:
+        if not include_spares_and_spaces and ckt.CircuitType in [CircuitType.Spare, CircuitType.Space]:
             continue
 
         # Safely get rating and poles if circuit is a PowerCircuit
-        if ckt.SystemType == DBE.ElectricalSystemType.PowerCircuit:
+        if ckt.SystemType == ElectricalSystemType.PowerCircuit:
             try:
-                rating = int(round(ckt.Rating, 0))
+                rating = int(round(ckt.Rating,0))
             except:
                 rating = "N/A"
 
@@ -297,9 +293,7 @@ def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_space
             rating = "N/A"
             pole = "?"
 
-        get_id_val = get_elementid_value_func()
-        ckt_id = get_id_val(ckt.Id)
-
+        ckt_id = ckt.Id.IntegerValue
         base_equipment = ckt.BaseEquipment
         panel_name = getattr(base_equipment, 'Name', None) if base_equipment else None
         panel_name = panel_name or " No Panel"
@@ -308,19 +302,18 @@ def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_space
         start_slot = ckt.StartSlot if hasattr(ckt, 'StartSlot') else 0
         sort_key = (panel_name, start_slot, load_name.strip())
 
-        if ckt.CircuitType == DBE.CircuitType.Space:
+        if ckt.CircuitType == CircuitType.Space:
             # Space: no rating/poles, just panel and label
-            label = "[{}]  {}/{} - {}({}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(), pole)
+            label = "[{}]  {}/{} - {}({}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(),pole)
 
-        elif ckt.CircuitType == DBE.CircuitType.Spare:
+        elif ckt.CircuitType == CircuitType.Spare:
             # Spare: show circuit number and panel, label as [SPARE]
-            label = "[{}]  {}/{} - {}  ({} A/{}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(), rating,
-                                                          pole)
+            label = "[{}]  {}/{} - {}  ({} A/{}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(), rating, pole)
 
         else:
             # Normal circuit
             label = "[{}]  {}/{} - {}  ({} A/{}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(), rating,
-                                                          pole)
+                                                       pole)
 
         all_labels.append((sort_key, label))
 
@@ -355,19 +348,20 @@ def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_space
     return selected_ckts
 
 
+
 def pick_panel_from_list(doc, select_multiple=False):
-    panels = DB.FilteredElementCollector(doc) \
-        .OfClass(DBE.ElectricalEquipment) \
-        .WhereElementIsNotElementType()
+    panels = FilteredElementCollector(doc).OfCategory(
+        BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType().WherePasses(option_filter)
 
     panel_lookup = {}
-    grouped_options = {}
+    grouped_options = {" All": []}
 
     for panel in panels:
+
         panel_name = DB.Element.Name.__get__(panel)
         panel_data = get_panel_dist_system(panel, doc)
         dist_system = panel_data.get('dist_system_name', 'Unspecified')
-
+        grouped_options[' All'].append(panel_name)
         if dist_system not in grouped_options:
             grouped_options[dist_system] = []
 
@@ -389,40 +383,6 @@ def pick_panel_from_list(doc, select_multiple=False):
         logger.info("No panel selected. Exiting script.")
         script.exit()
 
-    selected_panels = [panel_lookup[name] for name in selected_names] if select_multiple else panel_lookup[
-        selected_names]
+    selected_panels = [panel_lookup[name] for name in selected_names] if select_multiple else panel_lookup[selected_names]
     return selected_panels
-
-
-def get_circuits_from_selection(selection):
-    circuits = []
-
-    if not isinstance(selection, (list, tuple, set)):
-        selection = [selection]
-
-    for item in selection:
-        if isinstance(item, DBE.ElectricalSystem):
-            logger.debug("item {} is electrical circuit".format(item.Id.Value))
-            circuits.append(item)
-            continue
-
-        try:
-            mep = item.MEPModel
-        except Exception as e:
-            logger.debug("{}".format(e))
-            continue
-
-        if item.Category == DB.BuiltInCategory.OST_ElectricalEquipment:
-            all_systems = mep.GetElectricalSystems() or []
-            assigned_systems = mep.GetAssignedElectricalSystems() or []
-            assigned_ids = set([sys.Id for sys in assigned_systems])
-
-            supply_systems = [sys for sys in all_systems if sys.Id not in assigned_ids]
-
-            circuits.extend(supply_systems)
-        else:
-            all_systems = mep.GetElectricalSystems() or []
-            circuits.extend(all_systems)
-
-    return circuits
 

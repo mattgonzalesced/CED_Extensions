@@ -33,8 +33,8 @@ def collect_shared_param_values(branch):
         'CKT_Wire Isolated Ground Size_CEDT': branch.isolated_ground_wire_size,
         'CKT_Wire Isolated Ground Quantity_CED': branch.isolated_ground_wire_quantity,
         'Wire Material_CEDT': branch.wire_material,
-        'Wire Temparature Rating_CEDT': branch.wire_info.get('wire_temperature_rating', '75'),
-        'Wire Insulation_CEDT': branch.wire_info.get('wire_insulation', 'THWN'),
+        'Wire Temparature Rating_CEDT': branch.wire_temp_rating,
+        'Wire Insulation_CEDT': branch.wire_insulation,
         'Conduit Size_CEDT': branch.conduit_size,
         'Conduit Type_CEDT': branch.conduit_type,
         'Conduit Fill Percentage_CED': branch.conduit_fill_percentage,
@@ -148,8 +148,6 @@ def main():
         branch = CircuitBranch(circuit)
         if not branch.is_power_circuit:
             continue
-        if not branch.reasonable_user_overrides and branch._auto_calculate_override:
-            logger.warning("Some of the overrides are unreasonable")
 
         branch.calculate_breaker_size()
         branch.calculate_hot_wire_size()
@@ -172,18 +170,20 @@ def main():
             total_equipment += e
         t.Commit()
         tg.Assimilate()
+
+        output = script.get_output()
+        output.close_others()
+        output.print_md("## ✅ Shared Parameters Updated")
+        output.print_md("* Circuits updated: **{}**".format(len(branches)))
+        output.print_md("* Electrical Fixtures updated: **{}**".format(total_fixtures))
+        output.print_md("* Electrical Equipment updated: **{}**".format(total_equipment))
+
     except Exception as e:
         t.RollBack()
         tg.RollBack()
         logger.error("{}❌ Transaction failed: {}".format(branch.name,e))
         return
 
-    output = script.get_output()
-    output.close_others()
-    output.print_md("## ✅ Shared Parameters Updated")
-    output.print_md("* Circuits updated: **{}**".format(len(branches)))
-    output.print_md("* Electrical Fixtures updated: **{}**".format(total_fixtures))
-    output.print_md("* Electrical Equipment updated: **{}**".format(total_equipment))
 
 
 if __name__ == "__main__":

@@ -24,6 +24,12 @@ PART_TYPE_MAP = {
     18: "Equipment Switch"
 }
 
+ALLOWED_WIRE_SIZES = [
+"12", "10", "8", "6", "4", "3", "2", "1", "1/0", "2/0", "3/0", "4/0",
+    "250", "300", "350", "400", "500", "600", "750", "1000"
+]
+
+
 # TODO: make sure circuit settings is set up correctly for use in the circuit branch class. these settings
 #  should apply to every instance of circuit branch, so we need to make sure we're efficient and not recreating
 #  data unnecessarily.
@@ -87,6 +93,7 @@ class CircuitBranch(object):
         self._conduit_type_override = None
         self._conduit_size_override = None
         self._get_user_overrides()
+        self.reasonable_user_overrides = self._reasonable_user_overrides()
 
         # Calculated values (set by calculation methods)
         self._calculated_breaker = None
@@ -97,30 +104,24 @@ class CircuitBranch(object):
         self._calculated_conduit_size = None
         self._calculated_conduit_fill = None
 
-
-
     # ----------- Classification -----------
 
     def log_info(self, msg, *args):
         logger.info("{}: {}".format(self.name, msg), *args)
-   
+
     def log_warning(self, msg, *args):
         logger.warning("{}: {}".format(self.name, msg), *args)
 
     def log_debug(self, msg, *args):
         logger.debug("{}: {}".format(self.name, msg), *args)
 
+    # ------------Prevent Ridiculous User Overrides------------
 
+    def _reasonable_user_overrides(self):
 
-
-    #------------Prevent Ridiculous User Overrides------------
-    @property
-    def reasonable_user_overrides(self):
-
-
-        reasonable = True 
+        reasonable = True
         if self._wire_sets_override and isinstance(self._wire_sets_override, int):
-            if self._wire_sets_override < 1 or self._wire_sets_override > 12:
+            if self._wire_sets_override < 1:
                 self.log_warning("Unreasonable wire sets override: {}. Resetting to 1.".format(
                     self._wire_sets_override))
                 self._wire_sets_override = 1
@@ -161,30 +162,33 @@ class CircuitBranch(object):
         if self._wire_hot_size_override:
             normalized = self._normalize_wire_size(self._wire_hot_size_override)
             if normalized not in CONDUCTOR_AREA_TABLE.keys():
-                self.log_warning("Unreasonable hot wire size override: {}. Resetting to Calculated: {}.".format(
-                    self._wire_hot_size_override,self._calculated_hot_wire))
-                self._wire_hot_size_override = self._calculated_hot_wire
-                reasonable = False 
+                self.log_warning("Unreasonable hot wire size override: {}. Will default to calculated value.".format(
+                    self._wire_hot_size_override))
+                self._wire_hot_size_override = None
+                reasonable = False
 
         if self._wire_neutral_size_override:
             normalized = self._normalize_wire_size(self._wire_neutral_size_override)
             if normalized not in CONDUCTOR_AREA_TABLE.keys():
-                self.log_warning("Unreasonable neutral wire size override: {}. Resetting to Calculated Hot Size: {}.".format(
-                    self._wire_neutral_size_override,self._calculated_hot_wire))
-                self._wire_neutral_size_override = self._calculated_hot_wire
+                self.log_warning(
+                    "Unreasonable neutral wire size override: {}. Will default to calculated Hot Size.".format(
+                        self._wire_neutral_size_override))
+                self._wire_neutral_size_override = None
                 reasonable = False
-            
+
         if self._wire_ground_size_override:
             normalized = self._normalize_wire_size(self._wire_ground_size_override)
             if normalized not in CONDUCTOR_AREA_TABLE.keys():
-                self.log_warning("Unreasonable ground wire size override: {}. Resetting to Calculated Ground Size: {}.".format(
-                    self._wire_ground_size_override, self._calculated_ground_wire))
-                self._wire_ground_size_override = self._calculated_ground_wire
+                self.log_warning(
+                    "Unreasonable ground wire size override: {}. Will default to calculated Ground Size.".format(
+                        self._wire_ground_size_override))
+                self._wire_ground_size_override = None
                 reasonable = False
-            
+
         if self._conduit_type_override:
             contype = self._conduit_type_override
-            if contype not in CONDUIT_AREA_TABLE['Magnetic'].keys() and contype not in CONDUIT_AREA_TABLE['Non-Magnetic'].keys():
+            if contype not in CONDUIT_AREA_TABLE['Magnetic'].keys() and contype not in CONDUIT_AREA_TABLE[
+                'Non-Magnetic'].keys():
                 self.log_warning("Unreasonable conduit type override: {}. Resetting to EMT.".format(
                     self._conduit_type_override))
                 self._conduit_type_override = "EMT"
@@ -193,9 +197,10 @@ class CircuitBranch(object):
         if self._conduit_size_override:
             size = str(self._conduit_size_override).replace('C', '').strip()
             if size not in CONDUIT_SIZE_INDEX:
-                self.log_warning("Unreasonable conduit size override: {}. Resetting to Calculated Conduit Size: {}.".format(
-                    self._conduit_size_override, self._calculated_conduit_size))
-                self._conduit_size_override = self._calculated_conduit_size
+                self.log_warning(
+                    "Unreasonable conduit size override: {}. Will default to Calculated Conduit Size.".format(
+                        self._conduit_size_override))
+                self._conduit_size_override = None
                 reasonable = False
         return reasonable
 
@@ -262,7 +267,6 @@ class CircuitBranch(object):
         else:
             return self.settings.max_branch_voltage_drop
 
-
     @property
     def wire_info(self):
         if not self.is_power_circuit:
@@ -285,13 +289,16 @@ class CircuitBranch(object):
         for key in sorted_keys:
             if key >= rating_key:
                 self._wire_info = table[key]
-                logger.debug("⚠️ No exact wire info match for {}, using next available: {}".format(rating_key, key))
+                self.log_warning(
+                    "⚠️ No exact wire info match for Breaker Size: {}., using next available size: {}".format(
+                        rating_key, key))
                 return self._wire_info
 
         # If no match or next larger found, use largest available
         fallback_key = sorted_keys[-1]
         self._wire_info = table[fallback_key]
-        logger.debug("⚠️ Rating {} exceeds all defaults. Using max available: {}".format(rating_key, fallback_key))
+        self.log_warning(
+            "⚠️ Breaker Rating {} exceeds all defaults. Using max available: {}".format(rating_key, fallback_key))
         return self._wire_info
 
     # ----------- Circuit Properties -----------
@@ -379,6 +386,7 @@ class CircuitBranch(object):
                 return self.apparent_current
         else:
             logger.debug("circuit_load_current: Not a load circuit.")
+
     @property
     def poles(self):
         try:
@@ -476,12 +484,6 @@ class CircuitBranch(object):
         if self._wire_insulation_override:
             return self._wire_insulation_override
         return self._wire_info.get('wire_insulation')
-
-    # @property
-    # def wire_hot_size(self):
-    #     if self._wire_hot_size_override:
-    #         return self._wire_hot_size_override
-    #     return self._wire_info.get('wire_hot_size')
 
     @property
     def hot_wire_quantity(self):
@@ -643,7 +645,7 @@ class CircuitBranch(object):
             try:
                 material = self._wire_material_override
                 temp = int(str(self._wire_temp_rating_override).replace('C', '').strip())
-                sets = self._wire_sets_override or 1
+                sets = self._wire_sets_override
                 wire_set = WIRE_AMPACITY_TABLE.get(material, {}).get(temp, [])
 
                 for wire, ampacity in wire_set:
@@ -691,10 +693,18 @@ class CircuitBranch(object):
         while sets <= max_sets:
             reached_max_size = False
             for wire, ampacity in wire_set[start_index:]:
+
+                # >>> ADD THIS FILTER <<<
+                if wire not in ALLOWED_WIRE_SIZES:
+                    self.log_debug("Skipping unsupported wire size: {}".format(wire))
+                    continue
+
                 total_ampacity = ampacity * sets
 
+                self.log_debug("starting VD. wire:{}, sets:{}, total ampacity:{}".format(wire, sets, total_ampacity))
                 # NEC 240.4(B) check here
                 if not self._is_ampacity_acceptable(rating, total_ampacity, self.circuit_load_current):
+                    self.log_debug("Ampacity BAD!")
                     continue
 
                 try:
@@ -1074,7 +1084,7 @@ class CircuitBranch(object):
         # Wire Info
         if include_wire_info:
             print("\nWire Info:")
-            if self.wire_info:
+            if self._wire_info:
                 for key, val in self.wire_info.items():
                     print("    {}: {}".format(key, val if val else "N/A"))
             else:
