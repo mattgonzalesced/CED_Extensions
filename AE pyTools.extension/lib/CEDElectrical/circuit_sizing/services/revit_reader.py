@@ -1,8 +1,3 @@
-<<<<<<< ours
-from __future__ import annotations
-
-=======
->>>>>>> theirs
 import Autodesk.Revit.DB.Electrical as DBE
 from System import Guid
 from pyrevit import DB, revit, script
@@ -26,11 +21,7 @@ class RevitCircuitReader:
         self.settings = settings or CircuitSettings()
 
     # --- Public API ---
-<<<<<<< ours
-    def to_model(self) -> CircuitBranchModel:
-=======
     def to_model(self):
->>>>>>> theirs
         is_feeder, is_transformer_primary = self._is_feeder()
         is_transformer_secondary = self._is_transformer_secondary()
         is_space = self.circuit.CircuitType == DBE.CircuitType.Space
@@ -190,11 +181,7 @@ class RevitCircuitReader:
         except Exception:
             return None
 
-<<<<<<< ours
-    def _read_overrides(self) -> CircuitOverrides:
-=======
     def _read_overrides(self):
->>>>>>> theirs
         overrides = CircuitOverrides()
         try:
             overrides.include_neutral = self._get_yesno(SHARED_PARAMS['CKT_Include Neutral_CED']['GUID'])
