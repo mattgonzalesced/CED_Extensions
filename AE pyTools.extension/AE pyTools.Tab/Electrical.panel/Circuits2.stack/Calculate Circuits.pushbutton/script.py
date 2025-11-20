@@ -51,18 +51,49 @@ def collect_shared_param_values(branch):
 # -------------------------------------------------------------------------
 def update_circuit_parameters(circuit, param_values):
     for param_name, value in param_values.items():
-        if value is None:
-            continue
         param = circuit.LookupParameter(param_name)
         if not param:
+            logger.debug("⚠️ Did not find parameter '{}' on circuit {}".format(param_name, circuit.Id))
             continue
+
+        # --------------------------
+        # BLANKING OUT NULL VALUES
+        # --------------------------
+        if value is None:
+            try:
+                st = param.StorageType
+                if st == DB.StorageType.String:
+                    param.Set("")
+                elif st == DB.StorageType.Integer:
+                    # For Yes/No or integer params, use 0
+                    param.Set(0)
+                elif st == DB.StorageType.Double:
+                    # For numeric params, use 0.0
+                    param.Set(0.0)
+                elif st == DB.StorageType.ElementId:
+                    param.Set(DB.ElementId.InvalidElementId)
+                logger.debug("🧹 Cleared '{}' on circuit {}".format(param_name, circuit.Id))
+            except Exception as e:
+                logger.debug("❌ Failed to blank '{}' on circuit {}: {}".format(param_name, circuit.Id, e))
+            continue
+
+        # --------------------------
+        # WRITING VALID VALUES
+        # --------------------------
         try:
-            if param.StorageType == DB.StorageType.String:
+            st = param.StorageType
+            if st == DB.StorageType.String:
                 param.Set(str(value))
-            elif param.StorageType == DB.StorageType.Integer:
+            elif st == DB.StorageType.Integer:
                 param.Set(int(value))
-            elif param.StorageType == DB.StorageType.Double:
+            elif st == DB.StorageType.Double:
                 param.Set(float(value))
+            elif st == DB.StorageType.ElementId:
+                # user should pass an ElementId or None
+                if isinstance(value, DB.ElementId):
+                    param.Set(value)
+                else:
+                    param.Set(DB.ElementId.InvalidElementId)
         except Exception as e:
             logger.debug("❌ Failed to write '{}' to circuit {}: {}".format(param_name, circuit.Id, e))
 
