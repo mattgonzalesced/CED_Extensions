@@ -1,0 +1,41 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Circuit Browser" Height="480" Width="760" Background="White">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*" />
+            <ColumnDefinition Width="3*" />
+        </Grid.ColumnDefinitions>
+
+        <ListBox x:Name="CircuitList" Grid.Row="0" Grid.Column="0" SelectionChanged="OnCircuitSelected" SelectionMode="Extended">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding DisplayName}" Foreground="{Binding ColorBrush}" />
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,0">
+            <TextBlock Text="Circuit Details" FontWeight="Bold" FontSize="14" />
+            <TextBlock Text="Panel:" FontWeight="Bold" />
+            <TextBlock x:Name="PanelText" Margin="0,0,0,8" />
+            <TextBlock Text="Number:" FontWeight="Bold" />
+            <TextBlock x:Name="NumberText" Margin="0,0,0,8" />
+            <TextBlock Text="Type:" FontWeight="Bold" />
+            <TextBlock x:Name="TypeText" Margin="0,0,0,8" />
+            <TextBlock Text="Load (A):" FontWeight="Bold" />
+            <TextBlock x:Name="LoadText" Margin="0,0,0,8" />
+            <TextBlock Text="Length (ft):" FontWeight="Bold" />
+            <TextBlock x:Name="LengthText" Margin="0,0,0,8" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="Calculate Selected" Width="160" Margin="0,0,10,0" Click="OnCalculateClicked" />
+            <Button Content="Close" Width="80" Click="OnCloseClicked" />
+        </StackPanel>
+    </Grid>
+</Window>
