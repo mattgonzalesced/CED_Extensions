@@ -2,7 +2,8 @@
 """Circuit sizing calculator with searchable circuit picker."""
 
 from pyrevit import DB, forms, revit
-from CEDElectrical.Model.CircuitBranch import *
+from CEDElectrical.Model.CircuitBranch import CircuitBranch
+from CEDElectrical.circuit_sizing.services.override_validator import OverrideValidator
 from CEDElectrical.circuit_sizing.services.revit_reader import CircuitListProvider
 from CEDElectrical.circuit_sizing.ui.circuit_selector import CircuitSelectorWindow
 from Snippets import _elecutils as eu
@@ -110,6 +111,7 @@ def update_connected_elements(branch, param_values):
 
 
 def _calculate_and_update(circuits):
+    validator = OverrideValidator(logger)
     count = len(circuits)
     if count > 1000:
         proceed = forms.alert(
@@ -128,6 +130,8 @@ def _calculate_and_update(circuits):
         branch = CircuitBranch(circuit)
         if not branch.is_power_circuit:
             continue
+        for warning in validator.validate(branch):
+            logger.warning(warning)
         branch.calculate_breaker_size()
         branch.calculate_hot_wire_size()
         branch.calculate_ground_wire_size()

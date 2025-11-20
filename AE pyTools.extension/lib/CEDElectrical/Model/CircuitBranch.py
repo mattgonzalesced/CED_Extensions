@@ -907,11 +907,25 @@ class CircuitBranch(object):
         wp = self.settings.wire_size_prefix or ''
         parts = []
 
-        total_hn_qty = self.number_of_wires  # hot + neutral quantity
+        hot_qty = self.hot_wire_quantity or 0
+        neutral_qty = self.neutral_wire_quantity or 0
         hot_size = self._normalize_wire_size(self.hot_wire_size)
+        neutral_size = self._normalize_wire_size(self.neutral_wire_size)
 
-        if total_hn_qty and hot_size:
-            parts.append("{}{}{}".format(total_hn_qty, wp, hot_size))
+        neutral_differs = neutral_qty and hot_size and neutral_size and neutral_size != hot_size
+
+        if hot_qty and hot_size:
+            suffix = "H" if neutral_differs else ""
+            parts.append("{}{}{}{}".format(hot_qty, wp, hot_size, suffix))
+
+        if neutral_qty:
+            if neutral_differs:
+                parts.append("{}{}{}N".format(neutral_qty, wp, neutral_size))
+            elif hot_size and not parts:
+                parts.append("{}{}{}".format(neutral_qty, wp, hot_size))
+            elif hot_size and parts:
+                merged_qty = hot_qty + neutral_qty
+                parts[0] = "{}{}{}".format(merged_qty, wp, hot_size)
 
         if self.ground_wire_quantity:
             grd_size = self._normalize_wire_size(self.ground_wire_size)
