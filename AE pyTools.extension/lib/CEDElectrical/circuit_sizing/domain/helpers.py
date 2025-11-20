@@ -13,3 +13,12 @@ def normalize_conduit_size(value, suffix="C"):
     if not value:
         return None
     return str(value).replace(suffix, "").strip()
+
+
+def normalize_temperature_rating(value, suffix="C"):
+    """Return a normalized conduit size without the configured suffix."""
+    if not value:
+        return None
+    return int(str(value).replace(suffix, "").strip())
+
+

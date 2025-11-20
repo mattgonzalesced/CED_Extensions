@@ -1,5 +1,5 @@
-from CEDElectrical.circuit_sizing.domain.helpers import normalize_conduit_size, normalize_wire_size
-from CEDElectrical.circuit_sizing.models.circuit_branch import CircuitBranchModel, CircuitOverrides
+from CEDElectrical.circuit_sizing.domain.helpers import normalize_conduit_size, normalize_wire_size, normalize_temperature_rating
+from CEDElectrical.circuit_sizing.models.circuit_branch import CircuitOverrides
 
 
 class OverrideValidator:
@@ -17,16 +17,19 @@ class OverrideValidator:
         cleaned.include_isolated_ground = self.overrides.include_isolated_ground
 
         cleaned.breaker_override = self._safe_float(self.overrides.breaker_override)
-        cleaned.wire_sets_override = self._safe_int(self.overrides.wire_sets_override)
+
 
         cleaned.wire_material_override = self._safe_str(self.overrides.wire_material_override)
-        cleaned.wire_temp_rating_override = self._safe_str(
+
+        cleaned.wire_temp_rating_override = normalize_temperature_rating(
             self.overrides.wire_temp_rating_override
         )
+
         cleaned.wire_insulation_override = self._safe_str(
             self.overrides.wire_insulation_override
         )
 
+        cleaned.wire_sets_override = self._safe_int(self.overrides.wire_sets_override)
         cleaned.wire_hot_size_override = normalize_wire_size(
             self.overrides.wire_hot_size_override, settings.wire_size_prefix
         )

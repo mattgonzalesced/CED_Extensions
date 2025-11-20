@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """Circuit sizing calculator with searchable circuit picker."""
 
-from pyrevit import DB, forms, revit
+from pyrevit import forms
+
 from CEDElectrical.Model.CircuitBranch import *
 from CEDElectrical.circuit_sizing.services.revit_reader import CircuitListProvider
 from CEDElectrical.circuit_sizing.ui.circuit_selector import CircuitSelectorWindow
 from Snippets import _elecutils as eu
 
-USE_SELECTION_WINDOW = True  # Toggle to False to quickly test sizing logic without the picker
+USE_SELECTION_WINDOW = False  # Toggle to False to quickly test sizing logic without the picker
 
 doc = revit.doc
 logger = script.get_logger()
