@@ -9,10 +9,21 @@ class ConduitSizer(object):
     def __init__(self, settings):
         self.settings = settings
 
-    def _conductor_area(self, wire_size):
+    def _conductor_area(self, wire_size, insulation):
         if wire_size is None:
             return 0
-        return CONDUCTOR_AREA_TABLE.get(str(wire_size), 0)
+        data = CONDUCTOR_AREA_TABLE.get(str(wire_size))
+        if not data:
+            return 0
+        area_table = data.get('area', {})
+        if insulation in area_table:
+            return area_table.get(insulation)
+        if area_table:
+            try:
+                return list(area_table.values())[0]
+            except Exception:
+                pass
+        return 0
 
     def _conduit_area(self, conduit_type, conduit_size):
         if conduit_type is None or conduit_size is None:
@@ -37,12 +48,12 @@ class ConduitSizer(object):
                     return size
         return None
 
-    def size_conduit(self, conduit_type, hot_size, neutral_size, ground_size, isolated_ground_size, quantities):
+    def size_conduit(self, conduit_type, hot_size, neutral_size, ground_size, isolated_ground_size, quantities, insulation):
         total_area = 0
-        total_area += self._conductor_area(hot_size) * quantities.get('hot', 0)
-        total_area += self._conductor_area(neutral_size) * quantities.get('neutral', 0)
-        total_area += self._conductor_area(ground_size) * quantities.get('ground', 0)
-        total_area += self._conductor_area(isolated_ground_size) * quantities.get('isolated_ground', 0)
+        total_area += self._conductor_area(hot_size, insulation) * quantities.get('hot', 0)
+        total_area += self._conductor_area(neutral_size, insulation) * quantities.get('neutral', 0)
+        total_area += self._conductor_area(ground_size, insulation) * quantities.get('ground', 0)
+        total_area += self._conductor_area(isolated_ground_size, insulation) * quantities.get('isolated_ground', 0)
 
         conduit_size = self.pick_conduit_size(conduit_type, total_area)
         conduit_area = self._conduit_area(conduit_type, conduit_size)

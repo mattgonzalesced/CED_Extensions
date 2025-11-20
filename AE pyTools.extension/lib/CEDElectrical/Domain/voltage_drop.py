@@ -2,7 +2,6 @@
 """Voltage drop calculations."""
 
 from math import sqrt
-from pyrevit import DB
 
 from CEDElectrical.refdata.impedance_table import WIRE_IMPEDANCE_TABLE
 
@@ -10,12 +9,6 @@ from CEDElectrical.refdata.impedance_table import WIRE_IMPEDANCE_TABLE
 class VoltageDropCalculator(object):
     def __init__(self):
         pass
-
-    def _length_in_feet(self, length_internal):
-        try:
-            return DB.UnitUtils.ConvertFromInternalUnits(length_internal, DB.DisplayUnitType.DUT_FEET)
-        except Exception:
-            return length_internal
 
     def calculate_percentage(self, model, hot_size, wire_sets, material, conduit_material_type):
         if not hot_size or model.length is None or model.voltage is None or model.circuit_load_current is None:
@@ -36,7 +29,7 @@ class VoltageDropCalculator(object):
             return None
 
         impedance = sqrt(r_val ** 2 + x_val ** 2)
-        length_ft = self._length_in_feet(model.length) or 0
+        length_ft = model.length or 0
         if length_ft <= 0:
             return None
 

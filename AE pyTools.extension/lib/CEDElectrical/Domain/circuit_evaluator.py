@@ -87,13 +87,15 @@ class CircuitEvaluator(object):
         result.number_of_wires = sum(quantities.values())
 
         conduit_type = overrides.get('conduit_type_override') or model.base_wire_info.get('conduit_type') or 'EMT'
+        insulation = result.wire_insulation or model.base_wire_info.get('wire_insulation', 'THHN')
         conduit_size, fill_pct = self.conduit_sizer.size_conduit(
             conduit_type,
             result.hot_wire_size,
             result.neutral_wire_size,
             result.ground_wire_size,
             result.isolated_ground_wire_size,
-            quantities
+            quantities,
+            insulation
         )
         result.conduit_type = conduit_type
         result.conduit_size = conduit_size

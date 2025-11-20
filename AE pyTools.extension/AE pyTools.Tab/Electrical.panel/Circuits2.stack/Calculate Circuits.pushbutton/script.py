@@ -50,8 +50,8 @@ def calculate_and_write(circuits, settings):
     try:
         t.Start()
         for result in results:
-            writer.write_circuit(result.model.circuit, result)
-            f, e = writer.write_connected(result.model.circuit, result)
+            writer.write_circuit(result.model.circuit_id, result)
+            f, e = writer.write_connected(result.model.circuit_id, result)
             fixture_total += f
             equipment_total += e
         t.Commit()

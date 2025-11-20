@@ -5,11 +5,6 @@ These classes intentionally avoid Revit business logic so that
 calculation engines can operate on plain Python objects.
 """
 
-import Autodesk.Revit.DB.Electrical as DBE
-from pyrevit import DB
-
-from CEDElectrical.refdata.ocp_cable_defaults import OCP_CABLE_DEFAULTS
-
 
 class CircuitSettings(object):
     """User-configurable calculation settings."""
@@ -30,130 +25,57 @@ class CircuitSettings(object):
 class CircuitBranchModel(object):
     """Plain data extracted from a Revit electrical system."""
 
-    def __init__(self, circuit, settings, overrides=None):
-        self.circuit = circuit
-        self.settings = settings or CircuitSettings()
+    def __init__(
+        self,
+        circuit_id=None,
+        panel='',
+        circuit_number=None,
+        branch_type='Unknown',
+        load_name=None,
+        rating=None,
+        frame=None,
+        length=None,
+        circuit_notes=None,
+        voltage=None,
+        apparent_current=None,
+        apparent_power=None,
+        power_factor=None,
+        poles=0,
+        include_neutral=None,
+        include_isolated_ground=None,
+        auto_calculate_override=False,
+        base_wire_info=None,
+        overrides=None,
+        is_power_circuit=False,
+        is_feeder=False,
+        name=None,
+        settings=None,
+    ):
+        self.circuit_id = circuit_id
+        self.panel = panel or ''
+        self.circuit_number = circuit_number
+        self.branch_type = branch_type or 'Unknown'
+        self.load_name = load_name
+        self.rating = rating
+        self.frame = frame
+        self.length = length
+        self.circuit_notes = circuit_notes
+        self.voltage = voltage
+        self.apparent_current = apparent_current
+        self.apparent_power = apparent_power
+        self.power_factor = power_factor
+        self.poles = poles or 0
+
+        self.include_neutral = include_neutral
+        self.include_isolated_ground = include_isolated_ground
+        self.auto_calculate_override = auto_calculate_override
+
+        self.base_wire_info = base_wire_info or {}
         self.overrides = overrides or {}
-
-        self.circuit_id = circuit.Id.Value if hasattr(circuit, 'Id') else None
-        self.panel = self._get_panel_name(circuit)
-        self.circuit_number = getattr(circuit, 'CircuitNumber', None)
-        self.name = "%s-%s" % (self.panel, self.circuit_number)
-        self.branch_type = self._get_branch_type(circuit)
-        self.load_name = self._safe_get(circuit, 'LoadName')
-        self.rating = self._safe_get(circuit, 'Rating')
-        self.frame = self._safe_get(circuit, 'Frame')
-        self.length = self._get_length(circuit)
-        self.circuit_notes = self._get_parameter_value(circuit, 'CKT_Schedule Notes_CEDT')
-        self.voltage = self._get_voltage(circuit)
-        self.apparent_current = self._safe_get(DBE.ElectricalSystem, 'ApparentCurrent', circuit)
-        self.apparent_power = self._safe_get(DBE.ElectricalSystem, 'ApparentLoad', circuit)
-        self.power_factor = self._safe_get(DBE.ElectricalSystem, 'PowerFactor', circuit)
-        self.poles = self._safe_get(DBE.ElectricalSystem, 'PolesNumber', circuit) or 0
-
-        self.include_neutral = overrides.get('include_neutral') if overrides else None
-        self.include_isolated_ground = overrides.get('include_isolated_ground') if overrides else None
-        self.auto_calculate_override = overrides.get('auto_calculate_override') if overrides else False
-
-        self.base_wire_info = self._get_base_wire_info()
-
-    def _safe_get(self, source, attr_name, target=None):
-        try:
-            if target is None:
-                return getattr(source, attr_name)
-            return getattr(source, attr_name).__get__(target)
-        except Exception:
-            try:
-                return getattr(target, attr_name)
-            except Exception:
-                return None
-
-    def _get_parameter_value(self, element, param_name):
-        try:
-            param = element.LookupParameter(param_name)
-            if param:
-                if param.StorageType == DB.StorageType.String:
-                    return param.AsString()
-                if param.StorageType == DB.StorageType.Integer:
-                    return param.AsInteger()
-                if param.StorageType == DB.StorageType.Double:
-                    return param.AsDouble()
-        except Exception:
-            pass
-        return None
-
-    def _get_voltage(self, circuit):
-        try:
-            return self._safe_get(DBE.ElectricalSystem, 'Voltage', circuit)
-        except Exception:
-            return None
-
-    def _get_length(self, circuit):
-        try:
-            if hasattr(circuit, 'Length'):
-                return circuit.Length
-        except Exception:
-            pass
-        try:
-            param = circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_LENGTH_PARAM)
-            if param:
-                return param.AsDouble()
-        except Exception:
-            pass
-        return None
-
-    def _get_panel_name(self, circuit):
-        try:
-            base = getattr(circuit, 'BaseEquipment', None)
-            if base:
-                return getattr(base, 'Name', '')
-        except Exception:
-            pass
-        return ''
-
-    def _get_branch_type(self, circuit):
-        try:
-            system_type = getattr(circuit, 'SystemType', None)
-            if system_type:
-                return str(system_type)
-        except Exception:
-            pass
-        return 'Unknown'
-
-    def _get_base_wire_info(self):
-        rating = self.rating
-        if rating is None:
-            return {}
-        try:
-            rating_key = int(rating)
-        except Exception:
-            return {}
-
-        table = OCP_CABLE_DEFAULTS
-        if rating_key in table:
-            return table[rating_key]
-
-        sorted_keys = sorted(table.keys())
-        for key in sorted_keys:
-            if key >= rating_key:
-                return table[key]
-        if sorted_keys:
-            return table[sorted_keys[-1]]
-        return {}
-
-    @property
-    def is_power_circuit(self):
-        try:
-            return self.circuit.CircuitType == DBE.CircuitType.Circuit
-        except Exception:
-            return False
-
-    @property
-    def is_feeder(self):
-        try:
-            return self.circuit.IsFeedToPanel
-        except Exception:
-            return False
+        self.is_power_circuit = bool(is_power_circuit)
+        self.is_feeder = bool(is_feeder)
+        self.settings = settings or CircuitSettings()
+        self.name = name or "%s-%s" % (self.panel, self.circuit_number)
 
     @property
     def max_voltage_drop(self):

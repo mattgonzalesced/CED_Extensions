@@ -59,13 +59,25 @@ class RevitCircuitWriter(object):
             'Circuit Ampacity_CED': result.circuit_base_ampacity,
         }
 
-    def write_circuit(self, circuit, result):
+    def _get_circuit(self, circuit_id):
+        try:
+            return self.doc.GetElement(DB.ElementId(circuit_id))
+        except Exception:
+            return None
+
+    def write_circuit(self, circuit_id, result):
         values = self._collect_values(result)
+        circuit = self._get_circuit(circuit_id)
+        if not circuit:
+            return
         for name, value in values.items():
             self._set_param(circuit, name, value)
 
-    def write_connected(self, circuit, result):
+    def write_connected(self, circuit_id, result):
         values = self._collect_values(result)
+        circuit = self._get_circuit(circuit_id)
+        if not circuit:
+            return 0, 0
         fixture_count = 0
         equipment_count = 0
 
