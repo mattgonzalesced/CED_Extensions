@@ -1,106 +1,88 @@
 import os
-from System.Collections.Generic import List
-from System.Windows.Controls import CheckBox, TreeViewItem
+from System.Windows.Controls import ListBoxItem
 from pyrevit import forms
-from pyrevit import revit
-from pyrevit import DB
 
 
 class CircuitSelectorWindow(forms.WPFWindow):
-    def __init__(self, reader, external_event, uidoc):
+    def __init__(self, provider):
         xaml_path = os.path.join(os.path.dirname(__file__), 'circuit_selector.xaml')
         super(CircuitSelectorWindow, self).__init__(xaml_path)
-        self.reader = reader
-        self.external_event = external_event
-        self.uidoc = uidoc
-        self.selected_circuit_nodes = []
+        self.provider = provider
+        self.selected_ids = set()
+        self.selected_circuits = []
 
-        self.SortMode.SelectedIndex = 0
-        self._build_tree(self.reader.hierarchy)
+        self.PreserveSelection.IsChecked = True
+        self.PanelFilter.Items.Add('All Panels')
+        for panel_name in provider.panels:
+            self.PanelFilter.Items.Add(panel_name)
+        self.PanelFilter.Items.Add('<No Panel>')
+        self.PanelFilter.SelectedIndex = 0
 
-        self.SearchBox.TextChanged += self._on_search
-        self.SortMode.SelectionChanged += self._on_sort_changed
-        self.CircuitTree.MouseDoubleClick += self._on_double_click
-        self.SelectButton.Click += self._select_active
-        self.CalculateButton.Click += self._run_calculation
+        self.SearchBox.TextChanged += self._refresh_list
+        self.PanelFilter.SelectionChanged += self._on_panel_changed
+        self.PreserveSelection.Checked += self._on_preserve_toggle
+        self.PreserveSelection.Unchecked += self._on_preserve_toggle
+        self.CircuitList.SelectionChanged += self._on_selection_changed
+        self.SelectAllButton.Click += self._select_all
+        self.SelectNoneButton.Click += self._select_none
+        self.CalculateButton.Click += self._calculate
+        self.CancelButton.Click += self._close
 
-    def _on_search(self, sender, args):
-        term = self.SearchBox.Text
-        data = self.reader.search(term)
-        self._build_tree(data)
+        self._refresh_list(None, None)
 
-    def _on_sort_changed(self, sender, args):
-        choice = self.SortMode.SelectedItem.Content.ToString()
-        self.reader.refresh(choice)
-        term = self.SearchBox.Text
-        data = self.reader.search(term)
-        self._build_tree(data)
+    def _on_panel_changed(self, sender, args):
+        self._refresh_list(sender, args)
 
-    def _on_double_click(self, sender, args):
-        item = self.CircuitTree.SelectedItem
-        target = getattr(item, 'Tag', None)
-        if target:
-            self._select_element(target)
+    def _on_preserve_toggle(self, sender, args):
+        if not self.PreserveSelection.IsChecked:
+            self.selected_ids = set()
+        self._refresh_list(sender, args)
 
-    def _select_active(self, sender, args):
-        item = self.CircuitTree.SelectedItem
-        target = getattr(item, 'Tag', None)
-        if target:
-            self._select_element(target)
+    def _refresh_list(self, sender, args):
+        search_text = self.SearchBox.Text
+        panel_filter = self.PanelFilter.SelectedItem
+        items = self.provider.filter(search_text, panel_filter)
+        self.CircuitList.Items.Clear()
+        for item in items:
+            list_item = ListBoxItem()
+            list_item.Content = item['label']
+            list_item.Tag = item['circuit']
+            self.CircuitList.Items.Add(list_item)
+            if self.PreserveSelection.IsChecked and item['id'] in self.selected_ids:
+                list_item.IsSelected = True
 
-    def _select_element(self, element):
-        if not element:
+    def _on_selection_changed(self, sender, args):
+        self._capture_selection()
+
+    def _capture_selection(self):
+        self.selected_ids = set()
+        self.selected_circuits = []
+        for item in self.CircuitList.SelectedItems:
+            self.selected_circuits.append(item.Tag)
+            try:
+                self.selected_ids.add(item.Tag.Id.IntegerValue)
+            except Exception:
+                pass
+
+    def _select_all(self, sender, args):
+        self.CircuitList.SelectAll()
+        self._capture_selection()
+
+    def _select_none(self, sender, args):
+        self.CircuitList.UnselectAll()
+        self._capture_selection()
+
+    def _calculate(self, sender, args):
+        self._capture_selection()
+        if not self.selected_circuits:
+            forms.alert('Select at least one circuit to calculate.')
             return
-        try:
-            ids = List[DB.ElementId]([element.Id])
-            self.uidoc.Selection.SetElementIds(ids)
-            self.uidoc.ShowElements(element)
-        except Exception:
-            pass
+        self.Close()
 
-    def _run_calculation(self, sender, args):
-        self.reader.selected_circuits = []
-        for node in self.CircuitTree.Items:
-            self._collect_checked_circuits(node)
-        if not self.reader.selected_circuits:
-            forms.alert("Select at least one circuit to calculate.")
-            return
-        self.external_event.Raise()
+    def _close(self, sender, args):
+        self.selected_circuits = []
+        self.Close()
 
-    def _collect_checked_circuits(self, tree_item):
-        header = getattr(tree_item, 'Header', None)
-        if isinstance(header, CheckBox) and header.IsChecked:
-            circuit = getattr(tree_item, 'Tag', None)
-            if circuit and isinstance(circuit, DB.Electrical.ElectricalSystem):
-                self.reader.selected_circuits.append(circuit)
-        for child in getattr(tree_item, 'Items', []):
-            self._collect_checked_circuits(child)
-
-    def _build_tree(self, hierarchy):
-        self.CircuitTree.Items.Clear()
-        for panel in hierarchy:
-            panel_checkbox = CheckBox()
-            panel_checkbox.Content = panel['label']
-            panel_checkbox.IsThreeState = True
-
-            panel_item = TreeViewItem()
-            panel_item.Header = panel_checkbox
-            panel_item.Tag = panel.get('element')
-            for circuit in panel['children']:
-                circuit_checkbox = CheckBox()
-                circuit_checkbox.Content = circuit['label']
-
-                circuit_item = TreeViewItem()
-                circuit_item.Header = circuit_checkbox
-                circuit_item.Tag = circuit['circuit']
-                for device in circuit['devices']:
-                    device_item = TreeViewItem()
-                    device_item.Header = device['label']
-                    device_item.Tag = device.get('element')
-                    circuit_item.Items.Add(device_item)
-                panel_item.Items.Add(circuit_item)
-            self.CircuitTree.Items.Add(panel_item)
-
-    def show(self):
-        self.Show()
-        return self
+    def show_dialog(self):
+        self.ShowDialog()
+        return self.selected_circuits

@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
-"""Modeless circuit selection and calculation launcher."""
+"""Circuit sizing calculator with searchable circuit picker."""
 
-from Autodesk.Revit import UI
+from pyrevit import DB, forms, revit
 from CEDElectrical.Model.CircuitBranch import *
-from CEDElectrical.circuit_sizing.services.revit_reader import CircuitHierarchyReader
+from CEDElectrical.circuit_sizing.services.revit_reader import CircuitListProvider
 from CEDElectrical.circuit_sizing.ui.circuit_selector import CircuitSelectorWindow
+from Snippets import _elecutils as eu
+
+USE_SELECTION_WINDOW = True  # Toggle to False to quickly test sizing logic without the picker
 
 doc = revit.doc
-uidoc = revit.uidoc
 logger = script.get_logger()
 
 
@@ -160,34 +162,30 @@ def _calculate_and_update(circuits):
     output.print_md("* Electrical Equipment updated: **{}**".format(total_equipment))
 
 
-class _ExternalEventHandler(UI.IExternalEventHandler):
-    def __init__(self, action):
-        self.action = action
-
-    def Execute(self, uiapp):
-        self.action()
-
-    def GetName(self):
-        return "Circuit sizing calculator"
-
-
-def _launch_modeless_window():
-    reader = CircuitHierarchyReader(doc)
-    handler = _ExternalEventHandler(lambda: _calculate_and_update(reader.selected_circuits))
-    external_event = UI.ExternalEvent.Create(handler)
-    window = CircuitSelectorWindow(reader, external_event, uidoc)
-    window.show()
+def _launch_selection_window():
+    provider = CircuitListProvider(doc)
+    window = CircuitSelectorWindow(provider)
+    return window.show_dialog()
 
 
 def main():
     selection = revit.get_selection()
-    if selection:
-        circuits = [el for el in selection if isinstance(el, DB.Electrical.ElectricalSystem)]
-        if circuits:
-            _calculate_and_update(circuits)
-            return
+    selected_circuits = []
 
-    _launch_modeless_window()
+    if selection:
+        selected_circuits = [el for el in selection if isinstance(el, DB.Electrical.ElectricalSystem)]
+
+    if not selected_circuits:
+        if USE_SELECTION_WINDOW:
+            selected_circuits = _launch_selection_window() or []
+        else:
+            selected_circuits = eu.pick_circuits_from_list(doc, select_multiple=True)
+
+    if not selected_circuits:
+        logger.info("No circuits selected. Exiting.")
+        return
+
+    _calculate_and_update(selected_circuits)
 
 
 if __name__ == "__main__":

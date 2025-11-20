@@ -1,103 +1,69 @@
-from collections import defaultdict
 from pyrevit import DB
-from pyrevit.compat import get_elementid_value_func
 
 
-class CircuitHierarchyReader(object):
-    """Loads electrical equipment, circuits, and connected devices."""
+class CircuitListProvider(object):
+    """Builds a flat, panel-aware circuit list for selection UI."""
 
     def __init__(self, doc):
         self.doc = doc
-        self._hierarchy = []
-        self._sorted = []
-        self.selected_circuits = []
-        self.refresh("System Tree")
+        self._circuits = []
+        self._panels = []
+        self._build_list()
 
     @property
-    def hierarchy(self):
-        return self._hierarchy
+    def panels(self):
+        return self._panels
 
-    def refresh(self, sort_mode):
-        equipment_lookup = defaultdict(list)
-        get_id_val = get_elementid_value_func()
-
+    def _build_list(self):
+        circuits = []
+        panels = set()
         for circuit in DB.FilteredElementCollector(self.doc)\
                 .OfClass(DB.Electrical.ElectricalSystem)\
                 .WhereElementIsNotElementType():
             base_equipment = circuit.BaseEquipment
-            if not base_equipment:
-                continue
-
-            panel_name = getattr(base_equipment, 'Name', None) or "<No Equipment>"
-            circuit_label = self._build_circuit_label(circuit, get_id_val)
-            devices = self._get_connected_devices(circuit, get_id_val)
+            panel_name = getattr(base_equipment, 'Name', None)
+            rating = self._safe_int(getattr(circuit, 'Rating', None)) if circuit.SystemType == DB.Electrical.ElectricalSystemType.PowerCircuit else None
+            poles = getattr(circuit, 'PolesNumber', None)
             start_slot = getattr(circuit, 'StartSlot', 0)
 
-            equipment_lookup[panel_name].append({
-                'label': circuit_label,
+            if panel_name:
+                panels.add(panel_name)
+
+            circuits.append({
+                'id': circuit.Id.IntegerValue,
+                'panel': panel_name,
+                'label': self._format_label(panel_name, circuit.CircuitNumber, circuit.LoadName, rating, poles),
                 'circuit': circuit,
-                'devices': devices,
-                'panel': panel_name,
-                'start_slot': start_slot,
+                'sort_key': (0 if panel_name else 1, (panel_name or '').lower(), start_slot, (circuit.CircuitNumber or '').lower())
             })
 
-        panel_names = sorted(equipment_lookup.keys()) if sort_mode == "Alphabetical" else self._sort_system_tree(equipment_lookup)
+        self._circuits = sorted(circuits, key=lambda c: c['sort_key'])
+        self._panels = sorted(panels)
 
-        hierarchy = []
-        for panel_name in panel_names:
-            if sort_mode == "Alphabetical":
-                circuit_nodes = sorted(equipment_lookup[panel_name], key=lambda c: c['label'])
-            else:
-                circuit_nodes = sorted(equipment_lookup[panel_name], key=lambda c: (c.get('start_slot', 0), c['label']))
-            hierarchy.append({
-                'label': panel_name,
-                'panel': panel_name,
-                'children': circuit_nodes
-            })
-
-        self._hierarchy = hierarchy
-        self._sorted = panel_names
-
-    def search(self, term):
-        if not term:
-            return self._hierarchy
-
-        term_lower = term.lower()
-        filtered = []
-        for panel in self._hierarchy:
-            matching_circuits = []
-            for circuit in panel['children']:
-                device_matches = [d for d in circuit['devices'] if term_lower in d['label'].lower()]
-                if term_lower in circuit['label'].lower() or device_matches:
-                    circuit_copy = circuit.copy()
-                    circuit_copy['devices'] = device_matches if device_matches else circuit['devices']
-                    matching_circuits.append(circuit_copy)
-            if term_lower in panel['label'].lower() or matching_circuits:
-                filtered.append({
-                    'label': panel['label'],
-                    'panel': panel['panel'],
-                    'children': matching_circuits
-                })
-        return filtered
-
-    def _sort_system_tree(self, lookup):
-        ordered_panels = []
-        for panel_name, circuits in lookup.items():
-            ordered_panels.append((panel_name, min(c.get('start_slot', 0) for c in circuits)))
-        return [name for name, _ in sorted(ordered_panels, key=lambda x: (x[1], x[0]))]
-
-    def _get_connected_devices(self, circuit, get_id_val):
-        devices = []
-        for el in circuit.Elements:
-            category = getattr(el, 'Category', None)
-            if not category:
+    def filter(self, search_text='', panel_filter=None):
+        term = (search_text or '').lower()
+        matches = []
+        for entry in self._circuits:
+            if panel_filter and panel_filter != 'All Panels':
+                if panel_filter == '<No Panel>':
+                    if entry['panel']:
+                        continue
+                elif entry['panel'] != panel_filter:
+                    continue
+            if term and term not in entry['label'].lower():
                 continue
-            label = "[{}] {}".format(get_id_val(el.Id), getattr(el, 'Name', ''))
-            devices.append({'label': label, 'element': el})
-        return sorted(devices, key=lambda d: d['label'])
+            matches.append(entry)
+        return matches
 
-    def _build_circuit_label(self, circuit, get_id_val):
-        panel = getattr(circuit.BaseEquipment, 'Name', None) or "<No Panel>"
-        number = getattr(circuit, 'CircuitNumber', '')
-        load = getattr(circuit, 'LoadName', '') or ''
-        return "[{}] {}/{} - {}".format(get_id_val(circuit.Id), panel, number, load.strip())
+    def _format_label(self, panel, circuit_number, load_name, rating, poles):
+        panel_label = panel or '<No Panel>'
+        load = (load_name or '').strip()
+        rating_str = 'N/A' if rating is None else rating
+        poles_str = poles if poles is not None else '?'
+        return "{}/{} - {} ({}/{})".format(panel_label, circuit_number, load, rating_str, "{}P".format(poles_str))
+
+    def _safe_int(self, value):
+        try:
+            return int(round(value, 0)) if value is not None else None
+        except Exception:
+            return None
