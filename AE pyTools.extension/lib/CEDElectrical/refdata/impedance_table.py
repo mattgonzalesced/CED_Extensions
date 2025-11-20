@@ -125,11 +125,26 @@ WIRE_IMPEDANCE_TABLE = {
             'AL': {'Non-Magnetic': 0.036, 'Magnetic': 0.038}
         }
     },
+    '700': {
+        'X': {'Non-Magnetic': 0.039, 'Magnetic': 0.048},
+        'R': {
+            'CU': {'Non-Magnetic': 0.021, 'Magnetic': 0.023},
+            'AL': {'Non-Magnetic': 0.033, 'Magnetic': 0.035}
+        }
+    },
     '750': {
         'X': {'Non-Magnetic': 0.038, 'Magnetic': 0.048},
         'R': {
             'CU': {'Non-Magnetic': 0.019, 'Magnetic': 0.021},
             'AL': {'Non-Magnetic': 0.029, 'Magnetic': 0.031}
+        }
+    },
+
+    '800': {
+        'X': {'Non-Magnetic': 0.038, 'Magnetic': 0.048},
+        'R': {
+            'CU': {'Non-Magnetic': 0.018, 'Magnetic': 0.021},
+            'AL': {'Non-Magnetic': 0.028, 'Magnetic': 0.030}
         }
     },
     '1000': {

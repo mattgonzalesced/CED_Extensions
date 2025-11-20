@@ -26,7 +26,7 @@ PART_TYPE_MAP = {
 
 ALLOWED_WIRE_SIZES = [
 "12", "10", "8", "6", "4", "3", "2", "1", "1/0", "2/0", "3/0", "4/0",
-    "250", "300", "350", "400", "500", "600", "750", "1000"
+    "250", "300", "350", "400", "500", "600","700", "750", "800","1000"
 ]
 
 
@@ -290,7 +290,7 @@ class CircuitBranch(object):
             if key >= rating_key:
                 self._wire_info = table[key]
                 self.log_warning(
-                    "⚠️ No exact wire info match for Breaker Size: {}., using next available size: {}".format(
+                    "⚠️ No exact wire info match for Breaker Size: {}., using next available size for calculations: {}".format(
                         rating_key, key))
                 return self._wire_info
 
@@ -637,112 +637,232 @@ class CircuitBranch(object):
     def calculate_hot_wire_size(self):
         rating = self.breaker_rating
         if rating is None:
+            self._calculated_hot_wire = None
+            self._calculated_wire_sets = None
+            self._calculated_hot_ampacity = None
             return
 
-        # --- Handle user overrides directly ---
+        # ------------------------------------------------------------
+        # 1) USER OVERRIDE PATH (if enabled and has a hot size)
+        # ------------------------------------------------------------
         if self._auto_calculate_override and self._wire_hot_size_override:
-            self.log_info("overrides set for calc hot wire size.")
+            self.log_info("Overrides set for hot wire sizing.")
             try:
-                material = self._wire_material_override
-                temp = int(str(self._wire_temp_rating_override).replace('C', '').strip())
-                sets = self._wire_sets_override
-                wire_set = WIRE_AMPACITY_TABLE.get(material, {}).get(temp, [])
+                override_wire = self._normalize_wire_size(self._wire_hot_size_override)
+                override_sets = self._wire_sets_override or 1
 
-                for wire, ampacity in wire_set:
-                    # need to call self.reasonableUserOverrides right here and if False 
-                    # set the self._calculated_hot_wire = None 
-                    if wire == self._normalize_wire_size(self._wire_hot_size_override):
-                        self._calculated_hot_wire = wire
-                        self._calculated_wire_sets = sets
-                        self._calculated_hot_ampacity = ampacity * sets
-                        logger.debug(
-                            "Ampacity with override: wire={}, sets={}, ampacity per wire={}, total ampacity={}".format(
-                                wire,
-                                sets,
-                                ampacity,
-                                ampacity * sets
-                            ))
+                if not override_wire:
+                    self.log_warning("Override hot wire size is empty. Falling back to automatic sizing.")
+                elif override_wire not in ALLOWED_WIRE_SIZES:
+                    self.log_warning(
+                        "Override hot wire size {} is not in allowed list. Falling back to automatic sizing.".format(
+                            override_wire
+                        )
+                    )
+                else:
+                    material = self._wire_material_override or self.wire_material or "CU"
+                    temp_str = self._wire_temp_rating_override or self.wire_temp_rating or "75 C"
+                    try:
+                        temp = int(str(temp_str).replace('C', '').strip())
+                    except Exception:
+                        self.log_warning(
+                            "Invalid override temperature rating {}. Falling back to automatic sizing.".format(temp_str)
+                        )
+                    else:
+                        wire_set = WIRE_AMPACITY_TABLE.get(material, {}).get(temp, [])
+                        if not wire_set:
+                            self.log_warning(
+                                "No ampacity table for material {} at {} C. Falling back to automatic sizing.".format(
+                                    material, temp
+                                )
+                            )
+                        else:
+                            for wire, ampacity in wire_set:
+                                if wire != override_wire:
+                                    continue
 
-                        return
+                                total_ampacity = ampacity * override_sets
+                                self.log_debug(
+                                    "Checking override hot wire {} x {} set(s), total ampacity {}.".format(
+                                        wire, override_sets, total_ampacity
+                                    )
+                                )
+
+                                # NEC 240.4(B) check
+                                if not self._is_ampacity_acceptable(rating, total_ampacity, self.circuit_load_current):
+                                    self.log_warning(
+                                        "Override {} x {} set(s) fails ampacity rules ({} A).".format(
+                                            wire, override_sets, total_ampacity
+                                        )
+                                    )
+                                    break
+
+                                # Voltage drop check
+                                try:
+                                    vd = self.calculate_voltage_drop(wire, override_sets)
+                                except Exception as e:
+                                    logger.debug(
+                                        "Override VD check failed for {}x{}: {}".format(
+                                            wire, override_sets, e
+                                        )
+                                    )
+                                    vd = None
+
+                                if vd is not None and vd > self.max_voltage_drop:
+                                    self.log_warning(
+                                        "Override {} x {} set(s) fails voltage drop (VD = {}, max = {}).".format(
+                                            wire, override_sets, vd, self.max_voltage_drop
+                                        )
+                                    )
+                                    break
+
+                                # Override is acceptable
+                                self._calculated_hot_wire = wire
+                                self._calculated_wire_sets = override_sets
+                                self._calculated_hot_ampacity = total_ampacity
+                                self.log_debug(
+                                    "Using override hot wire: {} x {} set(s), total ampacity {}.".format(
+                                        wire, override_sets, total_ampacity
+                                    )
+                                )
+                                return
+
             except Exception as e:
                 logger.debug("Override ampacity calc failed: {}".format(e))
-                return
 
+            self.log_info("Falling back to automatic hot wire sizing.")
+
+        # ------------------------------------------------------------
+        # 2) AUTOMATIC SIZING PATH
+        # ------------------------------------------------------------
         wire_info = self._wire_info
+        if not wire_info:
+            self.log_warning("No wire info available; cannot size hot conductor.")
+            self._calculated_hot_wire = None
+            self._calculated_wire_sets = None
+            self._calculated_hot_ampacity = None
+            return
+
         try:
             temp = int(wire_info.get('wire_temperature_rating', '75').replace('C', '').strip())
         except Exception as e:
-            logger.debug("Invalid wire temperature: {}".format(e))
+            logger.debug("Invalid wire temperature in wire_info: {}".format(e))
+            self._calculated_hot_wire = None
+            self._calculated_wire_sets = None
+            self._calculated_hot_ampacity = None
             return
 
         material = wire_info.get('wire_material', 'CU')
         base_wire = wire_info.get('wire_hot_size')
-        base_sets = wire_info.get('number_of_parallel_sets')
+        base_sets = wire_info.get('number_of_parallel_sets') or 1
         max_size = wire_info.get('max_lug_size')
-        max_sets = wire_info.get('max_lug_qty', 1)
+        max_sets = wire_info.get('max_lug_qty', 1) or 1
 
         wire_set = WIRE_AMPACITY_TABLE.get(material, {}).get(temp, [])
-        sets = base_sets or 1
-        start_index = 0
+        if not wire_set:
+            self.log_warning(
+                "No ampacity data for material {} at {} C; cannot size hot conductor.".format(material, temp)
+            )
+            self._calculated_hot_wire = None
+            self._calculated_wire_sets = None
+            self._calculated_hot_ampacity = None
+            return
 
-        for i, (wire, _) in enumerate(wire_set):
-            if wire == base_wire:
-                start_index = i
-                break
+        sets = base_sets
 
         while sets <= max_sets:
-            reached_max_size = False
-            for wire, ampacity in wire_set[start_index:]:
+            # For each sets value, start from base_wire again
+            start_index = 0
+            if base_wire:
+                for i, (wire, _) in enumerate(wire_set):
+                    if wire == base_wire:
+                        start_index = i
+                        break
 
-                # >>> ADD THIS FILTER <<<
+            reached_max_size = False
+
+            for wire, ampacity in wire_set[start_index:]:
+                # Skip unsupported sizes
                 if wire not in ALLOWED_WIRE_SIZES:
                     self.log_debug("Skipping unsupported wire size: {}".format(wire))
                     continue
 
                 total_ampacity = ampacity * sets
+                self.log_debug(
+                    "Checking wire {} with {} set(s), total ampacity {}.".format(
+                        wire, sets, total_ampacity
+                    )
+                )
 
-                self.log_debug("starting VD. wire:{}, sets:{}, total ampacity:{}".format(wire, sets, total_ampacity))
-                # NEC 240.4(B) check here
+                # NEC 240.4(B) check
                 if not self._is_ampacity_acceptable(rating, total_ampacity, self.circuit_load_current):
-                    self.log_debug("Ampacity BAD!")
+                    self.log_debug(
+                        "Ampacity not acceptable for {} x {} set(s) (total = {}).".format(
+                            wire, sets, total_ampacity
+                        )
+                    )
+                    # even if ampacity fails, we still want to know if we hit max lug size
+                    if max_size and wire == max_size:
+                        reached_max_size = True
+                        break
                     continue
 
+                # Voltage drop check
                 try:
                     vd = self.calculate_voltage_drop(wire, sets)
                 except Exception as e:
                     logger.debug("Voltage drop failed for {}x{}: {}".format(wire, sets, e))
                     vd = None
 
-                if vd is None or vd <= self.max_voltage_drop:
-                    self._calculated_hot_wire = wire
-                    self._calculated_wire_sets = sets
-                    self._calculated_hot_ampacity = total_ampacity
-                    return
+                if vd is not None and vd > self.max_voltage_drop:
+                    self.log_debug(
+                        "Voltage drop {} exceeds max {} for {} x {} set(s).".format(
+                            vd, self.max_voltage_drop, wire, sets
+                        )
+                    )
+                    if max_size and wire == max_size:
+                        reached_max_size = True
+                        break
+                    continue
 
-                if wire == max_size:
-                    self._calculated_hot_wire = wire
-                    self._calculated_wire_sets = sets
-                    self._calculated_hot_ampacity = total_ampacity
-                    reached_max_size = True
-                    break
+                # Success
+                self._calculated_hot_wire = wire
+                self._calculated_wire_sets = sets
+                self._calculated_hot_ampacity = total_ampacity
+                self.log_debug(
+                    "Selected hot wire {} with {} set(s), total ampacity {}, VD {}.".format(
+                        wire, sets, total_ampacity, vd
+                    )
+                )
+                return
+
+            # If we got to max lug size for this sets value without success
+            if max_size and not self._calculated_hot_wire:
+                # Did we at least reach the max lug size in this pass?
+                for wire, _ in wire_set[start_index:]:
+                    if wire == max_size:
+                        reached_max_size = True
+                        break
 
             if reached_max_size:
-                logger.warning("{}: wire reached max size for breaker rating.".format(self.name))
-                break
+                self.log_debug(
+                    "{}: reached MAX LUG WIRE SIZE {} with {} set(s) and no acceptable solution.".format(
+                        self.name, max_size, sets
+                    )
+                )
+
             sets += 1
 
-            # fallback: use base wire size directly if no match
-            if base_wire:
-                for wire, ampacity in wire_set:
-                    if wire == base_wire:
-                        self._calculated_hot_wire = wire
-                        self._calculated_wire_sets = base_sets
-                        self._calculated_hot_ampacity = base_sets * ampacity
-                        return
+        # If we get here, we exhausted all sets up to max_sets
+        self.log_warning(
+            "{}: reached MAX PARALLEL SETS ({}) and could not size hot conductor.".format(
+                self.name, max_sets
+            )
+        )
 
-            self._calculated_hot_wire = None
-            self._calculated_wire_sets = None
-            self._calculated_hot_ampacity = None
+        self._calculated_hot_wire = None
+        self._calculated_wire_sets = None
+        self._calculated_hot_ampacity = None
 
     def calculate_ground_wire_size(self):
         try:
@@ -848,7 +968,7 @@ class CircuitBranch(object):
                 return 0
 
             wire_info = self._wire_info
-            material = wire_info.get('wire_material', 'CU')
+            material = self.wire_material
             conduit_material = self.conduit_material_type
             wire_size = self._normalize_wire_size(wire_size_formatted)
 
