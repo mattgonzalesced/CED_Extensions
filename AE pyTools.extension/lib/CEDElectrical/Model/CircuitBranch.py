@@ -343,7 +343,8 @@ class CircuitBranch(object):
     def length(self):
         try:
             if self.is_power_circuit and not self.is_spare and not self.is_space:
-                return self.circuit.Length
+
+               return self.circuit.Length
         except:
             logger.debug("length property failed.")
             return None

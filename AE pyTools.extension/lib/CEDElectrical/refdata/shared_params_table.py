@@ -100,6 +100,13 @@ SHARED_PARAMS = {
         'Categories': 'Electrical Circuits, Electrical Equipment, Electrical Fixtures',
         'Groups': 'Values are aligned per group type'
     },
+    'CKT_Length Makeup_CED': {
+        'GUID': '4d467bf2-9dc1-4086-9279-727c85716211', 'Discipline': 'Common',
+        'Type of Parameter': 'Length', 'Group Under': 'Electrical - Circuiting',
+        'Instance/Type': 'Instance',
+        'Categories': 'Electrical Circuits, Electrical Equipment, Electrical Fixtures',
+        'Groups': 'Values are aligned per group type'
+    },
     'Wire Material_CEDT': {
         'GUID': '0d71adc3-3b78-4349-bd13-7f69771bdec9', 'Discipline': 'Common',
         'Type of Parameter': 'Text', 'Group Under': 'Electrical - Circuiting',
