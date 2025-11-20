@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
-from CEDElectrical.Model.CircuitBranch import *
+"""Modaless circuit browser and calculator for electrical systems."""
+from pyrevit import DB, forms, revit, script
+import System.Windows.Media as Media
+
+from CEDElectrical.circuit_sizing.domain.circuit_evaluator import CircuitEvaluator
+from CEDElectrical.circuit_sizing.services.revit_reader import RevitCircuitReader
+from CEDElectrical.circuit_sizing.services.revit_writer import RevitCircuitWriter
+from CEDElectrical.circuit_sizing.models.circuit_branch import CircuitSettings
 from Snippets import _elecutils as eu
 
 app = __revit__.Application
@@ -8,179 +15,182 @@ doc = revit.doc
 logger = script.get_logger()
 
 
-# -------------------------------------------------------------------------
-# Collects parameter values from a CircuitBranch object
-# -------------------------------------------------------------------------
-def collect_shared_param_values(branch):
-    return {
-        'CKT_Circuit Type_CEDT': branch.branch_type,
-        'CKT_Panel_CEDT': branch.panel,
-        'CKT_Circuit Number_CEDT': branch.circuit_number,
-        'CKT_Load Name_CEDT': branch.load_name,
-        'CKT_Rating_CED': branch.rating,
-        'CKT_Frame_CED': branch.frame,
-        'CKT_Length_CED': branch.length,
-        'CKT_Schedule Notes_CEDT': branch.circuit_notes,
-        'Voltage Drop Percentage_CED': branch.voltage_drop_percentage,
-        'CKT_Wire Hot Size_CEDT': branch.hot_wire_size,
-        'CKT_Number of Wires_CED': branch.number_of_wires,
-        'CKT_Number of Sets_CED': branch.number_of_sets,
-        'CKT_Wire Hot Quantity_CED': branch.hot_wire_quantity,
-        'CKT_Wire Ground Size_CEDT': branch.ground_wire_size,
-        'CKT_Wire Ground Quantity_CED': branch.ground_wire_quantity,
-        'CKT_Wire Neutral Size_CEDT': branch.neutral_wire_size,
-        'CKT_Wire Neutral Quantity_CED': branch.neutral_wire_quantity,
-        'CKT_Wire Isolated Ground Size_CEDT': branch.isolated_ground_wire_size,
-        'CKT_Wire Isolated Ground Quantity_CED': branch.isolated_ground_wire_quantity,
-        'Wire Material_CEDT': branch.wire_material,
-        'Wire Temparature Rating_CEDT': branch.wire_info.get('wire_temperature_rating', '75'),
-        'Wire Insulation_CEDT': branch.wire_info.get('wire_insulation', 'THWN'),
-        'Conduit Size_CEDT': branch.conduit_size,
-        'Conduit Type_CEDT': branch.conduit_type,
-        'Conduit Fill Percentage_CED': branch.conduit_fill_percentage,
-        'Wire Size_CEDT': branch.get_wire_size_callout(),
-        'Conduit and Wire Size_CEDT': branch.get_conduit_and_wire_size(),
-        'Circuit Load Current_CED': branch.circuit_load_current,
-        'Circuit Ampacity_CED': branch.circuit_base_ampacity,
-    }
+class CircuitListItem:
+    """Lightweight item used to visualize and refresh circuit data."""
+
+    def __init__(self, circuit, settings):
+        self.circuit = circuit
+        self.settings = settings
+        self.model = RevitCircuitReader(circuit, settings=settings).to_model()
+        self.DisplayName = "{} - {}".format(self.model.panel, self.model.circuit_number)
+        self.ColorBrush = self._color_for_branch(self.model.branch_type)
+
+    def refresh(self):
+        self.model = RevitCircuitReader(self.circuit, settings=self.settings).to_model()
+        self.DisplayName = "{} - {}".format(self.model.panel, self.model.circuit_number)
+        self.ColorBrush = self._color_for_branch(self.model.branch_type)
+        return self
+
+    def _color_for_branch(self, branch_type):
+        mapping = {
+            "FEEDER": Media.Colors.DarkOrange,
+            "BRANCH": Media.Colors.DarkGreen,
+            "TRANSFORMER_PRIMARY": Media.Colors.MediumPurple,
+            "TRANSFORMER_SECONDARY": Media.Colors.SteelBlue,
+            "SPACE": Media.Colors.Gray,
+            "SPARE": Media.Colors.LightGray,
+        }
+        return Media.SolidColorBrush(mapping.get(branch_type, Media.Colors.Black))
 
 
-# -------------------------------------------------------------------------
-# Write shared parameters to the electrical circuit
-# -------------------------------------------------------------------------
-def update_circuit_parameters(circuit, param_values):
-    for param_name, value in param_values.items():
-        if value is None:
-            continue
-        param = circuit.LookupParameter(param_name)
-        if not param:
-            continue
-        try:
-            if param.StorageType == DB.StorageType.String:
-                param.Set(str(value))
-            elif param.StorageType == DB.StorageType.Integer:
-                param.Set(int(value))
-            elif param.StorageType == DB.StorageType.Double:
-                param.Set(float(value))
-        except Exception as e:
-            logger.debug("❌ Failed to write '{}' to circuit {}: {}".format(param_name, circuit.Id, e))
+class CircuitSelectionWindow(forms.WPFWindow):
+    """Modeless list of electrical systems with inline calculation triggers."""
 
+    XAML = r"""
+    <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            Title="Circuit Browser" Height="480" Width="760" Background="White">
+        <Grid Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" />
+                <ColumnDefinition Width="3*" />
+            </Grid.ColumnDefinitions>
 
-# -------------------------------------------------------------------------
-# Write shared parameters to connected family instances
-# -------------------------------------------------------------------------
-def update_connected_elements(branch, param_values):
-    circuit = branch.circuit
-    fixture_count = 0
-    equipment_count = 0
+            <ListBox x:Name="CircuitList" Grid.Row="0" Grid.Column="0" SelectionChanged="OnCircuitSelected" SelectionMode="Extended">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding DisplayName}" Foreground="{Binding ColorBrush}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
 
-    for el in circuit.Elements:
-        if not isinstance(el, DB.FamilyInstance):
-            continue
+            <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,0">
+                <TextBlock Text="Circuit Details" FontWeight="Bold" FontSize="14" />
+                <TextBlock Text="Panel:" FontWeight="Bold" />
+                <TextBlock x:Name="PanelText" Margin="0,0,0,8" />
+                <TextBlock Text="Number:" FontWeight="Bold" />
+                <TextBlock x:Name="NumberText" Margin="0,0,0,8" />
+                <TextBlock Text="Type:" FontWeight="Bold" />
+                <TextBlock x:Name="TypeText" Margin="0,0,0,8" />
+                <TextBlock Text="Load (A):" FontWeight="Bold" />
+                <TextBlock x:Name="LoadText" Margin="0,0,0,8" />
+                <TextBlock Text="Length (ft):" FontWeight="Bold" />
+                <TextBlock x:Name="LengthText" Margin="0,0,0,8" />
+            </StackPanel>
 
-        cat = el.Category
-        if not cat:
-            continue
+            <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                <Button Content="Calculate Selected" Width="160" Margin="0,0,10,0" Click="OnCalculateClicked" />
+                <Button Content="Close" Width="80" Click="OnCloseClicked" />
+            </StackPanel>
+        </Grid>
+    </Window>
+    """
 
-        cat_id = cat.Id
-        is_fixture = cat_id == DB.ElementId(DB.BuiltInCategory.OST_ElectricalFixtures)
-        is_equipment = cat_id == DB.ElementId(DB.BuiltInCategory.OST_ElectricalEquipment)
+    def __init__(self, doc, circuits, settings):
+        super(CircuitSelectionWindow, self).__init__(self.XAML)
+        self.doc = doc
+        self.settings = settings
+        self.items = [CircuitListItem(circuit, settings) for circuit in circuits]
+        self.CircuitList.ItemsSource = self.items
+        if self.items:
+            self.CircuitList.SelectedIndex = 0
+            self._populate_details(self.items[0])
 
-        if not (is_fixture or is_equipment):
-            continue
+    def OnCircuitSelected(self, sender, args):
+        item = self.CircuitList.SelectedItem
+        self._populate_details(item)
 
-        # Write all parameters
-        for param_name, value in param_values.items():
-            if value is None:
-                continue
-            param = el.LookupParameter(param_name)
-            if not param:
-                continue
+    def OnCloseClicked(self, sender, args):
+        self.Close()
+
+    def OnCalculateClicked(self, sender, args):
+        selected = list(self.CircuitList.SelectedItems) if self.CircuitList.SelectedItems else []
+        if not selected:
+            selected = self.items
+        self._calculate_and_write(selected)
+
+    def _populate_details(self, item):
+        if not item:
+            self.PanelText.Text = ""
+            self.NumberText.Text = ""
+            self.TypeText.Text = ""
+            self.LoadText.Text = ""
+            self.LengthText.Text = ""
+            return
+        model = item.model
+        self.PanelText.Text = str(model.panel)
+        self.NumberText.Text = str(model.circuit_number)
+        self.TypeText.Text = model.classification
+        self.LoadText.Text = "{}".format(model.circuit_load_current or model.apparent_current or "")
+        self.LengthText.Text = "{}".format(model.length or "")
+
+    def _calculate_and_write(self, selected_items):
+        evaluated = []
+        for item in selected_items:
             try:
-                if param.StorageType == DB.StorageType.String:
-                    param.Set(str(value))
-                elif param.StorageType == DB.StorageType.Integer:
-                    param.Set(int(value))
-                elif param.StorageType == DB.StorageType.Double:
-                    param.Set(float(value))
-            except Exception as e:
-                logger.debug("❌ Failed to write '{}' to element {}: {}".format(param_name, el.Id, e))
+                refreshed = item.refresh()
+                calc_result = CircuitEvaluator.evaluate(refreshed.model)
+                evaluated.append((item.circuit, refreshed.model, calc_result))
+            except Exception as exc:
+                logger.error("Failed to evaluate circuit {}: {}".format(item.circuit.Id, exc))
 
-        if is_fixture:
-            fixture_count += 1
-        elif is_equipment:
-            equipment_count += 1
+        if not evaluated:
+            forms.alert("No circuits evaluated.", title="Circuit Browser")
+            return
 
-    return fixture_count, equipment_count
+        tg = DB.TransactionGroup(self.doc, "Calculate Circuits")
+        tg.Start()
+        t = DB.Transaction(self.doc, "Write Shared Parameters")
+        total_fixtures = 0
+        total_equipment = 0
+
+        try:
+            t.Start()
+            for circuit, model, calc_result in evaluated:
+                param_values = RevitCircuitWriter.collect_param_values(model, calc_result)
+                RevitCircuitWriter.update_circuit_parameters(circuit, param_values)
+                fixtures, equipment = RevitCircuitWriter.update_connected_elements(circuit, param_values)
+                total_fixtures += fixtures
+                total_equipment += equipment
+            t.Commit()
+            tg.Assimilate()
+        except Exception as exc:
+            t.RollBack()
+            tg.RollBack()
+            logger.error("Transaction failed: {}".format(exc))
+            return
+
+        output = script.get_output()
+        output.close_others()
+        output.print_md("## ✅ Shared Parameters Updated")
+        output.print_md("* Circuits updated: **{}**".format(len(evaluated)))
+        output.print_md("* Electrical Fixtures updated: **{}**".format(total_fixtures))
+        output.print_md("* Electrical Equipment updated: **{}**".format(total_equipment))
 
 
-# -------------------------------------------------------------------------
-# Main Execution
-# -------------------------------------------------------------------------
-def main():
+def collect_circuits():
     selection = revit.get_selection()
-    test_circuits = []
-    if not selection:
-        test_circuits = eu.pick_circuits_from_list(doc, select_multiple=True)
-    else:
-        for el in selection:
-            if isinstance(el, DB.Electrical.ElectricalSystem):
-                test_circuits.append(el)
-        if not test_circuits:
-            test_circuits = eu.pick_circuits_from_list(doc, select_multiple=True)
+    circuits = []
+    if selection:
+        circuits = eu.get_circuits_from_selection(selection)
+    if not circuits:
+        collector = DB.FilteredElementCollector(doc).OfClass(DB.Electrical.ElectricalSystem)
+        circuits = [c for c in collector if c.SystemType == DB.Electrical.ElectricalSystemType.PowerCircuit]
+    return circuits
 
-    count = len(test_circuits)
-    if count > 1000:
-        proceed = forms.alert(
-            "{} circuits selected.\n\nThis may take a while.\n\n".format(count),
-            title="⚠️ Large Selection Warning",
-            options=["Continue", "Cancel"]
-        )
-        if proceed != "Continue":
-            script.exit()
 
-    branches = []
-    total_fixtures = 0
-    total_equipment = 0
-
-    # Perform all calculations first
-    for circuit in test_circuits:
-        branch = CircuitBranch(circuit)
-        if not branch.is_power_circuit:
-            continue
-        branch.calculate_breaker_size()
-        branch.calculate_hot_wire_size()
-        branch.calculate_ground_wire_size()
-        branch.calculate_conduit_size()
-        branch.calculate_conduit_fill_percentage()
-        branches.append(branch)
-
-    # Write all parameters in a single transaction
-    tg = DB.TransactionGroup(doc, "Calculate Circuits")
-    tg.Start()
-    t = DB.Transaction(doc, "Write Shared Parameters")
-    try:
-        t.Start()
-        for branch in branches:
-            param_values = collect_shared_param_values(branch)
-            update_circuit_parameters(branch.circuit, param_values)
-            f, e = update_connected_elements(branch, param_values)
-            total_fixtures += f
-            total_equipment += e
-        t.Commit()
-        tg.Assimilate()
-    except Exception as e:
-        t.RollBack()
-        tg.RollBack()
-        logger.error("{}❌ Transaction failed: {}".format(branch.name,e))
+def main():
+    settings = CircuitSettings()
+    circuits = collect_circuits()
+    if not circuits:
+        forms.alert("No electrical circuits found for display.", title="Circuit Browser")
         return
-
-    output = script.get_output()
-    output.close_others()
-    output.print_md("## ✅ Shared Parameters Updated")
-    output.print_md("* Circuits updated: **{}**".format(len(branches)))
-    output.print_md("* Electrical Fixtures updated: **{}**".format(total_fixtures))
-    output.print_md("* Electrical Equipment updated: **{}**".format(total_equipment))
+    window = CircuitSelectionWindow(doc, circuits, settings)
+    window.show(modal=False)
 
 
 if __name__ == "__main__":

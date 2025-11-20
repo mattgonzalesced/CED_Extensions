@@ -1,0 +1,66 @@
+@startuml
+' High-level architecture showing interactions between UI, services, domain engine, and models
+
+package "UI" {
+  class CalculateCircuitsUI {
+    note right
+      Collects circuit selections
+      Opens modeless browser dialog
+      Requests calculations on selection
+    end note
+  }
+}
+
+package "Services" {
+  class RevitCircuitReader
+  class RevitCircuitWriter
+}
+
+package "Domain / Engine" {
+  class CircuitEvaluator
+  class WireSizer
+  class ConduitSizer
+  class VoltageDropCalculator
+  class OverrideValidator
+}
+
+package "Models" {
+  class CircuitBranchModel
+  class CircuitOverrides
+  class CircuitSettings
+  class CircuitCalculationResult
+}
+
+package "Reference Data" {
+  class AmpacityTable
+  class ConductorAreaTable
+  class GroundTable
+  class StandardOCPTable
+}
+
+CalculateCircuitsUI --> RevitCircuitReader : read circuits
+RevitCircuitReader --> CircuitBranchModel : build models
+CalculateCircuitsUI --> CircuitEvaluator : evaluate selection
+CircuitEvaluator --> OverrideValidator : clean overrides
+CircuitEvaluator --> WireSizer : size breaker and conductors
+CircuitEvaluator --> ConduitSizer : size conduit and fill
+CircuitEvaluator --> CircuitCalculationResult : return results
+WireSizer --> VoltageDropCalculator : check drop
+WireSizer --> CircuitCalculationResult
+ConduitSizer --> CircuitCalculationResult
+CircuitBranchModel --> CircuitOverrides : has
+CircuitBranchModel --> CircuitSettings : has
+CircuitCalculationResult --> CircuitBranchModel : accompanies
+CircuitEvaluator --> CircuitBranchModel : uses inputs
+
+RevitCircuitWriter --> CircuitCalculationResult : consume results
+CalculateCircuitsUI --> RevitCircuitWriter : push updates
+
+WireSizer --> AmpacityTable
+WireSizer --> ConductorAreaTable
+WireSizer --> GroundTable
+WireSizer --> StandardOCPTable
+ConduitSizer --> ConductorAreaTable
+VoltageDropCalculator --> AmpacityTable
+
+@enduml
