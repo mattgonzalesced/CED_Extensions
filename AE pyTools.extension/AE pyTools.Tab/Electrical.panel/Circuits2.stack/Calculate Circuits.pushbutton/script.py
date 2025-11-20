@@ -42,6 +42,7 @@ def collect_shared_param_values(branch):
         'Conduit and Wire Size_CEDT': branch.get_conduit_and_wire_size(),
         'Circuit Load Current_CED': branch.circuit_load_current,
         'Circuit Ampacity_CED': branch.circuit_base_ampacity,
+        'CKT_Length Makeup_CED': branch.wire_length_makeup
     }
 
 

@@ -76,6 +76,10 @@ class CircuitBranch(object):
         self._is_transformer_primary = False
         self._is_feeder = self.is_feeder
 
+        self.wire_length_makeup = self._get_param_value(SHARED_PARAMS['CKT_Length Makeup_CED']['GUID'])
+        self._wire_length = None
+        self._get_wire_length()
+
         # User overrides (None = no override)
         self._auto_calculate_override = False
         self._include_neutral = False
@@ -92,6 +96,7 @@ class CircuitBranch(object):
         self._wire_ground_size_override = None
         self._conduit_type_override = None
         self._conduit_size_override = None
+
         self._get_user_overrides()
         self.reasonable_user_overrides = self._reasonable_user_overrides()
 
@@ -341,13 +346,7 @@ class CircuitBranch(object):
 
     @property
     def length(self):
-        try:
-            if self.is_power_circuit and not self.is_spare and not self.is_space:
-
-               return self.circuit.Length
-        except:
-            logger.debug("length property failed.")
-            return None
+        return self._wire_length
 
     @property
     def voltage(self):
@@ -451,6 +450,24 @@ class CircuitBranch(object):
             logger.debug("got overrides")
         except Exception as e:
             logger.debug("_get_user_overrides failed: {}".format(e))
+
+
+    def _get_wire_length(self):
+        if self.is_power_circuit and not self.is_spare and not self.is_space:
+            try:
+                rvt_length = self.circuit.Length
+                length_makeup = self.wire_length_makeup
+                final_length = rvt_length + length_makeup
+
+                if final_length <= 0:
+                    self.log_warning("Wire makeup length results in a total length of 0 or less! using Revit built-in Length.")
+                    self._wire_length = rvt_length
+                else:
+                    self._wire_length = final_length
+            except Exception as e:
+                logger.debug("length property failed. exception: {}".format(e))
+            return None
+
 
     # ----------- Public Access Properties -----------
 
