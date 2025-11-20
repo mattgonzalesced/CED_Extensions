@@ -7,6 +7,7 @@ from CEDElectrical.circuit_sizing.services.revit_reader import CircuitHierarchyR
 from CEDElectrical.circuit_sizing.ui.circuit_selector import CircuitSelectorWindow
 
 doc = revit.doc
+uidoc = revit.uidoc
 logger = script.get_logger()
 
 
