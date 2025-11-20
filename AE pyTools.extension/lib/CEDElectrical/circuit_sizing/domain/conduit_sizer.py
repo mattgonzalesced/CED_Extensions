@@ -1,7 +1,3 @@
-from __future__ import annotations
-
-from typing import Optional
-
 from CEDElectrical.circuit_sizing.domain.helpers import normalize_conduit_size, normalize_wire_size
 from CEDElectrical.circuit_sizing.models.circuit_branch import CircuitBranchModel, CircuitCalculationResult
 from CEDElectrical.refdata.conductor_area_table import CONDUCTOR_AREA_TABLE
@@ -10,22 +6,22 @@ from CEDElectrical.refdata.conduit_area_table import CONDUIT_AREA_TABLE, CONDUIT
 
 class ConduitSizer:
     """Calculates conduit size and fill based on conductor quantities."""
-    def __init__(self, model: CircuitBranchModel, results: CircuitCalculationResult):
+    def __init__(self, model, results):
         self.model = model
         self.results = results
 
-    def conduit_material(self) -> Optional[str]:
+    def conduit_material(self):
         if self.model.overrides.conduit_type_override:
             return self._material_from_type(self.model.overrides.conduit_type_override)
         return self.model.wire_info.get("conduit_material_type")
 
-    def _material_from_type(self, conduit_type: Optional[str]) -> Optional[str]:
+    def _material_from_type(self, conduit_type):
         for material, type_dict in CONDUIT_AREA_TABLE.items():
             if conduit_type in type_dict:
                 return material
         return None
 
-    def calculate_conduit(self) -> Optional[str]:
+    def calculate_conduit(self):
         insulation = self.results.wire_insulation or self.model.wire_info.get("wire_insulation")
         conduit_material = self.conduit_material()
         conduit_type = self.model.overrides.conduit_type_override or self.model.wire_info.get("conduit_type", "EMT")
@@ -63,7 +59,7 @@ class ConduitSizer:
                 return size
         return None
 
-    def calculate_fill(self) -> Optional[float]:
+    def calculate_fill(self):
         conduit_raw = self.model.overrides.conduit_size_override or self.results.conduit.size
         conduit_size = normalize_conduit_size(conduit_raw, self.model.settings.conduit_size_suffix)
         insulation = self.results.wire_insulation or self.model.wire_info.get("wire_insulation")
@@ -94,19 +90,19 @@ class ConduitSizer:
         return self.results.conduit.fill
 
     # --- Quantities/formatting helpers ---
-    def hot_wire_quantity(self) -> int:
+    def hot_wire_quantity(self):
         return self.model.poles or 0
 
-    def neutral_wire_quantity(self) -> int:
+    def neutral_wire_quantity(self):
         return 1 if self.results.neutral_included else 0
 
-    def ground_wire_quantity(self) -> int:
+    def ground_wire_quantity(self):
         return 1 if self.model.branch_type != "SPACE" else 0
 
-    def isolated_ground_quantity(self) -> int:
+    def isolated_ground_quantity(self):
         return 1 if self.results.isolated_ground_included else 0
 
-    def _formatted_hot_wire(self) -> Optional[str]:
+    def _formatted_hot_wire(self):
         if self.model.overrides.wire_hot_size_override and self.model.overrides.auto_calculate:
             return self.model.overrides.wire_hot_size_override
         if not self.results.wire.hot_wire_size:
@@ -115,14 +111,14 @@ class ConduitSizer:
             return "{}{}".format(self.model.settings.wire_size_prefix, self.results.wire.hot_wire_size)
         return self.results.wire.hot_wire_size
 
-    def _formatted_neutral_wire(self) -> Optional[str]:
+    def _formatted_neutral_wire(self):
         if not self.results.neutral_included:
             return None
         if self.model.overrides.wire_neutral_size_override and self.model.overrides.auto_calculate:
             return self.model.overrides.wire_neutral_size_override
         return self._formatted_hot_wire()
 
-    def _formatted_ground_wire(self) -> Optional[str]:
+    def _formatted_ground_wire(self):
         if self.model.overrides.wire_ground_size_override and self.model.overrides.auto_calculate:
             return self.model.overrides.wire_ground_size_override
         if not self.results.wire.ground_wire_size:
@@ -131,7 +127,7 @@ class ConduitSizer:
             return "{}{}".format(self.model.settings.wire_size_prefix, self.results.wire.ground_wire_size)
         return self.results.wire.ground_wire_size
 
-    def _formatted_isolated_ground_wire(self) -> Optional[str]:
+    def _formatted_isolated_ground_wire(self):
         if not self.results.isolated_ground_included:
             return None
         return self._formatted_ground_wire()

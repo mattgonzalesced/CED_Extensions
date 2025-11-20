@@ -1,7 +1,3 @@
-from __future__ import annotations
-
-from typing import Optional, Tuple
-
 from CEDElectrical.circuit_sizing.domain.helpers import normalize_wire_size
 from CEDElectrical.circuit_sizing.domain.voltage_drop import VoltageDropCalculator
 from CEDElectrical.circuit_sizing.models.circuit_branch import CircuitBranchModel, CircuitCalculationResult
@@ -13,10 +9,10 @@ from CEDElectrical.refdata.standard_ocp_table import BREAKER_FRAME_SWITCH_TABLE
 
 class WireSizer:
     """Determines breaker, conductor sizes, and ampacity for a circuit model."""
-    def __init__(self, model: CircuitBranchModel):
+    def __init__(self, model):
         self.model = model
 
-    def calculate_breaker(self) -> Optional[float]:
+    def calculate_breaker(self):
         """Return a breaker size based on load and minimum settings."""
         if self.model.settings.auto_calculate_breaker:
             amps = self.model.apparent_current
@@ -35,9 +31,7 @@ class WireSizer:
                 return breaker
         return None
 
-    def size_hot_conductor(
-        self, overrides: CircuitCalculationResult, cleaned_hot_override: Optional[str]
-    ) -> Tuple[Optional[str], Optional[int], Optional[float]]:
+    def size_hot_conductor(self, overrides, cleaned_hot_override):
         """Size the hot conductor based on overrides and ampacity rules."""
         rating = overrides.wire.breaker_rating
         wire_info = self.model.wire_info
@@ -95,9 +89,7 @@ class WireSizer:
 
         return None, None, None
 
-    def size_ground_conductor(
-        self, overrides: CircuitCalculationResult, cleaned_ground_override: Optional[str]
-    ) -> Optional[str]:
+    def size_ground_conductor(self, overrides, cleaned_ground_override):
         rating = overrides.wire.breaker_rating
         wire_info = self.model.wire_info
         material = overrides.wire_material or wire_info.get("wire_material", "CU")
@@ -144,7 +136,7 @@ class WireSizer:
         return None
 
     @staticmethod
-    def _is_ampacity_acceptable(breaker_rating: float, ampacity: float, circuit_amps: Optional[float]) -> bool:
+    def _is_ampacity_acceptable(breaker_rating, ampacity, circuit_amps):
         if circuit_amps is not None and ampacity < circuit_amps:
             return False
         if ampacity >= breaker_rating:
@@ -157,7 +149,7 @@ class WireSizer:
                 return std_rating >= breaker_rating
         return False
 
-    def evaluate(self, cleaned_overrides) -> CircuitCalculationResult:
+    def evaluate(self, cleaned_overrides):
         result = CircuitCalculationResult()
         result.wire_material = cleaned_overrides.wire_material_override or self.model.wire_info.get("wire_material")
         result.wire_temp_rating = cleaned_overrides.wire_temp_rating_override or self.model.wire_info.get("wire_temperature_rating")

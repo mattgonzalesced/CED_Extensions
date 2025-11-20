@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from CEDElectrical.circuit_sizing.domain.conduit_sizer import ConduitSizer
 from CEDElectrical.circuit_sizing.domain.override_validator import OverrideValidator
 from CEDElectrical.circuit_sizing.domain.wire_sizer import WireSizer
@@ -10,7 +8,7 @@ class CircuitEvaluator:
     """Coordinates sizing logic for a circuit model."""
 
     @staticmethod
-    def evaluate(model: CircuitBranchModel) -> CircuitCalculationResult:
+    def evaluate(model):
         overrides = OverrideValidator(model).cleaned_overrides()
         model.overrides = overrides
 

@@ -1,7 +1,3 @@
-from __future__ import annotations
-
-from typing import Optional
-
 from CEDElectrical.circuit_sizing.domain.helpers import normalize_conduit_size, normalize_wire_size
 from CEDElectrical.circuit_sizing.models.circuit_branch import CircuitBranchModel, CircuitOverrides
 
@@ -9,17 +5,16 @@ from CEDElectrical.circuit_sizing.models.circuit_branch import CircuitBranchMode
 class OverrideValidator:
     """Cleans and normalizes user-entered overrides before calculations."""
 
-    def __init__(self, model: CircuitBranchModel):
+    def __init__(self, model):
         self.model = model
-        self.overrides: CircuitOverrides = model.overrides
+        self.overrides = model.overrides
 
-    def cleaned_overrides(self) -> CircuitOverrides:
+    def cleaned_overrides(self):
         settings = self.model.settings
-        cleaned = CircuitOverrides(
-            auto_calculate=self.overrides.auto_calculate,
-            include_neutral=self.overrides.include_neutral,
-            include_isolated_ground=self.overrides.include_isolated_ground,
-        )
+        cleaned = CircuitOverrides()
+        cleaned.auto_calculate = self.overrides.auto_calculate
+        cleaned.include_neutral = self.overrides.include_neutral
+        cleaned.include_isolated_ground = self.overrides.include_isolated_ground
 
         cleaned.breaker_override = self._safe_float(self.overrides.breaker_override)
         cleaned.wire_sets_override = self._safe_int(self.overrides.wire_sets_override)
@@ -51,18 +46,18 @@ class OverrideValidator:
         return cleaned
 
     @staticmethod
-    def _safe_str(value: Optional[str]) -> Optional[str]:
+    def _safe_str(value):
         return str(value).strip() if value not in (None, "") else None
 
     @staticmethod
-    def _safe_float(value: Optional[float]) -> Optional[float]:
+    def _safe_float(value):
         try:
             return float(value) if value not in (None, "") else None
         except Exception:
             return None
 
     @staticmethod
-    def _safe_int(value: Optional[int]) -> Optional[int]:
+    def _safe_int(value):
         try:
             return int(value) if value not in (None, "") else None
         except Exception:

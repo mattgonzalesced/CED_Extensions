@@ -1,15 +1,15 @@
-from __future__ import annotations
-
-from typing import Optional
+"""Helper functions for normalizing sizing inputs."""
 
 
-def normalize_wire_size(value: Optional[str], prefix: str = "#") -> Optional[str]:
+def normalize_wire_size(value, prefix="#"):
+    """Return a normalized wire size without the configured prefix."""
     if not value:
         return None
     return str(value).replace(prefix, "").strip()
 
 
-def normalize_conduit_size(value: Optional[str], suffix: str = "C") -> Optional[str]:
+def normalize_conduit_size(value, suffix="C"):
+    """Return a normalized conduit size without the configured suffix."""
     if not value:
         return None
     return str(value).replace(suffix, "").strip()

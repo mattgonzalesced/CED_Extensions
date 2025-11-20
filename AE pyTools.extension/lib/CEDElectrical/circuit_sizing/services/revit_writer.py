@@ -1,7 +1,10 @@
+<<<<<<< ours
 from __future__ import annotations
 
 from typing import Dict, Tuple
 
+=======
+>>>>>>> theirs
 import Autodesk.Revit.DB as DB
 from pyrevit import script
 
@@ -14,7 +17,11 @@ logger = script.get_logger()
 class RevitCircuitWriter:
     """Writes circuit calculation results back into Revit parameters."""
     @staticmethod
+<<<<<<< ours
     def collect_param_values(model: CircuitBranchModel, results: CircuitCalculationResult) -> Dict[str, object]:
+=======
+    def collect_param_values(model, results):
+>>>>>>> theirs
         hot_qty = model.poles or 0
         neutral_qty = 1 if results.neutral_included else 0
         ground_qty = 1 if model.branch_type != "SPACE" else 0
@@ -82,7 +89,11 @@ class RevitCircuitWriter:
         }
 
     @staticmethod
+<<<<<<< ours
     def _format_wire(size: object, prefix: str) -> str:
+=======
+    def _format_wire(size, prefix):
+>>>>>>> theirs
         if size is None:
             return ""
         if prefix:
@@ -90,7 +101,11 @@ class RevitCircuitWriter:
         return str(size)
 
     @staticmethod
+<<<<<<< ours
     def _format_conduit(size: object, suffix: str) -> str:
+=======
+    def _format_conduit(size, suffix):
+>>>>>>> theirs
         if size is None:
             return ""
         if suffix:
@@ -113,7 +128,11 @@ class RevitCircuitWriter:
         return "{} {}".format(" + ".join(parts), suffix).strip()
 
     @staticmethod
+<<<<<<< ours
     def _wire_size_callout(sets: int, wire_set_string: str) -> str:
+=======
+    def _wire_size_callout(sets, wire_set_string):
+>>>>>>> theirs
         if not wire_set_string:
             return ""
         sets = sets or 1
@@ -122,7 +141,11 @@ class RevitCircuitWriter:
         return wire_set_string
 
     @staticmethod
+<<<<<<< ours
     def _conduit_and_wire_size(sets: int, conduit: str, conduit_type: str, wire_callout: str) -> str:
+=======
+    def _conduit_and_wire_size(sets, conduit, conduit_type, wire_callout):
+>>>>>>> theirs
         if not conduit:
             return ""
         prefix = "{} SETS - ".format(sets) if (sets or 1) > 1 else ""
@@ -131,7 +154,11 @@ class RevitCircuitWriter:
         return "{}{} ({})".format(prefix, conduit, conduit_type)
 
     @staticmethod
+<<<<<<< ours
     def update_circuit_parameters(circuit, param_values: Dict[str, object]):
+=======
+    def update_circuit_parameters(circuit, param_values):
+>>>>>>> theirs
         for param_name, value in param_values.items():
             if value is None:
                 continue
@@ -149,7 +176,11 @@ class RevitCircuitWriter:
                 logger.debug("Failed to write '{}' to circuit {}: {}".format(param_name, circuit.Id, e))
 
     @staticmethod
+<<<<<<< ours
     def update_connected_elements(circuit, param_values: Dict[str, object]) -> Tuple[int, int]:
+=======
+    def update_connected_elements(circuit, param_values):
+>>>>>>> theirs
         fixture_count = 0
         equipment_count = 0
 

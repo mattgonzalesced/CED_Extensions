@@ -1,7 +1,3 @@
-from __future__ import annotations
-
-from typing import Optional
-
 from CEDElectrical.refdata.impedance_table import WIRE_IMPEDANCE_TABLE
 from CEDElectrical.circuit_sizing.domain.helpers import normalize_wire_size
 from CEDElectrical.circuit_sizing.models.circuit_branch import CircuitBranchModel
@@ -11,7 +7,7 @@ class VoltageDropCalculator:
     """Computes voltage drop percentage using impedance lookup tables."""
 
     @staticmethod
-    def calculate(model: CircuitBranchModel, wire_size: Optional[str], sets: int = 1) -> Optional[float]:
+    def calculate(model, wire_size, sets=1):
         """Return voltage drop fraction for the supplied circuit model."""
         if not wire_size:
             return None
