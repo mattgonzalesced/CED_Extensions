@@ -9,12 +9,14 @@ class PlacementRule(object):
         placement_basis=None,
         placement_mode=None,
         rotation_basis=None,
+        tags=None,
     ):
         self._offset_xyz = tuple(offset_xyz) if offset_xyz is not None else None
         self._rotation_degrees = rotation_degrees
         self._placement_basis = placement_basis
         self._placement_mode = placement_mode
         self._rotation_basis = rotation_basis
+        self._tags = list(tags) if tags else []
 
     def get_offset_xyz(self):
         return self._offset_xyz
@@ -45,6 +47,12 @@ class PlacementRule(object):
 
     def set_rotation_basis(self, value):
         self._rotation_basis = value
+
+    def get_tags(self):
+        return list(self._tags or [])
+
+    def set_tags(self, value):
+        self._tags = list(value) if value else []
 
     # Helpers
     def update_offset(self, delta_xyz):

@@ -1,0 +1,36 @@
+Add YAML Profiles
+Captures only dependent tags, so loose detail components are ignored. Parameter harvesting is
+limited and duplicate entries appear when the tool is run multiple times.
+
+Delete YAML Profiles
+The UI cannot distinguish duplicate labels and deletions happen immediately with no backup. The
+fallback parser may reorder YAML.
+
+Edit YAML Profiles
+Type dropdown is keyed only by label, so duplicates overlap. The parameter grid exposes existing
+keys only, and tag validation is minimal.
+
+Load Equipment Definition
+No filtering is available; every linked definition drops at once and missing families are skipped
+silently. Tags only will be loaded on the active view.
+
+PlaceElements
+Malformed CSV rows or missing families cause the single transaction to roll back. dev-Group IDs are
+ignored, so placements can land in the wrong zones.
+
+Set New XYZ Offset
+Assumes the selected element maps to a unique label; misclicking edits the wrong definition and tag
+offsets stay stale. 
+
+Set New Rotation Offset
+Double-counts rotation when the element was already rotated, updates only the first offset entry,
+and ignores tag rotation. Need a way for this to just know which equipment we want offset without 
+picking an equipment definition, probably we should add a parameter to everything called
+Equipment Definition ID in revit, clear this with Tony. Otherwise the program will never know which 
+element you want modified unless you select it, it can narrow down by family type label right now, 
+but theres a lot of duplex wall receptacles to say the least.
+
+Tag Equipment
+Strict dev-Group ID matching blocks tagging when the parameter is blank. Dedupe collapses
+intentional duplicate tags and leader lines are forced on.
+

@@ -1,0 +1,56 @@
+{
+  "entries": [
+    {
+      "cad_name": "Reed and Tony Work Together", 
+      "label": "EF-U_Receptacle_CED : Duplex Wall #2", 
+      "is_group": true, 
+      "offsets": {
+        "rotation_deg": 90.0, 
+        "x_inches": -5.6193569999999999, 
+        "y_inches": 31.315010000000001, 
+        "z_inches": 0.0
+      }, 
+      "tags": [
+        {
+          "offset": [
+            4.2632564145605996e-13, 
+            2.0156249999997167, 
+            -2.46469511466785e-14
+          ], 
+          "family": "EF-Tag_Electrical Fixtures_CED", 
+          "rotation_deg": 0.0, 
+          "category": "Electrical Fixture Tags", 
+          "parameters": {}, 
+          "type": "Circuit Number"
+        }
+      ], 
+      "equipment_id": "00001"
+    }, 
+    {
+      "cad_name": "Reed and Tony Work Together", 
+      "label": "EF-U_Receptacle_CED : Duplex Wall", 
+      "is_group": true, 
+      "offsets": {
+        "rotation_deg": 0.0, 
+        "x_inches": -1.28185644111193, 
+        "y_inches": 6.8840438504158801, 
+        "z_inches": 0.0
+      }, 
+      "tags": [
+        {
+          "offset": [
+            4.2632564145605996e-13, 
+            2.0156249999997167, 
+            -2.46469511466785e-14
+          ], 
+          "family": "EF-Tag_Electrical Fixtures_CED", 
+          "rotation_deg": 0.0, 
+          "category": "Electrical Fixture Tags", 
+          "parameters": {}, 
+          "type": "Circuit Number"
+        }
+      ], 
+      "equipment_id": "00002"
+    }
+  ]
+}

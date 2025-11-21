@@ -2070,7 +2070,7 @@
           }
         }, 
         {
-          "label": "P_Electric Water Cooler - Dual Height : P_Default", 
+          "label": "P_Electric Water Cooler - Dual Height", 
           "is_group": false, 
           "category_name": "Model", 
           "instance_config": {
@@ -2232,7 +2232,7 @@
           }
         }, 
         {
-          "label": "P_Electric Water Heater on Floor : P_Default", 
+          "label": "P_Electric Water Heater on Floor", 
           "is_group": false, 
           "category_name": "Model", 
           "instance_config": {
@@ -2398,7 +2398,7 @@
           }
         }, 
         {
-          "label": "P_Commercial Lavatory ADA : P_Default", 
+          "label": "P_Commercial Lavatory ADA", 
           "is_group": false, 
           "category_name": "Model", 
           "instance_config": {
@@ -4053,50 +4053,6 @@
     {
       "types": [
         {
-          "label": "P_2 inch (50) Floor Drain, Horizontal with Trap Primer : P_Default", 
-          "is_group": false, 
-          "category_name": "Model", 
-          "instance_config": {
-            "offsets": [
-              {
-                "rotation_deg": 0.0, 
-                "x_inches": 0.0, 
-                "y_inches": 0.0, 
-                "z_inches": 0.0
-              }
-            ], 
-            "tags": [], 
-            "parameters": {}
-          }
-        }
-      ], 
-      "cad_name": "Floor Drain 1"
-    }, 
-    {
-      "types": [
-        {
-          "label": "P_2 inch (50) Floor Drain, Horizontal with Trap Primer : P_Default", 
-          "is_group": false, 
-          "category_name": "Model Groups", 
-          "instance_config": {
-            "offsets": [
-              {
-                "rotation_deg": 0.0, 
-                "x_inches": 0.0, 
-                "y_inches": 0.0, 
-                "z_inches": 0.0
-              }
-            ], 
-            "tags": [], 
-            "parameters": {}
-          }
-        }
-      ], 
-      "cad_name": "Floor Drain 2"
-    }, 
-    {
-      "types": [
-        {
           "label": "Manual Key Note- All Shapes : Square", 
           "is_group": false, 
           "category_name": "Generic Annotations", 
@@ -4173,7 +4129,7 @@
           }
         }, 
         {
-          "label": "P_Shower Rough-In 2 : P_Default", 
+          "label": "P_Shower Rough-In 2", 
           "is_group": false, 
           "category_name": "Model", 
           "instance_config": {
@@ -4271,7 +4227,7 @@
           }
         }, 
         {
-          "label": "P_Shower Rough-In : P_Default", 
+          "label": "P_Shower Rough-In", 
           "is_group": false, 
           "category_name": "Model", 
           "instance_config": {
@@ -4331,7 +4287,7 @@
           }
         }, 
         {
-          "label": "P_Commercial Water Closet : P_Default", 
+          "label": "P_Commercial Water Closet", 
           "is_group": false, 
           "category_name": "Model", 
           "instance_config": {
@@ -4353,7 +4309,7 @@
     {
       "types": [
         {
-          "label": "P_2 inch (50) Floor Drain, Horizontal with Trap Primer : P_Default", 
+          "label": "P_2 inch (50) Floor Drain, Horizontal with Trap Primer", 
           "is_group": false, 
           "category_name": "Model", 
           "instance_config": {
@@ -4413,7 +4369,7 @@
           }
         }, 
         {
-          "label": "P_Sink Fixture - Janitorial, Vertical : P_Default", 
+          "label": "P_Sink Fixture - Janitorial, Vertical", 
           "is_group": false, 
           "category_name": "Model", 
           "instance_config": {
@@ -4477,7 +4433,7 @@
           }
         }, 
         {
-          "label": "P_Commercial Urinal : P_Default", 
+          "label": "P_Commercial Urinal", 
           "is_group": false, 
           "category_name": "Model", 
           "instance_config": {
@@ -4537,7 +4493,7 @@
           }
         }, 
         {
-          "label": "P_Commercial Water Closet : P_Default", 
+          "label": "P_Commercial Water Closet", 
           "is_group": false, 
           "category_name": "Model", 
           "instance_config": {

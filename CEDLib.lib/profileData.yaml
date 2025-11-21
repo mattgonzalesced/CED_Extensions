@@ -1,0 +1,4848 @@
+equipment_definitions:
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Disconnect Switch_CED
+    category: Electrical Fixtures
+    type_name_pattern: Fused - 60A
+    parameter_filters:
+      '{}': {}
+  name: BCS_Tanning Bed 42.4
+  schema_version: 1
+  id: EQ-001
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Disconnect Switch_CED : Fused - 60A'
+      parameters:
+        dev-Group ID: HM62A
+        CKT_Rating_CED: 40
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L4
+        Number of Poles_CED: 3
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 11223.00
+        CKT_Circuit Number_CEDT: DEDICATED
+        Voltage_CED: 240
+        CKT_Load Name_CEDT: TLT TANNING - 103F
+      id: SET-001-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 270
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: HM62A
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: NONGROUPEDBLOCK
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: RECEPT - BCS
+      id: SET-001-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-001-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 180
+        x_inches: -45
+        y_inches: 10
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Junction Box - Wall'
+      parameters:
+        dev-Group ID: HM62A
+      id: SET-001-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: HM62A
+      id: SET-001-LED-005
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Speaker'
+      parameters:
+        dev-Group ID: HM62A
+      id: SET-001-LED-006
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-001-LED-007
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 16
+        y_inches: 8
+        z_inches: 0
+    id: SET-001
+    name: BCS_Tanning Bed 42.4 Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Disconnect Switch_CED
+    category: Electrical Fixtures
+    type_name_pattern: Fused - 60A
+    parameter_filters:
+      '{}': {}
+  name: BCS_Hybrid Tanning Booth
+  schema_version: 1
+  id: EQ-002
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Disconnect Switch_CED : Fused - 60A'
+      parameters:
+        dev-Group ID: HM62E Hybrid Tanning Booth
+        CKT_Rating_CED: 40
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L4
+        Number of Poles_CED: 3
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 11640.00
+        CKT_Circuit Number_CEDT: DEDICATED
+        Voltage_CED: 240
+        CKT_Load Name_CEDT: HYBRID TANNER - 103B
+      id: SET-002-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 270
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: HM62E Hybrid Tanning Booth
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: NONGROUPEDBLOCK
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: RECEPT - BCS
+      id: SET-002-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 90
+        x_inches: 12
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-002-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 180
+        x_inches: -12
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Junction Box - Wall'
+      parameters:
+        dev-Group ID: HM62E Hybrid Tanning Booth
+      id: SET-002-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 18
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: HM62E Hybrid Tanning Booth
+      id: SET-002-LED-005
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 24
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Speaker'
+      parameters:
+        dev-Group ID: HM62E Hybrid Tanning Booth
+      id: SET-002-LED-006
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 30
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-002-LED-007
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 16
+        y_inches: 8
+        z_inches: 0
+    id: SET-002
+    name: BCS_Hybrid Tanning Booth Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: LF-U_Exit Sign_CED
+    category: Lighting Fixtures
+    type_name_pattern: E2
+    parameter_filters:
+      '{}': {}
+  name: Exit Directional Sign
+  schema_version: 1
+  id: EQ-003
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'LF-U_Exit Sign_CED : E2'
+      parameters:
+        CKT_Rating_CED: 20
+        CKT_Panel_CEDT: L3
+        CKT_Schedule Notes_CEDT: ''
+        CKT_Circuit Number_CEDT: EMERGENCY
+        CKT_Load Name_CEDT: EMERGENCY - (Space)
+      id: SET-003-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Lighting Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-003
+    name: Exit Directional Sign Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Duplex Wall - GFCI
+    parameter_filters:
+      '{}': {}
+  name: PF_Plan DF
+  schema_version: 1
+  id: EQ-004
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall - GFCI'
+      parameters:
+        dev-Group ID: PF_Plan DF
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L2
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 27
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: WATER FOUNTAIN
+      id: SET-004-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall - GFCI'
+      parameters:
+        dev-Group ID: PF_Plan DF
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L2
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 27
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: WATER FOUNTAIN
+      id: SET-004-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 12
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-004-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-004-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-004-LED-005
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: P_Electric Water Cooler - Dual Height
+      parameters: {}
+      id: SET-004-LED-006
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Model
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-004
+    name: PF_Plan DF Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Duplex Wall - GFCI
+    parameter_filters:
+      '{}': {}
+  name: PF_Plan Soap Dispenser
+  schema_version: 1
+  id: EQ-005
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall - GFCI'
+      parameters:
+        dev-Group ID: PF_Plan Soap Dispenser
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 6 & 9
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: BATHROOM SINK
+      id: SET-005-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-005-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: -24
+        y_inches: 0
+        z_inches: 0
+    id: SET-005
+    name: PF_Plan Soap Dispenser Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Duplex Wall
+    parameter_filters:
+      '{}': {}
+  name: HM5A
+  schema_version: 1
+  id: EQ-006
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: HM5A
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L1
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 1920
+        CKT_Circuit Number_CEDT: DEDICATED
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: POWERED BIKE
+      id: SET-006-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 270
+        x_inches: 0
+        y_inches: -36
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-006-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 6
+        y_inches: 8
+        z_inches: 0
+    id: SET-006
+    name: HM5A Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    type_name_pattern: Square
+    parameter_filters:
+      '{}': {}
+  name: PF_Plan Urinal
+  schema_version: 1
+  id: EQ-007
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-007-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-007-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: P_Commercial Urinal
+      parameters: {}
+      id: SET-007-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Model
+      offsets:
+      - rotation_deg: 270
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-007
+    name: PF_Plan Urinal Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Junction Box_CED
+    category: Electrical Fixtures
+    type_name_pattern: Wall - With Stem
+    parameter_filters:
+      '{}': {}
+  name: Room Name 100 VESTIBULE
+  schema_version: 1
+  id: EQ-008
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Junction Box_CED : Wall - With Stem'
+      parameters:
+        dev-Group ID: Room Name 100 VESTIBULE
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 2
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 3994
+        CKT_Circuit Number_CEDT: DEDICATED
+        Voltage_CED: 208
+        CKT_Load Name_CEDT: ECH-1
+      id: SET-008-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 30
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: Room Name 100 VESTIBULE
+        CKT_Rating_CED: 0
+        CKT_Panel_CEDT: ''
+        CKT_Schedule Notes_CEDT: ''
+        CKT_Circuit Number_CEDT: ''
+        CKT_Load Name_CEDT: ''
+      id: SET-008-LED-002
+      tags:
+      - parameters: {}
+        type_name: Circuit Number
+        offsets:
+          rotation_deg: 0
+          x_inches: 0.9063
+          y_inches: -25.25
+          z_inches: 0
+        category_name: Annotation Symbols
+        family_name: EF-Tag_Electrical Fixtures_CED
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: -10.9903
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: ''
+        CKT_Rating_CED: 0
+        CKT_Panel_CEDT: L3
+        CKT_Schedule Notes_CEDT: ''
+        CKT_Circuit Number_CEDT: ''
+        CKT_Load Name_CEDT: ''
+      id: SET-008-LED-003
+      tags: []
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 5.79802872380242E-12
+        y_inches: 10.9902548661888
+        z_inches: 0
+    id: SET-008
+    name: Room Name 100 VESTIBULE Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Duplex Wall - GFCI
+    parameter_filters:
+      '{}': {}
+  name: 43 tv
+  schema_version: 1
+  id: EQ-009
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall - GFCI'
+      parameters:
+        dev-Group ID: 43 tv
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 250
+        CKT_Circuit Number_CEDT: 12
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: TV - MEN/WOMEN LOCKER ROOM
+      id: SET-009-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 45
+        x_inches: 0
+        y_inches: -12
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-009-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 6
+        y_inches: 8
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: 43 tv
+        Symbol Label_CEDT: TV
+      id: SET-009-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-009-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 16
+        y_inches: 8
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-009-LED-005
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 26
+        y_inches: 8
+        z_inches: 0
+    id: SET-009
+    name: 43 tv Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Duplex Wall
+    parameter_filters:
+      '{}': {}
+  name: 75TV
+  schema_version: 1
+  id: EQ-010
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: 75TV
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 250
+        CKT_Circuit Number_CEDT: 33
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: TV - MISSION STATEMENT
+      id: SET-010-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 180
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-010-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 90
+        x_inches: -12
+        y_inches: -16
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: 75TV
+        Symbol Label_CEDT: TV
+      id: SET-010-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-010-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 16
+        y_inches: 8
+        z_inches: 0
+    id: SET-010
+    name: 75TV Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Quad Wall
+    parameter_filters:
+      '{}': {}
+  name: IT RACKS
+  schema_version: 1
+  id: EQ-011
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Quad Wall'
+      parameters:
+        dev-Group ID: it
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 1
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: IT RACK
+      id: SET-011-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Quad Wall'
+      parameters:
+        dev-Group ID: it
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 1
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: IT RACK
+      id: SET-011-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 12
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-011-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-011
+    name: IT RACKS Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Disconnect Switch_CED
+    category: Electrical Fixtures
+    type_name_pattern: Fused - 60A
+    parameter_filters:
+      '{}': {}
+  name: Hybrid Light Bed HM62D
+  schema_version: 1
+  id: EQ-012
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Disconnect Switch_CED : Fused - 60A'
+      parameters:
+        dev-Group ID: Hybrid Light Bed HM62D
+        CKT_Rating_CED: 40
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L4
+        Number of Poles_CED: 3
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 11223.00
+        CKT_Circuit Number_CEDT: DEDICATED
+        Voltage_CED: 240
+        CKT_Load Name_CEDT: HYBRID LIGHT BED - 103E
+      id: SET-012-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 90
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: Hybrid Light Bed HM62D
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: NONGROUPEDBLOCK
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: RECEPT - BCS
+      id: SET-012-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 90
+        x_inches: 12
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-012-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: -12
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Junction Box - Wall'
+      parameters:
+        dev-Group ID: Hybrid Light Bed HM62D
+      id: SET-012-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 20
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: Hybrid Light Bed HM62D
+      id: SET-012-LED-005
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 30
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Speaker'
+      parameters:
+        dev-Group ID: Hybrid Light Bed HM62D
+      id: SET-012-LED-006
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 40
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-012-LED-007
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 16
+        y_inches: 8
+        z_inches: 0
+    id: SET-012
+    name: Hybrid Light Bed HM62D Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    type_name_pattern: Square
+    parameter_filters:
+      '{}': {}
+  name: PF_Plan ADA Toilet
+  schema_version: 1
+  id: EQ-013
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-013-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-013-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: P_Commercial Water Closet
+      parameters: {}
+      id: SET-013-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Model
+      offsets:
+      - rotation_deg: 270
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-013
+    name: PF_Plan ADA Toilet Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Duplex Wall
+    parameter_filters:
+      '{}': {}
+  name: BCS_Cryolounge
+  schema_version: 1
+  id: EQ-014
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: CRYO
+        CKT_Rating_CED: 40
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L4
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: GFI
+        Apparent Load Input_CED: 1440
+        CKT_Circuit Number_CEDT: DEDICATED
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: CRYOLOUNGE - 103
+      id: SET-014-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 90
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: CRYO
+      id: SET-014-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 6
+        y_inches: 0
+        z_inches: 0
+    id: SET-014
+    name: BCS_Cryolounge Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Disconnect Switch_CED
+    category: Electrical Fixtures
+    type_name_pattern: Fused - 60A
+    parameter_filters:
+      '{}': {}
+  name: BCS_Upright Tanning
+  schema_version: 1
+  id: EQ-015
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Disconnect Switch_CED : Fused - 60A'
+      parameters:
+        dev-Group ID: HM62B_Up tanning
+        CKT_Rating_CED: 40
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L4
+        Number of Poles_CED: 3
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 10392.00
+        CKT_Circuit Number_CEDT: DEDICATED
+        Voltage_CED: 240
+        CKT_Load Name_CEDT: STAND-UP TANNER - 103C
+      id: SET-015-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 180
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: HM62B_Up tanning
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: NONGROUPEDBLOCK
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: RECEPT - BCS
+      id: SET-015-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 12
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-015-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: -12
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Junction Box - Wall'
+      parameters:
+        dev-Group ID: HM62B_Up tanning
+      id: SET-015-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: HM62B_Up tanning
+      id: SET-015-LED-005
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Speaker'
+      parameters:
+        dev-Group ID: HM62B_Up tanning
+      id: SET-015-LED-006
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-015-LED-007
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 16
+        y_inches: 8
+        z_inches: 0
+    id: SET-015
+    name: BCS_Upright Tanning Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: LF-U_Exit Sign_CED
+    category: Lighting Fixtures
+    type_name_pattern: E1
+    parameter_filters:
+      '{}': {}
+  name: Exit Sign
+  schema_version: 1
+  id: EQ-016
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'LF-U_Exit Sign_CED : E1'
+      parameters:
+        CKT_Rating_CED: 20
+        CKT_Panel_CEDT: L3
+        CKT_Schedule Notes_CEDT: ''
+        CKT_Circuit Number_CEDT: EMERGENCY
+        CKT_Load Name_CEDT: EMERGENCY - (Space)
+      id: SET-016-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Lighting Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-016
+    name: Exit Sign Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Duplex Wall
+    parameter_filters:
+      '{}': {}
+  name: PF_Plan Vend Mach
+  schema_version: 1
+  id: EQ-017
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: vending machine
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 1000
+        CKT_Circuit Number_CEDT: DEDICATED
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: VENDING MACHINE
+      id: SET-017-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-017-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 270
+        x_inches: -12
+        y_inches: 0
+        z_inches: 0
+    id: SET-017
+    name: PF_Plan Vend Mach Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    type_name_pattern: Square
+    parameter_filters:
+      '{}': {}
+  name: Room Name 105 LOCKER ROOM MEN'S
+  schema_version: 1
+  id: EQ-018
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-018-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall - GFCI'
+      parameters:
+        dev-Group ID: "ROOM: Men's Room"
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L2
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: GFI
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 10
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: DRY VANITY
+      id: SET-018-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 270
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall - GFCI'
+      parameters:
+        dev-Group ID: "ROOM: Men's Room"
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L2
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: GFI
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 10
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: DRY VANITY
+      id: SET-018-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 90
+        x_inches: -12
+        y_inches: 0
+        z_inches: 0
+    id: SET-018
+    name: Room Name 105 LOCKER ROOM MEN'S Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: LF-U_Wall Sconce Fixture_CED
+    category: Lighting Fixtures
+    type_name_pattern: F12
+    parameter_filters:
+      '{}': {}
+  name: PF_Light Sconce
+  schema_version: 1
+  id: EQ-019
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'LF-U_Wall Sconce Fixture_CED : F12'
+      parameters:
+        dev-Group ID: F12
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: L
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: STANDARD
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: (Space)
+      id: SET-019-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Lighting Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-019
+    name: PF_Light Sconce Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Specialty Wall - 240V/1Ph
+    parameter_filters:
+      '{}': {}
+  name: BCS_Hydro Lounge
+  schema_version: 1
+  id: EQ-021
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Specialty Wall - 240V/1Ph'
+      parameters:
+        dev-Group ID: HM63C (Hydromassage)
+        CKT_Rating_CED: 30
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L4
+        Number of Poles_CED: 2
+        CKT_Schedule Notes_CEDT: GFI
+        Apparent Load Input_CED: 4320.00
+        CKT_Circuit Number_CEDT: DEDICATED
+        Voltage_CED: 240
+        CKT_Load Name_CEDT: HYDROMASSAGE - 103A
+      id: SET-021-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 180
+        x_inches: 0
+        y_inches: -24
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall - GFCI'
+      parameters:
+        dev-Group ID: HM63C (Hydromassage)
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L4
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 37
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: HYDROMASSAGE RECEPT - 103A
+      id: SET-021-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 180
+        x_inches: 12
+        y_inches: -24
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-021-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 6
+        y_inches: 8
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Junction Box - Wall'
+      parameters:
+        dev-Group ID: HM63C (Hydromassage)
+      id: SET-021-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 12
+        y_inches: 0
+        z_inches: 0
+    id: SET-021
+    name: BCS_Hydro Lounge Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Duplex Wall
+    parameter_filters:
+      '{}': {}
+  name: HM5A (Indoor Cycle)
+  schema_version: 1
+  id: EQ-020
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: HM5A (Indoor Cycle)
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L1
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 1920
+        CKT_Circuit Number_CEDT: DEDICATED
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: POWERED BIKE
+      id: SET-020-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-020
+    name: HM5A (Indoor Cycle) Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    parameter_filters: {}
+    type_name_pattern: Duplex Wall
+  name: Reed
+  schema_version: 1
+  id: EQ-053
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        CKT_Rating_CED: 0
+        CKT_Panel_CEDT: ''
+        CKT_Schedule Notes_CEDT: ''
+        CKT_Circuit Number_CEDT: ''
+        CKT_Load Name_CEDT: ''
+      id: SET-053-LED-001
+      tags: []
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: -15
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        CKT_Rating_CED: 0
+        CKT_Panel_CEDT: ''
+        CKT_Schedule Notes_CEDT: ''
+        CKT_Circuit Number_CEDT: ''
+        CKT_Load Name_CEDT: ''
+      id: SET-053-LED-002
+      tags: []
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 15
+        y_inches: 0
+        z_inches: 0
+    id: SET-053
+    name: Reed Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Quad Wall
+    parameter_filters:
+      '{}': {}
+  name: PF_Plan TV
+  schema_version: 1
+  id: EQ-022
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Quad Wall'
+      parameters:
+        dev-Group ID: TV TRUSS
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L2
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: TVTRUSS
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: TV TRUSS
+      id: SET-022-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 180
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-022-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 90
+        x_inches: -12
+        y_inches: -16
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: 27TV
+        Symbol Label_CEDT: TV
+      id: SET-022-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-022-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 16
+        y_inches: 8
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-022-LED-005
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 36
+        y_inches: 8
+        z_inches: 0
+    id: SET-022
+    name: PF_Plan TV Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: LF-U_Round Fixture_CED
+    category: Lighting Fixtures
+    type_name_pattern: F1A
+    parameter_filters:
+      '{}': {}
+  name: PF_Light Recess
+  schema_version: 1
+  id: EQ-023
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'LF-U_Round Fixture_CED : F1A'
+      parameters:
+        CKT_Rating_CED: 20
+        CKT_Panel_CEDT: L3
+        CKT_Schedule Notes_CEDT: ''
+        CKT_Circuit Number_CEDT: STANDARD
+        CKT_Load Name_CEDT: (Space)
+      id: SET-023-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Lighting Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 19.9845044760203
+        y_inches: -12.9691980991159
+        z_inches: 0.00134743508537016
+    id: SET-023
+    name: PF_Light Recess Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    type_name_pattern: Square
+    parameter_filters:
+      '{}': {}
+  name: PF_Plan WC
+  schema_version: 1
+  id: EQ-024
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-024-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-024-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: P_Commercial Water Closet
+      parameters: {}
+      id: SET-024-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Model
+      offsets:
+      - rotation_deg: 270
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-024
+    name: PF_Plan WC Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Duplex Wall
+    parameter_filters:
+      '{}': {}
+  name: 70tv
+  schema_version: 1
+  id: EQ-025
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: 70tv
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 250
+        CKT_Circuit Number_CEDT: 32
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: TV - DIGITAL MEDIA
+      id: SET-025-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 6
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-025-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 6
+        y_inches: 8
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: 70tv
+        Symbol Label_CEDT: TV
+      id: SET-025-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-025-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 16
+        y_inches: 8
+        z_inches: 0
+    id: SET-025
+    name: 70tv Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Junction Box_CED
+    category: Electrical Fixtures
+    type_name_pattern: Wall - With Stem
+    parameter_filters:
+      '{}': {}
+  name: PF_Plan Sloan Trough Sink
+  schema_version: 1
+  id: EQ-026
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Junction Box_CED : Wall - With Stem'
+      parameters:
+        dev-Group ID: PF_Plan Sloan Trough Sink
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L2
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 6 & 9
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: BATHROOM SINKS
+      id: SET-026-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 90
+        x_inches: 30
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Junction Box_CED : Wall - With Stem'
+      parameters:
+        dev-Group ID: PF_Plan Sloan Trough Sink
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 6 & 9
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: BATHROOM SINKS
+      id: SET-026-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 90
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Junction Box_CED : Wall - With Stem'
+      parameters:
+        dev-Group ID: PF_Plan Sloan Trough Sink
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 6 & 9
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: BATHROOM SINKS
+      id: SET-026-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 90
+        x_inches: -30
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-026-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 32
+        y_inches: -62
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-026-LED-005
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-026-LED-006
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: P_Commercial Lavatory ADA
+      parameters: {}
+      id: SET-026-LED-007
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Model
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-026
+    name: PF_Plan Sloan Trough Sink Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Disconnect Switch_CED
+    category: Electrical Fixtures
+    type_name_pattern: Fused - 60A
+    parameter_filters:
+      '{}': {}
+  name: PF Tanning 42-3 TLT PLT
+  schema_version: 1
+  id: EQ-027
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Disconnect Switch_CED : Fused - 60A'
+      parameters:
+        dev-Group ID: PF Tanning 42-3 TLT PLT
+        CKT_Rating_CED: 40
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L4
+        Number of Poles_CED: 3
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 11223.00
+        CKT_Circuit Number_CEDT: DEDICATED
+        Voltage_CED: 240
+        CKT_Load Name_CEDT: LAY-DOWN TANNING - 103G
+      id: SET-027-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 270
+        x_inches: 0
+        y_inches: 54
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: PF Tanning 42-3 TLT PLT
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: NONGROUPEDBLOCK
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: RECEPT - BCS
+      id: SET-027-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 270
+        x_inches: 44
+        y_inches: -60
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-027-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 180
+        x_inches: -46
+        y_inches: 10
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Junction Box - Wall'
+      parameters:
+        dev-Group ID: PF Tanning 42-3 TLT PLT
+      id: SET-027-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF Tanning 42-3 TLT PLT
+      id: SET-027-LED-005
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Speaker'
+      parameters:
+        dev-Group ID: PF Tanning 42-3 TLT PLT
+      id: SET-027-LED-006
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-027-LED-007
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 16
+        y_inches: 8
+        z_inches: 0
+    id: SET-027
+    name: PF Tanning 42-3 TLT PLT Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: LF-U_Universal Light Fixture_CED
+    category: Lighting Fixtures
+    type_name_pattern: F2
+    parameter_filters:
+      '{}': {}
+  name: PF_Light Linear Bay
+  schema_version: 1
+  id: EQ-028
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'LF-U_Universal Light Fixture_CED : F2'
+      parameters:
+        CKT_Rating_CED: 20
+        CKT_Panel_CEDT: L3
+        CKT_Schedule Notes_CEDT: ''
+        CKT_Circuit Number_CEDT: STANDARD
+        CKT_Load Name_CEDT: (Space)
+      id: SET-028-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Lighting Fixtures
+      offsets:
+      - rotation_deg: 270
+        x_inches: 14.013596
+        y_inches: -3.202996
+        z_inches: 0
+    id: SET-028
+    name: PF_Light Linear Bay Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: LF-U_Rectangular Fixture_CED
+    category: Lighting Fixtures
+    type_name_pattern: F6
+    parameter_filters:
+      '{}': {}
+  name: PF_Light Podium Desk
+  schema_version: 1
+  id: EQ-029
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'LF-U_Rectangular Fixture_CED : F6'
+      parameters:
+        dev-Group ID: F6
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: L
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: STANDARD
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: (Space)
+      id: SET-029-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Lighting Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-029
+    name: PF_Light Podium Desk Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: '*'
+    category: Model
+    type_name_pattern: P_2 inch (50) Floor Drain, Horizontal with Trap Primer
+    parameter_filters:
+      '{}': {}
+  name: PF_Plan Floor Drain
+  schema_version: 1
+  id: EQ-030
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: P_2 inch (50) Floor Drain, Horizontal with Trap Primer
+      parameters: {}
+      id: SET-030-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Model
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-030
+    name: PF_Plan Floor Drain Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: LF-U_Rectangular Fixture_CED
+    category: Lighting Fixtures
+    type_name_pattern: F10
+    parameter_filters:
+      '{}': {}
+  name: PF_Light Fluorescent
+  schema_version: 1
+  id: EQ-031
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'LF-U_Rectangular Fixture_CED : F10'
+      parameters:
+        dev-Group ID: F10
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: L
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: STANDARD
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: (Space)
+      id: SET-031-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Lighting Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 8.033599
+        y_inches: 6.471292
+        z_inches: -0.001347
+    id: SET-031
+    name: PF_Light Fluorescent Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Quad Wall
+    parameter_filters:
+      '{}': {}
+  name: PF_Plan Computer
+  schema_version: 1
+  id: EQ-032
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Quad Wall'
+      parameters:
+        dev-Group ID: PF_Plan Computer
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 25
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: CHECK-IN RECEPT DESK
+      id: SET-032-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 45
+        x_inches: 0
+        y_inches: -13
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-032-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 135
+        x_inches: 6
+        y_inches: 8
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan Computer
+      id: SET-032-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 10
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-032-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 16
+        y_inches: 8
+        z_inches: 0
+    id: SET-032
+    name: PF_Plan Computer Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    type_name_pattern: Square
+    parameter_filters:
+      '{}': {}
+  name: Inpro 36x36 ADA Shower
+  schema_version: 1
+  id: EQ-033
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-033-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-033-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-033-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-033-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: P_Shower Rough-In 2
+      parameters: {}
+      id: SET-033-LED-005
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Model
+      offsets:
+      - rotation_deg: 270
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-033
+    name: Inpro 36x36 ADA Shower Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Duplex Floor
+    parameter_filters:
+      '{}': {}
+  name: BCS_SmarteCarte Massage Chair
+  schema_version: 1
+  id: EQ-034
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Floor'
+      parameters:
+        dev-Group ID: SmarteCarte Massage Chair
+        CKT_Rating_CED: 30
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L4
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 500
+        CKT_Circuit Number_CEDT: 1
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: MASSAGE CHAIRS - 103
+      id: SET-034-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-034-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 90
+        x_inches: 5
+        y_inches: 8
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Floor'
+      parameters:
+        dev-group ID: SmarteCarte Massage Chair
+      id: SET-034-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 10
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-034-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 5
+        y_inches: 8
+        z_inches: 0
+    id: SET-034
+    name: BCS_SmarteCarte Massage Chair Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    type_name_pattern: Square
+    parameter_filters:
+      '{}': {}
+  name: Room Name 101 RECEPTION
+  schema_version: 1
+  id: EQ-036
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-036-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 90
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall - USB'
+      parameters:
+        dev-Group ID: 'ROOM: '
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 3
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: RECEPTION USB
+      id: SET-036-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 90
+        x_inches: 118
+        y_inches: 24
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall - USB'
+      parameters:
+        dev-Group ID: 'ROOM: '
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 3
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: RECEPTION USB
+      id: SET-036-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 90
+        x_inches: 118
+        y_inches: 14
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall - USB'
+      parameters:
+        dev-Group ID: 'ROOM: '
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 3
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: RECEPTION USB
+      id: SET-036-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 90
+        x_inches: -14
+        y_inches: 24
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall - USB'
+      parameters:
+        dev-Group ID: 'ROOM: '
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 3
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: RECEPTION USB
+      id: SET-036-LED-005
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 90
+        x_inches: -14
+        y_inches: 14
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall - USB'
+      parameters:
+        dev-Group ID: 'ROOM: '
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 3
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: RECEPTION USB
+      id: SET-036-LED-006
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 90
+        x_inches: 58
+        y_inches: 24
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall - USB'
+      parameters:
+        dev-Group ID: 'ROOM: '
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 3
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: RECEPTION USB
+      id: SET-036-LED-007
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 90
+        x_inches: 58
+        y_inches: 14
+        z_inches: 0
+    id: SET-036
+    name: Room Name 101 RECEPTION Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: LF-U_Rectangular Fixture_CED
+    category: Lighting Fixtures
+    type_name_pattern: F9
+    parameter_filters:
+      '{}': {}
+  name: PF_Light Surface Mtd
+  schema_version: 1
+  id: EQ-037
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'LF-U_Rectangular Fixture_CED : F9'
+      parameters:
+        dev-Group ID: F9
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: L
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: STANDARD
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: (Space)
+      id: SET-037-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Lighting Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-037
+    name: PF_Light Surface Mtd Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Disconnect Switch_CED
+    category: Electrical Fixtures
+    type_name_pattern: Fused - 30A
+    parameter_filters:
+      '{}': {}
+  name: BCS_Beauty Angel
+  schema_version: 1
+  id: EQ-038
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Disconnect Switch_CED : Fused - 30A'
+      parameters:
+        dev-Group ID: BEAUTYANGEL
+        CKT_Rating_CED: 30
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L4
+        Number of Poles_CED: 3
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 1500
+        CKT_Circuit Number_CEDT: DEDICATED
+        Voltage_CED: 240
+        CKT_Load Name_CEDT: BEAUTY ANGEL - 103D
+      id: SET-038-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 90
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: BEAUTYANGEL
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: NONGROUPEDBLOCK
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: RECEPT - BCS
+      id: SET-038-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 270
+        x_inches: 12
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-038-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: -12
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Junction Box - Wall'
+      parameters:
+        dev-Group ID: BEAUTYANGEL - PULLBOX
+      id: SET-038-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: BEAUTYANGEL
+      id: SET-038-LED-005
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Speaker'
+      parameters:
+        dev-Group ID: BEAUTYANGEL - Speaker
+      id: SET-038-LED-006
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-038-LED-007
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 16
+        y_inches: 8
+        z_inches: 0
+    id: SET-038
+    name: BCS_Beauty Angel Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Duplex Wall - GFCI
+    parameter_filters:
+      '{}': {}
+  name: PF_Plan Hand Dryer
+  schema_version: 1
+  id: EQ-039
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall - GFCI'
+      parameters:
+        dev-Group ID: PF_Plan Hand Dryer
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L2
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 1000
+        CKT_Circuit Number_CEDT: DEDICATED
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: Hand Dryer
+      id: SET-039-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-039-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 24
+        z_inches: 0
+    id: SET-039
+    name: PF_Plan Hand Dryer Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    type_name_pattern: Square
+    parameter_filters:
+      '{}': {}
+  name: Inpro 42x36 Shower
+  schema_version: 1
+  id: EQ-040
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-040-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-040-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-040-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-040-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: P_Shower Rough-In
+      parameters: {}
+      id: SET-040-LED-005
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Model
+      offsets:
+      - rotation_deg: 0
+        x_inches: -14
+        y_inches: 20
+        z_inches: 0
+    id: SET-040
+    name: Inpro 42x36 Shower Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Junction Box_CED
+    category: Electrical Fixtures
+    type_name_pattern: Wall - With Stem
+    parameter_filters:
+      '{}': {}
+  name: PF_Plan Rinnai HWH
+  schema_version: 1
+  id: EQ-041
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Junction Box_CED : Wall - With Stem'
+      parameters:
+        dev-Group ID: PF_Plan Rinnai HWH
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L2
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 1000
+        CKT_Circuit Number_CEDT: 38
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: HWH
+      id: SET-041-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 26
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Junction Box_CED : Wall - With Stem'
+      parameters:
+        dev-Group ID: PF_Plan Rinnai HWH
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 38
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: HWH
+      id: SET-041-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 43
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Junction Box_CED : Wall - With Stem'
+      parameters:
+        dev-Group ID: PF_Plan Rinnai HWH
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 38
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: HWH
+      id: SET-041-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 9
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: P_Electric Water Heater on Floor
+      parameters: {}
+      id: SET-041-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Model
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-041
+    name: PF_Plan Rinnai HWH Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_Tele & Data Outlet_CED
+    category: Data Devices
+    type_name_pattern: Data - Wall
+    parameter_filters:
+      '{}': {}
+  name: PF_Plan Phone
+  schema_version: 1
+  id: EQ-042
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan Phone
+      id: SET-042-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-042
+    name: PF_Plan Phone Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    type_name_pattern: Square
+    parameter_filters:
+      '{}': {}
+  name: PF_Plan Mop Sink
+  schema_version: 1
+  id: EQ-043
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-043-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-043-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: P_Sink Fixture - Janitorial, Vertical
+      parameters: {}
+      id: SET-043-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Model
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-043
+    name: PF_Plan Mop Sink Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    type_name_pattern: Square
+    parameter_filters:
+      '{}': {}
+  name: Room Name 104 LOCKER ROOM WOMEN'S
+  schema_version: 1
+  id: EQ-044
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-044-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall - GFCI'
+      parameters:
+        dev-Group ID: "ROOM: Women's Room"
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L2
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: GFI
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 7
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: DRY VANITY
+      id: SET-044-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 270
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall - GFCI'
+      parameters:
+        dev-Group ID: "ROOM: Women's Room"
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L2
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: GFI
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 7
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: DRY VANITY
+      id: SET-044-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 90
+        x_inches: 12
+        y_inches: 0
+        z_inches: 0
+    id: SET-044
+    name: Room Name 104 LOCKER ROOM WOMEN'S Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Duplex Wall
+    parameter_filters:
+      '{}': {}
+  name: Treadmill (T5X-5PL-PF)
+  schema_version: 1
+  id: EQ-045
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: Treadmill (T5X-5PL-PF)
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: NC
+        CKT_Panel_CEDT: L1
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 1920
+        CKT_Circuit Number_CEDT: DEDICATED
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: TREADMILL
+      id: SET-045-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 270
+        x_inches: 0
+        y_inches: -7
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-045-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 5
+        y_inches: 8
+        z_inches: 0
+    id: SET-045
+    name: Treadmill (T5X-5PL-PF) Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: LF-U_Bug Eye Fixture_CED
+    category: Lighting Fixtures
+    type_name_pattern: F13
+    parameter_filters:
+      '{}': {}
+  name: PF_Light Exterior
+  schema_version: 1
+  id: EQ-046
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'LF-U_Bug Eye Fixture_CED : F13'
+      parameters:
+        dev-Group ID: F13
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: L
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: STANDARD
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: (Space)
+      id: SET-046-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Lighting Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-046
+    name: PF_Light Exterior Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Disconnect Switch_CED
+    category: Electrical Fixtures
+    type_name_pattern: Fused - 30A
+    parameter_filters:
+      '{}': {}
+  name: PF_FAN 1
+  schema_version: 1
+  id: EQ-047
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Disconnect Switch_CED : Fused - 30A'
+      parameters:
+        dev-Group ID: PF_FAN 1
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 3
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 1500
+        CKT_Circuit Number_CEDT: DEDICATED
+        Voltage_CED: 208
+        CKT_Load Name_CEDT: BIG FAN
+      id: SET-047-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 124
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-047-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 105
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Ceiling'
+      parameters:
+        dev-Group ID: Fan 1
+      id: SET-047-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-047-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 16
+        y_inches: 8
+        z_inches: 0
+    id: SET-047
+    name: PF_FAN 1 Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Duplex Wall
+    parameter_filters:
+      '{}': {}
+  name: PF_Plan TMAX
+  schema_version: 1
+  id: EQ-048
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: PF_Plan TMAX
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 4
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: TMAX RECEPT
+      id: SET-048-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 270
+        x_inches: -8
+        y_inches: 8
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: PF_Plan TMAX
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 4
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: TMAX RECEPT
+      id: SET-048-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 180
+        x_inches: -5
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: PF_Plan TMAX
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 4
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: TMAX RECEPT
+      id: SET-048-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 270
+        x_inches: 26
+        y_inches: -4
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: PF_Plan TMAX
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 4
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: TMAX RECEPT
+      id: SET-048-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 270
+        x_inches: 128
+        y_inches: 8
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: PF_Plan TMAX
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 4
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: TMAX RECEPT
+      id: SET-048-LED-005
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 5
+        y_inches: -120
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: PF_Plan TMAX
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 4
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: TMAX RECEPT
+      id: SET-048-LED-006
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 270
+        x_inches: 94
+        y_inches: -4
+        z_inches: 0
+    - is_group: true
+      label: 'EF-U_Junction Box_CED : Wall - With Stem'
+      parameters:
+        dev-Group ID: PF_Plan TMAX
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: 4
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: TMAX RECEPT
+      id: SET-048-LED-007
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: -60
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-048-LED-008
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 12
+        y_inches: -36
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-048-LED-009
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 12
+        y_inches: -96
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TMAX
+      id: SET-048-LED-010
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: -70
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-048-LED-011
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 16
+        y_inches: 8
+        z_inches: 0
+    id: SET-048
+    name: PF_Plan TMAX Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Duplex Wall
+    parameter_filters:
+      '{}': {}
+  name: Stepmill (C5X-5PL-PF)
+  schema_version: 1
+  id: EQ-049
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: Stepmill (C5X-5PL-PF)
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L1
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 1920
+        CKT_Circuit Number_CEDT: DEDICATED
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: STAIRMASTER
+      id: SET-049-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 180
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-049-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 270
+        x_inches: -11
+        y_inches: 8
+        z_inches: 0
+    id: SET-049
+    name: Stepmill (C5X-5PL-PF) Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Duplex Wall
+    parameter_filters:
+      '{}': {}
+  name: 65tv
+  schema_version: 1
+  id: EQ-050
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: 65tv
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L3
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 250
+        CKT_Circuit Number_CEDT: 5
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: TV - BLACK CARD SUITE
+      id: SET-050-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 180
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-050-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 90
+        x_inches: -12
+        y_inches: -16
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: 65tv
+        Symbol Label_CEDT: TV
+      id: SET-050-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-050-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 16
+        y_inches: 8
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-050-LED-005
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 26
+        y_inches: 8
+        z_inches: 0
+    id: SET-050
+    name: 65tv Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    type_name_pattern: Duplex Wall
+    parameter_filters:
+      '{}': {}
+  name: PF_Plan TV Video Wall
+  schema_version: 1
+  id: EQ-051
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        CKT_Rating_CED: 20
+        FLA Input_CED: 0
+        Load Classification_CED: C
+        CKT_Panel_CEDT: L2
+        Number of Poles_CED: 1
+        CKT_Schedule Notes_CEDT: ''
+        Apparent Load Input_CED: 180
+        CKT_Circuit Number_CEDT: DEDICATED
+        Voltage_CED: 120
+        CKT_Load Name_CEDT: PF_Plan TV Video Wall
+      id: SET-051-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 180
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-051-LED-002
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 90
+        x_inches: -12
+        y_inches: -16
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-051-LED-003
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-051-LED-004
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 12
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-051-LED-005
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: -12
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-051-LED-006
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 24
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-051-LED-007
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: -24
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-051-LED-008
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 36
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-051-LED-009
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: -36
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-051-LED-010
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 48
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-051-LED-011
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: -48
+        y_inches: 0
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-051-LED-012
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 20
+        y_inches: -40
+        z_inches: 0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters: {}
+      id: SET-051-LED-013
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0
+        x_inches: 40
+        y_inches: -40
+        z_inches: 0
+    id: SET-051
+    name: PF_Plan TV Video Wall Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_General Low Voltage Device_CED
+    category: Data Devices
+    type_name_pattern: Speaker
+    parameter_filters:
+      '{}': {}
+  name: BCS Speaker
+  schema_version: 1
+  id: EQ-052
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Speaker'
+      parameters:
+        dev-Group ID: BEAUTYANGEL - Speaker
+      id: SET-052-LED-001
+      tags:
+      - parameters: {}
+        type_name: ''
+        offsets: {}
+        category_name: ''
+        family_name: ''
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0
+        x_inches: 0
+        y_inches: 0
+        z_inches: 0
+    id: SET-052
+    name: BCS Speaker Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    '{}': {}

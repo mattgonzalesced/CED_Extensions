@@ -1,0 +1,23 @@
+Add YAML Profiles
+This button is the catalog authoring workflow. You model the equipment exactly how you want it to look (including any tags) and run the tool. It measures how far every piece sits from the center of the selection, remembers which direction each host is facing, copies the dev-Group ID and other electrical notes, and records how far the tags sit from the host. That recipe is written into the shared YAML file so the next time you place that CAD profile the entire arrangement (hosts plus tags) drops in automatically without hand-measuring offsets.
+
+Delete YAML Profiles
+Delete is the quick cleanup tool. It lists the labels that belong to a CAD name, you check the ones you no longer need, and it removes them from the YAML immediately. A log entry is created so there is a record of what was removed, but there is no undo or recycle bin, so treat it like deleting rows in a spreadsheet.
+
+Edit YAML Profiles
+Edit opens the familiar Element Linker window. The offsets, electrical values, and tag descriptions show up in editable fields so you can fine-tune numbers without opening the YAML in a text editor. When you hit OK the catalog entry is rewritten with the new values and the change is logged for auditing.
+
+Load Equipment Definition
+Load Equipment Definition is the quick dropper. Pick the CAD profile from the list, click where you want it, and the script inserts every family, group, and tag stored under that profile using the same placement engine as the production runner. It is perfect for testing a single kit of parts or dropping a one-off layout.
+
+PlaceElements
+PlaceElements is the production batch tool. You can feed it a CSV of coordinates or just pick CAD profiles from the dialog. Once you hit go, it activates the required families, places them at every position you listed, fills in the saved electrical parameters, and adds the cataloged tags. Because everything happens in one run, you can populate entire floors or rooms with consistent layouts in minutes.
+
+Set New XYZ Offset
+XYZ Offset is your calibration helper. Pick an existing instance, click where you wish the CAD block’s origin had been, and the tool writes that offset into the YAML so the next time you drop that profile it lands with the adjusted origin. The current instance moves to the preview location so you can confirm the change right away.
+
+Set New Rotation Offset
+Rotation Offset does the same for angles. Rotate the selected instance to the exact direction you want, run the tool, and it records that rotation in the YAML so every future placement comes in facing the right direction. The current instance rotates too so you can verify the setting visually.
+
+Tag Equipment
+Tag Equipment reads the tag recipes stored in the catalog, shows you the available tag families, and tags every matching element in the current view exactly once. It filters hosts by dev-Group ID so you only tag the instances that belong to the selected CAD profile, and it places the tags with the offsets you previously recorded so the leaders drop in the same place every time.
