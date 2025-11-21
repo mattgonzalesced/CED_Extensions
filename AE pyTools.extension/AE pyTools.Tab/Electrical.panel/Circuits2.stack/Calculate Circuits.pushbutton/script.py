@@ -33,8 +33,8 @@ def collect_shared_param_values(branch):
         'CKT_Wire Isolated Ground Size_CEDT': branch.isolated_ground_wire_size,
         'CKT_Wire Isolated Ground Quantity_CED': branch.isolated_ground_wire_quantity,
         'Wire Material_CEDT': branch.wire_material,
-        'Wire Temparature Rating_CEDT': branch.wire_info.get('wire_temperature_rating', '75'),
-        'Wire Insulation_CEDT': branch.wire_info.get('wire_insulation', 'THWN'),
+        'Wire Temparature Rating_CEDT': branch.wire_temp_rating,
+        'Wire Insulation_CEDT': branch.wire_insulation,
         'Conduit Size_CEDT': branch.conduit_size,
         'Conduit Type_CEDT': branch.conduit_type,
         'Conduit Fill Percentage_CED': branch.conduit_fill_percentage,
@@ -42,6 +42,7 @@ def collect_shared_param_values(branch):
         'Conduit and Wire Size_CEDT': branch.get_conduit_and_wire_size(),
         'Circuit Load Current_CED': branch.circuit_load_current,
         'Circuit Ampacity_CED': branch.circuit_base_ampacity,
+        'CKT_Length Makeup_CED': branch.wire_length_makeup
     }
 
 
@@ -50,18 +51,49 @@ def collect_shared_param_values(branch):
 # -------------------------------------------------------------------------
 def update_circuit_parameters(circuit, param_values):
     for param_name, value in param_values.items():
-        if value is None:
-            continue
         param = circuit.LookupParameter(param_name)
         if not param:
+            logger.debug("⚠️ Did not find parameter '{}' on circuit {}".format(param_name, circuit.Id))
             continue
+
+        # --------------------------
+        # BLANKING OUT NULL VALUES
+        # --------------------------
+        if value is None:
+            try:
+                st = param.StorageType
+                if st == DB.StorageType.String:
+                    param.Set("")
+                elif st == DB.StorageType.Integer:
+                    # For Yes/No or integer params, use 0
+                    param.Set(0)
+                elif st == DB.StorageType.Double:
+                    # For numeric params, use 0.0
+                    param.Set(0.0)
+                elif st == DB.StorageType.ElementId:
+                    param.Set(DB.ElementId.InvalidElementId)
+                logger.debug("🧹 Cleared '{}' on circuit {}".format(param_name, circuit.Id))
+            except Exception as e:
+                logger.debug("❌ Failed to blank '{}' on circuit {}: {}".format(param_name, circuit.Id, e))
+            continue
+
+        # --------------------------
+        # WRITING VALID VALUES
+        # --------------------------
         try:
-            if param.StorageType == DB.StorageType.String:
+            st = param.StorageType
+            if st == DB.StorageType.String:
                 param.Set(str(value))
-            elif param.StorageType == DB.StorageType.Integer:
+            elif st == DB.StorageType.Integer:
                 param.Set(int(value))
-            elif param.StorageType == DB.StorageType.Double:
+            elif st == DB.StorageType.Double:
                 param.Set(float(value))
+            elif st == DB.StorageType.ElementId:
+                # user should pass an ElementId or None
+                if isinstance(value, DB.ElementId):
+                    param.Set(value)
+                else:
+                    param.Set(DB.ElementId.InvalidElementId)
         except Exception as e:
             logger.debug("❌ Failed to write '{}' to circuit {}: {}".format(param_name, circuit.Id, e))
 
@@ -148,8 +180,6 @@ def main():
         branch = CircuitBranch(circuit)
         if not branch.is_power_circuit:
             continue
-        if not branch.reasonable_user_overrides and branch._auto_calculate_override:
-            logger.warning("Some of the overrides are unreasonable")
 
         branch.calculate_breaker_size()
         branch.calculate_hot_wire_size()
@@ -172,18 +202,20 @@ def main():
             total_equipment += e
         t.Commit()
         tg.Assimilate()
+
+        output = script.get_output()
+        output.close_others()
+        output.print_md("## ✅ Shared Parameters Updated")
+        output.print_md("* Circuits updated: **{}**".format(len(branches)))
+        output.print_md("* Electrical Fixtures updated: **{}**".format(total_fixtures))
+        output.print_md("* Electrical Equipment updated: **{}**".format(total_equipment))
+
     except Exception as e:
         t.RollBack()
         tg.RollBack()
         logger.error("{}❌ Transaction failed: {}".format(branch.name,e))
         return
 
-    output = script.get_output()
-    output.close_others()
-    output.print_md("## ✅ Shared Parameters Updated")
-    output.print_md("* Circuits updated: **{}**".format(len(branches)))
-    output.print_md("* Electrical Fixtures updated: **{}**".format(total_fixtures))
-    output.print_md("* Electrical Equipment updated: **{}**".format(total_equipment))
 
 
 if __name__ == "__main__":
