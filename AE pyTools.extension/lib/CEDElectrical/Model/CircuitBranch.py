@@ -663,15 +663,20 @@ class CircuitBranch(object):
 
     @property
     def conduit_size(self):
-        raw = self._conduit_size_override if self._auto_calculate_override else self._calculated_conduit_size
+        if self._auto_calculate_override and self._conduit_size_override:
+            raw = self._conduit_size_override
+        else:
+            raw = self._calculated_conduit_size
+
         size = self._normalize_conduit_type(raw)
+
         if size and self.settings.conduit_size_suffix:
             return "{}{}".format(size, self.settings.conduit_size_suffix)
         return size
 
     @property
     def conduit_fill_percentage(self):
-        return self.calculate_conduit_fill_percentage()
+        return self._calculated_conduit_fill
 
     # ----------- Calculations -----------
 
@@ -1095,42 +1100,22 @@ class CircuitBranch(object):
         for size in enum[min_index:]:
             area = conduit_table.get(size)
             if area and area * self.settings.max_conduit_fill >= total_area:
+                fill = round(total_area / area, 5)
                 self._calculated_conduit_size = size
-                self._calculated_conduit_fill = round(total_area / area, 5)  # ⚠️ decimal, not percent
+                self._calculated_conduit_fill = fill
+
+                if fill > self.settings.max_conduit_fill:
+                    self.log_warning(
+                        "Conduit fill {:.3f} exceeds max allowed {:.3f} for conduit size {}".format(
+                            fill, self.settings.max_conduit_fill, size
+                        )
+                    )
+
                 return
 
-        logger.warning("{}: No conduit size found that fits total area {:.4f}".format(self.name, total_area))
+        self.log_error("No conduit size found that fits total area {:.4f}".format(total_area))
 
-    def calculate_conduit_fill_percentage(self):
-        conduit_formatted = self._conduit_size_override if self._auto_calculate_override else self._calculated_conduit_size
-        conduit_size = self._normalize_conduit_type(conduit_formatted)
-        wire_info = self._wire_info
-        insulation = self.wire_insulation
-        conduit_material = self.conduit_material_type
-        conduit_type = self.conduit_type
 
-        if not conduit_size or not conduit_material or not conduit_type or not insulation:
-            return None
-
-        conduit_area = CONDUIT_AREA_TABLE.get(conduit_material, {}).get(conduit_type, {}).get(conduit_size)
-        if not conduit_area:
-            return None
-
-        sizes_and_qtys = [
-            (self._normalize_wire_size(self.hot_wire_size), self.hot_wire_quantity),
-            (self._normalize_wire_size(self.neutral_wire_size), self.neutral_wire_quantity),
-            (self._normalize_wire_size(self.ground_wire_size), self.ground_wire_quantity),
-            (self._normalize_wire_size(self.isolated_ground_wire_size), self.isolated_ground_wire_quantity)
-        ]
-        # TODO: need to build protections in for sizes that are NOT found! need to decide if this should happen here
-        #  or in the wire size attributes
-        total_area = sum(
-            CONDUCTOR_AREA_TABLE[size]['area'][insulation] * qty
-            for size, qty in sizes_and_qtys
-            if size and qty and size in CONDUCTOR_AREA_TABLE and insulation in CONDUCTOR_AREA_TABLE[size]['area']
-        )
-
-        return round(total_area / conduit_area, 5)  # ⚠️ keep as decimal
 
     def get_wire_set_string(self):
         parts = []

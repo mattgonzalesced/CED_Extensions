@@ -185,7 +185,6 @@ def main():
         branch.calculate_hot_wire_size()
         branch.calculate_ground_wire_size()
         branch.calculate_conduit_size()
-        branch.calculate_conduit_fill_percentage()
         branches.append(branch)
 
     # Write all parameters in a single transaction
