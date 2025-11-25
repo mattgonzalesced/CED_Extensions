@@ -1,0 +1,82 @@
+﻿Update Vector Workflow Explanation
+=================================
+
+1. Overview
+-----------
+The Update Vector tool is the field editor for the YAML equipment profiles used by Place Elements (YAML). Its job is to capture the current state of a selected element (or hosted tag), translate the physical move/rotation into offset deltas relative to the element’s original drop point, and then persist those adjustments back into `CEDLib.lib\profileData.yaml`. Because the YAML drives both future placements and the “apply to similar elements” backfill in an active model, Update Vector must coordinate three domains simultaneously: the geometry in Revit, the Element_Linker metadata stored on each instance, and the YAML definition that holds offsets, rotations, and hosted tags. The script therefore follows a strict sequence: discover context, compute deltas, update YAML + linker metadata, and optionally propagate moves to other live instances.
+
+2. Selecting and Classifying the Target
+---------------------------------------
+When the user launches the command, `_resolve_target_element()` asks the Revit selection API for the current pick; it supports either a family instance/group or an IndependentTag. If a tag is selected, `_get_tag_metadata()` resolves its host element, host point, and identifying “signature” (normalized type name). The script flips into `tag_only` mode so only tag offsets change. For regular elements, it simply records the instance ID.
+
+The next critical step is retrieving Element_Linker data from the target. `_get_element_linker_payload()` pulls the multi-line text parameter that Add YAML Profiles stored earlier. `_parse_element_linker_payload()` converts that text into a dictionary containing the linked element definition ID (`led_id`), set ID, original placement point (`location`), base rotation, and other fields (level, element ID, facing orientation). Without this payload the script aborts, because it would have no way to reconcile the live element with its YAML entry.
+
+3. Locating the YAML Definition
+-------------------------------
+Using the parsed `led_id`, `_find_led_entry()` iterates over every equipment definition and linked set inside `profileData.yaml` until it finds the matching linked element definition. The helper returns a tuple `(equipment_def, set_entry, led_entry)` where `led_entry` contains the offsets, parameters, and tags for the exact type that was placed. `_ensure_offset_entry()` guarantees the offsets list exists and normalizes the first entry with `x/y/z` plus `rotation_deg`. From this point, all writes happen against that in-memory Python structure.
+
+4. Establishing the Geometric Baseline
+--------------------------------------
+The core of Update Vector is translating world-space moves into offsets relative to the original insertion point:
+* `_get_point(elem)` returns the current XYZ of the element (or tag host point when `tag_only`).
+* `_get_rotation_degrees(elem)` samples the instance’s facing orientation to get a rotation angle in degrees.
+* The payload’s `location` is the original drop point; subtracting the rotated previous offsets reconstructs the true base point. Specifically, `previous_world_offset = _rotate_xy(original_local_offset, payload_rotation)` projects the stored local offsets into world coordinates, and `base_point = payload_location - previous_world_offset` isolates the static anchor.
+* The delta between the new position and the base point (`delta_world = elem_point - base_point`) captures how far the user moved the element.
+* For non-tag runs, `_rotate_xy(delta_world, -total_rotation)` converts that translation back into local offsets so the YAML can store values that are independent of project orientation.
+
+Rotation follows a similar pattern. The script compares the current rotation with the payload’s rotation to produce `rotation_delta`, then adds that delta to the original stored offset. `_normalize_angle()` keeps the value within ±180 degrees to avoid drift.
+
+5. Updating Tag Offsets
+-----------------------
+Tags are treated as secondary offsets stored under each linked element definition. `_collect_hosted_tags()` walks the element’s dependent elements, filters for `IndependentTag` instances, and for each one captures the symbol’s family/type names plus a relative offset (tag head minus host point). `_update_tag_yaml_offsets()` merges those offsets into YAML: when `tag_only` the code can patch just the matching signature; otherwise it replaces the entire tag list so it mirrors the current model. After this merge, the code refreshes `tag_entries = led_entry.get("tags") or []`. That list is later reused for both YAML persistence and live propagation.
+
+6. Persisting Changes
+---------------------
+If the run is not tag-only, the offset entry is rewritten with the newly computed inches + rotation. Regardless of mode, `_feet_to_inches` and `_inches_to_feet` handle the unit conversions so YAML remains in inches even though Revit points are stored in feet. Once the data structure reflects the new geometry, `save_profile_data()` dumps the entire `equipment_definitions` array back to `profileData.yaml`. Because the repository uses a lightweight YAML writer (with JSON fallback), this step is fast but atomic—any validation errors trigger a dialog and abort the command to prevent partial writes.
+
+Immediately after saving, `_build_linker_payload()` crafts an updated Element_Linker text block using the new offsets and current element metadata. `_set_element_linker_payload()` writes that string back onto the selected element so the on-instance cache stays synchronized with YAML. This is crucial: future Update Vector runs rely on the linker payload to know the previous offsets, so both sides must stay in lockstep.
+
+7. Prompting to Propagate
+-------------------------
+Before exiting, the tool decides whether it should offer to move similar instances. It compares the old and new offsets (`local_delta`), rotation delta, and whether any tag records changed. If any of those exceed a tolerance, `_collect_similar_elements()` scans the document for other instances whose Element_Linker payload references the same `led_id`. If matches exist, the command displays “Apply to all similar equipment?” with the count of additional instances. The user’s answer controls the propagation branch; declining simply leaves other instances untouched while YAML is still updated.
+
+8. Applying Offsets to Similar Elements
+---------------------------------------
+When the user accepts the prompt, `_apply_offsets_to_similar()` opens a single Revit Transaction and loops over every similar element:
+* For each instance, it reconstructs that element’s base point using its current location, rotation, and the *old* offsets—this ensures the move is relative to that element’s original drop point, not the one that was edited.
+* It computes the new target rotation and offsets using the updated values from YAML (`new_local_offset`, `new_rotation_offset`).
+* It then moves the element (`ElementTransformUtils.MoveElement`) to match the new target point and, if rotation changed, rotates around a vertical axis so the facing matches the updated rotation offset.
+* After moving, the code rebuilds the element’s Element_Linker payload so its metadata stays synchronized.
+* Finally, `_apply_tag_offsets_to_instance()` repositions any hosted tags on that element. This helper matches YAML entries to live tags by normalized type name, converts the stored inches back into feet, and moves each tag head accordingly. If a rotation change occurred, it also rotates the tag geometry around its head point. Because the same `tag_entries` list is fed into this routine, any edits captured during the primary Update Vector run propagate consistently across every similar instance.
+
+If all moves succeed, the transaction commits and the tool optionally selects the moved elements so the user can visually confirm the update. Failures trigger a rollback, leaving the document unchanged (though YAML has already been updated; the dialog warns users if the propagation fails so they can rerun manually if needed).
+
+9. Tag-Only Workflow
+--------------------
+When the command starts from an IndependentTag, it switches into tag-only mode. Instead of recomputing host offsets, it simply captures the tag’s new offset relative to its host, updates just the matching tag entry in YAML, saves, and asks about propagation based on whether tag offsets changed. If the user applies to similar equipment, the host element’s geometry stays put while `_apply_tag_offsets_to_instance()` adjusts the companion tags on every other instance. This gives designers a lightweight way to tune annotation layouts without disturbing the actual equipment.
+
+10. Logging and User Feedback
+-----------------------------
+Every successful run appends a JSON line to `profileData.log` recording the action, element labels, offset values, delta inches, rotation changes, whether propagation was requested, and the username from the environment. This log provides traceability for later debugging. After logging, the script builds a textual summary dialog listing the new rotation, offsets, delta move, and propagation outcome so users immediately know what happened. If propagation succeeded, it mentions that similar elements were selected for review; if it failed or no matches were found, the message reflects that as well.
+
+11. Error Handling Philosophy
+-----------------------------
+Because Update Vector manipulates both the model and the YAML library, it defends each critical step with guardrails:
+* Missing Element_Linker data or invalid payloads trigger explanatory dialogs before any writes occur.
+* `_load_profile_store()` falls back to a simple parser if the YAML library raises an error, which keeps existing data readable even if PyYAML stumbles.
+* Operations that touch Revit’s document—setting parameters, moving elements, rotating—live inside transactions or try/except blocks, so unexpected failures don’t leave the model in a half-edited state.
+* Unit conversions are centralized so offsets always remain in inches, preventing subtle drift when users edit elements with project units set to feet.
+* Tag updates gracefully skip entries if signatures don’t match, and tag-only runs alert the user when no matching YAML entry exists.
+
+12. Putting It All Together
+---------------------------
+A typical Update Vector session therefore unfolds as:
+1. User moves/rotates equipment or its tag and runs the command.
+2. Script resolves the selection, extracts Element_Linker data, and finds the linked element definition inside `profileData.yaml`.
+3. It reconstructs the original base point, compares it to the current location/rotation, and converts that delta back into local offsets.
+4. It captures any hosted tags’ offsets relative to the same base point.
+5. It writes these offsets (in inches) and rotation degrees back into the YAML and refreshes the element’s own Element_Linker payload.
+6. If there’s a meaningful change, it offers to push the same delta onto other instances referencing the same linked element definition; if the user agrees, it moves/rotates those elements and repositions their hosted tags inside a single transaction.
+7. It logs the action and surfaces a summary dialog so the user can verify the result.
+
+By grounding every calculation in the original Element_Linker metadata and keeping YAML, element parameters, and hosted tags synchronized, Update Vector lets designers make ad-hoc adjustments in Revit while guaranteeing that future placements—and the rest of the model—inherit the exact same vector changes.

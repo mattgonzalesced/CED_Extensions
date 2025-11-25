@@ -36,6 +36,7 @@ from profile_schema import equipment_defs_to_legacy, load_data as load_profile_d
 from LogicClasses.yaml_path_cache import get_cached_yaml_path, set_cached_yaml_path  # noqa: E402
 
 DEFAULT_DATA_PATH = os.path.join(LIB_ROOT, "profileData.yaml")
+LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
 
 try:
     basestring
@@ -127,12 +128,39 @@ def _build_repository(data_path):
     return ProfileRepository(eq_defs)
 
 
+def _parse_linker_payload(text):
+    if not text:
+        return {}
+    entries = {}
+    for raw_line in str(text).splitlines():
+        line = raw_line.strip()
+        if not line or ":" not in line:
+            continue
+        key, _, remainder = line.partition(":")
+        entries[key.strip()] = remainder.strip()
+    return {
+        "led_id": entries.get("Linked Element Definition ID", "").strip(),
+        "set_id": entries.get("Set Definition ID", "").strip(),
+    }
+
+
+def _extract_led_id_from_linked_def(linked_def):
+    if not linked_def:
+        return None
+    raw = (
+        linked_def.get_static_param("Element_Linker Parameter")
+        or linked_def.get_static_param("Element_Linker")
+    )
+    payload = _parse_linker_payload(raw)
+    return payload.get("led_id") or None
+
+
 def _collect_tag_entries(repo):
     grouped = {}
-    for cad_name in repo.cad_names():
-        labels = repo.labels_for_cad(cad_name)
+    for equipment_name in repo.cad_names():
+        labels = repo.labels_for_cad(equipment_name)
         for label in labels:
-            linked_def = repo.definition_for_label(cad_name, label)
+            linked_def = repo.definition_for_label(equipment_name, label)
             if not linked_def:
                 continue
             placement = linked_def.get_placement()
@@ -181,10 +209,11 @@ def _collect_tag_entries(repo):
                         "category": tag.get("category") if hasattr(tag, "get") else None,
                     }
                 entry["contexts"].append({
-                    "cad_name": cad_name,
+                    "equipment_name": equipment_name,
                     "label": label,
                     "canonical": family_label,
                     "group_id": group_id,
+                    "led_id": _extract_led_id_from_linked_def(linked_def),
                     "tag": tag_copy,
                 })
 
@@ -195,20 +224,20 @@ def _collect_tag_entries(repo):
         typ = entry.get("tag_type") or "<Type?>"
         if len(contexts) == 1:
             ctx = contexts[0]
-            entry["display"] = u"{family} : {type}  ({cad} :: {label})".format(
+            entry["display"] = u"{family} : {type}  ({equip} :: {label})".format(
                 family=fam,
                 type=typ,
-                cad=ctx.get("cad_name") or "<CAD?>",
+                equip=ctx.get("equipment_name") or "<Equipment?>",
                 label=ctx.get("label") or "<Label?>",
             )
         else:
-            cad_count = len({ctx.get("cad_name") for ctx in contexts if ctx.get("cad_name")})
+            equip_count = len({ctx.get("equipment_name") for ctx in contexts if ctx.get("equipment_name")})
             label_count = len(contexts)
-            entry["display"] = u"{family} : {type}  ({labels} labels / {cads} CAD)".format(
+            entry["display"] = u"{family} : {type}  ({labels} labels / {defs} equipment definitions)".format(
                 family=fam,
                 type=typ,
                 labels=label_count,
-                cads=cad_count or 1,
+                defs=equip_count or 1,
             )
         entries.append(entry)
     entries.sort(key=lambda e: (e.get("display") or "").lower())
@@ -381,6 +410,46 @@ def _filter_by_group_id(instances, group_id):
     return filtered
 
 
+def _get_linker_payload_from_instance(inst):
+    for name in LINKER_PARAM_NAMES:
+        try:
+            param = inst.LookupParameter(name)
+        except Exception:
+            param = None
+        if not param:
+            continue
+        text = None
+        try:
+            text = param.AsString()
+        except Exception:
+            text = None
+        if not text:
+            try:
+                text = param.AsValueString()
+            except Exception:
+                text = None
+        if text:
+            payload = _parse_linker_payload(text)
+            if payload.get("led_id"):
+                return payload
+    return {}
+
+
+def _filter_by_led_id(instances, led_id):
+    if not led_id:
+        return instances
+    target = led_id.strip().lower()
+    if not target:
+        return instances
+    filtered = []
+    for inst in instances:
+        payload = _get_linker_payload_from_instance(inst)
+        cand = (payload.get("led_id") or "").strip().lower()
+        if cand == target:
+            filtered.append(inst)
+    return filtered
+
+
 def _resolve_hosts(host_lookup, symbol_lookup, label, canonical):
     """
     Attempt to find host instances using multiple label variants and a final
@@ -477,9 +546,12 @@ def main():
                 canonical = ctx.get("canonical")
                 host_list = _resolve_hosts(host_lookup, symbol_lookup, target_label, canonical)
                 if not host_list:
-                    missing.append("{0} :: {1}".format(ctx.get("cad_name") or "<CAD?>", target_label))
+                    missing.append("{0} :: {1}".format(ctx.get("equipment_name") or "<Equipment?>", target_label))
                     continue
                 hosts = _filter_by_group_id(host_list, ctx.get("group_id"))
+                if not hosts:
+                    continue
+                hosts = _filter_by_led_id(hosts, ctx.get("led_id"))
                 if not hosts:
                     continue
 

@@ -28,46 +28,61 @@ from System.Windows import Thickness
 
 
 class ProfileEditorWindow(forms.WPFWindow):
-    def __init__(self, xaml_path, cad_block_profiles):
+    def __init__(self, xaml_path, cad_block_profiles, relations=None):
         self._profiles = cad_block_profiles
+        self._relations = relations or {}
         self._current_profile = None
+        self._current_profile_name = None
         self._current_typecfg = None
         self._type_lookup = {}
 
         # cache of (param_name, TextBox) for current type
         self._param_rows = []
         self._tag_rows = []
+        self._in_edit_mode = False
 
         forms.WPFWindow.__init__(self, xaml_path)
 
-        # Fill profile combo
         profile_names = sorted(self._profiles.keys())
         for name in profile_names:
-            self.ProfileCombo.Items.Add(name)
+            self.ProfileList.Items.Add(name)
 
-        if self.ProfileCombo.Items.Count > 0:
-            self.ProfileCombo.SelectedIndex = 0
+        if self.ProfileList.Items.Count > 0:
+            self.ProfileList.SelectedIndex = 0
+        else:
+            self._clear_fields()
+        self._set_edit_mode(False)
 
     # ------------------------------------------------------------------ #
     #  Event handlers
     # ------------------------------------------------------------------ #
-    def ProfileCombo_SelectionChanged(self, sender, args):
-        """When user picks a profile, populate the Type (label) combo."""
-        self.TypeCombo.Items.Clear()
+    def ProfileList_SelectionChanged(self, sender, args):
+        """When user picks a profile, populate the Type list."""
+        self._set_edit_mode(False)
+        self.TypeList.Items.Clear()
+        if hasattr(self, "ChildrenList"):
+            self.ChildrenList.Items.Clear()
+        if hasattr(self, "ShowChildrenButton"):
+            self.ShowChildrenButton.IsEnabled = False
         self._current_profile = None
+        self._current_profile_name = None
         self._current_typecfg = None
         self._type_lookup = {}
         self._clear_fields()
 
-        profile_name = self.ProfileCombo.SelectedItem
+        profile_name = self.ProfileList.SelectedItem
         if not profile_name:
+            self.ParentInfoText.Text = "Parent: (none)"
             return
 
         profile = self._profiles.get(profile_name)
         if not profile:
+            self.ParentInfoText.Text = "Parent: (none)"
             return
 
         self._current_profile = profile
+        self._current_profile_name = profile_name
+        self._update_parent_display()
 
         # Discover TypeConfig objects by introspecting the profile
         type_list = self._discover_type_configs(profile)
@@ -80,31 +95,33 @@ class ProfileEditorWindow(forms.WPFWindow):
         label_indices = {}
         for tc in type_list:
             lbl = getattr(tc, "label", None) or "<Unnamed>"
+            led_id = getattr(tc, "led_id", None)
             label_indices[lbl] = label_indices.get(lbl, 0) + 1
             display = lbl
-            if label_totals.get(lbl, 0) > 1:
+            if led_id:
+                display = u"{} [{}]".format(lbl, led_id)
+            elif label_totals.get(lbl, 0) > 1:
                 display = u"{} [#{}]".format(lbl, label_indices[lbl])
-            self.TypeCombo.Items.Add(display)
+            self.TypeList.Items.Add(display)
             self._type_lookup[display] = tc
 
-        if self.TypeCombo.Items.Count > 0:
-            self.TypeCombo.SelectedIndex = 0
+        if self.TypeList.Items.Count > 0:
+            self.TypeList.SelectedIndex = 0
         else:
-            # Optional tiny hint so you know this profile really has no types
-            # (remove this if it gets annoying)
             forms.alert(
                 "No TypeConfigs found for profile:\n\n{}".format(profile_name),
                 title="Element Linker Profile Editor"
             )
 
-    def TypeCombo_SelectionChanged(self, sender, args):
+    def TypeList_SelectionChanged(self, sender, args):
         """When user picks a type label, load its data into the editor."""
         self._clear_fields()
+        self._set_edit_mode(False)
 
         if not self._current_profile:
             return
 
-        display_label = self.TypeCombo.SelectedItem
+        display_label = self.TypeList.SelectedItem
         if not display_label:
             return
 
@@ -127,6 +144,8 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._current_typecfg = type_cfg
 
         if not type_cfg:
+            if hasattr(self, "ShowChildrenButton"):
+                self.ShowChildrenButton.IsEnabled = False
             return
 
         inst_cfg = type_cfg.instance_config
@@ -163,6 +182,7 @@ class ProfileEditorWindow(forms.WPFWindow):
             value_box = TextBox()
             value_box.Text = u"{}".format(val if val is not None else u"")
             value_box.Width = 200
+            value_box.IsReadOnly = not self._in_edit_mode
 
             row_panel.Children.Add(name_block)
             row_panel.Children.Add(value_box)
@@ -183,6 +203,39 @@ class ProfileEditorWindow(forms.WPFWindow):
                 self._add_tag_row(tg)
         else:
             self._add_tag_row()
+
+        if hasattr(self, "ShowChildrenButton"):
+            has_children = bool(self._get_children_for_current_profile())
+            self.ShowChildrenButton.IsEnabled = bool(has_children and self._current_typecfg)
+        if hasattr(self, "ChildrenList"):
+            self.ChildrenList.Items.Clear()
+
+    def EditButton_Click(self, sender, args):
+        if not self._current_typecfg:
+            forms.alert("Select a type before editing.", title="Element Linker Profile Editor")
+            return
+        self._set_edit_mode(not self._in_edit_mode)
+
+    def ShowChildrenButton_Click(self, sender, args):
+        if not hasattr(self, "ChildrenList"):
+            return
+        if not self._current_typecfg:
+            forms.alert("Select a type before showing child equipment.", title="Element Linker Profile Editor")
+            return
+        self.ChildrenList.Items.Clear()
+        children = self._get_children_for_current_profile()
+        if not children:
+            self.ChildrenList.Items.Add("No child equipment definitions linked to this type.")
+            return
+        for child in children:
+            cid = child.get("id") or ""
+            cname = child.get("name") or ""
+            if cid and cname:
+                self.ChildrenList.Items.Add("{} ({})".format(cname, cid))
+            elif cid:
+                self.ChildrenList.Items.Add(cid)
+            elif cname:
+                self.ChildrenList.Items.Add(cname)
 
     def OkButton_Click(self, sender, args):
         """Apply edits back into the current TypeConfig's InstanceConfig."""
@@ -273,6 +326,80 @@ class ProfileEditorWindow(forms.WPFWindow):
     # ------------------------------------------------------------------ #
     #  Helpers
     # ------------------------------------------------------------------ #
+    def _relation_entry(self):
+        if not self._relations:
+            return {}
+        keys = []
+        if self._current_profile_name:
+            keys.append(self._current_profile_name)
+        if self._current_profile and hasattr(self._current_profile, "cad_name"):
+            keys.append(getattr(self._current_profile, "cad_name", ""))
+        for key in keys:
+            if not key:
+                continue
+            relation = self._relations.get(key)
+            if relation:
+                return relation
+        return {}
+
+    def _update_parent_display(self):
+        relation = self._relation_entry()
+        parent_id = (relation.get("parent_id") or "").strip()
+        parent_name = (relation.get("parent_name") or "").strip()
+        if parent_name and parent_id:
+            text = "Parent: {} ({})".format(parent_name, parent_id)
+        elif parent_name:
+            text = "Parent: {}".format(parent_name)
+        elif parent_id:
+            text = "Parent: {}".format(parent_id)
+        else:
+            text = "Parent: (none)"
+        if hasattr(self, "ParentInfoText"):
+            self.ParentInfoText.Text = text
+
+    def _get_children_for_current_profile(self):
+        if not self._current_profile_name:
+            return []
+        relation = self._relation_entry()
+        children = relation.get("children") or []
+        anchor_led = None
+        if self._current_typecfg:
+            anchor_led = getattr(self._current_typecfg, "led_id", None)
+            if anchor_led:
+                anchor_led = anchor_led.strip()
+        cleaned = []
+        for child in children:
+            if not isinstance(child, dict):
+                continue
+            cid = (child.get("id") or "").strip()
+            cname = (child.get("name") or "").strip()
+            child_anchor = (child.get("anchor_led_id") or "").strip()
+            if anchor_led and child_anchor and child_anchor != anchor_led:
+                continue
+            if cid or cname:
+                cleaned.append({"id": cid, "name": cname})
+        return cleaned
+
+    def _set_edit_mode(self, enabled):
+        self._in_edit_mode = bool(enabled)
+        if hasattr(self, "EditButton"):
+            self.EditButton.Content = "Done" if self._in_edit_mode else "Edit"
+        self._apply_read_only_state()
+
+    def _apply_read_only_state(self):
+        read_only = not self._in_edit_mode
+        for textbox in (self.OffsetXBox, self.OffsetYBox, self.OffsetZBox, self.OffsetRotBox):
+            textbox.IsReadOnly = read_only
+        for name, value_box in self._param_rows:
+            value_box.IsReadOnly = read_only
+        for row in self._tag_rows:
+            for textbox in row[1:]:
+                textbox.IsReadOnly = read_only
+        if hasattr(self, "AddTagButton"):
+            self.AddTagButton.IsEnabled = self._in_edit_mode
+        if hasattr(self, "RemoveTagButton"):
+            self.RemoveTagButton.IsEnabled = self._in_edit_mode
+
     def _clear_fields(self):
         self.OffsetXBox.Text = ""
         self.OffsetYBox.Text = ""
@@ -283,6 +410,13 @@ class ProfileEditorWindow(forms.WPFWindow):
         if hasattr(self, "TagList"):
             self.TagList.Items.Clear()
         self._tag_rows = []
+        if hasattr(self, "ChildrenList"):
+            self.ChildrenList.Items.Clear()
+        if hasattr(self, "ShowChildrenButton"):
+            self.ShowChildrenButton.IsEnabled = False
+        if hasattr(self, "ParentInfoText") and not self._current_profile_name:
+            self.ParentInfoText.Text = "Parent: (none)"
+        self._apply_read_only_state()
 
     def _fmt_float(self, val):
         try:
@@ -346,6 +480,7 @@ class ProfileEditorWindow(forms.WPFWindow):
             container.Width = width
             lbl = TextBlock(Text=label_text, Margin=Thickness(0, 0, 0, 2))
             box = TextBox()
+            box.IsReadOnly = not self._in_edit_mode
             container.Children.Add(lbl)
             container.Children.Add(box)
             panel.Children.Add(container)
