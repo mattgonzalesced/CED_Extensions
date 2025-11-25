@@ -3,7 +3,7 @@
 Edit YAML Profiles
 ------------------
 UI to edit CEDLib.lib/profileData.yaml (used by Place Elements - YAML).
-Allows editing offsets, parameters, tags, category, and is_group for each CAD profile/type.
+Allows editing offsets, parameters, tags, category, and is_group for each equipment definition/type.
 """
 
 import io
@@ -183,6 +183,7 @@ class TypeConfigShim(object):
     def __init__(self, dct=None):
         dct = dct or {}
         self.label = dct.get("label")
+        self.led_id = dct.get("led_id")
         self.category_name = dct.get("category_name")
         self.is_group = bool(dct.get("is_group", False))
         self.instance_config = InstanceConfigShim(dct.get("instance_config") or {})
@@ -249,6 +250,7 @@ def _dict_from_shims(profiles):
                 params = {}
             types.append({
                 "label": t.label,
+                "led_id": getattr(t, "led_id", None),
                 "category_name": t.category_name,
                 "is_group": t.is_group,
                 "instance_config": {
@@ -274,6 +276,45 @@ def _shims_from_dict(data):
     return profiles
 
 
+def _build_relations_index(equipment_defs):
+    id_to_name = {}
+    for entry in equipment_defs or []:
+        eq_id = (entry.get("id") or "").strip()
+        eq_name = (entry.get("name") or eq_id or "").strip()
+        if eq_id:
+            id_to_name[eq_id] = eq_name
+    relations = {}
+    for entry in equipment_defs or []:
+        profile_name = (entry.get("name") or entry.get("id") or "").strip()
+        entry_id = (entry.get("id") or "").strip()
+        rel = entry.get("linked_relations") or {}
+        parent_block = rel.get("parent") or {}
+        parent_id = (parent_block.get("equipment_id") or "").strip()
+        parent_led = (parent_block.get("parent_led_id") or "").strip()
+        child_entries = []
+        for child in rel.get("children") or []:
+            cid = (child.get("equipment_id") or "").strip()
+            if not cid:
+                continue
+            anchor_led = (child.get("anchor_led_id") or "").strip()
+            child_entries.append({
+                "id": cid,
+                "name": id_to_name.get(cid, ""),
+                "anchor_led_id": anchor_led,
+            })
+        data = {
+            "parent_id": parent_id,
+            "parent_name": id_to_name.get(parent_id, ""),
+            "parent_led_id": parent_led,
+            "children": child_entries,
+        }
+        if profile_name:
+            relations[profile_name] = data
+        if entry_id and entry_id not in relations:
+            relations[entry_id] = data
+    return relations
+
+
 def main():
     data_path = _pick_profile_data_path()
     if not data_path:
@@ -288,10 +329,11 @@ def main():
 
     raw_data = _load_profile_store(data_path)
     raw_defs = raw_data.get("equipment_definitions") or []
+    relations_index = _build_relations_index(raw_defs)
     legacy_dict = {"profiles": equipment_defs_to_legacy(raw_defs)}
     shim_profiles = _shims_from_dict(legacy_dict)
 
-    window = ProfileEditorWindow(xaml_path, shim_profiles)
+    window = ProfileEditorWindow(xaml_path, shim_profiles, relations_index)
     result = window.show_dialog()
     if not result:
         return

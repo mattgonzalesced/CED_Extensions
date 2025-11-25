@@ -15,6 +15,7 @@ Flow:
 
 import io
 import json
+import math
 import os
 import datetime
 
@@ -44,7 +45,10 @@ try:
 except NameError:
     basestring = str
 
-from Autodesk.Revit.DB import Group, GroupType, XYZ, BuiltInParameter, IndependentTag  # noqa: E402
+from Autodesk.Revit.DB import Group, GroupType, XYZ, BuiltInParameter, IndependentTag, Transaction  # noqa: E402
+
+ELEMENT_LINKER_PARAM_NAME = "Element_Linker Parameter"
+ELEMENT_LINKER_SHARED_PARAM = "Element_Linker"
 
 # --------------------------------------------------------------------------- #
 # YAML helpers
@@ -231,6 +235,97 @@ def _collect_params(elem):
     return {"dev-Group ID": found.get("dev-Group ID", "")}
 
 
+def _get_rotation_degrees(elem):
+    loc = getattr(elem, "Location", None)
+    if loc is not None and hasattr(loc, "Rotation"):
+        try:
+            return math.degrees(loc.Rotation)
+        except Exception:
+            pass
+    facing = getattr(elem, "FacingOrientation", None)
+    if facing:
+        try:
+            return math.degrees(math.atan2(facing.Y, facing.X))
+        except Exception:
+            pass
+    return 0.0
+
+
+def _get_level_element_id(elem):
+    try:
+        lvl = getattr(elem, "LevelId", None)
+        if lvl and getattr(lvl, "IntegerValue", -1) > 0:
+            return lvl.IntegerValue
+    except Exception:
+        pass
+    level_params = (
+        BuiltInParameter.SCHEDULE_LEVEL_PARAM,
+        BuiltInParameter.INSTANCE_REFERENCE_LEVEL_PARAM,
+        BuiltInParameter.FAMILY_LEVEL_PARAM,
+        BuiltInParameter.INSTANCE_LEVEL_PARAM,
+    )
+    for bip in level_params:
+        try:
+            param = elem.get_Parameter(bip)
+        except Exception:
+            param = None
+        if not param:
+            continue
+        try:
+            eid = param.AsElementId()
+            if eid and getattr(eid, "IntegerValue", -1) > 0:
+                return eid.IntegerValue
+        except Exception:
+            continue
+    return None
+
+
+def _format_xyz(vec):
+    if not vec:
+        return ""
+    return "{:.6f},{:.6f},{:.6f}".format(vec.X, vec.Y, vec.Z)
+
+
+def _build_element_linker_payload(led_id, set_id, elem, host_point):
+    point = host_point or _get_point(elem)
+    rotation_deg = _get_rotation_degrees(elem)
+    level_id = _get_level_element_id(elem)
+    try:
+        elem_id = elem.Id.IntegerValue
+    except Exception:
+        elem_id = ""
+    facing = getattr(elem, "FacingOrientation", None)
+    lines = [
+        "Linked Element Definition ID: {}".format(led_id or ""),
+        "Set Definition ID: {}".format(set_id or ""),
+        "Location XYZ (ft): {}".format(_format_xyz(point)),
+        "Rotation (deg): {:.6f}".format(rotation_deg),
+        "LevelId: {}".format(level_id if level_id is not None else ""),
+        "ElementId: {}".format(elem_id),
+        "FacingOrientation: {}".format(_format_xyz(facing)),
+    ]
+    return "\n".join(lines).strip()
+
+
+def _set_element_linker_parameter(elem, value):
+    if not elem or value is None:
+        return False
+    param_names = (ELEMENT_LINKER_SHARED_PARAM, ELEMENT_LINKER_PARAM_NAME)
+    for name in param_names:
+        try:
+            param = elem.LookupParameter(name)
+        except Exception:
+            param = None
+        if not param or param.IsReadOnly:
+            continue
+        try:
+            param.Set(value)
+            return True
+        except Exception:
+            continue
+    return False
+
+
 def _collect_hosted_tags(elem, host_point):
     doc = getattr(elem, "Document", None)
     if doc is None or host_point is None:
@@ -314,7 +409,6 @@ def _collect_hosted_tags(elem, host_point):
             delta = tag_pt - host_point
             offsets["x_inches"] = _feet_to_inches(delta.X)
             offsets["y_inches"] = _feet_to_inches(delta.Y)
-            offsets["z_inches"] = _feet_to_inches(delta.Z)
         tags.append({
             "family_name": fam_name,
             "type_name": type_name,
@@ -387,22 +481,50 @@ def _build_type_entry(elem, offset_vec, rot_deg, host_point):
     params = _collect_params(elem)
     tags = _collect_hosted_tags(elem, host_point)
 
+    offsets = {
+        "x_inches": _feet_to_inches(offset_vec.X),
+        "y_inches": _feet_to_inches(offset_vec.Y),
+        "rotation_deg": rot_deg,
+    }
+
+    # z offset should match the element's elevation from level parameter (in inches)
+    z_offset = 0.0
+    try:
+        level_param = elem.get_Parameter(BuiltInParameter.INSTANCE_ELEVATION_PARAM)
+        if level_param:
+            z_offset = level_param.AsDouble()
+        else:
+            # fallback to world z if parameter missing
+            z_offset = host_point.Z if host_point else 0.0
+    except Exception:
+        z_offset = host_point.Z if host_point else 0.0
+    offsets["z_inches"] = _feet_to_inches(z_offset)
+
     type_entry = {
         "label": label,
         "is_group": is_group,
         "instance_config": {
-            "offsets": [{
-                "x_inches": _feet_to_inches(offset_vec.X),
-                "y_inches": _feet_to_inches(offset_vec.Y),
-                "z_inches": _feet_to_inches(offset_vec.Z),
-                "rotation_deg": rot_deg,
-            }],
+            "offsets": [offsets],
             "parameters": params,
             "tags": tags,
         },
         "category_name": cat_name or "",
     }
     return type_entry
+
+
+def _next_eq_number(data):
+    max_id = 0
+    for eq in data.get("equipment_definitions") or []:
+        eq_id = (eq.get("id") or "").strip()
+        if eq_id.startswith("EQ-"):
+            try:
+                num = int(eq_id.split("-")[-1])
+                if num > max_id:
+                    max_id = num
+            except Exception:
+                continue
+    return max_id + 1
 
 
 # --------------------------------------------------------------------------- #
@@ -434,6 +556,7 @@ def main():
     if not cad_choice:
         return
     cad_choice = cad_choice if isinstance(cad_choice, basestring) else cad_choice[0]
+    created_new_def = False
     if cad_choice == NEW_DEF_OPTION:
         cad_name = forms.ask_for_string(
             prompt="Enter a name for the new equipment definition:",
@@ -444,6 +567,7 @@ def main():
         cad_name = cad_name.strip()
         if not cad_name:
             return
+        created_new_def = True
     else:
         cad_name = cad_choice
 
@@ -474,31 +598,55 @@ def main():
     count = float(len(element_locations))
     centroid = XYZ(sum_x / count, sum_y / count, sum_z / count)
 
-    type_entries = []
+    element_records = []
     for elem, loc in element_locations:
         rel_vec = loc - centroid
-        type_entries.append(_build_type_entry(elem, rel_vec, 0.0, loc))
+        type_entry = _build_type_entry(elem, rel_vec, 0.0, loc)
+        element_records.append({
+            "element": elem,
+            "host_point": loc,
+            "type_entry": type_entry,
+        })
 
-    if not type_entries:
+    if not element_records:
         forms.alert("No valid elements were selected.", title="Add YAML Profiles")
         return
+    type_entries = [rec["type_entry"] for rec in element_records]
 
     data = _load_profile_store(data_path)
     equipment_def = ensure_equipment_definition(data, cad_name, type_entries[0])
-    type_set = get_type_set(equipment_def)
-    led_list = type_set.setdefault("linked_element_definitions", [])
+    if created_new_def:
+        next_idx = _next_eq_number(data)
+        eq_id = "EQ-{:03d}".format(next_idx)
+        set_id = "SET-{:03d}".format(next_idx)
+        equipment_def["id"] = eq_id
+        for linked_set in equipment_def.get("linked_sets") or []:
+            linked_set["id"] = set_id
+            linked_set["name"] = "{} Types".format(cad_name)
 
-    for entry in type_entries:
+    type_set = get_type_set(equipment_def)
+    eq_id = equipment_def.get("id")
+    set_id = type_set.get("id")
+
+    metadata_updates = []
+    led_list = type_set.setdefault("linked_element_definitions", [])
+    for rec in element_records:
+        entry = rec["type_entry"]
         lbl = (entry.get("label") or "").strip()
         if not lbl:
             continue
-        entry_inst = entry.get("instance_config") or {}
-        entry_offsets = entry_inst.get("offsets") or [{}]
-        entry_params = entry_inst.get("parameters") or {}
-        entry_tags = entry_inst.get("tags") or []
+        inst_cfg = entry.setdefault("instance_config", {})
+        entry_offsets = inst_cfg.get("offsets") or [{}]
+        entry_params = inst_cfg.setdefault("parameters", {})
+        entry_tags = inst_cfg.get("tags") or []
+
+        led_id = next_led_id(type_set, equipment_def)
+        payload = _build_element_linker_payload(led_id, set_id, rec["element"], rec["host_point"])
+        entry_params[ELEMENT_LINKER_PARAM_NAME] = payload
+        metadata_updates.append((rec["element"], payload))
 
         led_list.append({
-            "id": next_led_id(type_set, equipment_def),
+            "id": led_id,
             "label": lbl,
             "category": entry.get("category_name"),
             "is_group": bool(entry.get("is_group")),
@@ -506,6 +654,20 @@ def main():
             "parameters": entry_params,
             "tags": entry_tags,
         })
+
+    doc = getattr(revit, "doc", None)
+    if metadata_updates and doc:
+        t = Transaction(doc, "Store Element Linker metadata")
+        try:
+            t.Start()
+            for element, payload in metadata_updates:
+                _set_element_linker_parameter(element, payload)
+            t.Commit()
+        except Exception:
+            try:
+                t.RollBack()
+            except Exception:
+                pass
 
     try:
         save_profile_data(data_path, data)
@@ -516,7 +678,7 @@ def main():
             "type_labels": [t.get("label") for t in type_entries],
             "user": os.getenv("USERNAME") or os.getenv("USER") or "unknown",
         }, log_path)
-        forms.alert("Added {} type(s) under CAD profile '{}'.\nReload Place Elements (YAML) to use them.".format(len(type_entries), cad_name), title="Add YAML Profiles")
+        forms.alert("Added {} type(s) under equipment definition '{}'.\nReload Place Elements (YAML) to use them.".format(len(type_entries), cad_name), title="Add YAML Profiles")
     except Exception as ex:
         forms.alert("Failed to save profileData.yaml:\n\n{}".format(ex), title="Add YAML Profiles")
 

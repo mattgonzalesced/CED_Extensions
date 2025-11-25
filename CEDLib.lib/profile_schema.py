@@ -297,6 +297,7 @@ def equipment_defs_to_legacy(equipment_defs):
                     "label": led.get("label"),
                     "category_name": led.get("category"),
                     "is_group": bool(led.get("is_group")),
+                    "led_id": led.get("id"),
                     "instance_config": inst_cfg,
                 })
         legacy.append({
@@ -406,7 +407,7 @@ def _types_to_linked_set(equipment_def, types, seq):
         offsets = inst.get("offsets") or []
         params = inst.get("parameters") or {}
         tags = inst.get("tags") or []
-        led_id = "{}-LED-{:03d}".format(set_id, idx)
+        led_id = t.get("led_id") or "{}-LED-{:03d}".format(set_id, idx)
         linked_defs.append({
             "id": led_id,
             "label": t.get("label"),

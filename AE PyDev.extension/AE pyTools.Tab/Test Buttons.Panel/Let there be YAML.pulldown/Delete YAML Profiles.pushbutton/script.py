@@ -2,7 +2,7 @@
 """
 Delete YAML Profiles
 --------------------
-Select an equipment definition (formerly CAD name) and remove linked element labels
+Select an equipment definition and remove linked element labels
 from CEDLib.lib/profileData.yaml.
 """
 
@@ -245,10 +245,88 @@ def _collect_type_entries(equipment_def):
     return entries
 
 
+def _get_relations(entry):
+    if not isinstance(entry, dict):
+        return {"children": [], "parent": {}}
+    relations = entry.get("linked_relations")
+    if not isinstance(relations, dict):
+        relations = {}
+        entry["linked_relations"] = relations
+    relations.setdefault("children", [])
+    relations.setdefault("parent", {})
+    return relations
+
+
+def _pop_equipment_by_id(equipment_defs, target_id):
+    target = (target_id or "").strip().lower()
+    if not target:
+        return None
+    for entry in list(equipment_defs):
+        current_id = (entry.get("id") or "").strip().lower()
+        if current_id == target:
+            try:
+                equipment_defs.remove(entry)
+            except ValueError:
+                pass
+            return entry
+    return None
+
+
+def _collect_children_refs(entry):
+    relations = _get_relations(entry)
+    child_refs = []
+    for child in relations.get("children") or []:
+        cid = (child.get("equipment_id") or "").strip()
+        anchor_led = (child.get("anchor_led_id") or "").strip()
+        if cid:
+            child_refs.append((cid, anchor_led))
+    return child_refs
+
+
+def _cascade_remove_children(equipment_defs, initial_entries):
+    removed_entries = []
+    queue = list(initial_entries)
+    processed = set()
+    while queue:
+        entry = queue.pop(0)
+        children = _collect_children_refs(entry)
+        for cid, _ in children:
+            norm = cid.strip().lower()
+            if not norm or norm in processed:
+                continue
+            child_entry = _pop_equipment_by_id(equipment_defs, cid)
+            if child_entry:
+                removed_entries.append(child_entry)
+                queue.append(child_entry)
+                processed.add(norm)
+    return removed_entries
+
+
+def _cleanup_relations(equipment_defs, removed_ids):
+    removed_set = {(rid or "").strip().lower() for rid in removed_ids if rid}
+    if not removed_set:
+        return
+    for entry in equipment_defs:
+        relations = entry.get("linked_relations")
+        if not isinstance(relations, dict):
+            continue
+        parent = relations.get("parent")
+        if isinstance(parent, dict):
+            pid = (parent.get("equipment_id") or "").strip().lower()
+            if pid in removed_set:
+                relations["parent"] = {}
+        children = relations.get("children")
+        if isinstance(children, list):
+            relations["children"] = [
+                child for child in children if (child.get("equipment_id") or "").strip().lower() not in removed_set
+            ]
+
+
 def _erase_entries(equipment_defs, definition_name, type_ids):
     if not equipment_defs:
-        return False
+        return False, []
     removed = False
+    removed_entries = []
     for entry in list(equipment_defs):
         name = _normalize_name(entry.get("name") or entry.get("id"))
         if name != definition_name:
@@ -262,12 +340,13 @@ def _erase_entries(equipment_defs, definition_name, type_ids):
             linked_set["linked_element_definitions"] = filtered
         entry["linked_sets"] = [ls for ls in linked_sets if ls.get("linked_element_definitions")]
         if not entry["linked_sets"]:
+            removed_entries.append(entry)
             try:
                 equipment_defs.remove(entry)
             except ValueError:
                 pass
         break
-    return removed
+    return removed, removed_entries
 
 
 def main():
@@ -317,20 +396,63 @@ def main():
     picked_entries = [display_map[name] for name in picked]
     picked_ids = {entry["id"] for entry in picked_entries}
     before_hash = _file_hash(data_path)
-    changed = _erase_entries(native_equipment_defs, definition_choice, picked_ids)
+    changed, removed_eq_entries = _erase_entries(native_equipment_defs, definition_choice, picked_ids)
     if not changed:
         return
+    # Determine if individual LED deletions remove child relationships
+    cascaded_entries = []
+    for defn in native_equipment_defs:
+        if (defn.get("name") or defn.get("id")) != definition_choice:
+            continue
+        relations = defn.get("linked_relations") or {}
+        children = relations.get("children") or []
+        led_by_id = {}
+        for linked_set in defn.get("linked_sets") or []:
+            for led_entry in linked_set.get("linked_element_definitions") or []:
+                led_id = (led_entry.get("id") or "").strip()
+                if led_id:
+                    led_by_id[led_id] = led_entry
+        affected_children = []
+        for child in children:
+            parent_led = (child.get("anchor_led_id") or "").strip()
+            if not parent_led or parent_led.lower() not in {_normalize_name(tid) for tid in picked_ids}:
+                continue
+            child_id = (child.get("equipment_id") or "").strip()
+            affected_children.append((child_id, child.get("anchor_led_id")))
+        if affected_children:
+            msg = [
+                "Deleting those types will remove child links (shown below). Continue?",
+                "",
+            ]
+            for cid, p_led in affected_children:
+                msg.append(" - Child '{}', anchored to LED '{}'".format(cid or "<Unknown>", p_led or "<Unknown>"))
+            if not forms.alert("\n".join(msg), title="Delete YAML Profiles", yes=True, no=True):
+                return
+            # also remove child entries referencing parent LEDs being deleted
+            relations["children"] = [
+                child
+                for child in children
+                if (child.get("anchor_led_id") or "").strip().lower() not in {_normalize_name(tid) for tid in picked_ids}
+            ]
+        break
+
+    cascade_entries = _cascade_remove_children(native_equipment_defs, removed_eq_entries)
+    all_removed_entries = list(removed_eq_entries) + list(cascade_entries)
+    removed_ids = [(entry.get("id") or "").strip() for entry in all_removed_entries if isinstance(entry, dict)]
+
+    _cleanup_relations(native_equipment_defs, removed_ids)
 
     save_profile_data(data_path, {"equipment_definitions": native_equipment_defs})
     after_hash = _file_hash(data_path)
     _append_log("delete", definition_choice, picked, before_hash, after_hash, log_path)
 
-    forms.alert(
-        "Deleted {} type(s) from definition '{}' and saved to profileData.yaml.\nReload Place Elements (YAML) to use updated data.".format(
-            len(picked), definition_choice
-        ),
-        title="Delete YAML Profiles",
-    )
+    summary = [
+        "Deleted {} type(s) from definition '{}' and saved to profileData.yaml.".format(len(picked), definition_choice),
+    ]
+    if removed_ids:
+        summary.append("Removed equipment definitions: {}".format(", ".join(sorted(set(removed_ids)))))
+    summary.append("Reload Place Elements (YAML) to use updated data.")
+    forms.alert("\n".join(summary), title="Delete YAML Profiles")
 
 
 if __name__ == "__main__":
