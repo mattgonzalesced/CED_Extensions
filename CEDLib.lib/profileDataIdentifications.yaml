@@ -1,47 +1,47 @@
 {
   "entries": [
     {
-      "cad_name": "Reed and Tony Work Together", 
-      "label": "EF-U_Receptacle_CED : Duplex Wall #2", 
-      "is_group": true, 
-      "offsets": {
-        "rotation_deg": 90.0, 
-        "x_inches": -5.6193569999999999, 
-        "y_inches": 31.315010000000001, 
-        "z_inches": 0.0
-      }, 
-      "tags": [
-        {
-          "offset": [
-            4.2632564145605996e-13, 
-            2.0156249999997167, 
-            -2.46469511466785e-14
-          ], 
-          "family": "EF-Tag_Electrical Fixtures_CED", 
-          "rotation_deg": 0.0, 
-          "category": "Electrical Fixture Tags", 
-          "parameters": {}, 
-          "type": "Circuit Number"
-        }
-      ], 
-      "equipment_id": "00001"
-    }, 
-    {
-      "cad_name": "Reed and Tony Work Together", 
-      "label": "EF-U_Receptacle_CED : Duplex Wall", 
+      "cad_name": "Thing 2", 
+      "label": "EF-U_Receptacle_CED : Quad Floor", 
       "is_group": true, 
       "offsets": {
         "rotation_deg": 0.0, 
-        "x_inches": -1.28185644111193, 
-        "y_inches": 6.8840438504158801, 
+        "x_inches": 0.0, 
+        "y_inches": 0.0, 
         "z_inches": 0.0
+      }, 
+      "tags": [], 
+      "equipment_id": "00001"
+    }, 
+    {
+      "cad_name": "Thing", 
+      "label": "EF-U_Receptacle_CED : Duplex Wall #2", 
+      "is_group": true, 
+      "offsets": {
+        "rotation_deg": 0.0, 
+        "x_inches": 9.0413599999999992, 
+        "y_inches": 1.7e-05, 
+        "z_inches": 18.0
+      }, 
+      "tags": [], 
+      "equipment_id": "00002"
+    }, 
+    {
+      "cad_name": "Thing", 
+      "label": "EF-U_Receptacle_CED : Duplex Wall", 
+      "is_group": true, 
+      "offsets": {
+        "rotation_deg": -90.0, 
+        "x_inches": -5.0000000000000004e-06, 
+        "y_inches": -9.0413610000000002, 
+        "z_inches": 18.0
       }, 
       "tags": [
         {
           "offset": [
-            4.2632564145605996e-13, 
-            2.0156249999997167, 
-            -2.46469511466785e-14
+            -0.038091556650954338, 
+            -1.0081364962114165, 
+            -2.4202861936828416e-14
           ], 
           "family": "EF-Tag_Electrical Fixtures_CED", 
           "rotation_deg": 0.0, 
@@ -50,7 +50,7 @@
           "type": "Circuit Number"
         }
       ], 
-      "equipment_id": "00002"
+      "equipment_id": "00003"
     }
   ]
 }

@@ -33,6 +33,7 @@ from LogicClasses.placement_engine import PlaceElementsEngine  # noqa: E402
 from LogicClasses.profile_repository import ProfileRepository  # noqa: E402
 from LogicClasses.tag_utils import tag_key_from_dict  # noqa: E402
 from LogicClasses.yaml_path_cache import get_cached_yaml_path, set_cached_yaml_path  # noqa: E402
+from LogicClasses.linked_equipment import build_child_requests, find_equipment_by_name  # noqa: E402
 try:
     from profile_schema import equipment_defs_to_legacy, load_data as load_profile_data  # noqa: E402
 except Exception:
@@ -213,8 +214,7 @@ def _sanitize_profiles(profiles):
     return cleaned
 
 
-def _build_repository(data_path):
-    data = _load_profile_store(data_path)
+def _build_repository(data):
     cleaned_defs = _sanitize_equipment_definitions(data.get("equipment_definitions") or [])
     legacy_profiles = equipment_defs_to_legacy(cleaned_defs)
     cleaned_profiles = _sanitize_profiles(legacy_profiles)
@@ -243,12 +243,65 @@ def _collect_tag_defs(repo, selection_map):
     return tags
 
 
+def _place_child_requests(repo, child_requests):
+    selection_map = {}
+    rows = []
+    for request in child_requests or []:
+        cad_name = request.get("name")
+        labels = request.get("labels")
+        point = request.get("target_point")
+        rotation = request.get("rotation")
+        if not cad_name or not labels or point is None:
+            continue
+        selection_map[cad_name] = labels
+        rows.append({
+            "Name": cad_name,
+            "Count": "1",
+            "Position X": str(point.X * 12.0),
+            "Position Y": str(point.Y * 12.0),
+            "Position Z": str(point.Z * 12.0),
+            "Rotation": str(rotation or 0.0),
+        })
+    if not selection_map or not rows:
+        return 0
+    tag_defs = _collect_tag_defs(repo, selection_map)
+    tag_view_map = {}
+    active_view = getattr(revit.doc, "ActiveView", None)
+    if active_view:
+        vid = active_view.Id.IntegerValue
+        for key in tag_defs:
+            tag_view_map[key] = [vid]
+    engine = PlaceElementsEngine(revit.doc, repo, tag_view_map=tag_view_map)
+    try:
+        results = engine.place_from_csv(rows, selection_map)
+    except Exception as exc:
+        forms.alert("Failed to place linked child equipment:\\n\\n{}".format(exc), title="Load Equipment Definition")
+        return 0
+    return results.get("placed", 0)
+
+
+def _gather_child_requests(parent_def, base_point, base_rotation, repo, data):
+    requests = []
+    if not parent_def:
+        return requests
+    for linked_set in parent_def.get("linked_sets") or []:
+        for led_entry in linked_set.get("linked_element_definitions") or []:
+            led_id = (led_entry.get("id") or "").strip()
+            if not led_id:
+                continue
+            reqs = build_child_requests(repo, data, parent_def, base_point, base_rotation, led_id)
+            if reqs:
+                requests.extend(reqs)
+    return requests
+
+
 def main():
     data_path = _pick_profile_data_path()
     if not data_path:
         return
 
-    repo = _build_repository(data_path)
+    raw_data = _load_profile_store(data_path)
+    repo = _build_repository(raw_data)
     cad_names = repo.cad_names()
     if not cad_names:
         forms.alert("No equipment definitions found in the selected YAML.", title="Load Equipment Definition")
@@ -277,6 +330,42 @@ def main():
         return
 
     selection_map = {cad_choice: labels}
+    rows = [{
+        "Name": cad_choice,
+        "Count": "1",
+        "Position X": str(base_pt.X * 12.0),
+        "Position Y": str(base_pt.Y * 12.0),
+        "Position Z": str(base_pt.Z * 12.0),
+        "Rotation": "0",
+    }]
+
+    parent_def = find_equipment_by_name(raw_data, cad_choice)
+    if parent_def:
+        child_requests = _gather_child_requests(parent_def, base_pt, 0.0, repo, raw_data)
+        if child_requests:
+            if forms.alert(
+                "Load '{}' with {} linked child equipment definition(s)?".format(cad_choice, len(child_requests)),
+                title="Load Equipment Definition",
+                yes=True,
+                no=True,
+            ):
+                for request in child_requests:
+                    name = request.get("name")
+                    labels = request.get("labels")
+                    point = request.get("target_point")
+                    rotation = request.get("rotation")
+                    if not name or not labels or point is None:
+                        continue
+                    selection_map[name] = labels
+                    rows.append({
+                        "Name": name,
+                        "Count": "1",
+                        "Position X": str(point.X * 12.0),
+                        "Position Y": str(point.Y * 12.0),
+                        "Position Z": str(point.Z * 12.0),
+                        "Rotation": str(rotation or 0.0),
+                    })
+
     tag_defs = _collect_tag_defs(repo, selection_map)
     tag_view_map = {}
     active_view = getattr(revit.doc, "ActiveView", None)
@@ -285,26 +374,14 @@ def main():
         for key in tag_defs:
             tag_view_map[key] = [vid]
 
-    base_row = {
-        "Name": cad_choice,
-        "Count": "1",
-        "Position X": str(base_pt.X * 12.0),
-        "Position Y": str(base_pt.Y * 12.0),
-        "Position Z": str(base_pt.Z * 12.0),
-        "Rotation": "0",
-    }
-
     engine = PlaceElementsEngine(revit.doc, repo, tag_view_map=tag_view_map)
     try:
-        results = engine.place_from_csv([base_row], selection_map)
+        results = engine.place_from_csv(rows, selection_map)
     except Exception as exc:
         forms.alert("Error during placement:\n\n{}".format(exc), title="Load Equipment Definition")
         return
 
-    forms.alert(
-        "Placed {} element(s) for equipment definition '{}'.".format(results.get("placed", 0), cad_choice),
-        title="Load Equipment Definition",
-    )
+    forms.alert("Placed {} element(s) for equipment definition '{}'.".format(results.get("placed", 0), cad_choice), title="Load Equipment Definition")
 
 
 if __name__ == "__main__":

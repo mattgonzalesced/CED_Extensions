@@ -1,0 +1,30 @@
+﻿Tag Equipment Workflow Explanation
+=================================
+
+1. Purpose and High-Level Flow
+------------------------------
+Tag Equipment is the annotation companion to Place Elements. It lets designers pull tag definitions from `profileData.yaml`, filter them by the dev-Group ID embedded in each family instance, and then drop the right tags onto matching hosts in the active view. The command therefore performs four major steps: load the YAML library, let the user choose which tag recipes to run, resolve eligible host elements in the current view, and use the shared `PlaceElementsEngine` to create tags relative to each host's current rotation and location. Because tags often duplicate across equipment definitions, the tool also de-duplicates placements so each host/type combination is tagged only once per run.
+
+2. Loading Tag Definitions
+--------------------------
+At launch, the script locates `profileData.yaml` using `get_cached_yaml_path()` and falls back to a file picker if needed. `_load_profile_store()` uses `profile_schema.load_data` with a YAML fallback parser to convert the file into an in-memory dictionary, then `_build_repository()` transforms that structure into a `ProfileRepository` of equipment definition names and linked types. `_collect_tag_entries()` walks every equipment definition and collects only those linked element definitions that have tag entries in their `instance_config`. Each candidate captures: the equipment definition name, Revit label (`Family : Type`), the LED ID, dev-Group filter, the actual tag definition, and a `display` string for UI.
+
+3. Gathering User Intent
+------------------------
+Once tag entries are built, the command prompts the user with a multi-select list of formatted strings such as `Thanksgiving :: EF-U_Receptacle_CED : Duplex Wall`. The user can choose one or many recipes. The script then filters the master entries down to the picked set, aborting if nothing remains. Prior to placement, `_collect_instance_lookup()` scans the active view for family instances (groups are excluded) and builds dictionaries keyed by normalized `Family : Type` strings as well as `Family` only. Each dictionary stores a list of `(instance, point, rotation, led_payload)` tuples so the matching phase can quickly identify host candidates.
+
+4. Matching Hosts and Filtering by Metadata
+-------------------------------------------
+For each selected tag recipe, `_resolve_hosts()` tries multiple match strategies: exact `label`, canonical `Family : Type`, or just the family name. Once a pool of hosts is found, `_filter_by_group_id()` restricts the list to instances whose `dev-Group ID` parameter matches the YAML entry (empty value behaves as a wildcard). `_filter_by_led_id()` further narrows the list when the YAML contains an `Element_Linker` payload. These filters ensure that only the subset of instances that belong to the same equipment definition instance are tagged, preventing the command from flooding unrelated elements.
+
+5. Placing Tags via PlaceElementsEngine
+--------------------------------------
+With the host list approved, the command leverages `PlaceElementsEngine._place_tags`. For each host, the script records the type key (`tag_key_from_dict`) and stores `(host_id, tag_key)` in `placed_tag_pairs` to avoid duplicates. It measures the host’s origin and rotation (`_get_point` / `_get_rotation_degrees`), and hands that information plus the YAML tag definition to the engine. The engine reads the stored `x/y/z` offsets and rotation deltas, converts inches back to feet, and creates an IndependentTag aligned with the current host orientation. Everything happens inside a single `Transaction` named “Tag Equipment (YAML)” so the user can undo the entire batch in one step if needed.
+
+6. View Filtering and Tag View Map
+----------------------------------
+Because tags are view-specific, the script automatically constrains placement to the active view. When the user selected tag recipes, the code built `tag_view_map` entries that map the tag signature to the current view ID. This map is passed into the placement engine so tags are only created in views that the user actually has open, which avoids cross-view warnings or invisible annotations. Attempts to run the tool in 3D views are blocked with an alert because Revit prohibits IndependentTag heads in perspective/3D contexts.
+
+7. Reporting and Diagnostics
+----------------------------
+After committing the transaction, the script summarizes the run: number of tags placed and, if any requested hosts were missing, a short list of equipment-definition + label pairs that had no matching instances in the view. The message helps designers fix dev-Group mismatches or ensure they're running the command in the correct view. Any exception during placement rolls back the transaction and displays the error so the YAML source is never partially processed. Combined with the shared repository + engine approach, Tag Equipment stays in sync with the same tag offsets captured by Add YAML Profiles and tweaked via Update Vector.

@@ -38,6 +38,44 @@ try:
 except NameError:  # Python 3 fallback
     basestring = str
 
+ELEMENT_LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
+
+
+def _parse_linker_payload(payload_text):
+    if not payload_text:
+        return {}
+    entries = {}
+    for raw_line in payload_text.splitlines():
+        line = raw_line.strip()
+        if not line or ":" not in line:
+            continue
+        key, _, remainder = line.partition(":")
+        entries[key.strip()] = remainder.strip()
+    return {
+        "led_id": (entries.get("Linked Element Definition ID", "") or "").strip(),
+        "set_id": (entries.get("Set Definition ID", "") or "").strip(),
+    }
+
+
+def _format_xyz(vec):
+    if not vec:
+        return ""
+    return "{:.6f},{:.6f},{:.6f}".format(vec.X, vec.Y, vec.Z)
+
+
+def _build_linker_payload(led_id, set_id, location, rotation_deg, level_id, element_id, facing):
+    rotation = float(rotation_deg or 0.0)
+    lines = [
+        "Linked Element Definition ID: {}".format(led_id or ""),
+        "Set Definition ID: {}".format(set_id or ""),
+        "Location XYZ (ft): {}".format(_format_xyz(location)),
+        "Rotation (deg): {:.6f}".format(rotation),
+        "LevelId: {}".format(level_id if level_id is not None else ""),
+        "ElementId: {}".format(element_id if element_id is not None else ""),
+        "FacingOrientation: {}".format(_format_xyz(facing)),
+    ]
+    return "\n".join(lines).strip()
+
 
 class PlaceElementsEngine(object):
     def __init__(self, doc, repo, default_level=None, tag_view_map=None, allow_tags=True):
@@ -384,6 +422,7 @@ class PlaceElementsEngine(object):
         if instance:
             if abs(final_rot_deg) > 1e-6:
                 self._rotate_instance(instance, loc, final_rot_deg)
+            self._update_element_linker_parameter(instance, linked_def, loc, final_rot_deg)
             if self.allow_tags:
                 self._place_tags(tags, instance, loc, final_rot_deg)
             return True
@@ -687,6 +726,76 @@ class PlaceElementsEngine(object):
                     param.Set(str(value))
             except Exception:
                 continue
+
+    def _get_linker_template(self, linked_def):
+        cache = getattr(linked_def, "_ced_linker_template", None)
+        if cache is not None:
+            return cache
+        params = linked_def.get_static_params() or {}
+        for name in ELEMENT_LINKER_PARAM_NAMES:
+            value = params.get(name)
+            if isinstance(value, basestring) and value.strip():
+                parsed = _parse_linker_payload(value)
+                cache = {
+                    "param_name": name,
+                    "led_id": parsed.get("led_id"),
+                    "set_id": parsed.get("set_id"),
+                }
+                setattr(linked_def, "_ced_linker_template", cache)
+                return cache
+        cache = {}
+        setattr(linked_def, "_ced_linker_template", cache)
+        return cache
+
+    def _set_element_linker_param(self, element, payload_value):
+        if not element or not payload_value:
+            return False
+        success = False
+        for name in ELEMENT_LINKER_PARAM_NAMES:
+            try:
+                param = element.LookupParameter(name)
+            except Exception:
+                param = None
+            if not param or param.IsReadOnly:
+                continue
+            try:
+                param.Set(payload_value)
+                success = True
+            except Exception:
+                continue
+        return success
+
+    def _update_element_linker_parameter(self, instance, linked_def, location, rotation_deg):
+        if not instance or not linked_def:
+            return
+        template = self._get_linker_template(linked_def)
+        if not template or not template.get("led_id"):
+            return
+        led_id = template.get("led_id")
+        set_id = template.get("set_id")
+        level_id = None
+        level_ref = getattr(instance, "LevelId", None)
+        if level_ref is not None:
+            try:
+                level_id = level_ref.IntegerValue
+            except Exception:
+                level_id = None
+        element_id = None
+        try:
+            element_id = instance.Id.IntegerValue
+        except Exception:
+            element_id = None
+        facing = getattr(instance, "FacingOrientation", None)
+        payload = _build_linker_payload(
+            led_id=led_id,
+            set_id=set_id,
+            location=location,
+            rotation_deg=rotation_deg,
+            level_id=level_id,
+            element_id=element_id,
+            facing=facing,
+        )
+        self._set_element_linker_param(instance, payload)
 
 
 __all__ = ["PlaceElementsEngine"]
