@@ -1,56 +1,69 @@
 {
   "entries": [
     {
-      "cad_name": "Thing 2", 
-      "label": "EF-U_Receptacle_CED : Quad Floor", 
+      "cad_name": "GO Check Stand", 
+      "label": "EF-U_Receptacle_CED : Duplex Ceiling", 
       "is_group": true, 
       "offsets": {
         "rotation_deg": 0.0, 
         "x_inches": 0.0, 
         "y_inches": 0.0, 
-        "z_inches": 0.0
+        "z_inches": 108.0
       }, 
       "tags": [], 
       "equipment_id": "00001"
     }, 
     {
-      "cad_name": "Thing", 
-      "label": "EF-U_Receptacle_CED : Duplex Wall #2", 
+      "cad_name": "GO Check Stand", 
+      "label": "EF-U_Receptacle_CED : Duplex Ceiling", 
       "is_group": true, 
       "offsets": {
         "rotation_deg": 0.0, 
-        "x_inches": 9.0413599999999992, 
-        "y_inches": 1.7e-05, 
-        "z_inches": 18.0
+        "x_inches": 0.0, 
+        "y_inches": 0.0, 
+        "z_inches": 108.0
       }, 
       "tags": [], 
       "equipment_id": "00002"
     }, 
     {
-      "cad_name": "Thing", 
-      "label": "EF-U_Receptacle_CED : Duplex Wall", 
+      "cad_name": "GO Check Stand", 
+      "label": "EF-U_Receptacle_CED : Duplex Ceiling", 
       "is_group": true, 
       "offsets": {
-        "rotation_deg": -90.0, 
-        "x_inches": -5.0000000000000004e-06, 
-        "y_inches": -9.0413610000000002, 
-        "z_inches": 18.0
+        "rotation_deg": 0.0, 
+        "x_inches": 0.0, 
+        "y_inches": 0.0, 
+        "z_inches": 108.0
       }, 
-      "tags": [
-        {
-          "offset": [
-            -0.038091556650954338, 
-            -1.0081364962114165, 
-            -2.4202861936828416e-14
-          ], 
-          "family": "EF-Tag_Electrical Fixtures_CED", 
-          "rotation_deg": 0.0, 
-          "category": "Electrical Fixture Tags", 
-          "parameters": {}, 
-          "type": "Circuit Number"
-        }
-      ], 
+      "tags": [], 
       "equipment_id": "00003"
+    }, 
+    {
+      "cad_name": "GO Check Stand", 
+      "label": "EF-U_Receptacle_CED : Duplex Ceiling", 
+      "is_group": true, 
+      "offsets": {
+        "rotation_deg": 0.0, 
+        "x_inches": 0.0, 
+        "y_inches": 0.0, 
+        "z_inches": 108.0
+      }, 
+      "tags": [], 
+      "equipment_id": "00004"
+    }, 
+    {
+      "cad_name": "GO Check Stand", 
+      "label": "EF-U_Receptacle_CED : Duplex Ceiling", 
+      "is_group": true, 
+      "offsets": {
+        "rotation_deg": 0.0, 
+        "x_inches": 0.0, 
+        "y_inches": 0.0, 
+        "z_inches": 108.0
+      }, 
+      "tags": [], 
+      "equipment_id": "00005"
     }
   ]
 }

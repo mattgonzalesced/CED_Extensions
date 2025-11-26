@@ -184,71 +184,71 @@ def register_profiles_from_csv(csv_path, name_columns=None):
 # Data loading from external YAML (JSON subset).
 # -------------------------------------------------------------------------
 
-DATA_FILE = os.path.join(os.path.dirname(__file__), "element_data.yaml")
+#DATA_FILE = os.path.join(os.path.dirname(__file__), "element_data.yaml")
 
 
-def _offset_from_dict(data):
-    if data is None:
-        return OffsetConfig()
-    return OffsetConfig(
-        data.get("x_inches", 0.0),
-        data.get("y_inches", 0.0),
-        data.get("z_inches", 0.0),
-        data.get("rotation_deg", 0.0),
-    )
+#def _offset_from_dict(data):
+ #   if data is None:
+  #      return OffsetConfig()
+   # return OffsetConfig(
+    #    data.get("x_inches", 0.0),
+     #   data.get("y_inches", 0.0),
+      #  data.get("z_inches", 0.0),
+       # data.get("rotation_deg", 0.0),
+    #)
 
 
-def _instance_from_dict(data):
-    if data is None:
-        return InstanceConfig()
+#def _instance_from_dict(data):
+ #   if data is None:
+  #      return InstanceConfig()
+#
+ #   offsets_data = data.get("offsets", []) or []
+  #  offsets = []
+   # for od in offsets_data:
+    #    offsets.append(_offset_from_dict(od))
 
-    offsets_data = data.get("offsets", []) or []
-    offsets = []
-    for od in offsets_data:
-        offsets.append(_offset_from_dict(od))
+    #tags = []
+    #for tag_data in data.get("tags", []) or []:
+     #   tags.append(
+      #      TagConfig(
+       #         category_name=tag_data.get("category_name"),
+        #        family_name=tag_data.get("family_name"),
+         #       type_name=tag_data.get("type_name"),
+          #      parameters=tag_data.get("parameters") or {},
+           #     offsets=_offset_from_dict(tag_data.get("offsets") or {}),
+            #)
+        #)
 
-    tags = []
-    for tag_data in data.get("tags", []) or []:
-        tags.append(
-            TagConfig(
-                category_name=tag_data.get("category_name"),
-                family_name=tag_data.get("family_name"),
-                type_name=tag_data.get("type_name"),
-                parameters=tag_data.get("parameters") or {},
-                offsets=_offset_from_dict(tag_data.get("offsets") or {}),
-            )
-        )
-
-    return InstanceConfig(
-        parameters=data.get("parameters") or {},
-        offsets=offsets,
-        tags=tags,
-    )
+    #return InstanceConfig(
+     #   parameters=data.get("parameters") or {},
+      #  offsets=offsets,
+       # tags=tags,
+    #)
 
 
-def load_profiles_from_yaml(path=None):
-    """Populate CAD_BLOCK_PROFILES from element_data.yaml (stored as JSON-compatible YAML)."""
-    data_path = path or DATA_FILE
-    if not os.path.exists(data_path):
-        raise IOError("Profile data file not found: {}".format(data_path))
-
-    with open(data_path, "r") as f:
-        data = json.load(f)
-
-    CAD_BLOCK_PROFILES.clear()
-    for prof_data in data.get("profiles", []):
-        profile = CadBlockProfile(prof_data.get("cad_name"))
-        for type_data in prof_data.get("types", []) or []:
-            instance_cfg = _instance_from_dict(type_data.get("instance_config") or {})
-            type_cfg = TypeConfig(
-                label=type_data.get("label"),
-                category_name=type_data.get("category_name"),
-                is_group=type_data.get("is_group", False),
-                instance_config=instance_cfg,
-            )
-            profile.add_type(type_cfg)
-        register_profile(profile)
+#def load_profiles_from_yaml(path=None):
+#    """Populate CAD_BLOCK_PROFILES from element_data.yaml (stored as JSON-compatible YAML)."""
+ #   data_path = path or DATA_FILE
+  #  if not os.path.exists(data_path):
+   #     raise IOError("Profile data file not found: {}".format(data_path))
+#
+ #   with open(data_path, "r") as f:
+  #      data = json.load(f)
+#
+ #   CAD_BLOCK_PROFILES.clear()
+  #  for prof_data in data.get("profiles", []):
+   #     profile = CadBlockProfile(prof_data.get("cad_name"))
+    #    for type_data in prof_data.get("types", []) or []:
+     #       instance_cfg = _instance_from_dict(type_data.get("instance_config") or {})
+      #      type_cfg = TypeConfig(
+       #         label=type_data.get("label"),
+        #        category_name=type_data.get("category_name"),
+         #       is_group=type_data.get("is_group", False),
+          #      instance_config=instance_cfg,
+           # )
+            #profile.add_type(type_cfg)
+        #register_profile(profile)
 
 
 # Load profile data immediately on import
-load_profiles_from_yaml()
+#load_profiles_from_yaml()

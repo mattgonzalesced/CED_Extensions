@@ -15,7 +15,7 @@ Changes are written back into the existing InstanceConfig objects in memory.
 """
 
 from pyrevit import forms
-from Element_Linker import OffsetConfig, TagConfig
+from LogicClasses.Element_Linker import OffsetConfig, TagConfig
 
 try:
     basestring
