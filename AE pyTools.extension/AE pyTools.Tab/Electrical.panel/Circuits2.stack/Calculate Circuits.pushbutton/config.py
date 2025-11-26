@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from pyrevit import forms, revit, script
+from pyrevit import DB, forms, revit, script
 from System.Windows import FontStyles, Visibility
 from System.Windows.Media import Brushes
 
@@ -12,6 +12,7 @@ from CEDElectrical.Model.circuit_settings import (
 from CEDElectrical.Domain import settings_manager
 
 XAML_PATH = script.get_bundle_file('settings.xaml')
+logger = script.get_logger()
 
 
 class CircuitSettingsWindow(forms.WPFWindow):
@@ -20,6 +21,8 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.doc = revit.doc
         self.defaults = CircuitSettings()
         self.settings = settings_manager.load_circuit_settings(self.doc)
+        self._previous_equipment_write = bool(self.settings.write_equipment_results)
+        self._previous_fixture_write = bool(self.settings.write_fixture_results)
         self._help_key = None
         self._is_normalizing = False
 
@@ -205,7 +208,34 @@ class CircuitSettingsWindow(forms.WPFWindow):
             forms.alert("Could not save settings. Please check your inputs.\n\n{}".format(ex))
             return
 
+        clear_equipment = self._previous_equipment_write and not updated.write_equipment_results
+        clear_fixtures = self._previous_fixture_write and not updated.write_fixture_results
+
+        if clear_equipment or clear_fixtures:
+            msg_parts = [
+                "Turning off write-back will clear stored circuit data (numbers to 0, text to blank) on:"
+            ]
+            if clear_equipment:
+                msg_parts.append("• Electrical Equipment")
+            if clear_fixtures:
+                msg_parts.append("• Fixtures and Devices")
+            msg_parts.append("This will run after you save settings.")
+            choice = forms.alert("\n".join(msg_parts), ok=False, yes=True, no=True, options=["Proceed and Clear", "Cancel"])
+            if choice != "Proceed and Clear":
+                return
+
         settings_manager.save_circuit_settings(self.doc, updated)
+        if clear_equipment or clear_fixtures:
+            try:
+                settings_manager.clear_downstream_results(
+                    self.doc,
+                    clear_equipment=clear_equipment,
+                    clear_fixtures=clear_fixtures,
+                    logger=logger,
+                )
+            except Exception as ex:
+                logger.error("Failed to clear downstream circuit data: {}".format(ex))
+
         forms.alert("Calculate Circuits settings saved to project.")
         self.Close()
 
