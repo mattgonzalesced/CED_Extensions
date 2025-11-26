@@ -17,9 +17,8 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="2*"/>
@@ -28,11 +27,21 @@
         </Grid.ColumnDefinitions>
 
         <TextBlock Grid.Row="0" Grid.Column="0" Text="Minimum Conduit Size" Margin="0,0,8,10" VerticalAlignment="Center"/>
-        <TextBox x:Name="min_conduit_size_tb" Grid.Row="0" Grid.Column="1" Margin="0,0,8,10" Padding="6"/>
+        <ComboBox x:Name="min_conduit_size_cb" Grid.Row="0" Grid.Column="1" Margin="0,0,8,10" Padding="6" SelectedIndex="0">
+            <ComboBoxItem Content="1/2\"" Tag="1/2\""/>
+            <ComboBoxItem Content="3/4\"" Tag="3/4\""/>
+        </ComboBox>
         <TextBlock x:Name="min_conduit_default" Grid.Row="0" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
 
         <TextBlock Grid.Row="1" Grid.Column="0" Text="Max Conduit Fill" Margin="0,0,8,10" VerticalAlignment="Center"/>
-        <TextBox x:Name="max_conduit_fill_tb" Grid.Row="1" Grid.Column="1" Margin="0,0,8,10" Padding="6"/>
+        <Grid Grid.Row="1" Grid.Column="1" Margin="0,0,8,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="max_conduit_fill_tb" Grid.Column="0" Padding="6" Tag="Max Conduit Fill"/>
+            <TextBlock x:Name="max_conduit_fill_warn" Grid.Column="1" Text="⚠" Foreground="#D9822B" VerticalAlignment="Center" Visibility="Collapsed" Margin="8,0,0,0" FontSize="14"/>
+        </Grid>
         <TextBlock x:Name="max_conduit_fill_default" Grid.Row="1" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
 
         <TextBlock Grid.Row="2" Grid.Column="0" Text="Neutral Behavior" Margin="0,0,8,10" VerticalAlignment="Center"/>
@@ -43,11 +52,25 @@
         <TextBlock x:Name="neutral_behavior_default" Grid.Row="2" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
 
         <TextBlock Grid.Row="3" Grid.Column="0" Text="Max Branch Voltage Drop" Margin="0,0,8,10" VerticalAlignment="Center"/>
-        <TextBox x:Name="max_branch_vd_tb" Grid.Row="3" Grid.Column="1" Margin="0,0,8,10" Padding="6"/>
+        <Grid Grid.Row="3" Grid.Column="1" Margin="0,0,8,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="max_branch_vd_tb" Grid.Column="0" Padding="6" Tag="Max Branch Voltage Drop"/>
+            <TextBlock x:Name="max_branch_vd_warn" Grid.Column="1" Text="⚠" Foreground="#D9822B" VerticalAlignment="Center" Visibility="Collapsed" Margin="8,0,0,0" FontSize="14"/>
+        </Grid>
         <TextBlock x:Name="max_branch_vd_default" Grid.Row="3" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
 
         <TextBlock Grid.Row="4" Grid.Column="0" Text="Max Feeder Voltage Drop" Margin="0,0,8,10" VerticalAlignment="Center"/>
-        <TextBox x:Name="max_feeder_vd_tb" Grid.Row="4" Grid.Column="1" Margin="0,0,8,10" Padding="6"/>
+        <Grid Grid.Row="4" Grid.Column="1" Margin="0,0,8,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="max_feeder_vd_tb" Grid.Column="0" Padding="6" Tag="Max Feeder Voltage Drop"/>
+            <TextBlock x:Name="max_feeder_vd_warn" Grid.Column="1" Text="⚠" Foreground="#D9822B" VerticalAlignment="Center" Visibility="Collapsed" Margin="8,0,0,0" FontSize="14"/>
+        </Grid>
         <TextBlock x:Name="max_feeder_vd_default" Grid.Row="4" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
 
         <TextBlock Grid.Row="5" Grid.Column="0" Text="Feeder VD Method" Margin="0,0,8,10" VerticalAlignment="Center"/>
@@ -58,12 +81,11 @@
         </ComboBox>
         <TextBlock x:Name="feeder_vd_method_default" Grid.Row="5" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
 
-        <Border Grid.Row="6" Grid.ColumnSpan="3" Margin="0,0,0,10" Padding="8" Background="#FFF0F0F0" BorderBrush="#DDD" BorderThickness="1">
+        <Border Grid.Row="5" Grid.ColumnSpan="3" Margin="0,0,0,10" Padding="8" Background="#FFF0F0F0" BorderBrush="#DDD" BorderThickness="1">
             <TextBlock x:Name="help_preview" TextWrapping="Wrap" Foreground="#333"/>
         </Border>
 
-        <StackPanel Grid.Row="7" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0" >
-            <Button x:Name="help_btn" Content="Help" Margin="0,0,8,0" Padding="10,6" MinWidth="80"/>
+        <StackPanel Grid.Row="6" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0" VerticalAlignment="Center">
             <Button x:Name="reset_btn" Content="Reset to Defaults" Margin="0,0,8,0" Padding="14,6" MinWidth="130"/>
             <Button x:Name="cancel_btn" Content="Cancel" Margin="0,0,8,0" Padding="14,6" MinWidth="90"/>
             <Button x:Name="save_btn" Content="Save Settings" Padding="16,6" MinWidth="120"/>
