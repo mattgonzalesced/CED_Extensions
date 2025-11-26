@@ -114,7 +114,7 @@ def _clear_param(param):
 
 
 def clear_downstream_results(doc, clear_equipment=False, clear_fixtures=False, logger=None):
-    """Blank all stored circuit data on downstream elements after toggles are disabled."""
+    """Blank stored circuit data on downstream elements after toggles are disabled."""
     if not (clear_equipment or clear_fixtures):
         return 0, 0
 
@@ -122,11 +122,31 @@ def clear_downstream_results(doc, clear_equipment=False, clear_fixtures=False, l
     cleared_equipment = 0
     cleared_fixtures = 0
 
+    # Filter to only electrical fixtures/equipment that have an MEP model to avoid
+    # grouped annotation and other non-relevant family instances.
+    category_ids = []
+    if clear_equipment:
+        category_ids.append(DB.ElementId(DB.BuiltInCategory.OST_ElectricalEquipment))
+    if clear_fixtures:
+        category_ids.append(DB.ElementId(DB.BuiltInCategory.OST_ElectricalFixtures))
+
+    multi_filter = DB.ElementMulticategoryFilter(category_ids) if category_ids else None
+
     t = DB.Transaction(doc, "Clear downstream circuit data")
     t.Start()
     try:
         collector = DB.FilteredElementCollector(doc).OfClass(DB.FamilyInstance)
+        if multi_filter:
+            collector = collector.WherePasses(multi_filter)
+
         for el in collector:
+            try:
+                # Skip non-MEP model family instances which are typically annotation or nested items.
+                if getattr(el, "MEPModel", None) is None:
+                    continue
+            except Exception:
+                continue
+
             cat = el.Category
             if not cat:
                 continue
