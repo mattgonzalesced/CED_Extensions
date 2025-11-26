@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-from Autodesk.Revit.DB import (XYZ, Line, ElementTransformUtils, IndependentTag, FilteredElementCollector,
-                               TagOrientation, LeaderEndCondition, Reference)
-
 import math
 from collections import defaultdict
-from pyrevit import script
+
+from Autodesk.Revit.DB import (XYZ, Line, ElementTransformUtils, IndependentTag, FilteredElementCollector,
+                               TagOrientation, LeaderEndCondition, Reference)
 from pyrevit import DB
 from pyrevit import HOST_APP
+from pyrevit import script
 from pyrevit.compat import get_elementid_value_func
 
 get_id_value = get_elementid_value_func()

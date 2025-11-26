@@ -48,6 +48,10 @@ _____________________________________________________________________
 
 #____________________________________________________________________ IMPORTS
 import clr, sys
+# ____________________________________________________________________ IMPORTS
+import clr
+import sys
+
 clr.AddReference("System")
 from System.Collections.Generic import List
 # from Autodesk.Revit.DB import *
