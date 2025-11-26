@@ -1,0 +1,40 @@
+Place Linked Elements
+---------------------
+This command automates the “drop each linked element by hand” routine. Instead of picking a point and choosing
+one equipment definition, it scans the active model (plus every loaded Revit Link) for instances whose name
+matches a CAD definition in `profileData.yaml`, then drives PlaceElementsEngine with that coordinate data.
+
+Workflow
+1. Resolve YAML  
+   * `_pick_profile_data_path()` reuses the cached path so the user only sees a file picker when necessary.  
+   * `_load_profile_store()` loads the modern `equipment_definitions` schema and `_build_repository()` converts
+     it into the legacy `ProfileRepository` objects that PlaceElementsEngine expects.
+2. Discover targets  
+   * `repo.cad_names()` provides every equipment definition.  
+   * `_collect_placeholders()` walks two datasets:
+       - All host FamilyInstance and Group instances (via `FilteredElementCollector`).  
+       - All FamilyInstances inside each RevitLinkInstance (using the link transform to convert into host
+         coordinates).  
+     Each element contributes multiple name variants (raw name, `Family : Type`, type-only, etc.) so
+     case/spacing mismatches are tolerated. Every match stores `XYZ` position and orientation (converted
+     to rotation degrees).
+3. Build placement queue  
+   * For every equipment definition with at least one match, the script grabs all linked element labels
+     (`repo.labels_for_cad`) and records a CSV-style row for each discovered location.  
+   * If a definition has no linked types the script records the name in `missing_labels` so the summary can
+     highlight YAML definitions that need offsets.
+4. Place via engine  
+   * `_place_requests()` gathers tag definitions, builds `selection_map`, and hands everything to
+     `PlaceElementsEngine.place_from_csv`.  
+   * Because coordinates are already in feet, each row uses the `Position X/Y/Z` fields directly and the engine
+     handles offsets/tags exactly like the CSV tool would.
+5. Report results  
+   * The final alert lists how many linked elements were processed, how many hosts were actually placed, and calls
+     out equipment definitions that either had no matching linked element names or were missing linked types.
+
+Key behaviors
+* Nothing is placed unless a matching Revit family or model group is already loaded in the host document.
+  (Just like the CSV flow: `_place_symbol()` returns `None` if the family isn’t present.)
+* Linked-model matches inherit the link’s transform so the inserted equipment lands exactly where the link shows it.
+* Update Vector edits remain the source of truth for offsets. If you delete and rerun the command after an offset
+  update, the refreshed YAML values drive every linked element automatically.
