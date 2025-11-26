@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from pyrevit import revit, DB, forms, script
 from pyrevit.framework import wpf
+from System import Object
 from System.Collections.ObjectModel import ObservableCollection
 from System.Collections.Generic import List
 
@@ -179,7 +180,7 @@ class PowerSystemPane(DockableBase):
         self.SelectBothButton = self.FindName("SelectBothButton")
 
         self.all_items = []
-        self.visible_items = ObservableCollection()
+        self.visible_items = ObservableCollection[Object]()
         self.TreeList.ItemsSource = self.visible_items
 
         self._wire_events()
