@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from System.Collections.Generic import List
 from pyrevit import DB, script
 
 from CEDElectrical.Model.circuit_settings import CircuitSettings
@@ -36,6 +37,16 @@ RESULT_PARAM_NAMES = [
     'Circuit Load Current_CED',
     'Circuit Ampacity_CED',
     'CKT_Length Makeup_CED',
+]
+
+FIXTURE_CATEGORY_IDS = [
+    DB.ElementId(DB.BuiltInCategory.OST_ElectricalFixtures),
+    DB.ElementId(DB.BuiltInCategory.OST_LightingDevices),
+    DB.ElementId(DB.BuiltInCategory.OST_LightingFixtures),
+    DB.ElementId(DB.BuiltInCategory.OST_SecurityDevices),
+    DB.ElementId(DB.BuiltInCategory.OST_FireAlarmDevices),
+    DB.ElementId(DB.BuiltInCategory.OST_DataDevices),
+    DB.ElementId(DB.BuiltInCategory.OST_MechanicalControlDevices),
 ]
 
 
@@ -128,16 +139,23 @@ def clear_downstream_results(doc, clear_equipment=False, clear_fixtures=False, l
     if clear_equipment:
         category_ids.append(DB.ElementId(DB.BuiltInCategory.OST_ElectricalEquipment))
     if clear_fixtures:
-        category_ids.append(DB.ElementId(DB.BuiltInCategory.OST_ElectricalFixtures))
+        category_ids.extend(FIXTURE_CATEGORY_IDS)
 
-    multi_filter = DB.ElementMulticategoryFilter(category_ids) if category_ids else None
+    if not category_ids:
+        return 0, 0
+
+    multi_filter = DB.ElementMulticategoryFilter(List[DB.ElementId](category_ids))
+    option_filter = DB.ElementDesignOptionFilter(DB.ElementId.InvalidElementId)
 
     t = DB.Transaction(doc, "Clear downstream circuit data")
     t.Start()
     try:
-        collector = DB.FilteredElementCollector(doc).OfClass(DB.FamilyInstance)
-        if multi_filter:
-            collector = collector.WherePasses(multi_filter)
+        collector = (
+            DB.FilteredElementCollector(doc)
+            .WherePasses(multi_filter)
+            .WherePasses(option_filter)
+            .OfClass(DB.FamilyInstance)
+        )
 
         for el in collector:
             try:
@@ -152,7 +170,7 @@ def clear_downstream_results(doc, clear_equipment=False, clear_fixtures=False, l
                 continue
 
             cat_id = cat.Id
-            is_fixture = cat_id == DB.ElementId(DB.BuiltInCategory.OST_ElectricalFixtures)
+            is_fixture = cat_id in FIXTURE_CATEGORY_IDS
             is_equipment = cat_id == DB.ElementId(DB.BuiltInCategory.OST_ElectricalEquipment)
 
             if (is_fixture and not clear_fixtures) or (is_equipment and not clear_equipment):
