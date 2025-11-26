@@ -463,6 +463,24 @@ class CircuitBranch(object):
             else:
                 self._wire_sets_override = parsed_sets
 
+        if self._wire_sets_override:
+            max_sets = self._wire_info.get("max_lug_qty", 1) or 1
+            if self._wire_sets_override > max_sets:
+                self.log_warning(
+                    "Wire sets override {} exceeds lug capacity of {} set(s); keeping user override per request.".format(
+                        self._wire_sets_override, max_sets
+                    )
+                )
+
+            rating = self.rating or 0
+            poles = self.poles or 0
+            if ((rating and rating < 100) or poles < 2) and self._wire_sets_override != 1:
+                self.log_warning(
+                    "Parallel sets not allowed for {}P breaker {}A; keeping {} set(s) as requested.".format(
+                        poles or 0, rating, self._wire_sets_override
+                    )
+                )
+
         # --- material ---
         if self._wire_material_override:
             norm = str(self._wire_material_override).upper().strip()
@@ -1103,8 +1121,10 @@ class CircuitBranch(object):
             return False
 
         if override not in ALLOWED_WIRE_SIZES:
-            self.log_warning("Hot size override {} invalid; using auto-sizing."
-                             .format(self._wire_hot_size_override))
+            self.log_warning(
+                "Hot size override {} is invalid; using auto-sizing while keeping your material/insulation overrides."
+                .format(self._wire_hot_size_override)
+            )
             return False
 
         material = self._wire_material_override or self.cable.material or "CU"
@@ -1181,14 +1201,16 @@ class CircuitBranch(object):
         except Exception:
             temp_c = 75
 
-        material = wire_info.get("wire_material", "CU")
+        # Prefer user-provided material/insulation overrides even when hot size override
+        # is rejected so ampacity and fill are based on user intent.
+        material = self.cable.material or wire_info.get("wire_material", "CU")
         base_wire = wire_info.get("wire_hot_size")
         base_sets = wire_info.get("number_of_parallel_sets", 1) or 1
         max_size = wire_info.get("max_lug_size")
         max_sets = wire_info.get("max_lug_qty", 1) or 1
         max_feeder_size = wire_info.get("max_feeder_size")
 
-        wire_set = WIRE_AMPACITY_TABLE.get(material, {}).get(temp_c, [])
+        wire_set = WIRE_AMPACITY_TABLE.get(material, {}).get(self.cable.temp_c or temp_c, [])
         if not wire_set:
             self._fail_cable_sizing(
                 "No ampacity table for {} at {} C.".format(material, temp_c)
@@ -1221,7 +1243,14 @@ class CircuitBranch(object):
                 if max_size and self._is_wire_larger_than_limit(wire, max_size):
                     reached_max_lug_size = True
                     any_lug_limit_hit = True
-                    continue
+                    if sets < max_sets:
+                        continue
+                    else:
+                        self.log_warning(
+                            "Exceeded lug size block {} at max sets {}; selecting {} with warning.".format(
+                                max_size, max_sets, wire
+                            )
+                        )
 
                 if self._is_feeder and sets > 1 and self._is_wire_below_one_aught(wire):
                     self.log_warning(
