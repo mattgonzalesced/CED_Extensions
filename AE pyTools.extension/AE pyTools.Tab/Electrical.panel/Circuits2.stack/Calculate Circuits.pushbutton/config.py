@@ -36,19 +36,26 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.reset_btn.Click += self._on_reset
         self.min_conduit_size_cb.SelectionChanged += self._on_value_changed
         self.min_conduit_size_cb.GotFocus += lambda s, e: self._set_help_context('min_conduit_size')
-        self.max_conduit_fill_tb.TextChanged += self._on_value_changed
         self.max_conduit_fill_tb.GotFocus += lambda s, e: self._set_help_context('max_conduit_fill')
         self.max_conduit_fill_tb.LostFocus += lambda s, e: self._normalize_percent_on_blur(self.max_conduit_fill_tb, 0.1, 1.0, self.max_conduit_fill_warn, 0.4)
-        self.max_branch_vd_tb.TextChanged += self._on_value_changed
         self.max_branch_vd_tb.GotFocus += lambda s, e: self._set_help_context('max_branch_voltage_drop')
         self.max_branch_vd_tb.LostFocus += lambda s, e: self._normalize_percent_on_blur(self.max_branch_vd_tb, 0.001, 1.0, self.max_branch_vd_warn, 0.05)
-        self.max_feeder_vd_tb.TextChanged += self._on_value_changed
         self.max_feeder_vd_tb.GotFocus += lambda s, e: self._set_help_context('max_feeder_voltage_drop')
         self.max_feeder_vd_tb.LostFocus += lambda s, e: self._normalize_percent_on_blur(self.max_feeder_vd_tb, 0.001, 1.0, self.max_feeder_vd_warn, 0.05)
         self.neutral_behavior_cb.SelectionChanged += self._on_value_changed
         self.neutral_behavior_cb.GotFocus += lambda s, e: self._set_help_context('neutral_behavior')
         self.feeder_vd_method_cb.SelectionChanged += self._on_value_changed
         self.feeder_vd_method_cb.GotFocus += lambda s, e: self._set_help_context('feeder_vd_method')
+        self.write_equipment_cb.Checked += self._on_value_changed
+        self.write_equipment_cb.Unchecked += self._on_value_changed
+        self.write_equipment_cb.GotFocus += lambda s, e: self._set_help_context('write_results')
+        self.write_fixtures_cb.Checked += self._on_value_changed
+        self.write_fixtures_cb.Unchecked += self._on_value_changed
+        self.write_fixtures_cb.GotFocus += lambda s, e: self._set_help_context('write_results')
+
+        self.max_conduit_fill_tb.TextChanged += lambda s, e: self._on_percent_value_changed(self.max_conduit_fill_tb, 0.1, 1.0, self.max_conduit_fill_warn, 0.4)
+        self.max_branch_vd_tb.TextChanged += lambda s, e: self._on_percent_value_changed(self.max_branch_vd_tb, 0.001, 1.0, self.max_branch_vd_warn, 0.05)
+        self.max_feeder_vd_tb.TextChanged += lambda s, e: self._on_percent_value_changed(self.max_feeder_vd_tb, 0.001, 1.0, self.max_feeder_vd_warn, 0.05)
 
     # ------------- Data helpers --------------
     def _load_defaults_panel(self):
@@ -58,6 +65,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.max_branch_vd_default.Text = u"(Default: {}%)".format(self._percent_value(self.defaults.max_branch_voltage_drop))
         self.max_feeder_vd_default.Text = u"(Default: {}%)".format(self._percent_value(self.defaults.max_feeder_voltage_drop))
         self.feeder_vd_method_default.Text = u"(Default: {})".format(self._describe_feeder_method(self.defaults.feeder_vd_method))
+        self.write_results_default.Text = u"(Defaults: Equipment ✓, Fixtures ✕)"
 
     def _load_values(self):
         self._select_combo_by_tag(self.min_conduit_size_cb, self.settings.min_conduit_size)
@@ -67,6 +75,9 @@ class CircuitSettingsWindow(forms.WPFWindow):
 
         self._select_combo_by_tag(self.neutral_behavior_cb, self.settings.neutral_behavior)
         self._select_combo_by_tag(self.feeder_vd_method_cb, self.settings.feeder_vd_method)
+
+        self.write_equipment_cb.IsChecked = bool(self.settings.write_equipment_results)
+        self.write_fixtures_cb.IsChecked = bool(self.settings.write_fixture_results)
 
     def _select_combo_by_tag(self, combo, tag_value):
         for item in combo.Items:
@@ -90,6 +101,8 @@ class CircuitSettingsWindow(forms.WPFWindow):
         updated.set('max_branch_voltage_drop', self._parse_percent_field(self.max_branch_vd_tb, 0.001, 1.0, self.max_branch_vd_warn, 0.05))
         updated.set('max_feeder_voltage_drop', self._parse_percent_field(self.max_feeder_vd_tb, 0.001, 1.0, self.max_feeder_vd_warn, 0.05))
         updated.set('feeder_vd_method', self._get_combo_tag(self.feeder_vd_method_cb))
+        updated.set('write_equipment_results', bool(self.write_equipment_cb.IsChecked))
+        updated.set('write_fixture_results', bool(self.write_fixtures_cb.IsChecked))
         return updated
 
     # ------------- Styling helpers -----------
@@ -117,6 +130,8 @@ class CircuitSettingsWindow(forms.WPFWindow):
         fd_value = self._get_combo_tag(self.feeder_vd_method_cb)
         self._apply_default_style(self.neutral_behavior_cb, self._is_default('neutral_behavior', nb_value))
         self._apply_default_style(self.feeder_vd_method_cb, self._is_default('feeder_vd_method', fd_value))
+        self._apply_default_style(self.write_equipment_cb, self._is_default('write_equipment_results', bool(self.write_equipment_cb.IsChecked)))
+        self._apply_default_style(self.write_fixtures_cb, self._is_default('write_fixture_results', bool(self.write_fixtures_cb.IsChecked)))
 
         self._refresh_validation_state()
         self._update_help_preview()
@@ -146,6 +161,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
             'max_branch_voltage_drop': "Target maximum voltage drop for branch circuits (enter as a percentage). Calculated sizes will grow until this threshold is met.",
             'max_feeder_voltage_drop': "Target maximum voltage drop for feeders (enter as a percentage). Applies to feeder sizing logic and may differ from branch criteria.",
             'feeder_vd_method': "Which feeder load basis to use for voltage drop checks: demand load, connected load, or 80% of the maximum.",
+            'write_results': "Toggle whether calculated results push to downstream elements when present.",
         }
 
     def _option_help(self):
@@ -268,6 +284,37 @@ class CircuitSettingsWindow(forms.WPFWindow):
         except Exception:
             # Leave value as-is; save flow will surface the validation
             pass
+
+    def _on_percent_value_changed(self, textbox, min_value, max_value, warning_block, warn_threshold):
+        self._sanitize_percent_input(textbox)
+        self._update_warning(textbox, min_value, max_value, warning_block, warn_threshold)
+        self._refresh_styles()
+
+    def _sanitize_percent_input(self, textbox):
+        if self._is_normalizing:
+            return
+        text = textbox.Text
+        allowed = []
+        dot_seen = False
+        percent_seen = False
+        for ch in text:
+            if ch.isdigit():
+                allowed.append(ch)
+            elif ch == '.' and not dot_seen:
+                allowed.append(ch)
+                dot_seen = True
+            elif ch == '%' and not percent_seen:
+                percent_seen = True
+            # other characters are dropped
+
+        if percent_seen:
+            allowed.append('%')
+
+        cleaned = ''.join(allowed)
+        if cleaned != text:
+            caret = textbox.CaretIndex
+            textbox.Text = cleaned
+            textbox.CaretIndex = min(caret, len(cleaned))
 
     def _refresh_validation_state(self):
         self._update_warning(self.max_conduit_fill_tb, 0.1, 1.0, self.max_conduit_fill_warn, 0.4)

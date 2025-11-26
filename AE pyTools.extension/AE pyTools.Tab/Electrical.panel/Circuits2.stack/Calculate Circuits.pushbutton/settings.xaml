@@ -17,6 +17,8 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -28,8 +30,8 @@
 
         <TextBlock Grid.Row="0" Grid.Column="0" Text="Minimum Conduit Size" Margin="0,0,8,10" VerticalAlignment="Center"/>
         <ComboBox x:Name="min_conduit_size_cb" Grid.Row="0" Grid.Column="1" Margin="0,0,8,10" Padding="6" SelectedIndex="0">
-            <ComboBoxItem Content="1/2&amp;quot;" Tag="1/2&amp;quot;"/>
-            <ComboBoxItem Content="3/4&amp;quot;" Tag="3/4&amp;quot;"/>
+            <ComboBoxItem Content="1/2&quot;" Tag="1/2&quot;"/>
+            <ComboBoxItem Content="3/4&quot;" Tag="3/4&quot;"/>
         </ComboBox>
         <TextBlock x:Name="min_conduit_default" Grid.Row="0" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
 
@@ -81,11 +83,18 @@
         </ComboBox>
         <TextBlock x:Name="feeder_vd_method_default" Grid.Row="5" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
 
-        <Border Grid.Row="5" Grid.ColumnSpan="3" Margin="0,0,0,10" Padding="8" Background="#FFF0F0F0" BorderBrush="#DDD" BorderThickness="1">
+        <TextBlock Grid.Row="6" Grid.Column="0" Text="Write results to:" Margin="0,0,8,10" VerticalAlignment="Center"/>
+        <StackPanel Grid.Row="6" Grid.Column="1" Margin="0,0,8,10" Orientation="Vertical">
+            <CheckBox x:Name="write_equipment_cb" Content="Electrical Equipment" IsChecked="True" Margin="0,0,0,4"/>
+            <CheckBox x:Name="write_fixtures_cb" Content="Fixtures and Devices" IsChecked="False"/>
+        </StackPanel>
+        <TextBlock x:Name="write_results_default" Grid.Row="6" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
+
+        <Border Grid.Row="7" Grid.ColumnSpan="3" Margin="0,0,0,10" Padding="8" Background="#FFF0F0F0" BorderBrush="#DDD" BorderThickness="1">
             <TextBlock x:Name="help_preview" TextWrapping="Wrap" Foreground="#333"/>
         </Border>
 
-        <StackPanel Grid.Row="6" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0" VerticalAlignment="Center">
+        <StackPanel Grid.Row="8" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0" VerticalAlignment="Center">
             <Button x:Name="reset_btn" Content="Reset to Defaults" Margin="0,0,8,0" Padding="14,6" MinWidth="130"/>
             <Button x:Name="cancel_btn" Content="Cancel" Margin="0,0,8,0" Padding="14,6" MinWidth="90"/>
             <Button x:Name="save_btn" Content="Save Settings" Padding="16,6" MinWidth="120"/>

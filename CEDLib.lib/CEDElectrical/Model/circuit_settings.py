@@ -37,6 +37,8 @@ class CircuitSettings(object):
         "max_branch_voltage_drop": 0.03,
         "max_feeder_voltage_drop": 0.02,
         "feeder_vd_method": FeederVDMethod.DEMAND,
+        "write_equipment_results": True,
+        "write_fixture_results": False,
     }
 
     def __init__(self, values=None):
@@ -66,6 +68,9 @@ class CircuitSettings(object):
                    "max_branch_voltage_drop",
                    "max_feeder_voltage_drop"):
             float(value)  # ensures it is numeric
+
+        if key in ("write_equipment_results", "write_fixture_results"):
+            value = bool(value)
 
         self._values[key] = value
 
@@ -133,3 +138,11 @@ class CircuitSettings(object):
     @property
     def feeder_vd_method(self):
         return self._values["feeder_vd_method"]
+
+    @property
+    def write_equipment_results(self):
+        return bool(self._values["write_equipment_results"])
+
+    @property
+    def write_fixture_results(self):
+        return bool(self._values["write_fixture_results"])
