@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from CEDElectrical.Model.CircuitBranch import *
+from CEDElectrical.Domain import settings_manager
 from Snippets import _elecutils as eu
 
 app = __revit__.Application
@@ -152,6 +153,7 @@ def update_connected_elements(branch, param_values):
 def main():
     selection = revit.get_selection()
     test_circuits = []
+    settings = settings_manager.load_circuit_settings(doc)
     if not selection:
         test_circuits = eu.pick_circuits_from_list(doc, select_multiple=True)
     else:
@@ -177,7 +179,7 @@ def main():
 
     # Perform all calculations first
     for circuit in test_circuits:
-        branch = CircuitBranch(circuit)
+        branch = CircuitBranch(circuit, settings=settings)
         if not branch.is_power_circuit:
             continue
 

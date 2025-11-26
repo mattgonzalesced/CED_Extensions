@@ -21,7 +21,10 @@ def _get_global_param(doc):
 def _create_global_param(doc):
     """Create a new global text parameter and return it."""
     spec = DB.SpecTypeId.String.Text  # text parameter spec
+    t = DB.Transaction(doc, "Create {}".format(GP_NAME))
+    t.Start()
     gp = DB.GlobalParameter.Create(doc, GP_NAME, spec)
+    t.Commit()
     return gp
 
 
@@ -55,4 +58,7 @@ def save_circuit_settings(doc, settings):
     json_text = settings.to_json()
 
     spv = DB.StringParameterValue(json_text)
+    t = DB.Transaction(doc, "Save {}".format(GP_NAME))
+    t.Start()
     gp.SetValue(spv)
+    t.Commit()
