@@ -20,24 +20,34 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.doc = revit.doc
         self.defaults = CircuitSettings()
         self.settings = settings_manager.load_circuit_settings(self.doc)
+        self._help_window = None
+        self._help_key = None
 
         self._bind_events()
         self._load_defaults_panel()
         self._load_values()
         self._refresh_styles()
+        self._set_help_context('min_conduit_size')
 
     # ------------- UI wiring -----------------
     def _bind_events(self):
         self.save_btn.Click += self._on_save
         self.cancel_btn.Click += self._on_cancel
         self.reset_btn.Click += self._on_reset
+        self.help_btn.Click += self._on_help
 
         self.min_conduit_size_tb.TextChanged += self._on_value_changed
+        self.min_conduit_size_tb.GotFocus += lambda s, e: self._set_help_context('min_conduit_size')
         self.max_conduit_fill_tb.TextChanged += self._on_value_changed
+        self.max_conduit_fill_tb.GotFocus += lambda s, e: self._set_help_context('max_conduit_fill')
         self.max_branch_vd_tb.TextChanged += self._on_value_changed
+        self.max_branch_vd_tb.GotFocus += lambda s, e: self._set_help_context('max_branch_voltage_drop')
         self.max_feeder_vd_tb.TextChanged += self._on_value_changed
+        self.max_feeder_vd_tb.GotFocus += lambda s, e: self._set_help_context('max_feeder_voltage_drop')
         self.neutral_behavior_cb.SelectionChanged += self._on_value_changed
+        self.neutral_behavior_cb.GotFocus += lambda s, e: self._set_help_context('neutral_behavior')
         self.feeder_vd_method_cb.SelectionChanged += self._on_value_changed
+        self.feeder_vd_method_cb.GotFocus += lambda s, e: self._set_help_context('feeder_vd_method')
 
     # ------------- Data helpers --------------
     def _load_defaults_panel(self):
@@ -62,6 +72,9 @@ class CircuitSettingsWindow(forms.WPFWindow):
             if getattr(item, 'Tag', None) == tag_value:
                 combo.SelectedItem = item
                 break
+        else:
+            if combo.Items and combo.SelectedItem is None:
+                combo.SelectedIndex = 0
 
     def _get_combo_tag(self, combo):
         if combo.SelectedItem:
@@ -84,11 +97,14 @@ class CircuitSettingsWindow(forms.WPFWindow):
         try:
             return float(value) == float(default_value)
         except Exception:
-            return str(value) == str(default_value)
+            try:
+                return str(value).strip() == str(default_value).strip()
+            except Exception:
+                return False
 
     def _apply_default_style(self, control, is_default):
         control.FontStyle = FontStyles.Italic if is_default else FontStyles.Normal
-        control.Foreground = Brushes.Gray if is_default else Brushes.White
+        control.Foreground = Brushes.Gray if is_default else Brushes.Black
 
     def _refresh_styles(self, sender=None, args=None):
         self._apply_default_style(self.min_conduit_size_tb, self._is_default('min_conduit_size', self.min_conduit_size_tb.Text))
@@ -100,6 +116,8 @@ class CircuitSettingsWindow(forms.WPFWindow):
         fd_value = self._get_combo_tag(self.feeder_vd_method_cb)
         self._apply_default_style(self.neutral_behavior_cb, self._is_default('neutral_behavior', nb_value))
         self._apply_default_style(self.feeder_vd_method_cb, self._is_default('feeder_vd_method', fd_value))
+
+        self._update_help_preview()
 
     def _on_value_changed(self, sender, args):
         self._refresh_styles()
@@ -117,6 +135,27 @@ class CircuitSettingsWindow(forms.WPFWindow):
             FeederVDMethod.CONNECTED: "Connected",
             FeederVDMethod.EIGHTY_PERCENT: "80% of Max",
         }.get(value, value)
+
+    def _help_texts(self):
+        return {
+            'min_conduit_size': "Smallest conduit size that will ever be proposed by the calculation. This limits conduit downsizing in tight runs.",
+            'max_conduit_fill': "Maximum allowable conduit fill as a decimal (e.g., 0.36 for 36%). The conduit will be upsized until this fill is not exceeded.",
+            'neutral_behavior': "Choose whether neutral conductors match the quantity of hots automatically or are entered manually for each calculation.",
+            'max_branch_voltage_drop': "Target maximum voltage drop for branch circuits. Calculated sizes will grow until this threshold is met.",
+            'max_feeder_voltage_drop': "Target maximum voltage drop for feeders. Applies to feeder sizing logic and may differ from branch criteria.",
+            'feeder_vd_method': "Which feeder load basis to use for voltage drop checks: demand load, connected load, or 80% of the maximum.",
+        }
+
+    def _set_help_context(self, key):
+        self._help_key = key
+        self._update_help_preview()
+        if self._help_window:
+            self._help_window.help_text.Text = self._help_texts().get(key, "")
+
+    def _update_help_preview(self):
+        key = self._help_key or ''
+        preview = self._help_texts().get(key, "Select a field to see what it controls.")
+        self.help_preview.Text = preview
 
     # ------------- Event handlers ------------
     def _on_save(self, sender, args):
@@ -138,7 +177,32 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self._load_values()
         self._refresh_styles()
 
+    def _on_help(self, sender, args):
+        if not self._help_window:
+            self._help_window = self._create_help_window()
+
+        # Always update text for current context
+        self._help_window.help_text.Text = self._help_texts().get(self._help_key, "")
+        self._help_window.Show()
+
+    def _create_help_window(self):
+        xaml = """
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Calculate Circuits Help" Height="240" Width="420" Background="#FFFDFDFD"
+        Foreground="#222" WindowStartupLocation="CenterOwner" ResizeMode="CanResize">
+    <Border Margin="14" Padding="12" Background="#FFF7F7F7" BorderBrush="#DDD" BorderThickness="1">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <TextBlock x:Name="help_text" TextWrapping="Wrap" FontSize="13"/>
+        </ScrollViewer>
+    </Border>
+</Window>
+"""
+        hw = forms.WPFWindow(xaml)
+        hw.Owner = self
+        return hw
+
 
 if __name__ == '__main__':
     window = CircuitSettingsWindow()
-    window.show()
+    window.show_dialog()
