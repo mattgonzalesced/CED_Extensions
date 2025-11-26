@@ -1,0 +1,7 @@
+title: Power System Tree
+tooltip: Open a dockable pane that visualizes the electrical power system tree with searchable circuits and quick selection tools.
+hyperlink: https://pyrevitlabs.notion.site
+author: CED Extensions
+min_revit_version: 2020
+max_revit_version: 2025
+context: doc-project

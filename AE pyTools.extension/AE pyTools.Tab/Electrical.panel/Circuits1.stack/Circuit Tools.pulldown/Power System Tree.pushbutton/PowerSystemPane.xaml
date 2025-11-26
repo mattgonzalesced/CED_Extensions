@@ -1,0 +1,35 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Power System Tree" Height="560" Width="480" WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize">
+    <DockPanel Margin="8">
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+            <TextBlock Text="Electrical Power System Tree" FontSize="16" FontWeight="Bold" />
+            <TextBlock Text="Filter circuits and select them or their connected devices." Margin="0,2,0,6" TextWrapping="Wrap" />
+            <TextBox x:Name="SearchBox" Height="26" Margin="0,0,0,6" ToolTip="Type to filter by panel, circuit, or load" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="SelectCircuitsButton" Content="Select Circuits" Width="110" Margin="0,0,6,0" />
+                <Button x:Name="SelectDevicesButton" Content="Select Devices" Width="110" Margin="0,0,6,0" />
+                <Button x:Name="SelectBothButton" Content="Select Both" Width="110" />
+            </StackPanel>
+        </StackPanel>
+        <Border BorderBrush="#FFBEBEBE" BorderThickness="1" CornerRadius="4">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <ListBox x:Name="TreeList" SelectionMode="Extended" HorizontalContentAlignment="Stretch">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Label}" TextWrapping="Wrap" FontFamily="Consolas" ToolTip="{Binding Tooltip}" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Left" Margin="4">
+                    <TextBlock Text="Double-click an item to select both circuits and devices." FontStyle="Italic" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </DockPanel>
+</Window>
