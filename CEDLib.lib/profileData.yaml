@@ -4806,14 +4806,14 @@ equipment_definitions:
   linked_relations:
     children: []
     parent:
-      parent_led_id: SET-055-LED-001
       offsets:
-        rotation_deg: 0
-        x_inches: -57.750885
-        y_inches: 2.973946
+        rotation_deg: -90
+        x_inches: -22.666284
+        y_inches: -21.069136
         z_inches: 18
-      equipment_id: EQ-055
-  name: Thing
+      parent_led_id: SET-054-LED-002
+      equipment_id: EQ-054
+  name: Thing 1
   schema_version: 1
   id: EQ-053
   linked_sets:
@@ -4822,125 +4822,74 @@ equipment_definitions:
       label: 'EF-U_Receptacle_CED : Duplex Wall'
       parameters:
         dev-Group ID: ''
-        CKT_Load Name_CEDT: ''
-        CKT_Rating_CED: 0
-        CKT_Panel_CEDT: ''
-        CKT_Schedule Notes_CEDT: ''
-        CKT_Circuit Number_CEDT: ''
         Element_Linker Parameter: >-
           Linked Element Definition ID: SET-053-LED-001
 
           Set Definition ID: SET-053
 
-          Location XYZ (ft): 161.412130,-47.520716,1.500000
+          Location XYZ (ft): 163.401506,-48.811174,1.500000
 
-          Rotation (deg): 0.000000
+          Rotation (deg): 360.000000
 
           LevelId: 30
 
-          ElementId: 7169125
+          ElementId: 7169229
 
-          FacingOrientation: 0.000000,1.000000,0.000000
+          FacingOrientation: 0.000000,1.000000,-0.000000
+        CKT_Rating_CED: 0
+        CKT_Panel_CEDT: ''
+        CKT_Schedule Notes_CEDT: ''
+        CKT_Circuit Number_CEDT: ''
+        CKT_Load Name_CEDT: ''
       id: SET-053-LED-001
+      tags: []
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 35.28642
+        y_inches: -1.00459
+        z_inches: 18
+    - is_group: false
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      parameters:
+        dev-Group ID: ''
+        Element_Linker Parameter: >-
+          Linked Element Definition ID: SET-053-LED-002
+
+          Set Definition ID: SET-053
+
+          Location XYZ (ft): 161.894612,-48.811174,1.500000
+
+          Rotation (deg): 270.000000
+
+          LevelId: 30
+
+          ElementId: 7169230
+
+          FacingOrientation: 1.000000,0.000000,-0.000000
+        CKT_Rating_CED: 0
+        CKT_Panel_CEDT: ''
+        CKT_Schedule Notes_CEDT: ''
+        CKT_Circuit Number_CEDT: ''
+        CKT_Load Name_CEDT: ''
+      id: SET-053-LED-002
       tags:
       - parameters: {}
         type_name: Circuit Number
         offsets:
           rotation_deg: 0
-          x_inches: -0.457098679811452
-          y_inches: -12.097637954537
+          x_inches: -13.8783039179257
+          y_inches: -0.034926885938944
           z_inches: -2.90434343241941E-13
         category_name: Electrical Fixture Tags
         family_name: EF-Tag_Electrical Fixtures_CED
       category: Electrical Fixtures
       offsets:
       - rotation_deg: -90
-        x_inches: -5E-06
-        y_inches: -9.041361
-        z_inches: 18
-    - is_group: false
-      label: 'EF-U_Receptacle_CED : Duplex Wall'
-      parameters:
-        dev-Group ID: ''
-        CKT_Load Name_CEDT: ''
-        CKT_Rating_CED: 0
-        CKT_Panel_CEDT: ''
-        CKT_Schedule Notes_CEDT: ''
-        CKT_Circuit Number_CEDT: ''
-        Element_Linker Parameter: >-
-          Linked Element Definition ID: SET-053-LED-002
-
-          Set Definition ID: SET-053
-
-          Location XYZ (ft): 162.919023,-47.520716,1.500000
-
-          Rotation (deg): 0.000000
-
-          LevelId: 30
-
-          ElementId: 7169132
-
-          FacingOrientation: 0.000000,1.000000,0.000000
-      id: SET-053-LED-002
-      tags: []
-      category: Electrical Fixtures
-      offsets:
-      - rotation_deg: 0
-        x_inches: 9.04136
-        y_inches: 1.7E-05
+        x_inches: -3E-06
+        y_inches: -9.041357
         z_inches: 18
     id: SET-053
-    name: Thing Types
-  allow_parentless: true
-  allow_unmatched_parents: true
-  version: 1
-  equipment_properties: {}
-- prompt_on_parent_mismatch: false
-  parent_filter:
-    family_name_pattern: EF-U_Receptacle_CED
-    category: Electrical Fixtures
-    parameter_filters: {}
-    type_name_pattern: Specialty Floor - 120V/1Ph
-  linked_relations:
-    children: []
-    parent: {}
-  name: Thing 1
-  schema_version: 1
-  id: EQ-054
-  linked_sets:
-  - linked_element_definitions:
-    - is_group: false
-      label: 'EF-U_Receptacle_CED : Specialty Floor - 120V/1Ph'
-      parameters:
-        dev-Group ID: ''
-        Element_Linker Parameter: >-
-          Linked Element Definition ID: SET-054-LED-001
-
-          Set Definition ID: SET-054
-
-          Location XYZ (ft): 162.081860,-46.924237,0.000000
-
-          Rotation (deg): 0.000000
-
-          LevelId: 30
-
-          ElementId: 7169272
-
-          FacingOrientation: 0.000000,1.000000,0.000000
-        CKT_Rating_CED: 0
-        CKT_Panel_CEDT: ''
-        CKT_Schedule Notes_CEDT: ''
-        CKT_Circuit Number_CEDT: ''
-        CKT_Load Name_CEDT: ''
-      id: SET-054-LED-001
-      tags: []
-      category: Electrical Fixtures
-      offsets:
-      - rotation_deg: 0
-        x_inches: 0
-        y_inches: 0
-        z_inches: 0
-    id: SET-054
     name: Thing 1 Types
   allow_parentless: true
   allow_unmatched_parents: true
@@ -4955,25 +4904,107 @@ equipment_definitions:
   linked_relations:
     children:
     - offsets:
-        rotation_deg: 0
-        x_inches: -57.750885
-        y_inches: 2.973946
+        rotation_deg: -90
+        x_inches: -22.666284
+        y_inches: -21.069136
         z_inches: 18
       equipment_id: EQ-053
-      anchor_led_id: SET-055-LED-001
+      anchor_led_id: SET-054-LED-002
       anchor_offsets:
         rotation_deg: 0
-        x_inches: 0
+        x_inches: 9.104148
         y_inches: 0
         z_inches: 0
     parent: {}
-  name: Thing 2
+  name: Duplex Floors
+  schema_version: 1
+  id: EQ-054
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: false
+      label: 'EF-U_Receptacle_CED : Quad Floor'
+      parameters:
+        dev-Group ID: ''
+        Element_Linker Parameter: >-
+          Linked Element Definition ID: SET-054-LED-001
+
+          Set Definition ID: SET-054
+
+          Location XYZ (ft): 167.460633,-49.059003,0.000000
+
+          Rotation (deg): 0.000000
+
+          LevelId: 30
+
+          ElementId: 7169261
+
+          FacingOrientation: 0.000000,1.000000,0.000000
+        CKT_Rating_CED: 0
+        CKT_Panel_CEDT: ''
+        CKT_Schedule Notes_CEDT: ''
+        CKT_Circuit Number_CEDT: ''
+        CKT_Load Name_CEDT: ''
+      id: SET-054-LED-001
+      tags: []
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: -9.10414799217506
+        y_inches: 0
+        z_inches: 0
+    - is_group: false
+      label: 'EF-U_Receptacle_CED : Quad Floor'
+      parameters:
+        dev-Group ID: ''
+        Element_Linker Parameter: >-
+          Linked Element Definition ID: SET-054-LED-002
+
+          Set Definition ID: SET-054
+
+          Location XYZ (ft): 168.977991,-49.059003,0.000000
+
+          Rotation (deg): 0.000000
+
+          LevelId: 30
+
+          ElementId: 7169347
+
+          FacingOrientation: 0.000000,1.000000,0.000000
+        CKT_Rating_CED: 0
+        CKT_Panel_CEDT: ''
+        CKT_Schedule Notes_CEDT: ''
+        CKT_Circuit Number_CEDT: ''
+        CKT_Load Name_CEDT: ''
+      id: SET-054-LED-002
+      tags: []
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: 9.10414799217506
+        y_inches: 0
+        z_inches: 0
+    id: SET-054
+    name: Duplex Floors Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    parameter_filters: {}
+    type_name_pattern: Specialty Floor - 120V/1Ph
+  linked_relations:
+    children: []
+    parent: {}
+  name: special
   schema_version: 1
   id: EQ-055
   linked_sets:
   - linked_element_definitions:
     - is_group: false
-      label: 'EF-U_Receptacle_CED : Quad Floor'
+      label: 'EF-U_Receptacle_CED : Specialty Floor - 120V/1Ph'
       parameters:
         dev-Group ID: ''
         CKT_Load Name_CEDT: ''
@@ -4986,13 +5017,13 @@ equipment_definitions:
 
           Set Definition ID: SET-055
 
-          Location XYZ (ft): 167.460633,-49.059003,0.000000
+          Location XYZ (ft): 162.081860,-46.924237,0.000000
 
           Rotation (deg): 0.000000
 
           LevelId: 30
 
-          ElementId: 7169261
+          ElementId: 7169272
 
           FacingOrientation: 0.000000,1.000000,0.000000
       id: SET-055-LED-001
@@ -5004,7 +5035,7 @@ equipment_definitions:
         y_inches: 0
         z_inches: 0
     id: SET-055
-    name: Thing 2 Types
+    name: special Types
   allow_parentless: true
   allow_unmatched_parents: true
   version: 1
