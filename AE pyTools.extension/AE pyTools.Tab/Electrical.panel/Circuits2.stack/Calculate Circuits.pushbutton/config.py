@@ -12,6 +12,7 @@ from CEDElectrical.Model.circuit_settings import (
 from CEDElectrical.Domain import settings_manager
 
 XAML_PATH = script.get_bundle_file('settings.xaml')
+HELP_XAML_PATH = script.get_bundle_file('settings_help.xaml')
 
 
 class CircuitSettingsWindow(forms.WPFWindow):
@@ -214,19 +215,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
             self._help_window.help_text.Text = self.help_preview.Text
 
     def _create_help_window(self):
-        xaml = """
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Calculate Circuits Help" Height="260" Width="440" Background="#FFFDFDFD"
-        Foreground="#222" WindowStartupLocation="CenterOwner" ResizeMode="CanResizeWithGrip">
-    <Border Margin="14" Padding="12" Background="#FFF7F7F7" BorderBrush="#DDD" BorderThickness="1">
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <TextBlock x:Name="help_text" TextWrapping="Wrap" FontSize="13"/>
-        </ScrollViewer>
-    </Border>
-</Window>
-"""
-        hw = forms.WPFWindow(xaml)
+        hw = forms.WPFWindow(HELP_XAML_PATH)
         hw.Owner = self
         hw.Closed += lambda s, e: setattr(self, '_help_window', None)
         return hw
