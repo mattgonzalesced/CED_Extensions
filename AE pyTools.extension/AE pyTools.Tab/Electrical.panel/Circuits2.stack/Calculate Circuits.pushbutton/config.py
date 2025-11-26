@@ -148,9 +148,9 @@ class CircuitSettingsWindow(forms.WPFWindow):
 
     def _describe_feeder_method(self, value):
         return {
-            FeederVDMethod.DEMAND: "Demand",
-            FeederVDMethod.CONNECTED: "Connected",
-            FeederVDMethod.EIGHTY_PERCENT: "80% of Max",
+            FeederVDMethod.DEMAND: "Demand Load",
+            FeederVDMethod.CONNECTED: "Connected Load",
+            FeederVDMethod.EIGHTY_PERCENT: "80% of Breaker",
         }.get(value, value)
 
     def _help_texts(self):
@@ -160,7 +160,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
             'neutral_behavior': "Choose whether neutral conductors match the quantity of hots automatically or are entered manually for each calculation.",
             'max_branch_voltage_drop': "Target maximum voltage drop for branch circuits (enter as a percentage). Calculated sizes will grow until this threshold is met.",
             'max_feeder_voltage_drop': "Target maximum voltage drop for feeders (enter as a percentage). Applies to feeder sizing logic and may differ from branch criteria.",
-            'feeder_vd_method': "Which feeder load basis to use for voltage drop checks: demand load, connected load, or 80% of the maximum.",
+            'feeder_vd_method': "Which feeder load basis to use for voltage drop checks: demand load, connected load, or 80% of the breaker rating.",
             'write_results': "Toggle whether calculated results push to downstream elements when present.",
         }
 
@@ -169,7 +169,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
             'feeder_vd_method': {
                 FeederVDMethod.DEMAND: "Uses demand load (after demand factors) for voltage drop calculations.",
                 FeederVDMethod.CONNECTED: "Uses the raw connected load without demand factors for voltage drop checks.",
-                FeederVDMethod.EIGHTY_PERCENT: "Uses 80% of the maximum load to balance conservatism and practicality.",
+                FeederVDMethod.EIGHTY_PERCENT: "Uses 80% of the breaker rating unless that is lower than the demand load.",
             },
             'neutral_behavior': {
                 NeutralBehavior.MATCH_HOT: "Neutrals will always mirror the quantity of hot conductors.",
@@ -218,13 +218,13 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self._refresh_styles()
 
     def _percent_value(self, decimal_value):
-        return round(float(decimal_value) * 100, 2)
+        return round(float(decimal_value) * 100, 3)
 
     def _percent_string(self, decimal_value):
         return u"{}%".format(self._strip_trailing_zeros(self._percent_value(decimal_value)))
 
     def _strip_trailing_zeros(self, number):
-        text = ("{0:.4f}".format(number)).rstrip('0').rstrip('.')
+        text = ("{0:.5f}".format(number)).rstrip('0').rstrip('.')
         return text
 
     def _set_percent_field(self, textbox, decimal_value):
@@ -254,6 +254,8 @@ class CircuitSettingsWindow(forms.WPFWindow):
             decimal_value = numeric / 100.0
         else:
             decimal_value = numeric / 100.0 if numeric > 1 else numeric
+
+        decimal_value = round(decimal_value, 3)
 
         if decimal_value < min_value or decimal_value > max_value:
             if silent:

@@ -4,7 +4,7 @@ import Autodesk.Revit.DB.Electrical as DBE
 from System import Guid
 from pyrevit import DB, script, revit
 
-from CEDElectrical.Model.circuit_settings import CircuitSettings
+from CEDElectrical.Model.circuit_settings import CircuitSettings, FeederVDMethod
 from CEDElectrical.refdata.ampacity_table import WIRE_AMPACITY_TABLE
 from CEDElectrical.refdata.conductor_area_table import CONDUCTOR_AREA_TABLE
 from CEDElectrical.refdata.conduit_area_table import CONDUIT_AREA_TABLE, CONDUIT_SIZE_INDEX
@@ -624,6 +624,39 @@ class CircuitBranch(object):
             return self.get_downstream_demand_current()
         return self.apparent_current
 
+    def _get_voltage_drop_current(self):
+        """Resolve feeder voltage-drop current based on settings."""
+        if not self._is_feeder:
+            return self.apparent_current
+
+        method = getattr(self.settings, "feeder_vd_method", FeederVDMethod.DEMAND)
+        demand_current = self.get_downstream_demand_current()
+        connected_current = self.apparent_current
+        base_demand = demand_current if demand_current is not None else connected_current
+
+        if method == FeederVDMethod.CONNECTED:
+            return connected_current if connected_current is not None else base_demand
+
+        if method == FeederVDMethod.EIGHTY_PERCENT:
+            eighty_current = None
+            try:
+                rating = self.rating
+                if rating is not None:
+                    eighty_current = 0.8 * float(rating)
+            except Exception:
+                eighty_current = None
+
+            if eighty_current is None:
+                return base_demand
+
+            if base_demand is None:
+                return eighty_current
+
+            return base_demand if eighty_current < base_demand else eighty_current
+
+        # Default: demand load basis
+        return base_demand
+
     @property
     def poles(self):
         try:
@@ -1142,7 +1175,7 @@ class CircuitBranch(object):
             volts = self.voltage
             pf = self.power_factor or 0.9
             phase = self.phase
-            amps = self.circuit_load_current
+            amps = self._get_voltage_drop_current()
 
             if not amps or not length or not volts:
                 return 0

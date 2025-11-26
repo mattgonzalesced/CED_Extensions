@@ -30,8 +30,8 @@
 
         <TextBlock Grid.Row="0" Grid.Column="0" Text="Minimum Conduit Size" Margin="0,0,8,10" VerticalAlignment="Center"/>
         <ComboBox x:Name="min_conduit_size_cb" Grid.Row="0" Grid.Column="1" Margin="0,0,8,10" Padding="6" SelectedIndex="0">
-            <ComboBoxItem Content="1/2&quot;" Tag="1/2&quot;"/>
-            <ComboBoxItem Content="3/4&quot;" Tag="3/4&quot;"/>
+            <ComboBoxItem Content="1/2&#34;" Tag="1/2&#34;"/>
+            <ComboBoxItem Content="3/4&#34;" Tag="3/4&#34;"/>
         </ComboBox>
         <TextBlock x:Name="min_conduit_default" Grid.Row="0" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
 
@@ -77,9 +77,9 @@
 
         <TextBlock Grid.Row="5" Grid.Column="0" Text="Feeder VD Method" Margin="0,0,8,10" VerticalAlignment="Center"/>
         <ComboBox x:Name="feeder_vd_method_cb" Grid.Row="5" Grid.Column="1" Margin="0,0,8,10" Padding="6">
-            <ComboBoxItem Content="Demand" Tag="demand"/>
-            <ComboBoxItem Content="Connected" Tag="connected"/>
-            <ComboBoxItem Content="80% of Max" Tag="80_percent"/>
+            <ComboBoxItem Content="Demand Load" Tag="demand"/>
+            <ComboBoxItem Content="Connected Load" Tag="connected"/>
+            <ComboBoxItem Content="80% of Breaker" Tag="80_percent"/>
         </ComboBox>
         <TextBlock x:Name="feeder_vd_method_default" Grid.Row="5" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
 

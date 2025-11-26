@@ -102,10 +102,15 @@ def update_circuit_parameters(circuit, param_values):
 # -------------------------------------------------------------------------
 # Write shared parameters to connected family instances
 # -------------------------------------------------------------------------
-def update_connected_elements(branch, param_values):
+def update_connected_elements(branch, param_values, settings):
     circuit = branch.circuit
     fixture_count = 0
     equipment_count = 0
+
+    write_fixtures = getattr(settings, 'write_fixture_results', False)
+    write_equipment = getattr(settings, 'write_equipment_results', False)
+    if not (write_fixtures or write_equipment):
+        return fixture_count, equipment_count
 
     for el in circuit.Elements:
         if not isinstance(el, DB.FamilyInstance):
@@ -120,6 +125,11 @@ def update_connected_elements(branch, param_values):
         is_equipment = cat_id == DB.ElementId(DB.BuiltInCategory.OST_ElectricalEquipment)
 
         if not (is_fixture or is_equipment):
+            continue
+
+        if is_fixture and not write_fixtures:
+            continue
+        if is_equipment and not write_equipment:
             continue
 
         # Write all parameters
@@ -198,8 +208,7 @@ def main():
         for branch in branches:
             param_values = collect_shared_param_values(branch)
             update_circuit_parameters(branch.circuit, param_values)
-            # f, e = update_connected_elements(branch, param_values)
-            f, e = [0,0]
+            f, e = update_connected_elements(branch, param_values, settings)
             total_fixtures += f
             total_equipment += e
         t.Commit()
