@@ -12,7 +12,6 @@ from CEDElectrical.Model.circuit_settings import (
 from CEDElectrical.Domain import settings_manager
 
 XAML_PATH = script.get_bundle_file('settings.xaml')
-HELP_XAML_PATH = script.get_bundle_file('settings_help.xaml')
 
 
 class CircuitSettingsWindow(forms.WPFWindow):
@@ -21,7 +20,6 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.doc = revit.doc
         self.defaults = CircuitSettings()
         self.settings = settings_manager.load_circuit_settings(self.doc)
-        self._help_window = None
         self._help_key = None
         self._is_normalizing = False
 
@@ -30,7 +28,6 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self._load_values()
         self._refresh_styles()
         self._set_help_context('min_conduit_size')
-        self._ensure_help_window()
 
     # ------------- UI wiring -----------------
     def _bind_events(self):
@@ -184,9 +181,6 @@ class CircuitSettingsWindow(forms.WPFWindow):
         combined = preview if option_detail is None else u"{}\n{}".format(preview, option_detail)
         self.help_preview.Text = combined
 
-        if self._help_window:
-            self._help_window.help_text.Text = combined
-
     # ------------- Event handlers ------------
     def _on_save(self, sender, args):
         try:
@@ -206,19 +200,6 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.settings = CircuitSettings()
         self._load_values()
         self._refresh_styles()
-        self._ensure_help_window()
-
-    def _ensure_help_window(self):
-        if not self._help_window:
-            self._help_window = self._create_help_window()
-            self._help_window.Show()
-            self._help_window.help_text.Text = self.help_preview.Text
-
-    def _create_help_window(self):
-        hw = forms.WPFWindow(HELP_XAML_PATH)
-        hw.Owner = self
-        hw.Closed += lambda s, e: setattr(self, '_help_window', None)
-        return hw
 
     def _percent_value(self, decimal_value):
         return round(float(decimal_value) * 100, 2)
