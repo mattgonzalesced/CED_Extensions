@@ -28,8 +28,8 @@
 
         <TextBlock Grid.Row="0" Grid.Column="0" Text="Minimum Conduit Size" Margin="0,0,8,10" VerticalAlignment="Center"/>
         <ComboBox x:Name="min_conduit_size_cb" Grid.Row="0" Grid.Column="1" Margin="0,0,8,10" Padding="6" SelectedIndex="0">
-            <ComboBoxItem Content="1/2\"" Tag="1/2\""/>
-            <ComboBoxItem Content="3/4\"" Tag="3/4\""/>
+            <ComboBoxItem Content="1/2&amp;quot;" Tag="1/2&amp;quot;"/>
+            <ComboBoxItem Content="3/4&amp;quot;" Tag="3/4&amp;quot;"/>
         </ComboBox>
         <TextBlock x:Name="min_conduit_default" Grid.Row="0" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
 
