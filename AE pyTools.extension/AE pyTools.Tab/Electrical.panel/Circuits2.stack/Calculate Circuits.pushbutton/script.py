@@ -181,8 +181,8 @@ def main():
         if not branch.is_power_circuit:
             continue
 
-        branch.calculate_breaker_size()
         branch.calculate_hot_wire_size()
+        branch.calculate_neutral_wire_size()
         branch.calculate_ground_wire_size()
         branch.calculate_conduit_size()
         branches.append(branch)
@@ -196,7 +196,8 @@ def main():
         for branch in branches:
             param_values = collect_shared_param_values(branch)
             update_circuit_parameters(branch.circuit, param_values)
-            f, e = update_connected_elements(branch, param_values)
+            # f, e = update_connected_elements(branch, param_values)
+            f, e = [0,0]
             total_fixtures += f
             total_equipment += e
         t.Commit()

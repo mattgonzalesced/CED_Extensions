@@ -7,6 +7,10 @@ __author__ = "Erik Frits"
 
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> IMPORTS
 import clr, sys
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> IMPORTS
+import clr
+import sys
+
 clr.AddReference("System")
 from System.Collections.Generic import List
 from Autodesk.Revit.DB import ( FilteredElementCollector,

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pyrevit import script, revit, DB
+from pyrevit import script, revit, DB, forms
 
 logger = script.get_logger()
 import csv
@@ -118,37 +118,6 @@ class SystemTree(object):
 
         # ... existing methods ...
 
-    def to_list(self):
-        data = []
-
-        for node in self.nodes.values():
-            node_record = node.to_dict()
-            for branch in node.downstream:
-                branch_record = branch.to_dict(parent_node=node)
-                combined = dict(node_record)
-                combined.update(branch_record)
-                data.append(combined)
-
-        return data
-
-    def export_to_csv(self, filepath):
-        data = self.to_list()
-        if not data:
-            logger.warning("No data to export.")
-            return
-
-        fieldnames = list(data[0].keys())
-
-        try:
-            with open(filepath, 'w') as f:
-                writer = csv.DictWriter(f, fieldnames=fieldnames)
-                writer.writeheader()
-                writer.writerows(data)
-
-            logger.info("Exported tree to CSV: {}".format(filepath))
-        except Exception as e:
-            logger.error("Failed to export CSV: {}".format(str(e)))
-
     def walk_all(self):
         for root in self.root_nodes:
             output.print_md("---\n### Root: **{}**".format(root.panel_name))
@@ -202,6 +171,41 @@ class SystemTree(object):
                     cat_name,
                     count
                 ))
+
+    def to_list(self):
+        data = []
+
+        for node in self.nodes.values():
+            node_record = node.to_dict()
+            for branch in node.downstream:
+                branch_record = branch.to_dict(parent_node=node)
+                combined = dict(node_record)
+                combined.update(branch_record)
+                data.append(combined)
+
+        return data
+
+    def export_to_csv(self, filepath):
+        data = self.to_list()
+        if not data:
+            logger.warning("No data to export.")
+            return
+
+        fieldnames = list(data[0].keys())
+
+        try:
+            with open(filepath, 'w') as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(data)
+
+            logger.info("Exported tree to CSV: {}".format(filepath))
+        except Exception as e:
+            logger.error("Failed to export CSV: {}".format(str(e)))
+
+    def _request_path(self):
+        path = forms.save_file(file_ext='csv',default_name="system_tree_export")
+        return path
 
 
 # ----------------------------

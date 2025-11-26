@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from pyrevit import DB, script, forms, revit, output
-from pyrevit.revit import query
-import clr
-from Snippets import _elecutils as eu
-from Autodesk.Revit.DB.Electrical import *
+from pyrevit import DB, script, revit
 
 app = __revit__.Application
 uidoc = __revit__.ActiveUIDocument

@@ -1,5 +1,5 @@
+import Autodesk.Revit.DB.Electrical as DBE
 from Autodesk.Revit.DB import FilteredElementCollector, Electrical, Transaction, BuiltInCategory, BuiltInParameter
-from Autodesk.Revit.DB.Electrical import *
 from pyrevit import script, forms, DB
 
 logger = script.get_logger()
@@ -221,7 +221,7 @@ def find_open_slots(target_panel):
 def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
     """Get circuits from a selected panel with sorting and inclusion of spare/space circuits."""
     circuits = []
-    panel_circuits = FilteredElementCollector(doc).OfClass(Electrical.ElectricalSystem).WherePasses(option_filter).ToElements()
+    panel_circuits = FilteredElementCollector(doc).OfClass(DBE.ElectricalSystem).WherePasses(option_filter).ToElements()
 
     for circuit in panel_circuits:
         if circuit.BaseEquipment and circuit.BaseEquipment.Id == panel.Id:
@@ -265,7 +265,7 @@ def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
 
 def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_spaces=False):
     ckts = DB.FilteredElementCollector(doc) \
-        .OfClass(ElectricalSystem) \
+        .OfClass(DBE.ElectricalSystem) \
         .WhereElementIsNotElementType().WherePasses(option_filter)
 
     grouped_options = {" All": []}
@@ -275,11 +275,11 @@ def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_space
 
     for ckt in ckts:
         # Skip spares/spaces if not included
-        if not include_spares_and_spaces and ckt.CircuitType in [CircuitType.Spare, CircuitType.Space]:
+        if not include_spares_and_spaces and ckt.CircuitType in [DBE.CircuitType.Spare, DBE.CircuitType.Space]:
             continue
 
         # Safely get rating and poles if circuit is a PowerCircuit
-        if ckt.SystemType == ElectricalSystemType.PowerCircuit:
+        if ckt.SystemType == DBE.ElectricalSystemType.PowerCircuit:
             try:
                 rating = int(round(ckt.Rating,0))
             except:
@@ -302,11 +302,11 @@ def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_space
         start_slot = ckt.StartSlot if hasattr(ckt, 'StartSlot') else 0
         sort_key = (panel_name, start_slot, load_name.strip())
 
-        if ckt.CircuitType == CircuitType.Space:
+        if ckt.CircuitType == DBE.CircuitType.Space:
             # Space: no rating/poles, just panel and label
             label = "[{}]  {}/{} - {}({}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(),pole)
 
-        elif ckt.CircuitType == CircuitType.Spare:
+        elif ckt.CircuitType == DBE.CircuitType.Spare:
             # Spare: show circuit number and panel, label as [SPARE]
             label = "[{}]  {}/{} - {}  ({} A/{}P)".format(ckt_id, panel_name, circuit_number, load_name.strip(), rating, pole)
 
@@ -385,4 +385,37 @@ def pick_panel_from_list(doc, select_multiple=False):
 
     selected_panels = [panel_lookup[name] for name in selected_names] if select_multiple else panel_lookup[selected_names]
     return selected_panels
+
+
+def get_circuits_from_selection(selection):
+    circuits = []
+
+    if not isinstance(selection, (list, tuple, set)):
+        selection = [selection]
+
+    for item in selection:
+        if isinstance(item, DBE.ElectricalSystem):
+            logger.debug("item {} is electrical circuit".format(item.Id.Value))
+            circuits.append(item)
+            continue
+
+        try:
+            mep = item.MEPModel
+        except Exception as e:
+            logger.debug("{}".format(e))
+            continue
+
+        if item.Category == DB.BuiltInCategory.OST_ElectricalEquipment:
+            all_systems = mep.GetElectricalSystems() or []
+            assigned_systems = mep.GetAssignedElectricalSystems() or []
+            assigned_ids = set([sys.Id for sys in assigned_systems])
+
+            supply_systems = [sys for sys in all_systems if sys.Id not in assigned_ids]
+
+            circuits.extend(supply_systems)
+        else:
+            all_systems = mep.GetElectricalSystems() or []
+            circuits.extend(all_systems)
+
+    return circuits
 

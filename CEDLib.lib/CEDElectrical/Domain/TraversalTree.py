@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from Autodesk.Revit.DB.Electrical import *
 from pyrevit import script, revit, forms, DB
-from Snippets import _elecutils as eu
+
 logger = script.get_logger()
 import csv
 from pyrevit.compat import get_elementid_value_func
