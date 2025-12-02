@@ -7,10 +7,8 @@ Allows editing offsets, parameters, tags, category, and is_group for each equipm
 """
 
 import io
-import json
 import os
 import hashlib
-import datetime
 
 from pyrevit import script, forms
 
@@ -215,19 +213,6 @@ def _file_hash(path):
     return h.hexdigest()
 
 
-def _append_log(action, cad_names, before_hash, after_hash, log_path):
-    entry = {
-        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-        "user": os.getenv("USERNAME") or os.getenv("USER") or "unknown",
-        "action": action,
-        "cad_names": list(cad_names or []),
-        "before_hash": before_hash,
-        "after_hash": after_hash,
-    }
-    with io.open(log_path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry, ensure_ascii=True) + "\n")
-
-
 def _dict_from_shims(profiles):
     out = {"profiles": []}
     for p in profiles.values():
@@ -319,7 +304,6 @@ def main():
     data_path = _pick_profile_data_path()
     if not data_path:
         return
-    log_path = os.path.join(os.path.dirname(data_path), "profileData.log")
 
     # XAML lives alongside the UI class in CEDLib.lib/UIClasses
     xaml_path = os.path.join(LIB_ROOT, "UIClasses", "ProfileEditorWindow.xaml")
@@ -347,7 +331,6 @@ def main():
         )
         save_profile_data(data_path, {"equipment_definitions": updated_defs})
         after_hash = _file_hash(data_path)
-        _append_log("edit", sorted(shim_profiles.keys()), before_hash, after_hash, log_path)
         forms.alert("Saved profile changes to profileData.yaml.\nReload Place Elements (YAML) to use the updates.", title="Edit YAML Profiles")
     except Exception as ex:
         forms.alert("Failed to save profileData.yaml:\n\n{}".format(ex), title="Edit YAML Profiles")

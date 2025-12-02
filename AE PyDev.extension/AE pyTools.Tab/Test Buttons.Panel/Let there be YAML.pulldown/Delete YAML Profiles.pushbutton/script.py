@@ -8,10 +8,7 @@ from CEDLib.lib/profileData.yaml.
 
 from __future__ import print_function
 
-import datetime
-import hashlib
 import io
-import json
 import os
 import sys
 
@@ -45,33 +42,6 @@ try:
     from System.Collections import IDictionary  # type: ignore
 except Exception:  # pragma: no cover
     IDictionary = None
-
-
-def _file_hash(path):
-    if not os.path.exists(path):
-        return ""
-    digest = hashlib.sha256()
-    with open(path, "rb") as handle:
-        for chunk in iter(lambda: handle.read(8192), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _append_log(action, definition_name, type_labels, before_hash, after_hash, log_path):
-    entry = {
-        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-        "user": os.getenv("USERNAME") or os.getenv("USER") or "unknown",
-        "action": action,
-        "definition_name": definition_name,
-        "type_labels": list(type_labels or []),
-        "before_hash": before_hash,
-        "after_hash": after_hash,
-    }
-    try:
-        with io.open(log_path, "a", encoding="utf-8") as handle:
-            handle.write(json.dumps(entry, ensure_ascii=True) + "\n")
-    except Exception:
-        pass
 
 
 def _to_native(value):
@@ -353,7 +323,6 @@ def main():
     data_path = _pick_profile_data_path()
     if not data_path:
         return
-    log_path = os.path.join(os.path.dirname(data_path), "profileData.log")
 
     raw_data, _ = _load_profile_store(data_path)
     native_equipment_defs = [_to_native(entry) or {} for entry in raw_data.get("equipment_definitions") or []]
@@ -395,7 +364,6 @@ def main():
 
     picked_entries = [display_map[name] for name in picked]
     picked_ids = {entry["id"] for entry in picked_entries}
-    before_hash = _file_hash(data_path)
     changed, removed_eq_entries = _erase_entries(native_equipment_defs, definition_choice, picked_ids)
     if not changed:
         return
@@ -443,9 +411,6 @@ def main():
     _cleanup_relations(native_equipment_defs, removed_ids)
 
     save_profile_data(data_path, {"equipment_definitions": native_equipment_defs})
-    after_hash = _file_hash(data_path)
-    _append_log("delete", definition_choice, picked, before_hash, after_hash, log_path)
-
     summary = [
         "Deleted {} type(s) from definition '{}' and saved to profileData.yaml.".format(len(picked), definition_choice),
     ]

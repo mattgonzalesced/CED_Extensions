@@ -4,8 +4,6 @@ Placement engine that consumes profile definitions and places Revit elements.
 """
 
 import os
-import io
-import json
 import math
 
 from Autodesk.Revit.DB import (
@@ -78,12 +76,13 @@ def _build_linker_payload(led_id, set_id, location, rotation_deg, level_id, elem
 
 
 class PlaceElementsEngine(object):
-    def __init__(self, doc, repo, default_level=None, tag_view_map=None, allow_tags=True):
+    def __init__(self, doc, repo, default_level=None, tag_view_map=None, allow_tags=True, transaction_name="Place Elements (YAML)"):
         self.doc = doc
         self.repo = repo
         self.default_level = default_level
         self.tag_view_map = tag_view_map or {}
         self.allow_tags = bool(allow_tags)
+        self.transaction_name = transaction_name or "Place Elements (YAML)"
         self._init_symbol_map()
         self._init_group_map()
 
@@ -252,14 +251,9 @@ class PlaceElementsEngine(object):
         placed_count = 0
         self._group_fail_notfound = []
         self._group_fail_error = []
-        # identification log setup
-        ident_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "profileDataIdentifications.yaml"))
-        # Always reset identifications per run
-        id_entries = []
-        next_equipment_id = 1
         self._group_fail_error_msgs = []
 
-        t = Transaction(self.doc, "Place Elements (YAML)")
+        t = Transaction(self.doc, self.transaction_name)
         t.Start()
 
         try:
@@ -329,27 +323,7 @@ class PlaceElementsEngine(object):
                                     tags = placement.get_tags()
                                 except Exception:
                                     tags = []
-                        id_entry = {
-                            "equipment_id": "{:05d}".format(next_equipment_id),
-                            "cad_name": cad_name,
-                            "label": label,
-                            "is_group": bool(placement_mode and str(placement_mode).lower() == "group"),
-                            "offsets": {
-                                "x_inches": float(offsets_ft[0]) * 12.0 if offsets_ft else 0.0,
-                                "y_inches": float(offsets_ft[1]) * 12.0 if offsets_ft else 0.0,
-                                "z_inches": float(offsets_ft[2]) * 12.0 if offsets_ft else 0.0,
-                                "rotation_deg": float(rot_off),
-                            },
-                            "tags": tags or [],
-                        }
-                        id_entries.append(id_entry)
-                        try:
-                            set_id = getattr(self.repo._by_cad.get(cad_name), "set_equipment_def_id", None)
-                            if set_id:
-                                set_id(next_equipment_id)
-                        except Exception:
-                            pass
-                        next_equipment_id += 1
+                        # identification logging removed
 
             t.Commit()
         except Exception:
@@ -357,13 +331,6 @@ class PlaceElementsEngine(object):
             raise
 
         # Persist identification log sorted by equipment_id
-        try:
-            ident_out = {"entries": id_entries}
-            with io.open(ident_path, "w", encoding="utf-8") as f_ident:
-                json.dump(ident_out, f_ident, indent=2)
-        except Exception:
-            pass
-
         return {
             "placed": placed_count,
             "total_rows": total_rows,
