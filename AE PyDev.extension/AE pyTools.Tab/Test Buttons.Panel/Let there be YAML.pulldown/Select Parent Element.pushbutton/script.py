@@ -561,6 +561,15 @@ def _get_rotation(elem):
             return float(angle * 180.0 / 3.141592653589793)
     except Exception:
         pass
+    try:
+        hand = getattr(elem, "HandOrientation", None)
+        if hand:
+            projected = XYZ(hand.X, hand.Y, 0.0)
+            if abs(projected.X) > 1e-9 or abs(projected.Y) > 1e-9:
+                angle = math.atan2(projected.Y, projected.X)
+                return float(angle * 180.0 / 3.141592653589793)
+    except Exception:
+        pass
     return 0.0
 
 
