@@ -8,7 +8,6 @@ resulting offset + rotation back to CEDLib.lib/profileData.yaml so future
 placements use the updated vector.
 """
 
-import datetime
 import io
 import math
 import os
@@ -150,14 +149,6 @@ def _load_profile_store(data_path):
     except Exception:
         pass
     return data
-
-
-def _log_entry(payload, log_path):
-    try:
-        with io.open(log_path, "a", encoding="utf-8") as handle:
-            handle.write("{} :: {}\n".format(datetime.datetime.utcnow().isoformat() + "Z", payload))
-    except Exception:
-        pass
 
 
 # --------------------------------------------------------------------------- #
@@ -1217,32 +1208,6 @@ def main():
     delta_inch_x = round(_feet_to_inches(local_delta.X), 6)
     delta_inch_y = round(_feet_to_inches(local_delta.Y), 6)
     delta_inch_z = round(_feet_to_inches(local_delta.Z), 6)
-
-    log_path = os.path.join(os.path.dirname(data_path), "profileData.log")
-    _log_entry(
-        {
-            "action": "update_vector",
-            "label": label or led_entry.get("label") or led_entry.get("id"),
-            "equipment": eq_def.get("name") or eq_def.get("id"),
-            "led_id": led_id,
-            "set_id": set_entry.get("id"),
-            "x_inches": offset_entry["x_inches"],
-            "y_inches": offset_entry["y_inches"],
-            "z_inches": offset_entry["z_inches"],
-            "rotation_deg": new_rotation_offset,
-            "base_rotation_deg": base_rotation,
-            "current_rotation_deg": elem_rotation,
-            "delta_x_inches": delta_inch_x,
-            "delta_y_inches": delta_inch_y,
-            "delta_z_inches": delta_inch_z,
-            "propagate_requested": propagate_requested,
-            "propagate_count": moved_count,
-            "propagate_success": propagate_success,
-            "rotation_delta_deg": rotation_delta,
-            "user": os.getenv("USERNAME") or os.getenv("USER") or "unknown",
-        },
-        log_path,
-    )
 
     def _format_float(val):
         try:

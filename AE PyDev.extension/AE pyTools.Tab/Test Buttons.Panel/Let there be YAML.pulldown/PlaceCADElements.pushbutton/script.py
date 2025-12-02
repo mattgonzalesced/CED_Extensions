@@ -200,7 +200,13 @@ def main():
     else:
         level = level_sel
 
-    engine = PlaceElementsEngine(revit.doc, repo, default_level=level, allow_tags=False)
+    engine = PlaceElementsEngine(
+        revit.doc,
+        repo,
+        default_level=level,
+        allow_tags=False,
+        transaction_name="Place CAD Elements (YAML)",
+    )
     try:
         results = engine.place_from_csv(csv_rows, selection_map)
     except Exception as exc:

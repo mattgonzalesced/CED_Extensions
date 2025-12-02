@@ -55,9 +55,9 @@ If all moves succeed, the transaction commits and the tool optionally selects th
 --------------------
 When the command starts from an IndependentTag, it switches into tag-only mode. Instead of recomputing host offsets, it simply captures the tag’s new offset relative to its host, updates just the matching tag entry in YAML, saves, and asks about propagation based on whether tag offsets changed. If the user applies to similar equipment, the host element’s geometry stays put while `_apply_tag_offsets_to_instance()` adjusts the companion tags on every other instance. This gives designers a lightweight way to tune annotation layouts without disturbing the actual equipment.
 
-10. Logging and User Feedback
------------------------------
-Every successful run appends a JSON line to `profileData.log` recording the action, element labels, offset values, delta inches, rotation changes, whether propagation was requested, and the username from the environment. This log provides traceability for later debugging. After logging, the script builds a textual summary dialog listing the new rotation, offsets, delta move, and propagation outcome so users immediately know what happened. If propagation succeeded, it mentions that similar elements were selected for review; if it failed or no matches were found, the message reflects that as well.
+10. User Feedback
+-----------------
+After updating YAML (and optionally propagating to similar elements), the script builds a textual summary dialog listing the new rotation, offsets, delta move, and propagation outcome so users immediately know what happened. If propagation succeeded, it mentions that similar elements were selected for review; if it failed or no matches were found, the message reflects that as well.
 
 11. Error Handling Philosophy
 -----------------------------
