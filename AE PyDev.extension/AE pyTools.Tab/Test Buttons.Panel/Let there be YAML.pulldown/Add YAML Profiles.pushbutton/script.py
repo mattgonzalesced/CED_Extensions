@@ -14,10 +14,8 @@ Flow:
 """
 
 import io
-import json
 import math
 import os
-import datetime
 
 from pyrevit import revit, forms
 
@@ -157,14 +155,6 @@ def _load_profile_store(data_path):
 # --------------------------------------------------------------------------- #
 # Helpers
 # --------------------------------------------------------------------------- #
-
-
-def _log_entry(entry, log_path):
-    try:
-        with io.open(log_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(entry, ensure_ascii=True) + "\n")
-    except Exception:
-        pass
 
 
 def _feet_to_inches(value):
@@ -536,7 +526,6 @@ def main():
     data_path = _pick_profile_data_path()
     if not data_path:
         return
-    log_path = os.path.join(os.path.dirname(data_path), "profileData.log")
 
     data = _load_profile_store(data_path)
     existing_names = sorted({
@@ -671,13 +660,6 @@ def main():
 
     try:
         save_profile_data(data_path, data)
-        _log_entry({
-            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-            "action": "add",
-            "cad_name": cad_name,
-            "type_labels": [t.get("label") for t in type_entries],
-            "user": os.getenv("USERNAME") or os.getenv("USER") or "unknown",
-        }, log_path)
         forms.alert("Added {} type(s) under equipment definition '{}'.\nReload Place Elements (YAML) to use them.".format(len(type_entries), cad_name), title="Add YAML Profiles")
     except Exception as ex:
         forms.alert("Failed to save profileData.yaml:\n\n{}".format(ex), title="Add YAML Profiles")

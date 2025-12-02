@@ -31,7 +31,6 @@ if LIB_ROOT not in sys.path:
 
 from LogicClasses.placement_engine import PlaceElementsEngine  # noqa: E402
 from LogicClasses.profile_repository import ProfileRepository  # noqa: E402
-from LogicClasses.tag_utils import tag_key_from_dict  # noqa: E402
 from LogicClasses.yaml_path_cache import get_cached_yaml_path, set_cached_yaml_path  # noqa: E402
 from LogicClasses.linked_equipment import build_child_requests, find_equipment_by_name  # noqa: E402
 try:
@@ -222,27 +221,6 @@ def _build_repository(data):
     return ProfileRepository(eq_defs)
 
 
-def _collect_tag_defs(repo, selection_map):
-    tags = {}
-    for cad_name, labels in selection_map.items():
-        if isinstance(labels, basestring):
-            labels_iter = [labels]
-        else:
-            labels_iter = list(labels)
-        for label in labels_iter:
-            linked_def = repo.definition_for_label(cad_name, label)
-            if not linked_def:
-                continue
-            placement = linked_def.get_placement()
-            if not placement:
-                continue
-            for tag in placement.get_tags() or []:
-                key = tag_key_from_dict(tag)
-                if key and key not in tags:
-                    tags[key] = tag
-    return tags
-
-
 def _place_child_requests(repo, child_requests):
     selection_map = {}
     rows = []
@@ -264,14 +242,7 @@ def _place_child_requests(repo, child_requests):
         })
     if not selection_map or not rows:
         return 0
-    tag_defs = _collect_tag_defs(repo, selection_map)
-    tag_view_map = {}
-    active_view = getattr(revit.doc, "ActiveView", None)
-    if active_view:
-        vid = active_view.Id.IntegerValue
-        for key in tag_defs:
-            tag_view_map[key] = [vid]
-    engine = PlaceElementsEngine(revit.doc, repo, tag_view_map=tag_view_map)
+    engine = PlaceElementsEngine(revit.doc, repo, allow_tags=False, transaction_name="Load Equipment Definition (Children)")
     try:
         results = engine.place_from_csv(rows, selection_map)
     except Exception as exc:
@@ -366,15 +337,7 @@ def main():
                         "Rotation": str(rotation or 0.0),
                     })
 
-    tag_defs = _collect_tag_defs(repo, selection_map)
-    tag_view_map = {}
-    active_view = getattr(revit.doc, "ActiveView", None)
-    if active_view:
-        vid = active_view.Id.IntegerValue
-        for key in tag_defs:
-            tag_view_map[key] = [vid]
-
-    engine = PlaceElementsEngine(revit.doc, repo, tag_view_map=tag_view_map)
+    engine = PlaceElementsEngine(revit.doc, repo, allow_tags=False, transaction_name="Load Equipment Definition")
     try:
         results = engine.place_from_csv(rows, selection_map)
     except Exception as exc:

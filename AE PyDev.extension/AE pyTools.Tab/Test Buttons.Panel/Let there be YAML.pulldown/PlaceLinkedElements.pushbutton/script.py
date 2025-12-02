@@ -12,7 +12,7 @@ LIB_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "
 if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
-from LogicClasses.PlaceElementsLogic import PlaceElementsEngine, ProfileRepository, tag_key_from_dict  # noqa: E402
+from LogicClasses.PlaceElementsLogic import PlaceElementsEngine, ProfileRepository  # noqa: E402
 from profile_schema import equipment_defs_to_legacy, load_data as load_profile_data  # noqa: E402
 from LogicClasses.yaml_path_cache import get_cached_yaml_path, set_cached_yaml_path  # noqa: E402
 
@@ -103,36 +103,16 @@ def _build_repository(data):
     return ProfileRepository(eq_defs)
 
 
-def _collect_tag_defs(repo, selection_map):
-    tags = {}
-    for cad_name, labels in selection_map.items():
-        if isinstance(labels, basestring):
-            labels_iter = [labels]
-        else:
-            labels_iter = list(labels)
-        for label in labels_iter:
-            linked_def = repo.definition_for_label(cad_name, label)
-            if not linked_def:
-                continue
-            placement = linked_def.get_placement()
-            if not placement:
-                continue
-            for tag in placement.get_tags() or []:
-                key = tag_key_from_dict(tag)
-                if key and key not in tags:
-                    tags[key] = tag
-    return tags
-
-
-def _place_requests(doc, repo, selection_map, rows, default_level=None, view_id=None):
+def _place_requests(doc, repo, selection_map, rows, default_level=None):
     if not selection_map or not rows:
         return {"placed": 0}
-    tag_defs = _collect_tag_defs(repo, selection_map)
-    tag_view_map = {}
-    if view_id:
-        for key in tag_defs:
-            tag_view_map.setdefault(key, []).append(view_id)
-    engine = PlaceElementsEngine(doc, repo, default_level=default_level, tag_view_map=tag_view_map)
+    engine = PlaceElementsEngine(
+        doc,
+        repo,
+        default_level=default_level,
+        allow_tags=False,
+        transaction_name="Place Linked Elements",
+    )
     return engine.place_from_csv(rows, selection_map)
 
 
@@ -364,10 +344,7 @@ def main():
     elif level_sel:
         level = level_sel
 
-    active_view = getattr(doc, "ActiveView", None)
-    view_id = getattr(getattr(active_view, "Id", None), "IntegerValue", None)
-
-    results = _place_requests(doc, repo, selection_map, rows, default_level=level, view_id=view_id)
+    results = _place_requests(doc, repo, selection_map, rows, default_level=level)
     placed = results.get("placed", 0)
     summary = [
         "Processed {} linked element(s).".format(len(rows)),

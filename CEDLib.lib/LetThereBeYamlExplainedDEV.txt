@@ -16,17 +16,14 @@ inches and appended to the instance_config.tags list so the placement engine can
 families later. Finally, ensure_equipment_definition guarantees the CAD profile exists, get_type_set
 fetches the linked_set, next_led_id assigns an ID, and the assembled dictionary
 (offsets/parameters/tags) is appended to linked_element_definitions. save_profile_data writes the
-updated dataset back to disk and _log_entry writes a JSON row to profileData.log containing
-timestamp, action="add", cad_name, labels, and user.
+updated dataset back to disk so the new definition is immediately available to the rest of the toolset.
 
 Delete YAML Profiles
 Delete YAML Profiles manipulates profileData.yaml entirely in memory. After resolving the path and
 loading it through _load_profile_store, the script enumerates CAD names and their labels, then uses
 SelectFromList with multiselect so the operator can choose multiple labels to remove. For each
 label, linked_element_definitions is rebuilt without entries whose label string matches the
-selection; all other metadata (linked set IDs, names, parent filters) stay intact. _file_hash runs
-before and after save_profile_data so profileData.log can record a before/after hash,
-action="delete", definition name, labels removed, and the operator name. Because this tool depends
+selection; all other metadata (linked set IDs, names, parent filters) stay intact. Because this tool depends
 on unique label strings, duplicates could remove unexpected entries, so the catalog author must
 ensure each label within a CAD profile is unique.
 
@@ -39,9 +36,8 @@ _discover_type_configs, which scans profile.__dict__ attributes for TypeConfig l
 operator selects a label, TypeCombo_SelectionChanged loads the first OffsetShim, builds parameter
 rows by pairing TextBlocks and TextBoxes, and builds tag rows with editable fields. After the user
 clicks OK, OkButton_Click gathers the edited offsets/parameters/tags, the script converts the shims
-back via legacy_to_equipment_defs, hashes the original file, writes the new YAML through
-save_profile_data, hashes again, and logs action="edit" with the CAD names touched plus the
-before/after hashes.
+back via legacy_to_equipment_defs, and writes the new YAML through save_profile_data so the library
+stays synchronized with the edits made inside the UI.
 
 Load Equipment Definition
 Load Equipment Definition sanitizes the YAML structures and feeds them directly to
@@ -76,8 +72,7 @@ prompts the user to select an instance, extracts its label (e.g., “EF-U_Recept
 Wall”) and CAD name, and resolves that entry inside the YAML dictionary. The operator then clicks a
 new preview point; the script subtracts the element’s current Location from the preview to get a
 delta vector, converts it to inches, and writes those numbers into led_entry['offsets'][0].
-save_profile_data writes the update and _log_entry appends action="set_xyz_offset" plus the LED id
-and values to profileData.log. Finally, ElementTransformUtils.MoveElement attempts to translate the
+save_profile_data writes the update, and ElementTransformUtils.MoveElement attempts to translate the
 live element by the same delta so the preview matches the stored calibration. If the move fails (for
 pinned or constrained elements) a warning is displayed but the YAML change remains.
 
@@ -85,8 +80,7 @@ Set New Rotation Offset
 The rotation helper follows the same pattern but manipulates the stored angle. After the user picks
 an element and defines a preview rotation, the script samples the current orientation (via
 Location.Rotation or FacingOrientation), computes an angular delta in degrees, and writes that value
-into the first offset entry. save_profile_data persists the change, profileData.log records
-action="set_rotation_offset", and ElementTransformUtils.RotateElement attempts to rotate the live
+into the first offset entry. save_profile_data persists the change, and ElementTransformUtils.RotateElement attempts to rotate the live
 instance around its insertion point. Exceptions for non-rotatable elements are caught and reported
 while the YAML still reflects the new rotation, ensuring catalog data matches the operator’s intent.
 
