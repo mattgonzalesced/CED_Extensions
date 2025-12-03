@@ -1,4 +1,4 @@
-title: Let there be YAML
+title: MEP Automation
 tooltip: Select a YAML definition file and run placement/tagging helpers
 context: doc-project
 default_button: Select YAML
