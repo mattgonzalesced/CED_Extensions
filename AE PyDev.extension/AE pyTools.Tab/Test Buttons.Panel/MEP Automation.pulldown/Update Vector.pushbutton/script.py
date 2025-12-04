@@ -4,11 +4,9 @@ Update Vector
 -------------
 Reads the Element_Linker metadata stored on a selected element, compares the
 current location/rotation to the original insertion point, and writes the
-resulting offset + rotation back to CEDLib.lib/profileData.yaml so future
-placements use the updated vector.
+resulting offset + rotation back to the active YAML stored in Extensible Storage.
 """
 
-import io
 import math
 import os
 import sys
@@ -33,10 +31,8 @@ LIB_ROOT = os.path.abspath(
 if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
-from profile_schema import load_data as load_profile_data, save_data as save_profile_data  # noqa: E402
-from LogicClasses.yaml_path_cache import get_cached_yaml_path, set_cached_yaml_path  # noqa: E402
-
-DEFAULT_DATA_PATH = os.path.join(LIB_ROOT, "profileData.yaml")
+from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
+from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data  # noqa: E402
 ELEMENT_LINKER_PARAM_NAME = "Element_Linker Parameter"
 ELEMENT_LINKER_SHARED_PARAM = "Element_Linker"
 TITLE = "Update Vector"
@@ -45,110 +41,6 @@ try:
     basestring
 except NameError:
     basestring = str
-
-
-# --------------------------------------------------------------------------- #
-# YAML helpers
-# --------------------------------------------------------------------------- #
-
-
-def _parse_scalar(token):
-    token = (token or "").strip()
-    if not token:
-        return ""
-    if token in ("{}",):
-        return {}
-    if token in ("[]",):
-        return []
-    if token.startswith('"') and token.endswith('"'):
-        return token[1:-1]
-    lowered = token.lower()
-    if lowered in ("true", "false"):
-        return lowered == "true"
-    if lowered == "null":
-        return None
-    try:
-        if "." in token:
-            return float(token)
-        return int(token)
-    except Exception:
-        return token
-
-
-def _simple_yaml_parse(text):
-    lines = text.splitlines()
-
-    def parse_block(start_idx, base_indent):
-        idx = start_idx
-        result = None
-        while idx < len(lines):
-            raw_line = lines[idx]
-            stripped = raw_line.strip()
-            if not stripped or stripped.startswith("#"):
-                idx += 1
-                continue
-            indent = len(raw_line) - len(raw_line.lstrip(" "))
-            if indent < base_indent:
-                break
-            if stripped.startswith("-"):
-                if result is None:
-                    result = []
-                elif not isinstance(result, list):
-                    break
-                remainder = stripped[1:].strip()
-                if remainder:
-                    result.append(_parse_scalar(remainder))
-                    idx += 1
-                else:
-                    value, idx = parse_block(idx + 1, indent + 2)
-                    result.append(value)
-            else:
-                if result is None:
-                    result = {}
-                elif isinstance(result, list):
-                    break
-                key, _, remainder = stripped.partition(":")
-                key = key.strip().strip('"')
-                remainder = remainder.strip()
-                if remainder:
-                    result[key] = _parse_scalar(remainder)
-                    idx += 1
-                else:
-                    value, idx = parse_block(idx + 1, indent + 2)
-                    result[key] = value
-        if result is None:
-            result = {}
-        return result, idx
-
-    parsed, _ = parse_block(0, 0)
-    return parsed if isinstance(parsed, dict) else {}
-
-
-def _pick_profile_data_path():
-    cached = get_cached_yaml_path()
-    if cached and os.path.exists(cached):
-        return cached
-    path = forms.pick_file(
-        file_ext="yaml",
-        title="Select profileData YAML file",
-    )
-    if path:
-        set_cached_yaml_path(path)
-    return path
-
-
-def _load_profile_store(data_path):
-    data = load_profile_data(data_path)
-    if data.get("equipment_definitions"):
-        return data
-    try:
-        with io.open(data_path, "r", encoding="utf-8") as handle:
-            fallback = _simple_yaml_parse(handle.read())
-        if fallback.get("equipment_definitions"):
-            return fallback
-    except Exception:
-        pass
-    return data
 
 
 # --------------------------------------------------------------------------- #
@@ -992,7 +884,7 @@ def _apply_offsets_to_similar(doc, elements, original_local_offset, original_rot
 
 
 # --------------------------------------------------------------------------- #
-# profileData helpers
+# Active YAML helpers
 # --------------------------------------------------------------------------- #
 
 
@@ -1088,14 +980,16 @@ def main():
         forms.alert("Element_Linker parameter does not contain a valid base location.", title=TITLE)
         return
     payload_rotation = float(payload.get("rotation_deg") or 0.0)
-    data_path = _pick_profile_data_path()
-    if not data_path:
+    try:
+        data_path, data = load_active_yaml_data()
+    except RuntimeError as exc:
+        forms.alert(str(exc), title=TITLE)
         return
-    data = _load_profile_store(data_path)
+    yaml_label = get_yaml_display_name(data_path)
 
     eq_entry = _find_led_entry(data, led_id, payload.get("set_id"))
     if not eq_entry:
-        forms.alert("Could not locate '{}' inside profileData.yaml.".format(led_id), title=TITLE)
+        forms.alert("Could not locate '{}' inside {}.".format(led_id, yaml_label), title=TITLE)
         return
     eq_def, set_entry, led_entry = eq_entry
     offset_entry = _ensure_offset_entry(led_entry)
@@ -1167,9 +1061,14 @@ def main():
         similar_elements = []
 
     try:
-        save_profile_data(data_path, data)
+        save_active_yaml_data(
+            None,
+            data,
+            "Update Vector",
+            "Updated offsets for {}".format(led_id),
+        )
     except Exception as ex:
-        forms.alert("Failed to update profileData.yaml:\n\n{}".format(ex), title=TITLE)
+        forms.alert("Failed to update {}:\n\n{}".format(yaml_label, ex), title=TITLE)
         return
 
     updated_payload_text = _build_linker_payload(

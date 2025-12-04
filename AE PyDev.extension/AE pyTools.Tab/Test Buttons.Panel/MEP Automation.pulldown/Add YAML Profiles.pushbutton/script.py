@@ -17,7 +17,7 @@ import io
 import math
 import os
 
-from pyrevit import revit, forms
+from pyrevit import revit, forms, script
 
 # Add CEDLib.lib to sys.path for shared assets
 import sys
@@ -30,13 +30,10 @@ if LIB_ROOT not in sys.path:
 from profile_schema import (  # noqa: E402
     ensure_equipment_definition,
     get_type_set,
-    load_data as load_profile_data,
     next_led_id,
-    save_data as save_profile_data,
 )
-from LogicClasses.yaml_path_cache import get_cached_yaml_path, set_cached_yaml_path  # noqa: E402
-
-DEFAULT_DATA_PATH = os.path.join(LIB_ROOT, "profileData.yaml")
+from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
+from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data  # noqa: E402
 
 try:
     basestring
@@ -123,38 +120,6 @@ def _simple_yaml_parse(text):
 
     parsed, _ = parse_block(0, 0)
     return parsed if isinstance(parsed, dict) else {}
-
-
-def _pick_profile_data_path():
-    cached = get_cached_yaml_path()
-    if cached and os.path.exists(cached):
-        return cached
-    path = forms.pick_file(
-        file_ext="yaml",
-        title="Select profileData YAML file",
-    )
-    if path:
-        set_cached_yaml_path(path)
-    return path
-
-
-def _load_profile_store(data_path):
-    data = load_profile_data(data_path)
-    if data.get("equipment_definitions"):
-        return data
-    try:
-        with io.open(data_path, "r", encoding="utf-8") as handle:
-            fallback = _simple_yaml_parse(handle.read())
-        if fallback.get("equipment_definitions"):
-            return fallback
-    except Exception:
-        pass
-    return data
-
-
-# --------------------------------------------------------------------------- #
-# Helpers
-# --------------------------------------------------------------------------- #
 
 
 def _feet_to_inches(value):
@@ -523,14 +488,18 @@ def _next_eq_number(data):
 
 
 def main():
-    data_path = _pick_profile_data_path()
-    if not data_path:
+    try:
+        yaml_path, data = load_active_yaml_data()
+    except RuntimeError as exc:
+        forms.alert(str(exc), title="Add YAML Profiles")
         return
-
-    data = _load_profile_store(data_path)
+    yaml_label = get_yaml_display_name(yaml_path)
+    equipment_defs = data.get("equipment_definitions") or []
+    logger = script.get_logger()
+    logger.info("[Add YAML] existing defs before prompt: %s", [eq.get("name") or eq.get("id") for eq in equipment_defs if isinstance(eq, dict)])
     existing_names = sorted({
         (entry.get("name") or entry.get("id") or "").strip()
-        for entry in data.get("equipment_definitions") or []
+        for entry in equipment_defs
         if (entry.get("name") or entry.get("id") or "").strip()
     })
 
@@ -602,7 +571,6 @@ def main():
         return
     type_entries = [rec["type_entry"] for rec in element_records]
 
-    data = _load_profile_store(data_path)
     equipment_def = ensure_equipment_definition(data, cad_name, type_entries[0])
     if created_new_def:
         next_idx = _next_eq_number(data)
@@ -646,7 +614,8 @@ def main():
 
     doc = getattr(revit, "doc", None)
     if metadata_updates and doc:
-        t = Transaction(doc, "Store Element Linker metadata")
+        txn_name = "Add YAML Profiles: Store Element Linker metadata ({})".format(len(metadata_updates))
+        t = Transaction(doc, txn_name)
         try:
             t.Start()
             for element, payload in metadata_updates:
@@ -658,11 +627,25 @@ def main():
             except Exception:
                 pass
 
+    logger = script.get_logger()
+    logger.info("[Add YAML] equipment definitions now: %s", [eq.get("name") or eq.get("id") for eq in data.get("equipment_definitions") or []])
     try:
-        save_profile_data(data_path, data)
-        forms.alert("Added {} type(s) under equipment definition '{}'.\nReload Place Elements (YAML) to use them.".format(len(type_entries), cad_name), title="Add YAML Profiles")
+        save_active_yaml_data(
+            None,
+            data,
+            "Add YAML Profiles",
+            "Added {} type(s) to '{}'".format(len(type_entries), cad_name),
+        )
+        forms.alert(
+            "Added {} type(s) under equipment definition '{}' in {}.\nReload Place Elements (YAML) to use them.".format(
+                len(type_entries),
+                cad_name,
+                yaml_label,
+            ),
+            title="Add YAML Profiles",
+        )
     except Exception as ex:
-        forms.alert("Failed to save profileData.yaml:\n\n{}".format(ex), title="Add YAML Profiles")
+        forms.alert("Failed to update {}:\n\n{}".format(yaml_label, ex), title="Add YAML Profiles")
 
 
 if __name__ == "__main__":

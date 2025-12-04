@@ -2,13 +2,12 @@
 """
 Edit YAML Profiles
 ------------------
-UI to edit CEDLib.lib/profileData.yaml (used by Place Elements - YAML).
+Edits the active YAML payload stored in Extensible Storage so Place Elements
+and other tools always reference the in-model definition.
 Allows editing offsets, parameters, tags, category, and is_group for each equipment definition/type.
 """
 
-import io
 import os
-import hashlib
 
 from pyrevit import script, forms
 
@@ -22,12 +21,9 @@ from UIClasses.ProfileEditorWindow import ProfileEditorWindow  # noqa: E402
 from profile_schema import (  # noqa: E402
     equipment_defs_to_legacy,
     legacy_to_equipment_defs,
-    load_data as load_profile_data,
-    save_data as save_profile_data,
 )
-from LogicClasses.yaml_path_cache import get_cached_yaml_path, set_cached_yaml_path  # noqa: E402
-
-DEFAULT_DATA_PATH = os.path.join(LIB_ROOT, "profileData.yaml")
+from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
+from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data  # noqa: E402
 
 
 # --------------------------------------------------------------------------- #
@@ -35,107 +31,8 @@ DEFAULT_DATA_PATH = os.path.join(LIB_ROOT, "profileData.yaml")
 # --------------------------------------------------------------------------- #
 
 
-def _parse_scalar(token):
-    token = (token or "").strip()
-    if not token:
-        return ""
-    if token in ("{}",):
-        return {}
-    if token in ("[]",):
-        return []
-    if token.startswith('"') and token.endswith('"'):
-        return token[1:-1]
-    lowered = token.lower()
-    if lowered in ("true", "false"):
-        return lowered == "true"
-    if lowered == "null":
-        return None
-    try:
-        if "." in token:
-            return float(token)
-        return int(token)
-    except Exception:
-        return token
-
-
-def _simple_yaml_parse(text):
-    lines = text.splitlines()
-
-    def parse_block(start_idx, base_indent):
-        idx = start_idx
-        result = None
-        while idx < len(lines):
-            raw_line = lines[idx]
-            stripped = raw_line.strip()
-            if not stripped or stripped.startswith("#"):
-                idx += 1
-                continue
-            indent = len(raw_line) - len(raw_line.lstrip(" "))
-            if indent < base_indent:
-                break
-            if stripped.startswith("-"):
-                if result is None:
-                    result = []
-                elif not isinstance(result, list):
-                    break
-                remainder = stripped[1:].strip()
-                if remainder:
-                    result.append(_parse_scalar(remainder))
-                    idx += 1
-                else:
-                    value, idx = parse_block(idx + 1, indent + 2)
-                    result.append(value)
-            else:
-                if result is None:
-                    result = {}
-                elif isinstance(result, list):
-                    break
-                key, _, remainder = stripped.partition(":")
-                key = key.strip().strip('"')
-                remainder = remainder.strip()
-                if remainder:
-                    result[key] = _parse_scalar(remainder)
-                    idx += 1
-                else:
-                    value, idx = parse_block(idx + 1, indent + 2)
-                    result[key] = value
-        if result is None:
-            result = {}
-        return result, idx
-
-    parsed, _ = parse_block(0, 0)
-    return parsed if isinstance(parsed, dict) else {}
-
-
-def _pick_profile_data_path():
-    cached = get_cached_yaml_path()
-    if cached and os.path.exists(cached):
-        return cached
-    path = forms.pick_file(
-        file_ext="yaml",
-        title="Select profileData YAML file",
-    )
-    if path:
-        set_cached_yaml_path(path)
-    return path
-
-
-def _load_profile_store(data_path):
-    data = load_profile_data(data_path)
-    if data.get("equipment_definitions"):
-        return data
-    try:
-        with io.open(data_path, "r", encoding="utf-8") as handle:
-            fallback = _simple_yaml_parse(handle.read())
-        if fallback.get("equipment_definitions"):
-            return fallback
-    except Exception:
-        pass
-    return data
-
-
 # --------------------------------------------------------------------------- #
-# Simple shims so the existing ProfileEditorWindow can work on profileData.yaml
+# Simple shims so the existing ProfileEditorWindow can work on stored YAML
 # --------------------------------------------------------------------------- #
 
 class OffsetShim(object):
@@ -201,16 +98,6 @@ class ProfileShim(object):
             if getattr(t, "label", None) == label:
                 return t
         return None
-
-
-def _file_hash(path):
-    if not os.path.exists(path):
-        return ""
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            h.update(chunk)
-    return h.hexdigest()
 
 
 def _dict_from_shims(profiles):
@@ -301,17 +188,18 @@ def _build_relations_index(equipment_defs):
 
 
 def main():
-    data_path = _pick_profile_data_path()
-    if not data_path:
+    try:
+        data_path, raw_data = load_active_yaml_data()
+    except RuntimeError as exc:
+        forms.alert(str(exc), title="Edit YAML Profiles")
         return
-
+    yaml_label = get_yaml_display_name(data_path)
     # XAML lives alongside the UI class in CEDLib.lib/UIClasses
     xaml_path = os.path.join(LIB_ROOT, "UIClasses", "ProfileEditorWindow.xaml")
     if not os.path.exists(xaml_path):
         forms.alert("ProfileEditorWindow.xaml not found under CEDLib.lib/UIClasses.", title="Edit YAML Profiles")
         return
 
-    raw_data = _load_profile_store(data_path)
     raw_defs = raw_data.get("equipment_definitions") or []
     relations_index = _build_relations_index(raw_defs)
     legacy_dict = {"profiles": equipment_defs_to_legacy(raw_defs)}
@@ -323,17 +211,21 @@ def main():
         return
 
     try:
-        before_hash = _file_hash(data_path)
         updated_dict = _dict_from_shims(shim_profiles)
         updated_defs = legacy_to_equipment_defs(
             updated_dict.get("profiles") or [],
             raw_defs,
         )
-        save_profile_data(data_path, {"equipment_definitions": updated_defs})
-        after_hash = _file_hash(data_path)
-        forms.alert("Saved profile changes to profileData.yaml.\nReload Place Elements (YAML) to use the updates.", title="Edit YAML Profiles")
+        raw_data["equipment_definitions"] = updated_defs
+        save_active_yaml_data(
+            None,
+            raw_data,
+            "Edit YAML Profiles",
+            "Updated YAML profiles via editor window",
+        )
+        forms.alert("Saved profile changes to {}.\nReload Place Elements (YAML) to use the updates.".format(yaml_label), title="Edit YAML Profiles")
     except Exception as ex:
-        forms.alert("Failed to save profileData.yaml:\n\n{}".format(ex), title="Edit YAML Profiles")
+        forms.alert("Failed to save {}:\n\n{}".format(yaml_label, ex), title="Edit YAML Profiles")
 
 
 def _serialize_tags(tags):

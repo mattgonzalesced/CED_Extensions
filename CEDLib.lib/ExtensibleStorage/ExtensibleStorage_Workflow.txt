@@ -1,0 +1,54 @@
+Extensible Storage History
+--------------------------
+The `ExtensibleStorage` module keeps a per-project history of every YAML edit performed through the Let There Be
+YAML tools. Instead of relying solely on disk backups, the Revit model now carries its own undo stack so changes can
+be traced and reverted even after the file syncs to central.
+
+Purpose
+- Capture who changed a YAML library, when they did it, and what the resulting file looked like.
+- Support undo/redo: any command can roll the YAML back to a previous entry without leaving Revit.
+- Maintain a readable audit trail (useful when multiple teammates share the same cloud model).
+
+How it works
+1. Each time a command modifies the active YAML file, call `ExtensibleStorage.capture_change(...)` with the file
+   path, previous text, new text, and a short action description.
+2. The module stores a history entry in Extensible Storage on `ProjectInformation`. Entries are always **deltas**:
+   ndiff-formatted differences between the previous and new YAML text. The calling command is responsible for keeping
+   track of the “base” file that existed before the first recorded change so it can reconstruct any revision later.
+3. Each entry records: timestamp (UTC), user, action, optional description, YAML path, entry type, and content.
+4. Because the data lives inside the RVT, it syncs with central. Everyone shares the same undo history and each
+   entry includes the editor’s username.
+
+API overview
+- `capture_change(doc, yaml_path, previous_text, new_text, action, description=None, force_checkpoint=False)`
+  Stores a delta entry and returns the sequence number. Commands should call this immediately before writing the YAML
+  file to disk, then stash the returned `seq` in their transaction metadata so the undo handler knows
+  which entry was recorded.
+- `list_history(doc, yaml_path=None)` returns metadata (newest first) for UI display or reporting. Passing a path
+  filters the list to just that file.
+- `reconstruct_entry(doc, seq, yaml_path, base_text)` rebuilds the YAML text for a specific entry by replaying all
+  stored deltas starting from `base_text` (the YAML content that existed before the first recorded change).
+- `revert_to_entry(doc, seq, yaml_path, writer_callback, base_text)` reconstructs the file, writes it using the supplied
+  callback, and returns the path + text so callers can log or reload it.
+
+Undo / revert integration
+1. Each YAML-editing command wraps its write in a named Revit `TransactionGroup` (e.g., “YAML Update”) so it appears in
+   the native Undo list. The command calls `capture_change(...)`, writes the new YAML file, and records the returned
+   sequence number in the transaction name or a shared metadata table.
+2. A global `UndoRedoExecuted` event handler watches for Undo/Redo operations whose transaction name starts with the
+   YAML prefix. When an Undo occurs, the handler reads the `seq` and YAML path, calls `reconstruct_entry()` for the
+   previous version, and rewrites the file automatically. Redo works the same way but applies the forward entry.
+3. Because everything rides on Revit’s transaction system, users can hit Ctrl+Z/Redo to revert YAML changes without
+   running a separate button.
+
+Storage & sync details
+- All content is compressed (zlib + base64) so even full snapshots stay small.
+- The schema is identified by GUID `9f6633b1-d77f-49ef-9390-5111fbb16d82` and stored on `ProjectInformation`.
+- Because Revit replicates Extensible Storage, the history is preserved in workshared models and travels with
+  detached copies.
+
+Extending the system
+- The module exposes Python dicts, so additional metadata or export logic can be layered on top (e.g., push the history
+  to an external log, filter by user, show diff previews).
+- `capture_change` still accepts a `force_checkpoint` flag for backward compatibility, but it no longer changes storage
+  behavior (entries are always deltas). Callers that need a full fallback snapshot should manage it externally.

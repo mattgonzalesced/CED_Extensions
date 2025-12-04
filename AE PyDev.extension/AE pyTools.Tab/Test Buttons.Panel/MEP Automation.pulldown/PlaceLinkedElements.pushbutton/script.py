@@ -1,5 +1,5 @@
 ﻿# -*- coding: utf-8 -*-
-"""Place every equipment definition on matching linked elements automatically."""
+"""Place every equipment definition on matching linked elements automatically using the active YAML store."""
 
 import math
 import os
@@ -13,8 +13,9 @@ if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
 from LogicClasses.PlaceElementsLogic import PlaceElementsEngine, ProfileRepository  # noqa: E402
-from profile_schema import equipment_defs_to_legacy, load_data as load_profile_data  # noqa: E402
-from LogicClasses.yaml_path_cache import get_cached_yaml_path, set_cached_yaml_path  # noqa: E402
+from profile_schema import equipment_defs_to_legacy  # noqa: E402
+from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
+from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
 
 TITLE = "Place Linked Elements"
 
@@ -22,79 +23,6 @@ try:
     basestring
 except NameError:
     basestring = str
-
-
-def _pick_profile_data_path():
-    cached = get_cached_yaml_path()
-    if cached and os.path.exists(cached):
-        return cached
-    path = forms.pick_file(file_ext="yaml", title="Select profileData YAML file", init_dir=os.path.dirname(os.path.join(LIB_ROOT, "profileData.yaml")))
-    if path:
-        set_cached_yaml_path(path)
-    return path
-
-
-def _simple_yaml_parse(text):
-    lines = text.splitlines()
-
-    def parse_block(start_idx, base_indent):
-        idx = start_idx
-        result = None
-        while idx < len(lines):
-            raw_line = lines[idx]
-            stripped = raw_line.strip()
-            if not stripped or stripped.startswith("#"):
-                idx += 1
-                continue
-            indent = len(raw_line) - len(raw_line.lstrip(" "))
-            if indent < base_indent:
-                break
-            if stripped.startswith("-"):
-                if result is None:
-                    result = []
-                elif not isinstance(result, list):
-                    break
-                remainder = stripped[1:].strip()
-                if remainder:
-                    result.append(remainder)
-                    idx += 1
-                else:
-                    value, idx = parse_block(idx + 1, indent + 2)
-                    result.append(value)
-            else:
-                if result is None:
-                    result = {}
-                elif isinstance(result, list):
-                    break
-                key, _, remainder = stripped.partition(":")
-                key = key.strip().strip('"')
-                remainder = remainder.strip()
-                if remainder:
-                    result[key] = remainder
-                    idx += 1
-                else:
-                    value, idx = parse_block(idx + 1, indent + 2)
-                    result[key] = value
-        if result is None:
-            result = {}
-        return result, idx
-
-    parsed, _ = parse_block(0, 0)
-    return parsed if isinstance(parsed, dict) else {}
-
-
-def _load_profile_store(data_path):
-    data = load_profile_data(data_path)
-    if data.get("equipment_definitions"):
-        return data
-    try:
-        with open(data_path, "r", encoding="utf-8") as handle:
-            fallback = _simple_yaml_parse(handle.read())
-        if fallback.get("equipment_definitions"):
-            return fallback
-    except Exception:
-        pass
-    return data
 
 
 def _build_repository(data):
@@ -285,16 +213,17 @@ def main():
     if doc is None:
         forms.alert("No active document detected.", title=TITLE)
         return
-
-    data_path = _pick_profile_data_path()
-    if not data_path:
+    try:
+        data_path, data = load_active_yaml_data()
+    except RuntimeError as exc:
+        forms.alert(str(exc), title=TITLE)
         return
-    data = _load_profile_store(data_path)
+    yaml_label = get_yaml_display_name(data_path)
     repo = _build_repository(data)
 
     equipment_names = repo.cad_names()
     if not equipment_names:
-        forms.alert("No equipment definitions found in the selected YAML.", title=TITLE)
+        forms.alert("No equipment definitions found in {}.".format(yaml_label), title=TITLE)
         return
 
     target_names = {_normalize_name(name) for name in equipment_names if _normalize_name(name)}
