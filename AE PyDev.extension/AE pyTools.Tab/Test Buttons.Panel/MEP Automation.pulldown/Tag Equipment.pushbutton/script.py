@@ -2,12 +2,12 @@
 """
 Tag Equipment (filtered)
 ------------------------
-Loads tag definitions from profileData.yaml and allows the user to place tags on
-matching family instances in the active view. Tags are filtered so that only
-instances that belong to the same dev-Group (via parameter value) are tagged.
+Loads tag definitions from the active YAML stored in Extensible Storage and allows
+the user to place tags on matching family instances in the active view. Tags are
+filtered so that only instances that belong to the same dev-Group (via parameter value)
+are tagged.
 """
 
-import io
 import math
 import os
 import sys
@@ -32,11 +32,12 @@ from LogicClasses.PlaceElementsLogic import (  # noqa: E402
     ProfileRepository,
     tag_key_from_dict,
 )
-from profile_schema import equipment_defs_to_legacy, load_data as load_profile_data  # noqa: E402
-from LogicClasses.yaml_path_cache import get_cached_yaml_path, set_cached_yaml_path  # noqa: E402
+from profile_schema import equipment_defs_to_legacy  # noqa: E402
+from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
+from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
 
-DEFAULT_DATA_PATH = os.path.join(LIB_ROOT, "profileData.yaml")
 LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
+TITLE = "Tag Equipment"
 
 try:
     basestring
@@ -44,85 +45,7 @@ except NameError:
     basestring = str
 
 
-def _simple_yaml_parse(text):
-    lines = text.splitlines()
-
-    def parse_block(start_idx, base_indent):
-        idx = start_idx
-        result = None
-        while idx < len(lines):
-            raw_line = lines[idx]
-            stripped = raw_line.strip()
-            if not stripped or stripped.startswith("#"):
-                idx += 1
-                continue
-            indent = len(raw_line) - len(raw_line.lstrip(" "))
-            if indent < base_indent:
-                break
-            if stripped.startswith("-"):
-                if result is None:
-                    result = []
-                elif not isinstance(result, list):
-                    break
-                remainder = stripped[1:].strip()
-                if remainder:
-                    result.append(remainder)
-                    idx += 1
-                else:
-                    value, idx = parse_block(idx + 1, indent + 2)
-                    result.append(value)
-            else:
-                if result is None:
-                    result = {}
-                elif isinstance(result, list):
-                    break
-                key, _, remainder = stripped.partition(":")
-                key = key.strip().strip('"')
-                remainder = remainder.strip()
-                if remainder:
-                    result[key] = remainder
-                    idx += 1
-                else:
-                    value, idx = parse_block(idx + 1, indent + 2)
-                    result[key] = value
-        if result is None:
-            result = {}
-        return result, idx
-
-    parsed, _ = parse_block(0, 0)
-    return parsed if isinstance(parsed, dict) else {}
-
-
-def _pick_profile_data_path():
-    cached = get_cached_yaml_path()
-    if cached and os.path.exists(cached):
-        return cached
-    path = forms.pick_file(
-        file_ext="yaml",
-        title="Select profileData YAML file",
-        init_dir=os.path.dirname(DEFAULT_DATA_PATH),
-    )
-    if path:
-        set_cached_yaml_path(path)
-    return path
-
-
-def _load_profile_store(data_path):
-    data = load_profile_data(data_path)
-    if data.get("equipment_definitions"):
-        return data
-    try:
-        with io.open(data_path, "r", encoding="utf-8") as handle:
-            fallback = _simple_yaml_parse(handle.read())
-        if fallback.get("equipment_definitions"):
-            return fallback
-    except Exception:
-        pass
-    return data
-
-
-def _build_repository(data_path):
-    data = _load_profile_store(data_path)
+def _build_repository(data):
     legacy_profiles = equipment_defs_to_legacy(data.get("equipment_definitions") or [])
     eq_defs = ProfileRepository._parse_profiles(legacy_profiles)
     return ProfileRepository(eq_defs)
@@ -483,20 +406,22 @@ def main():
     doc = revit.doc
     active_view = getattr(doc, "ActiveView", None)
     if not active_view:
-        forms.alert("No active view detected.", title="Tag Equipment")
+        forms.alert("No active view detected.", title=TITLE)
         return
     if active_view.ViewType == ViewType.ThreeD:
-        forms.alert("Tag Equipment only works in plan/elevation views.", title="Tag Equipment")
+        forms.alert("Tag Equipment only works in plan/elevation views.", title=TITLE)
         return
 
-    data_path = _pick_profile_data_path()
-    if not data_path:
+    try:
+        data_path, data = load_active_yaml_data()
+    except RuntimeError as exc:
+        forms.alert(str(exc), title=TITLE)
         return
-
-    repo = _build_repository(data_path)
+    yaml_label = get_yaml_display_name(data_path)
+    repo = _build_repository(data)
     tag_entries = _collect_tag_entries(repo)
     if not tag_entries:
-        forms.alert("No tags found in the selected YAML.", title="Tag Equipment")
+        forms.alert("No tags found in {}.".format(yaml_label), title=TITLE)
         return
 
     choices = [entry["display"] for entry in tag_entries]
@@ -518,7 +443,7 @@ def main():
 
     host_lookup, symbol_lookup = _collect_instance_lookup(doc, active_view)
     if not host_lookup and not symbol_lookup:
-        forms.alert("No family instances found in the active view.", title="Tag Equipment")
+        forms.alert("No family instances found in the active view.", title=TITLE)
         return
 
     tag_view_map = {}
@@ -571,7 +496,7 @@ def main():
         t.Commit()
     except Exception as exc:
         t.RollBack()
-        forms.alert("Failed while placing tags:\n\n{0}".format(exc), title="Tag Equipment")
+        forms.alert("Failed while placing tags:\n\n{0}".format(exc), title=TITLE)
         return
 
     summary = [
@@ -585,7 +510,7 @@ def main():
         if len(missing) > len(sample):
             summary.append("   (+{0} more)".format(len(missing) - len(sample)))
 
-    forms.alert("\n".join(summary), title="Tag Equipment")
+    forms.alert("\n".join(summary), title=TITLE)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 ﻿# -*- coding: utf-8 -*-
-"""Attach selected elements to the linked equipment definition of a parent element."""
+"""Attach selected elements to the linked equipment definition stored in Extensible Storage."""
 
 import math
 import os
@@ -22,27 +22,14 @@ LIB_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "
 if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
-from profile_schema import get_type_set, load_data as load_profile_data, next_led_id, save_data as save_profile_data  # noqa: E402
-from LogicClasses.yaml_path_cache import get_cached_yaml_path, set_cached_yaml_path  # noqa: E402
+from profile_schema import get_type_set, next_led_id  # noqa: E402
+from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 from LogicClasses.linked_equipment import compute_offsets_from_points, find_equipment_by_name  # noqa: E402
+from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data  # noqa: E402
 
 TITLE = "Select Parent Element"
 ELEMENT_LINKER_PARAM_NAME = "Element_Linker Parameter"
 ELEMENT_LINKER_PARAM_NAMES = ("Element_Linker", ELEMENT_LINKER_PARAM_NAME)
-
-
-def _pick_profile_data_path():
-    cached = get_cached_yaml_path()
-    if cached and os.path.exists(cached):
-        return cached
-    path = forms.pick_file(file_ext="yaml", title="Select profileData YAML file", init_dir=os.path.dirname(os.path.join(LIB_ROOT, "profileData.yaml")))
-    if path:
-        set_cached_yaml_path(path)
-    return path
-
-
-def _load_profile_store(data_path):
-    return load_profile_data(data_path)
 
 
 def _linked_element_from_reference(doc, reference):
@@ -715,10 +702,12 @@ def main():
         forms.alert("No active document detected.", title=TITLE)
         return
 
-    data_path = _pick_profile_data_path()
-    if not data_path:
+    try:
+        data_path, data = load_active_yaml_data()
+    except RuntimeError as exc:
+        forms.alert(str(exc), title=TITLE)
         return
-    data = _load_profile_store(data_path)
+    yaml_label = get_yaml_display_name(data_path)
 
     selection = list(revit.get_selection().elements)
     if not selection:
@@ -792,7 +781,8 @@ def main():
         return
 
     if metadata_updates and doc:
-        t = Transaction(doc, "Store Element Linker metadata")
+        txn_name = "Select Parent Element: Store Element Linker metadata ({})".format(len(metadata_updates))
+        t = Transaction(doc, txn_name)
         try:
             t.Start()
             for element, payload in metadata_updates:
@@ -805,9 +795,14 @@ def main():
                 pass
 
     try:
-        save_profile_data(data_path, data)
+        save_active_yaml_data(
+            None,
+            data,
+            "Select Parent Element",
+            "Added {} type(s) to {}".format(len(labels_added), parent_name),
+        )
     except Exception as exc:
-        forms.alert("Failed to save profileData.yaml:\n\n{}".format(exc), title=TITLE)
+        forms.alert("Failed to save {}:\n\n{}".format(yaml_label, exc), title=TITLE)
         return
 
     _summarize(labels_added, parent_name)

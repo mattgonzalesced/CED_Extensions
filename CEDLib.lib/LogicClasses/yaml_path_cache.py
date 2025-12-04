@@ -51,4 +51,17 @@ def set_cached_yaml_path(path):
     _write_config(data)
 
 
-__all__ = ["get_cached_yaml_path", "set_cached_yaml_path"]
+def get_yaml_display_name(active_path=None):
+    """
+    Returns a friendly name for the current YAML file (basename of the cached path).
+    """
+    path = active_path or get_cached_yaml_path()
+    if not path:
+        return "selected YAML file"
+    try:
+        return os.path.basename(path)
+    except Exception:
+        return path
+
+
+__all__ = ["get_cached_yaml_path", "set_cached_yaml_path", "get_yaml_display_name"]

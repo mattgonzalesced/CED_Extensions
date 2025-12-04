@@ -12,7 +12,7 @@ import io
 import os
 import sys
 
-from pyrevit import forms
+from pyrevit import forms, revit, script
 
 LIB_ROOT = os.path.abspath(
     os.path.join(
@@ -28,10 +28,9 @@ LIB_ROOT = os.path.abspath(
 if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
-from profile_schema import load_data as load_profile_data, save_data as save_profile_data  # noqa: E402
-from LogicClasses.yaml_path_cache import get_cached_yaml_path, set_cached_yaml_path  # noqa: E402
+from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
+from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data  # noqa: E402
 
-DEFAULT_DATA_PATH = os.path.join(LIB_ROOT, "profileData.yaml")
 
 try:
     basestring
@@ -148,33 +147,6 @@ def _simple_yaml_parse(text):
     return parsed if isinstance(parsed, dict) else {}
 
 
-def _pick_profile_data_path():
-    cached = get_cached_yaml_path()
-    if cached and os.path.exists(cached):
-        return cached
-    path = forms.pick_file(
-        file_ext="yaml",
-        title="Select profileData YAML file",
-    )
-    if path:
-        set_cached_yaml_path(path)
-    return path
-
-
-def _load_profile_store(data_path):
-    data = load_profile_data(data_path)
-    if data.get("equipment_definitions"):
-        return data, False
-    try:
-        with io.open(data_path, "r", encoding="utf-8") as yaml_handle:
-            fallback_data = _simple_yaml_parse(yaml_handle.read())
-        if fallback_data.get("equipment_definitions"):
-            return fallback_data, True
-    except Exception:
-        pass
-    return data, False
-
-
 def _normalize_name(value):
     if not value:
         return ""
@@ -184,20 +156,22 @@ def _normalize_name(value):
 
 
 def _build_definition_index(equipment_defs):
+    defs = equipment_defs or []
     index = {}
-    for entry in equipment_defs or []:
-        native = _to_native(entry) or {}
-        display_name = _normalize_name(native.get("name") or native.get("id"))
+    for entry in defs:
+        if not isinstance(entry, dict):
+            continue
+        display_name = _normalize_name(entry.get("name") or entry.get("id"))
         if not display_name:
             continue
-        index[display_name] = native
-    return index
+        index[display_name] = entry
+    return index, defs
 
 
 def _collect_type_entries(equipment_def):
     entries = []
     seen_ids = set()
-    for linked_set in equipment_def.get("linked_sets") or []:
+    for linked_set in (equipment_def.get("linked_sets") or []):
         for linked_def in linked_set.get("linked_element_definitions") or []:
             if not isinstance(linked_def, dict):
                 continue
@@ -320,15 +294,20 @@ def _erase_entries(equipment_defs, definition_name, type_ids):
 
 
 def main():
-    data_path = _pick_profile_data_path()
-    if not data_path:
+    try:
+        yaml_path, raw_data = load_active_yaml_data()
+    except RuntimeError as exc:
+        forms.alert(str(exc), title="Delete YAML Profiles")
         return
+    yaml_label = get_yaml_display_name(yaml_path)
 
-    raw_data, _ = _load_profile_store(data_path)
-    native_equipment_defs = [_to_native(entry) or {} for entry in raw_data.get("equipment_definitions") or []]
-    definitions_by_name = _build_definition_index(native_equipment_defs)
+    equipment_defs = raw_data.get("equipment_definitions") or []
+    log = script.get_logger()
+    log.info("[Delete YAML] raw equipment definitions: %s", [e.get("name") or e.get("id") for e in equipment_defs if isinstance(e, dict)])
+    definitions_by_name, native_equipment_defs = _build_definition_index(equipment_defs)
+    log.info("[Delete YAML] available definitions: %s", sorted(definitions_by_name.keys()))
     if not definitions_by_name:
-        forms.alert("profileData.yaml currently contains no equipment definitions.", title="Delete YAML Profiles")
+        forms.alert("{} currently contains no equipment definitions.".format(yaml_label), title="Delete YAML Profiles")
         return
 
     definition_choices = sorted(definitions_by_name.keys())
@@ -365,6 +344,8 @@ def main():
     picked_entries = [display_map[name] for name in picked]
     picked_ids = {entry["id"] for entry in picked_entries}
     changed, removed_eq_entries = _erase_entries(native_equipment_defs, definition_choice, picked_ids)
+    log = script.get_logger()
+    log.info("[Delete YAML] erase result changed=%s removed_defs=%s", changed, [e.get("id") for e in removed_eq_entries or []])
     if not changed:
         return
     # Determine if individual LED deletions remove child relationships
@@ -410,9 +391,15 @@ def main():
 
     _cleanup_relations(native_equipment_defs, removed_ids)
 
-    save_profile_data(data_path, {"equipment_definitions": native_equipment_defs})
+    raw_data["equipment_definitions"] = native_equipment_defs
+    save_active_yaml_data(
+        None,
+        raw_data,
+        "Delete YAML Profiles",
+        "Deleted {} type(s) from '{}'".format(len(picked), definition_choice),
+    )
     summary = [
-        "Deleted {} type(s) from definition '{}' and saved to profileData.yaml.".format(len(picked), definition_choice),
+        "Deleted {} type(s) from definition '{}' and saved to {}.".format(len(picked), definition_choice, yaml_label),
     ]
     if removed_ids:
         summary.append("Removed equipment definitions: {}".format(", ".join(sorted(set(removed_ids)))))

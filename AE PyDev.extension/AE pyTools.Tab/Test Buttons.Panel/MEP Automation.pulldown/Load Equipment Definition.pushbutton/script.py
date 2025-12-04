@@ -2,13 +2,11 @@
 """
 Load Equipment Definition
 -------------------------
-Select a profileData YAML, choose an equipment definition, and place all of its
-linked types at a picked point.
+Reads the active YAML stored in Extensible Storage, lets the user pick an
+equipment definition, and places the definition (plus optional linked types)
+at a picked point.
 """
 
-from __future__ import print_function
-
-import io
 import os
 import sys
 
@@ -31,118 +29,17 @@ if LIB_ROOT not in sys.path:
 
 from LogicClasses.placement_engine import PlaceElementsEngine  # noqa: E402
 from LogicClasses.profile_repository import ProfileRepository  # noqa: E402
-from LogicClasses.yaml_path_cache import get_cached_yaml_path, set_cached_yaml_path  # noqa: E402
 from LogicClasses.linked_equipment import build_child_requests, find_equipment_by_name  # noqa: E402
-try:
-    from profile_schema import equipment_defs_to_legacy, load_data as load_profile_data  # noqa: E402
-except Exception:
-    from CEDLib.lib.profile_schema import equipment_defs_to_legacy, load_data as load_profile_data  # noqa: E402
+from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
+from profile_schema import equipment_defs_to_legacy  # noqa: E402
+from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
 
-DEFAULT_DATA_PATH = os.path.join(LIB_ROOT, "profileData.yaml")
+TITLE = "Load Equipment Definition"
 
 try:
     basestring
 except NameError:
     basestring = str
-
-
-def _parse_scalar(token):
-    token = (token or "").strip()
-    if not token:
-        return ""
-    if token in ("{}",):
-        return {}
-    if token in ("[]",):
-        return []
-    if token.startswith('"') and token.endswith('"'):
-        return token[1:-1]
-    lowered = token.lower()
-    if lowered in ("true", "false"):
-        return lowered == "true"
-    if lowered == "null":
-        return None
-    try:
-        if "." in token:
-            return float(token)
-        return int(token)
-    except Exception:
-        return token
-
-
-def _simple_yaml_parse(text):
-    lines = text.splitlines()
-
-    def parse_block(start_idx, base_indent):
-        idx = start_idx
-        result = None
-        while idx < len(lines):
-            raw_line = lines[idx]
-            stripped = raw_line.strip()
-            if not stripped or stripped.startswith("#"):
-                idx += 1
-                continue
-            indent = len(raw_line) - len(raw_line.lstrip(" "))
-            if indent < base_indent:
-                break
-            if stripped.startswith("-"):
-                if result is None:
-                    result = []
-                elif not isinstance(result, list):
-                    break
-                remainder = stripped[1:].strip()
-                if remainder:
-                    result.append(_parse_scalar(remainder))
-                    idx += 1
-                else:
-                    value, idx = parse_block(idx + 1, indent + 2)
-                    result.append(value)
-            else:
-                if result is None:
-                    result = {}
-                elif isinstance(result, list):
-                    break
-                key, _, remainder = stripped.partition(":")
-                key = key.strip().strip('"')
-                remainder = remainder.strip()
-                if remainder:
-                    result[key] = _parse_scalar(remainder)
-                    idx += 1
-                else:
-                    value, idx = parse_block(idx + 1, indent + 2)
-                    result[key] = value
-        if result is None:
-            result = {}
-        return result, idx
-
-    parsed, _ = parse_block(0, 0)
-    return parsed if isinstance(parsed, dict) else {}
-
-
-def _pick_profile_data_path():
-    cached = get_cached_yaml_path()
-    if cached and os.path.exists(cached):
-        return cached
-    path = forms.pick_file(
-        file_ext="yaml",
-        title="Select profileData YAML file",
-    )
-    if path:
-        set_cached_yaml_path(path)
-    return path
-
-
-def _load_profile_store(data_path):
-    data = load_profile_data(data_path)
-    if data.get("equipment_definitions"):
-        return data
-    try:
-        with io.open(data_path, "r", encoding="utf-8") as handle:
-            fallback = _simple_yaml_parse(handle.read())
-        if fallback.get("equipment_definitions"):
-            return fallback
-    except Exception:
-        pass
-    return data
 
 
 def _sanitize_equipment_definitions(equipment_defs):
@@ -246,7 +143,7 @@ def _place_child_requests(repo, child_requests):
     try:
         results = engine.place_from_csv(rows, selection_map)
     except Exception as exc:
-        forms.alert("Failed to place linked child equipment:\\n\\n{}".format(exc), title="Load Equipment Definition")
+        forms.alert("Failed to place linked child equipment:\\n\\n{}".format(exc), title=TITLE)
         return 0
     return results.get("placed", 0)
 
@@ -267,15 +164,16 @@ def _gather_child_requests(parent_def, base_point, base_rotation, repo, data):
 
 
 def main():
-    data_path = _pick_profile_data_path()
-    if not data_path:
+    try:
+        data_path, raw_data = load_active_yaml_data()
+    except RuntimeError as exc:
+        forms.alert(str(exc), title=TITLE)
         return
-
-    raw_data = _load_profile_store(data_path)
+    yaml_label = get_yaml_display_name(data_path)
     repo = _build_repository(raw_data)
     cad_names = repo.cad_names()
     if not cad_names:
-        forms.alert("No equipment definitions found in the selected YAML.", title="Load Equipment Definition")
+        forms.alert("No equipment definitions found in {}.".format(yaml_label), title=TITLE)
         return
 
     cad_choice = forms.SelectFromList.show(
@@ -290,7 +188,7 @@ def main():
 
     labels = repo.labels_for_cad(cad_choice)
     if not labels:
-        forms.alert("Equipment definition '{}' has no linked types.".format(cad_choice), title="Load Equipment Definition")
+        forms.alert("Equipment definition '{}' has no linked types.".format(cad_choice), title=TITLE)
         return
 
     try:
@@ -316,7 +214,7 @@ def main():
         if child_requests:
             if forms.alert(
                 "Load '{}' with {} linked child equipment definition(s)?".format(cad_choice, len(child_requests)),
-                title="Load Equipment Definition",
+                title=TITLE,
                 yes=True,
                 no=True,
             ):
@@ -341,10 +239,10 @@ def main():
     try:
         results = engine.place_from_csv(rows, selection_map)
     except Exception as exc:
-        forms.alert("Error during placement:\n\n{}".format(exc), title="Load Equipment Definition")
+        forms.alert("Error during placement:\n\n{}".format(exc), title=TITLE)
         return
 
-    forms.alert("Placed {} element(s) for equipment definition '{}'.".format(results.get("placed", 0), cad_choice), title="Load Equipment Definition")
+    forms.alert("Placed {} element(s) for equipment definition '{}'.".format(results.get("placed", 0), cad_choice), title=TITLE)
 
 
 if __name__ == "__main__":
