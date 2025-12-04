@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-PlaceElements
--------------
-YAML-driven placement tool that mirrors the old Populate Elements flow but
-reads profiles from CEDLib.lib/profileData.yaml and uses LogicClasses for all
-logic. Supports both family instances and model groups.
+Place Elements (YAML)
+---------------------
+YAML-driven placement tool that mirrors the old Populate Elements flow but now
+reads the active YAML stored in Extensible Storage. Supports both family
+instances and model groups.
 """
 
-import io
 import os
 import sys
 
@@ -25,10 +24,11 @@ from LogicClasses.PlaceElementsLogic import (  # noqa: E402,I100
     read_xyz_csv,
 )
 from UIClasses.PlaceElementsUI import PlaceElementsWindow  # noqa: E402
-from profile_schema import equipment_defs_to_legacy, load_data as load_profile_data  # noqa: E402
-from LogicClasses.yaml_path_cache import get_cached_yaml_path, set_cached_yaml_path  # noqa: E402
+from profile_schema import equipment_defs_to_legacy  # noqa: E402
+from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
+from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
 
-DEFAULT_DATA_PATH = os.path.join(LIB_ROOT, "profileData.yaml")
+TITLE = "Place Elements (YAML)"
 
 try:
     basestring
@@ -46,116 +46,19 @@ def _dedupe_preserve(seq):
     return result
 
 
-def _parse_scalar(token):
-    token = (token or "").strip()
-    if not token:
-        return ""
-    if token in ("{}",):
-        return {}
-    if token in ("[]",):
-        return []
-    if token.startswith('"') and token.endswith('"'):
-        return token[1:-1]
-    lowered = token.lower()
-    if lowered in ("true", "false"):
-        return lowered == "true"
-    if lowered == "null":
-        return None
-    try:
-        if "." in token:
-            return float(token)
-        return int(token)
-    except Exception:
-        return token
-
-
-def _simple_yaml_parse(text):
-    lines = text.splitlines()
-
-    def parse_block(start_idx, base_indent):
-        idx = start_idx
-        result = None
-        while idx < len(lines):
-            raw_line = lines[idx]
-            stripped = raw_line.strip()
-            if not stripped or stripped.startswith("#"):
-                idx += 1
-                continue
-            indent = len(raw_line) - len(raw_line.lstrip(" "))
-            if indent < base_indent:
-                break
-            if stripped.startswith("-"):
-                if result is None:
-                    result = []
-                elif not isinstance(result, list):
-                    break
-                remainder = stripped[1:].strip()
-                if remainder:
-                    result.append(_parse_scalar(remainder))
-                    idx += 1
-                else:
-                    value, idx = parse_block(idx + 1, indent + 2)
-                    result.append(value)
-            else:
-                if result is None:
-                    result = {}
-                elif isinstance(result, list):
-                    break
-                key, _, remainder = stripped.partition(":")
-                key = key.strip().strip('"')
-                remainder = remainder.strip()
-                if remainder:
-                    result[key] = _parse_scalar(remainder)
-                    idx += 1
-                else:
-                    value, idx = parse_block(idx + 1, indent + 2)
-                    result[key] = value
-        if result is None:
-            result = {}
-        return result, idx
-
-    parsed, _ = parse_block(0, 0)
-    return parsed if isinstance(parsed, dict) else {}
-
-
-def _pick_profile_data_path():
-    cached = get_cached_yaml_path()
-    if cached and os.path.exists(cached):
-        return cached
-    path = forms.pick_file(
-        file_ext="yaml",
-        title="Select profileData YAML file",
-    )
-    if path:
-        set_cached_yaml_path(path)
-    return path
-
-
-def _load_profile_store(data_path):
-    data = load_profile_data(data_path)
-    if data.get("equipment_definitions"):
-        return data
-    try:
-        with io.open(data_path, "r", encoding="utf-8") as handle:
-            fallback = _simple_yaml_parse(handle.read())
-        if fallback.get("equipment_definitions"):
-            return fallback
-    except Exception:
-        pass
-    return data
-
-
-def _build_repository(data_path):
-    data = _load_profile_store(data_path)
+def _build_repository(data):
     legacy_profiles = equipment_defs_to_legacy(data.get("equipment_definitions") or [])
     eq_defs = ProfileRepository._parse_profiles(legacy_profiles)
     return ProfileRepository(eq_defs)
 
 
 def main():
-    data_path = _pick_profile_data_path()
-    if not data_path:
+    try:
+        data_path, raw_data = load_active_yaml_data()
+    except RuntimeError as exc:
+        forms.alert(str(exc), title=TITLE)
         return
+    yaml_label = get_yaml_display_name(data_path)
 
     csv_path = forms.pick_file(file_ext="csv", title="Select XYZ / CAD CSV")
     if not csv_path:
@@ -163,12 +66,12 @@ def main():
 
     csv_rows, cad_names = read_xyz_csv(csv_path)
     if not csv_rows:
-        forms.alert("No rows in CSV.", title="Place Elements (YAML)")
+        forms.alert("No rows in CSV.", title=TITLE)
         return
 
-    repo = _build_repository(data_path)
+    repo = _build_repository(raw_data)
     if not repo.cad_names():
-        forms.alert("No profiles found in the selected YAML file.", title="Place Elements (YAML)")
+        forms.alert("No profiles found in {}.".format(yaml_label), title=TITLE)
         return
 
     initial_mapping = {}
@@ -190,7 +93,7 @@ def main():
 
     selection_map = window.result_mapping
     if not selection_map:
-        forms.alert("No selections to place.", title="Place Elements (YAML)")
+        forms.alert("No selections to place.", title=TITLE)
         return
 
     level = None
@@ -210,7 +113,7 @@ def main():
     try:
         results = engine.place_from_csv(csv_rows, selection_map)
     except Exception as exc:
-        forms.alert("Error during placement:\n\n{0}".format(exc), title="Place Elements (YAML)")
+        forms.alert("Error during placement:\n\n{0}".format(exc), title=TITLE)
         return
 
     # Debug output when run with pyRevit Ctrl+Click (prints to console)
@@ -228,10 +131,10 @@ def main():
     if results.get("placed", 0) == 0:
         msg_lines.append("")
         msg_lines.append("No elements were placed. Check that:")
-        msg_lines.append(" - Profiles exist for the CAD names in profileData.yaml.")
+        msg_lines.append(" - Profiles exist for the CAD names in {}.".format(yaml_label))
         msg_lines.append(" - Labels match loaded Revit families/types or model groups.")
 
-    forms.alert("\n".join(msg_lines), title="Place Elements (YAML)")
+    forms.alert("\n".join(msg_lines), title=TITLE)
 
 
 if __name__ == "__main__":

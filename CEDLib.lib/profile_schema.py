@@ -222,22 +222,29 @@ def load_data(path):
         return {"equipment_definitions": []}
     with io.open(path, "r", encoding="utf-8") as f:
         raw = f.read()
+    return load_data_from_text(raw, path)
 
+
+def load_data_from_text(raw_text, source_label="<memory>"):
+    raw = raw_text or ""
+    stripped = raw.lstrip()
+    if stripped.startswith("{") or stripped.startswith("["):
+        try:
+            return json.loads(raw or "{}")
+        except Exception:
+            pass
     data = None
     yaml_error = None
     if yaml:
-        loaded, yaml_error = _yaml_load(raw, path)
+        loaded, yaml_error = _yaml_load(raw, source_label)
         if isinstance(loaded, Mapping):
             data = dict(loaded)
 
     if data is None:
-        stripped = (raw or "").lstrip()
-        if stripped.startswith("{") or stripped.startswith("["):
-            data = json.loads(raw or "{}")
-        elif yaml_error:
+        if yaml_error:
             raise yaml_error
         else:
-            raise ValueError("profileData.yaml could not be parsed as YAML and does not look like JSON.")
+            raise ValueError("profile data could not be parsed as YAML and does not look like JSON.")
 
     if "equipment_definitions" in data:
         defs = data.get("equipment_definitions") or []
@@ -254,18 +261,20 @@ def load_data(path):
             diag_payload["fallback_equipment_defs_length"] = len(cleaned_defs)
             diag_payload["fallback_sample"] = cleaned_defs[:1]
             if cleaned_defs:
-                diag_path = os.path.join(os.path.dirname(path), "profileData_load_diag.json")
-                with io.open(diag_path, "w", encoding="utf-8") as diag_file:
-                    json.dump(diag_payload, diag_file, indent=2)
+                if source_label and os.path.exists(os.path.dirname(source_label)):
+                    diag_path = os.path.join(os.path.dirname(source_label), "profileData_load_diag.json")
+                    with io.open(diag_path, "w", encoding="utf-8") as diag_file:
+                        json.dump(diag_payload, diag_file, indent=2)
                 return alt_data
         except Exception as fallback_ex:
             diag_payload["error"] = str(fallback_ex)
-        diag_path = os.path.join(os.path.dirname(path), "profileData_load_diag.json")
-        try:
-            with io.open(diag_path, "w", encoding="utf-8") as diag_file:
-                json.dump(diag_payload, diag_file, indent=2)
-        except Exception:
-            pass
+        if source_label and os.path.exists(os.path.dirname(source_label)):
+            diag_path = os.path.join(os.path.dirname(source_label), "profileData_load_diag.json")
+            try:
+                with io.open(diag_path, "w", encoding="utf-8") as diag_file:
+                    json.dump(diag_payload, diag_file, indent=2)
+            except Exception:
+                pass
     profiles = data.get("profiles")
     if profiles:
         return {"equipment_definitions": legacy_to_equipment_defs(profiles, [])}
@@ -277,6 +286,19 @@ def save_data(path, data):
     if not _yaml_dump_to_path(path, payload):
         with io.open(path, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2)
+
+
+def dump_data_to_string(data):
+    payload = {"equipment_definitions": data.get("equipment_definitions", [])}
+    if yaml:
+        dumper = getattr(yaml, "safe_dump", None) or getattr(yaml, "dump", None)
+        if dumper:
+            kwargs = {"default_flow_style": False, "sort_keys": False, "allow_unicode": True}
+            try:
+                return dumper(payload, **kwargs)
+            except TypeError:
+                return dumper(payload)
+    return json.dumps(payload, indent=2)
 
 
 def equipment_defs_to_legacy(equipment_defs):
