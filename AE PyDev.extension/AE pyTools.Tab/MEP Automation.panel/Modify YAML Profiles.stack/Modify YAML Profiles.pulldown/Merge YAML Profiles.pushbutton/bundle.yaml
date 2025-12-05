@@ -1,6 +1,6 @@
-title: Merge Linked Elements
+title: Merge YAML Profiles
 tooltip: |
-  Launch Merge Linked Elements when two equipment definitions describe identical
+  Launch Merge YAML Profiles when two equipment definitions describe identical
   assemblies but differ only by naming convention; it lets you treat one entry as
   the truth and clone its configuration across the others.
 
