@@ -13,7 +13,26 @@ from pyrevit import script, forms
 
 # Add CEDLib.lib to sys.path for shared UI/logic classes
 import sys
-LIB_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib"))
+
+
+def _find_cedlib_root():
+    current = os.path.abspath(os.path.dirname(__file__))
+    while True:
+        candidate = os.path.join(current, "CEDLib.lib")
+        if os.path.isdir(candidate):
+            return candidate
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
+    raise RuntimeError("Unable to locate CEDLib.lib relative to {}".format(__file__))
+
+
+try:
+    LIB_ROOT = _find_cedlib_root()
+except RuntimeError as exc:
+    forms.alert(str(exc), title="Edit YAML Profiles")
+    raise
 if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
@@ -114,12 +133,7 @@ def _dict_from_shims(profiles):
                     "z_inches": off.z_inches,
                     "rotation_deg": off.rotation_deg,
                 })
-            # Filter parameters to only electrical-like categories
             params = getattr(inst, "parameters", {}) or {}
-            cat_l = (t.category_name or "").lower() if hasattr(t, "category_name") else ""
-            is_electrical = ("electrical" in cat_l) or ("lighting" in cat_l) or ("data" in cat_l)
-            if not is_electrical:
-                params = {}
             types.append({
                 "label": t.label,
                 "led_id": getattr(t, "led_id", None),
