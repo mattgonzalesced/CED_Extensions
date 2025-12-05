@@ -1,0 +1,16 @@
+Prepare an Excel workbook with the first column named “Equipment” and the second
+column named “Element Label”.  Every column to the right represents a parameter,
+where the column header is the parameter name and the cell value is the string
+to store (leave cells blank to skip that parameter).  Each row describes a
+linked element definition.
+
+Launch Build Profiles AI, pick the workbook, and decide whether to replace
+existing definitions with the same name.  Rows are grouped by equipment name, so
+multiple rows for the same definition generate multiple linked elements.  The
+tool automatically arranges each equipment’s linked elements in a circular
+pattern six inches from the centroid so they do not overlap on placement.
+
+All parameter columns are copied into the instance parameters section for each
+type, while IDs, offsets, and rotation values are prefilled.  After the summary
+alert reports how many definitions were created or updated, review the results
+with Load Equipment Definition or QA/QC before running placement workflows.
