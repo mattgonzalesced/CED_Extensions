@@ -1,26 +1,15 @@
-Edit YAML Profiles Workflow Explanation
-======================================
+Use Edit YAML Profiles for quick tweaks to an existing equipment definition
+without re-recording the entire configuration; it is ideal for changing parent
+filters, toggling prompts, or renaming linked sets.
 
-1. Purpose
-----------
-Edit YAML Profiles provides an interactive UI for modifying `profileData.yaml`. Instead of editing the YAML manually, users can view all equipment definitions, tweak offsets, parameters, tags, and metadata inside `ProfileEditorWindow`, and then save back to the canonical schema with all conversions handled for them.
+Load the current YAML through Select YAML first, then choose the definition you
+want to edit; the editor reflects the data stored inside Extensible Storage
+and provides simple text boxes for each editable property.
 
-2. Loading and Normalizing Data
---------------------------------
-The command begins by picking the YAML file (cached path supported) and parsing it via `profile_schema.load_data`, with `_simple_yaml_parse` fallback for resilience. Because the UI layer still works with the legacy `profiles` structure, the script converts `equipment_definitions` into that form using `equipment_defs_to_legacy`. `_shims_from_dict()` then wraps each profile in a lightweight shim object (`ProfileShim`) that exposes properties/methods expected by the WPF UI.
+Modify the fields you need, keeping the schema conventions in mind, then press
+Save so the workflow validates the updated payload and writes it back into the
+project document history for undo support.
 
-3. Launching the Editor UI
---------------------------
-`ProfileEditorWindow.xaml` lives in `CEDLib.lib/UIClasses`, and the script verifies it exists before proceeding. The shim dictionary is passed into the window, which displays a tree of equipment definitions and their linked types. Users can edit label text, category, `is_group`, dev-Group parameters, offsets, rotation, tags, and certain electrical parameters. Because all edits happen in-memory through the shims, no file writes occur until the dialog closes with OK.
-
-4. Saving Changes Back to YAML
-------------------------------
-When the user confirms, `_dict_from_shims()` walks every shim and serializes its data back into the legacy dictionary format. Tags are flattened via `_serialize_tags` so offsets become plain dictionaries. The script then converts the legacy structure back into the modern equipment definitions using `legacy_to_equipment_defs`, merging into the original list so IDs and order stay intact. If `save_profile_data()` fails, the user is alerted and the original file remains untouched.
-
-5. Guardrails and Best Practices
---------------------------------
-- Only electrical-like categories retain parameter edits; `_dict_from_shims()` strips parameters for non-electrical families to avoid polluting the YAML with irrelevant fields.
-- The script bails out gracefully if the YAML has no equipment definitions or the XAML is missing.
-- All conversions use helper functions shared with the other commands, ensuring consistency across Add/Edit/Delete flows.
-
-In short, Edit YAML Profiles is the safe, UI-driven way to maintain the library that Place Elements, Update Vector, and Tag Equipment all consume.
+When you close the dialog, the cached YAML on disk remains unchanged until you
+explicitly export, ensuring collaborative teams always reference the in-model
+truth until they decide to publish an updated file.

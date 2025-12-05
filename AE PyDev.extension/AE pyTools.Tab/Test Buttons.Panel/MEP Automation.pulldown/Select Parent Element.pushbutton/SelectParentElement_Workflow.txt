@@ -1,7 +1,15 @@
-Select Parent Element Workflow Notes
-===================================
+Select Parent Element helps verify which Revit element satisfies the parent
+filter for a given configuration; it highlights the element, displays its
+parameters, and shows whether optional prompts will trigger.
 
-- This tool captures selected child elements (receptacles, groups, etc.) and stores them as linked element definitions under the parent equipment definition selected by the user. Offsets/rotation are computed relative to the parent so future linked placements match the stored geometry.
-- Because wall-hosted receptacles currently realign to face east when Place Linked Elements recreates them, designers should run **Update Vector** immediately after placement to nudge the rotation back to the intended orientation. Update Vector updates the YAML offsets/rotation so subsequent placements inherit the corrected facing.
-- All other metadata captured by Select Parent (parameters, tags, linker payloads) remains accurate, so Update Vector should only need to adjust rotation unless spacing also changed.
-- Once Update Vector is applied, rerun Place Linked Elements if necessary and the receptacles will retain the corrected orientation.
+Launch the tool, pick the element you expect to qualify, and confirm the dialog
+states that the filter rules match; if they do not, adjust the definition
+through Edit YAML Profiles or Update Vector until the test passes.
+
+Because the tool reads directly from the active YAML, it is ideal for quickly
+debugging field conditions in the model without running a full placement pass
+that might fail mid way through.
+
+Repeat as necessary for different family types or levels; the workflow is
+non-destructive and provides immediate feedback on whether linked elements meet
+the pattern matching criteria you configured.

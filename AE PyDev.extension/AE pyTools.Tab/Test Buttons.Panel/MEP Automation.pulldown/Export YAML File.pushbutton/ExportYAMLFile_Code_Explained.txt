@@ -1,0 +1,28 @@
+Export YAML File – Code Explained
+=================================
+
+Goal
+----
+Persist the current in-model YAML (stored in Extensible Storage) to a user-
+specified file on disk.  This is essentially a “publish” command so teams can
+share the latest configuration outside Revit.
+
+Core Steps
+----------
+1. **Fetch Active YAML** – `load_active_yaml_text` returns the path and raw text
+   currently held in Extensible Storage.  Because this text already reflects all
+   in-project edits, no further serialization is needed.
+2. **Prompt for Destination** – Uses `forms.save_file` with a YAML filter,
+   defaulting to the basename of the active path so the user sees a familiar
+   filename.
+3. **Write File** – Calls `io.open(..., encoding="utf-8")` to write the raw text
+   exactly as stored, preserving literal block scalars and other formatting the
+   schema requires.
+4. **Feedback** – The script displays a success alert summarizing the output
+   path, or warns the user if they cancel or if the write fails due to permissions.
+
+Notes
+-----
+* No Extensible Storage modifications occur; the workflow is read-only.
+* Logging is minimal but could be extended to indicate when exports happened for
+  auditing purposes.

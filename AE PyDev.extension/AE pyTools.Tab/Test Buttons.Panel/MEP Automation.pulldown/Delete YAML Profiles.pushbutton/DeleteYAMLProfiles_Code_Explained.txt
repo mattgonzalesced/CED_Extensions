@@ -1,0 +1,52 @@
+Delete YAML Profiles – Code Explained
+=====================================
+
+Purpose
+-------
+This script removes linked element definitions (LEDs) or entire equipment
+definitions from the active YAML store.  It handles cascade deletion of child
+relationships, updates Extensible Storage, and communicates results through
+pyRevit alerts.
+
+Key Imports
+-----------
+* `ExtensibleStorage.yaml_store` – provides `load_active_yaml_data` and
+  `save_active_yaml_data` to interact with the in-model YAML.
+* `LogicClasses.yaml_path_cache` – used for display-friendly file names.
+* `.NET interfaces` – `IDictionary` detection allows normalization of Revit
+  host objects.
+
+Workflow Breakdown
+------------------
+1. **Load YAML** – Similar to Add Profiles, the script reads the active YAML
+   data and path so modifications occur within Extensible Storage.
+2. **Build Definition Index** – `_build_definition_index` constructs a map of
+   display names to entries, ensuring each equipment definition can be retrieved
+   quickly.
+3. **Collect LED Entries** – `_collect_type_entries` traverses linked sets and
+   LED arrays, preparing a list for selection with human-readable labels.
+4. **User Selection** – pyRevit dialogs prompt the user to pick the definition
+   and one or more LED entries to delete.
+5. **Erase LEDs** – `_erase_entries` removes chosen LEDs from the definition’s
+   linked sets.  If a linked set becomes empty, it is dropped, and if the
+   definition itself becomes empty, it is removed from the data entirely.
+6. **Child Cascade** – `_cascade_remove_children` handles dependent definitions
+   using `linked_relations`.  When a parent LED anchoring a child definition is
+   deleted, the script removes the child to keep the hierarchy consistent.
+7. **Cleanup** – `_cleanup_relations` sweeps remaining definitions to remove
+   references to deleted children or parents, preventing dangling pointers.
+8. **Save** – The updated data is written back with `save_active_yaml_data`
+   using a descriptive action string (“Delete YAML Profiles”), which logs an
+   undoable transaction in Extensible Storage.
+
+Human Feedback
+--------------
+After completion, the script alerts the user with a summary showing how many
+LEDs and definitions were removed.  If no changes occurred (e.g., the user
+selected none), the workflow exits silently.
+
+Error Handling
+--------------
+All dictionary accesses are defensive.  The script uses helper functions like
+`_normalize_name` to avoid case sensitivity issues, and selection dialogs guard
+against `None` entries to minimize runtime errors.
