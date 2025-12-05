@@ -135,6 +135,10 @@ class SystemTree(object):
         visited.add(node.element_id)
 
         for branch in node.downstream:
+            # APPLY FILTER RULE
+            if not self._should_include_branch(node, branch):
+                continue
+
             output.print_md("{}- Circuit `{}` | Load: `{}`".format(
                 "    " * (level + 1),
                 branch.circuit_number,
@@ -206,6 +210,27 @@ class SystemTree(object):
     def _request_path(self):
         path = forms.save_file(file_ext='csv',default_name="system_tree_export")
         return path
+
+    def _should_include_branch(self, node, branch):
+        """
+        Returns True if the branch should be included in output,
+        based on equipment type rules.
+        """
+        eq_type = node.equipment_type.lower()
+
+        # 1) Transformers and Switchboards: include everything
+        if "transformer" in eq_type or "switchboard" in eq_type:
+            return True
+
+        # 2) Panelboards: only include circuits feeding other equipment
+        #     i.e. only include branches where system.Elements contains electrical equipment
+        system = branch.system
+        if hasattr(system, "Elements"):
+            for e in list(system.Elements):
+                if e.Category and int(e.Category.Id.IntegerValue) == int(DB.BuiltInCategory.OST_ElectricalEquipment):
+                    return True
+
+        return False
 
 
 # ----------------------------

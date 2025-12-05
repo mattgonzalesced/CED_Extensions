@@ -458,7 +458,7 @@ class CircuitBranch(object):
 
             if parsed_sets is None or parsed_sets <= 0:
                 if self._wire_sets_override not in (None, ""):
-                    self.log_warning("Wire sets override '{}' is invalid. Ignoring.".format(self._wire_sets_override))
+                    self.log_warning("Wire sets override '{}' is invalid. Will try to use defaults.".format(self._wire_sets_override))
                 self._wire_sets_override = None
             else:
                 self._wire_sets_override = parsed_sets
