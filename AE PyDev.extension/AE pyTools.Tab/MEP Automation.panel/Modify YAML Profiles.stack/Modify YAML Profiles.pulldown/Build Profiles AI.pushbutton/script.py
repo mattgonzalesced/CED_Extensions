@@ -92,13 +92,20 @@ def read_excel_rows(path):
         if nrows < 2 or ncols < 2:
             raise RuntimeError("Excel sheet is empty.")
         headers = [_cell(cells, 1, c) for c in range(1, ncols + 1)]
-        header_map = {h.strip(): idx + 1 for idx, h in enumerate(headers) if h}
+        header_map = {h.strip(): idx + 1 for idx, h in enumerate(headers) if h and h.strip()}
         if len(headers) < 2:
             raise RuntimeError("Excel sheet must include at least two columns (Equipment, Element Label).")
         for r in range(2, nrows + 1):
             row = {}
-            for name, col in header_map.items():
-                row[name] = _cell(cells, r, col)
+            row_values = []
+            for c in range(1, ncols + 1):
+                value = _cell(cells, r, c)
+                row_values.append(value)
+                header_name = headers[c - 1]
+                header_trim = header_name.strip() if header_name else ""
+                if header_trim:
+                    row[header_trim] = value
+            row["__values__"] = row_values
             rows.append(row)
         return headers, rows
     finally:
@@ -165,6 +172,46 @@ def _parse_parameter_pairs(raw_value):
     return data
 
 
+def _parse_tag_value(raw_value):
+    if not raw_value:
+        return None
+    text = str(raw_value).strip()
+    if not text:
+        return None
+    family = ""
+    type_name = text
+    if ":" in text:
+        fam, typ = text.split(":", 1)
+        family = fam.strip()
+        type_name = typ.strip()
+    return {
+        "family_name": family,
+        "type_name": type_name,
+        "category_name": "",
+        "parameters": {},
+        "offsets": {
+            "x_inches": 0.0,
+            "y_inches": 0.0,
+            "z_inches": 0.0,
+            "rotation_deg": 0.0,
+        },
+    }
+
+
+def _build_linker_payload(led_id, set_id):
+    set_label = set_id or ""
+    lines = [
+        "Linked Element Definition ID: {}".format(led_id or ""),
+        "Set Definition ID: {}".format(set_label),
+        "Location XYZ (ft): 0.000000,0.000000,0.000000",
+        "Rotation (deg): 0.000000",
+        "LevelId: ",
+        "ElementId: ",
+        "FacingOrientation: 0.000000,0.000000,0.000000",
+    ]
+    return "\n".join(lines)
+
+
 def build_led_entries(row_info, equipment_def, type_set):
     led_list = type_set.setdefault("linked_element_definitions", [])
     label_block = row_info["label"]
@@ -211,8 +258,11 @@ def build_led_entries(row_info, equipment_def, type_set):
                 }
             ],
             "parameters": clean_params,
-            "tags": [],
+            "tags": list(row_info.get("tags") or []),
         }
+        entry["parameters"]["Element_Linker Parameter"] = _build_linker_payload(
+            led_id, type_set.get("id") or equipment_def.get("id")
+        )
         led_list.append(entry)
         entries.append(entry)
     return entries
@@ -252,7 +302,26 @@ def main():
 
     equipment_header = headers[0]
     label_header = headers[1]
-    parameter_headers = headers[2:]
+    parameter_headers = []
+    tag_columns = []
+    params_section = False
+    tags_section = False
+    for idx in range(3, len(headers) + 1):
+        header = headers[idx - 1]
+        name = (header or "").strip()
+        lname = name.lower() if name else ""
+        if lname == "parameters":
+            params_section = True
+            tags_section = False
+            continue
+        if lname == "tags":
+            tags_section = True
+            continue
+        if tags_section:
+            tag_columns.append(idx)
+            continue
+        if params_section and name:
+            parameter_headers.append(name)
 
     processed_rows = []
     for row in raw_rows:
@@ -268,13 +337,25 @@ def main():
             "family": "",
             "type": "",
             "parameters_dict": {},
+            "tags": [],
         }
         params = {}
         for header in parameter_headers:
+            name = (header or "").strip()
+            if not name:
+                continue
             value = _find_value(row, header)
             if value:
-                params[header] = value
+                params[name] = value
         info["parameters_dict"] = params
+        tags = []
+        row_values = row.get("__values__") or []
+        for col_idx in tag_columns:
+            if col_idx - 1 < len(row_values):
+                tag_entry = _parse_tag_value(row_values[col_idx - 1])
+                if tag_entry:
+                    tags.append(tag_entry)
+        info["tags"] = tags
         processed_rows.append(info)
 
     if not processed_rows:
