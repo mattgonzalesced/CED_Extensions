@@ -1,4 +1,4 @@
-title: Select YAML
+title: Import YAML File
 tooltip: |
   Select YAML is the entry point for every workflow in this dropdown; it seeds the
   active project with the YAML file you want to edit or place from by copying its
