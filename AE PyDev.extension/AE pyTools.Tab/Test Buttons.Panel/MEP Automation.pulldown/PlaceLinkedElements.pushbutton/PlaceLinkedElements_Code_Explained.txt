@@ -1,0 +1,46 @@
+Place Linked Elements – Code Explained
+======================================
+
+Purpose
+-------
+This script automates the placement of equipment definitions described in the
+YAML file by matching host elements (in the model or linked documents) whose
+names align with CAD names stored in the definitions.
+
+Main Stages
+-----------
+1. **Data Preparation** – The script loads the active YAML, converts it into
+   legacy “profiles” using `profile_schema.equipment_defs_to_legacy`, and feeds
+   them into `LogicClasses.ProfileRepository`.  This repository exposes methods
+   for retrieving labels per CAD name.
+2. **Host Collection** – `_collect_placeholders` iterates all FamilyInstances and
+   Groups in the document, plus instances inside RevitLinkInstances.  For each,
+   `_name_variants` produces normalized name strings (family : type, type only,
+   etc.), and matching names are recorded with their 3D point and rotation.
+3. **CSV Row Construction** – For every matched host, `_build_row` writes a row
+   containing position coordinates (in inches) and rotation.  This mimics the
+   format expected by `PlaceElementsEngine.place_from_csv`.
+4. **Placement Engine** – The script instantiates `PlaceElementsEngine`, passing
+   the profile repository and optional default level.  The engine handles
+   symbol activation, group placement, rotation, tag creation, and metadata
+   stamping via `Element_Linker`.
+5. **Summary** – After placement, a report is built listing how many hosts were
+   processed, how many elements were placed, and which definitions lacked
+   matches or linked types.
+
+Noteworthy Logic
+----------------
+* **Transform Handling** – When scanning Revit links, the script transforms
+  linked coordinates into the host coordinate system to ensure placements occur
+  in the correct location.
+* **Metadata** – The placement engine copies the Element_Linker template stored
+  in each linked element definition to the newly created instances, ensuring
+  QA/QC can trace every placement back to its source LED.
+* **Level Selection** – Users can explicitly pick a level for placement; if none
+  is selected, the script falls back to the first Level found in the document.
+
+Error Handling
+--------------
+If no hosts are found or no rows are generated, the script alerts the user
+instead of attempting placement.  This prevents empty transactions and makes
+diagnosing name mismatches easier.

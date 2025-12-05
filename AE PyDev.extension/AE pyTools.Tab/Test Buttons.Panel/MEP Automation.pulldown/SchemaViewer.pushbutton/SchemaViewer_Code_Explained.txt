@@ -1,0 +1,24 @@
+Schema Viewer – Code Explained
+==============================
+
+Goal
+----
+Expose the Extensible Storage payload for debugging.  This includes reading the
+history entries array and metadata (active YAML path, base text, next sequence
+numbers) and presenting them in a user-friendly dialog.
+
+Implementation
+--------------
+1. **Entity Retrieval** – Uses `ExtensibleStorage` helper to get the raw JSON
+   stored under `CED_YamlHistory` schema fields (`HistoryJson`, `MetadataJson`).
+2. **Deserialization** – Converts JSON strings into Python structures, handling
+   missing fields gracefully.
+3. **UI Rendering** – Builds a scrollable summary showing checkpoints, deltas,
+   timestamps, descriptions, and metadata such as active path or base text size.
+   This is often a simple `forms.alert` with a large text block.
+
+Usage
+-----
+The viewer is read-only and does not trigger transactions.  It is primarily
+used when diagnosing undo/redo issues, verifying that history entries exist, or
+ensuring metadata like `active_yaml` aligns with expectations.

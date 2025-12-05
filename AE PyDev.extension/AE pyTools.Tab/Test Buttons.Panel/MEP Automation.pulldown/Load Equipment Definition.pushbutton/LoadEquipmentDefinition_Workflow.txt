@@ -1,30 +1,14 @@
-﻿Load Equipment Definition Workflow Explanation
-=============================================
+Use Load Equipment Definition to inspect how a profile will drive placements
+without committing to creation; it is essentially a dry run that surfaces every
+linked element definition and its captured offsets or parameters.
 
-1. Objective
-------------
-Load Equipment Definition is a shortcut for placing every linked element definition within a single equipment definition profile at once. Instead of driving placement through a CSV, the user picks which definition to load, clicks one base point, and the tool instantiates each type (and its hosted tags) using the offsets captured in `profileData.yaml`.
+Select the target definition from the list populated by the active YAML, then
+review the dialog listing its LEDs, tags, and parent filter behavior; this helps
+confirm the structure before running an actual placement workflow.
 
-2. Preparing the Repository
----------------------------
-The command mirrors Place Elements when it comes to loading data: `_pick_profile_data_path()` resolves the YAML file, `_load_profile_store()` parses it, and `_build_repository()` converts the modern `equipment_definitions` schema into the legacy format expected by `ProfileRepository`. Before parsing, `_sanitize_equipment_definitions()` ensures every linked element definition has offsets, tags, and parameter dictionaries so downstream code never trips over `None` values. `_sanitize_profiles()` performs another pass over the legacy structures to enforce the same guarantees on the repository side.
+From here you can copy IDs, take screenshots, or communicate details to other
+team members so everyone understands what the automation will produce on the
+floor plan when the placer runs.
 
-3. Gathering User Choices
--------------------------
-Once the repository is ready, the user selects which equipment definition to load from a simple list dialog. Selecting a definition name yields all labels (linked types) attached to that definition. If none exist, the tool warns the user. Otherwise, it prompts for a base point in the view; this point becomes the anchor for the entire set. The command also builds `selection_map = {definition_choice: labels}` so the placement engine knows to drop every linked type in that definition.
-
-4. Tag Handling
----------------
-Before handing off to the engine, `_collect_tag_defs()` scans the selected labels for tag definitions and stores a dictionary keyed by `tag_key_from_dict`. Because tags must be created in specific views, the tool maps each tag key to the current active view ID. Passing `tag_view_map` to `PlaceElementsEngine` ensures tags appear in the view the user was working in when they launched the command.
-
-5. Creating a Synthetic CSV Row
---------------------------------
-To reuse the robust CSV placement pipeline, the command fabricates a single CSV row that includes the equipment definition name, a count of 1, and the picked XYZ coordinates converted into inches (matching the CSV convention). Rotation is hard-coded to zero because each linked type's stored rotation offsets already describe its orientation relative to the base point. This fake row plus the selection map give `place_from_csv()` everything it expects, meaning the heavy lifting-including Element_Linker parameter assignment-remains centralized inside the engine.
-
-6. Placement and Feedback
--------------------------
-`PlaceElementsEngine` is initialized with the repository and tag-view map. `place_from_csv()` handles offsets, groups, tags, parameter pushes, and Element_Linker metadata just as if the input came from a real CSV. Once the transaction completes, the script displays how many elements were placed. Errors from the engine bubble up and are shown to the user so they can diagnose missing families or invalid YAML entries.
-
-7. Why Use This Command?
-------------------------
-Load Equipment Definition is ideal for quick prototyping or auditing: it lets you drop an entire equipment definition onto the canvas with one pick, review spacing, tweak with Update Vector, and then save any changes back to YAML. Because it shares the same repository, tag collection, and placement engine as the other commands, the instances it creates behave identically to those produced by CSV-driven placement.
+Close the viewer when finished; no data is modified, and you can immediately
+switch to other tools such as Add, Delete, or Merge without reloading the YAML.

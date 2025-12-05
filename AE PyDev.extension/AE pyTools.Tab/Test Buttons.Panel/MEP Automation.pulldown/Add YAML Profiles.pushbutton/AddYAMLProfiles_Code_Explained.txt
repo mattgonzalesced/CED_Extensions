@@ -1,0 +1,87 @@
+Add YAML Profiles – Code Explained
+==================================
+
+Overview
+--------
+The Add YAML Profiles button automates the capture of existing Revit families,
+groups, and hosted tags into the YAML schema used by the Place Linked Elements
+engine.  The script lives inside the pushbutton folder and orchestrates user
+interaction, data gathering, metadata stamping, and Extensible Storage updates.
+It is written against IronPython, imports Revit API classes such as Group,
+FamilyInstance, and Transaction, and leans heavily on shared helpers from
+CEDLib.lib (notably `profile_schema`, `LogicClasses`, and `ExtensibleStorage`).
+
+Initialization and Dependencies
+-------------------------------
+The script starts by extending `sys.path` to include `CEDLib.lib`, allowing it to
+import schema helpers (`ensure_equipment_definition`, `get_type_set`,
+`next_led_id`), YAML path utilities (`get_yaml_display_name`), and the
+`ExtensibleStorage.yaml_store`.  It also defines constants for the element linker
+parameter names (`Element_Linker Parameter` and `Element_Linker`) to ensure
+metadata is written consistently.  IronPython compatibility shims such as
+`basestring` are included so the script works under both Python 2 and pseudo
+Python 3 environments inside pyRevit.
+
+User Flow
+---------
+1. Load YAML – `load_active_yaml_data()` fetches the in-model YAML text along
+   with its path.  The script immediately formats the path for alerts using
+   `get_yaml_display_name`.
+2. Choose Definition – The user is shown a dialog listing existing equipment
+   definitions plus a “<< New equipment definition >>” sentinel.
+3. Gather Elements – After selecting or naming a target definition, the user
+   picks one or more Revit elements.  The code supports both multi-pick and
+   single-pick fallbacks to accommodate older versions or partial selections.
+4. Compute Centroid – The locations of each selected element are averaged to
+   create a centroid.  Every element’s offset is stored relative to that point,
+   preserving their spatial relationship when the configuration is later placed.
+5. Build Type Entries – `_build_type_entry` collects category names, “family :
+   type” labels, electrical parameters, hosted tags, level data, offsets, and
+   rotational information for each element.  Tags are gathered by inspecting
+   dependent elements to capture annotation families and their offsets too.
+6. Update Equipment Definition – The script ensures a definition exists using
+   `ensure_equipment_definition`.  For new definitions, it auto-generates IDs
+   (`EQ-###`, `SET-###`) based on existing entries.  The type entries are then
+   appended to the linked set.
+7. Metadata Stamping – `_build_element_linker_payload` writes descriptive text to
+   the Element_Linker parameter so downstream workflows can correlate placed
+   instances with specific linked element definitions.
+8. Persistence – `save_active_yaml_data` is called with action metadata (“Add
+   YAML Profiles”) and a human-readable description.  This writes the updated
+   YAML back into Extensible Storage and records a transaction for undo/redo.
+
+Notable Helpers
+---------------
+* `_collect_params` iterates parameters on each element, capturing electrical
+  values (CKT_Rating, CKT_Panel, etc.) and storing them in the linked element
+  definition’s `parameters` block.
+* `_collect_hosted_tags` finds dependent tags, records their offsets, and stores
+  them under the `tags` array so the Tag Equipment workflow can later recreate
+  them.
+* `_next_eq_number` inspects existing IDs to assign the next sequential number
+  when creating a new equipment definition.
+* `_set_element_linker_parameter` writes metadata in a Revit transaction to
+  avoid read-only failures and ensures consistent naming of payloads.
+
+Extensible Storage Interaction
+------------------------------
+By using `load_active_yaml_data` and `save_active_yaml_data`, Add YAML Profiles
+operates entirely on the in-model copy of the YAML.  Every change triggers a
+history entry with action, description, previous text, and new text so QA/QC,
+undo/redo, and future auditing are coherent.  The module automatically captures
+the path of the source YAML, allowing alerts to reference friendly names.
+
+Error Handling and Alerts
+-------------------------
+Throughout the script, `forms.alert` is used to warn the user about missing
+elements, invalid selections, or save failures.  Exceptions in parameter access
+are caught silently to keep the workflow robust even when certain families lack
+expected parameters.
+
+Summary
+-------
+Add YAML Profiles is the backbone for recording new linked element
+configurations.  It combines Revit API geometry extraction, parameter harvesting,
+schema manipulation, transaction-safe metadata stamping, and Extensible Storage
+persistence to transform on-screen arrangements into reusable automation-ready
+definitions.
