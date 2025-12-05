@@ -1,0 +1,30 @@
+Load Equipment Definition – Code Explained
+==========================================
+
+Purpose
+-------
+This script exposes a read-only view of the YAML data for a single equipment
+definition.  It is primarily used for verification and documentation, allowing
+designers to inspect linked element definitions, offsets, parameters, and tags
+without editing or placing anything.
+
+Data Flow
+---------
+1. **YAML Retrieval** – `load_active_yaml_data` fetches the current dataset from
+   Extensible Storage.  The path is converted to a readable label using
+   `get_yaml_display_name`.
+2. **Selection Dialog** – The user is shown a list of equipment definition names
+   derived from `equipment_definitions`.  Once selected, the script builds a
+   human-friendly summary of its contents.
+3. **Formatting** – Each linked set is iterated, and the script lists LED IDs,
+   labels, category names, offset tuples, parameter dictionaries, and tag
+   definitions.  The goal is to provide an exact snapshot that mirrors what the
+   placer will consume.
+4. **Display** – The summary text is shown via `forms.alert` or a custom form,
+   giving the user a scrollable, copyable readout.
+
+Key Observations
+----------------
+* No changes are written back to storage; this is strictly informational.
+* The script shares helper utilities with other buttons, ensuring the view uses
+  the same normalized naming conventions as the placer and QA/QC tools.

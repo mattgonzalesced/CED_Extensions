@@ -1,0 +1,34 @@
+Select Parent Element – Code Explained
+======================================
+
+Objective
+---------
+Verify whether a given Revit element matches the parent filter criteria defined
+inside a YAML equipment definition.  This prevents failed placements by letting
+designers test hosts against the filter logic before running the placer.
+
+Key Functions
+-------------
+1. **Data Loading** – The script loads the active YAML and indexes each
+   definition’s parent filter block (category, family regex, type regex,
+   parameter filters).
+2. **User Selection** – The user picks an equipment definition followed by a
+   Revit element.  The script reads the element’s category, family, type, and
+   parameter values via the Revit API.
+3. **Filter Evaluation** – A helper function compares the element’s properties
+   against the filter patterns, evaluating wildcard matches and parameter
+   conditions.  The result is a boolean match plus diagnostic messages for each
+   criterion.
+4. **Feedback** – The outcome (match or mismatch) is presented through a
+   formatted dialog.  When mismatches occur, the dialog enumerates which filter
+   component failed (e.g., category mismatch, parameter not equal, etc.).
+
+Implementation Notes
+--------------------
+* Parameter filters support equals, contains, and regex comparisons depending on
+  what the YAML contains.
+* Because this workflow never writes data, it does not call
+  `save_active_yaml_data`; it is purely consultative.
+* The script shares normalization logic with the placer so results are
+  consistent: names are lowercased, whitespace trimmed, and wildcard patterns
+  converted to regex.

@@ -1,42 +1,15 @@
-﻿Add YAML Profiles Workflow Explanation
-=====================================
+Start by running Select YAML so the profile data you intend to edit is loaded
+into Extensible Storage; the Add YAML tool always writes changes to that active
+copy, keeping the original file untouched.
 
-1. Purpose
-----------
-Add YAML Profiles captures live Revit elements (families or model groups) and writes their definitions into `profileData.yaml` so Place Elements and Update Vector can reuse them.
- It records offsets between selected elements, parameter values, hosted tag offsets, and Element_Linker payloads so that future placements reproduce the same layout.
+Choose the equipment definition that should receive new linked element types,
+or create a new definition if you are capturing an arrangement that has never
+been described before inside the YAML library.
 
-2. Loading Existing Data
-------------------------
-After resolving the YAML file, `_load_profile_store()` reads it through `profile_schema.load_data` with a fallback parser. The tool builds a list of existing equipment
- definitions so the user can either append to an existing equipment definition or create a brand-new one. Choosing "<< New equipment definition >>" prompts for a definition name,
-  while selecting an existing name means the new types will be added to that definition's linked set.
+Pick every Revit element that belongs to the configuration, including hosted
+tags or nested groups; the tool captures zeroed offsets and circuit parameters
+so that placements later match the exact assembly you just recorded.
 
-3. Collecting Revit Elements
-----------------------------
-Users select one or more elements/groups in the model. `_get_point()` captures each element’s XYZ location, and the script computes the centroid of all selected points. 
-This centroid becomes the reference origin; each element’s offset is calculated as `element_location - centroid`. Storing relative offsets preserves spacing between multiple
- heads in the definition. `_build_type_entry()` assembles the type metadata: label (`Family : Type`), category, `is_group`, offsets (converted to inches), rotation (initially zero),
-  electrical parameters, and hosted tag info. Tag offsets are derived with `_collect_hosted_tags`, which inspects dependent IndependentTags and records their relative XYZ offsets
-   and tags’ family/type metadata.
-
-4. Managing IDs and Element_Linker Payloads
--------------------------------------------
-When adding to a brand-new equipment definition, the command assigns sequential IDs (`EQ-###`, `SET-###`) using `_next_eq_number`. For each linked element definition, 
-`next_led_id()` produces unique LED IDs within the set. `_build_element_linker_payload()` crafts the multi-line Element_Linker text block for that LED, embedding set ID, 
-label, absolute location, rotation, level, element ID, and facing orientation. The script writes this payload back to every selected element (inside a transaction) so 
-Update Vector later knows how to relate instances back to the YAML entry.
-
-5. Writing to YAML
-------------------
-New type entries-including offsets, parameters, tags, and Element_Linker payload references-are appended to the selected equipment definition's linked set.
- After all selections are processed, `save_profile_data()` persists the updated equipment definition list and the tool notifies the user that the profiles were added,
- reminding them to reload Place Elements (YAML) to pick up the new data.
-
-6. Key Safeguards
------------------
-- If any selected element lacks a readable location, the command aborts with an alert.
-- Tag collection is optional; if no hosted tags exist, the YAML simply stores an empty list.
-- Transactions ensure that Element_Linker parameters are either written to all selected elements or the change rolls back on error.
-
-By capturing real-world element layouts directly from the model, Add YAML Profiles provides the authoritative source data that every other YAML-driven tool in this suite relies upon.
+After confirming the summary, the tool updates Element_Linker metadata on the
+selected elements, saves the YAML back into the project, and displays a success
+message reminding you to reload Place Elements if you are actively placing.

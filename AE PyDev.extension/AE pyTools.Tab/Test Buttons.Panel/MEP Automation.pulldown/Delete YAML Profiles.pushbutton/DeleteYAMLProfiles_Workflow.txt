@@ -1,30 +1,15 @@
-﻿Delete YAML Profiles Workflow Explanation
-========================================
+Only use Delete YAML Profiles after verifying the active YAML snapshot already
+reflects the project state you want to prune; the action cannot be undone
+without reverting through Extensible Storage history.
 
-1. Goal
--------
-Delete YAML Profiles lets users prune linked element definitions out of `profileData.yaml` without hand-editing the file. It guides you through picking an equipment definition, selecting specific types (linked element definitions) to remove, and then persists the change while keeping the data model intact.
+Pick the equipment definition from the list to inspect its linked element
+definitions; the dialog displays each LED label with its identifier so you can
+confirm you are targeting the proper instances.
 
-2. Loading and Normalizing Data
---------------------------------
-The script resolves `profileData.yaml`, parses it via `profile_schema.load_data`, and also captures the raw YAML text so `_simple_yaml_parse` can rescue malformed files. `_to_native()` walks any .NET dictionaries/lists that pyRevit may have constructed and converts them into pure Python types. `_build_definition_index()` then creates a dictionary keyed by normalized equipment definition names (or IDs) so user selections can be matched case-insensitively.
+Select every LED you want removed and review the summary prompt; if the
+definition becomes empty, the workflow also removes associated child links to
+stop orphaned references from persisting inside other configurations.
 
-3. Selecting What to Delete
----------------------------
-Users first pick the equipment definition. `_collect_type_entries()` iterates through every linked set inside that definition and enumerates each linked element definition. Each entry stores the label, LED ID, and a combined display string (`Label  [LED-ID]`). The UI lets users multi-select whichever types they want to remove. If the definition has no types, the command exits early.
-
-4. Applying the Deletions
--------------------------
-Before modifying anything, the script records a SHA-256 hash of the YAML file. `_erase_entries()` then loops through the linked sets and filters out any definitions whose normalized ID matches the user's pick list. If a linked set becomes empty, it is removed entirely; if the whole equipment definition ends up empty, it is removed from the master list. This approach keeps the remaining structure intact (IDs, ordering, other definition names).
-
-5. Saving
----------
-When deletions occur, `save_profile_data()` writes the updated equipment definition list back to disk. If no changes were made (for example, the user cancelled or picked IDs that weren’t present), the command simply returns without writing.
-
-6. Safeguards
--------------
-- Empty selections, missing definitions, and malformed YAML all trigger clear alerts.
-- The normalized string helpers make the tool insensitive to accidental whitespace/case mismatches.
-- Because everything runs through `save_profile_data`, the file format stays consistent with the rest of the toolchain.
-
-Overall, Delete YAML Profiles is the controlled way to retire obsolete linked element definitions while keeping the YAML schema valid and auditable.
+When you accept the deletion, the tool writes the updated dataset back into
+Extensible Storage, records an audit entry, and reminds you to reload Place
+Elements before continuing with automated placements.

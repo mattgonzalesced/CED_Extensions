@@ -1,0 +1,32 @@
+Update Vector – Code Explained
+==============================
+
+Purpose
+-------
+This tool recalculates the offset vectors within a linked element definition.
+Use it when the physical layout of a configuration changes but the equipment
+set, tags, and parameter data remain constant.
+
+Key Mechanics
+-------------
+1. **Definition Selection** – The script loads the active YAML, presents the
+   user with a list of equipment definitions, and retrieves the linked set for
+   the chosen entry.
+2. **Element Capture** – The user selects Revit elements representing the new
+   arrangement.  The script records each element’s location, centroid, and
+   orientation, much like Add YAML Profiles.
+3. **Vector Computation** – Offsets are recalculated relative to the centroid
+   with `_feet_to_inches` helpers, ensuring the stored offsets reflect the new
+   spacing.  Rotation offsets are derived from the host element orientation.
+4. **Data Update** – The script iterates the linked element definitions inside
+   the selected equipment definition, updating each `offsets` entry with the
+   new values while leaving parameters, tags, and IDs untouched.
+5. **Persistence** – The updated YAML data is written back through
+   `save_active_yaml_data`, generating an Extensible Storage transaction labeled
+   “Update Vector”.
+
+Benefits
+--------
+* Maintains historical context because IDs and metadata stay the same.
+* Eliminates the need to recreate definitions when only geometry changes.
+* Participates in undo/redo flows thanks to Extensible Storage history.

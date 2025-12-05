@@ -1,31 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-QA/QC report for the active YAML data stored in Extensible Storage.
+QA/QC summary for the active YAML stored in Extensible Storage.
 
-Summarises, per equipment definition, how many matching host elements were found
-in the model (or its links) and how many Revit elements have been placed using
-the automation (detected via the Element_Linker metadata written during
-placement). Results are printed to the pyRevit output panel so we can use
-Markdown for emphasis (bold = has placements, italics = none placed).
+Reports, for each equipment definition:
+* how many host elements were found (Revit + linked docs)
+* how many elements were actually placed (via Element_Linker metadata)
+
+Also prints totals per equipment definition and per linked element type so we can
+quickly confirm coverage. Uses Markdown output so bold entries indicate at least
+one placement, italics indicate nothing placed yet.
 """
-
-from __future__ import print_function
 
 import os
 import sys
 from collections import defaultdict
 
 from pyrevit import revit, forms, script
-from Autodesk.Revit.DB import (
-    FamilyInstance,
-    FilteredElementCollector,
-    Group,
-    RevitLinkInstance,
-)
+from Autodesk.Revit.DB import FamilyInstance, FilteredElementCollector, Group, RevitLinkInstance
 
-LIB_ROOT = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib")
-)
+LIB_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib"))
 if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
@@ -82,7 +75,6 @@ def _iter_host_candidates(doc):
 
 
 def _collect_placeholder_counts(doc, target_map):
-    """Count how many host elements exist whose names match equipment definitions."""
     counts = defaultdict(int)
     if not target_map:
         return counts
@@ -146,8 +138,7 @@ def _collect_placed_counts(doc, led_to_equipment):
     led_counts = defaultdict(int)
     if not led_to_equipment:
         return eq_counts, led_counts
-    elems = _iter_host_candidates(doc)
-    for elem in elems:
+    for elem in _iter_host_candidates(doc):
         payload = _get_linker_payload(elem)
         if not payload:
             continue
@@ -165,6 +156,7 @@ def _collect_placed_counts(doc, led_to_equipment):
 def _build_led_map(data):
     eq_mapping = {}
     led_metadata = {}
+    eq_led_counts = defaultdict(int)
     order = []
     for eq in data.get("equipment_definitions") or []:
         if not isinstance(eq, dict):
@@ -180,12 +172,13 @@ def _build_led_map(data):
                     continue
                 if led_id not in eq_mapping:
                     eq_mapping[led_id] = name
+                eq_led_counts[name] += 1
                 label = (led.get("label") or led_id).strip()
                 led_metadata[led_id] = {
                     "equipment": name,
                     "label": label or led_id,
                 }
-    return eq_mapping, led_metadata, order
+    return eq_mapping, led_metadata, eq_led_counts, order
 
 
 def main():
@@ -209,7 +202,7 @@ def main():
         forms.alert("No equipment definitions found in {}.".format(yaml_label), title=TITLE)
         return
 
-    led_map, led_metadata, eq_order = _build_led_map(yaml_data)
+    led_map, led_metadata, eq_led_counts, eq_order = _build_led_map(yaml_data)
     if eq_order:
         seen = set()
         ordered_names = []
@@ -229,7 +222,7 @@ def main():
     placed_counts, led_type_counts = _collect_placed_counts(doc, led_map)
 
     output = script.get_output()
-    output.print_md("### QA/QC Report – {}".format(yaml_label))
+    output.print_md("### QA/QC Report - {}".format(yaml_label))
     total_found = 0
     total_placed = 0
     for name in equipment_names:
@@ -244,17 +237,12 @@ def main():
             note = " ({} awaiting placement)".format(delta)
         elif found == 0 and placed == 0:
             note = " (no hosts detected yet)"
-        output.print_md(
-            "{} — placed `{}` / hosts `{}`{}".format(label, placed, found, note)
-        )
+        output.print_md("{} - placed `{}` / hosts `{}`{}".format(label, placed, found, note))
+
     output.print_md("")
-    output.print_md(
-        "**Totals:** placed `{}` elements across `{}` host matches."
-        .format(total_placed, total_found)
-    )
+    output.print_md("**Totals:** placed `{}` elements across `{}` host matches.".format(total_placed, total_found))
 
     type_rows = []
-    label_totals = defaultdict(int)
     for led_id, count in led_type_counts.items():
         if count <= 0:
             continue
@@ -262,18 +250,30 @@ def main():
         eq_name = meta.get("equipment") or led_map.get(led_id) or "<Unknown>"
         label = (meta.get("label") or led_id).strip() or led_id
         type_rows.append((eq_name, label, count))
-        label_totals[label] += count
     if type_rows:
         type_rows.sort(key=lambda row: (row[0], row[1]))
         output.print_md("")
         output.print_md("#### Placed Type Totals")
         for eq_name, label, count in type_rows:
-            output.print_md("* {} – `{}` placed for '{}'".format(label, count, eq_name))
-    if label_totals:
+            output.print_md("* {} - `{}` placed for '{}'".format(label, count, eq_name))
+
+    eq_total_rows = []
+    for name in equipment_names:
+        placed_total = placed_counts.get(name, 0)
+        if placed_total <= 0:
+            continue
+        led_per_definition = max(1, eq_led_counts.get(name, 1))
+        configs = placed_total / float(led_per_definition)
+        if abs(configs - round(configs)) < 1e-6:
+            configs_display = int(round(configs))
+        else:
+            configs_display = round(configs, 2)
+        eq_total_rows.append((name, configs_display))
+    if eq_total_rows:
         output.print_md("")
-        output.print_md("#### Grand Totals by Type")
-        for label in sorted(label_totals.keys()):
-            output.print_md("* {} – `{}` placed in project".format(label, label_totals[label]))
+        output.print_md("#### Placed Equipment Totals")
+        for name, configs_display in eq_total_rows:
+            output.print_md("* {} - `{}` configurations placed".format(name, configs_display))
 
     forms.alert(
         "QA/QC summary sent to the pyRevit output panel for {}.\n"

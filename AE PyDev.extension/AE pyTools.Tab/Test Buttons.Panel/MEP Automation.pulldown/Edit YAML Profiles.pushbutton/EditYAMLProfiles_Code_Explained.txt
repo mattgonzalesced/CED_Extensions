@@ -1,0 +1,33 @@
+Edit YAML Profiles – Code Explained
+===================================
+
+Overview
+--------
+This tool provides an inline editor for equipment definition metadata stored in
+Extensible Storage.  Instead of modifying the full YAML text manually, it lets
+users change parent filters, flags, names, and linked set attributes via a
+pyRevit UI while preserving schema integrity.
+
+Major Components
+----------------
+1. **Data Loading** – Uses `load_active_yaml_data` to parse the active YAML into
+   Python dictionaries.  The script keeps the structure in memory until the user
+   confirms changes.
+2. **UI Construction** – Builds a dynamic form using pyRevit’s WPF helpers,
+   binding each schema field to a textbox or checkbox.  Each input is validated
+   before saving.
+3. **Schema Awareness** – Relies on `profile_schema` descriptions to know which
+   fields are optional, which require numeric values, and how nested structures
+   (linked sets, relations) should be serialized back.
+4. **Save Pipeline** – After validation, the script writes the updated entry to
+   the `equipment_definitions` list, calls `save_active_yaml_data`, and logs
+   “Edit YAML Profiles” as the action string for Extensible Storage history.
+
+Important Behaviors
+-------------------
+* **Non-destructive Editing** – Only the selected definition is edited; the
+  rest of the YAML remains untouched.
+* **Validation** – Empty required fields trigger warnings so the user cannot
+  save invalid structures that would break downstream workflows.
+* **Undo Support** – Because the update goes through Extensible Storage, every
+  edit participates in Revit’s undo stack and the custom QA/QC history.

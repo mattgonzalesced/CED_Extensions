@@ -1,34 +1,15 @@
-﻿Place Elements Workflow Explanation
-==================================
+Use Place CAD Elements to populate the model with legacy CSV driven
+arrangements, primarily when translating designs from older workflows into the
+current YAML driven environment for validation and cleanup.
 
-1. Purpose
-----------
-Place Elements (YAML) converts CAD-driven CSV schedules into actual Revit elements or model groups using the profiles stored in `profileData.yaml`. Each profile captures offsets, parameters, and tags for a CAD name (“equipment definition”). The command orchestrates: selecting a YAML file, pairing CSV rows with CAD profiles, letting the user confirm mappings in a WPF UI, and then calling `PlaceElementsEngine.place_from_csv` to batch-create instances at the coordinates supplied by the CSV.
+Provide the CSV file exported from CAD, review the column mappings, and specify
+the level or base plane; the engine reads each row, converts imperial offsets,
+and instantiates the referenced family types automatically.
 
-2. Loading the YAML Repository
-------------------------------
-The tool begins by resolving `profileData.yaml` with the cached path helper. `_load_profile_store()` uses `profile_schema.load_data` and falls back to a minimal parser to ensure even slightly malformed files can load. `_build_repository()` then converts `equipment_definitions` into the older “legacy” profile format (`equipment_defs_to_legacy`) so `ProfileRepository` can parse them. The repository exposes CAD names, linked labels, offsets, and tag recipes, giving the rest of the script a consistent API regardless of how the YAML evolved.
+Because this process predates Extensible Storage, it does not consult the active
+YAML; treat it as a bridge tool for finishing existing projects while the team
+transitions to linked element definitions recorded through Add YAML Profiles.
 
-3. Reading the CSV
-------------------
-Next, the user picks a CSV file containing at least `Name`, `Position X/Y/Z`, `Rotation`, and optional `Count` columns. `read_xyz_csv()` parses the file, normalizes numeric data, and returns both the row list and an ordered list of CAD names encountered in the CSV. If the CSV lacks rows, the command alerts and exits early—there’s nothing to place.
-
-4. Preparing Initial Mapping Suggestions
-----------------------------------------
-With both repo and CSV data available, the script prepares default label selections for each CAD name. `_dedupe_preserve()` ensures duplicate labels aren’t repeated. These defaults populate the UI so users only need to tweak rows that have multiple valid types. The WPF dialog (`PlaceElementsWindow`) lets users choose, per CAD name, which linked element definition should be created. The window also surfaces optional overrides like flipping groups or changing rotation, all backed by the `ProfileRepository` data the tool just loaded.
-
-5. Gathering Final Selections
------------------------------
-After the user clicks OK, `window.result_mapping` returns a dictionary of CAD names to selected labels. The script validates that at least one mapping exists and then prompts the user to pick a default level (optional). Level selection uses `forms.select_levels`; if skipped, the placement engine relies on whatever level is baked into the families/groups.
-
-6. Driving the Placement Engine
--------------------------------
-`PlaceElementsEngine` is initialized with the document, repository, chosen default level, and `allow_tags=False` (since this command focuses on hosts; tags can be placed later via Tag Equipment). `place_from_csv()` loops over each CSV row, matches it to the user’s selection map, computes insertion transforms, resolves family symbols or groups, applies the YAML offsets, and handles duplication counts. It also writes Element_Linker metadata back to each new instance so Update Vector can edit them later. Exceptions bubble up to the caller and are shown to the user without partially placed content continuing silently.
-
-7. Reporting Results
---------------------
-When placement succeeds, the command displays totals: number of CSV rows seen, rows with mappings, rows that had valid coordinates, and total elements/groups placed. If nothing was placed, it reminds the user to verify that CAD names in the CSV actually exist in the YAML and that the selected labels correspond to loaded Revit content.
-
-8. Reliability Considerations
------------------------------
-Throughout the workflow, the script uses cached YAML paths, resilient parsers, and clear error messages so designers can recover quickly if they pick the wrong files. Because `PlaceElementsEngine` handles Element_Linker payloads, offsets, and tag metadata, any subsequent command (Update Vector, Tag Equipment, etc.) can treat these placed elements exactly like ones authored manually.
+After placement, consider converting the resulting assemblies into YAML
+definitions so future iterations rely on the modern automation pipeline, then
+archive the original CSV for documentation purposes only.
