@@ -1,4 +1,4 @@
-title: MEP Automation
+title: Misc Operations
 tooltip: Select a YAML definition file and run placement/tagging helpers
 context: doc-project
 default_button: Select YAML
