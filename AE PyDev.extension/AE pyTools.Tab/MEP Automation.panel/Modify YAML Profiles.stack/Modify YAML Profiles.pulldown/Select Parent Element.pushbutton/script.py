@@ -9,6 +9,7 @@ from pyrevit import revit, forms
 from Autodesk.Revit.DB import (
     BuiltInParameter,
     ElementId,
+    FilteredElementCollector,
     Group,
     IndependentTag,
     RevitLinkInstance,
@@ -22,7 +23,7 @@ LIB_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "
 if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
-from profile_schema import get_type_set, next_led_id  # noqa: E402
+from profile_schema import get_type_set, next_led_id, ensure_equipment_definition  # noqa: E402
 from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 from LogicClasses.linked_equipment import compute_offsets_from_points, find_equipment_by_name  # noqa: E402
 from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data  # noqa: E402
@@ -252,9 +253,9 @@ def _format_xyz(vec):
     return "{:.6f},{:.6f},{:.6f}".format(vec.X, vec.Y, vec.Z)
 
 
-def _build_element_linker_payload(led_id, set_id, elem, host_point):
+def _build_element_linker_payload(led_id, set_id, elem, host_point, rotation_override=None, parent_rotation_deg=None):
     point = host_point or _get_point(elem)
-    rotation_deg = _get_rotation(elem)
+    rotation_deg = _get_rotation(elem) if rotation_override is None else rotation_override
     level_id = _get_level_element_id(elem)
     try:
         elem_id = elem.Id.IntegerValue
@@ -266,6 +267,7 @@ def _build_element_linker_payload(led_id, set_id, elem, host_point):
         "Set Definition ID: {}".format(set_id or ""),
         "Location XYZ (ft): {}".format(_format_xyz(point)),
         "Rotation (deg): {:.6f}".format(rotation_deg),
+        "Parent Rotation (deg): {}".format("{:.6f}".format(parent_rotation_deg) if parent_rotation_deg is not None else ""),
         "LevelId: {}".format(level_id if level_id is not None else ""),
         "ElementId: {}".format(elem_id),
         "FacingOrientation: {}".format(_format_xyz(facing)),
@@ -289,6 +291,149 @@ def _set_element_linker_parameter(elem, value):
         except Exception:
             continue
     return False
+
+
+def _next_eq_number(data):
+    max_id = 0
+    for eq in data.get("equipment_definitions") or []:
+        eq_id = (eq.get("id") or "").strip()
+        if eq_id.upper().startswith("EQ-"):
+            try:
+                num = int(eq_id.split("-")[-1])
+                if num > max_id:
+                    max_id = num
+            except Exception:
+                continue
+    return max_id + 1
+
+
+def _max_set_number(data):
+    max_id = 0
+    for eq in data.get("equipment_definitions") or []:
+        for set_entry in eq.get("linked_sets") or []:
+            sid = (set_entry.get("id") or "").strip()
+            if not sid:
+                continue
+            upper = sid.upper()
+            if upper.startswith("SET-"):
+                try:
+                    num = int(upper.split("-")[-1])
+                    if num > max_id:
+                        max_id = num
+                except Exception:
+                    continue
+    return max_id
+
+
+def _allocate_new_set_id(existing_ids, seed):
+    counter = max(seed, 1)
+    while True:
+        candidate = "SET-{:03d}".format(counter)
+        upper = candidate.upper()
+        if upper not in existing_ids:
+            existing_ids.add(upper)
+            return candidate, counter + 1
+        counter += 1
+
+
+def _renumber_led_ids(set_entry, new_set_id):
+    replacements = {}
+    led_list = set_entry.get("linked_element_definitions") or []
+    counter = 0
+    for led in led_list:
+        if not isinstance(led, dict):
+            continue
+        old_id = led.get("id") or ""
+        if led.get("is_parent_anchor"):
+            new_id = "{}-LED-000".format(new_set_id)
+        else:
+            counter += 1
+            new_id = "{}-LED-{:03d}".format(new_set_id, counter)
+        if old_id:
+            replacements[old_id] = new_id
+        led["id"] = new_id
+    return replacements
+
+
+def _update_linker_payload_ids(doc, replacements):
+    if doc is None or not replacements:
+        return 0
+    changed = 0
+    collector = FilteredElementCollector(doc).WhereElementIsNotElementType()
+    txn = Transaction(doc, "Repair Element_Linker IDs")
+    try:
+        txn.Start()
+        for elem in collector:
+            payload = _get_element_linker_payload(elem)
+            if not payload:
+                continue
+            new_payload = payload
+            for old, new in replacements.items():
+                if old and old in new_payload:
+                    new_payload = new_payload.replace(old, new)
+            if new_payload != payload:
+                if _set_element_linker_parameter(elem, new_payload):
+                    changed += 1
+        txn.Commit()
+    except Exception:
+        try:
+            txn.RollBack()
+        except Exception:
+            pass
+        raise
+    return changed
+
+
+def _repair_duplicate_set_ids(doc, data):
+    eq_defs = data.get("equipment_definitions") or []
+    if not eq_defs:
+        return False, {}
+    used_ids = set()
+    replacements = {}
+    seed = max(_max_set_number(data), _next_eq_number(data))
+    next_idx = seed + 1
+    for eq in eq_defs:
+        linked_sets = eq.get("linked_sets") or []
+        if not linked_sets:
+            continue
+        set_entry = linked_sets[0]
+        set_id = (set_entry.get("id") or "").strip()
+        norm = set_id.upper()
+        if norm and norm not in used_ids:
+            used_ids.add(norm)
+            continue
+        new_set_id, next_idx = _allocate_new_set_id(used_ids, next_idx)
+        if set_id:
+            replacements[set_id] = new_set_id
+        replacements.update(_renumber_led_ids(set_entry, new_set_id))
+        set_entry["id"] = new_set_id
+        set_entry["name"] = "{} Types".format(eq.get("name") or "Types")
+    if not replacements:
+        return False, {}
+    if doc:
+        _update_linker_payload_ids(doc, replacements)
+    return True, replacements
+
+
+def _assign_unique_ids_to_new_definition(eq_def, data):
+    next_idx = _next_eq_number(data)
+    eq_def["id"] = "EQ-{:03d}".format(next_idx)
+    set_id = "SET-{:03d}".format(next_idx)
+    for linked_set in eq_def.get("linked_sets") or []:
+        linked_set["id"] = set_id
+        linked_set["name"] = "{} Types".format(eq_def.get("name") or "Types")
+    return set_id
+
+
+def _find_equipment_definition_by_name(data, eq_name):
+    target = (eq_name or "").strip().lower()
+    if not target:
+        return None
+    for eq in data.get("equipment_definitions") or []:
+        current = (eq.get("name") or eq.get("id") or "").strip().lower()
+        if current == target:
+            return eq
+    return None
 
 
 def _collect_hosted_tags(elem, host_point):
@@ -499,6 +644,12 @@ def _parse_payload(text):
             payload["rotation_deg"] = float(rot_token)
         except Exception:
             payload["rotation_deg"] = 0.0
+    parent_rot = payload.get("parent rotation (deg)")
+    if parent_rot is not None:
+        try:
+            payload["parent_rotation_deg"] = float(parent_rot)
+        except Exception:
+            payload["parent_rotation_deg"] = None
     led_token = payload.get("linked element definition id")
     if led_token:
         payload["led_id"] = led_token.strip()
@@ -526,38 +677,53 @@ def _get_point(elem):
     return None
 
 
-def _get_rotation(elem):
+def _orientation_vector(elem):
     if elem is None:
-        return 0.0
+        return None
     try:
-        location = elem.Location
+        location = getattr(elem, "Location", None)
     except Exception:
         location = None
-    if hasattr(location, "Rotation"):
+    if location is not None and hasattr(location, "Rotation"):
         try:
-            return float(location.Rotation * 180.0 / 3.141592653589793)
+            ang = float(location.Rotation)
+            return XYZ(math.cos(ang), math.sin(ang), 0.0)
         except Exception:
             pass
     try:
         facing = getattr(elem, "FacingOrientation", None)
-        if facing:
-            angle = XYZ.BasisX.AngleTo(facing)
-            cross = XYZ.BasisX.CrossProduct(facing)
-            if cross.Z < 0:
-                angle = -angle
-            return float(angle * 180.0 / 3.141592653589793)
+        if facing and (abs(facing.X) > 1e-9 or abs(facing.Y) > 1e-9):
+            return XYZ(facing.X, facing.Y, 0.0)
     except Exception:
         pass
     try:
         hand = getattr(elem, "HandOrientation", None)
-        if hand:
-            projected = XYZ(hand.X, hand.Y, 0.0)
-            if abs(projected.X) > 1e-9 or abs(projected.Y) > 1e-9:
-                angle = math.atan2(projected.Y, projected.X)
-                return float(angle * 180.0 / 3.141592653589793)
+        if hand and (abs(hand.X) > 1e-9 or abs(hand.Y) > 1e-9):
+            return XYZ(hand.X, hand.Y, 0.0)
     except Exception:
         pass
-    return 0.0
+    try:
+        transform = elem.GetTransform()
+    except Exception:
+        transform = None
+    if transform is not None:
+        basis = getattr(transform, "BasisX", None)
+        if basis and (abs(basis.X) > 1e-9 or abs(basis.Y) > 1e-9):
+            return XYZ(basis.X, basis.Y, 0.0)
+        basis = getattr(transform, "BasisY", None)
+        if basis and (abs(basis.X) > 1e-9 or abs(basis.Y) > 1e-9):
+            return XYZ(basis.X, basis.Y, 0.0)
+    return None
+
+
+def _get_rotation(elem):
+    vec = _orientation_vector(elem)
+    if vec is None:
+        return 0.0
+    try:
+        return float(math.degrees(math.atan2(vec.Y, vec.X)))
+    except Exception:
+        return 0.0
 
 
 def _feet_to_inches(value):
@@ -597,6 +763,24 @@ def _transform_point(point, transform):
         return point
 
 
+def _transform_rotation(rotation_deg, transform):
+    if transform is None:
+        return rotation_deg
+    try:
+        ang = math.radians(float(rotation_deg or 0.0))
+    except Exception:
+        ang = 0.0
+    vec = XYZ(math.cos(ang), math.sin(ang), 0.0)
+    try:
+        world_vec = transform.OfVector(vec)
+    except Exception:
+        return rotation_deg
+    try:
+        return math.degrees(math.atan2(world_vec.Y, world_vec.X))
+    except Exception:
+        return rotation_deg
+
+
 def _find_equipment_by_led(data, led_id):
     target = (led_id or "").strip().lower()
     if not target:
@@ -619,7 +803,7 @@ def _resolve_equipment_info(elem, data, include_reason=False, allow_name_lookup=
                 if element_point is None:
                     reason = {"code": "missing-location"}
                     return (None, reason) if include_reason else None
-                rotation = _get_rotation(elem)
+                rotation = _transform_rotation(_get_rotation(elem), link_transform)
                 eq_id = (eq_def.get("id") or "").strip()
                 eq_name = (eq_def.get("name") or matched_name or eq_id or "").strip()
                 linked_set = get_type_set(eq_def)
@@ -635,6 +819,7 @@ def _resolve_equipment_info(elem, data, include_reason=False, allow_name_lookup=
                     "payload_point": None,
                     "payload_rotation": None,
                     "led_id": None,
+                    "link_transform": link_transform,
                 }
                 if include_reason:
                     return result, None
@@ -649,10 +834,12 @@ def _resolve_equipment_info(elem, data, include_reason=False, allow_name_lookup=
     eq_def, linked_set, led_entry = entry
     payload_point = payload.get("location")
     payload_rotation = payload.get("rotation_deg") or 0.0
+    payload_parent_rotation = payload.get("parent_rotation_deg")
     live_point = _transform_point(_get_point(elem), link_transform)
     live_rotation = _get_rotation(elem)
     element_point = live_point or payload_point
     rotation = live_rotation if live_point else payload_rotation
+    rotation = _transform_rotation(rotation, link_transform)
     # approximate equipment base by subtracting stored offsets
     offsets = (led_entry.get("offsets") or [])
     if isinstance(offsets, list) and offsets:
@@ -664,7 +851,12 @@ def _resolve_equipment_info(elem, data, include_reason=False, allow_name_lookup=
         _inches_to_feet(offsets.get("y_inches") or 0.0),
         _inches_to_feet(offsets.get("z_inches") or 0.0),
     )
-    base_point = element_point - _rotate_xy(local_vec, rotation)
+    stored_rot_offset = float((offsets.get("rotation_deg") or 0.0))
+    if payload_parent_rotation is not None:
+        parent_rotation = payload_parent_rotation
+    else:
+        parent_rotation = rotation - stored_rot_offset
+    base_point = element_point - _rotate_xy(local_vec, parent_rotation)
     eq_id = (eq_def.get("id") or "").strip()
     eq_name = (eq_def.get("name") or eq_id or "").strip()
     led_id = (led_entry.get("id") or "").strip() if isinstance(led_entry, dict) else None
@@ -676,14 +868,131 @@ def _resolve_equipment_info(elem, data, include_reason=False, allow_name_lookup=
         "eq_name": eq_name,
         "base_point": base_point,
         "element_point": element_point,
-        "rotation_deg": rotation,
+        "rotation_deg": parent_rotation,
         "payload_point": payload_point,
         "payload_rotation": payload_rotation,
+        "parent_rotation": parent_rotation,
         "led_id": led_id,
+        "link_transform": link_transform,
     }
     if include_reason:
         return result, None
     return result
+
+
+def _seed_parent_equipment_definition(parent_elem, data, link_transform=None):
+    candidates = _candidate_equipment_names(parent_elem)
+    default_name = candidates[0] if candidates else ""
+    eq_name = forms.ask_for_string(
+        prompt="Enter a name for the new equipment definition",
+        title=TITLE,
+        default=default_name,
+    )
+    if not eq_name:
+        forms.alert("Equipment definition creation canceled.", title=TITLE)
+        return None
+    label, is_group = _build_label_info(parent_elem)
+    sample_entry = {
+        "label": label,
+        "category_name": _get_category_name(parent_elem),
+        "is_group": is_group,
+    }
+    existing = _find_equipment_definition_by_name(data, eq_name)
+    eq_def = ensure_equipment_definition(data, eq_name, sample_entry)
+    newly_created = existing is None
+    if newly_created:
+        _assign_unique_ids_to_new_definition(eq_def, data)
+    linked_set = get_type_set(eq_def)
+    led_list = linked_set.setdefault("linked_element_definitions", [])
+    set_id = linked_set.get("id") or (eq_def.get("id") or "SET")
+
+    parent_point = _transform_point(_get_point(parent_elem), link_transform)
+    if parent_point is None:
+        forms.alert("Could not determine the parent element's location.", title=TITLE)
+        return None
+    parent_rotation = _transform_rotation(_get_rotation(parent_elem), link_transform)
+    led_id = "{}-LED-000".format(set_id)
+    params = dict(_collect_params(parent_elem) or {})
+    payload = _build_element_linker_payload(led_id, set_id, parent_elem, parent_point, parent_rotation, parent_rotation)
+    params[ELEMENT_LINKER_PARAM_NAME] = payload
+    led_entry = {
+        "id": led_id,
+        "label": label,
+        "category": _get_category_name(parent_elem),
+        "is_group": is_group,
+        "offsets": [{
+            "x_inches": 0.0,
+            "y_inches": 0.0,
+            "z_inches": 0.0,
+            "rotation_deg": 0.0,
+        }],
+        "parameters": params,
+        "tags": _collect_hosted_tags(parent_elem, parent_point),
+        "is_parent_anchor": True,
+    }
+    led_list.append(led_entry)
+
+    doc = revit.doc
+    if doc:
+        txn = Transaction(doc, "Select Parent Element: Initialize Parent Definition")
+        try:
+            txn.Start()
+            _set_element_linker_parameter(parent_elem, payload)
+            txn.Commit()
+        except Exception:
+            try:
+                txn.RollBack()
+            except Exception:
+                pass
+    try:
+        save_active_yaml_data(
+            None,
+            data,
+            "Select Parent Element",
+            "Created equipment definition '{}'".format(eq_name),
+        )
+    except Exception:
+        pass
+    info = {
+        "eq_def": eq_def,
+        "linked_set": linked_set,
+        "led_entry": led_entry,
+        "eq_id": eq_def.get("id") or "",
+        "eq_name": eq_name,
+        "base_point": parent_point,
+        "element_point": parent_point,
+        "rotation_deg": parent_rotation,
+        "payload_point": parent_point,
+        "payload_rotation": parent_rotation,
+        "led_id": led_id,
+        "link_transform": link_transform,
+    }
+    return info
+
+
+def _prune_anchor_only_definitions(data):
+    changed = False
+    eq_defs = data.get("equipment_definitions") or []
+    survivors = []
+    for entry in eq_defs:
+        linked_sets = entry.get("linked_sets") or []
+        has_real = False
+        for linked_set in linked_sets:
+            for led in linked_set.get("linked_element_definitions") or []:
+                if not isinstance(led, dict):
+                    continue
+                if not led.get("is_parent_anchor"):
+                    has_real = True
+                    break
+            if has_real:
+                break
+        if has_real:
+            survivors.append(entry)
+        else:
+            changed = True
+    if changed:
+        data["equipment_definitions"] = survivors
+    return changed
 
 
 def _summarize(children_updates, parent_name):
@@ -707,6 +1016,18 @@ def main():
     except RuntimeError as exc:
         forms.alert(str(exc), title=TITLE)
         return
+    repaired, replacements = _repair_duplicate_set_ids(doc, data)
+    if repaired:
+        try:
+            save_active_yaml_data(
+                None,
+                data,
+                "Repair Equipment Definition IDs",
+                "Reassigned duplicate set identifiers",
+            )
+        except Exception as repair_exc:
+            forms.alert("Failed to repair duplicate IDs:\n\n{}".format(repair_exc), title=TITLE)
+            return
     yaml_label = get_yaml_display_name(data_path)
 
     selection = list(revit.get_selection().elements)
@@ -729,16 +1050,36 @@ def main():
     if not parent_elem:
         return
 
+    parent_definition_seeded = False
     parent_info, parent_error = _resolve_equipment_info(parent_elem, data, include_reason=True, allow_name_lookup=True, link_transform=parent_transform)
     if not parent_info:
         code = (parent_error or {}).get("code") if isinstance(parent_error, dict) else parent_error
         if code in ("missing-equipment", "missing-equipment-by-name"):
-            forms.alert("No equipment definition with that name exists yet, please create one with Add Yaml Profiles", title=TITLE)
+            seed_result = _seed_parent_equipment_definition(parent_elem, data, parent_transform)
+            if not seed_result:
+                return
+            parent_definition_seeded = True
+            parent_info = seed_result
+            parent_info, parent_error = _resolve_equipment_info(
+                parent_elem,
+                data,
+                include_reason=True,
+                allow_name_lookup=True,
+                link_transform=parent_transform,
+            )
+            if not parent_info:
+                code = (parent_error or {}).get("code") if isinstance(parent_error, dict) else parent_error
+                if code == "missing-location":
+                    forms.alert("Could not determine the parent element's location.", title=TITLE)
+                else:
+                    forms.alert("Parent element is missing Element_Linker metadata.", title=TITLE)
+                return
         elif code == "missing-location":
             forms.alert("Could not determine the parent element's location.", title=TITLE)
+            return
         else:
             forms.alert("Parent element is missing Element_Linker metadata.", title=TITLE)
-        return
+            return
 
     parent_eq = parent_info["eq_def"]
     parent_name = parent_info["eq_name"] or parent_info.get("eq_id") or "(unknown)"
@@ -747,6 +1088,15 @@ def main():
     if parent_origin_point is None:
         forms.alert("Could not determine the parent element's location.", title=TITLE)
         return
+
+    parent_transform = parent_info.get("link_transform")
+    if parent_transform:
+        parent_doc = getattr(parent_elem, "Document", None)
+        for entry in child_entries:
+            child_elem = entry.get("element")
+            if parent_doc is not None and getattr(child_elem, "Document", None) is parent_doc:
+                entry["point"] = _transform_point(entry.get("point"), parent_transform)
+                entry["rotation_deg"] = _transform_rotation(entry.get("rotation_deg"), parent_transform)
 
     linked_set = parent_info.get("linked_set") or get_type_set(parent_eq)
     if not linked_set:
@@ -761,7 +1111,14 @@ def main():
         offsets = compute_offsets_from_points(parent_origin_point, parent_rotation, child["point"], child["rotation_deg"])
         led_id = next_led_id(linked_set, parent_eq)
         params = dict(child.get("parameters") or {})
-        payload = _build_element_linker_payload(led_id, set_id, child["element"], child["point"])
+        payload = _build_element_linker_payload(
+            led_id,
+            set_id,
+            child["element"],
+            child["point"],
+            child.get("rotation_deg"),
+            parent_rotation,
+        )
         params[ELEMENT_LINKER_PARAM_NAME] = payload
         led_entry = {
             "id": led_id,
@@ -777,6 +1134,8 @@ def main():
         labels_added.append(child["label"])
 
     if not labels_added:
+        if parent_definition_seeded:
+            _remove_seeded_parent_definition(parent_info, data, parent_elem)
         forms.alert("No new linked element definitions were created.", title=TITLE)
         return
 
@@ -794,6 +1153,7 @@ def main():
             except Exception:
                 pass
 
+    _prune_anchor_only_definitions(data)
     try:
         save_active_yaml_data(
             None,
@@ -810,3 +1170,22 @@ def main():
 
 if __name__ == "__main__":
     main()
+def _remove_seeded_parent_definition(parent_info, data, parent_elem):
+    eq_def = parent_info.get("eq_def")
+    if not eq_def:
+        return
+    eq_id = eq_def.get("id")
+    defs = data.get("equipment_definitions") or []
+    data["equipment_definitions"] = [entry for entry in defs if entry is not eq_def]
+    doc = getattr(revit, "doc", None)
+    if doc and parent_elem:
+        txn = Transaction(doc, "Select Parent Element: Clear Placeholder Definition")
+        try:
+            txn.Start()
+            _set_element_linker_parameter(parent_elem, "")
+            txn.Commit()
+        except Exception:
+            try:
+                txn.RollBack()
+            except Exception:
+                pass

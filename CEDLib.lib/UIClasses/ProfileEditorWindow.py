@@ -162,33 +162,13 @@ class ProfileEditorWindow(forms.WPFWindow):
         self.ParamList.Items.Clear()
 
         params = {}
-        # Try method first
         if hasattr(inst_cfg, "get_parameters"):
             params = inst_cfg.get_parameters() or {}
-        # Fallback: direct attribute
         if not params and hasattr(inst_cfg, "parameters"):
             params = inst_cfg.parameters or {}
 
         for name, val in params.items():
-            row_panel = StackPanel()
-            row_panel.Orientation = Orientation.Horizontal
-            row_panel.Margin = Thickness(0, 0, 0, 4)
-
-            name_block = TextBlock()
-            name_block.Text = name
-            name_block.Width = 200
-            name_block.Margin = Thickness(0, 0, 8, 0)
-
-            value_box = TextBox()
-            value_box.Text = u"{}".format(val if val is not None else u"")
-            value_box.Width = 200
-            value_box.IsReadOnly = not self._in_edit_mode
-
-            row_panel.Children.Add(name_block)
-            row_panel.Children.Add(value_box)
-
-            self.ParamList.Items.Add(row_panel)
-            self._param_rows.append((name, value_box))
+            self._add_param_row(name, val)
 
         # --- Tags: build editable rows ---
         tags = []
@@ -209,6 +189,7 @@ class ProfileEditorWindow(forms.WPFWindow):
             self.ShowChildrenButton.IsEnabled = bool(has_children and self._current_typecfg)
         if hasattr(self, "ChildrenList"):
             self.ChildrenList.Items.Clear()
+        self._apply_read_only_state()
 
     def EditButton_Click(self, sender, args):
         if not self._current_typecfg:
@@ -278,7 +259,9 @@ class ProfileEditorWindow(forms.WPFWindow):
 
         # --- Parameters: read back values from the UI rows ---
         new_params = {}
-        for name, value_box in self._param_rows:
+        for entry in self._param_rows:
+            name = entry["name"]
+            value_box = entry["value_box"]
             val_text = (value_box.Text or u"").strip()
             new_params[name] = val_text
 
@@ -385,13 +368,14 @@ class ProfileEditorWindow(forms.WPFWindow):
         if hasattr(self, "EditButton"):
             self.EditButton.Content = "Done" if self._in_edit_mode else "Edit"
         self._apply_read_only_state()
+        self._refresh_param_buttons()
 
     def _apply_read_only_state(self):
         read_only = not self._in_edit_mode
         for textbox in (self.OffsetXBox, self.OffsetYBox, self.OffsetZBox, self.OffsetRotBox):
             textbox.IsReadOnly = read_only
-        for name, value_box in self._param_rows:
-            value_box.IsReadOnly = read_only
+        for entry in self._param_rows:
+            entry["value_box"].IsReadOnly = read_only
         for row in self._tag_rows:
             for textbox in row[1:]:
                 textbox.IsReadOnly = read_only
@@ -399,6 +383,7 @@ class ProfileEditorWindow(forms.WPFWindow):
             self.AddTagButton.IsEnabled = self._in_edit_mode
         if hasattr(self, "RemoveTagButton"):
             self.RemoveTagButton.IsEnabled = self._in_edit_mode
+        self._refresh_param_buttons()
 
     def _clear_fields(self):
         self.OffsetXBox.Text = ""
@@ -417,6 +402,7 @@ class ProfileEditorWindow(forms.WPFWindow):
         if hasattr(self, "ParentInfoText") and not self._current_profile_name:
             self.ParentInfoText.Text = "Parent: (none)"
         self._apply_read_only_state()
+        self._refresh_param_buttons()
 
     def _fmt_float(self, val):
         try:
@@ -424,6 +410,14 @@ class ProfileEditorWindow(forms.WPFWindow):
             return str(round(f, 4))
         except Exception:
             return "0"
+
+    def _refresh_param_buttons(self):
+        add_enabled = self._in_edit_mode and bool(self._current_typecfg)
+        if hasattr(self, "AddParamButton"):
+            self.AddParamButton.IsEnabled = add_enabled
+        delete_enabled = self._in_edit_mode and bool(getattr(self, "ParamList", None) and self.ParamList.SelectedItem)
+        if hasattr(self, "DeleteParamButton"):
+            self.DeleteParamButton.IsEnabled = delete_enabled
 
     def _discover_type_configs(self, profile):
         """
@@ -556,8 +550,78 @@ class ProfileEditorWindow(forms.WPFWindow):
                 break
         self.TagList.Items.Remove(selected)
 
+    def AddParamButton_Click(self, sender, args):
+        if not self._current_typecfg:
+            forms.alert("Select a type before adding parameters.", title="Element Linker Profile Editor")
+            return
+        if not self._in_edit_mode:
+            self._set_edit_mode(True)
+        name = forms.ask_for_string(prompt="Parameter name", title="Add Parameter")
+        if not name:
+            return
+        for entry in self._param_rows:
+            existing = entry["name"]
+            if existing.strip().lower() == name.strip().lower():
+                forms.alert("Parameter '{}' already exists.".format(name), title="Add Parameter")
+                return
+        value = forms.ask_for_string(prompt="Value for '{}'".format(name), title="Add Parameter") or ""
+        self._add_param_row(name, value)
+        self._apply_read_only_state()
+
     def _parse_float(self, text_val):
         try:
             return float((text_val or "0").strip())
         except Exception:
             return 0.0
+    def _add_param_row(self, name, value):
+        row_panel = StackPanel()
+        row_panel.Orientation = Orientation.Horizontal
+        row_panel.Margin = Thickness(0, 0, 0, 4)
+
+        name_block = TextBlock()
+        name_block.Text = name
+        name_block.Width = 200
+        name_block.Margin = Thickness(0, 0, 8, 0)
+
+        value_box = TextBox()
+        value_box.Text = u"{}".format(value if value is not None else u"")
+        value_box.Width = 200
+
+        row_panel.Children.Add(name_block)
+        row_panel.Children.Add(value_box)
+
+        self.ParamList.Items.Add(row_panel)
+        self._param_rows.append({
+            "name": name,
+            "value_box": value_box,
+            "panel": row_panel,
+        })
+        self._apply_read_only_state()
+        self.ParamList.SelectedItem = row_panel
+        self._refresh_param_buttons()
+
+    def DeleteParamButton_Click(self, sender, args):
+        if not self._in_edit_mode:
+            forms.alert("Click Edit before deleting parameters.", title="Element Linker Profile Editor")
+            return
+        if not hasattr(self, "ParamList"):
+            return
+        selected = self.ParamList.SelectedItem
+        if not selected:
+            forms.alert("Select a parameter row to delete.", title="Element Linker Profile Editor")
+            return
+        removed = False
+        for idx, entry in enumerate(list(self._param_rows)):
+            if entry["panel"] == selected:
+                self._param_rows.pop(idx)
+                removed = True
+                break
+        if removed:
+            self.ParamList.Items.Remove(selected)
+            self.ParamList.SelectedItem = None
+        else:
+            forms.alert("Could not determine which parameter to delete.", title="Element Linker Profile Editor")
+        self._refresh_param_buttons()
+
+    def ParamList_SelectionChanged(self, sender, args):
+        self._refresh_param_buttons()

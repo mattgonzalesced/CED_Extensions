@@ -10,7 +10,7 @@ at a picked point.
 import os
 import sys
 
-from pyrevit import revit, forms
+from pyrevit import revit, forms, script
 from Autodesk.Revit.DB import XYZ
 
 LIB_ROOT = os.path.abspath(
@@ -35,6 +35,7 @@ from profile_schema import equipment_defs_to_legacy  # noqa: E402
 from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
 
 TITLE = "Load Equipment Definition"
+LOG = script.get_logger()
 
 try:
     basestring
@@ -56,6 +57,8 @@ def _sanitize_equipment_definitions(equipment_defs):
             led_list = []
             for led in ls_copy.get("linked_element_definitions") or []:
                 if not isinstance(led, dict):
+                    continue
+                if led.get("is_parent_anchor"):
                     continue
                 led_copy = dict(led)
                 tags = led_copy.get("tags")
@@ -115,7 +118,19 @@ def _build_repository(data):
     legacy_profiles = equipment_defs_to_legacy(cleaned_defs)
     cleaned_profiles = _sanitize_profiles(legacy_profiles)
     eq_defs = ProfileRepository._parse_profiles(cleaned_profiles)
-    return ProfileRepository(eq_defs)
+    repo = ProfileRepository(eq_defs)
+    log = script.get_logger()
+    try:
+        for cad in repo.cad_names():
+            defs = repo._label_map.get(cad) or {}
+            log.info("[Load Equipment Definition] repo contains CAD '%s' with %d linked definitions", cad, len(defs))
+            for label, linked_def in defs.items():
+                placement = linked_def.get_placement()
+                offsets = placement.get_offset_xyz() if placement else (0, 0, 0)
+                log.info("    label='%s' offsets=%s rotation=%s", label, offsets, placement.get_rotation_degrees() if placement else 0)
+    except Exception:
+        pass
+    return repo
 
 
 def _place_child_requests(repo, child_requests):
@@ -137,6 +152,12 @@ def _place_child_requests(repo, child_requests):
             "Position Z": str(point.Z * 12.0),
             "Rotation": str(rotation or 0.0),
         })
+        try:
+            LOG.info("[Load Equipment Definition] child request '%s' offsets=%s", cad_name, [
+                req.get("offsets") for req in request.get("linked_element_definitions", [])
+            ])
+        except Exception:
+            pass
     if not selection_map or not rows:
         return 0
     engine = PlaceElementsEngine(revit.doc, repo, allow_tags=False, transaction_name="Load Equipment Definition (Children)")
@@ -207,8 +228,24 @@ def main():
         "Position Z": str(base_pt.Z * 12.0),
         "Rotation": "0",
     }]
+    try:
+        LOG.info("[Load Equipment Definition] repo built cad=%s label_count=%s", cad_choice, len(labels))
+    except Exception:
+        pass
 
     parent_def = find_equipment_by_name(raw_data, cad_choice)
+    if parent_def:
+        try:
+            LOG.info("[Load Equipment Definition] offsets for '%s':", cad_choice)
+            for linked_set in parent_def.get("linked_sets") or []:
+                for led_entry in linked_set.get("linked_element_definitions") or []:
+                    led_id = led_entry.get("id")
+                    label = led_entry.get("label")
+                    offsets = led_entry.get("offsets") or []
+                    offsets_desc = offsets[0] if offsets else {}
+                    LOG.info("  LED=%s label=%s offsets=%s", led_id, label, offsets_desc)
+        except Exception:
+            pass
     if parent_def:
         child_requests = _gather_child_requests(parent_def, base_pt, 0.0, repo, raw_data)
         if child_requests:

@@ -98,6 +98,7 @@ class TypeConfigShim(object):
         dct = dct or {}
         self.label = dct.get("label")
         self.led_id = dct.get("led_id")
+        self.element_def_id = dct.get("id") or dct.get("led_id")
         self.category_name = dct.get("category_name")
         self.is_group = bool(dct.get("is_group", False))
         self.instance_config = InstanceConfigShim(dct.get("instance_config") or {})
@@ -136,6 +137,7 @@ def _dict_from_shims(profiles):
             params = getattr(inst, "parameters", {}) or {}
             types.append({
                 "label": t.label,
+                "id": getattr(t, "element_def_id", None) or getattr(t, "led_id", None),
                 "led_id": getattr(t, "led_id", None),
                 "category_name": t.category_name,
                 "is_group": t.is_group,

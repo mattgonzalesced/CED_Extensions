@@ -109,19 +109,36 @@ def _get_element_point(elem):
 
 
 def _get_orientation_vector(elem):
-    try:
-        facing = getattr(elem, "FacingOrientation", None)
-        if facing:
-            return facing
-    except Exception:
-        pass
     location = getattr(elem, "Location", None)
     if location and hasattr(location, "Rotation"):
         try:
             angle = float(location.Rotation)
             return XYZ(math.cos(angle), math.sin(angle), 0.0)
         except Exception:
-            return None
+            pass
+    try:
+        facing = getattr(elem, "FacingOrientation", None)
+        if facing and (abs(facing.X) > 1e-9 or abs(facing.Y) > 1e-9):
+            return XYZ(facing.X, facing.Y, 0.0)
+    except Exception:
+        pass
+    try:
+        hand = getattr(elem, "HandOrientation", None)
+        if hand and (abs(hand.X) > 1e-9 or abs(hand.Y) > 1e-9):
+            return XYZ(hand.X, hand.Y, 0.0)
+    except Exception:
+        pass
+    try:
+        transform = elem.GetTransform()
+    except Exception:
+        transform = None
+    if transform is not None:
+        basis = getattr(transform, "BasisX", None)
+        if basis and (abs(basis.X) > 1e-9 or abs(basis.Y) > 1e-9):
+            return XYZ(basis.X, basis.Y, 0.0)
+        basis = getattr(transform, "BasisY", None)
+        if basis and (abs(basis.X) > 1e-9 or abs(basis.Y) > 1e-9):
+            return XYZ(basis.X, basis.Y, 0.0)
     return None
 
 
