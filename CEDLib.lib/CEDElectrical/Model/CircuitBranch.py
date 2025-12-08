@@ -313,7 +313,7 @@ class CircuitBranch(object):
         self._user_clear_hot = False
         self._user_clear_conduit = False
 
-        neutral_expected = self._expected_neutral_qty() > 0
+        self.neutral_expected = self._expected_neutral_qty() > 0
 
         # calculation results
         self._calculated_breaker = None
@@ -726,7 +726,7 @@ class CircuitBranch(object):
         _check_size(
             "neutral",
             "_wire_neutral_size_override",
-            warn_user=self._auto_calculate_override and neutral_expected,
+            warn_user=self._auto_calculate_override and self.neutral_expected,
         )
         _check_size("ground", "_wire_ground_size_override", warn_user=self._auto_calculate_override)
 
@@ -2055,7 +2055,7 @@ class CircuitBranch(object):
         required_cmil = base_ground_cmil * (actual_total_hot / float(base_total_hot))
         upsized = self._pick_size_by_cmil(required_cmil)
         if upsized and upsized != gnd_size:
-            self.log_warning(
+            self.log_info(
                 "Upsizing ground from {} to {} to match voltage-drop conductor growth.".format(
                     gnd_size, upsized
                 ),
