@@ -5,8 +5,8 @@ import math
 import os
 import sys
 
-from pyrevit import revit, forms
-from Autodesk.Revit.DB import FamilyInstance, FilteredElementCollector, Group, RevitLinkInstance, XYZ
+from pyrevit import revit, forms, script
+from Autodesk.Revit.DB import BuiltInParameter, FamilyInstance, FilteredElementCollector, Group, RevitLinkInstance, XYZ
 
 LIB_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib"))
 if LIB_ROOT not in sys.path:
@@ -18,6 +18,7 @@ from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
 
 TITLE = "Place Linked Elements"
+LOG = script.get_logger()
 
 try:
     basestring
@@ -62,6 +63,24 @@ def _normalize_name(value):
     return normalized
 
 
+def _get_symbol(elem):
+    symbol = getattr(elem, "Symbol", None)
+    if symbol is not None:
+        return symbol
+    try:
+        type_id = elem.GetTypeId()
+    except Exception:
+        type_id = None
+    if type_id:
+        doc = getattr(elem, "Document", None)
+        if doc:
+            try:
+                return doc.GetElement(type_id)
+            except Exception:
+                return None
+    return None
+
+
 def _name_variants(elem):
     names = set()
     try:
@@ -71,12 +90,60 @@ def _name_variants(elem):
     except Exception:
         pass
     if isinstance(elem, FamilyInstance):
-        symbol = getattr(elem, "Symbol", None)
+        symbol = _get_symbol(elem)
         family = getattr(symbol, "Family", None) if symbol else None
         type_name = getattr(symbol, "Name", None) if symbol else None
         family_name = getattr(family, "Name", None) if family else None
+        if not family_name or not type_name:
+            try:
+                fam_param = elem.get_Parameter(BuiltInParameter.ELEM_FAMILY_PARAM)
+            except Exception:
+                fam_param = None
+            if fam_param and not family_name:
+                try:
+                    fam_id = fam_param.AsElementId()
+                except Exception:
+                    fam_id = None
+                if fam_id:
+                    doc = getattr(elem, "Document", None)
+                    if doc:
+                        try:
+                            fam_elem = doc.GetElement(fam_id)
+                        except Exception:
+                            fam_elem = None
+                        if fam_elem is not None:
+                            family_name = getattr(fam_elem, "Name", None)
+                if not family_name:
+                    try:
+                        family_name = fam_param.AsValueString()
+                    except Exception:
+                        family_name = None
+            try:
+                type_param = elem.get_Parameter(BuiltInParameter.ELEM_TYPE_PARAM)
+            except Exception:
+                type_param = None
+            if type_param and not type_name:
+                try:
+                    type_id = type_param.AsElementId()
+                except Exception:
+                    type_id = None
+                if type_id:
+                    doc = getattr(elem, "Document", None)
+                    if doc:
+                        try:
+                            type_elem = doc.GetElement(type_id)
+                        except Exception:
+                            type_elem = None
+                        if type_elem is not None:
+                            type_name = getattr(type_elem, "Name", None)
+                if not type_name:
+                    try:
+                        type_name = type_param.AsValueString()
+                    except Exception:
+                        type_name = None
         if family_name and type_name:
             names.add(u"{} : {}".format(family_name, type_name))
+            names.add(u"{} : {}".format(type_name, family_name))
         if type_name:
             names.add(type_name)
         if family_name:

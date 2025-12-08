@@ -14,6 +14,7 @@ from Autodesk.Revit.DB import (
     IndependentTag,
     RevitLinkInstance,
     Transaction,
+    TransactionGroup,
     Transform,
     XYZ,
 )
@@ -133,7 +134,7 @@ def _candidate_equipment_names(elem):
             pass
     fam_label, _ = _build_label_info(elem)
     if fam_label:
-        names.append(fam_label)
+        names.insert(0, fam_label)
     uniq = []
     seen = set()
     for name in names:
@@ -1030,142 +1031,155 @@ def main():
             return
     yaml_label = get_yaml_display_name(data_path)
 
-    selection = list(revit.get_selection().elements)
-    if not selection:
-        try:
-            selection = list(revit.pick_elements(message="Select element(s) to attach to the parent"))
-        except Exception:
-            selection = []
-    if not selection:
-        forms.alert("No child elements were selected.", title=TITLE)
-        return
+    trans_group = TransactionGroup(doc, "Select Parent Element")
+    trans_group.Start()
+    success = False
+    try:
+        selection = list(revit.get_selection().elements)
+        if not selection:
+            try:
+                selection = list(revit.pick_elements(message="Select element(s) to attach to the parent"))
+            except Exception:
+                selection = []
+        if not selection:
+            forms.alert("No child elements were selected.", title=TITLE)
+            return
 
-    child_entries = _build_child_entries(selection)
-    if not child_entries:
-        forms.alert("Selected elements could not be processed.", title=TITLE)
-        return
+        child_entries = _build_child_entries(selection)
+        if not child_entries:
+            forms.alert("Selected elements could not be processed.", title=TITLE)
+            return
 
-    forms.alert("Select the parent element that owns the linked equipment definition.", title=TITLE)
-    parent_elem, parent_transform = _pick_parent_element("Select parent element")
-    if not parent_elem:
-        return
+        forms.alert("Select the parent element that owns the linked equipment definition.", title=TITLE)
+        parent_elem, parent_transform = _pick_parent_element("Select parent element")
+        if not parent_elem:
+            return
 
-    parent_definition_seeded = False
-    parent_info, parent_error = _resolve_equipment_info(parent_elem, data, include_reason=True, allow_name_lookup=True, link_transform=parent_transform)
-    if not parent_info:
-        code = (parent_error or {}).get("code") if isinstance(parent_error, dict) else parent_error
-        if code in ("missing-equipment", "missing-equipment-by-name"):
-            seed_result = _seed_parent_equipment_definition(parent_elem, data, parent_transform)
-            if not seed_result:
+        parent_definition_seeded = False
+        parent_info, parent_error = _resolve_equipment_info(parent_elem, data, include_reason=True, allow_name_lookup=True, link_transform=parent_transform)
+        if not parent_info:
+            code = (parent_error or {}).get("code") if isinstance(parent_error, dict) else parent_error
+            if code in ("missing-equipment", "missing-equipment-by-name"):
+                seed_result = _seed_parent_equipment_definition(parent_elem, data, parent_transform)
+                if not seed_result:
+                    return
+                parent_definition_seeded = True
+                parent_info = seed_result
+                parent_info, parent_error = _resolve_equipment_info(
+                    parent_elem,
+                    data,
+                    include_reason=True,
+                    allow_name_lookup=True,
+                    link_transform=parent_transform,
+                )
+                if not parent_info:
+                    code = (parent_error or {}).get("code") if isinstance(parent_error, dict) else parent_error
+                    if code == "missing-location":
+                        forms.alert("Could not determine the parent element's location.", title=TITLE)
+                    else:
+                        forms.alert("Parent element is missing Element_Linker metadata.", title=TITLE)
+                    return
+            elif code == "missing-location":
+                forms.alert("Could not determine the parent element's location.", title=TITLE)
                 return
-            parent_definition_seeded = True
-            parent_info = seed_result
-            parent_info, parent_error = _resolve_equipment_info(
-                parent_elem,
-                data,
-                include_reason=True,
-                allow_name_lookup=True,
-                link_transform=parent_transform,
-            )
-            if not parent_info:
-                code = (parent_error or {}).get("code") if isinstance(parent_error, dict) else parent_error
-                if code == "missing-location":
-                    forms.alert("Could not determine the parent element's location.", title=TITLE)
-                else:
-                    forms.alert("Parent element is missing Element_Linker metadata.", title=TITLE)
+            else:
+                forms.alert("Parent element is missing Element_Linker metadata.", title=TITLE)
                 return
-        elif code == "missing-location":
+
+        parent_eq = parent_info["eq_def"]
+        parent_name = parent_info["eq_name"] or parent_info.get("eq_id") or "(unknown)"
+        parent_origin_point = parent_info.get("element_point") or parent_info.get("base_point")
+        parent_rotation = parent_info.get("rotation_deg") or 0.0
+        if parent_origin_point is None:
             forms.alert("Could not determine the parent element's location.", title=TITLE)
             return
-        else:
-            forms.alert("Parent element is missing Element_Linker metadata.", title=TITLE)
+
+        parent_transform = parent_info.get("link_transform")
+        if parent_transform:
+            parent_doc = getattr(parent_elem, "Document", None)
+            for entry in child_entries:
+                child_elem = entry.get("element")
+                if parent_doc is not None and getattr(child_elem, "Document", None) is parent_doc:
+                    entry["point"] = _transform_point(entry.get("point"), parent_transform)
+                    entry["rotation_deg"] = _transform_rotation(entry.get("rotation_deg"), parent_transform)
+
+        linked_set = parent_info.get("linked_set") or get_type_set(parent_eq)
+        if not linked_set:
+            forms.alert("Parent equipment definition is missing a linked set to host new types.", title=TITLE)
+            return
+        led_list = linked_set.setdefault("linked_element_definitions", [])
+        set_id = linked_set.get("id") or (parent_eq.get("id") or "")
+
+        metadata_updates = []
+        labels_added = []
+        for child in child_entries:
+            offsets = compute_offsets_from_points(parent_origin_point, parent_rotation, child["point"], child["rotation_deg"])
+            led_id = next_led_id(linked_set, parent_eq)
+            params = dict(child.get("parameters") or {})
+            payload = _build_element_linker_payload(
+                led_id,
+                set_id,
+                child["element"],
+                child["point"],
+                child.get("rotation_deg"),
+                parent_rotation,
+            )
+            params[ELEMENT_LINKER_PARAM_NAME] = payload
+            led_entry = {
+                "id": led_id,
+                "label": child["label"],
+                "category": child["category"],
+                "is_group": child["is_group"],
+                "offsets": [offsets],
+                "parameters": params,
+                "tags": child["tags"],
+            }
+            led_list.append(led_entry)
+            metadata_updates.append((child["element"], payload))
+            labels_added.append(child["label"])
+
+        if not labels_added:
+            if parent_definition_seeded:
+                _remove_seeded_parent_definition(parent_info, data, parent_elem)
+            forms.alert("No new linked element definitions were created.", title=TITLE)
             return
 
-    parent_eq = parent_info["eq_def"]
-    parent_name = parent_info["eq_name"] or parent_info.get("eq_id") or "(unknown)"
-    parent_origin_point = parent_info.get("element_point") or parent_info.get("base_point")
-    parent_rotation = parent_info.get("rotation_deg") or 0.0
-    if parent_origin_point is None:
-        forms.alert("Could not determine the parent element's location.", title=TITLE)
-        return
-
-    parent_transform = parent_info.get("link_transform")
-    if parent_transform:
-        parent_doc = getattr(parent_elem, "Document", None)
-        for entry in child_entries:
-            child_elem = entry.get("element")
-            if parent_doc is not None and getattr(child_elem, "Document", None) is parent_doc:
-                entry["point"] = _transform_point(entry.get("point"), parent_transform)
-                entry["rotation_deg"] = _transform_rotation(entry.get("rotation_deg"), parent_transform)
-
-    linked_set = parent_info.get("linked_set") or get_type_set(parent_eq)
-    if not linked_set:
-        forms.alert("Parent equipment definition is missing a linked set to host new types.", title=TITLE)
-        return
-    led_list = linked_set.setdefault("linked_element_definitions", [])
-    set_id = linked_set.get("id") or (parent_eq.get("id") or "")
-
-    metadata_updates = []
-    labels_added = []
-    for child in child_entries:
-        offsets = compute_offsets_from_points(parent_origin_point, parent_rotation, child["point"], child["rotation_deg"])
-        led_id = next_led_id(linked_set, parent_eq)
-        params = dict(child.get("parameters") or {})
-        payload = _build_element_linker_payload(
-            led_id,
-            set_id,
-            child["element"],
-            child["point"],
-            child.get("rotation_deg"),
-            parent_rotation,
-        )
-        params[ELEMENT_LINKER_PARAM_NAME] = payload
-        led_entry = {
-            "id": led_id,
-            "label": child["label"],
-            "category": child["category"],
-            "is_group": child["is_group"],
-            "offsets": [offsets],
-            "parameters": params,
-            "tags": child["tags"],
-        }
-        led_list.append(led_entry)
-        metadata_updates.append((child["element"], payload))
-        labels_added.append(child["label"])
-
-    if not labels_added:
-        if parent_definition_seeded:
-            _remove_seeded_parent_definition(parent_info, data, parent_elem)
-        forms.alert("No new linked element definitions were created.", title=TITLE)
-        return
-
-    if metadata_updates and doc:
-        txn_name = "Select Parent Element: Store Element Linker metadata ({})".format(len(metadata_updates))
-        t = Transaction(doc, txn_name)
-        try:
-            t.Start()
-            for element, payload in metadata_updates:
-                _set_element_linker_parameter(element, payload)
-            t.Commit()
-        except Exception:
+        if metadata_updates and doc:
+            txn_name = "Select Parent Element: Store Element Linker metadata ({})".format(len(metadata_updates))
+            t = Transaction(doc, txn_name)
             try:
-                t.RollBack()
+                t.Start()
+                for element, payload in metadata_updates:
+                    _set_element_linker_parameter(element, payload)
+                t.Commit()
             except Exception:
-                pass
+                try:
+                    t.RollBack()
+                except Exception:
+                    pass
 
-    _prune_anchor_only_definitions(data)
-    try:
-        save_active_yaml_data(
-            None,
-            data,
-            "Select Parent Element",
-            "Added {} type(s) to {}".format(len(labels_added), parent_name),
-        )
-    except Exception as exc:
-        forms.alert("Failed to save {}:\n\n{}".format(yaml_label, exc), title=TITLE)
-        return
+        _prune_anchor_only_definitions(data)
+        try:
+            save_active_yaml_data(
+                None,
+                data,
+                "Select Parent Element",
+                "Added {} type(s) to {}".format(len(labels_added), parent_name),
+            )
+        except Exception as exc:
+            forms.alert("Failed to save {}:\n\n{}".format(yaml_label, exc), title=TITLE)
+            return
 
-    _summarize(labels_added, parent_name)
+        _summarize(labels_added, parent_name)
+        success = True
+    finally:
+        try:
+            if success:
+                trans_group.Assimilate()
+            else:
+                trans_group.RollBack()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
