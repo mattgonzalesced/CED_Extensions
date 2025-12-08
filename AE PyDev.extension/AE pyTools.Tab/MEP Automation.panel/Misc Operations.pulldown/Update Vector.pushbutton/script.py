@@ -11,7 +11,7 @@ import math
 import os
 import sys
 
-from pyrevit import revit, forms
+from pyrevit import revit, forms, script
 from Autodesk.Revit.DB import (
     BuiltInParameter,
     ElementTransformUtils,
@@ -23,6 +23,7 @@ from Autodesk.Revit.DB import (
     TagOrientation,
     Transaction,
     XYZ,
+    StorageType,
 )
 
 LIB_ROOT = os.path.abspath(
@@ -32,10 +33,13 @@ if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
 from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
+from profile_schema import dump_data_to_string  # noqa: E402
 from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data  # noqa: E402
+from ExtensibleStorage import ExtensibleStorage  # noqa: E402
 ELEMENT_LINKER_PARAM_NAME = "Element_Linker Parameter"
 ELEMENT_LINKER_SHARED_PARAM = "Element_Linker"
 TITLE = "Update Vector"
+LOG = script.get_logger()
 
 try:
     basestring
@@ -728,6 +732,7 @@ def _parse_element_linker_payload(payload_text):
         "set_id": entries.get("Set Definition ID", "").strip(),
         "location": _parse_xyz_string(entries.get("Location XYZ (ft)")),
         "rotation_deg": _parse_float(entries.get("Rotation (deg)"), 0.0),
+        "parent_rotation_deg": _parse_float(entries.get("Parent Rotation (deg)")),
         "facing": _parse_xyz_string(entries.get("FacingOrientation")),
         "raw": entries,
     }
@@ -739,12 +744,13 @@ def _format_xyz(vec):
     return "{:.6f},{:.6f},{:.6f}".format(vec.X, vec.Y, vec.Z)
 
 
-def _build_linker_payload(led_id, set_id, location, rotation_deg, level_id, element_id, facing):
+def _build_linker_payload(led_id, set_id, location, rotation_deg, level_id, element_id, facing, parent_rotation):
     lines = [
         "Linked Element Definition ID: {}".format(led_id or ""),
         "Set Definition ID: {}".format(set_id or ""),
         "Location XYZ (ft): {}".format(_format_xyz(location)),
         "Rotation (deg): {:.6f}".format(rotation_deg or 0.0),
+        "Parent Rotation (deg): {:.6f}".format(parent_rotation or 0.0),
         "LevelId: {}".format(level_id if level_id is not None else ""),
         "ElementId: {}".format(element_id if element_id is not None else ""),
         "FacingOrientation: {}".format(_format_xyz(facing)),
@@ -824,13 +830,20 @@ def _apply_offsets_to_similar(doc, elements, original_local_offset, original_rot
             elem_point = _get_point(elem)
             if not elem_point:
                 continue
+            payload_text = _get_element_linker_payload(elem)
+            payload = _parse_element_linker_payload(payload_text)
             elem_rotation = _get_rotation_degrees(elem)
-            base_rotation = elem_rotation - old_rotation_offset
-            previous_world_offset = _rotate_xy(old_local_offset, elem_rotation)
+            parent_rot = payload.get("parent_rotation_deg")
+            if parent_rot is not None:
+                base_rotation = parent_rot
+            else:
+                base_rotation = elem_rotation - old_rotation_offset
+
+            previous_world_offset = _rotate_xy(old_local_offset, base_rotation)
             base_point = elem_point - previous_world_offset
 
-            target_rotation = base_rotation + rotation_offset if rotation_change else elem_rotation
-            world_offset = _rotate_xy(local_offset, target_rotation)
+            target_rotation = base_rotation + rotation_offset
+            world_offset = _rotate_xy(local_offset, base_rotation)
             target_point = base_point + world_offset
 
             move_vec = target_point - elem_point
@@ -843,23 +856,21 @@ def _apply_offsets_to_similar(doc, elements, original_local_offset, original_rot
                 ElementTransformUtils.MoveElement(doc, elem.Id, move_vec)
                 elem_point = target_point
 
-            elem_rotation = _get_rotation_degrees(elem)
             rot_delta = _normalize_angle(target_rotation - elem_rotation)
             if rotation_change and abs(rot_delta) > tol:
                 axis = Line.CreateBound(elem_point, elem_point + XYZ(0, 0, 1))
                 ElementTransformUtils.RotateElement(doc, elem.Id, axis, math.radians(rot_delta))
                 elem_rotation = target_rotation
 
-            payload_text = _get_element_linker_payload(elem)
-            payload = _parse_element_linker_payload(payload_text)
             new_payload_text = _build_linker_payload(
                 payload.get("led_id"),
                 payload.get("set_id"),
                 target_point,
-                target_rotation,
+                elem_rotation,
                 getattr(getattr(elem, "LevelId", None), "IntegerValue", None),
                 getattr(getattr(elem, "Id", None), "IntegerValue", None),
                 getattr(elem, "FacingOrientation", None),
+                base_rotation,
             )
             _set_element_linker_payload(elem, new_payload_text)
 
@@ -888,27 +899,80 @@ def _apply_offsets_to_similar(doc, elements, original_local_offset, original_rot
 # --------------------------------------------------------------------------- #
 
 
-def _find_led_entry(data, led_id, set_hint=None):
+def _get_element_param(elem, name):
+    if elem is None or not name:
+        return None
+    try:
+        param = elem.LookupParameter(name)
+    except Exception:
+        param = None
+    if not param:
+        return None
+    try:
+        if param.StorageType == StorageType.String:
+            return param.AsString()
+        if param.StorageType == StorageType.Double:
+            return str(param.AsDouble())
+        if param.StorageType == StorageType.Integer:
+            return str(param.AsInteger())
+        return param.AsValueString()
+    except Exception:
+        return None
+
+
+def _parameter_match_score(element, led_entry):
+    if element is None or not isinstance(led_entry, dict):
+        return 0
+    params = led_entry.get("parameters") or {}
+    score = 0
+    for name, expected in params.items():
+        expected_text = (str(expected or "").strip())
+        if not expected_text:
+            continue
+        actual = _get_element_param(element, name)
+        if actual is None:
+            continue
+        if actual.strip() == expected_text:
+            score += 1
+    return score
+
+
+def _find_led_entry(data, led_id, set_hint=None, element=None):
     target = (led_id or "").strip().lower()
     if not target:
         return None
     set_target = (set_hint or "").strip().lower()
     fallback = None
+    fallback_idx = None
+    best_match = None
+    best_idx = None
+    best_score = -1
     for eq in data.get("equipment_definitions") or []:
         for set_entry in eq.get("linked_sets") or []:
             set_id = (set_entry.get("id") or "").strip()
             set_id_lower = set_id.lower()
-            for led_entry in set_entry.get("linked_element_definitions") or []:
-                current_id = (led_entry.get("id") or "").strip()
+            led_list = set_entry.get("linked_element_definitions") or []
+            for idx, led_entry in enumerate(led_list):
+                current_id = (led_entry.get("id") or led_entry.get("led_id") or "").strip()
                 if not current_id:
                     continue
                 if current_id.strip().lower() != target:
                     continue
                 if set_target and set_id_lower == set_target:
-                    return eq, set_entry, led_entry
+                    return eq, set_entry, led_entry, idx
+                score = _parameter_match_score(element, led_entry)
+                if score > best_score:
+                    best_match = (eq, set_entry, led_entry)
+                    best_idx = idx
+                    best_score = score
                 if fallback is None:
                     fallback = (eq, set_entry, led_entry)
-    return fallback
+                    fallback_idx = idx
+    if best_match is not None:
+        return best_match[0], best_match[1], best_match[2], best_idx
+    if fallback is None:
+        return None
+    return fallback[0], fallback[1], fallback[2], fallback_idx
 
 
 def _ensure_offset_entry(led_entry):
@@ -927,6 +991,52 @@ def _ensure_offset_entry(led_entry):
     entry.setdefault("z_inches", 0.0)
     entry.setdefault("rotation_deg", 0.0)
     return entry
+
+
+def _verify_saved_offsets(led_id, set_id, expected_entry):
+    """Reload YAML after saving to confirm offsets persisted."""
+    try:
+        _, verify_data = load_active_yaml_data()
+    except Exception as exc:
+        try:
+            LOG.warning("[Update Vector] verification reload failed for %s: %s", led_id, exc)
+        except Exception:
+            pass
+        return False, "Reload failed: {}".format(exc)
+    verify_lookup = _find_led_entry(verify_data, led_id, set_id)
+    if not verify_lookup:
+        try:
+            LOG.warning("[Update Vector] verification could not find LED %s", led_id)
+        except Exception:
+            pass
+        return False, "LED '{}' not found in refreshed YAML.".format(led_id)
+    verify_entry = _ensure_offset_entry(verify_lookup[2])
+    for key in ("x_inches", "y_inches", "z_inches", "rotation_deg"):
+        exp = expected_entry.get(key, 0.0)
+        act = verify_entry.get(key, 0.0)
+        try:
+            exp_val = float(exp)
+        except Exception:
+            exp_val = 0.0
+        try:
+            act_val = float(act)
+        except Exception:
+            act_val = 0.0
+        if abs(exp_val - act_val) > 1e-6:
+            try:
+                LOG.warning("[Update Vector] verification mismatch for %s key=%s expected=%s actual=%s", led_id, key, exp_val, act_val)
+            except Exception:
+                pass
+            return False, "Mismatch for {} (expected {}, found {})".format(key, exp_val, act_val)
+    try:
+        LOG.info(
+            "[Update Vector] verification comparison matched for %s offsets=%s",
+            led_id,
+            {k: expected_entry.get(k) for k in ("x_inches", "y_inches", "z_inches", "rotation_deg")},
+        )
+    except Exception:
+        pass
+    return True, ""
 
 
 # --------------------------------------------------------------------------- #
@@ -987,11 +1097,11 @@ def main():
         return
     yaml_label = get_yaml_display_name(data_path)
 
-    eq_entry = _find_led_entry(data, led_id, payload.get("set_id"))
+    eq_entry = _find_led_entry(data, led_id, payload.get("set_id"), elem)
     if not eq_entry:
         forms.alert("Could not locate '{}' inside {}.".format(led_id, yaml_label), title=TITLE)
         return
-    eq_def, set_entry, led_entry = eq_entry
+    eq_def, set_entry, led_entry, led_index = eq_entry
     offset_entry = _ensure_offset_entry(led_entry)
     tag_entries = []
 
@@ -1001,9 +1111,25 @@ def main():
         _inches_to_feet(offset_entry.get("z_inches") or 0.0),
     )
     original_rotation_offset = float(offset_entry.get("rotation_deg") or 0.0)
-    base_rotation = payload_rotation - original_rotation_offset
+    parent_rotation = payload.get("parent_rotation_deg")
+    if parent_rotation is not None:
+        base_rotation = parent_rotation
+    else:
+        base_rotation = payload_rotation - original_rotation_offset
+    try:
+        LOG.info(
+            "[Update Vector] starting offsets led=%s label=%s inches=(%.3f, %.3f, %.3f) rot=%.3f",
+            led_id,
+            label,
+            float(offset_entry.get("x_inches") or 0.0),
+            float(offset_entry.get("y_inches") or 0.0),
+            float(offset_entry.get("z_inches") or 0.0),
+            original_rotation_offset,
+        )
+    except Exception:
+        pass
 
-    previous_world_offset = _rotate_xy(original_local_offset, payload_rotation)
+    previous_world_offset = _rotate_xy(original_local_offset, base_rotation)
     base_point = payload_location - previous_world_offset
     delta_world = elem_point - base_point
     original_total_rotation = payload_rotation
@@ -1016,8 +1142,8 @@ def main():
     else:
         new_rotation_offset = round(_normalize_angle(elem_rotation - base_rotation), 6)
         rotation_delta = _normalize_angle(new_rotation_offset - original_rotation_offset)
+        local_offset = _rotate_xy(delta_world, -base_rotation)
         total_rotation = base_rotation + new_rotation_offset
-        local_offset = _rotate_xy(delta_world, -total_rotation)
         new_local_offset = XYZ(local_offset.X, local_offset.Y, local_offset.Z)
 
     tags_changed = 0
@@ -1033,6 +1159,21 @@ def main():
         offset_entry["y_inches"] = round(_feet_to_inches(local_offset.Y if local_offset else 0.0), 6)
         offset_entry["z_inches"] = round(_feet_to_inches(local_offset.Z if local_offset else 0.0), 6)
         offset_entry["rotation_deg"] = new_rotation_offset
+        try:
+            LOG.info(
+                "[Update Vector] updated offsets led=%s inches=(%.3f, %.3f, %.3f) rot=%.3f",
+                led_id,
+                offset_entry["x_inches"],
+                offset_entry["y_inches"],
+                offset_entry["z_inches"],
+                offset_entry["rotation_deg"],
+            )
+        except Exception:
+            pass
+    if led_index is not None:
+        les = set_entry.get("linked_element_definitions") or []
+        if 0 <= led_index < len(les):
+            les[led_index] = led_entry
 
     doc = getattr(revit, "doc", None)
     similar_elements = []
@@ -1071,6 +1212,21 @@ def main():
         forms.alert("Failed to update {}:\n\n{}".format(yaml_label, ex), title=TITLE)
         return
 
+    if not tag_only:
+        verify_ok, verify_msg = _verify_saved_offsets(led_id, payload.get("set_id"), offset_entry)
+        if not verify_ok:
+            forms.alert(
+                "Warning: YAML verification after saving failed.\n{}\n"
+                "Re-run Update Vector or review Extensible Storage history.".format(verify_msg),
+                title=TITLE,
+            )
+        else:
+            try:
+                text = dump_data_to_string(data)
+                ExtensibleStorage.update_active_text_only(revit.doc, data_path, text)
+            except Exception as exc:
+                LOG.warning("[Update Vector] failed to refresh active YAML snapshot: %s", exc)
+
     updated_payload_text = _build_linker_payload(
         led_id,
         payload.get("set_id"),
@@ -1079,6 +1235,7 @@ def main():
         getattr(getattr(elem, "LevelId", None), "IntegerValue", None),
         getattr(getattr(elem, "Id", None), "IntegerValue", None),
         getattr(elem, "FacingOrientation", None),
+        base_rotation,
     )
     _set_element_linker_payload(elem, updated_payload_text)
 

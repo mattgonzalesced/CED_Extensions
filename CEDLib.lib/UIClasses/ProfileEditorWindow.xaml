@@ -94,7 +94,29 @@
 
                 <GroupBox Header="Instance Parameters" Grid.Column="0" Margin="0,0,5,0">
                     <Grid Margin="5">
-                        <ListBox x:Name="ParamList"/>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <ListBox x:Name="ParamList"
+                                 Grid.Row="0"
+                                 Margin="0,0,0,5"
+                                 SelectionChanged="ParamList_SelectionChanged"/>
+                        <StackPanel Grid.Row="1"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Right">
+                            <Button x:Name="AddParamButton"
+                                    Content="Add Parameter"
+                                    Width="120"
+                                    Margin="0,0,5,0"
+                                    IsEnabled="False"
+                                    Click="AddParamButton_Click"/>
+                            <Button x:Name="DeleteParamButton"
+                                    Content="Delete Parameter"
+                                    Width="120"
+                                    IsEnabled="False"
+                                    Click="DeleteParamButton_Click"/>
+                        </StackPanel>
                     </Grid>
                 </GroupBox>
 

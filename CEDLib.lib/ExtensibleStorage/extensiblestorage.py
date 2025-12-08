@@ -227,16 +227,21 @@ class ExtensibleStorage(object):
         normalized = active.get("normalized") or (cls._normalize_path(path) if path else None)
         text = None
         if path and normalized:
+            entries = cls._merge_with_cache(doc, payload.get("entries", []), normalized)
+            latest_text = None
+            if entries:
+                latest_text = cls._decompress_text(entries[-1].get("new_content"))
             stored_text = active.get("text")
-            if stored_text:
+            if latest_text:
+                text = latest_text
+                cls._log("get_active_yaml returning latest entry for {} (len={})".format(path, len(latest_text or "")))
+            elif stored_text:
                 text = stored_text
+                cls._log("get_active_yaml returning stored text for {} (len={})".format(path, len(stored_text or "")))
             else:
-                entries = cls._merge_with_cache(doc, payload.get("entries", []), normalized)
-                if entries:
-                    text = cls._decompress_text(entries[-1].get("new_content"))
-                else:
-                    base_map = meta.get("base_text") or {}
-                    text = cls._decompress_text(base_map.get(normalized))
+                base_map = meta.get("base_text") or {}
+                text = cls._decompress_text(base_map.get(normalized))
+                cls._log("get_active_yaml returning base text for {} (len={})".format(path, len(text or "")))
         return path, normalized, text
 
     @classmethod
@@ -261,6 +266,19 @@ class ExtensibleStorage(object):
             action,
             description=description or "",
         )
+
+    @classmethod
+    def update_active_text_only(cls, doc, yaml_path, new_text):
+        if doc is None or not yaml_path:
+            return
+        payload = cls._read_storage(doc)
+        normalized = cls._normalize_path(yaml_path)
+        meta = payload.setdefault("meta", {})
+        active = meta.setdefault("active_yaml", {"path": yaml_path, "normalized": normalized})
+        active["path"] = yaml_path
+        active["normalized"] = normalized
+        active["text"] = new_text or ""
+        cls._write_storage(doc, payload, "ACTIVE_YAML_REFRESH")
 
     # ---------------------------------------------------------------------- #
     # Undo / Redo integration
@@ -408,6 +426,9 @@ class ExtensibleStorage(object):
         if not name:
             cls._log("Transaction hook called with empty name via {}".format(source))
             return False
+        if name == "ACTIVE_YAML_REFRESH":
+            cls._log("Transaction hook ignoring active YAML refresh via {}".format(source))
+            return True
         cls._log("Transaction hook evaluating '{}' via {}".format(name, source))
         seq, normalized = cls._resolve_transaction_tokens(doc, name)
         if seq is None or normalized is None:
@@ -608,6 +629,11 @@ class ExtensibleStorage(object):
         t = Transaction(doc, transaction_name or "YAML Change")
         t.Start()
         try:
+            cls._log("ExtensibleStorage write txn={} entries={} active_path={}".format(
+                transaction_name or "YAML Change",
+                len(payload.get("entries", [])),
+                (payload.get("meta", {}).get("active_yaml") or {}).get("path"),
+            ))
             _apply()
             t.Commit()
         except Exception as ex:

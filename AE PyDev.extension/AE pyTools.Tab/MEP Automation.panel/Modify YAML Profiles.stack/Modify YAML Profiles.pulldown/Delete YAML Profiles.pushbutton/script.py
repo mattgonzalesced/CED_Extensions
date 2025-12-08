@@ -175,6 +175,8 @@ def _collect_type_entries(equipment_def):
         for linked_def in linked_set.get("linked_element_definitions") or []:
             if not isinstance(linked_def, dict):
                 continue
+            if linked_def.get("is_parent_anchor"):
+                continue
             label = _normalize_name(linked_def.get("label"))
             led_id = _normalize_name(linked_def.get("id")) or label
             if not led_id or led_id in seen_ids:
@@ -392,6 +394,7 @@ def main():
     _cleanup_relations(native_equipment_defs, removed_ids)
 
     raw_data["equipment_definitions"] = native_equipment_defs
+    _prune_anchor_only_definitions(raw_data)
     save_active_yaml_data(
         None,
         raw_data,
@@ -405,6 +408,31 @@ def main():
         summary.append("Removed equipment definitions: {}".format(", ".join(sorted(set(removed_ids)))))
     summary.append("Reload Place Elements (YAML) to use updated data.")
     forms.alert("\n".join(summary), title="Delete YAML Profiles")
+
+
+def _prune_anchor_only_definitions(data):
+    changed = False
+    eq_defs = data.get("equipment_definitions") or []
+    survivors = []
+    for entry in eq_defs:
+        linked_sets = entry.get("linked_sets") or []
+        has_real = False
+        for linked_set in linked_sets:
+            for led in linked_set.get("linked_element_definitions") or []:
+                if not isinstance(led, dict):
+                    continue
+                if not led.get("is_parent_anchor"):
+                    has_real = True
+                    break
+            if has_real:
+                break
+        if has_real:
+            survivors.append(entry)
+        else:
+            changed = True
+    if changed:
+        data["equipment_definitions"] = survivors
+    return changed
 
 
 if __name__ == "__main__":

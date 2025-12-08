@@ -350,9 +350,9 @@ class PlaceElementsEngine(object):
         placement_mode = placement.get_placement_mode() if placement else None
         is_group = bool(placement_mode and str(placement_mode).lower() == "group")
 
-        total_offset_rotation = base_rot_deg + (rot_offset or 0.0)
-        if total_offset_rotation:
-            ang = math.radians(total_offset_rotation)
+        offset_rotation = base_rot_deg
+        if offset_rotation:
+            ang = math.radians(offset_rotation)
             cos_a = math.cos(ang)
             sin_a = math.sin(ang)
             ox, oy = offset[0], offset[1]

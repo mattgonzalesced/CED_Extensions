@@ -310,6 +310,8 @@ def equipment_defs_to_legacy(equipment_defs):
         types = []
         for linked_set in eq.get("linked_sets") or []:
             for led in linked_set.get("linked_element_definitions") or []:
+                if led.get("is_parent_anchor"):
+                    continue
                 inst_cfg = {
                     "offsets": led.get("offsets") or [{}],
                     "parameters": led.get("parameters") or {},
@@ -371,7 +373,11 @@ def get_type_set(equipment_def):
 
 def next_led_id(type_set, equipment_def):
     base = type_set.get("id") or (equipment_def.get("id") or "LED")
-    existing = {led.get("id") for led in type_set.get("linked_element_definitions") or []}
+    existing = {
+        led.get("id")
+        for led in type_set.get("linked_element_definitions") or []
+        if not (led.get("is_parent_anchor") if isinstance(led, dict) else False)
+    }
     counter = len(existing) + 1
     candidate = "{}-LED-{:03d}".format(base, counter)
     while candidate in existing:
