@@ -1,15 +1,15 @@
-Place Linked Elements is the primary automation button; it reads the active
-YAML, matches linked elements or Revit links by name, and places every recorded
-configuration on the correct centroid with preserved spacing.
+Place Linked Elements now consumes the exact offsets, parent rotation, tags,
+and parameters stored in Extensible Storage. After selecting the active YAML,
+the tool scans the project (and linked models) for matching host names, then
+creates every Linked Element Definition at the saved location relative to its
+parent’s frame.
 
-Before running, ensure Select YAML has loaded the desired file and that the
-project contains host families or linked groups whose names align with the
-equipment definitions you want to place.
+Because Element_Linker payloads are written during placement, Undo/Redo,
+Update Vector, Tag Equipment, and QA/QC can immediately track each instance by
+its LED ID. If a host is missing, the summary callout lets you know so you can
+fix the naming before rerunning the command.
 
-When prompted, confirm the level, review the summary of matched hosts, and let
-the engine process each entry; it sets Element_Linker metadata so QA/QC and
-Undo integration work seamlessly.
-
-After placement, inspect the resulting families, run QAQC if needed, and commit
-any required tweaks through Add, Edit, or Merge before exporting the updated
-YAML back to disk for coordination.
+Run this after Select Parent Element or Update Vector to push the refreshed
+layouts back into the model. Once the pass completes, feel free to launch QAQC
+or Tag Equipment—both tools read the same metadata and require no additional
+manual work.

@@ -1,32 +1,44 @@
-Update Vector – Code Explained
+﻿Update Vector – Code Explained
 ==============================
 
 Purpose
 -------
-This tool recalculates the offset vectors within a linked element definition.
-Use it when the physical layout of a configuration changes but the equipment
-set, tags, and parameter data remain constant.
+`Update Vector` refreshes the geometric portion of an equipment definition
+without touching its parameter/tag metadata. Designers use it after they move a
+placed configuration in the model. The command measures the new offsets,
+updates Extensible Storage, and (optionally) propagates the change to every
+other instance carrying the same Linked Element Definition ID.
 
-Key Mechanics
--------------
-1. **Definition Selection** – The script loads the active YAML, presents the
-   user with a list of equipment definitions, and retrieves the linked set for
-   the chosen entry.
-2. **Element Capture** – The user selects Revit elements representing the new
-   arrangement.  The script records each element’s location, centroid, and
-   orientation, much like Add YAML Profiles.
-3. **Vector Computation** – Offsets are recalculated relative to the centroid
-   with `_feet_to_inches` helpers, ensuring the stored offsets reflect the new
-   spacing.  Rotation offsets are derived from the host element orientation.
-4. **Data Update** – The script iterates the linked element definitions inside
-   the selected equipment definition, updating each `offsets` entry with the
-   new values while leaving parameters, tags, and IDs untouched.
-5. **Persistence** – The updated YAML data is written back through
-   `save_active_yaml_data`, generating an Extensible Storage transaction labeled
-   “Update Vector”.
+Execution Flow
+--------------
+1. **Target Resolution** – We read the selected element’s Element_Linker
+   payload, parse the LED/SET identifiers, and fetch the matching entry from the
+   active YAML (`load_active_yaml_data`). The payload includes a `Parent Rotation
+   (deg)` field (captured by Select Parent Element) so we can re-create the
+   parent’s coordinate system exactly.
+2. **Offset Math** – The element’s current world location is compared to the
+   stored base point. By rotating the delta vector back by the parent rotation
+   we obtain new `x_inches`, `y_inches`, `z_inches` offsets. The rotation offset
+   becomes `elem_rotation - parent_rotation`, which keeps the child’s twist
+   relative to its parent.
+3. **YAML + Metadata Update** – The linked element definition receives the new
+   offset numbers. We call `save_active_yaml_data` so Extensible Storage records
+   the edit, then we rebuild the Element_Linker text on the actual family
+   instance (with the refreshed parent rotation) to keep the model in sync.
+4. **Propagate to Similar (Optional)** – `_collect_similar_elements` locates
+   every other instance referencing the same LED. For each element we compute
+   its own base point using the parent rotation stored in its payload, move/rotate
+   it by the same vector, and rewrite its Element_Linker data. This keeps crews
+   from re-running the placer when only minor tweaks were made.
 
-Benefits
---------
-* Maintains historical context because IDs and metadata stay the same.
-* Eliminates the need to recreate definitions when only geometry changes.
-* Participates in undo/redo flows thanks to Extensible Storage history.
+Notable Details
+---------------
+* Tags hosted on the element are reprojected via `_update_tag_yaml_offsets`, so
+  annotation stays aligned with the new geometry.
+* All edits participate in Revit’s undo stack because we wrap metadata writes in
+  transactions and Extensible Storage history entries.
+* When YAML verification detects that offsets failed to persist, the tool warns
+  the user and suggests rerunning so no stale data remains.
+
+In short, Update Vector is the geometric maintenance tool: it keeps YAML and
+Element_Linker metadata aligned whenever a crew nudges the installed equipment.

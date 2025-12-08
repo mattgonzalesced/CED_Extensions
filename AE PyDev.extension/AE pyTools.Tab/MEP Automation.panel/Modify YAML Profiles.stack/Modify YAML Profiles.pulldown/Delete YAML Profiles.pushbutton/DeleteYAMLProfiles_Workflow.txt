@@ -1,15 +1,9 @@
-Only use Delete YAML Profiles after verifying the active YAML snapshot already
-reflects the project state you want to prune; the action cannot be undone
-without reverting through Extensible Storage history.
+Before deleting, confirm the Extensible Storage snapshot is the one you want to
+trim. Pick an equipment definition, review the LED list (anchors are flagged as
+LED-000), and choose which linked types to remove. If the last non-anchor entry
+is deleted, the workflow now auto-prunes the remaining anchor and any child
+relationships that referenced it, preventing orphan data.
 
-Pick the equipment definition from the list to inspect its linked element
-definitions; the dialog displays each LED label with its identifier so you can
-confirm you are targeting the proper instances.
-
-Select every LED you want removed and review the summary prompt; if the
-definition becomes empty, the workflow also removes associated child links to
-stop orphaned references from persisting inside other configurations.
-
-When you accept the deletion, the tool writes the updated dataset back into
-Extensible Storage, records an audit entry, and reminds you to reload Place
-Elements before continuing with automated placements.
+Accepting the prompt writes the cleaned dataset back into Extensible Storage
+and logs a history entry, so QA/QC and placement tools immediately see the
+updated definition set.

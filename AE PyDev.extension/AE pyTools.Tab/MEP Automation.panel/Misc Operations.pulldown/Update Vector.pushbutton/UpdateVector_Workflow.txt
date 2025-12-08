@@ -1,15 +1,14 @@
-Update Vector recalculates the centroid and offset vector data for an existing
-equipment definition without forcing you to re-run Add YAML Profiles; use it
-when the layout changes slightly but the components remain identical.
+Use Update Vector after you physically move already placed instances. Select a
+host element, confirm the Element_Linker payload, and the tool recomputes the
+local offsets in the parent’s coordinate system. Offsets, parent rotation, and
+tag offsets are written to Extensible Storage, so subsequent placements match
+what you just captured.
 
-Pick the equipment definition, then select the elements inside the model that
-represent the new footprint; the tool measures their relative spacing and
-updates the linked element offsets accordingly.
+When prompted, choose whether to apply the new vector to other instances with
+the same Linked Element Definition ID. The tool will automatically locate them,
+move/rotate them by the same vector, refresh their Element_Linker payloads, and
+update the YAML entry in one transaction. If no other instances exist you can
+skip the propagation and only the selected element is updated.
 
-Parameters and tags remain untouched, so the change is limited to geometric
-placement, which helps keep QA/QC reports aligned with what you just installed
-while preserving circuits and metadata.
-
-After confirming, the updated vectors are written to Extensible Storage; rerun
-Place Linked Elements or Tag Equipment to see the new arrangement take effect
-in production views.
+Once Update Vector completes, rerun Place Linked Elements or Tag Equipment to
+validate the geometry—those tools now respect the refreshed offsets exactly.
