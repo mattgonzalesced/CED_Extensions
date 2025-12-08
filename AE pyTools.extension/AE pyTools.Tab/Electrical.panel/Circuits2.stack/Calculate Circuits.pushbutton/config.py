@@ -154,6 +154,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
             FeederVDMethod.DEMAND: "Demand Load",
             FeederVDMethod.CONNECTED: "Connected Load",
             FeederVDMethod.EIGHTY_PERCENT: "80% of Breaker",
+            FeederVDMethod.HUNDRED_PERCENT: "100% of Breaker",
         }.get(value, value)
 
     def _help_texts(self):
@@ -163,7 +164,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
             'neutral_behavior': "Choose whether neutral conductors match the quantity of hots automatically or are entered manually for each calculation.",
             'max_branch_voltage_drop': "Target maximum voltage drop for branch circuits (enter as a percentage). Calculated sizes will grow until this threshold is met.",
             'max_feeder_voltage_drop': "Target maximum voltage drop for feeders (enter as a percentage). Applies to feeder sizing logic and may differ from branch criteria.",
-            'feeder_vd_method': "Which feeder load basis to use for voltage drop checks: demand load, connected load, or 80% of the breaker rating.",
+            'feeder_vd_method': "Which feeder load basis to use for voltage drop checks: demand load, connected load, 80% of the breaker rating, or 100% of the breaker rating.",
             'write_results': "Toggle whether calculated results push to downstream elements when present.",
         }
 
@@ -173,6 +174,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
                 FeederVDMethod.DEMAND: "Uses demand load (after demand factors) for voltage drop calculations.",
                 FeederVDMethod.CONNECTED: "Uses the raw connected load without demand factors for voltage drop checks.",
                 FeederVDMethod.EIGHTY_PERCENT: "Uses 80% of the breaker rating unless that is lower than the demand load.",
+                FeederVDMethod.HUNDRED_PERCENT: "Uses 100% of the breaker rating unless that is lower than the demand load.",
             },
             'neutral_behavior': {
                 NeutralBehavior.MATCH_HOT: "Neutrals will always mirror the quantity of hot conductors.",

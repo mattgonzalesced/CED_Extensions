@@ -5,10 +5,11 @@ class FeederVDMethod(object):
     DEMAND = "demand"
     CONNECTED = "connected"
     EIGHTY_PERCENT = "80_percent"
+    HUNDRED_PERCENT = "100_percent"
 
     @classmethod
     def all(cls):
-        return [cls.DEMAND, cls.CONNECTED, cls.EIGHTY_PERCENT]
+        return [cls.DEMAND, cls.CONNECTED, cls.EIGHTY_PERCENT, cls.HUNDRED_PERCENT]
 
 
 class NeutralBehavior(object):
@@ -36,7 +37,7 @@ class CircuitSettings(object):
         "neutral_behavior": NeutralBehavior.MATCH_HOT,
         "max_branch_voltage_drop": 0.03,
         "max_feeder_voltage_drop": 0.02,
-        "feeder_vd_method": FeederVDMethod.DEMAND,
+        "feeder_vd_method": FeederVDMethod.EIGHTY_PERCENT,
         "write_equipment_results": True,
         "write_fixture_results": False,
     }
@@ -61,6 +62,7 @@ class CircuitSettings(object):
                 # backward compatibility for old persisted values
                 legacy_map = {
                     "80_percent": FeederVDMethod.EIGHTY_PERCENT,
+                    "100_percent": FeederVDMethod.HUNDRED_PERCENT,
                 }
                 value = legacy_map.get(value, value)
             if value not in FeederVDMethod.all():

@@ -17,6 +17,7 @@ from CEDElectrical.refdata.conduit_area_table import CONDUIT_AREA_TABLE, CONDUIT
 from CEDElectrical.refdata.egc_table import EGC_TABLE
 from CEDElectrical.refdata.impedance_table import WIRE_IMPEDANCE_TABLE
 from CEDElectrical.refdata.ocp_cable_defaults import OCP_CABLE_DEFAULTS
+from CEDElectrical.refdata.service_ground_table import SERVICE_GROUND_TABLE
 from CEDElectrical.refdata.shared_params_table import SHARED_PARAMS
 from CEDElectrical.refdata.standard_ocp_table import BREAKER_FRAME_SWITCH_TABLE
 
@@ -267,6 +268,7 @@ class CircuitBranch(object):
         self.name = "{}-{}".format(self.panel, self.circuit_number)
 
         # feeder/transformer flags
+        self._is_transformer_secondary = self._detect_transformer_secondary()
         self._is_transformer_primary = False
         self._is_feeder = self._detect_feeder()
 
@@ -391,6 +393,21 @@ class CircuitBranch(object):
                         return True
         except Exception as e:
             logger.debug("is_feeder detection failed on {}: {}".format(self.name, e))
+        return False
+
+    def _detect_transformer_secondary(self):
+        """Detects transformer secondary by checking the base equipment family type."""
+        try:
+            base_equipment = getattr(self.circuit, "BaseEquipment", None)
+            if not base_equipment:
+                return False
+            if isinstance(base_equipment, DB.FamilyInstance):
+                family = base_equipment.Symbol.Family
+                param = family.get_Parameter(DB.BuiltInParameter.FAMILY_CONTENT_PART_TYPE)
+                if param and param.StorageType == DB.StorageType.Integer:
+                    return param.AsInteger() == 15  # Transformer part type
+        except Exception as e:
+            logger.debug("transformer secondary detection failed on {}: {}".format(self.name, e))
         return False
 
     @property
@@ -966,22 +983,23 @@ class CircuitBranch(object):
         if method == FeederVDMethod.CONNECTED:
             return connected_current if connected_current is not None else base_demand
 
-        if method == FeederVDMethod.EIGHTY_PERCENT:
-            eighty_current = None
+        if method in (FeederVDMethod.EIGHTY_PERCENT, FeederVDMethod.HUNDRED_PERCENT):
+            factor = 0.8 if method == FeederVDMethod.EIGHTY_PERCENT else 1.0
+            breaker_current = None
             try:
                 rating = self.rating
                 if rating is not None:
-                    eighty_current = 0.8 * float(rating)
+                    breaker_current = factor * float(rating)
             except Exception:
-                eighty_current = None
+                breaker_current = None
 
-            if eighty_current is None:
+            if breaker_current is None:
                 return base_demand
 
             if base_demand is None:
-                return eighty_current
+                return breaker_current
 
-            return base_demand if eighty_current < base_demand else eighty_current
+            return base_demand if breaker_current < base_demand else breaker_current
 
         # Default: demand load basis
         return base_demand
@@ -1230,6 +1248,10 @@ class CircuitBranch(object):
             if self._try_override_ground_size():
                 return
 
+        if self._is_transformer_secondary:
+            self._calculate_service_ground_size()
+            return
+
         amps = self.breaker_rating
         if amps is None:
             self.cable.ground_size = None
@@ -1248,6 +1270,24 @@ class CircuitBranch(object):
         # Track upsizing if the hots grew for voltage-drop/ampacity reasons
         self._upsize_ground_for_voltage_drop()
 
+        if self.cable.ig_qty:
+            self.cable.ig_size = self.cable.ground_size
+
+    def _calculate_service_ground_size(self):
+        hot_size = self.cable.hot_size
+        if not hot_size:
+            self.cable.ground_size = None
+            return
+
+        material = (
+            self._wire_material_override
+            or self.cable.material
+            or self._wire_info.get("wire_material", "CU")
+        )
+        material = str(material).upper().strip() if material else "CU"
+
+        service_ground = self._lookup_service_ground_size(hot_size, material)
+        self.cable.ground_size = service_ground
         if self.cable.ig_qty:
             self.cable.ig_size = self.cable.ground_size
 
@@ -1805,6 +1845,46 @@ class CircuitBranch(object):
             )
         )
         return largest
+
+    def _lookup_service_ground_size(self, hot_size, material):
+        table = SERVICE_GROUND_TABLE.get(material)
+        if not table:
+            self.log_warning(
+                "Service-ground table missing for material {}; leaving ground blank.".format(material)
+            )
+            return None
+
+        normalized = str(hot_size).strip()
+        if normalized.endswith('"'):
+            normalized = normalized[:-1]
+        normalized = normalized.upper().replace(" ", "")
+
+        # exact match first
+        for conductor, ground in table:
+            if conductor == normalized:
+                return ground
+
+        # fallback to next-largest conductor entry in table order
+        norm_index = self._wire_index(normalized)
+        if norm_index != -1:
+            for conductor, ground in table:
+                idx = self._wire_index(conductor)
+                if idx != -1 and idx >= norm_index:
+                    self.log_warning(
+                        "Service-ground size for hot {} not found; using {} entry {}.".format(
+                            normalized, conductor, ground
+                        )
+                    )
+                    return ground
+
+        # final fallback to largest listed
+        fallback_conductor, fallback_ground = table[-1]
+        self.log_warning(
+            "Service-ground size for hot {} not in table; using largest mapped size {} ({}).".format(
+                normalized, fallback_ground, fallback_conductor
+            )
+        )
+        return fallback_ground
 
     def _conductor_area_value(self, wire_size, insulation):
         if not wire_size:

@@ -80,6 +80,7 @@
             <ComboBoxItem Content="Demand Load" Tag="demand"/>
             <ComboBoxItem Content="Connected Load" Tag="connected"/>
             <ComboBoxItem Content="80% of Breaker" Tag="80_percent"/>
+            <ComboBoxItem Content="100% of Breaker" Tag="100_percent"/>
         </ComboBox>
         <TextBlock x:Name="feeder_vd_method_default" Grid.Row="5" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
 
