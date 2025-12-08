@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import os
+
 import Autodesk.Revit.DB.Electrical as DBE
 from System import Guid
 from pyrevit import DB, script, revit
@@ -20,6 +22,7 @@ from CEDElectrical.refdata.standard_ocp_table import BREAKER_FRAME_SWITCH_TABLE
 
 console = script.get_output()
 logger = script.get_logger()
+DEV_LOGGING = bool(int(os.environ.get("CED_DEV_LOGGING", "0")))
 
 
 class NoticeCollector(object):
@@ -284,20 +287,24 @@ class CircuitBranch(object):
     # Logging helpers
     # -----------------------------------------------------------------
     def log_info(self, msg, *args):
-        logger.info("{}: {}".format(self.name, msg), *args)
+        if DEV_LOGGING:
+            logger.info("{}: {}".format(self.name, msg), *args)
 
     def log_warning(self, msg, *args):
         formatted = msg.format(*args) if args else msg
         self.notices.add("WARNING", formatted)
-        logger.warning("{}: {}".format(self.name, formatted))
+        if DEV_LOGGING:
+            logger.warning("{}: {}".format(self.name, formatted))
 
     def log_error(self, msg, *args):
         formatted = msg.format(*args) if args else msg
         self.notices.add("ERROR", formatted)
-        logger.error("{}: {}".format(self.name, formatted))
+        if DEV_LOGGING:
+            logger.error("{}: {}".format(self.name, formatted))
 
     def log_debug(self, msg, *args):
-        logger.debug("{}: {}".format(self.name, msg), *args)
+        if DEV_LOGGING:
+            logger.debug("{}: {}".format(self.name, msg), *args)
 
     def _warn_if_overloaded(self):
         try:
@@ -485,6 +492,12 @@ class CircuitBranch(object):
         for v in CONDUCTOR_AREA_TABLE.values():
             valid_insulations.update(v.get("area", {}).keys())
 
+        def _is_clear_token(val):
+            try:
+                return str(val).strip() == "-"
+            except Exception:
+                return False
+
         # --- material ---
         if self._wire_material_override:
             norm = str(self._wire_material_override).upper().strip()
@@ -548,11 +561,49 @@ class CircuitBranch(object):
         if self._conduit_size_override:
             raw = self._conduit_size_override
             norm = self._normalize_conduit_type(raw)
-            if norm not in CONDUIT_SIZE_INDEX:
-                self.log_warning(
-                    "Conduit size '{}' invalid; using calculated size.".format(raw)
-                )
+            if norm is None:
                 self._conduit_size_override = None
+            elif self._is_clear_token(norm):
+                self._user_clear_conduit = True
+                self._conduit_size_override = "-"
+            elif norm not in CONDUIT_SIZE_INDEX:
+                if self._auto_calculate_override:
+                    self.log_warning(
+                        "Conduit size '{}' invalid; using calculated size.".format(raw)
+                    )
+                self._conduit_size_override = None
+            else:
+                self._conduit_size_override = norm
+
+        self._user_clear_hot = False
+        self._user_clear_conduit = False
+
+        def _check_size(name, attr, warn_user=True):
+            raw = getattr(self, attr)
+            if raw is None:
+                return
+            if self._is_clear_token(raw):
+                setattr(self, "_user_clear_{}".format(name), True)
+                setattr(self, attr, "-")
+                return
+            norm = self._normalize_wire_size(raw)
+            if norm not in CONDUCTOR_AREA_TABLE:
+                if warn_user:
+                    suffix = "using auto sizing." if name == "hot" else "using calculated sizing."
+                    if name == "ground":
+                        suffix = "using EGC lookup."  # always table-based fallback
+                    self.log_warning(
+                        "{} size override '{}' invalid; {}".format(
+                            name.capitalize(), raw, suffix
+                        )
+                    )
+                setattr(self, attr, None)
+                return
+            setattr(self, attr, norm)
+
+        _check_size("hot", "_wire_hot_size_override", warn_user=self._auto_calculate_override)
+        _check_size("neutral", "_wire_neutral_size_override", warn_user=self._auto_calculate_override)
+        _check_size("ground", "_wire_ground_size_override", warn_user=self._auto_calculate_override)
 
         # Manual-only validations below
         if not self._auto_calculate_override:
@@ -590,31 +641,11 @@ class CircuitBranch(object):
                     )
                 )
 
-        # --- wire sizes ---
-        def _check_size(name, attr):
-            raw = getattr(self, attr)
-            if not raw:
-                return
-            if isinstance(raw, str) and raw.strip() == "-":
-                setattr(self, "_user_clear_{}".format(name), True)
-                setattr(self, attr, None)
-                return
-            norm = self._normalize_wire_size(raw)
-            if norm not in CONDUCTOR_AREA_TABLE:
-                self.log_warning("{} size override '{}' invalid; will auto size.".format(name.capitalize(), raw))
-                setattr(self, attr, None)
-
-        self._user_clear_hot = False
-        self._user_clear_conduit = False
-
-        _check_size("hot", "_wire_hot_size_override")
-        _check_size("neutral", "_wire_neutral_size_override")
-        _check_size("ground", "_wire_ground_size_override")
 
         if self._conduit_size_override and isinstance(self._conduit_size_override, str):
-            if self._conduit_size_override.strip() == "-":
+            if self._is_clear_token(self._conduit_size_override):
                 self._user_clear_conduit = True
-                self._conduit_size_override = None
+                self._conduit_size_override = "-"
 
         if self._wire_sets_override and self._wire_sets_override > 1 and self._is_feeder:
             hot_norm = self._normalize_wire_size(self._wire_hot_size_override) or ""
@@ -952,6 +983,8 @@ class CircuitBranch(object):
         return self.cable.ig_qty or 0
 
     def _format_wire_size(self, normalized):
+        if (self.cable.cleared or self.calc_failed) and self._user_clear_hot:
+            return "-"
         if not normalized or self.cable.cleared or self.calc_failed:
             return ""
         prefix = self.settings.wire_size_prefix or ""
@@ -1020,7 +1053,7 @@ class CircuitBranch(object):
     @property
     def conduit_size(self):
         if self.conduit.cleared or self.calc_failed:
-            return ""
+            return "-" if self._user_clear_conduit else ""
         size = self.conduit.size
         if not size:
             return ""
@@ -1104,7 +1137,7 @@ class CircuitBranch(object):
             self.cable.neutral_size = self.cable.neutral_size or self.cable.hot_size
 
     def calculate_ground_wire_size(self):
-        """EGC sizing with fallback to table-lookup scaling."""
+        """EGC sizing based on breaker rating and material tables."""
         if self.cable.cleared or self.calc_failed:
             self.cable.ground_size = None
             return
@@ -1119,68 +1152,15 @@ class CircuitBranch(object):
             self.cable.ground_size = None
             return
 
-        material = self.cable.material or self._wire_info.get("wire_material", "CU")
-        wire_info = self._wire_info or {}
-
-        base_ground = wire_info.get("wire_ground_size")
-        base_hot = wire_info.get("wire_hot_size")
-        base_sets = wire_info.get("number_of_parallel_sets", 1) or 1
-
-        calc_hot = self.cable.hot_size
-        calc_sets = self.cable.sets or 1
-
-        if not base_ground:
-            egc_list = EGC_TABLE.get(material)
-            if not egc_list:
-                self.log_warning("EGC table missing for material {}.".format(material))
-                self.cable.ground_size = None
-                return
-            for threshold, size in egc_list:
-                if amps <= threshold:
-                    self.cable.ground_size = size
-                    return
-            self.log_warning(
-                "Breaker {}A exceeds EGC table; using largest EGC size {}.".format(
-                    amps, egc_list[-1][1]
-                )
-            )
-            self.cable.ground_size = egc_list[-1][1]
-            return
-
-        if not (base_hot and base_ground and calc_hot):
-            self.log_warning(
-                "Unable to scale ground size (missing base sizes); leaving ground blank."
-            )
-            self.cable.ground_size = None
-            return
-
-        base_hot_cmil = CONDUCTOR_AREA_TABLE.get(base_hot, {}).get("cmil")
-        calc_hot_cmil = CONDUCTOR_AREA_TABLE.get(calc_hot, {}).get("cmil")
-        base_ground_cmil = CONDUCTOR_AREA_TABLE.get(base_ground, {}).get("cmil")
-
-        if not (base_hot_cmil and calc_hot_cmil and base_ground_cmil):
-            self.log_warning("Ground size lookup failed for provided wire sizes; leaving blank.")
-            self.cable.ground_size = None
-            return
-
-        total_base = base_sets * base_hot_cmil
-        total_calc = calc_sets * calc_hot_cmil
-        if total_base <= 0:
-            self.cable.ground_size = None
-            return
-
-        new_ground_cmil = base_ground_cmil * (float(total_calc) / total_base)
-
-        candidates = sorted(
-            CONDUCTOR_AREA_TABLE.items(), key=lambda kv: kv[1].get("cmil", 0)
+        material = (
+            self._wire_material_override
+            or self.cable.material
+            or self._wire_info.get("wire_material", "CU")
         )
-        for wire, data in candidates:
-            cmil = data.get("cmil")
-            if cmil and cmil >= new_ground_cmil:
-                self.cable.ground_size = wire
-                return
+        material = str(material).upper().strip() if material else "CU"
 
-        self.cable.ground_size = None
+        egc_size = self._lookup_egc_size(amps, material)
+        self.cable.ground_size = egc_size
 
     def calculate_conduit_size(self):
         """Size conduit (or apply override) using CableSet + ConduitRun."""
@@ -1303,7 +1283,7 @@ class CircuitBranch(object):
             return True
 
         self.log_warning(
-            "Ground size override '{}' invalid; auto-calculating based on breaker/material.".format(
+            "Ground size override '{}' invalid; sizing from EGC table for breaker/material.".format(
                 self._wire_ground_size_override
             )
         )
@@ -1658,17 +1638,48 @@ class CircuitBranch(object):
             logger.debug("Failed to read param {} on {}: {}".format(guid, self.name, e))
         return None
 
+    def _is_clear_token(self, val):
+        try:
+            return str(val).strip() == "-"
+        except Exception:
+            return False
+
     def _normalize_wire_size(self, val):
         if not val:
             return None
         prefix = self.settings.wire_size_prefix or ""
+        if self._is_clear_token(val):
+            return "-"
         return str(val).replace(prefix, "").strip()
 
     def _normalize_conduit_type(self, val):
         if not val:
             return None
-        suffix = self.settings.conduit_size_suffix or ""
-        return str(val).replace(suffix, "").strip()
+        text = str(val).strip()
+        if self._is_clear_token(text):
+            return "-"
+
+        suffix = (self.settings.conduit_size_suffix or "").strip()
+        if suffix and text.upper().endswith(suffix.upper()):
+            text = text[: -len(suffix)]
+
+        text = text.strip().replace(" ", "")
+        if not text:
+            return None
+        # strip trailing material suffix like C/c
+        if text and text[-1].lower() == "c":
+            text = text[:-1]
+
+        if not text:
+            return None
+
+        if text.endswith('"'):
+            core = text[:-1]
+        else:
+            core = text
+
+        norm = core if core.endswith('"') else core + '"'
+        return norm
 
     def _wire_index(self, wire):
         try:
@@ -1687,3 +1698,21 @@ class CircuitBranch(object):
         if idx == -1 or limit_idx == -1:
             return False
         return idx > limit_idx
+
+    def _lookup_egc_size(self, amps, material):
+        table = EGC_TABLE.get(material)
+        if not table:
+            self.log_warning("EGC table missing for material {}; leaving ground blank.".format(material))
+            return None
+
+        for threshold, size in table:
+            if amps <= threshold:
+                return size
+
+        largest = table[-1][1]
+        self.log_warning(
+            "Breaker {}A exceeds EGC table for {}; using largest EGC size {}.".format(
+                amps, material, largest
+            )
+        )
+        return largest
