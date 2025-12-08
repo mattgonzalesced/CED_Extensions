@@ -1,30 +1,36 @@
-Load Equipment Definition – Code Explained
-==========================================
+﻿Load Equipment Definition – Code Explained
+=========================================
 
-Purpose
--------
-This script exposes a read-only view of the YAML data for a single equipment
-definition.  It is primarily used for verification and documentation, allowing
-designers to inspect linked element definitions, offsets, parameters, and tags
-without editing or placing anything.
+Use Case
+--------
+Quickly drop a single equipment definition (parent + children) at a picked
+point for review or ad-hoc placement without running the full linked-host
+workflow. The script leverages the same placement engine as Place Linked
+Elements, so the behavior is consistent with production automation.
 
-Data Flow
+Key Steps
 ---------
-1. **YAML Retrieval** – `load_active_yaml_data` fetches the current dataset from
-   Extensible Storage.  The path is converted to a readable label using
-   `get_yaml_display_name`.
-2. **Selection Dialog** – The user is shown a list of equipment definition names
-   derived from `equipment_definitions`.  Once selected, the script builds a
-   human-friendly summary of its contents.
-3. **Formatting** – Each linked set is iterated, and the script lists LED IDs,
-   labels, category names, offset tuples, parameter dictionaries, and tag
-   definitions.  The goal is to provide an exact snapshot that mirrors what the
-   placer will consume.
-4. **Display** – The summary text is shown via `forms.alert` or a custom form,
-   giving the user a scrollable, copyable readout.
+1. **Profile Repository** – Load the active YAML, convert it into legacy profile
+   objects, and feed them into `ProfileRepository`. This gives us access to the
+   exact `LinkedElementDefinition` objects (labels, offsets, tags, static
+   parameters).
+2. **User Selection** – Prompt the designer to choose which CAD name / equipment
+   definition to preview.
+3. **Point Capture** – Ask the user for a base point and rotation inside the
+   document. That point becomes the “parent anchor” for the temporary placement.
+4. **Child Requests** – For each LED in the definition, call
+   `build_child_requests` to translate the stored offsets into world coordinates
+   relative to the parent point. This produces the same request objects that
+   Place Linked Elements consumes.
+5. **Placement Engine** – Instantiate `PlaceElementsEngine` with `allow_tags=False`
+   (no need to tag during previews) and call `place_from_csv` with the synthesized
+   rows. The engine handles activation, rotation, Element_Linker stamping, etc.
 
-Key Observations
-----------------
-* No changes are written back to storage; this is strictly informational.
-* The script shares helper utilities with other buttons, ensuring the view uses
-  the same normalized naming conventions as the placer and QA/QC tools.
+Why It Matters
+--------------
+* Provides a safe, undoable preview of definitions built via Select Parent
+  Element/Add Profiles.
+* Lets designers verify spacing or parent filters in-context before they commit
+  to matching linked hosts.
+* Because everything runs through the placement engine, the geometry and
+  Element_Linker metadata match exactly what automation will produce later.

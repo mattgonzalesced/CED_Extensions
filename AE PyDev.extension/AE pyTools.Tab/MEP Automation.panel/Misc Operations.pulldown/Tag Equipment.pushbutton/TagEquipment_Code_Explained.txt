@@ -1,39 +1,36 @@
-Tag Equipment – Code Explained
-==============================
+﻿Tag Equipment – Code Explained
+=============================
 
 Purpose
 -------
-Automatically places the annotation families recorded under the `tags` array of
-each linked element definition.  The script reads Element_Linker metadata from
-placed instances, pulls tag definitions from the YAML, and instantiates tags in
-the active view with the correct offsets and rotation.
+Place or refresh hosted tags for every family instance that carries Element_Linker
+metadata. Tags are defined in the YAML under each linked element definition, so
+this script replays the exact tag families, offsets, and rotations captured by
+Select Parent Element or Add YAML Profiles.
 
-Processing Steps
-----------------
-1. **Scan Instances** – Collects all FamilyInstances with Element_Linker data.
-   The payload contains the linked element definition ID, allowing the script to
-   map each instance back to the source LED.
-2. **Lookup Tag Data** – Using the active YAML, the script finds the tag entry
-   for each LED.  Each tag includes family name, type name, offsets, rotation,
-   and optional parameter overrides.
-3. **Create Tag** – For each tag definition, the script ensures the family is
-   loaded and activated, then calls `IndependentTag.Create` or new family
-   instance creation depending on whether the tag is a true annotation family or
-   a generic annotation.
-4. **Apply Offsets and Rotation** – The tag head position is calculated by
-   offsetting the host instance location via the stored inches values.  The tag
-   is rotated by the stored rotation degrees plus the host orientation to mimic
-   the original capture.
-5. **Parameter Set** – Any custom parameters defined in the YAML are set on the
-   tag (string/integer/double handling mirrors the Add workflow).
-
-Error Handling
+Execution Flow
 --------------
-If tag families are missing, the script logs which labels failed so users can
-load the required families.  It also skips read-only parameters gracefully.
+1. **Repository Build** – We load the active YAML, convert it into a
+   `ProfileRepository`, and group tag definitions by tag family/type via
+   `_collect_tag_entries`. Each context entry includes the LED ID and optional
+   `dev-Group ID` so we can filter hosts.
+2. **Host Scan** – `_collect_tag_candidates` (inside the script) walks the active
+   view’s FamilyInstances, reading their Element_Linker payload to identify the
+   LED ID. Instances are grouped by dev-Group so a designer can target just one
+   configuration at a time.
+3. **Tag Placement** – For each candidate/LED pair we load the tag family if
+   needed, compute the tag head point by rotating the stored inch offsets by the
+   host’s facing orientation, then call `IndependentTag.Create` (or create a new
+   family instance for model tags). Parameter overrides from the YAML are
+   written onto the new tag instance so annotations show the same metadata as
+   the original capture.
+4. **Feedback** – The script reports missing families or LEDs with no tag
+   definition so users know which profiles need maintenance.
 
-Undo and Storage
-----------------
-Tags are created inside a Revit transaction with an identifiable name.  Because
-the script does not modify the YAML, there is no Extensible Storage write; the
-action is purely geometric.
+Key Points
+----------
+* Works across linked definitions created via Select Parent Element or Add YAML
+  Profiles because both tools populate the `tags` array in the same format.
+* The command is view-aware: run it per sheet/plan where annotations are needed.
+* Everything runs inside a Revit transaction, so misplacements can be undone in
+  one step.

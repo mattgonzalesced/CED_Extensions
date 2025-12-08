@@ -1,15 +1,9 @@
-If your equipment definitions capture hosted tags, run Tag Equipment after a
-placement pass to ensure every instance receives the annotation offsets and
-orientations described in the YAML.
+Run Tag Equipment after Select Parent, Add YAML Profiles, or Place Linked
+Elements whenever a definition includes hosted tag data. The command looks up
+each instance by its Element_Linker payload, filters by dev-Group so you only
+tag the intended equipment, and drops the captured tags at their recorded
+offsets within the active view.
 
-The tool scans for Element_Linker metadata, queries the definition to retrieve
-tag families, and instantiates them on the specified view with the stored
-offsets, rotation, and parameter overrides.
-
-Because tags depend on view context, launch the workflow from the sheet or plan
-where you want them to appear, and rerun for additional views if needed; the
-automation reuses the same metadata, so you never have to reselect hosts.
-
-If any tags fail to place, review the output for missing family warnings, then
-update the definition or load the required tag families before rerunning the
-command to finish annotation.
+Launch it from whatever plan or sheet you need annotated; rerun for additional
+views as required. If a tag family is missing, the summary lists the LED ID so
+you can load the family or edit the definition and run Tag Equipment again.

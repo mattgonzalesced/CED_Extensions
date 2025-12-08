@@ -1,46 +1,41 @@
-Place Linked Elements – Code Explained
-======================================
+﻿Place Linked Elements – Code Explained
+=====================================
 
-Purpose
--------
-This script automates the placement of equipment definitions described in the
-YAML file by matching host elements (in the model or linked documents) whose
-names align with CAD names stored in the definitions.
+Objective
+---------
+Automate the placement of every equipment definition stored in Extensible
+Storage by matching host elements (or linked instances) to the CAD names recorded
+in the YAML. Each placement replay the captured offsets, rotations, tags, and
+parameters exactly as Select Parent Element or Update Vector saved them.
 
-Main Stages
------------
-1. **Data Preparation** – The script loads the active YAML, converts it into
-   legacy “profiles” using `profile_schema.equipment_defs_to_legacy`, and feeds
-   them into `LogicClasses.ProfileRepository`.  This repository exposes methods
-   for retrieving labels per CAD name.
-2. **Host Collection** – `_collect_placeholders` iterates all FamilyInstances and
-   Groups in the document, plus instances inside RevitLinkInstances.  For each,
-   `_name_variants` produces normalized name strings (family : type, type only,
-   etc.), and matching names are recorded with their 3D point and rotation.
-3. **CSV Row Construction** – For every matched host, `_build_row` writes a row
-   containing position coordinates (in inches) and rotation.  This mimics the
-   format expected by `PlaceElementsEngine.place_from_csv`.
-4. **Placement Engine** – The script instantiates `PlaceElementsEngine`, passing
-   the profile repository and optional default level.  The engine handles
-   symbol activation, group placement, rotation, tag creation, and metadata
-   stamping via `Element_Linker`.
-5. **Summary** – After placement, a report is built listing how many hosts were
-   processed, how many elements were placed, and which definitions lacked
-   matches or linked types.
+Execution Pipeline
+------------------
+1. **Repository Build** – `load_active_yaml_data` feeds `equipment_defs_to_legacy`
+   and `ProfileRepository._parse_profiles`, producing an object model where each
+   CAD name exposes its linked element definitions (LEDs).
+2. **Host Discovery** – `_collect_placeholders` walks FamilyInstances/Groups and
+   RevitLinkInstances, normalizes their names (`_name_variants`), transforms
+   linked coordinates into the host document, and stores base points + rotations
+   for every name that matches a CAD definition.
+3. **Row Construction** – For every match we build a “CSV row” describing
+   placement coordinates (in inches) and rotation. `selection_map` ties each CAD
+   name to the list of LED labels that should be instantiated.
+4. **Placement Engine** – `PlaceElementsEngine.place_from_csv` does the heavy
+   lifting: activating symbols, placing families or groups, applying the offset
+   tuples from the YAML, stamping the Element_Linker payload (with parent
+   rotation), and creating hosted tags when the definition supplies them.
+5. **Reporting** – After the run we summarize processed hosts, actual placements,
+   and any definitions that still lack matching hosts or linked types. This ties
+   directly into QA/QC so designers know which names still need aliasing.
 
-Noteworthy Logic
-----------------
-* **Transform Handling** – When scanning Revit links, the script transforms
-  linked coordinates into the host coordinate system to ensure placements occur
-  in the correct location.
-* **Metadata** – The placement engine copies the Element_Linker template stored
-  in each linked element definition to the newly created instances, ensuring
-  QA/QC can trace every placement back to its source LED.
-* **Level Selection** – Users can explicitly pick a level for placement; if none
-  is selected, the script falls back to the first Level found in the document.
+Important Behaviors
+-------------------
+* The engine writes Element_Linker data to every instance so Update Vector, Tag
+  Equipment, and QA/QC can find them immediately.
+* Linked models are fully supported because points/rotations are transformed into
+  project coordinates before placement.
+* The command is undoable; each placement batch executes inside a single Revit
+  transaction for consistency.
 
-Error Handling
---------------
-If no hosts are found or no rows are generated, the script alerts the user
-instead of attempting placement.  This prevents empty transactions and makes
-diagnosing name mismatches easier.
+If no matches or rows are produced, the script raises an alert instead of running
+the engine, preventing partially configured data from creating stray elements.

@@ -1,14 +1,14 @@
-Use Load Equipment Definition to inspect how a profile will drive placements
-without committing to creation; it is essentially a dry run that surfaces every
-linked element definition and its captured offsets or parameters.
+Load Equipment Definition is a lightweight placement tool. Pick a definition
+from the active YAML, choose a base point in the model, and the command drops
+that configuration (parent plus children) so you can validate spacing before
+running full automation.
 
-Select the target definition from the list populated by the active YAML, then
-review the dialog listing its LEDs, tags, and parent filter behavior; this helps
-confirm the structure before running an actual placement workflow.
+Because it uses the same placement engine as Place Linked Elements, offsets,
+tags, parameters, and Element_Linker payloads are identical. This makes it
+ideal for prototyping layouts, testing new Select Parent captures, or sharing a
+single configuration with the team without touching existing hosts elsewhere
+in the model.
 
-From here you can copy IDs, take screenshots, or communicate details to other
-team members so everyone understands what the automation will produce on the
-floor plan when the placer runs.
-
-Close the viewer when finished; no data is modified, and you can immediately
-switch to other tools such as Add, Delete, or Merge without reloading the YAML.
+Delete the temporary instance when you’re done or convert it into the real
+installation; either way, the workflow provides a fast preview of how the YAML
+definition behaves in the live project.
