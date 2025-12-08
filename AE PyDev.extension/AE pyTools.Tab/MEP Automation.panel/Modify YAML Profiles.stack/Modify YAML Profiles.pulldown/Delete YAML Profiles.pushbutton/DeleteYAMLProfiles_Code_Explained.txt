@@ -1,52 +1,37 @@
-Delete YAML Profiles – Code Explained
-=====================================
+﻿Delete YAML Profiles – Code Explained
+===================================
 
 Purpose
 -------
-This script removes linked element definitions (LEDs) or entire equipment
-definitions from the active YAML store.  It handles cascade deletion of child
-relationships, updates Extensible Storage, and communicates results through
-pyRevit alerts.
+Remove one or more linked element definitions (LEDs) from the active YAML and
+cascade the change through dependent equipment definitions. The script cleans up
+anchors, child relations, and Extensible Storage state so no orphan records
+remain.
 
-Key Imports
------------
-* `ExtensibleStorage.yaml_store` – provides `load_active_yaml_data` and
-  `save_active_yaml_data` to interact with the in-model YAML.
-* `LogicClasses.yaml_path_cache` – used for display-friendly file names.
-* `.NET interfaces` – `IDictionary` detection allows normalization of Revit
-  host objects.
+Major Components
+----------------
+1. **Data Load** – `load_active_yaml_data` returns both the normalized path and a
+   writeable Python dict representing `equipment_definitions`.
+2. **Definition/LED Indexing** – `_build_definition_index` and
+   `_collect_type_entries` build selection lists showing human-friendly labels
+   (`Family : Type [LED-ID]`). Anchors (LED-000) are hidden unless they are the
+   only entry.
+3. **Deletion** – `_erase_entries` removes the chosen LEDs. If the remaining set
+   only contains anchors, `_prune_anchor_only_definitions` drops the definition
+   entirely. Child relationships stored under `linked_relations.children` are
+   scanned so any references to the removed LEDs disappear as well.
+4. **Cascade** – `_cascade_remove_children` looks for downstream definitions that
+   were anchored to the deleted parent and removes them to avoid dangling
+   hierarchies. `_cleanup_relations` finalizes the sweep.
+5. **Persistence** – `save_active_yaml_data` writes the new dataset back into
+   Extensible Storage with the action name “Delete YAML Profiles” so history and
+   undo/redo remain accurate.
 
-Workflow Breakdown
-------------------
-1. **Load YAML** – Similar to Add Profiles, the script reads the active YAML
-   data and path so modifications occur within Extensible Storage.
-2. **Build Definition Index** – `_build_definition_index` constructs a map of
-   display names to entries, ensuring each equipment definition can be retrieved
-   quickly.
-3. **Collect LED Entries** – `_collect_type_entries` traverses linked sets and
-   LED arrays, preparing a list for selection with human-readable labels.
-4. **User Selection** – pyRevit dialogs prompt the user to pick the definition
-   and one or more LED entries to delete.
-5. **Erase LEDs** – `_erase_entries` removes chosen LEDs from the definition’s
-   linked sets.  If a linked set becomes empty, it is dropped, and if the
-   definition itself becomes empty, it is removed from the data entirely.
-6. **Child Cascade** – `_cascade_remove_children` handles dependent definitions
-   using `linked_relations`.  When a parent LED anchoring a child definition is
-   deleted, the script removes the child to keep the hierarchy consistent.
-7. **Cleanup** – `_cleanup_relations` sweeps remaining definitions to remove
-   references to deleted children or parents, preventing dangling pointers.
-8. **Save** – The updated data is written back with `save_active_yaml_data`
-   using a descriptive action string (“Delete YAML Profiles”), which logs an
-   undoable transaction in Extensible Storage.
-
-Human Feedback
---------------
-After completion, the script alerts the user with a summary showing how many
-LEDs and definitions were removed.  If no changes occurred (e.g., the user
-selected none), the workflow exits silently.
-
-Error Handling
---------------
-All dictionary accesses are defensive.  The script uses helper functions like
-`_normalize_name` to avoid case sensitivity issues, and selection dialogs guard
-against `None` entries to minimize runtime errors.
+Highlights
+----------
+* Works with definitions produced by Select Parent Element, Add Profiles, or the
+  legacy JSON importer because everything is normalized before deletion.
+* Automatically strips the placeholder anchor (LED-000) when the last real LED
+  is removed, preventing QA/QC from reporting phantom definitions.
+* Provides a summary of LEDs and definitions deleted so crews can document the
+  change set.

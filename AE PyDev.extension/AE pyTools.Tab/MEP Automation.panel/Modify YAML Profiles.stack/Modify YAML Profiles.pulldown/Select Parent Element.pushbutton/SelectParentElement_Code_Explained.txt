@@ -1,34 +1,45 @@
-Select Parent Element – Code Explained
-======================================
+﻿Select Parent Element – Code Explained
+=====================================
 
-Objective
----------
-Verify whether a given Revit element matches the parent filter criteria defined
-inside a YAML equipment definition.  This prevents failed placements by letting
-designers test hosts against the filter logic before running the placer.
+Purpose
+-------
+`Select Parent Element` is the authoring entry point for new equipment
+definitions. Instead of manually editing YAML, the script captures live Revit
+geometry, parameters, and hosted tags, then writes the result straight into the
+active profile stored in Extensible Storage.
 
-Key Functions
+Core Workflow
 -------------
-1. **Data Loading** – The script loads the active YAML and indexes each
-   definition’s parent filter block (category, family regex, type regex,
-   parameter filters).
-2. **User Selection** – The user picks an equipment definition followed by a
-   Revit element.  The script reads the element’s category, family, type, and
-   parameter values via the Revit API.
-3. **Filter Evaluation** – A helper function compares the element’s properties
-   against the filter patterns, evaluating wildcard matches and parameter
-   conditions.  The result is a boolean match plus diagnostic messages for each
-   criterion.
-4. **Feedback** – The outcome (match or mismatch) is presented through a
-   formatted dialog.  When mismatches occur, the dialog enumerates which filter
-   component failed (e.g., category mismatch, parameter not equal, etc.).
+1. **Bootstrap** – Load the active YAML (`load_active_yaml_data`), repair any
+   duplicate `SET-###` identifiers, and either locate or create the equipment
+   definition via `ensure_equipment_definition`. Each definition keeps a
+   special anchor LED (`…-LED-000`) that records the parent family, so all
+   children inherit the correct frame of reference.
+2. **Capture** – The selected child instances are normalized into dictionaries
+   (`_build_child_entries`). For each element we read location, orientation,
+   dev-group / circuit parameters, and hosted tag positions. Offsets are
+   computed with `compute_offsets_from_points`, and we build a complete
+   `Element_Linker` payload which now includes the parent rotation. This makes
+   the data resilient when Update Vector or Place Linked Elements reconstruct
+   placements later.
+3. **Persist** – The newly minted linked element definitions are appended to
+   the YAML tree, placeholders/anchors are pruned when no longer needed, and
+   `save_active_yaml_data` pushes the snapshot back into Extensible Storage.
+   The script also writes the Element_Linker text back onto the live elements
+   inside the document so QA/QC, Tag Equipment, and Update Vector can discover
+   the instances immediately.
 
-Implementation Notes
---------------------
-* Parameter filters support equals, contains, and regex comparisons depending on
-  what the YAML contains.
-* Because this workflow never writes data, it does not call
-  `save_active_yaml_data`; it is purely consultative.
-* The script shares normalization logic with the placer so results are
-  consistent: names are lowercased, whitespace trimmed, and wildcard patterns
-  converted to regex.
+Notable Behaviors
+-----------------
+* Offsets, rotations, tags, and parameter dictionaries are all captured in the
+  exact format expected by the placement engine, so a subsequent `Place Linked
+  Elements` run reproduces the layout verbatim.
+* When the parent element lives inside a Revit link, transforms are applied to
+  convert all coordinates into project space before the offsets are stored.
+* Diagnostic popups summarize which child labels were added and how many types
+  were created, giving the designer quick feedback without opening the raw YAML.
+
+This script is therefore the canonical bridge between reality in the model and
+automation in YAML—every other tool (Update Vector, Tag Equipment, QA/QC,
+placer) consumes the metadata that Select Parent Element authoritatively
+creates.

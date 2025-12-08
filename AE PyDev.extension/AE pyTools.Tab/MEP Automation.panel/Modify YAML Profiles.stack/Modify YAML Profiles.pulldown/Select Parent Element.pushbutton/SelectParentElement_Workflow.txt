@@ -1,15 +1,11 @@
-Select Parent Element helps verify which Revit element satisfies the parent
-filter for a given configuration; it highlights the element, displays its
-parameters, and shows whether optional prompts will trigger.
+Select Parent Element now captures real production data. Start by selecting the
+child instances that should belong to a configuration. When prompted for the
+parent, pick the host family (linked or local). The tool automatically seeds an
+equipment definition if none exists, stores the parent anchor (LED-000), and
+records each child’s offsets, rotation, tags, and Element_Linker payload.
 
-Launch the tool, pick the element you expect to qualify, and confirm the dialog
-states that the filter rules match; if they do not, adjust the definition
-through Edit YAML Profiles or Update Vector until the test passes.
-
-Because the tool reads directly from the active YAML, it is ideal for quickly
-debugging field conditions in the model without running a full placement pass
-that might fail mid way through.
-
-Repeat as necessary for different family types or levels; the workflow is
-non-destructive and provides immediate feedback on whether linked elements meet
-the pattern matching criteria you configured.
+Because offsets are written directly into Extensible Storage with parent
+rotation, the data survives link reloads, rename operations, and matches what
+Load/Place tools expect. Rerun the workflow whenever you reposition equipment:
+Select Parent Element becomes the canonical way to author new linked element
+definitions without manually editing YAML.
