@@ -32,6 +32,20 @@ from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml
 TITLE = "Select Parent Element"
 ELEMENT_LINKER_PARAM_NAME = "Element_Linker Parameter"
 ELEMENT_LINKER_PARAM_NAMES = ("Element_Linker", ELEMENT_LINKER_PARAM_NAME)
+LEVEL_PARAM_NAMES = (
+    "SCHEDULE_LEVEL_PARAM",
+    "INSTANCE_REFERENCE_LEVEL_PARAM",
+    "FAMILY_LEVEL_PARAM",
+    "INSTANCE_LEVEL_PARAM",
+)
+
+
+def _iter_level_bips():
+    for name in LEVEL_PARAM_NAMES:
+        try:
+            yield getattr(BuiltInParameter, name)
+        except AttributeError:
+            continue
 
 
 def _linked_element_from_reference(doc, reference):
@@ -226,13 +240,7 @@ def _get_level_element_id(elem):
             return lvl.IntegerValue
     except Exception:
         pass
-    level_params = (
-        BuiltInParameter.SCHEDULE_LEVEL_PARAM,
-        BuiltInParameter.INSTANCE_REFERENCE_LEVEL_PARAM,
-        BuiltInParameter.FAMILY_LEVEL_PARAM,
-        BuiltInParameter.INSTANCE_LEVEL_PARAM,
-    )
-    for bip in level_params:
+    for bip in _iter_level_bips():
         try:
             param = elem.get_Parameter(bip)
         except Exception:

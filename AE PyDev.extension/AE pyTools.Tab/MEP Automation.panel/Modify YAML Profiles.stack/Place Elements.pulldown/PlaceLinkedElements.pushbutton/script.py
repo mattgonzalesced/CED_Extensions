@@ -156,6 +156,43 @@ def _name_variants(elem):
     return {_normalize_name(name) for name in names if _normalize_name(name)}
 
 
+def _parse_payload_pose(payload_text):
+    if not payload_text:
+        return None
+    location = None
+    rotation = None
+    parent_rotation = None
+    for raw_line in payload_text.splitlines():
+        line = raw_line.strip()
+        if not line or ":" not in line:
+            continue
+        key, _, remainder = line.partition(":")
+        key = key.strip().lower()
+        value = remainder.strip()
+        if key.startswith("location xyz"):
+            parts = [p.strip() for p in value.split(",")]
+            if len(parts) == 3:
+                try:
+                    location = tuple(float(p) for p in parts)
+                except Exception:
+                    location = None
+        elif key.startswith("parent rotation"):
+            try:
+                parent_rotation = float(value)
+            except Exception:
+                parent_rotation = None
+        elif key.startswith("rotation"):
+            try:
+                rotation = float(value)
+            except Exception:
+                rotation = None
+    if not location:
+        return None
+    point = XYZ(location[0], location[1], location[2])
+    final_rotation = parent_rotation if parent_rotation is not None else (rotation or 0.0)
+    return {"point": point, "rotation": final_rotation}
+
+
 def _get_element_point(elem):
     location = getattr(elem, "Location", None)
     if not location:
@@ -292,6 +329,28 @@ def _collect_placeholders(doc, normalized_targets):
     return placements
 
 
+def _anchor_rows_for_cad(repo, cad_name):
+    anchors = []
+    if hasattr(repo, "anchor_definitions_for_cad"):
+        try:
+            anchors = repo.anchor_definitions_for_cad(cad_name)
+        except Exception:
+            anchors = []
+    rows = []
+    for anchor in anchors or []:
+        params = anchor.get_static_params() or {}
+        payload = None
+        for key in ("Element_Linker Parameter", "Element_Linker"):
+            value = params.get(key)
+            if value:
+                payload = value
+                break
+        pose = _parse_payload_pose(payload)
+        if pose:
+            rows.append({"point": pose["point"], "rotation": pose["rotation"]})
+    return rows
+
+
 def main():
     doc = revit.doc
     if doc is None:
@@ -327,6 +386,8 @@ def main():
     for cad_name in equipment_names:
         normalized = _normalize_name(cad_name)
         matches = placeholders.get(normalized)
+        if not matches:
+            matches = _anchor_rows_for_cad(repo, cad_name)
         if not matches:
             continue
         labels = repo.labels_for_cad(cad_name)

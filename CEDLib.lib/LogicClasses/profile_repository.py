@@ -28,6 +28,7 @@ class ProfileRepository(object):
     def __init__(self, equipment_definitions):
         self._by_cad = {}
         self._label_map = {}
+        self._anchors_by_cad = {}
 
         for eq_def in equipment_definitions:
             cad_name = eq_def.get_equipment_def_id()
@@ -39,6 +40,9 @@ class ProfileRepository(object):
                 for linked_def in linked_set.get_elements() or []:
                     lbl = linked_def.get_element_def_id()
                     if not lbl:
+                        continue
+                    if getattr(linked_def, "is_parent_anchor", lambda: False)():
+                        self._anchors_by_cad.setdefault(cad_name, []).append(linked_def)
                         continue
                     base_lbl = lbl
                     unique_lbl = base_lbl
@@ -154,6 +158,7 @@ class ProfileRepository(object):
                         dynamic_params=None,
                         allow_recreate=False,
                         is_optional=False,
+                        is_parent_anchor=bool(type_entry.get("is_parent_anchor")),
                     )
                     linked_defs.append(led)
 
@@ -178,6 +183,9 @@ class ProfileRepository(object):
 
     def definition_for_label(self, cad_name, label):
         return (self._label_map.get(cad_name) or {}).get(label)
+
+    def anchor_definitions_for_cad(self, cad_name):
+        return list(self._anchors_by_cad.get(cad_name, []))
 
 
 __all__ = ["ProfileRepository"]

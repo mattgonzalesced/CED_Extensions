@@ -1,0 +1,2457 @@
+equipment_definitions:
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Tortilla_Machine_GrandeMax_1206082
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Tortilla_Machine_GrandeMax_1206082 : Default"
+    schema_version: 1
+    id: EQ-002
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "003_Tortilla_Machine_GrandeMax_1206082 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-002-LED-000
+                Set Definition ID: SET-002
+                Location XYZ (ft): 122.190718,-13.868148,0.000000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 3631995
+                FacingOrientation: -1.000000,0.000000,0.000000
+            id: SET-002-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -16.7716675397
+                  y_inches: 24.9013428527
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -16.6358233186
+                  y_inches: 22.2953027712
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip (Medium Left)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 49.4767877869
+                  y_inches: 22.7953027712
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Junction Box_CED : Wall - No Stem"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: ""
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-002-LED-001
+                Set Definition ID: SET-002
+                Location XYZ (ft): 120.502414,-14.251461,1.500000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7769956
+                FacingOrientation: 0.000000,1.000000,0.000000
+            id: SET-002-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -90.0
+                x_inches: -4.599763
+                y_inches: 20.259649
+                z_inches: 18.0
+          -
+            is_group: false
+            label: "EF-U_Junction Box_CED : Wall - No Stem"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: ""
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-002-LED-002
+                Set Definition ID: SET-002
+                Location XYZ (ft): 121.441853,-13.977286,1.500000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7769963
+                FacingOrientation: 0.000000,1.000000,0.000000
+            id: SET-002-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -90.0
+                x_inches: -1.309661
+                y_inches: 8.986379
+                z_inches: 18.0
+        id: SET-002
+        name: "003_Tortilla_Machine_GrandeMax_1206082 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: HEB_SCALE ISHIDA UNI-10D_1314729
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "HEB_SCALE ISHIDA UNI-10D_1314729 : Default"
+    schema_version: 1
+    id: EQ-004
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "HEB_SCALE ISHIDA UNI-10D_1314729 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-004-LED-000
+                Set Definition ID: SET-004
+                Location XYZ (ft): 129.301250,-32.944870,2.871404
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 6580418
+                FacingOrientation: 1.000000,-0.000000,0.000000
+            id: SET-004-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -20.8747232208
+                  y_inches: -1.70530256582e-13
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip (Medium Right)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -43.2484339971
+                  y_inches: 3.46027304035
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Simplex Ceiling"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: ""
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-004-LED-001
+                Set Definition ID: SET-004
+                Location XYZ (ft): 130.159583,-32.944870,9.000000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7770029
+                FacingOrientation: 0.000000,1.000000,0.000000
+            id: SET-004-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: 10.3
+                z_inches: 73.54315
+        id: SET-004
+        name: "HEB_SCALE ISHIDA UNI-10D_1314729 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Mixer_40Q_1031310
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Mixer_40Q_1031310 : Default"
+    schema_version: 1
+    id: EQ-005
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "003_Mixer_40Q_1031310 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-005-LED-000
+                Set Definition ID: SET-005
+                Location XYZ (ft): 129.287593,-16.895491,0.000000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 3239136
+                FacingOrientation: 1.000000,-0.000000,0.000000
+            id: SET-005-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 0.0
+                  y_inches: -8.52651282912e-14
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -25.1917207884
+                  y_inches: 3.8369307731e-13
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip (Medium Center)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 1.05827921160
+                  y_inches: -0.75
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Specialty Ceiling - 208V/3Ph"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: ""
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-005-LED-001
+                Set Definition ID: SET-005
+                Location XYZ (ft): 129.855621,-16.879433,9.000000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7770073
+                FacingOrientation: 0.000000,1.000000,0.000000
+            id: SET-005-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: -0.192696
+                y_inches: 6.81633
+                z_inches: 108.0
+        id: SET-005
+        name: "003_Mixer_40Q_1031310 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Divider_Dough_Hydraulic_1027902
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Divider_Dough_Hydraulic_1027902 : Default"
+    schema_version: 1
+    id: EQ-006
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "003_Divider_Dough_Hydraulic_1027902 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-006-LED-000
+                Set Definition ID: SET-006
+                Location XYZ (ft): 111.903954,-24.615434,-0.000000
+                Rotation (deg): 180.000000
+                Parent Rotation (deg): 180.000000
+                LevelId: 30
+                ElementId: 1782732
+                FacingOrientation: -0.000000,-1.000000,0.000000
+            id: SET-006-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 0.0483969063496
+                  y_inches: 0.539784997013
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -17.7959439168
+                  y_inches: 0.539784997013
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip (Medium Right)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -43.2959439168
+                  y_inches: -0.210215002987
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Specialty Ceiling - 208V/3Ph"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-006-LED-001
+                Set Definition ID: SET-006
+                Location XYZ (ft): 112.129584,-25.781693,9.000000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): 180.000000
+                LevelId: 30
+                ElementId: 7770096
+                FacingOrientation: 0.000000,1.000000,0.000000
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-006-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -180.0
+                x_inches: -2.707561
+                y_inches: 13.995105
+                z_inches: 108.0
+        id: SET-006
+        name: "003_Divider_Dough_Hydraulic_1027902 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Moulder_Bread_French_1027898
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Moulder_Bread_French_1027898 : Default"
+    schema_version: 1
+    id: EQ-007
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "003_Moulder_Bread_French_1027898 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-007-LED-000
+                Set Definition ID: SET-007
+                Location XYZ (ft): 114.580487,-23.936516,-0.000000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 1782731
+                FacingOrientation: -1.000000,0.000000,0.000000
+            id: SET-007-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -0.0728445009325
+                  y_inches: -1.70530256582e-13
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -6.98641518172
+                  y_inches: -0.128804245281
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip (Small Center)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -5.48641518172
+                  y_inches: 3.62119575472
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Specialty Ceiling - 208V/3Ph"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: ""
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-007-LED-001
+                Set Definition ID: SET-007
+                Location XYZ (ft): 114.329698,-25.781693,9.000000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770103
+                FacingOrientation: 0.000000,1.000000,0.000000
+            id: SET-007-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -90.0
+                x_inches: -22.142119
+                y_inches: 3.009463
+                z_inches: 108.0
+        id: SET-007
+        name: "003_Moulder_Bread_French_1027898 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Mixer_120L_Spiral_1026799
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Mixer_120L_Spiral_1026799 : Default"
+    schema_version: 1
+    id: EQ-008
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "003_Mixer_120L_Spiral_1026799 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-008-LED-000
+                Set Definition ID: SET-008
+                Location XYZ (ft): 112.107401,-35.076357,0.000000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 1782728
+                FacingOrientation: 1.000000,-0.000000,0.000000
+            id: SET-008-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 3.0
+                  y_inches: -8.52651282912e-14
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 3.0
+                  y_inches: -8.52651282912e-14
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip (Medium Left)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 63.75
+                  y_inches: -8.52651282912e-14
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Specialty Ceiling - 208V/3Ph"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-008-LED-001
+                Set Definition ID: SET-008
+                Location XYZ (ft): 113.308671,-34.413778,9.000000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7770121
+                FacingOrientation: 0.000000,1.000000,0.000000
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-008-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: -7.950946
+                y_inches: 14.415243
+                z_inches: 108.0
+        id: SET-008
+        name: "003_Mixer_120L_Spiral_1026799 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Proofer_2Door_6Rack_1034025
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Proofer_2Door_6Rack_1034025 : Default"
+    schema_version: 1
+    id: EQ-009
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "003_Proofer_2Door_6Rack_1034025 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-009-LED-000
+                Set Definition ID: SET-009
+                Location XYZ (ft): 101.246219,-22.716563,0.000000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 989486
+                FacingOrientation: -1.000000,-0.000000,-0.000000
+            id: SET-009-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 11.6431250000
+                  y_inches: 0.0
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -4.35687500000
+                  y_inches: 0.0
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip (Medium Center)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -4.35687500000
+                  y_inches: 0.0
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Junction Box_CED : Wall - With Stem"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: ""
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-009-LED-001
+                Set Definition ID: SET-009
+                Location XYZ (ft): 97.617954,-22.716563,1.500000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7770138
+                FacingOrientation: 0.000000,1.000000,0.000000
+            id: SET-009-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: -43.539182
+                z_inches: 18.0
+        id: SET-009
+        name: "003_Proofer_2Door_6Rack_1034025 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Oven_Double_Rack_1027577
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Oven_Double_Rack_1027577 : Default"
+    schema_version: 1
+    id: EQ-010
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "003_Oven_Double_Rack_1027577 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-010-LED-000
+                Set Definition ID: SET-010
+                Location XYZ (ft): 102.871219,-35.698333,0.000000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 989487
+                FacingOrientation: -1.000000,-0.000000,-0.000000
+            id: SET-010-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -4.99999999999
+                  y_inches: -4.26325641456e-13
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -21.0000000000
+                  y_inches: -4.26325641456e-13
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip (Medium Center)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -21.0000000000
+                  y_inches: -4.26325641456e-13
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Specialty Wall - 208V/3Ph"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-010-LED-001
+                Set Definition ID: SET-010
+                Location XYZ (ft): 97.617954,-36.594463,1.500000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7770155
+                FacingOrientation: 1.000000,-0.000000,0.000000
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-010-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -0.0
+                x_inches: 10.75355
+                y_inches: -63.039182
+                z_inches: 18.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Quad Wall"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-010-LED-002
+                Set Definition ID: SET-010
+                Location XYZ (ft): 97.617954,-34.490996,1.500000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7770186
+                FacingOrientation: 1.000000,-0.000000,0.000000
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-010-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -0.0
+                x_inches: -14.488045
+                y_inches: -63.039182
+                z_inches: 18.0
+        id: SET-010
+        name: "003_Oven_Double_Rack_1027577 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 000_Microwave_1212171
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "000_Microwave_1212171 : Default"
+    schema_version: 1
+    id: EQ-011
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "000_Microwave_1212171 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-011-LED-000
+                Set Definition ID: SET-011
+                Location XYZ (ft): 113.486696,-43.678835,2.837300
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 
+                ElementId: 1781574
+                FacingOrientation: 1.000000,-0.000000,-0.000000
+            id: SET-011-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -6.25
+                  y_inches: -8.52651282912e-14
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -6.25
+                  y_inches: 2.09429446844
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip (Medium Right)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -46.1378881004
+                  y_inches: -8.90570553156
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall - GFCI"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: ""
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-011-LED-001
+                Set Definition ID: SET-011
+                Location XYZ (ft): 115.076288,-43.121067,1.500000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7770221
+                FacingOrientation: -1.000000,0.000000,0.000000
+            id: SET-011-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -180.0
+                x_inches: -6.693222
+                y_inches: 19.075097
+                z_inches: -16.047598
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall - GFCI"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: ""
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-011-LED-002
+                Set Definition ID: SET-011
+                Location XYZ (ft): 115.076288,-44.491082,1.500000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7770228
+                FacingOrientation: -1.000000,0.000000,0.000000
+            id: SET-011-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -180.0
+                x_inches: 9.746963
+                y_inches: 19.075097
+                z_inches: -16.047598
+        id: SET-011
+        name: "000_Microwave_1212171 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Glazer_Jelly_Quick_1200682
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Glazer_Jelly_Quick_1200682 : Default"
+    schema_version: 1
+    id: EQ-012
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "003_Glazer_Jelly_Quick_1200682 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-012-LED-000
+                Set Definition ID: SET-012
+                Location XYZ (ft): 113.653363,-45.676806,2.871404
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 
+                ElementId: 1781573
+                FacingOrientation: -1.000000,0.000000,0.000000
+            id: SET-012-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Small Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -7.03175916033
+                  y_inches: 0.0
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip (Medium Right)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -47.5317591603
+                  y_inches: -1.0
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall - GFCI"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-012-LED-001
+                Set Definition ID: SET-012
+                Location XYZ (ft): 115.076288,-45.635197,1.500000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770251
+                FacingOrientation: -1.000000,0.000000,0.000000
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-012-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.499302
+                y_inches: -17.075097
+                z_inches: -16.45685
+        id: SET-012
+        name: "003_Glazer_Jelly_Quick_1200682 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Twist_Tie_1033842
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Twist_Tie_1033842 : Default"
+    schema_version: 1
+    id: EQ-013
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "003_Twist_Tie_1033842 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-013-LED-000
+                Set Definition ID: SET-013
+                Location XYZ (ft): 113.870433,-47.256798,2.666667
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 
+                ElementId: 1781575
+                FacingOrientation: 1.000000,-0.000000,0.000000
+            id: SET-013-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 0.0
+                  y_inches: -8.52651282912e-14
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 2.23501781217
+                  y_inches: -3.22835906202
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip (Medium Right)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -49.6366042714
+                  y_inches: -0.41642358576
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall - GFCI"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: ""
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-013-LED-001
+                Set Definition ID: SET-013
+                Location XYZ (ft): 115.076288,-47.262752,1.500000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7770258
+                FacingOrientation: -1.000000,0.000000,0.000000
+            id: SET-013-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -180.0
+                x_inches: 0.071454
+                y_inches: 14.470252
+                z_inches: -14.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Simplex Ceiling"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-013-LED-002
+                Set Definition ID: SET-013
+                Location XYZ (ft): 122.409621,-47.575335,9.000000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770526
+                FacingOrientation: 0.000000,1.000000,0.000000
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-013-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -90.0
+                x_inches: 9.935547
+                y_inches: 7.625
+                z_inches: 72.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Simplex Ceiling"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-013-LED-003
+                Set Definition ID: SET-013
+                Location XYZ (ft): 123.496490,-47.575335,9.000000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770536
+                FacingOrientation: 0.000000,1.000000,0.000000
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-013-LED-003
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -90.0
+                x_inches: 9.935547
+                y_inches: -5.417425
+                z_inches: 72.0
+        id: SET-013
+        name: "003_Twist_Tie_1033842 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Donut_Filler_1000560
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Donut_Filler_1000560 : Default"
+    schema_version: 1
+    id: EQ-014
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "003_Donut_Filler_1000560 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-014-LED-000
+                Set Definition ID: SET-014
+                Location XYZ (ft): 113.608493,-48.417129,2.666667
+                Rotation (deg): 180.000000
+                Parent Rotation (deg): 180.000000
+                LevelId: 
+                ElementId: 1781572
+                FacingOrientation: -0.000000,-1.000000,0.000000
+            id: SET-014-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 0.0
+                  y_inches: 0.75
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 0.930186345281
+                  y_inches: -10.8389812483
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip (Medium Right)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -1.06981365472
+                  y_inches: -35.8389812483
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall - GFCI"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-014-LED-001
+                Set Definition ID: SET-014
+                Location XYZ (ft): 115.076288,-48.397341,1.500000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): 180.000000
+                LevelId: 30
+                ElementId: 7770265
+                FacingOrientation: -1.000000,0.000000,0.000000
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-014-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -90.0
+                x_inches: -17.613541
+                y_inches: -0.237457
+                z_inches: -14.0
+        id: SET-014
+        name: "003_Donut_Filler_1000560 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_EZLift Glazer_18x26 Belshaw Glazer_1208571
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_EZLift Glazer_18x26 Belshaw Glazer_1208571 : Default"
+    schema_version: 1
+    id: EQ-015
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "003_EZLift Glazer_18x26 Belshaw Glazer_1208571 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-015-LED-000
+                Set Definition ID: SET-015
+                Location XYZ (ft): 99.316532,-43.151936,-0.000000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 1785543
+                FacingOrientation: -1.000000,0.000000,0.000000
+            id: SET-015-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -0.375000000001
+                  y_inches: 9.26745461659
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Small Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 33.8443944395
+                  y_inches: -0.011245005247
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip (Small Left)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 51.8443944395
+                  y_inches: 2.48875499475
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: ""
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-015-LED-001
+                Set Definition ID: SET-015
+                Location XYZ (ft): 97.701288,-43.121067,1.500000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770290
+                FacingOrientation: 1.000000,-0.000000,0.000000
+            id: SET-015-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 0.370432
+                y_inches: 19.382932
+                z_inches: 18.0
+        id: SET-015
+        name: "003_EZLift Glazer_18x26 Belshaw Glazer_1208571 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Donut_Fryer_1208264
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: 003_Donut_Fryer_1208264
+    name: "003_Donut_Fryer_1208264 : 003_Donut_Fryer_1208264"
+    schema_version: 1
+    id: EQ-016
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "003_Donut_Fryer_1208264 : 003_Donut_Fryer_1208264"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-016-LED-000
+                Set Definition ID: SET-016
+                Location XYZ (ft): 97.527469,-48.863584,-0.000000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 1785546
+                FacingOrientation: -1.000000,0.000000,0.000000
+            id: SET-016-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 20.5000000000
+                  y_inches: 27.0000000000
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 49.7150083357
+                  y_inches: 33.8435961300
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip (Small Left)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 77.1588995324
+                  y_inches: 12.9479331936
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Quad Wall"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-016-LED-001
+                Set Definition ID: SET-016
+                Location XYZ (ft): 101.691925,-44.808096,1.500000
+                Rotation (deg): 180.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770310
+                FacingOrientation: -0.000000,-1.000000,0.000000
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-016-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 48.665853
+                y_inches: -49.97347
+                z_inches: 18.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Quad Wall"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-016-LED-002
+                Set Definition ID: SET-016
+                Location XYZ (ft): 101.691925,-46.158990,1.500000
+                Rotation (deg): -180.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770317
+                FacingOrientation: 0.000000,-1.000000,0.000000
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-016-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 32.455129
+                y_inches: -49.97347
+                z_inches: 18.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Specialty Wall - 208V/3Ph"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: ""
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-016-LED-003
+                Set Definition ID: SET-016
+                Location XYZ (ft): 97.701288,-46.030251,1.500000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770338
+                FacingOrientation: 1.000000,-0.000000,0.000000
+            id: SET-016-LED-003
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 34.0
+                y_inches: -2.085818
+                z_inches: 18.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-016-LED-004
+                Set Definition ID: SET-016
+                Location XYZ (ft): 97.701288,-48.431123,1.500000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770355
+                FacingOrientation: 1.000000,-0.000000,0.000000
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-016-LED-004
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 5.189536
+                y_inches: -2.085818
+                z_inches: 18.0
+        id: SET-016
+        name: "003_Donut_Fryer_1208264 : 003_Donut_Fryer_1208264 Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: HEB_Cooler Door
+      category: Doors
+      parameter_filters:
+        {}
+      type_name_pattern: 42"W x 96"H
+    name: "HEB_Cooler Door : 42\"W x 96\"H"
+    schema_version: 1
+    id: EQ-017
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "HEB_Cooler Door : 42\"W x 96\"H"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-017-LED-000
+                Set Definition ID: SET-017
+                Location XYZ (ft): 106.336704,-51.360092,0.000000
+                Rotation (deg): -0.000000
+                Parent Rotation (deg): -0.000000
+                LevelId: 30
+                ElementId: 989297
+                FacingOrientation: -0.000000,-1.000000,-0.000000
+            id: SET-017-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: 00_Tag_Door_hgt x width
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 0.0
+                  y_inches: -8.52651282912e-14
+                  z_inches: 0.0
+                category_name: Door Tags
+                family_name: 00_Tag_Door_hgt x width
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -43.6512016758
+                  y_inches: 18.5374331758
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -43.6512016758
+                  y_inches: 18.5374331758
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+            category: Doors
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Quad Wall"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: ""
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-017-LED-001
+                Set Definition ID: SET-017
+                Location XYZ (ft): 103.082072,-51.193425,1.500000
+                Rotation (deg): -0.000000
+                Parent Rotation (deg): -0.000000
+                LevelId: 30
+                ElementId: 7770377
+                FacingOrientation: 0.000000,1.000000,-0.000000
+            id: SET-017-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -0.0
+                x_inches: -39.055586
+                y_inches: 2.0
+                z_inches: 18.0
+          -
+            is_group: false
+            label: "EF-U_Junction Box_CED : Wall - With Stem"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: ""
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-017-LED-002
+                Set Definition ID: SET-017
+                Location XYZ (ft): 103.727047,-51.193425,1.500000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): -0.000000
+                LevelId: 30
+                ElementId: 7770412
+                FacingOrientation: 0.000000,1.000000,0.000000
+            id: SET-017-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: -31.315892
+                y_inches: 2.0
+                z_inches: 18.0
+        id: SET-017
+        name: "HEB_Cooler Door : 42\"W x 96\"H Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: HEB_Sink_Hand_Both Splash_1025877
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "HEB_Sink_Hand_Both Splash_1025877 : Default"
+    schema_version: 1
+    id: EQ-018
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "HEB_Sink_Hand_Both Splash_1025877 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-018-LED-000
+                Set Definition ID: SET-018
+                Location XYZ (ft): 115.537886,-46.443425,0.000000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7483791
+                FacingOrientation: -1.000000,-0.000000,-0.000000
+            id: SET-018-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Equip (Large Left)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 46.0673079162
+                  y_inches: -8.48252502939
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+              -
+                parameters:
+                  {}
+                type_name: Equip  (Number)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 23.9899486093
+                  y_inches: -2.65080098041
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+              -
+                parameters:
+                  {}
+                type_name: Equip  (Number)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 23.9899486093
+                  y_inches: 3.22753789683
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall - GFCI"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-018-LED-001
+                Set Definition ID: SET-018
+                Location XYZ (ft): 115.545038,-46.818425,1.500000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7770441
+                FacingOrientation: 1.000000,-0.000000,0.000000
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-018-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -0.0
+                x_inches: 4.5
+                y_inches: 0.085818
+                z_inches: 18.0
+        id: SET-018
+        name: "HEB_Sink_Hand_Both Splash_1025877 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 000_Stinger_Cart_1032114
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "000_Stinger_Cart_1032114 : Default"
+    schema_version: 1
+    id: EQ-019
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "000_Stinger_Cart_1032114 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-019-LED-000
+                Set Definition ID: SET-019
+                Location XYZ (ft): 116.698695,-53.236124,0.000000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 1661894
+                FacingOrientation: -1.000000,0.000000,0.000000
+            id: SET-019-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 0.00281713806203
+                  y_inches: -8.52651282912e-14
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 1.52691063314
+                  y_inches: 8.21690968237
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 2.08590072269
+                  y_inches: -0.395
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 30.8460629460
+                  y_inches: -0.565155685502
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip  (Number)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 24.9272785091
+                  y_inches: -0.488746674255
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+              -
+                parameters:
+                  {}
+                type_name: Equip  (Number)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 18.9476328024
+                  y_inches: -0.488746674255
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+              -
+                parameters:
+                  {}
+                type_name: Equip (Small Left)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 51.0922817391
+                  y_inches: -3.09916675916
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+              -
+                parameters:
+                  {}
+                type_name: Equip  (Number)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 29.0149224321
+                  y_inches: 2.61759070197
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+              -
+                parameters:
+                  {}
+                type_name: Equip  (Number)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 29.0149224321
+                  y_inches: 8.31270973721
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall - GFCI"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: ""
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-019-LED-001
+                Set Definition ID: SET-019
+                Location XYZ (ft): 115.545038,-53.068425,1.500000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770480
+                FacingOrientation: 1.000000,-0.000000,0.000000
+            id: SET-019-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 2.012385
+                y_inches: 13.843893
+                z_inches: 18.0
+        id: SET-019
+        name: "000_Stinger_Cart_1032114 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 000_Printer_Laser_Lexmark_1210531
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "000_Printer_Laser_Lexmark_1210531 : Default"
+    schema_version: 1
+    id: EQ-020
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "000_Printer_Laser_Lexmark_1210531 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-020-LED-000
+                Set Definition ID: SET-020
+                Location XYZ (ft): 116.500912,-54.973841,2.239583
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 1661893
+                FacingOrientation: -1.000000,0.000000,0.000000
+            id: SET-020-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 1.36424205266e-12
+                  y_inches: 5.96855898038e-13
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 7.85000000000
+                  y_inches: -1.62460937500
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 1.36424205266e-12
+                  y_inches: 5.96855898038e-13
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip (Small Left)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 46.8243862219
+                  y_inches: 6.62906365441
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall - GFCI"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-020-LED-001
+                Set Definition ID: SET-020
+                Location XYZ (ft): 115.545038,-54.735092,1.500000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770490
+                FacingOrientation: 1.000000,-0.000000,0.000000
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-020-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 2.864988
+                y_inches: 11.470493
+                z_inches: -8.875
+        id: SET-020
+        name: "000_Printer_Laser_Lexmark_1210531 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Cake_Imager_1200201
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Cake_Imager_1200201 : Default"
+    schema_version: 1
+    id: EQ-021
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "003_Cake_Imager_1200201 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-021-LED-000
+                Set Definition ID: SET-021
+                Location XYZ (ft): 116.472121,-57.218531,3.000000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 
+                ElementId: 1661902
+                FacingOrientation: -1.000000,0.000000,0.000000
+            id: SET-021-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -1.70530256582e-13
+                  y_inches: -9.46233718457
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 2.74157073579
+                  y_inches: -18.6944191830
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip (Small Left)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 42.6074039825
+                  y_inches: -23.8471459292
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall - GFCI"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: ""
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-021-LED-001
+                Set Definition ID: SET-021
+                Location XYZ (ft): 115.545038,-57.068425,1.500000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770500
+                FacingOrientation: 1.000000,-0.000000,0.000000
+            id: SET-021-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 1.801266
+                y_inches: 11.125
+                z_inches: -18.0
+        id: SET-021
+        name: "003_Cake_Imager_1200201 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 000_Table_SS_30x72_wUnSh_NoSplash_1000639
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "000_Table_SS_30x72_wUnSh_NoSplash_1000639 : Default"
+    schema_version: 1
+    id: EQ-022
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_parent_anchor: true
+            is_group: false
+            label: "000_Table_SS_30x72_wUnSh_NoSplash_1000639 : Default"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-022-LED-000
+                Set Definition ID: SET-022
+                Location XYZ (ft): 123.111995,-54.828102,0.000000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 1781265
+                FacingOrientation: 1.000000,0.000000,-0.000000
+            id: SET-022-LED-000
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 1.70530256582e-13
+                  y_inches: 0.0
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Medium Center
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 1.70530256582e-13
+                  y_inches: 0.0
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: HEB_Tag_EquipmentSales_1_32
+              -
+                parameters:
+                  {}
+                type_name: Equip (Medium Center)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 1.70530256582e-13
+                  y_inches: 0.0
+                  z_inches: 0.0
+                category_name: Specialty Equipment Tags
+                family_name: _Special Equipment Tag (Updated)
+            category: Specialty Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Simplex Ceiling"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-022-LED-001
+                Set Definition ID: SET-022
+                Location XYZ (ft): 123.050387,-57.737583,9.000000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7770556
+                FacingOrientation: 0.000000,1.000000,0.000000
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: ""
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-022-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 34.913766
+                y_inches: -0.739296
+                z_inches: 108.0
+        id: SET-022
+        name: "000_Table_SS_30x72_wUnSh_NoSplash_1000639 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}

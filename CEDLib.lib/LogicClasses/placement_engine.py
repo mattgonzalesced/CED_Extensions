@@ -49,9 +49,37 @@ def _parse_linker_payload(payload_text):
             continue
         key, _, remainder = line.partition(":")
         entries[key.strip()] = remainder.strip()
+    def _as_int(value):
+        try:
+            return int(value)
+        except Exception:
+            return None
+
+    def _as_float(value):
+        try:
+            return float(value)
+        except Exception:
+            return None
+
+    def _as_xyz(value):
+        if not value:
+            return None
+        parts = [p.strip() for p in value.split(",")]
+        if len(parts) != 3:
+            return None
+        try:
+            return tuple(float(p) for p in parts)
+        except Exception:
+            return None
+
     return {
         "led_id": (entries.get("Linked Element Definition ID", "") or "").strip(),
         "set_id": (entries.get("Set Definition ID", "") or "").strip(),
+        "level_id": _as_int(entries.get("LevelId", "")),
+        "element_id": _as_int(entries.get("ElementId", "")),
+        "location": _as_xyz(entries.get("Location XYZ (ft)", "")),
+        "rotation": _as_float(entries.get("Rotation (deg)", "")),
+        "parent_rotation": _as_float(entries.get("Parent Rotation (deg)", "")),
     }
 
 
@@ -305,7 +333,10 @@ class PlaceElementsEngine(object):
                     occ_index = occurrence_counter.get(key, 0)
                     occurrence_counter[key] = occ_index + 1
                     linked_def = self.repo.definition_for_label(cad_name, label)
-                    if linked_def and self._place_one(linked_def, base_loc, base_rot_deg, occ_index):
+                    if not linked_def:
+                        continue
+                    placed = self._place_one(linked_def, base_loc, base_rot_deg, occ_index)
+                    if placed:
                         placed_count += 1
                         placement = linked_def.get_placement()
                         offsets_ft = (0.0, 0.0, 0.0)
@@ -324,7 +355,19 @@ class PlaceElementsEngine(object):
                                 except Exception:
                                     tags = []
                         # identification logging removed
+                    else:
+                        try:
+                            from pyrevit import script
 
+                            logger = script.get_logger()
+                        except Exception:
+                            logger = None
+                        if logger:
+                            logger.warning(
+                                "[Place Linked Elements] Skipped '%s' for '%s' because the matching family/type is not loaded in this model.",
+                                label,
+                                cad_name,
+                            )
             t.Commit()
         except Exception:
             t.RollBack()
@@ -387,6 +430,7 @@ class PlaceElementsEngine(object):
         if not instance:
             instance = self._place_symbol(label, family, type_name, linked_def, loc, offset[2])
         if instance:
+            self._apply_recorded_level(instance, linked_def)
             if abs(final_rot_deg) > 1e-6:
                 self._rotate_instance(instance, loc, final_rot_deg)
             self._update_element_linker_parameter(instance, linked_def, loc, final_rot_deg)
@@ -707,6 +751,7 @@ class PlaceElementsEngine(object):
                     "param_name": name,
                     "led_id": parsed.get("led_id"),
                     "set_id": parsed.get("set_id"),
+                    "level_id": parsed.get("level_id"),
                 }
                 setattr(linked_def, "_ced_linker_template", cache)
                 return cache
@@ -763,6 +808,44 @@ class PlaceElementsEngine(object):
             facing=facing,
         )
         self._set_element_linker_param(instance, payload)
+
+    def _apply_recorded_level(self, instance, linked_def):
+        if not instance or not linked_def:
+            return
+        template = self._get_linker_template(linked_def)
+        if not template:
+            return
+        level_id_val = template.get("level_id")
+        if not level_id_val:
+            return
+        try:
+            level_element = self.doc.GetElement(ElementId(int(level_id_val)))
+        except Exception:
+            level_element = None
+        if not level_element:
+            return
+        level_id = level_element.Id
+        level_param_names = (
+            "INSTANCE_LEVEL_PARAM",
+            "FAMILY_LEVEL_PARAM",
+            "SCHEDULE_LEVEL_PARAM",
+            "INSTANCE_REFERENCE_LEVEL_PARAM",
+        )
+        for name in level_param_names:
+            bip = getattr(BuiltInParameter, name, None)
+            if bip is None:
+                continue
+            try:
+                param = instance.get_Parameter(bip)
+            except Exception:
+                param = None
+            if not param or param.IsReadOnly:
+                continue
+            try:
+                param.Set(level_id)
+                return
+            except Exception:
+                continue
 
 
 __all__ = ["PlaceElementsEngine"]

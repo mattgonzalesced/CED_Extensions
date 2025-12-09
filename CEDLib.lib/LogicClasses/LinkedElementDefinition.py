@@ -23,6 +23,7 @@ class LinkedElementDefinition(object):
         dynamic_params=None,
         allow_recreate=False,
         is_optional=False,
+        is_parent_anchor=False,
     ):
         self._element_def_id = element_def_id
         self._category = category
@@ -33,6 +34,7 @@ class LinkedElementDefinition(object):
         self._dynamic_params = list(dynamic_params) if dynamic_params is not None else []
         self._allow_recreate = bool(allow_recreate)
         self._is_optional = bool(is_optional)
+        self._is_parent_anchor = bool(is_parent_anchor)
 
     def get_element_def_id(self):
         return self._element_def_id
@@ -87,6 +89,12 @@ class LinkedElementDefinition(object):
 
     def set_is_optional(self, value):
         self._is_optional = bool(value)
+
+    def is_parent_anchor(self):
+        return self._is_parent_anchor
+
+    def set_is_parent_anchor(self, value):
+        self._is_parent_anchor = bool(value)
 
     # Helpers
     def get_static_param(self, name, default=None):
