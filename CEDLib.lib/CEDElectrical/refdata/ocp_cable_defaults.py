@@ -1,4 +1,4 @@
-OCP_CABLE_DEFAULTS = {
+CU_OCP_CABLE_DEFAULTS = {
     15: {
         "wire_material": "CU",
         "wire_temperature_rating": "75 C",
@@ -591,4 +591,12 @@ OCP_CABLE_DEFAULTS = {
         "base_wire_x_per_1000ft": 0.038,
         "base_wire_r_per_1000ft": 0.019
     }
+}
+
+OCP_CABLE_DEFAULTS = {
+    rating: {
+        "CU": data,
+        "AL": None,
+    }
+    for rating, data in CU_OCP_CABLE_DEFAULTS.items()
 }
