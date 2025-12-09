@@ -899,6 +899,19 @@ def _seed_parent_equipment_definition(parent_elem, data, link_transform=None):
         "is_group": is_group,
     }
     existing = _find_equipment_definition_by_name(data, eq_name)
+    if existing:
+        overwrite = forms.alert(
+            "An equipment definition named '{}' already exists.\n"
+            "Selecting parent again will overwrite its contents.\n"
+            "Do you want to continue?".format(eq_name),
+            title=TITLE,
+            ok=False,
+            yes=True,
+            no=True,
+        )
+        if not overwrite:
+            forms.alert("Select Parent Element canceled.", title=TITLE)
+            return None
     eq_def = ensure_equipment_definition(data, eq_name, sample_entry)
     newly_created = existing is None
     if newly_created:
