@@ -525,7 +525,30 @@ def main():
         cad_name = cad_name.strip()
         if not cad_name:
             return
-        created_new_def = True
+        existing_match = None
+        cad_lower = cad_name.lower()
+        for eq in equipment_defs:
+            existing_name = (eq.get("name") or eq.get("id") or "").strip()
+            if existing_name and existing_name.lower() == cad_lower:
+                existing_match = eq
+                break
+        if existing_match:
+            append_to_existing = forms.alert(
+                "An equipment definition named '{}' already exists.\n"
+                "Selecting Yes will append the selected element type(s) to that definition.\n"
+                "Select No to choose a different name.".format(cad_name),
+                title="Add YAML Profiles",
+                ok=False,
+                yes=True,
+                no=True,
+            )
+            if not append_to_existing:
+                forms.alert("Add YAML Profiles canceled.", title="Add YAML Profiles")
+                return
+            created_new_def = False
+            cad_choice = cad_name
+        else:
+            created_new_def = True
     else:
         cad_name = cad_choice
 
