@@ -337,7 +337,10 @@ class CircuitBranch(object):
     # -----------------------------------------------------------------
     # Logging helpers
     # -----------------------------------------------------------------
-    def log_info(self, msg, *args):
+    def log_info(self, msg, *args,**kwargs):
+        category = kwargs.pop("category", "Calculation")
+        formatted = msg.format(*args) if args else msg
+        self.notices.add("INFO", formatted, category)
         if DEV_LOGGING:
             logger.info("{}: {}".format(self.name, msg), *args)
 
