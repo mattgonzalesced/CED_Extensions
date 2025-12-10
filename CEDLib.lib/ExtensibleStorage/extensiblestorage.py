@@ -41,7 +41,6 @@ class ExtensibleStorage(object):
     Tracks YAML edits per-project by storing history entries (deltas) inside the RVT.
     """
 
-    SCHEMA_GUID = Guid("9f6633b1-d77f-49ef-9390-5111fbb16d82")
     SCHEMA_NAME = "CED_YamlHistory"
     HISTORY_FIELD_NAME = "HistoryJson"
     META_FIELD_NAME = "MetadataJson"
@@ -49,9 +48,7 @@ class ExtensibleStorage(object):
     DIFF_FORMAT = "ndiff"
     TRANSACTION_PREFIX = "YAML_HISTORY::"
 
-    _schema = None
-    _history_field = None
-    _meta_field = None
+    _schema_cache = {}
     _undo_handler_registered = False
     _undo_handler_delegate = None
     _doc_handler = None
@@ -555,12 +552,13 @@ class ExtensibleStorage(object):
         cls._log("YAML rewrites are managed in Extensible Storage; skipping disk write for '{}'.".format(yaml_path or "<unknown>"))
 
     @classmethod
-    def _schema_and_fields(cls):
-        if cls._schema:
-            return cls._schema, cls._history_field, cls._meta_field
-        schema = Schema.Lookup(cls.SCHEMA_GUID)
+    def _schema_and_fields(cls, doc):
+        doc_key = getattr(doc, "Title", "unknown")
+        if doc_key in cls._schema_cache:
+            return cls._schema_cache[doc_key]
+        schema = Schema.Lookup(_make_doc_guid(doc))
         if schema is None:
-            builder = SchemaBuilder(cls.SCHEMA_GUID)
+            builder = SchemaBuilder(_make_doc_guid(doc))
             builder.SetSchemaName(cls.SCHEMA_NAME)
             builder.SetDocumentation("Stores YAML history deltas.")
             history_field = builder.AddSimpleField(cls.HISTORY_FIELD_NAME, String)
@@ -569,14 +567,13 @@ class ExtensibleStorage(object):
             schema = builder.Finish()
         history_field = schema.GetField(cls.HISTORY_FIELD_NAME)
         meta_field = schema.GetField(cls.META_FIELD_NAME)
-        cls._schema = schema
-        cls._history_field = history_field
-        cls._meta_field = meta_field
+        doc_key = getattr(doc, "Title", "unknown")
+        cls._schema_cache[doc_key] = (schema, history_field, meta_field)
         return schema, history_field, meta_field
 
     @classmethod
     def _read_storage(cls, doc):
-        schema, history_field, meta_field = cls._schema_and_fields()
+        schema, history_field, meta_field = cls._schema_and_fields(doc)
         payload = {"entries": [], "meta": {"next_seq": 1}}
         project_info = getattr(doc, "ProjectInformation", None)
         if project_info is None:
@@ -607,7 +604,7 @@ class ExtensibleStorage(object):
 
     @classmethod
     def _write_storage(cls, doc, payload, transaction_name=None):
-        schema, history_field, meta_field = cls._schema_and_fields()
+        schema, history_field, meta_field = cls._schema_and_fields(doc)
         history_json = json.dumps(payload.get("entries", []))
         meta_json = json.dumps(payload.get("meta", {}))
         project_info = getattr(doc, "ProjectInformation", None)
@@ -826,6 +823,14 @@ class ExtensibleStorage(object):
         except Exception:
             pass
         return os.getenv("USERNAME") or os.getenv("USER") or "unknown"
+
+
+def _make_doc_guid(doc):
+    """Generate document-specific GUID to avoid schema conflicts between models."""
+    import hashlib
+    title = getattr(doc, "Title", "unknown")
+    hash_bytes = hashlib.md5((title + "9f6633b1d77f49ef93905111fbb16d82").encode('utf-8')).digest()
+    return Guid(bytes(hash_bytes))
 
 
 __all__ = ["ExtensibleStorage"]
