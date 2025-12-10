@@ -184,6 +184,7 @@ def _collect_params(elem):
         "dev-Group ID": ["dev-Group ID", "dev_Group ID"],
         "Number of Poles_CED": ["Number of Poles_CED", "Number of Poles_CEDT"],
         "Apparent Load Input_CED": ["Apparent Load Input_CED", "Apparent Load Input_CEDT"],
+        "Voltage_CED": ["Voltage_CED", "Voltage_CEDT"],
     }
     electrical_targets = {
         "CKT_Rating_CED": ["CKT_Rating_CED"],
@@ -228,6 +229,8 @@ def _collect_params(elem):
 
     if "dev-Group ID" not in found:
         found["dev-Group ID"] = ""
+    if not found.get("Voltage_CED"):
+        found["Voltage_CED"] = 120
     if is_electrical:
         return found
     if any(value for key, value in found.items() if key != "dev-Group ID" and value):
