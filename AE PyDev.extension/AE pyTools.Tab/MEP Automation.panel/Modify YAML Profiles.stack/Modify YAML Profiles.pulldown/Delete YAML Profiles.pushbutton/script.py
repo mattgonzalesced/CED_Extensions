@@ -13,6 +13,7 @@ import os
 import sys
 
 from pyrevit import forms, revit, script
+from Autodesk.Revit.DB import TransactionGroup
 
 LIB_ROOT = os.path.abspath(
     os.path.join(
@@ -296,118 +297,137 @@ def _erase_entries(equipment_defs, definition_name, type_ids):
 
 
 def main():
+    doc = getattr(revit, "doc", None)
+    trans_group = TransactionGroup(doc, "Delete YAML Profiles") if doc else None
+    if trans_group:
+        trans_group.Start()
+    success = False
     try:
-        yaml_path, raw_data = load_active_yaml_data()
-    except RuntimeError as exc:
-        forms.alert(str(exc), title="Delete YAML Profiles")
-        return
-    yaml_label = get_yaml_display_name(yaml_path)
+        try:
+            yaml_path, raw_data = load_active_yaml_data()
+        except RuntimeError as exc:
+            forms.alert(str(exc), title="Delete YAML Profiles")
+            return
+        yaml_label = get_yaml_display_name(yaml_path)
 
-    equipment_defs = raw_data.get("equipment_definitions") or []
-    log = script.get_logger()
-    log.info("[Delete YAML] raw equipment definitions: %s", [e.get("name") or e.get("id") for e in equipment_defs if isinstance(e, dict)])
-    definitions_by_name, native_equipment_defs = _build_definition_index(equipment_defs)
-    log.info("[Delete YAML] available definitions: %s", sorted(definitions_by_name.keys()))
-    if not definitions_by_name:
-        forms.alert("{} currently contains no equipment definitions.".format(yaml_label), title="Delete YAML Profiles")
-        return
+        equipment_defs = raw_data.get("equipment_definitions") or []
+        log = script.get_logger()
+        log.info(
+            "[Delete YAML] raw equipment definitions: %s",
+            [e.get("name") or e.get("id") for e in equipment_defs if isinstance(e, dict)],
+        )
+        definitions_by_name, native_equipment_defs = _build_definition_index(equipment_defs)
+        log.info("[Delete YAML] available definitions: %s", sorted(definitions_by_name.keys()))
+        if not definitions_by_name:
+            forms.alert("{} currently contains no equipment definitions.".format(yaml_label), title="Delete YAML Profiles")
+            return
 
-    definition_choices = sorted(definitions_by_name.keys())
+        definition_choices = sorted(definitions_by_name.keys())
 
-    definition_choice = forms.SelectFromList.show(
-        definition_choices,
-        title="Select equipment definition to delete linked types",
-        multiselect=False,
-        button_name="Select",
-    )
-    if not definition_choice:
-        return
+        definition_choice = forms.SelectFromList.show(
+            definition_choices,
+            title="Select equipment definition to delete linked types",
+            multiselect=False,
+            button_name="Select",
+        )
+        if not definition_choice:
+            return
 
-    definition = definitions_by_name.get(definition_choice)
-    if not definition:
-        forms.alert("Definition '{}' could not be loaded.".format(definition_choice), title="Delete YAML Profiles")
-        return
+        definition = definitions_by_name.get(definition_choice)
+        if not definition:
+            forms.alert("Definition '{}' could not be loaded.".format(definition_choice), title="Delete YAML Profiles")
+            return
 
-    type_entries = _collect_type_entries(definition)
-    if not type_entries:
-        forms.alert("Definition '{}' has no linked element types to delete.".format(definition_choice), title="Delete YAML Profiles")
-        return
+        type_entries = _collect_type_entries(definition)
+        if not type_entries:
+            forms.alert("Definition '{}' has no linked element types to delete.".format(definition_choice), title="Delete YAML Profiles")
+            return
 
-    display_map = {entry["display"]: entry for entry in type_entries}
-    picked = forms.SelectFromList.show(
-        sorted(display_map.keys()),
-        title="Select types to delete from '{}'".format(definition_choice),
-        multiselect=True,
-        button_name="Delete",
-    )
-    if not picked:
-        return
+        display_map = {entry["display"]: entry for entry in type_entries}
+        picked = forms.SelectFromList.show(
+            sorted(display_map.keys()),
+            title="Select types to delete from '{}'".format(definition_choice),
+            multiselect=True,
+            button_name="Delete",
+        )
+        if not picked:
+            return
 
-    picked_entries = [display_map[name] for name in picked]
-    picked_ids = {entry["id"] for entry in picked_entries}
-    changed, removed_eq_entries = _erase_entries(native_equipment_defs, definition_choice, picked_ids)
-    log = script.get_logger()
-    log.info("[Delete YAML] erase result changed=%s removed_defs=%s", changed, [e.get("id") for e in removed_eq_entries or []])
-    if not changed:
-        return
-    # Determine if individual LED deletions remove child relationships
-    cascaded_entries = []
-    for defn in native_equipment_defs:
-        if (defn.get("name") or defn.get("id")) != definition_choice:
-            continue
-        relations = defn.get("linked_relations") or {}
-        children = relations.get("children") or []
-        led_by_id = {}
-        for linked_set in defn.get("linked_sets") or []:
-            for led_entry in linked_set.get("linked_element_definitions") or []:
-                led_id = (led_entry.get("id") or "").strip()
-                if led_id:
-                    led_by_id[led_id] = led_entry
-        affected_children = []
-        for child in children:
-            parent_led = (child.get("anchor_led_id") or "").strip()
-            if not parent_led or parent_led.lower() not in {_normalize_name(tid) for tid in picked_ids}:
+        picked_entries = [display_map[name] for name in picked]
+        picked_ids = {entry["id"] for entry in picked_entries}
+        changed, removed_eq_entries = _erase_entries(native_equipment_defs, definition_choice, picked_ids)
+        log = script.get_logger()
+        log.info("[Delete YAML] erase result changed=%s removed_defs=%s", changed, [e.get("id") for e in removed_eq_entries or []])
+        if not changed:
+            return
+        # Determine if individual LED deletions remove child relationships
+        cascaded_entries = []
+        for defn in native_equipment_defs:
+            if (defn.get("name") or defn.get("id")) != definition_choice:
                 continue
-            child_id = (child.get("equipment_id") or "").strip()
-            affected_children.append((child_id, child.get("anchor_led_id")))
-        if affected_children:
-            msg = [
-                "Deleting those types will remove child links (shown below). Continue?",
-                "",
-            ]
-            for cid, p_led in affected_children:
-                msg.append(" - Child '{}', anchored to LED '{}'".format(cid or "<Unknown>", p_led or "<Unknown>"))
-            if not forms.alert("\n".join(msg), title="Delete YAML Profiles", yes=True, no=True):
-                return
-            # also remove child entries referencing parent LEDs being deleted
-            relations["children"] = [
-                child
-                for child in children
-                if (child.get("anchor_led_id") or "").strip().lower() not in {_normalize_name(tid) for tid in picked_ids}
-            ]
-        break
+            relations = defn.get("linked_relations") or {}
+            children = relations.get("children") or []
+            led_by_id = {}
+            for linked_set in defn.get("linked_sets") or []:
+                for led_entry in linked_set.get("linked_element_definitions") or []:
+                    led_id = (led_entry.get("id") or "").strip()
+                    if led_id:
+                        led_by_id[led_id] = led_entry
+            affected_children = []
+            for child in children:
+                parent_led = (child.get("anchor_led_id") or "").strip()
+                if not parent_led or parent_led.lower() not in {_normalize_name(tid) for tid in picked_ids}:
+                    continue
+                child_id = (child.get("equipment_id") or "").strip()
+                affected_children.append((child_id, child.get("anchor_led_id")))
+            if affected_children:
+                msg = [
+                    "Deleting those types will remove child links (shown below). Continue?",
+                    "",
+                ]
+                for cid, p_led in affected_children:
+                    msg.append(" - Child '{}', anchored to LED '{}'".format(cid or "<Unknown>", p_led or "<Unknown>"))
+                if not forms.alert("\n".join(msg), title="Delete YAML Profiles", yes=True, no=True):
+                    return
+                # also remove child entries referencing parent LEDs being deleted
+                relations["children"] = [
+                    child
+                    for child in children
+                    if (child.get("anchor_led_id") or "").strip().lower() not in {_normalize_name(tid) for tid in picked_ids}
+                ]
+            break
 
-    cascade_entries = _cascade_remove_children(native_equipment_defs, removed_eq_entries)
-    all_removed_entries = list(removed_eq_entries) + list(cascade_entries)
-    removed_ids = [(entry.get("id") or "").strip() for entry in all_removed_entries if isinstance(entry, dict)]
+        cascade_entries = _cascade_remove_children(native_equipment_defs, removed_eq_entries)
+        all_removed_entries = list(removed_eq_entries) + list(cascade_entries)
+        removed_ids = [(entry.get("id") or "").strip() for entry in all_removed_entries if isinstance(entry, dict)]
 
-    _cleanup_relations(native_equipment_defs, removed_ids)
+        _cleanup_relations(native_equipment_defs, removed_ids)
 
-    raw_data["equipment_definitions"] = native_equipment_defs
-    _prune_anchor_only_definitions(raw_data)
-    save_active_yaml_data(
-        None,
-        raw_data,
-        "Delete YAML Profiles",
-        "Deleted {} type(s) from '{}'".format(len(picked), definition_choice),
-    )
-    summary = [
-        "Deleted {} type(s) from definition '{}' and saved to {}.".format(len(picked), definition_choice, yaml_label),
-    ]
-    if removed_ids:
-        summary.append("Removed equipment definitions: {}".format(", ".join(sorted(set(removed_ids)))))
-    summary.append("Reload Place Elements (YAML) to use updated data.")
-    forms.alert("\n".join(summary), title="Delete YAML Profiles")
+        raw_data["equipment_definitions"] = native_equipment_defs
+        _prune_anchor_only_definitions(raw_data)
+        save_active_yaml_data(
+            None,
+            raw_data,
+            "Delete YAML Profiles",
+            "Deleted {} type(s) from '{}'".format(len(picked), definition_choice),
+        )
+        summary = [
+            "Deleted {} type(s) from definition '{}' and saved to {}.".format(len(picked), definition_choice, yaml_label),
+        ]
+        if removed_ids:
+            summary.append("Removed equipment definitions: {}".format(", ".join(sorted(set(removed_ids)))))
+        summary.append("Reload Place Elements (YAML) to use updated data.")
+        forms.alert("\n".join(summary), title="Delete YAML Profiles")
+        success = True
+    finally:
+        if trans_group:
+            try:
+                if success:
+                    trans_group.Assimilate()
+                else:
+                    trans_group.RollBack()
+            except Exception:
+                pass
 
 
 def _prune_anchor_only_definitions(data):

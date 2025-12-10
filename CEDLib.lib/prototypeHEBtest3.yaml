@@ -1,0 +1,1610 @@
+equipment_definitions:
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: EF-U_Junction Box_CED
+      category: Electrical Fixtures
+      parameter_filters:
+        {}
+      type_name_pattern: Floor
+    name: Bakery Point of Sale
+    schema_version: 1
+    id: EQ-033
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Junction Box_CED : Floor"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-033-LED-001
+                Set Definition ID: SET-033
+                Location XYZ (ft): 130.800905,6.811355,0.000000
+                Rotation (deg): 0.000000
+                LevelId: 30
+                ElementId: 7781287
+                FacingOrientation: 0.000000,1.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 3
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 2167
+              CKT_Load Name_CEDT: MULTI DECK CASE
+            id: SET-033-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 35.9999
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Junction Box_CED : Floor"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: MULTI DECK CASE
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 3
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 2167
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-033-LED-002
+                Set Definition ID: SET-033
+                Location XYZ (ft): 130.800905,0.811364,0.000000
+                Rotation (deg): 0.000000
+                LevelId: 30
+                ElementId: 7781294
+                FacingOrientation: 0.000000,1.000000,0.000000
+            id: SET-033-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: -35.9999
+                z_inches: 0.0
+        id: SET-033
+        name: Bakery Point of Sale Types
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Proofer_2Door_6Rack_1034025
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Proofer_2Door_6Rack_1034025 : Default"
+    schema_version: 1
+    id: EQ-009
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Junction Box_CED : Wall - With Stem"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: PROOFER
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 3
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 1656
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-009-LED-001
+                Set Definition ID: SET-009
+                Location XYZ (ft): 97.617954,-22.716563,1.500000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7770138
+                FacingOrientation: 0.000000,1.000000,0.000000
+            id: SET-009-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: -43.5392
+                z_inches: 18.0
+        id: SET-009
+        name: "003_Proofer_2Door_6Rack_1034025 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Divider_Dough_Hydraulic_1027902
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Divider_Dough_Hydraulic_1027902 : Default"
+    schema_version: 1
+    id: EQ-006
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Specialty Ceiling - 208V/3Ph"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-006-LED-001
+                Set Definition ID: SET-006
+                Location XYZ (ft): 112.129584,-25.781693,9.000000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): 180.000000
+                LevelId: 30
+                ElementId: 7770096
+                FacingOrientation: 0.000000,1.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 3
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 960
+              CKT_Load Name_CEDT: DOUGH DIVIDER
+            id: SET-006-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -180.0
+                x_inches: -2.7076
+                y_inches: 13.9951
+                z_inches: 108.0
+        id: SET-006
+        name: "003_Divider_Dough_Hydraulic_1027902 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: HEB_SCALE ISHIDA UNI-10D_1314729
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "HEB_SCALE ISHIDA UNI-10D_1314729 : Default"
+    schema_version: 1
+    id: EQ-030
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: SCALE/RECEPT
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: 1
+              Apparent Load Input_CED: 180
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-030-LED-001
+                Set Definition ID: SET-030
+                Location XYZ (ft): 130.998953,-32.988321,1.000000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7772257
+                FacingOrientation: -1.000000,-0.000000,0.000000
+            id: SET-030-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -180.0
+                x_inches: 0.5214
+                y_inches: 20.3724
+                z_inches: -22.4569
+        id: SET-030
+        name: "HEB_SCALE ISHIDA UNI-10D_1314729 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Slicer_Bread_1002280
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Slicer_Bread_1002280 : Default"
+    schema_version: 1
+    id: EQ-025
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Simplex Ceiling"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: BREAD SLICER MIXERS
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 1200
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-025-LED-001
+                Set Definition ID: SET-025
+                Location XYZ (ft): 122.438570,-47.827906,9.000000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7771391
+                FacingOrientation: 0.000000,1.000000,0.000000
+            id: SET-025-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -90.0
+                x_inches: -11.0
+                y_inches: 6.8461
+                z_inches: 108.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Simplex Ceiling"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-025-LED-002
+                Set Definition ID: SET-025
+                Location XYZ (ft): 123.613244,-47.827906,9.000000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7771398
+                FacingOrientation: 0.000000,1.000000,0.000000
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 300
+              CKT_Load Name_CEDT: BS TWIST TIE
+            id: SET-025-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -90.0
+                x_inches: -11.0
+                y_inches: -7.25
+                z_inches: 108.0
+        id: SET-025
+        name: "003_Slicer_Bread_1002280 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 000_Stinger_Cart_1032114
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "000_Stinger_Cart_1032114 : Default"
+    schema_version: 1
+    id: EQ-019
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall - GFCI"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: STINGER CART
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 180
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-019-LED-001
+                Set Definition ID: SET-019
+                Location XYZ (ft): 115.545038,-53.068425,1.500000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770480
+                FacingOrientation: 1.000000,-0.000000,0.000000
+            id: SET-019-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Elevation (Inches)
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 12.0
+                  y_inches: 0.0
+                  z_inches: 0.0
+                category_name: Annotation Symbols
+                family_name: EF-Tag_Electrical Fixtures_CED
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 2.0124
+                y_inches: 13.8439
+                z_inches: 18.0
+        id: SET-019
+        name: "000_Stinger_Cart_1032114 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Cake_Imager_1200201
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Cake_Imager_1200201 : Default"
+    schema_version: 1
+    id: EQ-021
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall - GFCI"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: CAKE IMAGER
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 180
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-021-LED-001
+                Set Definition ID: SET-021
+                Location XYZ (ft): 115.545038,-57.068425,1.500000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770500
+                FacingOrientation: 1.000000,-0.000000,0.000000
+            id: SET-021-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 1.8013
+                y_inches: 11.125
+                z_inches: -18.0
+        id: SET-021
+        name: "003_Cake_Imager_1200201 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Mixer_120L_Spiral_1026799
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Mixer_120L_Spiral_1026799 : Default"
+    schema_version: 1
+    id: EQ-008
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Specialty Ceiling - 208V/3Ph"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-008-LED-001
+                Set Definition ID: SET-008
+                Location XYZ (ft): 113.308671,-34.413778,9.000000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7770121
+                FacingOrientation: 0.000000,1.000000,0.000000
+              CKT_Rating_CED: 45.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 3
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 3958
+              CKT_Load Name_CEDT: SPIRAL DOUGH MIXER
+            id: SET-008-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: -7.9509
+                y_inches: 14.4152
+                z_inches: 108.0
+        id: SET-008
+        name: "003_Mixer_120L_Spiral_1026799 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: EF-U_Receptacle_CED
+      category: Electrical Fixtures
+      parameter_filters:
+        {}
+      type_name_pattern: Quad Wall
+    name: Heated Door Vent
+    schema_version: 1
+    id: EQ-034
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Quad Wall"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: DOOR HEAT
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 1200
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-034-LED-001
+                Set Definition ID: SET-034
+                Location XYZ (ft): 103.296120,-51.193425,-6.500000
+                Rotation (deg): 0.000000
+                LevelId: 30
+                ElementId: 7781607
+                FacingOrientation: 0.000000,1.000000,0.000000
+            id: SET-034-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: -3.2044
+                y_inches: -1.5
+                z_inches: -78.0
+          -
+            is_group: false
+            label: "EF-U_Junction Box_CED : Wall - No Stem"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: DOOR & HEATED THRESHOLD
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 800
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-034-LED-002
+                Set Definition ID: SET-034
+                Location XYZ (ft): 103.830194,-50.943425,-6.500000
+                Rotation (deg): 0.000000
+                LevelId: 30
+                ElementId: 7781608
+                FacingOrientation: 0.000000,1.000000,0.000000
+            id: SET-034-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 3.2044
+                y_inches: 1.5
+                z_inches: -78.0
+        id: SET-034
+        name: Heated Door Vent Types
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 000_Printer_Laser_Lexmark_1210531
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "000_Printer_Laser_Lexmark_1210531 : Default"
+    schema_version: 1
+    id: EQ-020
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall - GFCI"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-020-LED-001
+                Set Definition ID: SET-020
+                Location XYZ (ft): 115.545038,-54.735092,1.500000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770490
+                FacingOrientation: 1.000000,-0.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 180
+              CKT_Load Name_CEDT: LASER PRINTER LEXMARK
+            id: SET-020-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 2.865
+                y_inches: 11.4705
+                z_inches: -8.875
+        id: SET-020
+        name: "000_Printer_Laser_Lexmark_1210531 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Tortilla_Machine_GrandeMax_1206082
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Tortilla_Machine_GrandeMax_1206082 : Default"
+    schema_version: 1
+    id: EQ-002
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Junction Box_CED : Wall - No Stem"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-002-LED-001
+                Set Definition ID: SET-002
+                Location XYZ (ft): 120.502414,-14.251461,1.500000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7769956
+                FacingOrientation: 0.000000,1.000000,0.000000
+              CKT_Rating_CED: 60.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 2
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 4275
+              CKT_Load Name_CEDT: TORTILLA MACHINE 1 - BAKERY
+            id: SET-002-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -90.0
+                x_inches: -4.5998
+                y_inches: 20.2596
+                z_inches: 18.0
+          -
+            is_group: false
+            label: "EF-U_Junction Box_CED : Wall - No Stem"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: TORTILLA WARMER
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 1740
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-002-LED-002
+                Set Definition ID: SET-002
+                Location XYZ (ft): 121.441853,-13.977286,1.500000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7769963
+                FacingOrientation: 0.000000,1.000000,0.000000
+            id: SET-002-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -90.0
+                x_inches: -1.3097
+                y_inches: 8.9864
+                z_inches: 18.0
+        id: SET-002
+        name: "003_Tortilla_Machine_GrandeMax_1206082 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Oven_Double_Rack_1027577
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Oven_Double_Rack_1027577 : Default"
+    schema_version: 1
+    id: EQ-010
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Specialty Wall - 208V/3Ph"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-010-LED-001
+                Set Definition ID: SET-010
+                Location XYZ (ft): 97.617954,-36.594463,1.500000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7770155
+                FacingOrientation: 1.000000,-0.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 3
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 600
+              CKT_Load Name_CEDT: DOUBLE RACK OVEN
+            id: SET-010-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 10.7536
+                y_inches: -63.0392
+                z_inches: 18.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Quad Wall"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: DRO RECEPT
+              CKT_Rating_CED: 0.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 1440
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-010-LED-002
+                Set Definition ID: SET-010
+                Location XYZ (ft): 97.617954,-34.490996,1.500000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7770186
+                FacingOrientation: 1.000000,-0.000000,0.000000
+            id: SET-010-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: -14.488
+                y_inches: -63.0392
+                z_inches: 18.0
+        id: SET-010
+        name: "003_Oven_Double_Rack_1027577 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Donut_Filler_1000560
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Donut_Filler_1000560 : Default"
+    schema_version: 1
+    id: EQ-028
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-028-LED-001
+                Set Definition ID: SET-028
+                Location XYZ (ft): 115.076288,-47.389369,1.000000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): 180.000000
+                LevelId: 30
+                ElementId: 7771907
+                FacingOrientation: -1.000000,-0.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 180
+              CKT_Load Name_CEDT: DONUT FILLER
+            id: SET-028-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -90.0
+                x_inches: -17.6135
+                y_inches: -12.3331
+                z_inches: -20.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-028-LED-002
+                Set Definition ID: SET-028
+                Location XYZ (ft): 115.076288,-48.556035,1.000000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): 180.000000
+                LevelId: 30
+                ElementId: 7771917
+                FacingOrientation: -1.000000,-0.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 300
+              CKT_Load Name_CEDT: DF - TWIST TIE
+            id: SET-028-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -90.0
+                x_inches: -17.6135
+                y_inches: 1.6669
+                z_inches: -20.0
+        id: SET-028
+        name: "003_Donut_Filler_1000560 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Donut_Fryer_1208264
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: 003_Donut_Fryer_1208264
+    name: "003_Donut_Fryer_1208264 : 003_Donut_Fryer_1208264"
+    schema_version: 1
+    id: EQ-016
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Quad Wall"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: ANSUL
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 500
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-016-LED-001
+                Set Definition ID: SET-016
+                Location XYZ (ft): 101.691925,-44.808096,1.500000
+                Rotation (deg): 180.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770310
+                FacingOrientation: -0.000000,-1.000000,0.000000
+            id: SET-016-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 48.6659
+                y_inches: -49.9735
+                z_inches: 18.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Quad Wall"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-016-LED-002
+                Set Definition ID: SET-016
+                Location XYZ (ft): 101.691925,-46.158990,1.500000
+                Rotation (deg): -180.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770317
+                FacingOrientation: 0.000000,-1.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 600
+              CKT_Load Name_CEDT: KH-06 CONTROLS
+            id: SET-016-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 32.4551
+                y_inches: -49.9735
+                z_inches: 18.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Specialty Wall - 208V/3Ph"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: DONUT FRYER
+              CKT_Rating_CED: 60.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 3
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 4918
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-016-LED-003
+                Set Definition ID: SET-016
+                Location XYZ (ft): 97.701288,-46.030251,1.500000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770338
+                FacingOrientation: 1.000000,-0.000000,0.000000
+            id: SET-016-LED-003
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 34.0
+                y_inches: -2.0858
+                z_inches: 18.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-016-LED-004
+                Set Definition ID: SET-016
+                Location XYZ (ft): 97.701288,-48.431123,1.500000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770355
+                FacingOrientation: 1.000000,-0.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 570
+              CKT_Load Name_CEDT: DONUT HOPPER
+            id: SET-016-LED-004
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 5.1895
+                y_inches: -2.0858
+                z_inches: 18.0
+        id: SET-016
+        name: "003_Donut_Fryer_1208264 : 003_Donut_Fryer_1208264 Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 000_Table_SS_30x72_wUnSh_NoSplash_1000639
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "000_Table_SS_30x72_wUnSh_NoSplash_1000639 : Default"
+    schema_version: 1
+    id: EQ-022
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Simplex Ceiling"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-022-LED-001
+                Set Definition ID: SET-022
+                Location XYZ (ft): 123.050387,-57.737583,9.000000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7770556
+                FacingOrientation: 0.000000,1.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: 1
+              Apparent Load Input_CED: 180
+              CKT_Load Name_CEDT: SCALE/RECEPT
+            id: SET-022-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 34.9138
+                y_inches: -0.7393
+                z_inches: 108.0
+        id: SET-022
+        name: "000_Table_SS_30x72_wUnSh_NoSplash_1000639 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Glazer_Jelly_Quick_1200682
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Glazer_Jelly_Quick_1200682 : Default"
+    schema_version: 1
+    id: EQ-027
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-027-LED-001
+                Set Definition ID: SET-027
+                Location XYZ (ft): 115.076288,-45.824039,1.000000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7771897
+                FacingOrientation: -1.000000,-0.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 1500
+              CKT_Load Name_CEDT: JELLY GLAZER
+            id: SET-027-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: -1.7668
+                y_inches: -17.0751
+                z_inches: -22.4569
+        id: SET-027
+        name: "003_Glazer_Jelly_Quick_1200682 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Moulder_Bread_French_1027898
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Moulder_Bread_French_1027898 : Default"
+    schema_version: 1
+    id: EQ-007
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Specialty Ceiling - 208V/3Ph"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: BREAD MOULDER
+              CKT_Rating_CED: 45.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 3
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 3958
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-007-LED-001
+                Set Definition ID: SET-007
+                Location XYZ (ft): 114.329698,-25.781693,9.000000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770103
+                FacingOrientation: 0.000000,1.000000,0.000000
+            id: SET-007-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -90.0
+                x_inches: -22.1421
+                y_inches: 3.0095
+                z_inches: 108.0
+        id: SET-007
+        name: "003_Moulder_Bread_French_1027898 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_EZLift Glazer_18x26 Belshaw Glazer_1208571
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_EZLift Glazer_18x26 Belshaw Glazer_1208571 : Default"
+    schema_version: 1
+    id: EQ-015
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: DONUT GLAZER
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 336
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-015-LED-001
+                Set Definition ID: SET-015
+                Location XYZ (ft): 97.701288,-43.121067,1.500000
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7770290
+                FacingOrientation: 1.000000,-0.000000,0.000000
+            id: SET-015-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 0.3704
+                y_inches: 19.3829
+                z_inches: 18.0
+        id: SET-015
+        name: "003_EZLift Glazer_18x26 Belshaw Glazer_1208571 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: HEB_Sink_Hand_Nested
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "HEB_Sink_Hand_Nested : Default"
+    schema_version: 1
+    id: EQ-029
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-029-LED-001
+                Set Definition ID: SET-029
+                Location XYZ (ft): 115.628371,-46.818425,-1.871404
+                Rotation (deg): -90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7772121
+                FacingOrientation: 1.000000,-0.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 360
+              CKT_Load Name_CEDT: FLY ZAPPER
+            id: SET-029-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 4.5
+                y_inches: 1.0858
+                z_inches: -22.4569
+        id: SET-029
+        name: "HEB_Sink_Hand_Nested : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: EF-U_Receptacle_CED
+      category: Electrical Fixtures
+      parameter_filters:
+        {}
+      type_name_pattern: Simplex Wall
+    name: Bakery Prep Wall
+    schema_version: 1
+    id: EQ-032
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Simplex Wall"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-032-LED-001
+                Set Definition ID: SET-032
+                Location XYZ (ft): 131.088761,-20.177333,1.500000
+                Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7781192
+                FacingOrientation: -1.000000,0.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: 2
+              Apparent Load Input_CED: 180
+              CKT_Load Name_CEDT: SMART LEVERS
+            id: SET-032-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: -1.6483
+                y_inches: 68.4742
+                z_inches: 18.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Simplex Wall"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-032-LED-002
+                Set Definition ID: SET-032
+                Location XYZ (ft): 131.088761,-23.871720,1.500000
+                Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7781199
+                FacingOrientation: -1.000000,0.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: 2
+              Apparent Load Input_CED: 180
+              CKT_Load Name_CEDT: SMART LEVERS
+            id: SET-032-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: -1.6483
+                y_inches: 24.1415
+                z_inches: 18.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Simplex Wall"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-032-LED-003
+                Set Definition ID: SET-032
+                Location XYZ (ft): 130.998950,-28.023913,1.500000
+                Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7781206
+                FacingOrientation: -1.000000,0.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: 2
+              Apparent Load Input_CED: 180
+              CKT_Load Name_CEDT: SMART LEVERS
+            id: SET-032-LED-003
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: -2.726
+                y_inches: -25.6848
+                z_inches: 18.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Simplex Wall"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-032-LED-004
+                Set Definition ID: SET-032
+                Location XYZ (ft): 130.998950,-31.514328,1.500000
+                Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7781213
+                FacingOrientation: -1.000000,0.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: 2
+              Apparent Load Input_CED: 180
+              CKT_Load Name_CEDT: SMART LEVERS
+            id: SET-032-LED-004
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: -2.726
+                y_inches: -67.5698
+                z_inches: 18.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Floor"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-032-LED-005
+                Set Definition ID: SET-032
+                Location XYZ (ft): 131.590642,-21.984074,0.000000
+                Rotation (deg): 0.000000
+                LevelId: 30
+                ElementId: 7781229
+                FacingOrientation: 0.000000,1.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: 3
+              Apparent Load Input_CED: 180
+              CKT_Load Name_CEDT: ARTISAN TABLES
+            id: SET-032-LED-005
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 4.3743
+                y_inches: 46.7933
+                z_inches: 0.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Floor"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-032-LED-006
+                Set Definition ID: SET-032
+                Location XYZ (ft): 131.590642,-29.729709,0.000000
+                Rotation (deg): 0.000000
+                LevelId: 30
+                ElementId: 7781236
+                FacingOrientation: 0.000000,1.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: 3
+              Apparent Load Input_CED: 180
+              CKT_Load Name_CEDT: ARTISAN TABLES
+            id: SET-032-LED-006
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 4.3743
+                y_inches: -46.1544
+                z_inches: 0.0
+        id: SET-032
+        name: Bakery Prep Wall Types
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 003_Mixer_40Q_1031310
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "003_Mixer_40Q_1031310 : Default"
+    schema_version: 1
+    id: EQ-005
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Specialty Ceiling - 208V/3Ph"
+            parameters:
+              dev-Group ID: ""
+              CKT_Load Name_CEDT: PLANETARY MIXER
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 3
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 1016
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-005-LED-001
+                Set Definition ID: SET-005
+                Location XYZ (ft): 129.855621,-16.879433,9.000000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7770073
+                FacingOrientation: 0.000000,1.000000,0.000000
+            id: SET-005-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: -0.1927
+                y_inches: 6.8163
+                z_inches: 108.0
+        id: SET-005
+        name: "003_Mixer_40Q_1031310 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 000_Microwave_1212171
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "000_Microwave_1212171 : Default"
+    schema_version: 1
+    id: EQ-026
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-026-LED-001
+                Set Definition ID: SET-026
+                Location XYZ (ft): 115.076288,-43.020697,1.500000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7771669
+                FacingOrientation: -1.000000,0.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 180
+              CKT_Load Name_CEDT: MICROWAVE
+            id: SET-026-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -180.0
+                x_inches: -7.8977
+                y_inches: 19.0751
+                z_inches: 12.0
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Duplex Wall"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-026-LED-002
+                Set Definition ID: SET-026
+                Location XYZ (ft): 115.076288,-44.056037,1.500000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7771676
+                FacingOrientation: -1.000000,0.000000,0.000000
+              CKT_Rating_CED: 20.0
+              CKT_Panel_CEDT: BA
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: DEDICATED
+              Apparent Load Input_CED: 400
+              CKT_Load Name_CEDT: SMART LEVELER
+            id: SET-026-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -180.0
+                x_inches: 4.5264
+                y_inches: 19.0751
+                z_inches: 12.0
+        id: SET-026
+        name: "000_Microwave_1212171 : Default Types"
+    allow_parentless: true
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}

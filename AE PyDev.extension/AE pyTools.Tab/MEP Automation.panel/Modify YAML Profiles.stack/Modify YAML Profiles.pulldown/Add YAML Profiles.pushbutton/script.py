@@ -40,7 +40,7 @@ try:
 except NameError:
     basestring = str
 
-from Autodesk.Revit.DB import Group, GroupType, XYZ, BuiltInParameter, IndependentTag, Transaction  # noqa: E402
+from Autodesk.Revit.DB import Group, GroupType, XYZ, BuiltInParameter, IndependentTag, Transaction, TransactionGroup  # noqa: E402
 
 ELEMENT_LINKER_PARAM_NAME = "Element_Linker Parameter"
 ELEMENT_LINKER_SHARED_PARAM = "Element_Linker"
@@ -140,6 +140,8 @@ def _collect_params(elem):
 
     base_targets = {
         "dev-Group ID": ["dev-Group ID", "dev_Group ID"],
+        "Number of Poles_CED": ["Number of Poles_CED", "Number of Poles_CEDT"],
+        "Apparent Load Input_CED": ["Apparent Load Input_CED", "Apparent Load Input_CEDT"],
     }
     electrical_targets = {
         "CKT_Rating_CED": ["CKT_Rating_CED"],
@@ -482,21 +484,13 @@ def _next_eq_number(data):
     return max_id + 1
 
 
-# --------------------------------------------------------------------------- #
-# Main
-# --------------------------------------------------------------------------- #
-
-
-def main():
-    try:
-        yaml_path, data = load_active_yaml_data()
-    except RuntimeError as exc:
-        forms.alert(str(exc), title="Add YAML Profiles")
-        return
-    yaml_label = get_yaml_display_name(yaml_path)
+def _execute_profile_addition(doc, data, yaml_label):
     equipment_defs = data.get("equipment_definitions") or []
     logger = script.get_logger()
-    logger.info("[Add YAML] existing defs before prompt: %s", [eq.get("name") or eq.get("id") for eq in equipment_defs if isinstance(eq, dict)])
+    logger.info(
+        "[Add YAML] existing defs before prompt: %s",
+        [eq.get("name") or eq.get("id") for eq in equipment_defs if isinstance(eq, dict)],
+    )
     existing_names = sorted({
         (entry.get("name") or entry.get("id") or "").strip()
         for entry in equipment_defs
@@ -509,22 +503,22 @@ def main():
         cad_options,
         title="Select equipment definition (or choose new)",
         multiselect=False,
-        button_name="Select"
+        button_name="Select",
     )
     if not cad_choice:
-        return
+        return False
     cad_choice = cad_choice if isinstance(cad_choice, basestring) else cad_choice[0]
     created_new_def = False
     if cad_choice == NEW_DEF_OPTION:
         cad_name = forms.ask_for_string(
             prompt="Enter a name for the new equipment definition:",
-            default=""
+            default="",
         )
         if not cad_name:
-            return
+            return False
         cad_name = cad_name.strip()
         if not cad_name:
-            return
+            return False
         existing_match = None
         cad_lower = cad_name.lower()
         for eq in equipment_defs:
@@ -544,7 +538,7 @@ def main():
             )
             if not append_to_existing:
                 forms.alert("Add YAML Profiles canceled.", title="Add YAML Profiles")
-                return
+                return False
             created_new_def = False
             cad_choice = cad_name
         else:
@@ -552,17 +546,14 @@ def main():
     else:
         cad_name = cad_choice
 
-    # 2) Pick elements
     try:
         elems = revit.pick_elements(message="Select Revit element(s) to create YAML profile type(s)")
     except Exception:
-        # fallback single
         e = revit.pick_element(message="Select Revit element to create YAML profile type")
         elems = [e] if e else []
     if not elems:
-        return
+        return False
 
-    # Capture zero-offset entries for each selected element
     element_locations = []
     for e in elems:
         loc = _get_point(e)
@@ -570,9 +561,8 @@ def main():
             element_locations.append((e, loc))
     if not element_locations:
         forms.alert("Could not read locations from selected elements.", title="Add YAML Profiles")
-        return
+        return False
 
-    # Compute centroid to preserve spacing between elements
     sum_x = sum(loc.X for _, loc in element_locations)
     sum_y = sum(loc.Y for _, loc in element_locations)
     sum_z = sum(loc.Z for _, loc in element_locations)
@@ -591,7 +581,7 @@ def main():
 
     if not element_records:
         forms.alert("No valid elements were selected.", title="Add YAML Profiles")
-        return
+        return False
     type_entries = [rec["type_entry"] for rec in element_records]
 
     equipment_def = ensure_equipment_definition(data, cad_name, type_entries[0])
@@ -635,7 +625,6 @@ def main():
             "tags": entry_tags,
         })
 
-    doc = getattr(revit, "doc", None)
     if metadata_updates and doc:
         txn_name = "Add YAML Profiles: Store Element Linker metadata ({})".format(len(metadata_updates))
         t = Transaction(doc, txn_name)
@@ -650,8 +639,10 @@ def main():
             except Exception:
                 pass
 
-    logger = script.get_logger()
-    logger.info("[Add YAML] equipment definitions now: %s", [eq.get("name") or eq.get("id") for eq in data.get("equipment_definitions") or []])
+    logger.info(
+        "[Add YAML] equipment definitions now: %s",
+        [eq.get("name") or eq.get("id") for eq in data.get("equipment_definitions") or []],
+    )
     try:
         save_active_yaml_data(
             None,
@@ -667,8 +658,40 @@ def main():
             ),
             title="Add YAML Profiles",
         )
+        return True
     except Exception as ex:
         forms.alert("Failed to update {}:\n\n{}".format(yaml_label, ex), title="Add YAML Profiles")
+        return False
+
+
+# --------------------------------------------------------------------------- #
+# Main
+# --------------------------------------------------------------------------- #
+
+
+def main():
+    doc = getattr(revit, "doc", None)
+    trans_group = TransactionGroup(doc, "Add YAML Profiles") if doc else None
+    if trans_group:
+        trans_group.Start()
+    success = False
+    try:
+        try:
+            yaml_path, data = load_active_yaml_data()
+        except RuntimeError as exc:
+            forms.alert(str(exc), title="Add YAML Profiles")
+            return
+        yaml_label = get_yaml_display_name(yaml_path)
+        success = _execute_profile_addition(doc, data, yaml_label)
+    finally:
+        if trans_group:
+            try:
+                if success:
+                    trans_group.Assimilate()
+                else:
+                    trans_group.RollBack()
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":

@@ -195,7 +195,12 @@ class ProfileEditorWindow(forms.WPFWindow):
         if not self._current_typecfg:
             forms.alert("Select a type before editing.", title="Element Linker Profile Editor")
             return
-        self._set_edit_mode(not self._in_edit_mode)
+        if self._in_edit_mode:
+            if not self._save_current_typecfg():
+                return
+            self._set_edit_mode(False)
+        else:
+            self._set_edit_mode(True)
 
     def ShowChildrenButton_Click(self, sender, args):
         if not hasattr(self, "ChildrenList"):
@@ -220,85 +225,8 @@ class ProfileEditorWindow(forms.WPFWindow):
 
     def OkButton_Click(self, sender, args):
         """Apply edits back into the current TypeConfig's InstanceConfig."""
-        if not self._current_profile or not self._current_typecfg:
-            self.DialogResult = False
-            self.Close()
+        if not self._save_current_typecfg():
             return
-
-        inst_cfg = self._current_typecfg.instance_config
-
-        # --- Offsets ---
-        try:
-            x_in = float(self.OffsetXBox.Text.strip() or "0")
-        except Exception:
-            x_in = 0.0
-        try:
-            y_in = float(self.OffsetYBox.Text.strip() or "0")
-        except Exception:
-            y_in = 0.0
-        try:
-            z_in = float(self.OffsetZBox.Text.strip() or "0")
-        except Exception:
-            z_in = 0.0
-        try:
-            rot_deg = float(self.OffsetRotBox.Text.strip() or "0")
-        except Exception:
-            rot_deg = 0.0
-
-        offsets = list(getattr(inst_cfg, "offsets", []))
-        if not offsets:
-            offsets = [OffsetConfig()]
-
-        offsets[0] = OffsetConfig(
-            x_inches=x_in,
-            y_inches=y_in,
-            z_inches=z_in,
-            rotation_deg=rot_deg,
-        )
-        inst_cfg.offsets = offsets
-
-        # --- Parameters: read back values from the UI rows ---
-        new_params = {}
-        for entry in self._param_rows:
-            name = entry["name"]
-            value_box = entry["value_box"]
-            val_text = (value_box.Text or u"").strip()
-            new_params[name] = val_text
-
-        # Write back via attribute or setter
-        if hasattr(inst_cfg, "parameters"):
-            inst_cfg.parameters = new_params
-        elif hasattr(inst_cfg, "set_parameters"):
-            inst_cfg.set_parameters(new_params)
-
-        # --- Tags ---
-        new_tags = []
-        for row in self._tag_rows:
-            _, family_box, type_box, x_box, y_box, z_box, rot_box = row
-            family = (family_box.Text or u"").strip()
-            type_name = (type_box.Text or u"").strip() or None
-            if not family and not type_name:
-                continue
-            tag_offset = OffsetConfig(
-                x_inches=self._parse_float(x_box.Text),
-                y_inches=self._parse_float(y_box.Text),
-                z_inches=self._parse_float(z_box.Text),
-                rotation_deg=self._parse_float(rot_box.Text),
-            )
-            new_tags.append(
-                TagConfig(
-                    category_name='Annotation Symbols',
-                    family_name=family,
-                    type_name=type_name,
-                    offsets=tag_offset,
-                )
-            )
-
-        if hasattr(inst_cfg, "tags"):
-            inst_cfg.tags = new_tags
-        elif hasattr(inst_cfg, "set_tags"):
-            inst_cfg.set_tags(new_tags)
-
         self.DialogResult = True
         self.Close()
 
@@ -573,6 +501,86 @@ class ProfileEditorWindow(forms.WPFWindow):
             return float((text_val or "0").strip())
         except Exception:
             return 0.0
+
+    def _save_current_typecfg(self):
+        if not self._current_profile or not self._current_typecfg:
+            forms.alert("Select a type before saving.", title="Element Linker Profile Editor")
+            return False
+
+        inst_cfg = self._current_typecfg.instance_config
+
+        # --- Offsets ---
+        try:
+            x_in = float(self.OffsetXBox.Text.strip() or "0")
+        except Exception:
+            x_in = 0.0
+        try:
+            y_in = float(self.OffsetYBox.Text.strip() or "0")
+        except Exception:
+            y_in = 0.0
+        try:
+            z_in = float(self.OffsetZBox.Text.strip() or "0")
+        except Exception:
+            z_in = 0.0
+        try:
+            rot_deg = float(self.OffsetRotBox.Text.strip() or "0")
+        except Exception:
+            rot_deg = 0.0
+
+        offsets = list(getattr(inst_cfg, "offsets", []))
+        if not offsets:
+            offsets = [OffsetConfig()]
+
+        offsets[0] = OffsetConfig(
+            x_inches=x_in,
+            y_inches=y_in,
+            z_inches=z_in,
+            rotation_deg=rot_deg,
+        )
+        inst_cfg.offsets = offsets
+
+        # --- Parameters ---
+        new_params = {}
+        for entry in self._param_rows:
+            name = entry["name"]
+            value_box = entry["value_box"]
+            val_text = (value_box.Text or u"").strip()
+            new_params[name] = val_text
+
+        if hasattr(inst_cfg, "parameters"):
+            inst_cfg.parameters = new_params
+        elif hasattr(inst_cfg, "set_parameters"):
+            inst_cfg.set_parameters(new_params)
+
+        # --- Tags ---
+        new_tags = []
+        for row in self._tag_rows:
+            _, family_box, type_box, x_box, y_box, z_box, rot_box = row
+            family = (family_box.Text or u"").strip()
+            type_name = (type_box.Text or u"").strip() or None
+            if not family and not type_name:
+                continue
+            tag_offset = OffsetConfig(
+                x_inches=self._parse_float(x_box.Text),
+                y_inches=self._parse_float(y_box.Text),
+                z_inches=self._parse_float(z_box.Text),
+                rotation_deg=self._parse_float(rot_box.Text),
+            )
+            new_tags.append(
+                TagConfig(
+                    category_name='Annotation Symbols',
+                    family_name=family,
+                    type_name=type_name,
+                    offsets=tag_offset,
+                )
+            )
+
+        if hasattr(inst_cfg, "tags"):
+            inst_cfg.tags = new_tags
+        elif hasattr(inst_cfg, "set_tags"):
+            inst_cfg.set_tags(new_tags)
+
+        return True
     def _add_param_row(self, name, value):
         row_panel = StackPanel()
         row_panel.Orientation = Orientation.Horizontal

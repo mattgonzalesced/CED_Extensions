@@ -410,6 +410,8 @@ class PlaceElementsEngine(object):
             base_loc.Y + offset[1],
             base_loc.Z + offset[2],
         )
+        if loc.Z < 0.0:
+            loc = XYZ(loc.X, loc.Y, 1.0)
 
         label = linked_def.get_element_def_id()
         family = linked_def.get_family()
@@ -720,20 +722,40 @@ class PlaceElementsEngine(object):
                 self._apply_parameters(instance, parameters)
 
     def _apply_parameters(self, element, params_dict):
-        from Autodesk.Revit.DB import StorageType
+        from Autodesk.Revit.DB import StorageType, UnitUtils, ForgeTypeId
 
         if not params_dict:
             return
         for name, value in params_dict.items():
-            param = element.LookupParameter(name)
+            try:
+                param = element.LookupParameter(name)
+            except Exception:
+                param = None
             if not param or param.IsReadOnly:
                 continue
             try:
-                if param.StorageType == StorageType.Integer:
+                storage_type = param.StorageType
+                if storage_type == StorageType.Integer:
                     param.Set(int(value))
-                elif param.StorageType == StorageType.Double:
+                elif storage_type == StorageType.Double:
+                    needs_va = bool(name and "Apparent Load" in name)
+                    needs_voltage = bool(name and "Voltage" in name)
+                    if needs_va or needs_voltage:
+                        try:
+                            unit_id = (
+                                ForgeTypeId("autodesk.unit.unit:voltAmperes-1.0.1")
+                                if needs_va
+                                else ForgeTypeId("autodesk.unit.unit:volts-1.0.1")
+                            )
+                            converted = UnitUtils.ConvertToInternalUnits(float(value), unit_id)
+                            param.Set(converted)
+                            continue
+                        except Exception:
+                            pass
                     param.Set(float(value))
-                elif param.StorageType == StorageType.String:
+                elif storage_type == StorageType.String:
+                    param.Set(str(value))
+                else:
                     param.Set(str(value))
             except Exception:
                 continue

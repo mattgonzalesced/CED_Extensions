@@ -27,12 +27,50 @@ from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
 
 TITLE = "QA/QC Equipment Coverage"
 LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
+NON_HOST_CATEGORIES = {
+    "Electrical Fixtures",
+    "Lighting Fixtures",
+    "Lighting Devices",
+    "Security Devices",
+    "Communication Devices",
+    "Data Devices",
+    "Nurse Call Devices",
+    "Fire Alarm Devices",
+    "Cable Trays",
+    "Conduits",
+    "Plumbing Fixtures",
+    "Plumbing Equipment",
+    "Mechanical Equipment",
+    "Mechanical Control Devices",
+}
 
 
 def _normalize_name(value):
     if not value:
         return ""
-    return " ".join(str(value).strip().lower().split())
+    text = str(value)
+    # Treat punctuation / separators as equivalent so family names with
+    # underscores, hyphens, or tight colons still match the YAML definition.
+    for ch in "_-:":
+        text = text.replace(ch, " ")
+    text = text.strip().lower()
+    return " ".join(text.split())
+
+
+def _format_quantity(value):
+    if abs(value - round(value)) < 1e-6:
+        return str(int(round(value)))
+    return "{:.2f}".format(value)
+
+
+def _has_parent_anchor(entry):
+    if not isinstance(entry, dict):
+        return False
+    for linked_set in entry.get("linked_sets") or []:
+        for led in linked_set.get("linked_element_definitions") or []:
+            if isinstance(led, dict) and led.get("is_parent_anchor"):
+                return True
+    return False
 
 
 def _name_variants(elem):
@@ -193,10 +231,10 @@ def main():
         return
     yaml_label = get_yaml_display_name(yaml_path)
 
+    raw_definitions = [entry for entry in (yaml_data.get("equipment_definitions") or []) if isinstance(entry, dict)]
     equipment_names = sorted({
         (entry.get("name") or entry.get("id") or "").strip()
-        for entry in (yaml_data.get("equipment_definitions") or [])
-        if isinstance(entry, dict)
+        for entry in raw_definitions
     })
     if not equipment_names:
         forms.alert("No equipment definitions found in {}.".format(yaml_label), title=TITLE)
@@ -214,33 +252,65 @@ def main():
         equipment_names = ordered_names + sorted(remaining)
 
     target_map = defaultdict(list)
-    for name in equipment_names:
-        normalized = _normalize_name(name)
-        if normalized:
-            target_map[normalized].append(name)
+    for entry in raw_definitions:
+        eq_name = (entry.get("name") or entry.get("id") or "").strip()
+        if not eq_name:
+            continue
+        parent_filter = entry.get("parent_filter") or {}
+        category_name = (parent_filter.get("category") or "").strip()
+        family_pattern = (parent_filter.get("family_name_pattern") or "").strip()
+        type_pattern = (parent_filter.get("type_name_pattern") or "").strip()
+        has_parent_hint = bool(family_pattern and type_pattern)
+        if category_name and category_name in NON_HOST_CATEGORIES:
+            has_parent_hint = False
+        if not (has_parent_hint or _has_parent_anchor(entry)):
+            continue
+        aliases = [eq_name, entry.get("id")]
+        if family_pattern and type_pattern:
+            aliases.append(u"{} : {}".format(family_pattern, type_pattern))
+        if family_pattern:
+            aliases.append(family_pattern)
+        # avoid adding isolated type pattern (e.g. "Default") since it's too generic
+        for alias in aliases:
+            norm = _normalize_name(alias)
+            if norm:
+                target_map[norm].append(eq_name)
+    normalized_map = {key: names[:] for key, names in target_map.items()}
     host_counts = _collect_placeholder_counts(doc, target_map)
     placed_counts, led_type_counts = _collect_placed_counts(doc, led_map)
+    target_map = normalized_map
 
     output = script.get_output()
     output.print_md("### QA/QC Report - {}".format(yaml_label))
     total_found = 0
-    total_placed = 0
+    total_placed = 0.0
     for name in equipment_names:
         found = host_counts.get(name, 0)
         placed = placed_counts.get(name, 0)
+        leds_per_def = max(1, eq_led_counts.get(name, 1))
+        placed_configs = placed / float(leds_per_def)
         total_found += found
-        total_placed += placed
-        label = "**{}**".format(name) if placed > 0 else "_{}_".format(name)
-        delta = found - placed
+        total_placed += placed_configs
+        label = "**{}**".format(name) if placed_configs > 0 else "_{}_".format(name)
+        delta = found - placed_configs
         note = ""
-        if delta > 0:
-            note = " ({} awaiting placement)".format(delta)
-        elif found == 0 and placed == 0:
+        if delta > 1e-6:
+            note = " ({} awaiting placement)".format(_format_quantity(delta))
+        elif delta < -1e-6:
+            note = " ({} placement(s) lack hosts)".format(_format_quantity(abs(delta)))
+        elif found == 0 and placed_configs == 0:
             note = " (no hosts detected yet)"
-        output.print_md("{} - placed `{}` / hosts `{}`{}".format(label, placed, found, note))
+        output.print_md(
+            "{} - placed `{}` / hosts `{}`{}".format(
+                label,
+                _format_quantity(placed_configs),
+                _format_quantity(found),
+                note,
+            )
+        )
 
     output.print_md("")
-    output.print_md("**Totals:** placed `{}` elements across `{}` host matches.".format(total_placed, total_found))
+    output.print_md("**Totals:** placed `{}` configurations across `{}` host matches.".format(_format_quantity(total_placed), _format_quantity(total_found)))
 
     type_rows = []
     for led_id, count in led_type_counts.items():

@@ -164,6 +164,7 @@ def gather_element_info(doc, elements, panel_lookup, logger=None):
         rating = get_param_value(element, "CKT_Rating_CED")
         load_name = get_param_value(element, "CKT_Load Name_CEDT")
         circuit_notes = get_param_value(element, "CKT_Schedule Notes_CEDT")
+        voltage_value = get_param_value(element, "Voltage_CED")
         poles_value = get_param_value(element, "Number of Poles_CED")
         number_of_poles = try_parse_int(poles_value)
 
@@ -195,6 +196,7 @@ def gather_element_info(doc, elements, panel_lookup, logger=None):
                 "circuit_notes": circuit_notes,
                 "number_of_poles": number_of_poles or 1,
                 "connector_poles": connector_poles,
+                "voltage_ced": voltage_value,
                 "panel_distribution_system_ids": list(panel_distribution_system_ids),
             }
         )

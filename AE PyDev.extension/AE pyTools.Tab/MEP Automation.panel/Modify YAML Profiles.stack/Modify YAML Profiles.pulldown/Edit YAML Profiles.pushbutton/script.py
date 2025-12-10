@@ -9,7 +9,8 @@ Allows editing offsets, parameters, tags, category, and is_group for each equipm
 
 import os
 
-from pyrevit import script, forms
+from pyrevit import script, forms, revit
+from Autodesk.Revit.DB import TransactionGroup
 
 # Add CEDLib.lib to sys.path for shared UI/logic classes
 import sys
@@ -204,44 +205,63 @@ def _build_relations_index(equipment_defs):
 
 
 def main():
+    doc = getattr(revit, "doc", None)
+    trans_group = TransactionGroup(doc, "Edit YAML Profiles") if doc else None
+    if trans_group:
+        trans_group.Start()
+    success = False
     try:
-        data_path, raw_data = load_active_yaml_data()
-    except RuntimeError as exc:
-        forms.alert(str(exc), title="Edit YAML Profiles")
-        return
-    yaml_label = get_yaml_display_name(data_path)
-    # XAML lives alongside the UI class in CEDLib.lib/UIClasses
-    xaml_path = os.path.join(LIB_ROOT, "UIClasses", "ProfileEditorWindow.xaml")
-    if not os.path.exists(xaml_path):
-        forms.alert("ProfileEditorWindow.xaml not found under CEDLib.lib/UIClasses.", title="Edit YAML Profiles")
-        return
+        try:
+            data_path, raw_data = load_active_yaml_data()
+        except RuntimeError as exc:
+            forms.alert(str(exc), title="Edit YAML Profiles")
+            return
+        yaml_label = get_yaml_display_name(data_path)
+        # XAML lives alongside the UI class in CEDLib.lib/UIClasses
+        xaml_path = os.path.join(LIB_ROOT, "UIClasses", "ProfileEditorWindow.xaml")
+        if not os.path.exists(xaml_path):
+            forms.alert("ProfileEditorWindow.xaml not found under CEDLib.lib/UIClasses.", title="Edit YAML Profiles")
+            return
 
-    raw_defs = raw_data.get("equipment_definitions") or []
-    relations_index = _build_relations_index(raw_defs)
-    legacy_dict = {"profiles": equipment_defs_to_legacy(raw_defs)}
-    shim_profiles = _shims_from_dict(legacy_dict)
+        raw_defs = raw_data.get("equipment_definitions") or []
+        relations_index = _build_relations_index(raw_defs)
+        legacy_dict = {"profiles": equipment_defs_to_legacy(raw_defs)}
+        shim_profiles = _shims_from_dict(legacy_dict)
 
-    window = ProfileEditorWindow(xaml_path, shim_profiles, relations_index)
-    result = window.show_dialog()
-    if not result:
-        return
+        window = ProfileEditorWindow(xaml_path, shim_profiles, relations_index)
+        result = window.show_dialog()
+        if not result:
+            return
 
-    try:
-        updated_dict = _dict_from_shims(shim_profiles)
-        updated_defs = legacy_to_equipment_defs(
-            updated_dict.get("profiles") or [],
-            raw_defs,
-        )
-        raw_data["equipment_definitions"] = updated_defs
-        save_active_yaml_data(
-            None,
-            raw_data,
-            "Edit YAML Profiles",
-            "Updated YAML profiles via editor window",
-        )
-        forms.alert("Saved profile changes to {}.\nReload Place Elements (YAML) to use the updates.".format(yaml_label), title="Edit YAML Profiles")
-    except Exception as ex:
-        forms.alert("Failed to save {}:\n\n{}".format(yaml_label, ex), title="Edit YAML Profiles")
+        try:
+            updated_dict = _dict_from_shims(shim_profiles)
+            updated_defs = legacy_to_equipment_defs(
+                updated_dict.get("profiles") or [],
+                raw_defs,
+            )
+            raw_data["equipment_definitions"] = updated_defs
+            save_active_yaml_data(
+                None,
+                raw_data,
+                "Edit YAML Profiles",
+                "Updated YAML profiles via editor window",
+            )
+            forms.alert(
+                "Saved profile changes to {}.\nReload Place Elements (YAML) to use the updates.".format(yaml_label),
+                title="Edit YAML Profiles",
+            )
+            success = True
+        except Exception as ex:
+            forms.alert("Failed to save {}:\n\n{}".format(yaml_label, ex), title="Edit YAML Profiles")
+    finally:
+        if trans_group:
+            try:
+                if success:
+                    trans_group.Assimilate()
+                else:
+                    trans_group.RollBack()
+            except Exception:
+                pass
 
 
 def _serialize_tags(tags):
