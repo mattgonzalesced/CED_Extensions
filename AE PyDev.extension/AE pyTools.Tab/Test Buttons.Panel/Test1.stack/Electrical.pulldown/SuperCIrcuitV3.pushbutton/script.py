@@ -17,7 +17,10 @@ from libGeneral import data, grouping, circuits, transactions, common
 
 logger = script.get_logger()
 POSITION_GROUP_SIZE = 3
-CLIENT_CHOICES = OrderedDict([("Planet Fitness", "planet_fitness")])
+CLIENT_CHOICES = OrderedDict([
+    ("Planet Fitness", "planet_fitness"),
+    ("HEB", "heb"),
+])
 client_helpers = None
 EXCLUDED_CATEGORY_IDS = {
     DB.ElementId(DB.BuiltInCategory.OST_LightingDevices).IntegerValue,
@@ -42,6 +45,13 @@ def _load_client_helpers(client_key):
             return PFhelpers
         except ImportError as ex:
             logger.warning("PF helpers unavailable: {}".format(ex))
+    elif client_key == "heb":
+        try:
+            from HEBlib import HEBhelper
+
+            return HEBhelper
+        except ImportError as ex:
+            logger.warning("HEB helpers unavailable: {}".format(ex))
     return None
 
 
@@ -147,6 +157,13 @@ def main():
     if not info_items:
         logger.info("No elements with circuit data were found.")
         return
+    if client_helpers and hasattr(client_helpers, "preprocess_items"):
+        try:
+            processed = client_helpers.preprocess_items(info_items, doc, panel_lookup, logger)
+            if processed:
+                info_items = processed
+        except Exception as ex:
+            logger.warning("Client preprocess_items failed: {}".format(ex))
 
     groups = grouping.assemble_groups(info_items, client_helpers, POSITION_GROUP_SIZE, logger)
     if not groups:
