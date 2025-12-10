@@ -365,12 +365,17 @@ def _filter_by_led_id(instances, led_id):
     if not target:
         return instances
     filtered = []
+    missing_payload = []
     for inst in instances:
         payload = _get_linker_payload_from_instance(inst)
         cand = (payload.get("led_id") or "").strip().lower()
-        if cand == target:
+        if not cand:
+            missing_payload.append(inst)
+        elif cand == target:
             filtered.append(inst)
-    return filtered
+    if filtered:
+        return filtered
+    return missing_payload
 
 
 def _resolve_hosts(host_lookup, symbol_lookup, label, canonical):
