@@ -21,7 +21,7 @@ except Exception:
 from Autodesk.Revit.DB import Transaction
 from Autodesk.Revit.DB.ExtensibleStorage import Entity, Schema, SchemaBuilder
 from Autodesk.Revit.DB.Events import DocumentChangedEventArgs, UndoOperation
-from System import Guid, String, EventHandler  # noqa: E402
+from System import Guid, String, EventHandler, Array, Byte  # noqa: E402
 
 try:
     from Autodesk.Revit.UI.Events import ApplicationUndoRedoEventArgs
@@ -828,13 +828,9 @@ class ExtensibleStorage(object):
 def _make_doc_guid(doc):
     """Generate document-specific GUID to avoid schema conflicts between models."""
     import hashlib
-    import System
     title = getattr(doc, "Title", "unknown")
     hash_bytes = hashlib.md5((title + "9f6633b1d77f49ef93905111fbb16d82").encode('utf-8')).digest()
-    # Convert Python bytes to .NET Array[Byte] for IronPython
-    # Need to convert each byte individually
-    byte_array = System.Array[System.Byte]([System.Byte(b) for b in bytearray(hash_bytes)])
-    return Guid(byte_array)
+    return Guid(bytes(hash_bytes))
 
 
 __all__ = ["ExtensibleStorage"]
