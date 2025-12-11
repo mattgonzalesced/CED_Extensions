@@ -155,6 +155,44 @@ def _dict_from_shims(profiles):
     return out
 
 
+def _has_negative_z(value):
+    if value is None:
+        return False
+    try:
+        return float(value) < 0.0
+    except Exception:
+        return False
+
+
+def _find_negative_z_offsets(profile_dict):
+    negatives = []
+    for profile in profile_dict.get("profiles") or []:
+        cad_name = profile.get("cad_name") or "<Unnamed CAD>"
+        for type_entry in profile.get("types") or []:
+            label = type_entry.get("label") or type_entry.get("id") or "<Unnamed Type>"
+            inst = type_entry.get("instance_config") or {}
+            for idx, offset in enumerate(inst.get("offsets") or []):
+                if _has_negative_z(offset.get("z_inches")):
+                    negatives.append({
+                        "cad": cad_name,
+                        "label": label,
+                        "index": idx + 1,
+                        "value": float(offset.get("z_inches") or 0.0),
+                        "source": "offset",
+                    })
+            for tag in inst.get("tags") or []:
+                offsets = tag.get("offsets") or {}
+                if _has_negative_z(offsets.get("z_inches")):
+                    negatives.append({
+                        "cad": cad_name,
+                        "label": label,
+                        "index": None,
+                        "value": float(offsets.get("z_inches") or 0.0),
+                        "source": "tag",
+                    })
+    return negatives
+
+
 def _shims_from_dict(data):
     profiles = {}
     for p in data.get("profiles") or []:
@@ -235,6 +273,28 @@ def main():
 
         try:
             updated_dict = _dict_from_shims(shim_profiles)
+            negatives = _find_negative_z_offsets(updated_dict)
+            if negatives:
+                lines = ["Negative Z-offsets detected:"]
+                for entry in negatives[:5]:
+                    if entry["source"] == "tag":
+                        lines.append(" - {} / {} tag offsets = {:.2f}\"".format(entry["cad"], entry["label"], entry["value"]))
+                    else:
+                        lines.append(" - {} / {} offset #{} = {:.2f}\"".format(entry["cad"], entry["label"], entry["index"], entry["value"]))
+                if len(negatives) > len(lines) - 1:
+                    lines.append(" - (+{} more)".format(len(negatives) - (len(lines) - 1)))
+                lines.append("")
+                lines.append("Continue saving anyway?")
+                proceed = forms.alert(
+                    "\n".join(lines),
+                    title="Edit YAML Profiles",
+                    ok=False,
+                    yes=True,
+                    no=True,
+                )
+                if not proceed:
+                    forms.alert("Save canceled. No changes were written.", title="Edit YAML Profiles")
+                    return
             updated_defs = legacy_to_equipment_defs(
                 updated_dict.get("profiles") or [],
                 raw_defs,
