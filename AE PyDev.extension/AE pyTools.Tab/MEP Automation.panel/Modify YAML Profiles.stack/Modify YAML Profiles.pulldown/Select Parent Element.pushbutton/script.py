@@ -267,6 +267,18 @@ def _format_xyz(vec):
     return "{:.6f},{:.6f},{:.6f}".format(vec.X, vec.Y, vec.Z)
 
 
+def _normalize_angle(angle_deg):
+    try:
+        value = float(angle_deg)
+    except Exception:
+        value = 0.0
+    while value > 180.0:
+        value -= 360.0
+    while value <= -180.0:
+        value += 360.0
+    return value
+
+
 def _build_element_linker_payload(led_id, set_id, elem, host_point, rotation_override=None, parent_rotation_deg=None):
     point = host_point or _get_point(elem)
     rotation_deg = _get_rotation(elem) if rotation_override is None else rotation_override
@@ -754,6 +766,56 @@ def _inches_to_feet(value):
         return 0.0
 
 
+def _level_relative_z_inches(elem, world_point):
+    if elem is None:
+        return 0.0
+    doc = getattr(elem, "Document", None)
+    level_elem = None
+    level_id = getattr(elem, "LevelId", None)
+    if level_id and doc:
+        try:
+            level_elem = doc.GetElement(level_id)
+        except Exception:
+            level_elem = None
+    if not level_elem:
+        level_param_names = (
+            "INSTANCE_REFERENCE_LEVEL_PARAM",
+            "FAMILY_LEVEL_PARAM",
+            "INSTANCE_LEVEL_PARAM",
+            "SCHEDULE_LEVEL_PARAM",
+        )
+        for name in level_param_names:
+            bip = getattr(BuiltInParameter, name, None)
+            if not bip:
+                continue
+            try:
+                param = elem.get_Parameter(bip)
+            except Exception:
+                param = None
+            if not param:
+                continue
+            try:
+                eid = param.AsElementId()
+            except Exception:
+                eid = None
+            if eid and doc:
+                try:
+                    level_elem = doc.GetElement(eid)
+                except Exception:
+                    level_elem = None
+                if level_elem:
+                    break
+    level_elev = 0.0
+    if level_elem:
+        try:
+            level_elev = getattr(level_elem, "Elevation", 0.0) or 0.0
+        except Exception:
+            level_elev = 0.0
+    world_z = world_point.Z if world_point else 0.0
+    relative_ft = world_z - level_elev
+    return _feet_to_inches(relative_ft)
+
+
 def _rotate_xy(vec, angle_deg):
     if vec is None:
         return XYZ(0, 0, 0)
@@ -1139,7 +1201,12 @@ def main():
         metadata_updates = []
         labels_added = []
         for child in child_entries:
-            offsets = compute_offsets_from_points(parent_origin_point, parent_rotation, child["point"], child["rotation_deg"])
+            child_rotation = child.get("rotation_deg")
+            offsets = compute_offsets_from_points(parent_origin_point, parent_rotation, child["point"], child_rotation)
+            offsets["z_inches"] = _level_relative_z_inches(child["element"], child["point"])
+            if child.get("is_group"):
+                rel_rot = _normalize_angle((child_rotation or 0.0) - (parent_rotation or 0.0))
+                offsets["rotation_deg"] = rel_rot
             led_id = next_led_id(linked_set, parent_eq)
             params = dict(child.get("parameters") or {})
             payload = _build_element_linker_payload(
@@ -1147,7 +1214,7 @@ def main():
                 set_id,
                 child["element"],
                 child["point"],
-                child.get("rotation_deg"),
+                child_rotation,
                 parent_rotation,
             )
             params[ELEMENT_LINKER_PARAM_NAME] = payload

@@ -129,6 +129,56 @@ def _feet_to_inches(value):
         return 0.0
 
 
+def _level_relative_z_inches(elem, world_point):
+    if elem is None:
+        return 0.0
+    doc = getattr(elem, "Document", None)
+    level_elem = None
+    level_id = getattr(elem, "LevelId", None)
+    if level_id and doc:
+        try:
+            level_elem = doc.GetElement(level_id)
+        except Exception:
+            level_elem = None
+    if not level_elem:
+        level_param_names = (
+            "INSTANCE_REFERENCE_LEVEL_PARAM",
+            "FAMILY_LEVEL_PARAM",
+            "INSTANCE_LEVEL_PARAM",
+            "SCHEDULE_LEVEL_PARAM",
+        )
+        for name in level_param_names:
+            bip = getattr(BuiltInParameter, name, None)
+            if not bip:
+                continue
+            try:
+                param = elem.get_Parameter(bip)
+            except Exception:
+                param = None
+            if not param:
+                continue
+            try:
+                eid = param.AsElementId()
+            except Exception:
+                eid = None
+            if eid and doc:
+                try:
+                    level_elem = doc.GetElement(eid)
+                except Exception:
+                    level_elem = None
+                if level_elem:
+                    break
+    level_elev = 0.0
+    if level_elem:
+        try:
+            level_elev = getattr(level_elem, "Elevation", 0.0) or 0.0
+        except Exception:
+            level_elev = 0.0
+    world_z = world_point.Z if world_point else 0.0
+    relative_ft = world_z - level_elev
+    return _feet_to_inches(relative_ft)
+
+
 def _collect_params(elem):
     try:
         cat = getattr(elem, "Category", None)
@@ -445,20 +495,8 @@ def _build_type_entry(elem, offset_vec, rot_deg, host_point):
         "x_inches": _feet_to_inches(offset_vec.X),
         "y_inches": _feet_to_inches(offset_vec.Y),
         "rotation_deg": rot_deg,
+        "z_inches": _level_relative_z_inches(elem, host_point),
     }
-
-    # z offset should match the element's elevation from level parameter (in inches)
-    z_offset = 0.0
-    try:
-        level_param = elem.get_Parameter(BuiltInParameter.INSTANCE_ELEVATION_PARAM)
-        if level_param:
-            z_offset = level_param.AsDouble()
-        else:
-            # fallback to world z if parameter missing
-            z_offset = host_point.Z if host_point else 0.0
-    except Exception:
-        z_offset = host_point.Z if host_point else 0.0
-    offsets["z_inches"] = _feet_to_inches(z_offset)
 
     type_entry = {
         "label": label,
