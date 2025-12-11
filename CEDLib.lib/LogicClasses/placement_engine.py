@@ -516,13 +516,30 @@ class PlaceElementsEngine(object):
         try:
             instance = self.doc.Create.PlaceGroup(location, gtype)
 
-            if detail_type is not None:
+            try:
+                view = getattr(self.doc, "ActiveView", None)
+            except Exception:
+                view = None
+            if view:
+                detail_ids = []
                 try:
-                    view = getattr(self.doc, "ActiveView", None)
-                    if view:
-                        instance.ShowAttachedDetailGroups(view, detail_type.Id)
+                    detail_ids = list(instance.GetAvailableAttachedDetailGroupTypeIds() or [])
                 except Exception:
-                    pass
+                    detail_ids = []
+                if detail_type is not None:
+                    try:
+                        detail_ids.append(detail_type.Id)
+                    except Exception:
+                        pass
+                seen = set()
+                for did in detail_ids or []:
+                    try:
+                        if did is None or did.IntegerValue in seen:
+                            continue
+                        instance.ShowAttachedDetailGroups(view, did)
+                        seen.add(did.IntegerValue)
+                    except Exception:
+                        continue
 
             return instance
         except Exception as exc:
