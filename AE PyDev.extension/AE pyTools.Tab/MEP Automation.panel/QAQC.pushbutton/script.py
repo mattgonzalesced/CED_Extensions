@@ -205,6 +205,10 @@ def _build_led_map(data):
         order.append(name)
         for linked_set in eq.get("linked_sets") or []:
             for led in linked_set.get("linked_element_definitions") or []:
+                if not isinstance(led, dict):
+                    continue
+                if led.get("is_parent_anchor"):
+                    continue
                 led_id = (led.get("id") or "").strip()
                 if not led_id:
                     continue
