@@ -7,6 +7,7 @@ and other tools always reference the in-model definition.
 Allows editing offsets, parameters, tags, category, and is_group for each equipment definition/type.
 """
 
+import copy
 import os
 
 from pyrevit import script, forms, revit
@@ -45,6 +46,8 @@ from profile_schema import (  # noqa: E402
 from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data  # noqa: E402
 
+TRUTH_SOURCE_ID_KEY = "ced_truth_source_id"
+TRUTH_SOURCE_NAME_KEY = "ced_truth_source_name"
 
 # --------------------------------------------------------------------------- #
 # YAML helpers
@@ -242,6 +245,73 @@ def _build_relations_index(equipment_defs):
     return relations
 
 
+def _build_truth_groups(equipment_defs):
+    """Return ({root_name: {'members': [names]}}, {cad_name: root_name})."""
+    groups = {}
+    child_to_root = {}
+    id_to_name = {}
+    for entry in equipment_defs or []:
+        eq_id = (entry.get("id") or "").strip()
+        eq_name = (entry.get("name") or entry.get("id") or "").strip()
+        if not eq_name:
+            continue
+        if eq_id:
+            id_to_name[eq_id] = eq_name
+    for entry in equipment_defs or []:
+        eq_id = (entry.get("id") or "").strip()
+        eq_name = (entry.get("name") or entry.get("id") or "").strip()
+        if not eq_name:
+            continue
+        source_id = (entry.get(TRUTH_SOURCE_ID_KEY) or eq_id).strip()
+        source_name = id_to_name.get(source_id) or (entry.get(TRUTH_SOURCE_NAME_KEY) or "").strip()
+        if not source_name:
+            source_name = eq_name
+        data = groups.setdefault(source_name, {
+            "source_id": source_id or eq_id,
+            "members": [],
+        })
+        data["members"].append(eq_name)
+        child_to_root[eq_name] = source_name
+    for source_name, data in groups.items():
+        members = data.get("members") or []
+        seen = set()
+        ordered = []
+        for name in members:
+            if name in seen:
+                continue
+            seen.add(name)
+            ordered.append(name)
+        rest = sorted([name for name in ordered if name != source_name], key=lambda val: val.lower())
+        rest.insert(0, source_name)
+        data["members"] = rest
+        if not data.get("source_id"):
+            data["source_id"] = source_name
+    return groups, child_to_root
+
+
+def _apply_truth_links(profile_dict, truth_groups):
+    if not truth_groups:
+        return
+    profiles = profile_dict.get("profiles") or []
+    by_name = {}
+    for entry in profiles:
+        cad = entry.get("cad_name")
+        if cad:
+            by_name[cad] = entry
+    for source_name, data in (truth_groups or {}).items():
+        members = data.get("members") or []
+        root_entry = by_name.get(source_name)
+        if not root_entry:
+            continue
+        for cad_name in members:
+            if cad_name == source_name:
+                continue
+            target = by_name.get(cad_name)
+            if not target:
+                continue
+            target["types"] = copy.deepcopy(root_entry.get("types") or [])
+
+
 def main():
     doc = getattr(revit, "doc", None)
     trans_group = TransactionGroup(doc, "Edit YAML Profiles") if doc else None
@@ -263,16 +333,24 @@ def main():
 
         raw_defs = raw_data.get("equipment_definitions") or []
         relations_index = _build_relations_index(raw_defs)
+        truth_groups, child_to_root = _build_truth_groups(raw_defs)
         legacy_dict = {"profiles": equipment_defs_to_legacy(raw_defs)}
         shim_profiles = _shims_from_dict(legacy_dict)
 
-        window = ProfileEditorWindow(xaml_path, shim_profiles, relations_index)
+        window = ProfileEditorWindow(
+            xaml_path,
+            shim_profiles,
+            relations_index,
+            truth_groups=truth_groups,
+            child_to_root=child_to_root,
+        )
         result = window.show_dialog()
         if not result:
             return
 
         try:
             updated_dict = _dict_from_shims(shim_profiles)
+            _apply_truth_links(updated_dict, truth_groups)
             negatives = _find_negative_z_offsets(updated_dict)
             if negatives:
                 lines = ["Negative Z-offsets detected:"]

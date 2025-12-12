@@ -14,6 +14,8 @@ WPF window for editing CadBlockProfile TypeConfigs at runtime:
 Changes are written back into the existing InstanceConfig objects in memory.
 """
 
+import copy
+
 from pyrevit import forms
 from LogicClasses.Element_Linker import OffsetConfig, TagConfig
 
@@ -23,33 +25,40 @@ except NameError:
     basestring = str
 
 # WPF controls for building parameter rows dynamically
-from System.Windows.Controls import StackPanel, TextBlock, TextBox, Orientation
+from System.Windows.Controls import StackPanel, TextBlock, TextBox, Orientation, ListBoxItem
 from System.Windows import Thickness
 
 
 class ProfileEditorWindow(forms.WPFWindow):
-    def __init__(self, xaml_path, cad_block_profiles, relations=None):
+    def __init__(self, xaml_path, cad_block_profiles, relations=None, truth_groups=None, child_to_root=None):
         self._profiles = cad_block_profiles
         self._relations = relations or {}
+        self._truth_groups = truth_groups or {}
+        self._child_to_root = child_to_root or {}
         self._current_profile = None
         self._current_profile_name = None
         self._current_typecfg = None
         self._type_lookup = {}
+        self._active_root_name = None
 
         # cache of (param_name, TextBox) for current type
         self._param_rows = []
         self._tag_rows = []
         self._in_edit_mode = False
+        self._force_read_only = False
+        self._profile_filter = u""
+        self._header_entries = {}
+        self._child_entries = {}
+        self._group_order = []
+        self._display_entries = []
+
+        self._normalize_truth_groups()
+        self._rebuild_profile_items()
 
         forms.WPFWindow.__init__(self, xaml_path)
 
-        profile_names = sorted(self._profiles.keys())
-        for name in profile_names:
-            self.ProfileList.Items.Add(name)
-
-        if self.ProfileList.Items.Count > 0:
-            self.ProfileList.SelectedIndex = 0
-        else:
+        self._apply_profile_filter(u"")
+        if not getattr(self.ProfileList, "Items", None) or not self.ProfileList.Items.Count:
             self._clear_fields()
         self._set_edit_mode(False)
 
@@ -70,10 +79,21 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._type_lookup = {}
         self._clear_fields()
 
-        profile_name = self.ProfileList.SelectedItem
+        selected_item = getattr(self.ProfileList, "SelectedItem", None)
+        metadata = getattr(selected_item, "Tag", None)
+        profile_name = metadata.get("profile_name") if metadata else None
+        root_name = metadata.get("root_name") if metadata else None
+        is_read_only = metadata.get("read_only") if metadata else False
         if not profile_name:
             self.ParentInfoText.Text = "Parent: (none)"
+            self._active_root_name = None
+            self._force_read_only = False
             return
+
+        self._active_root_name = root_name or profile_name
+        self._force_read_only = bool(is_read_only)
+        if self._force_read_only:
+            self._in_edit_mode = False
 
         profile = self._profiles.get(profile_name)
         if not profile:
@@ -112,6 +132,9 @@ class ProfileEditorWindow(forms.WPFWindow):
                 "No TypeConfigs found for profile:\n\n{}".format(profile_name),
                 title="Element Linker Profile Editor"
             )
+        self._apply_read_only_state()
+        self._refresh_param_buttons()
+        self._update_edit_button_state()
 
     def TypeList_SelectionChanged(self, sender, args):
         """When user picks a type label, load its data into the editor."""
@@ -192,12 +215,21 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._apply_read_only_state()
 
     def EditButton_Click(self, sender, args):
+        if self._force_read_only:
+            root = self._active_root_name or self._child_to_root.get(self._current_profile_name, self._current_profile_name)
+            if root:
+                msg = "Select the non-indented '{}' entry to edit merged profiles.".format(root)
+            else:
+                msg = "Select a source profile to edit."
+            forms.alert(msg, title="Element Linker Profile Editor")
+            return
         if not self._current_typecfg:
             forms.alert("Select a type before editing.", title="Element Linker Profile Editor")
             return
         if self._in_edit_mode:
             if not self._save_current_typecfg():
                 return
+            self._mirror_group_profiles(self._active_root_name or self._current_profile_name)
             self._set_edit_mode(False)
         else:
             self._set_edit_mode(True)
@@ -227,6 +259,8 @@ class ProfileEditorWindow(forms.WPFWindow):
         """Apply edits back into the current TypeConfig's InstanceConfig."""
         if not self._save_current_typecfg():
             return
+        if not self._force_read_only:
+            self._mirror_group_profiles(self._active_root_name or self._current_profile_name)
         self.DialogResult = True
         self.Close()
 
@@ -292,14 +326,23 @@ class ProfileEditorWindow(forms.WPFWindow):
         return cleaned
 
     def _set_edit_mode(self, enabled):
-        self._in_edit_mode = bool(enabled)
-        if hasattr(self, "EditButton"):
-            self.EditButton.Content = "Done" if self._in_edit_mode else "Edit"
+        self._in_edit_mode = bool(enabled) and not self._force_read_only
+        self._update_edit_button_state()
         self._apply_read_only_state()
         self._refresh_param_buttons()
 
+    def _update_edit_button_state(self):
+        if not hasattr(self, "EditButton"):
+            return
+        if self._force_read_only:
+            self.EditButton.Content = "Edit"
+            self.EditButton.IsEnabled = False
+        else:
+            self.EditButton.IsEnabled = True
+            self.EditButton.Content = "Done" if self._in_edit_mode else "Edit"
+
     def _apply_read_only_state(self):
-        read_only = not self._in_edit_mode
+        read_only = (not self._in_edit_mode) or self._force_read_only
         for textbox in (self.OffsetXBox, self.OffsetYBox, self.OffsetZBox, self.OffsetRotBox):
             textbox.IsReadOnly = read_only
         for entry in self._param_rows:
@@ -308,9 +351,9 @@ class ProfileEditorWindow(forms.WPFWindow):
             for textbox in row[1:]:
                 textbox.IsReadOnly = read_only
         if hasattr(self, "AddTagButton"):
-            self.AddTagButton.IsEnabled = self._in_edit_mode
+            self.AddTagButton.IsEnabled = not read_only
         if hasattr(self, "RemoveTagButton"):
-            self.RemoveTagButton.IsEnabled = self._in_edit_mode
+            self.RemoveTagButton.IsEnabled = not read_only
         self._refresh_param_buttons()
 
     def _clear_fields(self):
@@ -332,6 +375,172 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._apply_read_only_state()
         self._refresh_param_buttons()
 
+    def _normalize_truth_groups(self):
+        if not self._truth_groups:
+            self._truth_groups = {}
+        for name in sorted(self._profiles.keys()):
+            root = self._child_to_root.get(name) or name
+            self._child_to_root[name] = root
+            group = self._truth_groups.setdefault(root, {"members": []})
+            members = group.setdefault("members", [])
+            if root not in members:
+                members.insert(0, root)
+            if name not in members:
+                members.append(name)
+        normalized = {}
+        for root, data in self._truth_groups.items():
+            members = data.get("members") or []
+            seen = set()
+            ordered = []
+            for entry in members:
+                if entry in seen:
+                    continue
+                seen.add(entry)
+                ordered.append(entry)
+            rest = [entry for entry in ordered if entry != root]
+            rest.sort(key=lambda val: val.lower())
+            rest.insert(0, root)
+            normalized[root] = {
+                "members": rest,
+                "source_id": data.get("source_id")
+            }
+        self._truth_groups = normalized
+        self._group_order = sorted(self._truth_groups.keys(), key=lambda val: val.lower())
+
+    def _rebuild_profile_items(self):
+        self._header_entries = {}
+        self._child_entries = {}
+        entries = []
+        for root in self._group_order or sorted(self._profiles.keys()):
+            header = {
+                "display": root,
+                "profile_name": root,
+                "root_name": root,
+                "read_only": False,
+                "is_header": True,
+                "key": ("header", root),
+            }
+            self._header_entries[root] = header
+            entries.append(header)
+            members = (self._truth_groups.get(root) or {}).get("members") or [root]
+            child_list = []
+            for idx, member in enumerate(members):
+                display = u"    - {}".format(member)
+                child_entry = {
+                    "display": display,
+                    "profile_name": member,
+                    "root_name": root,
+                    "read_only": True,
+                    "is_header": False,
+                    "key": ("child", root, member, idx),
+                }
+                child_list.append(child_entry)
+                entries.append(child_entry)
+            self._child_entries[root] = child_list
+        self._display_entries = list(entries)
+
+    def _mirror_group_profiles(self, root_name):
+        if not root_name:
+            return
+        members = (self._truth_groups.get(root_name) or {}).get("members") or []
+        if len(members) <= 1:
+            return
+        source_profile = self._profiles.get(root_name)
+        if not source_profile:
+            return
+        for member in members:
+            if member == root_name:
+                continue
+            cloned = self._clone_profile_shim(source_profile, member)
+            if cloned:
+                self._profiles[member] = cloned
+
+    def _clone_profile_shim(self, source_profile, target_name):
+        if source_profile is None:
+            return None
+        try:
+            cloned = copy.deepcopy(source_profile)
+        except Exception:
+            return None
+        try:
+            cloned.cad_name = target_name
+        except Exception:
+            pass
+        return cloned
+
+    def _populate_profile_list(self, entries, preferred=None):
+        if not hasattr(self, "ProfileList"):
+            return
+        previous = preferred
+        if previous is None:
+            selected = getattr(self.ProfileList, "SelectedItem", None)
+            if selected is not None:
+                previous = getattr(selected, "Tag", None)
+        self.ProfileList.Items.Clear()
+        selected_item = None
+        for entry in entries:
+            lb_item = ListBoxItem()
+            lb_item.Content = entry["display"]
+            lb_item.Tag = entry
+            self.ProfileList.Items.Add(lb_item)
+            if previous and entry.get("key") == previous.get("key"):
+                selected_item = lb_item
+        if not entries:
+            self.ProfileList.SelectedIndex = -1
+            return
+        if selected_item is None:
+            selected_item = self.ProfileList.Items[0]
+        self.ProfileList.SelectedItem = selected_item
+
+    def _apply_profile_filter(self, search_text):
+        if not hasattr(self, "ProfileList"):
+            return
+        normalized = (search_text or u"").strip().lower()
+        self._profile_filter = normalized
+        if not normalized:
+            filtered = list(self._display_entries)
+        else:
+            filtered = []
+            for root in self._group_order:
+                header_entry = self._header_entries.get(root)
+                child_entries = self._child_entries.get(root, [])
+                header_matches = normalized in (root or "").lower()
+                matching_children = [
+                    entry for entry in child_entries
+                    if normalized in (entry.get("profile_name") or "").lower()
+                ]
+                if not header_matches and not matching_children:
+                    continue
+                if header_entry:
+                    filtered.append(header_entry)
+                if header_matches:
+                    filtered.extend(child_entries)
+                else:
+                    filtered.extend(matching_children)
+        preferred = None
+        current_selected = getattr(self.ProfileList, "SelectedItem", None)
+        if current_selected is not None:
+            tag = getattr(current_selected, "Tag", None)
+            if tag:
+                preferred = tag
+        elif isinstance(self._current_profile_name, basestring):
+            root_name = self._child_to_root.get(self._current_profile_name, self._current_profile_name)
+            preferred = self._header_entries.get(root_name)
+        self._populate_profile_list(filtered, preferred=preferred)
+        if not filtered:
+            self._current_profile = None
+            self._current_profile_name = None
+            self._current_typecfg = None
+            self._active_root_name = None
+            self._force_read_only = False
+            self._clear_fields()
+
+    def ProfileSearchBox_TextChanged(self, sender, args):
+        text = u""
+        if sender is not None:
+            text = getattr(sender, "Text", u"") or u""
+        self._apply_profile_filter(text)
+
     def _fmt_float(self, val):
         try:
             f = float(val)
@@ -340,10 +549,10 @@ class ProfileEditorWindow(forms.WPFWindow):
             return "0"
 
     def _refresh_param_buttons(self):
-        add_enabled = self._in_edit_mode and bool(self._current_typecfg)
+        add_enabled = self._in_edit_mode and not self._force_read_only and bool(self._current_typecfg)
         if hasattr(self, "AddParamButton"):
             self.AddParamButton.IsEnabled = add_enabled
-        delete_enabled = self._in_edit_mode and bool(getattr(self, "ParamList", None) and self.ParamList.SelectedItem)
+        delete_enabled = self._in_edit_mode and not self._force_read_only and bool(getattr(self, "ParamList", None) and self.ParamList.SelectedItem)
         if hasattr(self, "DeleteParamButton"):
             self.DeleteParamButton.IsEnabled = delete_enabled
 

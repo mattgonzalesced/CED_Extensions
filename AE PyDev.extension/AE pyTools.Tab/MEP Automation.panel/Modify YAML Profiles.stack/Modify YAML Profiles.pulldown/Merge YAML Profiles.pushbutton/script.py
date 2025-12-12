@@ -25,6 +25,9 @@ from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml
 
 TITLE = "Merge Linked Elements"
 
+TRUTH_SOURCE_ID_KEY = "ced_truth_source_id"
+TRUTH_SOURCE_NAME_KEY = "ced_truth_source_name"
+
 
 def _build_definition_map(equipment_defs):
     mapping = {}
@@ -52,6 +55,34 @@ def _copy_fields(source_entry, target_entry):
         if key in keep_keys:
             continue
         target_entry[key] = copy.deepcopy(value)
+
+
+def _ensure_truth_source(entry):
+    if not isinstance(entry, dict):
+        return None, None
+    eq_id = (entry.get("id") or entry.get("name") or "").strip()
+    eq_name = (entry.get("name") or entry.get("id") or "").strip()
+    if not eq_id:
+        return None, None
+    entry[TRUTH_SOURCE_ID_KEY] = eq_id
+    if eq_name:
+        entry[TRUTH_SOURCE_NAME_KEY] = eq_name
+    return eq_id, eq_name
+
+
+def _repoint_truth_children(equipment_defs, old_source_id, new_source_id, new_source_name):
+    old_id = (old_source_id or "").strip()
+    new_id = (new_source_id or "").strip()
+    if not old_id or not new_id or old_id == new_id:
+        return
+    for entry in equipment_defs or []:
+        source_id = (entry.get(TRUTH_SOURCE_ID_KEY) or "").strip()
+        if not source_id and entry.get("id"):
+            source_id = str(entry.get("id") or "").strip()
+        if source_id == old_id:
+            entry[TRUTH_SOURCE_ID_KEY] = new_id
+            if new_source_name:
+                entry[TRUTH_SOURCE_NAME_KEY] = new_source_name
 
 
 def main():
@@ -95,12 +126,26 @@ def main():
         return
 
     source_entry = def_map[source_name]
+    root_id, root_name = _ensure_truth_source(source_entry)
+    if not root_id:
+        root_id = (source_entry.get("id") or source_entry.get("name") or source_name).strip()
+    if not root_name:
+        root_name = (source_entry.get("name") or source_name).strip()
     merged = []
     for target_name in target_choices:
         target_entry = def_map.get(target_name)
         if not target_entry or target_entry is source_entry:
             continue
         _copy_fields(source_entry, target_entry)
+        target_entry[TRUTH_SOURCE_ID_KEY] = root_id
+        if root_name:
+            target_entry[TRUTH_SOURCE_NAME_KEY] = root_name
+        _repoint_truth_children(
+            equipment_defs,
+            target_entry.get("id"),
+            root_id,
+            root_name,
+        )
         merged.append(target_name)
 
     if not merged:

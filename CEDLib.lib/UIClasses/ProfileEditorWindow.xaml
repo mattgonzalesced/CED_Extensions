@@ -13,9 +13,21 @@
         </Grid.ColumnDefinitions>
 
         <GroupBox Header="Profiles" Grid.Column="0">
-            <ListBox x:Name="ProfileList"
-                     Margin="0"
-                     SelectionChanged="ProfileList_SelectionChanged"/>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBox x:Name="ProfileSearchBox"
+                         Grid.Row="0"
+                         Margin="0,0,0,5"
+                         ToolTip="Type to filter profiles by CAD name"
+                         TextChanged="ProfileSearchBox_TextChanged"/>
+                <ListBox x:Name="ProfileList"
+                         Grid.Row="1"
+                         Margin="0"
+                         SelectionChanged="ProfileList_SelectionChanged"/>
+            </Grid>
         </GroupBox>
 
         <Grid Grid.Column="2">
