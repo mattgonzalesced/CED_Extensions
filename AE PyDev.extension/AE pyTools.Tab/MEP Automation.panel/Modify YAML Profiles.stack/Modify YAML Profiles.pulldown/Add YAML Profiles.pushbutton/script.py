@@ -13,6 +13,7 @@ Flow:
    CKT_Circuit Number_CEDT, CKT_Load Name_CEDT).
 """
 
+import copy
 import io
 import math
 import os
@@ -44,6 +45,8 @@ from Autodesk.Revit.DB import Group, GroupType, XYZ, BuiltInParameter, Independe
 
 ELEMENT_LINKER_PARAM_NAME = "Element_Linker Parameter"
 ELEMENT_LINKER_SHARED_PARAM = "Element_Linker"
+TRUTH_SOURCE_ID_KEY = "ced_truth_source_id"
+TRUTH_SOURCE_NAME_KEY = "ced_truth_source_name"
 
 # --------------------------------------------------------------------------- #
 # YAML helpers
@@ -525,6 +528,85 @@ def _next_eq_number(data):
     return max_id + 1
 
 
+def _append_type_entries(equipment_def, template_entries):
+    type_set = get_type_set(equipment_def)
+    led_list = type_set.setdefault("linked_element_definitions", [])
+    for entry in template_entries or []:
+        cloned = copy.deepcopy(entry)
+        inst_cfg = cloned.get("instance_config") or {}
+        params = inst_cfg.get("parameters") or {}
+        if isinstance(params, dict):
+            params = copy.deepcopy(params)
+            params.pop(ELEMENT_LINKER_PARAM_NAME, None)
+            params.pop(ELEMENT_LINKER_SHARED_PARAM, None)
+        else:
+            params = {}
+        offsets = inst_cfg.get("offsets") or [{}]
+        tags = inst_cfg.get("tags") or []
+        offsets = copy.deepcopy(offsets)
+        tags = copy.deepcopy(tags)
+        led_id = next_led_id(type_set, equipment_def)
+        led_list.append({
+            "id": led_id,
+            "label": cloned.get("label"),
+            "category": cloned.get("category_name"),
+            "is_group": bool(cloned.get("is_group")),
+            "offsets": offsets,
+            "parameters": params,
+            "tags": tags,
+        })
+
+
+def _truth_group_metadata(equipment_defs):
+    groups = {}
+    child_to_group = {}
+    for entry in equipment_defs or []:
+        eq_name = (entry.get("name") or entry.get("id") or "").strip()
+        if not eq_name:
+            continue
+        source_id = (entry.get(TRUTH_SOURCE_ID_KEY) or "").strip()
+        if not source_id:
+            source_id = (entry.get("id") or eq_name).strip()
+        display = (entry.get(TRUTH_SOURCE_NAME_KEY) or "").strip()
+        if not display:
+            display = eq_name
+        group = groups.setdefault(source_id, {
+            "display": display,
+            "members": [],
+            "primary": None,
+        })
+        group["members"].append(eq_name)
+        eq_id = (entry.get("id") or "").strip()
+        if eq_id and eq_id == source_id:
+            group["primary"] = eq_name
+        child_to_group[eq_name] = source_id
+    label_counts = {}
+    label_map = {}
+    for source_id, data in groups.items():
+        members = data.get("members") or []
+        primary = data.get("primary") or (members[0] if members else None)
+        if not primary:
+            continue
+        display = data.get("display") or primary
+        count = len(members) if members else 1
+        base_label = display
+        if count > 1:
+            base_label = u"{} ({} profiles)".format(display, count)
+        label_counts[base_label] = label_counts.get(base_label, 0) + 1
+        label_map[source_id] = {
+            "base_label": base_label,
+            "primary": primary,
+        }
+    resolved_labels = {}
+    for source_id, info in label_map.items():
+        base_label = info["base_label"]
+        label = base_label
+        if label_counts.get(base_label, 0) > 1:
+            label = u"{} [{}]".format(base_label, source_id)
+        resolved_labels[label] = (info["primary"], source_id)
+    return resolved_labels, groups, child_to_group
+
+
 def _execute_profile_addition(doc, data, yaml_label):
     equipment_defs = data.get("equipment_definitions") or []
     logger = script.get_logger()
@@ -532,6 +614,7 @@ def _execute_profile_addition(doc, data, yaml_label):
         "[Add YAML] existing defs before prompt: %s",
         [eq.get("name") or eq.get("id") for eq in equipment_defs if isinstance(eq, dict)],
     )
+    label_map, truth_groups, child_to_group = _truth_group_metadata(equipment_defs)
     existing_names = sorted({
         (entry.get("name") or entry.get("id") or "").strip()
         for entry in equipment_defs
@@ -539,7 +622,17 @@ def _execute_profile_addition(doc, data, yaml_label):
     })
 
     NEW_DEF_OPTION = "<< New equipment definition >>"
-    cad_options = [NEW_DEF_OPTION] + existing_names
+    cad_options = [NEW_DEF_OPTION]
+    label_to_profile = {}
+    label_to_group_id = {}
+    if label_map:
+        for label in sorted(label_map.keys()):
+            cad_options.append(label)
+            primary, group_id = label_map[label]
+            label_to_profile[label] = primary
+            label_to_group_id[label] = group_id
+    else:
+        cad_options.extend(existing_names)
     cad_choice = forms.SelectFromList.show(
         cad_options,
         title="Select equipment definition (or choose new)",
@@ -550,6 +643,7 @@ def _execute_profile_addition(doc, data, yaml_label):
         return False
     cad_choice = cad_choice if isinstance(cad_choice, basestring) else cad_choice[0]
     created_new_def = False
+    selected_group_id = None
     if cad_choice == NEW_DEF_OPTION:
         cad_name = forms.ask_for_string(
             prompt="Enter a name for the new equipment definition:",
@@ -582,8 +676,12 @@ def _execute_profile_addition(doc, data, yaml_label):
                 return False
             created_new_def = False
             cad_choice = cad_name
+            selected_group_id = None
         else:
             created_new_def = True
+    elif cad_choice in label_to_profile:
+        cad_name = label_to_profile[cad_choice]
+        selected_group_id = label_to_group_id.get(cad_choice)
     else:
         cad_name = cad_choice
 
@@ -638,6 +736,8 @@ def _execute_profile_addition(doc, data, yaml_label):
     type_set = get_type_set(equipment_def)
     eq_id = equipment_def.get("id")
     set_id = type_set.get("id")
+    if created_new_def and not selected_group_id:
+        selected_group_id = eq_id or cad_name
 
     metadata_updates = []
     led_list = type_set.setdefault("linked_element_definitions", [])
@@ -679,6 +779,21 @@ def _execute_profile_addition(doc, data, yaml_label):
                 t.RollBack()
             except Exception:
                 pass
+
+    target_group_id = selected_group_id or child_to_group.get(cad_name) or (equipment_def.get("id") or cad_name)
+    if target_group_id:
+        group_info = truth_groups.get(target_group_id) or {}
+        display_name = group_info.get("display") or cad_name
+        equipment_def[TRUTH_SOURCE_ID_KEY] = target_group_id
+        equipment_def[TRUTH_SOURCE_NAME_KEY] = display_name
+        members = group_info.get("members") or []
+        for member in members:
+            if member == cad_name:
+                continue
+            target_def = ensure_equipment_definition(data, member, type_entries[0])
+            target_def[TRUTH_SOURCE_ID_KEY] = target_group_id
+            target_def[TRUTH_SOURCE_NAME_KEY] = display_name
+            _append_type_entries(target_def, [rec["type_entry"] for rec in element_records])
 
     logger.info(
         "[Add YAML] equipment definitions now: %s",
