@@ -308,57 +308,77 @@ class CircuitBranch(object):
             logger.info("{}: {}".format(self.name, msg), *args)
 
     def log_warning(self, msg, *args, **kwargs):
-        category = kwargs.pop("category", "Calculation")
+        category = kwargs.pop("category", None)
         alert_id = kwargs.pop("alert_id", None)
         fmt_kwargs = kwargs.pop("fmt", {})
         severity = kwargs.pop("severity", None)
 
         if isinstance(msg, dict) and msg.get("definition"):
-            self.notices.add_alert(msg, group_override=category, severity_override=severity)
-            if DEV_LOGGING:
-                logger.warning("{}: {}".format(self.name, msg.get("definition").GetId()))
+            definition = msg.get("definition")
+            group_override = category or (definition.group if definition else None)
+            severity_override = severity or (definition.severity if definition else None)
+            self.notices.add_alert(
+                msg,
+                group_override=group_override,
+                severity_override=severity_override,
+            )
+            if DEV_LOGGING and definition:
+                logger.warning("{}: {}".format(self.name, definition.GetId()))
             return
 
         if msg in ALERT_DEFINITIONS:
             alert_id = msg
 
         if alert_id:
+            definition = ALERT_DEFINITIONS.get(alert_id)
+            group_override = category or (definition.group if definition else None)
+            severity_override = severity or (definition.severity if definition else None)
             self.notices.add_by_id(
-                alert_id, group_override=category, severity_override=severity, **fmt_kwargs
+                alert_id,
+                group_override=group_override,
+                severity_override=severity_override,
+                **fmt_kwargs
             )
             if DEV_LOGGING:
                 logger.warning("{}: {}".format(self.name, alert_id))
             return
 
         formatted = msg.format(*args) if args else msg
-        self.notices.add_message(severity or "MEDIUM", formatted, category)
+        group = category or "Calculation"
+        self.notices.add_message(severity or "MEDIUM", formatted, group)
         if DEV_LOGGING:
             logger.warning("{}: {}".format(self.name, formatted))
 
     def log_error(self, msg, *args, **kwargs):
-        category = kwargs.pop("category", "Calculation")
+        category = kwargs.pop("category", None)
         alert_id = kwargs.pop("alert_id", None)
         fmt_kwargs = kwargs.pop("fmt", {})
         severity = kwargs.pop("severity", None)
 
         if isinstance(msg, dict) and msg.get("definition"):
+            definition = msg.get("definition")
+            group_override = category or (definition.group if definition else None)
+            severity_override = severity or (definition.severity if definition else "CRITICAL")
             self.notices.add_alert(
                 msg,
-                group_override=category,
-                severity_override=severity or "CRITICAL",
+                group_override=group_override,
+                severity_override=severity_override,
             )
-            if DEV_LOGGING:
-                logger.error("{}: {}".format(self.name, msg.get("definition").GetId()))
+            if DEV_LOGGING and definition:
+                logger.error("{}: {}".format(self.name, definition.GetId()))
             return
 
         if msg in ALERT_DEFINITIONS:
             alert_id = msg
 
         if alert_id:
+            definition = ALERT_DEFINITIONS.get(alert_id)
+            group_override = category or (definition.group if definition else None)
+            severity_override = severity or (definition.severity if definition else "CRITICAL")
             self.notices.add_by_id(
                 alert_id,
-                group_override=category,
-                severity_override=severity or "CRITICAL",
+                group_override=group_override,
+                severity_override=severity_override,
                 **fmt_kwargs
             )
             if DEV_LOGGING:
@@ -366,7 +386,8 @@ class CircuitBranch(object):
             return
 
         formatted = msg.format(*args) if args else msg
-        self.notices.add_message(severity or "CRITICAL", formatted, category)
+        group = category or "Calculation"
+        self.notices.add_message(severity or "CRITICAL", formatted, group)
         if DEV_LOGGING:
             logger.error("{}: {}".format(self.name, formatted))
 
@@ -379,10 +400,7 @@ class CircuitBranch(object):
             load = self.circuit_load_current
             rating = self.rating
             if load is not None and rating is not None and load > rating:
-                self.log_warning(
-                    Alerts.UndersizedOCP(load, rating),
-                    category="Design",
-                )
+                self.log_warning(Alerts.UndersizedOCP(load, rating))
         except Exception:
             pass
 
@@ -525,10 +543,7 @@ class CircuitBranch(object):
             material_map = None
             for key in sorted_keys:
                 if key >= rating_key:
-                    self.log_warning(
-                        Alerts.NonStandardOCPRating(rating_key, key),
-                        category="Design",
-                    )
+                    self.log_warning(Alerts.NonStandardOCPRating(rating_key, key))
                     material_map = table[key]
                     break
 
@@ -796,8 +811,7 @@ class CircuitBranch(object):
                 self.log_warning(
                     Alerts.BreakerLugQuantityLimitOverride(
                         self._wire_sets_override, self.rating or 0, max_sets
-                    ),
-                    category="Design",
+                    )
                 )
 
             rating = self.rating or 0
@@ -806,8 +820,7 @@ class CircuitBranch(object):
                 self.log_warning(
                     Alerts.BreakerLugQuantityLimitOverride(
                         self._wire_sets_override, rating, 1
-                    ),
-                    category="Design",
+                    )
                 )
 
 
@@ -833,8 +846,7 @@ class CircuitBranch(object):
                 self.log_warning(
                     Alerts.BreakerLugSizeLimitOverride(
                         self._wire_hot_size_override, self.rating or 0, max_hot_size
-                    ),
-                    category="Design",
+                    )
                 )
 
     def _setup_structural_quantities(self):
@@ -937,8 +949,7 @@ class CircuitBranch(object):
 
         if sets > max_sets:
             self.log_warning(
-                Alerts.BreakerLugQuantityLimitCalc(sets, self.rating or 0),
-                category="Calculation",
+                Alerts.BreakerLugQuantityLimitCalc(sets, self.rating or 0)
             )
             sets = max_sets
 
@@ -1346,6 +1357,7 @@ class CircuitBranch(object):
         # USER OVERRIDE
         if self._auto_calculate_override and self._wire_ground_size_override:
             if self._try_override_ground_size():
+                self._check_ground_design_limits()
                 return
 
         if self._is_transformer_secondary:
@@ -1427,15 +1439,11 @@ class CircuitBranch(object):
                             size_norm,
                             round(100 * self.conduit.fill_ratio, 2),
                             round(100 * self.settings.max_conduit_fill, 2),
-                        ),
-                        category="Design",
+                        )
                     )
                 return
             else:
-                self.log_warning(
-                    Alerts.InvalidConduit(self._conduit_size_override),
-                    category="Overrides",
-                )
+                self.log_warning(Alerts.InvalidConduit(self._conduit_size_override))
 
         # auto sizing path
         if not self.conduit.pick_size(total_area, self.settings):
@@ -1454,9 +1462,7 @@ class CircuitBranch(object):
             fill_pct = round(100 * best_fill, 2) if best_fill is not None else "N/A"
             max_fill_pct = round(100 * self.settings.max_conduit_fill, 2)
             self.log_error(
-                Alerts.ConduitSizingFailed(fill_pct, max_fill_pct),
-                category="Calculation",
-                severity="CRITICAL",
+                Alerts.ConduitSizingFailed(fill_pct, max_fill_pct)
             )
             self.conduit.calc_failed = True
             self.calc_failed = True
@@ -1492,14 +1498,12 @@ class CircuitBranch(object):
             if not self._is_ampacity_acceptable(rating, total_amp, self.circuit_load_current):
                 self.log_warning(
                     Alerts.InsufficientAmpacity(sets, "#{}".format(w), total_amp, self.circuit_load_current),
-                    category="Design",
                 )
 
             vd = self._safe_voltage_drop_calc(w, sets)
             if vd is not None and vd > self.max_voltage_drop:
                 self.log_warning(
                     Alerts.ExcessiveVoltDrop(sets, "#{}".format(w), round(100 * vd, 2)),
-                    category="Design",
                 )
 
             # ACCEPT regardless (but with warnings)
@@ -1550,7 +1554,7 @@ class CircuitBranch(object):
             if self._is_transformer_secondary
             else Alerts.InvalidEquipmentGround(self._wire_ground_size_override)
         )
-        self.log_warning(alert, category="Overrides")
+        self.log_warning(alert)
         return False
 
     def _auto_hot_sizing(self, rating):
@@ -1617,10 +1621,7 @@ class CircuitBranch(object):
                     else:
                         if not lug_block_warning_logged:
                             self.log_warning(
-                                "Exceeded lug size block {} at max sets {}; selecting {} with warning.".format(
-                                    max_size, max_sets, wire
-                                ),
-                                category="Design",
+                                Alerts.BreakerLugSizeLimitCalc(wire, rating)
                             )
                             lug_block_warning_logged = True
 
@@ -1670,18 +1671,12 @@ class CircuitBranch(object):
             )
 
         if ever_reached_lug_block and solution_found:
-            self.log_warning(
-                "Reached lug size block {} when sizing hots; continuing with allowable configuration.".format(max_size),
-                category="Design",
-            )
+            self.log_warning(Alerts.BreakerLugSizeLimitCalc(self.cable.hot_size, rating))
 
         if not solution_found:
-            msg = "Reached max lug qty {} and could not size hot conductor for breaker {} A.".format(
-                max_sets, rating
+            self._fail_cable_sizing(
+                Alerts.BreakerLugQuantityLimitCalc(max_sets, rating)
             )
-            if any_lug_limit_hit and max_size:
-                msg += " Lug size block at {} prevented further upsizing.".format(max_size)
-            self._fail_cable_sizing(msg)
 
     def _safe_voltage_drop_calc(self, wire_size, sets):
         try:
@@ -1695,7 +1690,10 @@ class CircuitBranch(object):
             return None
 
     def _fail_cable_sizing(self, msg):
-        self.log_error(Alerts.WireSizingFailed(msg), category="Calculation")
+        if isinstance(msg, dict):
+            self.log_error(msg)
+        else:
+            self.log_error(Alerts.WireSizingFailed(msg))
         self.cable.calc_failed = True
         self.calc_failed = True
         self._clear_cable_data()
@@ -2058,9 +2056,7 @@ class CircuitBranch(object):
                 self.log_warning(
                     Alerts.UndersizedWireServiceGround(
                         self.cable.ground_size, material
-                    ),
-                    category="Design",
-                    severity="HIGH",
+                    )
                 )
             return
 
@@ -2071,9 +2067,7 @@ class CircuitBranch(object):
         required = self._lookup_egc_size(amps, material)
         if required and self._is_wire_smaller_than(self.cable.ground_size, required):
             self.log_warning(
-                Alerts.UndersizedWireEGC(self.cable.ground_size, material),
-                category="Design",
-                severity="HIGH",
+                Alerts.UndersizedWireEGC(self.cable.ground_size, material)
             )
 
     def _conductor_cmil(self, wire_size):
@@ -2164,10 +2158,9 @@ class CircuitBranch(object):
         required_cmil = base_ground_cmil * (actual_total_hot / float(base_total_hot))
         upsized = self._pick_size_by_cmil(required_cmil)
         if upsized and upsized != gnd_size:
-            self.log_warning(
+            self.log_info(
                 "Upsizing ground from {} to {} to match voltage-drop conductor growth.".format(
                     gnd_size, upsized
-                ),
-                category="Calculation",
+                )
             )
             self.cable.ground_size = upsized
