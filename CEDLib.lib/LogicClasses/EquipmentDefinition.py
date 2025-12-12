@@ -35,7 +35,7 @@ class EquipmentDefinition(object):
         self._schema_version = schema_version
         self._allow_parentless = bool(allow_parentless)
         self._allow_unmatched_parents = bool(allow_unmatched_parents)
-        self._prompt_on_parent_mismatch = bool(prompt_on_parent_mismatch)
+        #self._prompt_on_parent_mismatch = bool(prompt_on_parent_mismatch)
         self._parent_filters = parent_filters
         self._equipment_properties = equipment_properties
         self._linked_sets = list(linked_sets) if linked_sets is not None else []
