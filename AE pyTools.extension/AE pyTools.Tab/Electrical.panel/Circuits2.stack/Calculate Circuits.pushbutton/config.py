@@ -159,30 +159,30 @@ class CircuitSettingsWindow(forms.WPFWindow):
 
     def _help_texts(self):
         return {
-            'min_conduit_size': "Smallest conduit size that will ever be proposed by the calculation. This limits conduit downsizing in tight runs.",
-            'max_conduit_fill': "Maximum allowable conduit fill as a percentage (e.g., 36%). The conduit will be upsized until this fill is not exceeded.",
-            'neutral_behavior': "Choose whether neutral conductors match the quantity of hots automatically or are entered manually for each calculation.",
-            'max_branch_voltage_drop': "Target maximum voltage drop for branch circuits (enter as a percentage). Calculated sizes will grow until this threshold is met.",
-            'max_feeder_voltage_drop': "Target maximum voltage drop for feeders (enter as a percentage). Applies to feeder sizing logic and may differ from branch criteria.",
-            'feeder_vd_method': "Which feeder load basis to use for voltage drop checks: demand load, connected load, 80% of the breaker rating, or 100% of the breaker rating.",
+            'min_conduit_size': "Smallest conduit size proposed during automatic calculations (has no effect on manual user overrides).",
+            'max_conduit_fill': "Maximum allowable conduit fill as a percentage. In automatic mode, the conduit will be upsized until this fill is not exceeded. In manual override mode, the tool will alert the user if this value is exceeded.",
+            'neutral_behavior': "Determines how neutrals are sized when in manual override mode (in automatic mode, neutral size always matches the hot size).",
+            'max_branch_voltage_drop': "Target maximum voltage drop for branch circuits. In automatic mode, calculated sizes will grow until this threshold is met. In manual override mode, the tool will alert the user if this threshold is exceeded.",
+            'max_feeder_voltage_drop': "Target maximum voltage drop for feeder circuits. In automatic mode, calculated sizes will grow until this threshold is met. In manual override mode, the tool will alert the user if this threshold is exceeded.",
+            'feeder_vd_method': "Which feeder load basis to use for voltage drop calculations and automatic sizing (only applies to feeder circuits that supply panels, switchboards, and transformers). Branch circuits are always based on connected load.",
             'write_results': "Toggle whether calculated results push to downstream elements when present.",
         }
 
     def _option_help(self):
         return {
             'feeder_vd_method': {
-                FeederVDMethod.DEMAND: "Uses demand load (after demand factors) for voltage drop calculations.",
-                FeederVDMethod.CONNECTED: "Uses the raw connected load without demand factors for voltage drop checks.",
-                FeederVDMethod.EIGHTY_PERCENT: "Uses 80% of the breaker rating unless that is lower than the demand load.",
-                FeederVDMethod.HUNDRED_PERCENT: "Uses 100% of the breaker rating unless that is lower than the demand load.",
+                FeederVDMethod.EIGHTY_PERCENT: "[80% of Breaker] Uses 80% of the breaker rating for volt drop calculations unless the actual demand load is higher.",
+                FeederVDMethod.HUNDRED_PERCENT: "[100% of Breaker] Uses 100% of the breaker rating for volt drop calculations unless the actual demand load is higher.",
+                FeederVDMethod.DEMAND: "[Demand Load] Uses the estimated demand load for volt drop calculations.",
+                FeederVDMethod.CONNECTED: "[Connected Load] Uses the connected VA for volt drop calculations with no demand factors applied.",
             },
             'neutral_behavior': {
-                NeutralBehavior.MATCH_HOT: "Neutrals will always mirror the quantity of hot conductors.",
-                NeutralBehavior.MANUAL: "You will be prompted to specify neutral counts when calculating.",
+                NeutralBehavior.MATCH_HOT: "[Match hot conductors] Neutral size will always match hot size.",
+                NeutralBehavior.MANUAL: "[Manual Neutral] Neutral size is specified independently in manual override mode.",
             },
             'min_conduit_size': {
-                '1/2"': "Choose for the tightest runs where smaller conduit is acceptable.",
-                '3/4"': "Common baseline that balances pullability and capacity.",
+                '1/2"': u"Selected: 1/2\"",
+                '3/4"': u"Selected: 3/4\"",
             },
         }
 
