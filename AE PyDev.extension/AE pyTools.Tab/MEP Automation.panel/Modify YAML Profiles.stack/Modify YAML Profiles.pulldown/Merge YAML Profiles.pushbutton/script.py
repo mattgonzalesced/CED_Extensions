@@ -44,6 +44,49 @@ def _build_definition_map(equipment_defs):
     return mapping, ordered
 
 
+def _truth_groups(equipment_defs):
+    groups = {}
+    id_to_entry = {}
+    name_to_entry = {}
+    for entry in equipment_defs or []:
+        eq_id = (entry.get("id") or "").strip()
+        eq_name = (entry.get("name") or entry.get("id") or "").strip()
+        if eq_id:
+            id_to_entry[eq_id] = entry
+        if eq_name:
+            name_to_entry[eq_name] = entry
+    for entry in equipment_defs or []:
+        eq_id = (entry.get("id") or "").strip()
+        eq_name = (entry.get("name") or entry.get("id") or "").strip()
+        if not eq_name:
+            continue
+        source_id = (entry.get(TRUTH_SOURCE_ID_KEY) or "").strip()
+        if not source_id:
+            source_id = eq_id or eq_name
+        display_name = (entry.get(TRUTH_SOURCE_NAME_KEY) or "").strip()
+        if not display_name:
+            display_name = eq_name
+        group = groups.setdefault(source_id, {
+            "display_name": display_name,
+            "members": [],
+            "source_entry": None,
+            "source_profile_name": None,
+        })
+        group["members"].append(eq_name)
+        if eq_id and eq_id == source_id:
+            group["source_entry"] = entry
+            group["source_profile_name"] = eq_name
+    for source_id, data in groups.items():
+        if not data.get("source_entry"):
+            fallback = data["members"][0]
+            entry = name_to_entry.get(fallback) or id_to_entry.get(source_id)
+            data["source_entry"] = entry
+            data["source_profile_name"] = fallback
+        if not data.get("display_name"):
+            data["display_name"] = data.get("source_profile_name") or source_id
+    return groups
+
+
 def _copy_fields(source_entry, target_entry):
     """Copy everything except identifying fields (name, id)."""
     keep_keys = {"name", "id"}
@@ -93,24 +136,66 @@ def main():
         return
     equipment_defs = data.get("equipment_definitions") or []
     def_map, ordered_names = _build_definition_map(equipment_defs)
+    truth_groups = _truth_groups(equipment_defs)
     if not def_map:
         forms.alert("No equipment definitions are available to merge.", title=TITLE)
         return
 
     yaml_label = get_yaml_display_name(yaml_path)
 
-    source_choice = forms.SelectFromList.show(
-        ordered_names,
-        title="Select source definition (truth)",
-        multiselect=False,
-        button_name="Select",
-    )
-    if not source_choice:
-        return
-    source_name = source_choice if isinstance(source_choice, basestring) else source_choice[0]
-    if source_name not in def_map:
-        forms.alert("Could not resolve the selected source definition.", title=TITLE)
-        return
+    if truth_groups:
+        sorted_keys = sorted(truth_groups.keys(), key=lambda k: (truth_groups[k]["display_name"] or k).lower())
+        label_counts = {}
+        base_info = []
+        for key in sorted_keys:
+            group = truth_groups[key]
+            base_label = group.get("display_name") or group.get("source_profile_name") or key
+            member_count = len(group.get("members") or [])
+            if member_count > 1:
+                base_label = u"{} ({} profiles)".format(base_label, member_count)
+            base_info.append((key, base_label))
+            label_counts[base_label] = label_counts.get(base_label, 0) + 1
+        source_items = []
+        label_to_key = {}
+        for key, base_label in base_info:
+            label = base_label
+            if label_counts.get(base_label, 0) > 1:
+                label = u"{} [{}]".format(base_label, key)
+            source_items.append(label)
+            label_to_key[label] = key
+        source_choice = forms.SelectFromList.show(
+            source_items,
+            title="Select source definition (truth)",
+            multiselect=False,
+            button_name="Select",
+        )
+        if not source_choice:
+            return
+        source_label = source_choice if isinstance(source_choice, basestring) else source_choice[0]
+        source_key = label_to_key.get(source_label)
+        group = truth_groups.get(source_key or "")
+        source_entry = group.get("source_entry") if group else None
+        source_name = group.get("source_profile_name") if group else None
+        if not source_entry or not source_name:
+            forms.alert("Could not resolve the selected source definition.", title=TITLE)
+            return
+        source_display = group.get("display_name") or source_name
+    else:
+        source_choice = forms.SelectFromList.show(
+            ordered_names,
+            title="Select source definition (truth)",
+            multiselect=False,
+            button_name="Select",
+        )
+        if not source_choice:
+            return
+        source_name = source_choice if isinstance(source_choice, basestring) else source_choice[0]
+        source_entry = def_map.get(source_name)
+        source_display = source_name
+        if not source_entry:
+            forms.alert("Could not resolve the selected source definition.", title=TITLE)
+            return
+
     target_candidates = [name for name in ordered_names if name != source_name]
     if not target_candidates:
         forms.alert("There are no other definitions to merge into.", title=TITLE)
@@ -125,12 +210,11 @@ def main():
     if not target_choices:
         return
 
-    source_entry = def_map[source_name]
     root_id, root_name = _ensure_truth_source(source_entry)
     if not root_id:
         root_id = (source_entry.get("id") or source_entry.get("name") or source_name).strip()
     if not root_name:
-        root_name = (source_entry.get("name") or source_name).strip()
+        root_name = (source_entry.get("name") or source_display or source_name).strip()
     merged = []
     for target_name in target_choices:
         target_entry = def_map.get(target_name)
@@ -161,7 +245,7 @@ def main():
 
     lines = [
         "Merged linked elements successfully.",
-        "Source definition: {}".format(source_name),
+        "Source definition: {}".format(source_display or source_name),
         "Merged into source: {}".format(", ".join(merged)),
         "",
         "Updated data saved back to {}.".format(yaml_label),
