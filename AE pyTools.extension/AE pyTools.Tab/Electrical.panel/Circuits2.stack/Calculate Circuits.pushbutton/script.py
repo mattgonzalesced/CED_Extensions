@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
+from pyrevit import DB, forms, revit, script
+
 from CEDElectrical.Model.CircuitBranch import *
+from CEDElectrical.Domain import settings_manager
 from Snippets import _elecutils as eu
 
 app = __revit__.Application
@@ -101,10 +104,16 @@ def update_circuit_parameters(circuit, param_values):
 # -------------------------------------------------------------------------
 # Write shared parameters to connected family instances
 # -------------------------------------------------------------------------
-def update_connected_elements(branch, param_values):
+def update_connected_elements(branch, param_values, settings, locked_ids=None):
     circuit = branch.circuit
     fixture_count = 0
     equipment_count = 0
+    locked_ids = locked_ids or set()
+
+    write_fixtures = getattr(settings, 'write_fixture_results', False)
+    write_equipment = getattr(settings, 'write_equipment_results', False)
+    if not (write_fixtures or write_equipment):
+        return fixture_count, equipment_count
 
     for el in circuit.Elements:
         if not isinstance(el, DB.FamilyInstance):
@@ -119,6 +128,14 @@ def update_connected_elements(branch, param_values):
         is_equipment = cat_id == DB.ElementId(DB.BuiltInCategory.OST_ElectricalEquipment)
 
         if not (is_fixture or is_equipment):
+            continue
+
+        if el.Id in locked_ids:
+            continue
+
+        if is_fixture and not write_fixtures:
+            continue
+        if is_equipment and not write_equipment:
             continue
 
         # Write all parameters
@@ -146,12 +163,85 @@ def update_connected_elements(branch, param_values):
     return fixture_count, equipment_count
 
 
+def _partition_locked_elements(doc, circuits, settings):
+    """Separate locked elements and return unlocked circuits + locked ids."""
+    if not getattr(doc, "IsWorkshared", False):
+        return circuits, set()
+
+    locked_ids = set()
+    unlocked_circuits = []
+
+    def _is_locked(eid):
+        try:
+            status = DB.WorksharingUtils.GetCheckoutStatus(doc, eid)
+            return status == DB.CheckoutStatus.OwnedByOther
+        except Exception:
+            return False
+
+    downstream_ids = set()
+    write_fixtures = getattr(settings, 'write_fixture_results', False)
+    write_equipment = getattr(settings, 'write_equipment_results', False)
+
+    for circuit in circuits:
+        if _is_locked(circuit.Id):
+            locked_ids.add(circuit.Id)
+            continue
+        unlocked_circuits.append(circuit)
+
+        if not (write_equipment or write_fixtures):
+            continue
+
+        for el in circuit.Elements:
+            if not isinstance(el, DB.FamilyInstance):
+                continue
+            cat = el.Category
+            if not cat:
+                continue
+            cat_id = cat.Id
+            is_fixture = cat_id == DB.ElementId(DB.BuiltInCategory.OST_ElectricalFixtures)
+            is_equipment = cat_id == DB.ElementId(DB.BuiltInCategory.OST_ElectricalEquipment)
+
+            if is_fixture and not write_fixtures:
+                continue
+            if is_equipment and not write_equipment:
+                continue
+            downstream_ids.add(el.Id)
+
+    for eid in downstream_ids:
+        if _is_locked(eid):
+            locked_ids.add(eid)
+
+    return unlocked_circuits, locked_ids
+
+
+def _summarize_locked(doc, locked_ids):
+    summary = {'circuits': 0, 'fixtures': 0, 'equipment': 0, 'other': 0}
+    for eid in locked_ids:
+        el = doc.GetElement(eid)
+        if isinstance(el, DB.Electrical.ElectricalSystem):
+            summary['circuits'] += 1
+            continue
+        if isinstance(el, DB.FamilyInstance):
+            cat = el.Category
+            if cat:
+                cid = cat.Id
+                if cid == DB.ElementId(DB.BuiltInCategory.OST_ElectricalFixtures):
+                    summary['fixtures'] += 1
+                    continue
+                if cid == DB.ElementId(DB.BuiltInCategory.OST_ElectricalEquipment):
+                    summary['equipment'] += 1
+                    continue
+        summary['other'] += 1
+    return summary
+
+
 # -------------------------------------------------------------------------
 # Main Execution
 # -------------------------------------------------------------------------
 def main():
     selection = revit.get_selection()
     test_circuits = []
+    settings = settings_manager.load_circuit_settings(doc)
     if not selection:
         test_circuits = eu.pick_circuits_from_list(doc, select_multiple=True)
     else:
@@ -160,6 +250,23 @@ def main():
                 test_circuits.append(el)
         if not test_circuits:
             test_circuits = eu.pick_circuits_from_list(doc, select_multiple=True)
+
+    test_circuits, locked_ids = _partition_locked_elements(doc, test_circuits, settings)
+    if locked_ids:
+        summary = _summarize_locked(doc, locked_ids)
+        msg_lines = [
+            "Some elements are owned by others and will be skipped:",
+            "• Circuits: {}".format(summary['circuits']),
+        ]
+        if settings.write_fixture_results:
+            msg_lines.append("• Fixtures: {}".format(summary['fixtures']))
+        if settings.write_equipment_results:
+            msg_lines.append("• Electrical Equipment: {}".format(summary['equipment']))
+        if summary['other']:
+            msg_lines.append("• Other: {}".format(summary['other']))
+        choice = forms.alert("\n".join(msg_lines), options=["Continue with Unlocked", "Cancel"], ok=False, yes=True, no=True)
+        if choice != "Continue with Unlocked":
+            script.exit()
 
     count = len(test_circuits)
     if count > 1000:
@@ -175,9 +282,13 @@ def main():
     total_fixtures = 0
     total_equipment = 0
 
+    if not test_circuits:
+        forms.alert("No editable circuits found to process.")
+        return
+
     # Perform all calculations first
     for circuit in test_circuits:
-        branch = CircuitBranch(circuit)
+        branch = CircuitBranch(circuit, settings=settings)
         if not branch.is_power_circuit:
             continue
 
@@ -196,8 +307,7 @@ def main():
         for branch in branches:
             param_values = collect_shared_param_values(branch)
             update_circuit_parameters(branch.circuit, param_values)
-            # f, e = update_connected_elements(branch, param_values)
-            f, e = [0,0]
+            f, e = update_connected_elements(branch, param_values, settings, locked_ids)
             total_fixtures += f
             total_equipment += e
         t.Commit()
@@ -209,6 +319,26 @@ def main():
         output.print_md("* Circuits updated: **{}**".format(len(branches)))
         output.print_md("* Electrical Fixtures updated: **{}**".format(total_fixtures))
         output.print_md("* Electrical Equipment updated: **{}**".format(total_equipment))
+
+        notice_lines = []
+        label_map = {
+            "Overrides": "Override Warnings",
+            "Calculation": "Calculation Warnings",
+            "Design": "Design Warnings",
+            "Error": "Errors",
+            "Other": "Other Notices",
+        }
+
+        for branch in branches:
+            if not getattr(branch, "notices", None) or not branch.notices.has_items():
+                continue
+
+            notice_lines.extend(branch.notices.formatted_lines(label_map))
+
+        if notice_lines:
+            output.print_md("\n### ⚠️ Warnings / Errors")
+            for line in notice_lines:
+                output.print_md(line)
 
     except Exception as e:
         t.RollBack()
