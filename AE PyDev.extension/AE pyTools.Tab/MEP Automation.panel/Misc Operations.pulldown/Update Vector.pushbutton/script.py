@@ -73,19 +73,41 @@ def _get_tag_point(tag):
         return None
 
 
+def _vector_angle(vec):
+    if vec is None:
+        return None
+    try:
+        x = float(vec.X)
+        y = float(vec.Y)
+    except Exception:
+        return None
+    if abs(x) < 1e-9 and abs(y) < 1e-9:
+        return None
+    try:
+        return math.degrees(math.atan2(y, x))
+    except Exception:
+        return None
+
+
 def _get_rotation_degrees(elem):
+    # Prefer basis vectors over Location.Rotation so mirrored/flipped families register 180° changes.
+    for attr in ("HandOrientation", "FacingOrientation"):
+        angle = _vector_angle(getattr(elem, attr, None))
+        if angle is not None:
+            return angle
     loc = getattr(elem, "Location", None)
     if loc is not None and hasattr(loc, "Rotation"):
         try:
             return math.degrees(loc.Rotation)
         except Exception:
             pass
-    facing = getattr(elem, "FacingOrientation", None)
-    if facing:
-        try:
-            return math.degrees(math.atan2(facing.Y, facing.X))
-        except Exception:
-            pass
+    try:
+        transform = elem.GetTransform()
+        angle = _vector_angle(getattr(transform, "BasisX", None))
+        if angle is not None:
+            return angle
+    except Exception:
+        pass
     return 0.0
 
 
@@ -101,6 +123,61 @@ def _inches_to_feet(value):
         return float(value) / 12.0
     except Exception:
         return 0.0
+
+
+def _level_relative_z_inches(elem, world_point):
+    if elem is None:
+        return 0.0
+    doc = getattr(elem, "Document", None)
+    level_elem = None
+    level_id = getattr(elem, "LevelId", None)
+    if level_id and doc:
+        try:
+            level_elem = doc.GetElement(level_id)
+        except Exception:
+            level_elem = None
+    if not level_elem:
+        level_param_names = (
+            "INSTANCE_REFERENCE_LEVEL_PARAM",
+            "FAMILY_LEVEL_PARAM",
+            "INSTANCE_LEVEL_PARAM",
+            "SCHEDULE_LEVEL_PARAM",
+        )
+        for name in level_param_names:
+            bip = getattr(BuiltInParameter, name, None)
+            if not bip:
+                continue
+            try:
+                param = elem.get_Parameter(bip)
+            except Exception:
+                param = None
+            if not param:
+                continue
+            try:
+                eid = param.AsElementId()
+            except Exception:
+                eid = None
+            if eid and doc:
+                try:
+                    level_elem = doc.GetElement(eid)
+                except Exception:
+                    level_elem = None
+                if level_elem:
+                    break
+    level_elev = 0.0
+    if level_elem:
+        try:
+            level_elev = getattr(level_elem, "Elevation", 0.0) or 0.0
+        except Exception:
+            level_elev = 0.0
+    world_z = getattr(world_point, "Z", None)
+    if world_z is None:
+        world_z = 0.0
+    try:
+        relative_ft = float(world_z) - float(level_elev)
+    except Exception:
+        relative_ft = 0.0
+    return _feet_to_inches(relative_ft)
 
 
 def _rotate_xy(vec, angle_degrees):
@@ -776,6 +853,33 @@ def _set_element_linker_payload(elem, text_value):
     return False
 
 
+def _write_element_linker_payload(elem, text_value, transaction_name=None):
+    if not elem or not text_value:
+        return False
+    doc = getattr(elem, "Document", None) or revit.doc
+    if doc is None:
+        return False
+    if getattr(doc, "IsModifiable", False):
+        return _set_element_linker_payload(elem, text_value)
+    txn = None
+    try:
+        txn = Transaction(doc, transaction_name or "Update Element_Linker payload")
+        txn.Start()
+        success = _set_element_linker_payload(elem, text_value)
+        if success:
+            txn.Commit()
+        else:
+            txn.RollBack()
+        return success
+    except Exception:
+        if txn:
+            try:
+                txn.RollBack()
+            except Exception:
+                pass
+        return False
+
+
 def _collect_similar_elements(doc, led_id, original_elem):
     """
     Gather all non-type elements in the active document that share the same
@@ -872,7 +976,7 @@ def _apply_offsets_to_similar(doc, elements, original_local_offset, original_rot
                 getattr(elem, "FacingOrientation", None),
                 base_rotation,
             )
-            _set_element_linker_payload(elem, new_payload_text)
+            _write_element_linker_payload(elem, new_payload_text)
 
             if tag_entries:
                 _apply_tag_offsets_to_instance(
@@ -1133,6 +1237,7 @@ def main():
     base_point = payload_location - previous_world_offset
     delta_world = elem_point - base_point
     original_total_rotation = payload_rotation
+    level_relative_z_inches = None
     if tag_only:
         rotation_delta = 0.0
         new_rotation_offset = original_rotation_offset
@@ -1143,6 +1248,8 @@ def main():
         new_rotation_offset = round(_normalize_angle(elem_rotation - base_rotation), 6)
         rotation_delta = _normalize_angle(new_rotation_offset - original_rotation_offset)
         local_offset = _rotate_xy(delta_world, -base_rotation)
+        level_relative_z_inches = _level_relative_z_inches(elem, elem_point)
+        local_offset = XYZ(local_offset.X, local_offset.Y, _inches_to_feet(level_relative_z_inches))
         total_rotation = base_rotation + new_rotation_offset
         new_local_offset = XYZ(local_offset.X, local_offset.Y, local_offset.Z)
 
@@ -1157,7 +1264,9 @@ def main():
     if not tag_only:
         offset_entry["x_inches"] = round(_feet_to_inches(local_offset.X if local_offset else 0.0), 6)
         offset_entry["y_inches"] = round(_feet_to_inches(local_offset.Y if local_offset else 0.0), 6)
-        offset_entry["z_inches"] = round(_feet_to_inches(local_offset.Z if local_offset else 0.0), 6)
+        if level_relative_z_inches is None:
+            level_relative_z_inches = _feet_to_inches(local_offset.Z if local_offset else 0.0)
+        offset_entry["z_inches"] = round(level_relative_z_inches, 6)
         offset_entry["rotation_deg"] = new_rotation_offset
         try:
             LOG.info(
@@ -1237,7 +1346,7 @@ def main():
         getattr(elem, "FacingOrientation", None),
         base_rotation,
     )
-    _set_element_linker_payload(elem, updated_payload_text)
+    _write_element_linker_payload(elem, updated_payload_text)
 
     moved_count = 0
     propagate_success = False
