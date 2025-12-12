@@ -322,18 +322,24 @@ def main():
 
         notice_lines = []
         label_map = {
-            "Overrides": "Override Warnings",
-            "Calculation": "Calculation Warnings",
-            "Design": "Design Warnings",
-            "Error": "Errors",
-            "Other": "Other Notices",
+            "Overrides": "Overrides",
+            "Calculation": "Calculation",
+            "Design": "Design",
+            "Error": "Error",
+            "Other": "Other",
+        }
+        severity_colors = {
+            "NONE": None,
+            "MEDIUM": "#d9822b",
+            "HIGH": "#d9534f",
+            "CRITICAL": "#b20000",
         }
 
         for branch in branches:
             if not getattr(branch, "notices", None) or not branch.notices.has_items():
                 continue
 
-            notice_lines.extend(branch.notices.formatted_lines(label_map))
+            notice_lines.extend(branch.notices.formatted_lines(label_map, severity_colors))
 
         if notice_lines:
             output.print_md("\n### ⚠️ Warnings / Errors")

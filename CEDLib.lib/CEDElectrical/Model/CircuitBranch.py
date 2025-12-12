@@ -311,9 +311,10 @@ class CircuitBranch(object):
         category = kwargs.pop("category", "Calculation")
         alert_id = kwargs.pop("alert_id", None)
         fmt_kwargs = kwargs.pop("fmt", {})
+        severity = kwargs.pop("severity", None)
 
         if isinstance(msg, dict) and msg.get("definition"):
-            self.notices.add_alert(msg, group_override=category)
+            self.notices.add_alert(msg, group_override=category, severity_override=severity)
             if DEV_LOGGING:
                 logger.warning("{}: {}".format(self.name, msg.get("definition").GetId()))
             return
@@ -322,13 +323,15 @@ class CircuitBranch(object):
             alert_id = msg
 
         if alert_id:
-            self.notices.add_by_id(alert_id, group_override=category, **fmt_kwargs)
+            self.notices.add_by_id(
+                alert_id, group_override=category, severity_override=severity, **fmt_kwargs
+            )
             if DEV_LOGGING:
                 logger.warning("{}: {}".format(self.name, alert_id))
             return
 
         formatted = msg.format(*args) if args else msg
-        self.notices.add_message("WARNING", formatted, category)
+        self.notices.add_message(severity or "MEDIUM", formatted, category)
         if DEV_LOGGING:
             logger.warning("{}: {}".format(self.name, formatted))
 
@@ -336,9 +339,14 @@ class CircuitBranch(object):
         category = kwargs.pop("category", "Calculation")
         alert_id = kwargs.pop("alert_id", None)
         fmt_kwargs = kwargs.pop("fmt", {})
+        severity = kwargs.pop("severity", None)
 
         if isinstance(msg, dict) and msg.get("definition"):
-            self.notices.add_alert(msg, group_override=category, severity_override="ERROR")
+            self.notices.add_alert(
+                msg,
+                group_override=category,
+                severity_override=severity or "CRITICAL",
+            )
             if DEV_LOGGING:
                 logger.error("{}: {}".format(self.name, msg.get("definition").GetId()))
             return
@@ -347,13 +355,18 @@ class CircuitBranch(object):
             alert_id = msg
 
         if alert_id:
-            self.notices.add_by_id(alert_id, group_override=category, severity_override="ERROR", **fmt_kwargs)
+            self.notices.add_by_id(
+                alert_id,
+                group_override=category,
+                severity_override=severity or "CRITICAL",
+                **fmt_kwargs
+            )
             if DEV_LOGGING:
                 logger.error("{}: {}".format(self.name, alert_id))
             return
 
         formatted = msg.format(*args) if args else msg
-        self.notices.add_message("ERROR", formatted, category)
+        self.notices.add_message(severity or "CRITICAL", formatted, category)
         if DEV_LOGGING:
             logger.error("{}: {}".format(self.name, formatted))
 
@@ -732,7 +745,11 @@ class CircuitBranch(object):
                     if name == "hot":
                         alert = Alerts.InvalidHotWire(raw)
                     elif name == "ground":
-                        alert = Alerts.InvalidEquipmentGround(raw)
+                        alert = (
+                            Alerts.InvalidServiceGround(raw)
+                            if self._is_transformer_secondary
+                            else Alerts.InvalidEquipmentGround(raw)
+                        )
                     else:
                         alert = Alerts.InvalidCircuitProperty(
                             "{} size".format(name.capitalize()), raw, None
@@ -958,6 +975,18 @@ class CircuitBranch(object):
         if self._user_clear_conduit:
             return None
         return self._conduit_type_override or self._wire_info.get("conduit_type")
+
+    def _resolve_conduit_material_for_impedance(self):
+        if self.conduit.material_type:
+            return self.conduit.material_type
+
+        conduit_type = self.conduit.conduit_type or self._resolve_conduit_type()
+        if conduit_type:
+            for material, type_dict in CONDUIT_AREA_TABLE.items():
+                if conduit_type in type_dict:
+                    return material
+
+        return self._wire_info.get("conduit_material_type") or "Magnetic"
 
     # -----------------------------------------------------------------
     # Core circuit properties (Revit getters)
@@ -1321,6 +1350,7 @@ class CircuitBranch(object):
 
         if self._is_transformer_secondary:
             self._calculate_service_ground_size()
+            self._check_ground_design_limits()
             return
 
         amps = self.breaker_rating
@@ -1343,6 +1373,8 @@ class CircuitBranch(object):
 
         if self.cable.ig_qty:
             self.cable.ig_size = self.cable.ground_size
+
+        self._check_ground_design_limits()
 
     def _calculate_service_ground_size(self):
         hot_size = self.cable.hot_size
@@ -1407,15 +1439,29 @@ class CircuitBranch(object):
 
         # auto sizing path
         if not self.conduit.pick_size(total_area, self.settings):
-            self.log_warning(
-                "{}: No conduit size fits total area {:.4f} at max fill {}.".format(
-                    self.name, total_area, self.settings.max_conduit_fill
-                ),
+            best_fill = None
+            table = CONDUIT_AREA_TABLE.get(self.conduit.material_type, {}).get(
+                self.conduit.conduit_type, {}
+            )
+            for area in table.values():
+                try:
+                    fill_val = total_area / float(area)
+                except Exception:
+                    continue
+                if best_fill is None or fill_val < best_fill:
+                    best_fill = fill_val
+
+            fill_pct = round(100 * best_fill, 2) if best_fill is not None else "N/A"
+            max_fill_pct = round(100 * self.settings.max_conduit_fill, 2)
+            self.log_error(
+                Alerts.ConduitSizingFailed(fill_pct, max_fill_pct),
                 category="Calculation",
+                severity="CRITICAL",
             )
             self.conduit.calc_failed = True
             self.calc_failed = True
             self._clear_conduit_data()
+            return
     def _try_override_hot_size(self, rating):
         override = self._normalize_wire_size(self._wire_hot_size_override)
         if not override:
@@ -1499,10 +1545,12 @@ class CircuitBranch(object):
                 self.cable.ig_size = override
             return True
 
-        self.log_warning(
-            Alerts.InvalidEquipmentGround(self._wire_ground_size_override),
-            category="Overrides",
+        alert = (
+            Alerts.InvalidServiceGround(self._wire_ground_size_override)
+            if self._is_transformer_secondary
+            else Alerts.InvalidEquipmentGround(self._wire_ground_size_override)
         )
+        self.log_warning(alert, category="Overrides")
         return False
 
     def _auto_hot_sizing(self, rating):
@@ -1647,9 +1695,7 @@ class CircuitBranch(object):
             return None
 
     def _fail_cable_sizing(self, msg):
-        self.log_error(
-            "{} Wire sizing failed. All cable outputs will be cleared.".format(msg)
-        )
+        self.log_error(Alerts.WireSizingFailed(msg), category="Calculation")
         self.cable.calc_failed = True
         self.calc_failed = True
         self._clear_cable_data()
@@ -1691,9 +1737,7 @@ class CircuitBranch(object):
                 return 0
 
             material = self.cable.material or self._wire_info.get("wire_material", "CU")
-            conduit_material = self.conduit_material_type or self._wire_info.get(
-                "conduit_material_type"
-            )
+            conduit_material = self._resolve_conduit_material_for_impedance()
             wire_size = self._normalize_wire_size(wire_size_formatted)
 
             impedance = WIRE_IMPEDANCE_TABLE.get(wire_size)
@@ -1927,6 +1971,13 @@ class CircuitBranch(object):
             return False
         return idx > limit_idx
 
+    def _is_wire_smaller_than(self, wire, min_wire):
+        idx = self._wire_index(wire)
+        min_idx = self._wire_index(min_wire)
+        if idx == -1 or min_idx == -1:
+            return False
+        return idx < min_idx
+
     def _lookup_egc_size(self, amps, material):
         table = EGC_TABLE.get(material)
         if not table:
@@ -1984,6 +2035,46 @@ class CircuitBranch(object):
             )
         )
         return fallback_ground
+
+    def _check_ground_design_limits(self):
+        if (
+            self.cable.cleared
+            or self.calc_failed
+            or not self.cable.ground_size
+            or not (self.cable.ground_qty or 0)
+        ):
+            return
+
+        material = (
+            self._wire_material_override
+            or self.cable.material
+            or self._wire_info.get("wire_material", "CU")
+        )
+        material = str(material).upper().strip()
+
+        if self._is_transformer_secondary:
+            required = self._lookup_service_ground_size(self.cable.hot_size, material)
+            if required and self._is_wire_smaller_than(self.cable.ground_size, required):
+                self.log_warning(
+                    Alerts.UndersizedWireServiceGround(
+                        self.cable.ground_size, material
+                    ),
+                    category="Design",
+                    severity="HIGH",
+                )
+            return
+
+        amps = self.breaker_rating
+        if amps is None:
+            return
+
+        required = self._lookup_egc_size(amps, material)
+        if required and self._is_wire_smaller_than(self.cable.ground_size, required):
+            self.log_warning(
+                Alerts.UndersizedWireEGC(self.cable.ground_size, material),
+                category="Design",
+                severity="HIGH",
+            )
 
     def _conductor_cmil(self, wire_size):
         if not wire_size:

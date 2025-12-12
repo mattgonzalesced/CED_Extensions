@@ -5,7 +5,7 @@
 class AlertDefinition(object):
     """Lightweight alert definition similar to Revit failure definitions."""
 
-    def __init__(self, alert_id, message, group, severity="WARNING", resolutions=None):
+    def __init__(self, alert_id, message, group, severity="NONE", resolutions=None):
         self._id = alert_id
         self._message = message
         self._group = group
@@ -57,8 +57,9 @@ class NoticeCollector(object):
         self.circuit_name = circuit_name
         self.items = []  # (AlertDefinition, severity, group, message)
 
-    def add_message(self, level, message, group="Calculation"):
-        self.items.append((None, level.upper(), group, message))
+    def add_message(self, severity, message, group="Calculation"):
+        sev = (severity or "NONE").upper()
+        self.items.append((None, sev, group, message))
 
     def add_alert(self, alert_spec, group_override=None, severity_override=None):
         if not alert_spec:
@@ -70,9 +71,9 @@ class NoticeCollector(object):
 
         data = alert_spec.get("data", {}) if isinstance(alert_spec, dict) else {}
         group = group_override or definition.group
-        severity = severity_override or definition.severity
+        severity = (severity_override or definition.severity or "NONE").upper()
         message = definition.format(**data)
-        self.items.append((definition, severity.upper(), group, message))
+        self.items.append((definition, severity, group, message))
 
     def add_by_id(self, alert_id, group_override=None, severity_override=None, **fmt):
         definition = get_alert_definition(alert_id)
@@ -83,36 +84,22 @@ class NoticeCollector(object):
     def has_items(self):
         return bool(self.items)
 
-    def categorized(self):
-        """Return items grouped by alert group with severity buckets."""
-        ordered = ["Overrides", "Calculation", "Design", "Error", "Other"]
-        buckets = {key: {"WARNING": [], "ERROR": []} for key in ordered}
-        for definition, severity, group, message in self.items:
-            bucket = group if group in buckets else "Other"
-            sev = severity.upper() if severity else "WARNING"
-            if sev not in buckets[bucket]:
-                buckets[bucket][sev] = []
-            buckets[bucket][sev].append(message)
-        return [
-            (cat, levels)
-            for cat, levels in buckets.items()
-            if levels.get("WARNING") or levels.get("ERROR")
-        ]
-
-    def formatted_lines(self, label_map=None):
+    def formatted_lines(self, label_map=None, severity_colors=None):
         if not self.has_items():
             return []
         label_map = label_map or {}
-        lines = ["* **{}**".format(self.circuit_name)]
-        for category, levels in self.categorized():
-            cat_label = label_map.get(category, category)
-            cat_msgs = []
-            for level in ("ERROR", "WARNING"):
-                for msg in levels.get(level, []):
-                    cat_msgs.append("      - ({}): {}".format(level.title(), msg))
-            if cat_msgs:
-                lines.append("  - {}:".format(cat_label))
-                lines.extend(cat_msgs)
+        severity_colors = severity_colors or {}
+        lines = ["**{}**".format(self.circuit_name)]
+
+        for _, severity, group, message in self.items:
+            label = label_map.get(group, group)
+            sev_key = severity.upper() if severity else "NONE"
+            color = severity_colors.get(sev_key)
+            rendered = message
+            if color:
+                rendered = "<span style=\"color:{}\">{}</span>".format(color, message)
+            lines.append("  - (**{}**) {}".format(label, rendered))
+
         return lines
 
 
@@ -257,6 +244,20 @@ class Alerts(object):
                 "circuit_load_current": circuit_load_current,
                 "breaker_rating": breaker_rating,
             },
+        }
+
+    @staticmethod
+    def WireSizingFailed(reason):
+        return {
+            "definition": get_alert_definition("calculation_wire_sizing_failed"),
+            "data": {"reason": reason},
+        }
+
+    @staticmethod
+    def ConduitSizingFailed(fill_ratio, max_fill):
+        return {
+            "definition": get_alert_definition("calculation_conduit_sizing_failed"),
+            "data": {"fill_ratio": fill_ratio, "max_fill": max_fill},
         }
 
 def get_alert_definition(alert_id):
