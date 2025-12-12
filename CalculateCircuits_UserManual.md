@@ -4,6 +4,7 @@
 Calculate Circuits automates sizing and documentation for Revit electrical circuits. It supports automatic sizing, supervised manual overrides, voltage-drop checks, conduit fill, downstream write-back to equipment/fixtures, and structured alerting. This guide explains how to configure settings, run the tool, and interpret results across all supported circuit types.
 
 ## Modes of Operation
+- Toggle mode via **CKT_User Override_CED** on the circuit: set to **No/blank** for automatic sizing or **Yes** for manual overrides.
 - **Automatic mode (default)**
   - Active when **CKT_User Override_CED = No** (or left blank). The tool sizes conductors, neutrals, grounds, and conduit based on connected/demand loads, code tables, and project defaults.
   - Missing or invalid property fields (material, insulation, temperature, conduit type) silently fall back to defaults with alerts. Numeric sizes left blank are auto-sized.
@@ -12,14 +13,14 @@ Calculate Circuits automates sizing and documentation for Revit electrical circu
   - Active when **CKT_User Override_CED = Yes**. User-entered sizes drive the calculation; the tool validates entries, issues alerts for risky inputs, and preserves overrides except when they are invalid.
   - Clearing tokens control whether wire or conduit should be ignored (see **Clearing tokens** below) and are honored only in manual mode.
   - Neutral sizing follows **Neutral Behavior**; grounds respect override values but are validated against NEC tables.
-  - **Length Makeup_CED** is always honored as the circuit length input for VD sizing in both modes.
+  - **CKT_Length Makeup_CED** is always honored as the circuit length input for VD sizing in both modes.
 
 ## Clearing Tokens (Manual Mode Only)
 - Enter a single hyphen (`-`) to intentionally clear a size. Tokens are preserved in parameters so future runs keep the intent.
   - **Hot size = `-`**: Treat as “conduit only” (no voltage-drop calc). Circuit type set to `CONDUIT ONLY`; wire size string shows `-`; conduit sizes still calculate unless also cleared.
   - **Hot size = `-` and Conduit size = `-`**: Treat as empty; branch data for conduit/cable is cleared and circuit type is `N/A`. Wire size string shows `-`; conduit size string shows `-`.
   - **Conduit size = `-`**: Conduit is cleared; conduit type is cleared for manual mode. Wire calculations continue if hots are provided; conduit size string shows `-`.
-- In **automatic mode**, cleared size tokens are ignored and replaced by calculated values; property overrides (material, insulation, temperature, conduit type) still validate.
+- In **automatic mode**, cleared size tokens are ignored and replaced by calculated values; property overrides (material, insulation, temperature, conduit type) still validate and cleared size tokens are overwritten.
 
 ## Circuit Types and Special Cases
 - **BRANCH**: Standard branch circuits sized to branch voltage-drop target.
@@ -58,17 +59,33 @@ Access via **Calculate Circuits Settings**. Defaults are italic/gray; user selec
 - Conductor upsizing considers cmil growth; equipment grounds upsize proportionally to hot conductor cmil increases.
 - Warning thresholds: Branch/feeder VD targets generate alerts when exceeded in manual mode.
 
+## Length Makeup
+- **CKT_Length Makeup_CED** applies in both automatic and manual modes to adjust the effective run length for voltage drop.
+- If *(Revit circuit length – Length Makeup)* is below zero, the tool reverts to the native Revit circuit length.
+
+## Neutral Rules
+- **Activation**: **CKT_Include Neutral_CED** adds or removes neutrals in both modes.
+- **Quantity logic**:
+  - 1P circuits default to one neutral when the distribution system includes a line-to-neutral voltage.
+  - Branch circuits omit neutrals automatically if the base equipment distribution system lacks an LN voltage.
+  - Feeder circuits include neutrals automatically when the downstream equipment distribution system has an LN voltage; otherwise they are omitted.
+- **Sizing logic**:
+  - Automatic mode: neutrals match hot size by default.
+  - Manual mode: follows **Neutral Behavior**—either match hot or use a user-entered neutral size. When neutrals are intentionally omitted (include neutral unchecked or no LN system), no override warnings are produced and the neutral size writes as `-`.
+
+## Isolated Grounds
+- **CKT_Include Isolated Ground_CED** enables or removes isolated grounds in both modes.
+- IG size always mirrors the equipment ground size; outputs write to the isolated ground size parameter and wire size strings.
+
 ## Grounding Rules
 - **Equipment grounds**: Sized from the EGC table by breaker rating and material; overrides must meet or exceed minimums.
 - **Service grounds (transformer secondary)**: Sized from the service ground table by final hot conductor size; overrides must meet or exceed minimums.
-- **Isolated grounds**: When enabled, IG size always matches equipment ground in manual and automatic modes and is written to the isolated ground size parameter.
-- **Neutrals**: In automatic mode, neutrals match hots. In manual mode, behavior follows the **Neutral Behavior** setting; no warnings appear when neutrals are intentionally omitted per system type.
+- **Isolated grounds**: When enabled, IG size matches equipment ground in manual and automatic modes and is written to the isolated ground size parameter.
 
 ## Wire and Conduit Properties
-- **Editable in both automatic and manual modes.** Defaults apply when left blank in auto mode; manual entries are validated.
+- **Editable in both automatic and manual modes** for material, insulation, temperature, and conduit type. Defaults apply when left blank in auto mode; manual entries are validated.
 - **Wire material, insulation, temperature**: Case-insensitive; normalized to uppercase (temperature must match table entries). Invalid values fall back to defaults with override alerts.
 - **Conduit type**: Case-insensitive; normalized before lookup. Invalid values fall back to defaults with override alerts.
-- **Conduit size**: Accepts normalized forms (e.g., `4"`, `4"C`, `4C`, `4`).
 
 ## Alerts and Notices
 - Alerts are grouped by category (Override, Calculation, Design, Calculation Failure) with severity coloring:
@@ -99,6 +116,23 @@ Access via **Calculate Circuits Settings**. Defaults are italic/gray; user selec
 ## Wire Size Strings
 - Wire size strings are read-only outputs summarizing the final configuration (sets × size × material × insulation × temperature plus neutrals/grounds/IGs).
 - When neutrals or IGs differ from hots, the strings reflect the unique sizing. Clearing tokens replace the associated segment with `-`.
+
+## Valid Inputs and Parameter Names
+- **Manual override toggle**: `CKT_User Override_CED` (Yes/No).
+- **Length adjustment**: `CKT_Length Makeup_CED` (decimal feet; negative values fall back to Revit length).
+- **Neutral inclusion**: `CKT_Include Neutral_CED` (Yes/No); **Isolated ground**: `CKT_Include Isolated Ground_CED` (Yes/No).
+- **Wire properties** (editable in auto/manual):
+  - Material: `CU`, `AL` (case-insensitive).
+  - Insulation: `THHN`, `THWN`, `XHHW`, `XHHW-2`, etc., as supported by the project tables.
+  - Temperature rating: `60 C`, `75 C`, `90 C` per tables.
+- **Conduit type** (editable in auto/manual): EMT, RMC, IMC, FMC, ENT, and other supported types from conduit tables.
+- **Size overrides (manual mode)**: Hot, neutral (when manual), ground, and conduit size accept standard trade sizes (e.g., `1/2"`, `3/4"`, `1"`, `4"C`, `4`). Clearing token `-` applies only in manual mode.
+- **Settings options** (project-wide):
+  - Minimum conduit size: `Selected: 3/4"`, `Selected: 1/2"`.
+  - Neutral behavior: `[Match hot conductors]`, `[Manual Neutral]`.
+  - Feeder VD method: `[80% of Breaker]`, `[100% of Breaker]`, `[Demand Load]`, `[Connected Load]`.
+  - Max conduit fill: `0.1–1.0` (percent inputs accepted, normalized to decimal in storage).
+  - Max voltage drop targets: `0.001–1.0` (percent inputs accepted, normalized to decimal in storage).
 
 
 ## Data Write-Back
