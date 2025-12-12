@@ -60,16 +60,25 @@ class NoticeCollector(object):
     def add_message(self, level, message, group="Calculation"):
         self.items.append((None, level.upper(), group, message))
 
-    def add_by_id(self, alert_id, group_override=None, severity_override=None, **fmt):
-        from CEDElectrical.refdata.alert_definitions import ALERT_DEFINITIONS
+    def add_alert(self, alert_spec, group_override=None, severity_override=None):
+        if not alert_spec:
+            return
 
-        definition = ALERT_DEFINITIONS.get(alert_id)
+        definition = alert_spec.get("definition") if isinstance(alert_spec, dict) else None
         if not definition:
             return
+
+        data = alert_spec.get("data", {}) if isinstance(alert_spec, dict) else {}
         group = group_override or definition.group
         severity = severity_override or definition.severity
-        message = definition.format(**fmt)
+        message = definition.format(**data)
         self.items.append((definition, severity.upper(), group, message))
+
+    def add_by_id(self, alert_id, group_override=None, severity_override=None, **fmt):
+        definition = get_alert_definition(alert_id)
+        if not definition:
+            return
+        self.add_alert({"definition": definition, "data": fmt}, group_override, severity_override)
 
     def has_items(self):
         return bool(self.items)
@@ -84,7 +93,11 @@ class NoticeCollector(object):
             if sev not in buckets[bucket]:
                 buckets[bucket][sev] = []
             buckets[bucket][sev].append(message)
-        return [(cat, levels) for cat, levels in buckets.items() if levels.get("WARNING") or levels.get("ERROR")]
+        return [
+            (cat, levels)
+            for cat, levels in buckets.items()
+            if levels.get("WARNING") or levels.get("ERROR")
+        ]
 
     def formatted_lines(self, label_map=None):
         if not self.has_items():
@@ -96,12 +109,171 @@ class NoticeCollector(object):
             cat_msgs = []
             for level in ("ERROR", "WARNING"):
                 for msg in levels.get(level, []):
-                    cat_msgs.append("    - ({}): {}".format(level.title(), msg))
+                    cat_msgs.append("      - ({}): {}".format(level.title(), msg))
             if cat_msgs:
                 lines.append("  - {}:".format(cat_label))
                 lines.extend(cat_msgs)
         return lines
 
 
+class Alerts(object):
+    """Static constructors for typed alert specs."""
+
+    @staticmethod
+    def InvalidCircuitProperty(property, override_value, default_value):
+        return {
+            "definition": get_alert_definition("overrides_invalid_circuit_property"),
+            "data": {
+                "property": property,
+                "override_value": override_value,
+                "default_value": default_value,
+            },
+        }
+
+    @staticmethod
+    def InvalidEquipmentGround(override_value):
+        return {
+            "definition": get_alert_definition("overrides_invalid_equipment_ground"),
+            "data": {"override_value": override_value},
+        }
+
+    @staticmethod
+    def InvalidServiceGround(override_value):
+        return {
+            "definition": get_alert_definition("overrides_invalid_service_ground"),
+            "data": {"override_value": override_value},
+        }
+
+    @staticmethod
+    def InvalidHotWire(override_value):
+        return {
+            "definition": get_alert_definition("overrides_invalid_hot_wire"),
+            "data": {"override_value": override_value},
+        }
+
+    @staticmethod
+    def InvalidConduit(override_value):
+        return {
+            "definition": get_alert_definition("overrides_invalid_conduit"),
+            "data": {"override_value": override_value},
+        }
+
+    @staticmethod
+    def NonStandardOCPRating(breaker_size, next_size):
+        return {
+            "definition": get_alert_definition("design_non_standard_ocp_rating"),
+            "data": {"breaker_size": breaker_size, "next_size": next_size},
+        }
+
+    @staticmethod
+    def BreakerLugSizeLimitOverride(hot_size, breaker_size, max_lug_size):
+        return {
+            "definition": get_alert_definition("design_breaker_lug_size_limit_override"),
+            "data": {
+                "hot_size": hot_size,
+                "breaker_size": breaker_size,
+                "max_lug_size": max_lug_size,
+            },
+        }
+
+    @staticmethod
+    def BreakerLugQuantityLimitOverride(wire_sets, breaker_size, max_lug_qty):
+        return {
+            "definition": get_alert_definition("design_breaker_lug_quantity_limit_override"),
+            "data": {
+                "wire_sets": wire_sets,
+                "breaker_size": breaker_size,
+                "max_lug_qty": max_lug_qty,
+            },
+        }
+
+    @staticmethod
+    def BreakerLugSizeLimitCalc(hot_size, breaker_size):
+        return {
+            "definition": get_alert_definition("calculation_breaker_lug_size_limit"),
+            "data": {"hot_size": hot_size, "breaker_size": breaker_size},
+        }
+
+    @staticmethod
+    def BreakerLugQuantityLimitCalc(wire_sets, breaker_size):
+        return {
+            "definition": get_alert_definition("calculation_breaker_lug_quantity_limit"),
+            "data": {"wire_sets": wire_sets, "breaker_size": breaker_size},
+        }
+
+    @staticmethod
+    def ExcessiveConduitFill(conduit_size, conduit_fill_percentage, max_fill_percentage):
+        return {
+            "definition": get_alert_definition("design_excessive_conduit_fill"),
+            "data": {
+                "conduit_size": conduit_size,
+                "conduit_fill_percentage": conduit_fill_percentage,
+                "max_fill_percentage": max_fill_percentage,
+            },
+        }
+
+    @staticmethod
+    def UndersizedWireEGC(ground_size, wire_material):
+        return {
+            "definition": get_alert_definition("design_undersized_wire_egc"),
+            "data": {"ground_size": ground_size, "wire_material": wire_material},
+        }
+
+    @staticmethod
+    def UndersizedWireServiceGround(ground_size, wire_material):
+        return {
+            "definition": get_alert_definition("design_undersized_wire_service_ground"),
+            "data": {"ground_size": ground_size, "wire_material": wire_material},
+        }
+
+    @staticmethod
+    def ExcessiveVoltDrop(wire_sets, wire_size, vd_percent):
+        return {
+            "definition": get_alert_definition("design_excessive_volt_drop"),
+            "data": {
+                "wire_sets": wire_sets,
+                "wire_size": wire_size,
+                "vd_percent": vd_percent,
+            },
+        }
+
+    @staticmethod
+    def InsufficientAmpacity(wire_sets, wire_size, circuit_ampacity, circuit_load_current):
+        return {
+            "definition": get_alert_definition("design_insufficient_ampacity"),
+            "data": {
+                "wire_sets": wire_sets,
+                "wire_size": wire_size,
+                "circuit_ampacity": circuit_ampacity,
+                "circuit_load_current": circuit_load_current,
+            },
+        }
+
+    @staticmethod
+    def UndersizedOCP(circuit_load_current, breaker_rating):
+        return {
+            "definition": get_alert_definition("design_undersized_ocp"),
+            "data": {
+                "circuit_load_current": circuit_load_current,
+                "breaker_rating": breaker_rating,
+            },
+        }
+
 def get_alert_definition(alert_id):
-    return ALERT_DEFINITIONS.get(alert_id)
+    try:
+        from CEDElectrical.refdata.alert_definitions import ALERT_DEFINITIONS
+    except Exception:
+        return None
+
+    definition = ALERT_DEFINITIONS.get(alert_id)
+    if definition:
+        return definition
+
+    # fall back to searching by definition id
+    for defn in ALERT_DEFINITIONS.values():
+        try:
+            if defn.GetId() == alert_id:
+                return defn
+        except Exception:
+            continue
+    return None

@@ -6,7 +6,7 @@ import Autodesk.Revit.DB.Electrical as DBE
 from System import Guid
 from pyrevit import DB, script, revit
 
-from CEDElectrical.Model.alerts import NoticeCollector
+from CEDElectrical.Model.alerts import Alerts, NoticeCollector
 from CEDElectrical.Model.circuit_settings import (
     CircuitSettings,
     FeederVDMethod,
@@ -312,6 +312,12 @@ class CircuitBranch(object):
         alert_id = kwargs.pop("alert_id", None)
         fmt_kwargs = kwargs.pop("fmt", {})
 
+        if isinstance(msg, dict) and msg.get("definition"):
+            self.notices.add_alert(msg, group_override=category)
+            if DEV_LOGGING:
+                logger.warning("{}: {}".format(self.name, msg.get("definition").GetId()))
+            return
+
         if msg in ALERT_DEFINITIONS:
             alert_id = msg
 
@@ -330,6 +336,12 @@ class CircuitBranch(object):
         category = kwargs.pop("category", "Calculation")
         alert_id = kwargs.pop("alert_id", None)
         fmt_kwargs = kwargs.pop("fmt", {})
+
+        if isinstance(msg, dict) and msg.get("definition"):
+            self.notices.add_alert(msg, group_override=category, severity_override="ERROR")
+            if DEV_LOGGING:
+                logger.error("{}: {}".format(self.name, msg.get("definition").GetId()))
+            return
 
         if msg in ALERT_DEFINITIONS:
             alert_id = msg
@@ -355,7 +367,7 @@ class CircuitBranch(object):
             rating = self.rating
             if load is not None and rating is not None and load > rating:
                 self.log_warning(
-                    "Circuit load {:.2f}A exceeds breaker rating {}A.".format(load, rating),
+                    Alerts.UndersizedOCP(load, rating),
                     category="Design",
                 )
         except Exception:
@@ -501,8 +513,7 @@ class CircuitBranch(object):
             for key in sorted_keys:
                 if key >= rating_key:
                     self.log_warning(
-                        "design_non_standard_ocp_rating",
-                        fmt={"breaker_size": rating_key, "next_size": key},
+                        Alerts.NonStandardOCPRating(rating_key, key),
                         category="Design",
                     )
                     material_map = table[key]
@@ -611,12 +622,11 @@ class CircuitBranch(object):
                 self._wire_material_override = norm
             else:
                 self.log_warning(
-                    "overrides_invalid_circuit_property",
-                    fmt={
-                        "property": "Wire material",
-                        "override_value": self._wire_material_override,
-                        "default_value": self._wire_info.get("wire_material", "CU"),
-                    },
+                    Alerts.InvalidCircuitProperty(
+                        "Wire material",
+                        self._wire_material_override,
+                        self._wire_info.get("wire_material", "CU"),
+                    ),
                     category="Overrides",
                 )
                 self._wire_material_override = None
@@ -630,12 +640,11 @@ class CircuitBranch(object):
                 self._wire_temp_rating_override = t
             except Exception:
                 self.log_warning(
-                    "overrides_invalid_circuit_property",
-                    fmt={
-                        "property": "Wire temperature",
-                        "override_value": self._wire_temp_rating_override,
-                        "default_value": self._wire_info.get("wire_temperature_rating", "75 C"),
-                    },
+                    Alerts.InvalidCircuitProperty(
+                        "Wire temperature",
+                        self._wire_temp_rating_override,
+                        self._wire_info.get("wire_temperature_rating", "75 C"),
+                    ),
                     category="Overrides",
                 )
                 self._wire_temp_rating_override = None
@@ -644,12 +653,11 @@ class CircuitBranch(object):
         if self._wire_insulation_override:
             if not isinstance(self._wire_insulation_override, str) or not self._wire_insulation_override.strip():
                 self.log_warning(
-                    "overrides_invalid_circuit_property",
-                    fmt={
-                        "property": "Wire insulation",
-                        "override_value": self._wire_insulation_override,
-                        "default_value": self._wire_info.get("wire_insulation"),
-                    },
+                    Alerts.InvalidCircuitProperty(
+                        "Wire insulation",
+                        self._wire_insulation_override,
+                        self._wire_info.get("wire_insulation"),
+                    ),
                     category="Overrides",
                 )
                 self._wire_insulation_override = None
@@ -657,12 +665,11 @@ class CircuitBranch(object):
                 norm_ins = self._wire_insulation_override.strip().upper()
                 if valid_insulations and norm_ins not in valid_insulations:
                     self.log_warning(
-                        "overrides_invalid_circuit_property",
-                        fmt={
-                            "property": "Wire insulation",
-                            "override_value": self._wire_insulation_override,
-                            "default_value": self._wire_info.get("wire_insulation"),
-                        },
+                        Alerts.InvalidCircuitProperty(
+                            "Wire insulation",
+                            self._wire_insulation_override,
+                            self._wire_info.get("wire_insulation"),
+                        ),
                         category="Overrides",
                     )
                     self._wire_insulation_override = None
@@ -675,12 +682,11 @@ class CircuitBranch(object):
             valid = any(raw in types for _, types in CONDUIT_AREA_TABLE.items())
             if not valid:
                 self.log_warning(
-                    "overrides_invalid_circuit_property",
-                    fmt={
-                        "property": "Conduit type",
-                        "override_value": raw,
-                        "default_value": self._wire_info.get("conduit_type"),
-                    },
+                    Alerts.InvalidCircuitProperty(
+                        "Conduit type",
+                        raw,
+                        self._wire_info.get("conduit_type"),
+                    ),
                     category="Overrides",
                 )
                 self._conduit_type_override = None
@@ -697,8 +703,7 @@ class CircuitBranch(object):
             elif norm not in CONDUIT_SIZE_INDEX:
                 if self._auto_calculate_override:
                     self.log_warning(
-                        "overrides_invalid_conduit",
-                        fmt={"override_value": raw},
+                        Alerts.InvalidConduit(raw),
                         category="Overrides",
                     )
                 self._conduit_size_override = None
@@ -723,15 +728,16 @@ class CircuitBranch(object):
             norm = self._normalize_wire_size(raw)
             if norm not in CONDUCTOR_AREA_TABLE:
                 if warn_user:
-                    suffix = "using auto sizing." if name == "hot" else "using calculated sizing."
-                    if name == "ground":
-                        suffix = "using EGC lookup."  # always table-based fallback
-                    self.log_warning(
-                        "{} size override '{}' invalid; {}".format(
-                            name.capitalize(), raw, suffix
-                        ),
-                        category="Overrides",
-                    )
+                    alert = None
+                    if name == "hot":
+                        alert = Alerts.InvalidHotWire(raw)
+                    elif name == "ground":
+                        alert = Alerts.InvalidEquipmentGround(raw)
+                    else:
+                        alert = Alerts.InvalidCircuitProperty(
+                            "{} size".format(name.capitalize()), raw, None
+                        )
+                    self.log_warning(alert, category="Overrides")
                 setattr(self, attr, None)
                 return
             setattr(self, attr, norm)
@@ -771,8 +777,8 @@ class CircuitBranch(object):
             max_sets = self._wire_info.get("max_lug_qty", 1) or 1
             if self._wire_sets_override > max_sets:
                 self.log_warning(
-                    "Wire sets override {} exceeds lug capacity of {} set(s); keeping user override per request.".format(
-                        self._wire_sets_override, max_sets
+                    Alerts.BreakerLugQuantityLimitOverride(
+                        self._wire_sets_override, self.rating or 0, max_sets
                     ),
                     category="Design",
                 )
@@ -781,8 +787,8 @@ class CircuitBranch(object):
             poles = self.poles or 0
             if ((rating and rating < 100) or poles < 2) and self._wire_sets_override != 1:
                 self.log_warning(
-                    "Parallel sets not allowed for {}P breaker {}A; keeping {} set(s) as requested.".format(
-                        poles or 0, rating, self._wire_sets_override
+                    Alerts.BreakerLugQuantityLimitOverride(
+                        self._wire_sets_override, rating, 1
                     ),
                     category="Design",
                 )
@@ -808,8 +814,8 @@ class CircuitBranch(object):
             hot_norm = self._normalize_wire_size(self._wire_hot_size_override)
             if self._is_wire_larger_than_limit(hot_norm, max_hot_size):
                 self.log_warning(
-                    "Hot size override {} exceeds lug size block {}; keeping user override per request.".format(
-                        self._wire_hot_size_override, max_hot_size
+                    Alerts.BreakerLugSizeLimitOverride(
+                        self._wire_hot_size_override, self.rating or 0, max_hot_size
                     ),
                     category="Design",
                 )
@@ -912,12 +918,12 @@ class CircuitBranch(object):
                     )
                     sets = 1
 
-            if sets > max_sets:
-                self.log_warning(
-                    "Requested {} sets exceeds lug capacity of {} set(s); clamping to {}.".format(sets, max_sets, max_sets),
-                    category="Design",
-                )
-                sets = max_sets
+        if sets > max_sets:
+            self.log_warning(
+                Alerts.BreakerLugQuantityLimitCalc(sets, self.rating or 0),
+                category="Calculation",
+            )
+            sets = max_sets
 
         return sets
 
@@ -1385,17 +1391,17 @@ class CircuitBranch(object):
             if self.conduit.apply_override_size(size_norm, total_area):
                 if self.conduit.fill_ratio and self.conduit.fill_ratio > self.settings.max_conduit_fill:
                     self.log_warning(
-                        "Override conduit size {} exceeds max fill ({} > {}).".format(
-                            size_norm, round(self.conduit.fill_ratio, 3), self.settings.max_conduit_fill
+                        Alerts.ExcessiveConduitFill(
+                            size_norm,
+                            round(100 * self.conduit.fill_ratio, 2),
+                            round(100 * self.settings.max_conduit_fill, 2),
                         ),
-                        category="Calculation",
+                        category="Design",
                     )
                 return
             else:
                 self.log_warning(
-                    "Invalid conduit size override '{}'; calculating instead.".format(
-                        self._conduit_size_override
-                    ),
+                    Alerts.InvalidConduit(self._conduit_size_override),
                     category="Overrides",
                 )
 
@@ -1439,19 +1445,15 @@ class CircuitBranch(object):
             # Accept override even if it fails VD or breaker, but warn
             if not self._is_ampacity_acceptable(rating, total_amp, self.circuit_load_current):
                 self.log_warning(
-                    "Override {} set(s) x #{}  fails ampacity ({} A). Saving anyway.".format(
-                        sets, w, total_amp
-                    ),
-                    category="Overrides",
+                    Alerts.InsufficientAmpacity(sets, "#{}".format(w), total_amp, self.circuit_load_current),
+                    category="Design",
                 )
 
             vd = self._safe_voltage_drop_calc(w, sets)
             if vd is not None and vd > self.max_voltage_drop:
                 self.log_warning(
-                    "Override {} set(s) x #{}  fails volt drop check ({}%). Saving anyway.".format(
-                        sets, w, round(100 * vd, 2)
-                    ),
-                    category="Overrides",
+                    Alerts.ExcessiveVoltDrop(sets, "#{}".format(w), round(100 * vd, 2)),
+                    category="Design",
                 )
 
             # ACCEPT regardless (but with warnings)
@@ -1498,8 +1500,7 @@ class CircuitBranch(object):
             return True
 
         self.log_warning(
-            "overrides_invalid_equipment_ground",
-            fmt={"override_value": self._wire_ground_size_override},
+            Alerts.InvalidEquipmentGround(self._wire_ground_size_override),
             category="Overrides",
         )
         return False
