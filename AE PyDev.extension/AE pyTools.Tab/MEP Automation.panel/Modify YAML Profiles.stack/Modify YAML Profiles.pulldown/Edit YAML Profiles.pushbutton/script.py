@@ -246,15 +246,18 @@ def _build_relations_index(equipment_defs):
 
 
 def _build_truth_groups(equipment_defs):
-    """Return ({root_name: {'members': [names]}}, {cad_name: root_name})."""
+    """
+    Build mapping of source-of-truth groups.
+    Returns:
+        groups: {source_key: {"display_name": str, "source_profile_name": str, "source_id": str, "members": [names]}}
+        child_to_root: {cad_name: source_key}
+    """
     groups = {}
     child_to_root = {}
     id_to_name = {}
     for entry in equipment_defs or []:
         eq_id = (entry.get("id") or "").strip()
         eq_name = (entry.get("name") or entry.get("id") or "").strip()
-        if not eq_name:
-            continue
         if eq_id:
             id_to_name[eq_id] = eq_name
     for entry in equipment_defs or []:
@@ -262,30 +265,27 @@ def _build_truth_groups(equipment_defs):
         eq_name = (entry.get("name") or entry.get("id") or "").strip()
         if not eq_name:
             continue
-        source_id = (entry.get(TRUTH_SOURCE_ID_KEY) or eq_id).strip()
-        source_name = id_to_name.get(source_id) or (entry.get(TRUTH_SOURCE_NAME_KEY) or "").strip()
-        if not source_name:
-            source_name = eq_name
-        data = groups.setdefault(source_name, {
+        source_id = (entry.get(TRUTH_SOURCE_ID_KEY) or "").strip()
+        source_key = source_id or eq_id or eq_name
+        source_profile_name = id_to_name.get(source_id) or eq_name
+        display_name = (entry.get(TRUTH_SOURCE_NAME_KEY) or source_profile_name or eq_name).strip()
+        if not display_name:
+            display_name = source_profile_name
+        data = groups.setdefault(source_key, {
+            "display_name": display_name,
+            "source_profile_name": source_profile_name,
             "source_id": source_id or eq_id,
             "members": [],
         })
-        data["members"].append(eq_name)
-        child_to_root[eq_name] = source_name
-    for source_name, data in groups.items():
-        members = data.get("members") or []
-        seen = set()
-        ordered = []
-        for name in members:
-            if name in seen:
-                continue
-            seen.add(name)
-            ordered.append(name)
-        rest = sorted([name for name in ordered if name != source_name], key=lambda val: val.lower())
-        rest.insert(0, source_name)
-        data["members"] = rest
-        if not data.get("source_id"):
-            data["source_id"] = source_name
+        if source_id and eq_id == source_id:
+            stored_display = (entry.get(TRUTH_SOURCE_NAME_KEY) or "").strip()
+            if stored_display:
+                data["display_name"] = stored_display
+            data["source_profile_name"] = eq_name
+        members = data.setdefault("members", [])
+        if eq_name not in members:
+            members.append(eq_name)
+        child_to_root[eq_name] = source_key
     return groups, child_to_root
 
 
@@ -298,7 +298,8 @@ def _apply_truth_links(profile_dict, truth_groups):
         cad = entry.get("cad_name")
         if cad:
             by_name[cad] = entry
-    for source_name, data in (truth_groups or {}).items():
+    for source_key, data in (truth_groups or {}).items():
+        source_name = data.get("source_profile_name") or source_key
         members = data.get("members") or []
         root_entry = by_name.get(source_name)
         if not root_entry:
@@ -310,6 +311,29 @@ def _apply_truth_links(profile_dict, truth_groups):
             if not target:
                 continue
             target["types"] = copy.deepcopy(root_entry.get("types") or [])
+
+
+def _apply_truth_metadata(equipment_defs, truth_groups):
+    if not truth_groups:
+        return
+    membership = {}
+    for source_key, data in truth_groups.items():
+        display_name = (data.get("display_name") or data.get("source_profile_name") or source_key).strip()
+        source_id = (data.get("source_id") or source_key or "").strip()
+        for member in data.get("members") or []:
+            membership[member] = (display_name, source_id)
+    for entry in equipment_defs or []:
+        eq_name = (entry.get("name") or entry.get("id") or "").strip()
+        eq_id = (entry.get("id") or "").strip()
+        display, source_id = membership.get(eq_name, (None, None))
+        if source_id:
+            entry[TRUTH_SOURCE_ID_KEY] = source_id
+        elif eq_id:
+            entry[TRUTH_SOURCE_ID_KEY] = eq_id
+        if display:
+            entry[TRUTH_SOURCE_NAME_KEY] = display
+        elif eq_name:
+            entry[TRUTH_SOURCE_NAME_KEY] = eq_name
 
 
 def main():
@@ -377,6 +401,7 @@ def main():
                 updated_dict.get("profiles") or [],
                 raw_defs,
             )
+            _apply_truth_metadata(updated_defs, truth_groups)
             raw_data["equipment_definitions"] = updated_defs
             save_active_yaml_data(
                 None,

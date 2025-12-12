@@ -25,6 +25,9 @@ try:
 except NameError:
     basestring = str
 
+TRUTH_SOURCE_ID_KEY = "ced_truth_source_id"
+TRUTH_SOURCE_NAME_KEY = "ced_truth_source_name"
+
 
 def _build_repository(data):
     legacy_profiles = equipment_defs_to_legacy(data.get("equipment_definitions") or [])
@@ -351,6 +354,23 @@ def _anchor_rows_for_cad(repo, cad_name):
     return rows
 
 
+def _truth_group_maps(equipment_defs):
+    child_to_group = {}
+    group_display = {}
+    for entry in equipment_defs or []:
+        name = (entry.get("name") or entry.get("id") or "").strip()
+        if not name:
+            continue
+        source_id = (entry.get(TRUTH_SOURCE_ID_KEY) or "").strip()
+        if not source_id:
+            source_id = (entry.get("id") or name).strip()
+        display = (entry.get(TRUTH_SOURCE_NAME_KEY) or name).strip()
+        child_to_group[name] = source_id or name
+        if source_id:
+            group_display.setdefault(source_id, display or source_id)
+    return child_to_group, group_display
+
+
 def main():
     doc = revit.doc
     if doc is None:
@@ -379,6 +399,8 @@ def main():
         )
         return
 
+    child_to_group, _ = _truth_group_maps(data.get("equipment_definitions") or [])
+    successful_groups = set()
     rows = []
     selection_map = {}
     placed_defs = set()
@@ -395,13 +417,19 @@ def main():
             missing_labels.append(cad_name)
             continue
         selection_map[cad_name] = labels
-        placed_defs.add(cad_name)
+        group_key = child_to_group.get(cad_name) or cad_name
+        any_row = False
         for match in matches:
             point = match.get("point")
             rotation = match.get("rotation")
             if point is None:
                 continue
             rows.append(_build_row(cad_name, point, rotation))
+            any_row = True
+        if any_row:
+            placed_defs.add(cad_name)
+            if group_key:
+                successful_groups.add(group_key)
 
     if not rows:
         forms.alert(
@@ -425,7 +453,15 @@ def main():
         "Placed {} element(s).".format(placed),
     ]
 
-    unmatched_defs = sorted(name for name in equipment_names if name not in placed_defs)
+    unmatched_defs = []
+    for name in equipment_names:
+        if name in placed_defs:
+            continue
+        group_key = child_to_group.get(name)
+        if group_key and group_key in successful_groups:
+            continue
+        unmatched_defs.append(name)
+    unmatched_defs.sort()
     if unmatched_defs:
         summary.append("")
         summary.append("No matching linked elements for:")

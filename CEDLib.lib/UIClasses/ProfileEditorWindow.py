@@ -39,7 +39,7 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._current_profile_name = None
         self._current_typecfg = None
         self._type_lookup = {}
-        self._active_root_name = None
+        self._active_root_key = None
 
         # cache of (param_name, TextBox) for current type
         self._param_rows = []
@@ -82,15 +82,19 @@ class ProfileEditorWindow(forms.WPFWindow):
         selected_item = getattr(self.ProfileList, "SelectedItem", None)
         metadata = getattr(selected_item, "Tag", None)
         profile_name = metadata.get("profile_name") if metadata else None
-        root_name = metadata.get("root_name") if metadata else None
+        root_key = metadata.get("root_key") if metadata else None
         is_read_only = metadata.get("read_only") if metadata else False
         if not profile_name:
             self.ParentInfoText.Text = "Parent: (none)"
-            self._active_root_name = None
+            self._active_root_key = None
             self._force_read_only = False
+            self._update_rename_button_state()
             return
 
-        self._active_root_name = root_name or profile_name
+        if not root_key:
+            root_key = self._child_to_root.get(profile_name, profile_name)
+
+        self._active_root_key = root_key
         self._force_read_only = bool(is_read_only)
         if self._force_read_only:
             self._in_edit_mode = False
@@ -135,6 +139,7 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._apply_read_only_state()
         self._refresh_param_buttons()
         self._update_edit_button_state()
+        self._update_rename_button_state()
 
     def TypeList_SelectionChanged(self, sender, args):
         """When user picks a type label, load its data into the editor."""
@@ -216,9 +221,10 @@ class ProfileEditorWindow(forms.WPFWindow):
 
     def EditButton_Click(self, sender, args):
         if self._force_read_only:
-            root = self._active_root_name or self._child_to_root.get(self._current_profile_name, self._current_profile_name)
-            if root:
-                msg = "Select the non-indented '{}' entry to edit merged profiles.".format(root)
+            root_key = self._active_root_key or self._child_to_root.get(self._current_profile_name, self._current_profile_name)
+            root_display = self._root_display_name(root_key) if root_key else None
+            if root_display:
+                msg = "Select the non-indented '{}' entry to edit merged profiles.".format(root_display)
             else:
                 msg = "Select a source profile to edit."
             forms.alert(msg, title="Element Linker Profile Editor")
@@ -229,7 +235,7 @@ class ProfileEditorWindow(forms.WPFWindow):
         if self._in_edit_mode:
             if not self._save_current_typecfg():
                 return
-            self._mirror_group_profiles(self._active_root_name or self._current_profile_name)
+            self._mirror_group_profiles(self._active_root_key or self._child_to_root.get(self._current_profile_name))
             self._set_edit_mode(False)
         else:
             self._set_edit_mode(True)
@@ -255,12 +261,52 @@ class ProfileEditorWindow(forms.WPFWindow):
             elif cname:
                 self.ChildrenList.Items.Add(cname)
 
+    def RenameButton_Click(self, sender, args):
+        if self._force_read_only or not self._in_edit_mode:
+            forms.alert("Click Edit on a source profile before renaming.", title="Element Linker Profile Editor")
+            return
+        root_key = self._active_root_key
+        if not root_key:
+            forms.alert("Select a source profile to rename.", title="Element Linker Profile Editor")
+            return
+        current_label = self._root_display_name(root_key)
+        new_name = forms.ask_for_string(
+            prompt="New name for '{}'".format(current_label or ""),
+            title="Rename Profile",
+            default=current_label or "",
+        )
+        if new_name is None:
+            return
+        new_name = (new_name or "").strip()
+        if not new_name:
+            forms.alert("Profile name cannot be empty.", title="Rename Profile")
+            return
+        lower = new_name.lower()
+        for key, data in self._truth_groups.items():
+            if key == root_key:
+                continue
+            existing = (data.get("display_name") or "").strip().lower()
+            if existing == lower:
+                forms.alert("A profile named '{}' already exists.".format(new_name), title="Rename Profile")
+                return
+        group = self._truth_groups.get(root_key)
+        if not group:
+            return
+        group["display_name"] = new_name
+        self._group_order = sorted(
+            self._truth_groups.keys(),
+            key=lambda key: (self._truth_groups[key].get("display_name") or key).lower()
+        )
+        self._rebuild_profile_items()
+        self._apply_profile_filter(self._profile_filter)
+        self._update_rename_button_state()
+
     def OkButton_Click(self, sender, args):
         """Apply edits back into the current TypeConfig's InstanceConfig."""
         if not self._save_current_typecfg():
             return
         if not self._force_read_only:
-            self._mirror_group_profiles(self._active_root_name or self._current_profile_name)
+            self._mirror_group_profiles(self._active_root_key or self._child_to_root.get(self._current_profile_name))
         self.DialogResult = True
         self.Close()
 
@@ -328,6 +374,7 @@ class ProfileEditorWindow(forms.WPFWindow):
     def _set_edit_mode(self, enabled):
         self._in_edit_mode = bool(enabled) and not self._force_read_only
         self._update_edit_button_state()
+        self._update_rename_button_state()
         self._apply_read_only_state()
         self._refresh_param_buttons()
 
@@ -340,6 +387,12 @@ class ProfileEditorWindow(forms.WPFWindow):
         else:
             self.EditButton.IsEnabled = True
             self.EditButton.Content = "Done" if self._in_edit_mode else "Edit"
+
+    def _update_rename_button_state(self):
+        if not hasattr(self, "RenameButton"):
+            return
+        can_rename = bool(self._in_edit_mode and not self._force_read_only and self._active_root_key)
+        self.RenameButton.IsEnabled = can_rename
 
     def _apply_read_only_state(self):
         read_only = (not self._in_edit_mode) or self._force_read_only
@@ -355,6 +408,7 @@ class ProfileEditorWindow(forms.WPFWindow):
         if hasattr(self, "RemoveTagButton"):
             self.RemoveTagButton.IsEnabled = not read_only
         self._refresh_param_buttons()
+        self._update_rename_button_state()
 
     def _clear_fields(self):
         self.OffsetXBox.Text = ""
@@ -375,81 +429,132 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._apply_read_only_state()
         self._refresh_param_buttons()
 
+    def _root_group(self, root_key):
+        if not root_key:
+            return {}
+        return self._truth_groups.get(root_key) or {}
+
+    def _root_display_name(self, root_key):
+        group = self._root_group(root_key)
+        return group.get("display_name") or group.get("source_profile_name") or root_key
+
+    def _root_source_profile(self, root_key):
+        group = self._root_group(root_key)
+        return group.get("source_profile_name") or root_key
+
+    def _root_members(self, root_key):
+        group = self._root_group(root_key)
+        members = list(group.get("members") or [])
+        source = self._root_source_profile(root_key)
+        if source and source not in members:
+            members.insert(0, source)
+        return members
+
     def _normalize_truth_groups(self):
         if not self._truth_groups:
             self._truth_groups = {}
-        for name in sorted(self._profiles.keys()):
-            root = self._child_to_root.get(name) or name
-            self._child_to_root[name] = root
-            group = self._truth_groups.setdefault(root, {"members": []})
-            members = group.setdefault("members", [])
-            if root not in members:
-                members.insert(0, root)
-            if name not in members:
-                members.append(name)
         normalized = {}
-        for root, data in self._truth_groups.items():
+        child_map = {}
+        for root_key, data in self._truth_groups.items():
+            display = (data.get("display_name") or data.get("source_profile_name") or root_key or "").strip()
+            source_profile = (data.get("source_profile_name") or root_key or "").strip()
             members = data.get("members") or []
             seen = set()
-            ordered = []
+            cleaned = []
             for entry in members:
-                if entry in seen:
+                name = (entry or "").strip()
+                if not name or name in seen:
                     continue
-                seen.add(entry)
-                ordered.append(entry)
-            rest = [entry for entry in ordered if entry != root]
-            rest.sort(key=lambda val: val.lower())
-            rest.insert(0, root)
-            normalized[root] = {
-                "members": rest,
-                "source_id": data.get("source_id")
+                seen.add(name)
+                cleaned.append(name)
+            if source_profile and source_profile not in seen:
+                cleaned.insert(0, source_profile)
+                seen.add(source_profile)
+            if not display:
+                display = source_profile or root_key
+            remainder = [entry for entry in cleaned if entry != source_profile]
+            remainder.sort(key=lambda val: val.lower())
+            ordered = []
+            if source_profile:
+                ordered.append(source_profile)
+            ordered.extend(remainder)
+            normalized[root_key] = {
+                "display_name": display,
+                "source_profile_name": source_profile or root_key,
+                "source_id": data.get("source_id") or root_key,
+                "members": ordered,
             }
-        self._truth_groups = normalized
-        self._group_order = sorted(self._truth_groups.keys(), key=lambda val: val.lower())
+            for name in ordered:
+                if name:
+                    child_map[name] = root_key
+        for name in sorted(self._profiles.keys()):
+            if name not in child_map:
+                normalized[name] = {
+                    "display_name": name,
+                    "source_profile_name": name,
+                    "source_id": name,
+                    "members": [name],
+                }
+                child_map[name] = name
+        self._truth_groups.clear()
+        self._truth_groups.update(normalized)
+        self._child_to_root.clear()
+        self._child_to_root.update(child_map)
+        self._group_order = sorted(
+            self._truth_groups.keys(),
+            key=lambda key: (self._truth_groups[key].get("display_name") or key).lower()
+        )
 
     def _rebuild_profile_items(self):
         self._header_entries = {}
         self._child_entries = {}
         entries = []
-        for root in self._group_order or sorted(self._profiles.keys()):
+        for root_key in self._group_order:
+            group = self._truth_groups.get(root_key) or {}
+            display = group.get("display_name") or group.get("source_profile_name") or root_key
+            profile_name = group.get("source_profile_name") or root_key
             header = {
-                "display": root,
-                "profile_name": root,
-                "root_name": root,
+                "display": display,
+                "profile_name": profile_name,
+                "root_key": root_key,
+                "display_name": display,
                 "read_only": False,
                 "is_header": True,
-                "key": ("header", root),
+                "key": ("header", root_key),
             }
-            self._header_entries[root] = header
+            self._header_entries[root_key] = header
             entries.append(header)
-            members = (self._truth_groups.get(root) or {}).get("members") or [root]
+            members = list(group.get("members") or []) or [profile_name]
             child_list = []
             for idx, member in enumerate(members):
-                display = u"    - {}".format(member)
+                display_child = u"    - {}".format(member)
                 child_entry = {
-                    "display": display,
+                    "display": display_child,
                     "profile_name": member,
-                    "root_name": root,
+                    "root_key": root_key,
+                    "display_name": member,
                     "read_only": True,
                     "is_header": False,
-                    "key": ("child", root, member, idx),
+                    "key": ("child", root_key, member, idx),
                 }
                 child_list.append(child_entry)
                 entries.append(child_entry)
-            self._child_entries[root] = child_list
+            self._child_entries[root_key] = child_list
         self._display_entries = list(entries)
 
-    def _mirror_group_profiles(self, root_name):
-        if not root_name:
+    def _mirror_group_profiles(self, root_key):
+        if not root_key:
             return
-        members = (self._truth_groups.get(root_name) or {}).get("members") or []
-        if len(members) <= 1:
+        group = self._truth_groups.get(root_key) or {}
+        members = list(group.get("members") or [])
+        source_name = group.get("source_profile_name") or root_key
+        if len(members) <= 1 or not source_name:
             return
-        source_profile = self._profiles.get(root_name)
+        source_profile = self._profiles.get(source_name)
         if not source_profile:
             return
         for member in members:
-            if member == root_name:
+            if member == source_name:
                 continue
             cloned = self._clone_profile_shim(source_profile, member)
             if cloned:
@@ -501,10 +606,11 @@ class ProfileEditorWindow(forms.WPFWindow):
             filtered = list(self._display_entries)
         else:
             filtered = []
-            for root in self._group_order:
-                header_entry = self._header_entries.get(root)
-                child_entries = self._child_entries.get(root, [])
-                header_matches = normalized in (root or "").lower()
+            for root_key in self._group_order:
+                header_entry = self._header_entries.get(root_key)
+                child_entries = self._child_entries.get(root_key, [])
+                header_label = (header_entry.get("display") if header_entry else self._root_display_name(root_key) or "")
+                header_matches = normalized in header_label.lower()
                 matching_children = [
                     entry for entry in child_entries
                     if normalized in (entry.get("profile_name") or "").lower()
@@ -524,14 +630,14 @@ class ProfileEditorWindow(forms.WPFWindow):
             if tag:
                 preferred = tag
         elif isinstance(self._current_profile_name, basestring):
-            root_name = self._child_to_root.get(self._current_profile_name, self._current_profile_name)
-            preferred = self._header_entries.get(root_name)
+            root_key = self._child_to_root.get(self._current_profile_name, self._current_profile_name)
+            preferred = self._header_entries.get(root_key)
         self._populate_profile_list(filtered, preferred=preferred)
         if not filtered:
             self._current_profile = None
             self._current_profile_name = None
             self._current_typecfg = None
-            self._active_root_name = None
+            self._active_root_key = None
             self._force_read_only = False
             self._clear_fields()
 
