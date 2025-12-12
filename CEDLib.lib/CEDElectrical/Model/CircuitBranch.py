@@ -602,6 +602,8 @@ class CircuitBranch(object):
             except Exception:
                 return False
 
+        neutral_expected = self._expected_neutral_qty() > 0
+
         # --- material ---
         if self._wire_material_override:
             norm = str(self._wire_material_override).upper().strip()
