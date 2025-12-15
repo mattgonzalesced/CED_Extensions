@@ -356,19 +356,17 @@ def main():
         output.print_md("* Electrical Fixtures updated: **{}**".format(total_fixtures))
         output.print_md("* Electrical Equipment updated: **{}**".format(total_equipment))
 
-        output.print_md("\n## Skipped Elements")
         if locked_rows:
+            output.print_md("\n## Skipped Elements")
             output.print_md("The following elements are owned by other users and could not be calculated. Please try again later.")
-            output.print_md("| Circuit | Circuit Owner | Device Owner |")
-            output.print_md("| --- | --- | --- |")
+            table = []
             for row in locked_rows:
-                output.print_md("| {} | {} | {} |".format(
+                table.append([
                     row.get("circuit", ""),
                     row.get("circuit_owner", "") or "-",
                     row.get("device_owner", "") or "-",
-                ))
-        else:
-            output.print_md("No circuits or connected elements were skipped due to ownership locks.")
+                ])
+            output.print_table(table_data=table, columns=["Circuit", "Circuit Owner", "Device Owner"])
 
         notice_lines = []
         label_map = {

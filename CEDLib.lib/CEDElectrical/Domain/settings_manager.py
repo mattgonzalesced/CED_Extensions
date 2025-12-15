@@ -124,14 +124,31 @@ def _clear_param(param):
         return False
 
 
-def clear_downstream_results(doc, clear_equipment=False, clear_fixtures=False, logger=None):
+def clear_downstream_results(doc, clear_equipment=False, clear_fixtures=False, logger=None, check_ownership=True):
     """Blank stored circuit data on downstream elements after toggles are disabled."""
     if not (clear_equipment or clear_fixtures):
-        return 0, 0
+        return 0, 0, []
 
     logger = logger or script.get_logger()
     cleared_equipment = 0
     cleared_fixtures = 0
+    locked = []
+
+    def _is_locked(eid):
+        if not getattr(doc, "IsWorkshared", False):
+            return False
+        try:
+            status = DB.WorksharingUtils.GetCheckoutStatus(doc, eid)
+            return status == DB.CheckoutStatus.OwnedByOtherUser
+        except Exception:
+            return False
+
+    def _owner_name(eid):
+        try:
+            info = DB.WorksharingUtils.GetWorksharingTooltipInfo(doc, eid)
+            return info.Owner
+        except Exception:
+            return None
 
     # Filter to only electrical fixtures/equipment that have an MEP model to avoid
     # grouped annotation and other non-relevant family instances.
@@ -142,7 +159,7 @@ def clear_downstream_results(doc, clear_equipment=False, clear_fixtures=False, l
         category_ids.extend(FIXTURE_CATEGORY_IDS)
 
     if not category_ids:
-        return 0, 0
+        return 0, 0, []
 
     multi_filter = DB.ElementMulticategoryFilter(List[DB.ElementId](category_ids))
     option_filter = DB.ElementDesignOptionFilter(DB.ElementId.InvalidElementId)
@@ -176,6 +193,16 @@ def clear_downstream_results(doc, clear_equipment=False, clear_fixtures=False, l
             if (is_fixture and not clear_fixtures) or (is_equipment and not clear_equipment):
                 continue
 
+            if check_ownership and _is_locked(el.Id):
+                locked.append(
+                    {
+                        "element_id": el.Id,
+                        "owner": _owner_name(el.Id) or "",
+                        "category": cat.Name if cat else "",
+                    }
+                )
+                continue
+
             changed = False
             for param_name in RESULT_PARAM_NAMES:
                 param = el.LookupParameter(param_name)
@@ -195,10 +222,10 @@ def clear_downstream_results(doc, clear_equipment=False, clear_fixtures=False, l
         raise
 
     if cleared_equipment or cleared_fixtures:
-        logger.error(
+        logger.info(
             "Cleared stored circuit data on {} equipment and {} fixtures after write toggles were disabled.".format(
                 cleared_equipment, cleared_fixtures
             )
         )
 
-    return cleared_equipment, cleared_fixtures
+    return cleared_equipment, cleared_fixtures, locked

@@ -40,6 +40,7 @@ class CircuitSettings(object):
         "feeder_vd_method": FeederVDMethod.EIGHTY_PERCENT,
         "write_equipment_results": True,
         "write_fixture_results": False,
+        "pending_clear_failed": False,
     }
 
     def __init__(self, values=None):
@@ -78,6 +79,9 @@ class CircuitSettings(object):
             value = round(float(value), 3)  # ensures it is numeric and rounded
 
         if key in ("write_equipment_results", "write_fixture_results"):
+            value = bool(value)
+
+        if key == "pending_clear_failed":
             value = bool(value)
 
         self._values[key] = value
@@ -160,3 +164,7 @@ class CircuitSettings(object):
     @property
     def write_fixture_results(self):
         return bool(self._values["write_fixture_results"])
+
+    @property
+    def pending_clear_failed(self):
+        return bool(self._values.get("pending_clear_failed", False))

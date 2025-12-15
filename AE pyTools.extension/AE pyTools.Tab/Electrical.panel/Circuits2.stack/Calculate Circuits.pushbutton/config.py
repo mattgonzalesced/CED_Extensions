@@ -37,6 +37,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.save_btn.Click += self._on_save
         self.cancel_btn.Click += self._on_cancel
         self.reset_btn.Click += self._on_reset
+        self.clear_writeback_btn.Click += self._on_clear_persistent
         self.min_conduit_size_cb.SelectionChanged += self._on_value_changed
         self.min_conduit_size_cb.GotFocus += lambda s, e: self._set_help_context('min_conduit_size')
         self.max_conduit_fill_tb.GotFocus += lambda s, e: self._set_help_context('max_conduit_fill')
@@ -55,6 +56,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.write_fixtures_cb.Checked += self._on_value_changed
         self.write_fixtures_cb.Unchecked += self._on_value_changed
         self.write_fixtures_cb.GotFocus += lambda s, e: self._set_help_context('write_results')
+        self.clear_writeback_btn.GotFocus += lambda s, e: self._set_help_context('clear_writebacks')
 
         self.max_conduit_fill_tb.TextChanged += lambda s, e: self._on_percent_value_changed(self.max_conduit_fill_tb, 0.1, 1.0, self.max_conduit_fill_warn, 0.4)
         self.max_branch_vd_tb.TextChanged += lambda s, e: self._on_percent_value_changed(self.max_branch_vd_tb, 0.001, 1.0, self.max_branch_vd_warn, 0.05)
@@ -82,6 +84,8 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.write_equipment_cb.IsChecked = bool(self.settings.write_equipment_results)
         self.write_fixtures_cb.IsChecked = bool(self.settings.write_fixture_results)
 
+        self._refresh_clear_alert()
+
     def _select_combo_by_tag(self, combo, tag_value):
         for item in combo.Items:
             if getattr(item, 'Tag', None) == tag_value:
@@ -106,6 +110,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
         updated.set('feeder_vd_method', self._get_combo_tag(self.feeder_vd_method_cb))
         updated.set('write_equipment_results', bool(self.write_equipment_cb.IsChecked))
         updated.set('write_fixture_results', bool(self.write_fixtures_cb.IsChecked))
+        updated.set('pending_clear_failed', bool(getattr(self.settings, 'pending_clear_failed', False)))
         return updated
 
     # ------------- Styling helpers -----------
@@ -166,6 +171,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
             'max_feeder_voltage_drop': "Target maximum voltage drop for feeder circuits. In automatic mode, calculated sizes will grow until this threshold is met. In manual override mode, the tool will alert the user if this threshold is exceeded.",
             'feeder_vd_method': "Which feeder load basis to use for voltage drop calculations and automatic sizing (only applies to feeder circuits that supply panels, switchboards, and transformers). Branch circuits are always based on connected load.",
             'write_results': "Toggle whether calculated results push to downstream elements when present.",
+            'clear_writebacks': "Clear persistent data on categories that are currently disabled for write-back. This keeps the window open and honors ownership locks.",
         }
 
     def _option_help(self):
@@ -202,6 +208,10 @@ class CircuitSettingsWindow(forms.WPFWindow):
         combined = preview if option_detail is None else u"{}\n{}".format(preview, option_detail)
         self.help_preview.Text = combined
 
+    def _refresh_clear_alert(self):
+        has_pending = bool(getattr(self.settings, 'pending_clear_failed', False))
+        self.clear_writeback_alert.Visibility = Visibility.Visible if has_pending else Visibility.Collapsed
+
     # ------------- Event handlers ------------
     def _on_save(self, sender, args):
         try:
@@ -226,17 +236,38 @@ class CircuitSettingsWindow(forms.WPFWindow):
             if choice != "Proceed and Clear":
                 return
 
-        settings_manager.save_circuit_settings(self.doc, updated)
         if clear_equipment or clear_fixtures:
             try:
-                settings_manager.clear_downstream_results(
+                cleared_equip, cleared_fix, locked = settings_manager.clear_downstream_results(
                     self.doc,
                     clear_equipment=clear_equipment,
                     clear_fixtures=clear_fixtures,
                     logger=logger,
+                    check_ownership=True,
                 )
+                if locked:
+                    updated.set('pending_clear_failed', True)
+                    locked_msg = [
+                        "Some elements could not be cleared because they are owned by other users.",
+                        "Equipment/fixtures cleared: {} / {}".format(cleared_equip, cleared_fix),
+                    ]
+                    forms.alert("\n".join(locked_msg))
+                else:
+                    updated.set('pending_clear_failed', False)
+                    forms.alert(
+                        "Cleared stored circuit data on {} equipment and {} fixtures.".format(
+                            cleared_equip, cleared_fix
+                        )
+                    )
             except Exception as ex:
+                updated.set('pending_clear_failed', True)
                 logger.error("Failed to clear downstream circuit data: {}".format(ex))
+
+        settings_manager.save_circuit_settings(self.doc, updated)
+        self.settings = updated
+        self._previous_equipment_write = bool(self.settings.write_equipment_results)
+        self._previous_fixture_write = bool(self.settings.write_fixture_results)
+        self._refresh_clear_alert()
 
         forms.alert("Calculate Circuits settings saved to project.")
         self.Close()
@@ -248,6 +279,39 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.settings = CircuitSettings()
         self._load_values()
         self._refresh_styles()
+
+    def _on_clear_persistent(self, sender, args):
+        clear_equipment = not bool(self.write_equipment_cb.IsChecked)
+        clear_fixtures = not bool(self.write_fixtures_cb.IsChecked)
+
+        if not (clear_equipment or clear_fixtures):
+            forms.alert("Both categories are enabled for write-back; nothing to clear.")
+            return
+
+        try:
+            cleared_equip, cleared_fix, locked = settings_manager.clear_downstream_results(
+                self.doc,
+                clear_equipment=clear_equipment,
+                clear_fixtures=clear_fixtures,
+                logger=logger,
+                check_ownership=True,
+            )
+            if locked:
+                self.settings.set('pending_clear_failed', True)
+                forms.alert("Some elements are owned by others and could not be cleared. Please try again later.")
+            else:
+                self.settings.set('pending_clear_failed', False)
+                forms.alert(
+                    "Cleared stored circuit data on {} equipment and {} fixtures.".format(
+                        cleared_equip, cleared_fix
+                    )
+                )
+            settings_manager.save_circuit_settings(self.doc, self.settings)
+        except Exception as ex:
+            self.settings.set('pending_clear_failed', True)
+            logger.error("Failed to clear downstream circuit data: {}".format(ex))
+
+        self._refresh_clear_alert()
 
     def _percent_value(self, decimal_value):
         return round(float(decimal_value) * 100, 3)
