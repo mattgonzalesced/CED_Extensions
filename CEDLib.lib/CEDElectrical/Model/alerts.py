@@ -242,7 +242,7 @@ class Alerts(object):
             "definition": get_alert_definition("design_undersized_ocp"),
             "data": {
                 "circuit_load_current": circuit_load_current,
-                "breaker_rating": breaker_rating,
+                "breaker_rating": int(round(breaker_rating)),
             },
         }
 
