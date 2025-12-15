@@ -41,6 +41,9 @@ class CircuitSettings(object):
         "write_equipment_results": True,
         "write_fixture_results": False,
         "pending_clear_failed": False,
+        "last_clear_equipment_disabled": False,
+        "last_clear_fixtures_disabled": False,
+        "last_clear_success": False,
     }
 
     def __init__(self, values=None):
@@ -82,6 +85,13 @@ class CircuitSettings(object):
             value = bool(value)
 
         if key == "pending_clear_failed":
+            value = bool(value)
+
+        if key in (
+            "last_clear_equipment_disabled",
+            "last_clear_fixtures_disabled",
+            "last_clear_success",
+        ):
             value = bool(value)
 
         self._values[key] = value
@@ -168,3 +178,15 @@ class CircuitSettings(object):
     @property
     def pending_clear_failed(self):
         return bool(self._values.get("pending_clear_failed", False))
+
+    @property
+    def last_clear_equipment_disabled(self):
+        return bool(self._values.get("last_clear_equipment_disabled", False))
+
+    @property
+    def last_clear_fixtures_disabled(self):
+        return bool(self._values.get("last_clear_fixtures_disabled", False))
+
+    @property
+    def last_clear_success(self):
+        return bool(self._values.get("last_clear_success", False))

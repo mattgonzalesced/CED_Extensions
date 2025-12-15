@@ -23,6 +23,9 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.settings = settings_manager.load_circuit_settings(self.doc)
         self._previous_equipment_write = bool(self.settings.write_equipment_results)
         self._previous_fixture_write = bool(self.settings.write_fixture_results)
+        self._last_clear_equipment_disabled = bool(getattr(self.settings, 'last_clear_equipment_disabled', False))
+        self._last_clear_fixtures_disabled = bool(getattr(self.settings, 'last_clear_fixtures_disabled', False))
+        self._last_clear_success = bool(getattr(self.settings, 'last_clear_success', False))
         self._help_key = None
         self._is_normalizing = False
 
@@ -111,6 +114,9 @@ class CircuitSettingsWindow(forms.WPFWindow):
         updated.set('write_equipment_results', bool(self.write_equipment_cb.IsChecked))
         updated.set('write_fixture_results', bool(self.write_fixtures_cb.IsChecked))
         updated.set('pending_clear_failed', bool(getattr(self.settings, 'pending_clear_failed', False)))
+        updated.set('last_clear_equipment_disabled', bool(getattr(self.settings, 'last_clear_equipment_disabled', False)))
+        updated.set('last_clear_fixtures_disabled', bool(getattr(self.settings, 'last_clear_fixtures_disabled', False)))
+        updated.set('last_clear_success', bool(getattr(self.settings, 'last_clear_success', False)))
         return updated
 
     # ------------- Styling helpers -----------
@@ -146,6 +152,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
 
     def _on_value_changed(self, sender, args):
         self._refresh_styles()
+        self._refresh_clear_alert()
 
     # ------------- Helpers -------------------
     def _describe_neutral(self, value):
@@ -210,7 +217,24 @@ class CircuitSettingsWindow(forms.WPFWindow):
 
     def _refresh_clear_alert(self):
         has_pending = bool(getattr(self.settings, 'pending_clear_failed', False))
-        self.clear_writeback_alert.Visibility = Visibility.Visible if has_pending else Visibility.Collapsed
+        last_clear_success = bool(getattr(self.settings, 'last_clear_success', False))
+        last_equipment_disabled = bool(getattr(self.settings, 'last_clear_equipment_disabled', False))
+        last_fixtures_disabled = bool(getattr(self.settings, 'last_clear_fixtures_disabled', False))
+
+        current_equipment_disabled = not bool(self.write_equipment_cb.IsChecked)
+        current_fixtures_disabled = not bool(self.write_fixtures_cb.IsChecked)
+
+        stale = last_clear_success and (
+            last_equipment_disabled != current_equipment_disabled
+            or last_fixtures_disabled != current_fixtures_disabled
+        )
+
+        show_alert = has_pending or stale
+        self.clear_writeback_alert.Visibility = Visibility.Visible if show_alert else Visibility.Collapsed
+        self.clear_writeback_alert.ToolTip = (
+            "Some downstream equipment or devices may still have out-of-date data. "
+            "Use 'Clear persistent write-back data' to resync disabled categories."
+        ) if show_alert else None
 
     # ------------- Event handlers ------------
     def _on_save(self, sender, args):
@@ -223,7 +247,14 @@ class CircuitSettingsWindow(forms.WPFWindow):
         clear_equipment = self._previous_equipment_write and not updated.write_equipment_results
         clear_fixtures = self._previous_fixture_write and not updated.write_fixture_results
 
-        if clear_equipment or clear_fixtures:
+        already_cleared = (
+            bool(getattr(self.settings, 'last_clear_success', False))
+            and not bool(getattr(self.settings, 'pending_clear_failed', False))
+            and bool(getattr(self.settings, 'last_clear_equipment_disabled', False)) == (not updated.write_equipment_results)
+            and bool(getattr(self.settings, 'last_clear_fixtures_disabled', False)) == (not updated.write_fixture_results)
+        )
+
+        if (clear_equipment or clear_fixtures) and not already_cleared:
             msg_parts = [
                 "Turning off write-back will clear stored circuit data (numbers to 0, text to blank) on:"
             ]
@@ -236,7 +267,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
             if choice != "Proceed and Clear":
                 return
 
-        if clear_equipment or clear_fixtures:
+        if (clear_equipment or clear_fixtures) and not already_cleared:
             try:
                 cleared_equip, cleared_fix, locked = settings_manager.clear_downstream_results(
                     self.doc,
@@ -247,6 +278,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
                 )
                 if locked:
                     updated.set('pending_clear_failed', True)
+                    updated.set('last_clear_success', False)
                     locked_msg = [
                         "Some elements could not be cleared because they are owned by other users.",
                         "Equipment/fixtures cleared: {} / {}".format(cleared_equip, cleared_fix),
@@ -254,6 +286,9 @@ class CircuitSettingsWindow(forms.WPFWindow):
                     forms.alert("\n".join(locked_msg))
                 else:
                     updated.set('pending_clear_failed', False)
+                    updated.set('last_clear_success', True)
+                    updated.set('last_clear_equipment_disabled', not updated.write_equipment_results)
+                    updated.set('last_clear_fixtures_disabled', not updated.write_fixture_results)
                     forms.alert(
                         "Cleared stored circuit data on {} equipment and {} fixtures.".format(
                             cleared_equip, cleared_fix
@@ -261,12 +296,16 @@ class CircuitSettingsWindow(forms.WPFWindow):
                     )
             except Exception as ex:
                 updated.set('pending_clear_failed', True)
+                updated.set('last_clear_success', False)
                 logger.error("Failed to clear downstream circuit data: {}".format(ex))
 
         settings_manager.save_circuit_settings(self.doc, updated)
         self.settings = updated
         self._previous_equipment_write = bool(self.settings.write_equipment_results)
         self._previous_fixture_write = bool(self.settings.write_fixture_results)
+        self._last_clear_equipment_disabled = bool(getattr(self.settings, 'last_clear_equipment_disabled', False))
+        self._last_clear_fixtures_disabled = bool(getattr(self.settings, 'last_clear_fixtures_disabled', False))
+        self._last_clear_success = bool(getattr(self.settings, 'last_clear_success', False))
         self._refresh_clear_alert()
 
         forms.alert("Calculate Circuits settings saved to project.")
@@ -298,9 +337,13 @@ class CircuitSettingsWindow(forms.WPFWindow):
             )
             if locked:
                 self.settings.set('pending_clear_failed', True)
+                self.settings.set('last_clear_success', False)
                 forms.alert("Some elements are owned by others and could not be cleared. Please try again later.")
             else:
                 self.settings.set('pending_clear_failed', False)
+                self.settings.set('last_clear_success', True)
+                self.settings.set('last_clear_equipment_disabled', clear_equipment)
+                self.settings.set('last_clear_fixtures_disabled', clear_fixtures)
                 forms.alert(
                     "Cleared stored circuit data on {} equipment and {} fixtures.".format(
                         cleared_equip, cleared_fix
@@ -309,6 +352,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
             settings_manager.save_circuit_settings(self.doc, self.settings)
         except Exception as ex:
             self.settings.set('pending_clear_failed', True)
+            self.settings.set('last_clear_success', False)
             logger.error("Failed to clear downstream circuit data: {}".format(ex))
 
         self._refresh_clear_alert()
