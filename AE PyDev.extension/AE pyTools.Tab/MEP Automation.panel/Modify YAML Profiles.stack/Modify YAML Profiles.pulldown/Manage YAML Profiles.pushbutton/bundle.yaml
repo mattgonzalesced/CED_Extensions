@@ -1,6 +1,6 @@
-title: Edit YAML Profiles
+title: Manage YAML Profiles
 tooltip: |
-  Use Edit YAML Profiles for quick tweaks to an existing equipment definition
+  Use Manage YAML Profiles for quick tweaks to an existing equipment definition
   without re-recording the entire configuration; it is ideal for changing parent
   filters, toggling prompts, or renaming linked sets.
 
