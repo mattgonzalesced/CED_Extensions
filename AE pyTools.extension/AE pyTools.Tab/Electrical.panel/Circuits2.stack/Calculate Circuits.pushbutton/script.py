@@ -164,27 +164,53 @@ def update_connected_elements(branch, param_values, settings, locked_ids=None):
 
 
 def _partition_locked_elements(doc, circuits, settings):
-    """Separate locked elements and return unlocked circuits + locked ids."""
+    """Separate locked elements and return unlocked circuits + locked ids + details."""
     if not getattr(doc, "IsWorkshared", False):
-        return circuits, set()
+        return circuits, set(), []
 
     locked_ids = set()
     unlocked_circuits = []
+    locked_records = {}
 
     def _is_locked(eid):
         try:
             status = DB.WorksharingUtils.GetCheckoutStatus(doc, eid)
-            return status == DB.CheckoutStatus.OwnedByOther
+            return status == DB.CheckoutStatus.OwnedByOtherUser
         except Exception:
             return False
 
-    downstream_ids = set()
+    def _owner_name(eid):
+        try:
+            info = DB.WorksharingUtils.GetWorksharingTooltipInfo(doc, eid)
+            return info.Owner
+        except Exception:
+            return None
+
+    def _circuit_label(circuit):
+        panel = getattr(circuit.BaseEquipment, "Name", "") if circuit.BaseEquipment else ""
+        try:
+            number = circuit.CircuitNumber
+        except Exception:
+            number = ""
+        return "{}-{}".format(panel, number)
+
+    def _ensure_record(circuit):
+        key = circuit.Id.IntegerValue
+        if key not in locked_records:
+            locked_records[key] = {
+                "circuit": _circuit_label(circuit),
+                "circuit_owner": _owner_name(circuit.Id),
+                "device_owners": set(),
+            }
+        return locked_records[key]
+
     write_fixtures = getattr(settings, 'write_fixture_results', False)
     write_equipment = getattr(settings, 'write_equipment_results', False)
 
     for circuit in circuits:
         if _is_locked(circuit.Id):
             locked_ids.add(circuit.Id)
+            _ensure_record(circuit)
             continue
         unlocked_circuits.append(circuit)
 
@@ -205,13 +231,23 @@ def _partition_locked_elements(doc, circuits, settings):
                 continue
             if is_equipment and not write_equipment:
                 continue
-            downstream_ids.add(el.Id)
 
-    for eid in downstream_ids:
-        if _is_locked(eid):
-            locked_ids.add(eid)
+            if _is_locked(el.Id):
+                locked_ids.add(el.Id)
+                rec = _ensure_record(circuit)
+                owner = _owner_name(el.Id)
+                if owner:
+                    rec["device_owners"].add(owner)
 
-    return unlocked_circuits, locked_ids
+    locked_rows = []
+    for rec in locked_records.values():
+        locked_rows.append({
+            "circuit": rec["circuit"],
+            "circuit_owner": rec.get("circuit_owner") or "",
+            "device_owner": ", ".join(sorted(rec["device_owners"])) if rec["device_owners"] else "",
+        })
+
+    return unlocked_circuits, locked_ids, locked_rows
 
 
 def _summarize_locked(doc, locked_ids):
@@ -251,7 +287,7 @@ def main():
         if not test_circuits:
             test_circuits = eu.pick_circuits_from_list(doc, select_multiple=True)
 
-    test_circuits, locked_ids = _partition_locked_elements(doc, test_circuits, settings)
+    test_circuits, locked_ids, locked_rows = _partition_locked_elements(doc, test_circuits, settings)
     if locked_ids:
         summary = _summarize_locked(doc, locked_ids)
         msg_lines = [
@@ -320,6 +356,20 @@ def main():
         output.print_md("* Electrical Fixtures updated: **{}**".format(total_fixtures))
         output.print_md("* Electrical Equipment updated: **{}**".format(total_equipment))
 
+        output.print_md("\n## Skipped Elements")
+        if locked_rows:
+            output.print_md("The following elements are owned by other users and could not be calculated. Please try again later.")
+            output.print_md("| Circuit | Circuit Owner | Device Owner |")
+            output.print_md("| --- | --- | --- |")
+            for row in locked_rows:
+                output.print_md("| {} | {} | {} |".format(
+                    row.get("circuit", ""),
+                    row.get("circuit_owner", "") or "-",
+                    row.get("device_owner", "") or "-",
+                ))
+        else:
+            output.print_md("No circuits or connected elements were skipped due to ownership locks.")
+
         notice_lines = []
         label_map = {
             "Overrides": "Overrides",
@@ -342,7 +392,7 @@ def main():
             notice_lines.extend(branch.notices.formatted_lines(label_map, severity_colors))
 
         if notice_lines:
-            output.print_md("\n### ⚠️ Warnings / Errors")
+            output.print_md("\n## ⚠️ Warnings / Errors")
             for line in notice_lines:
                 output.print_md(line)
 
