@@ -30,11 +30,12 @@ from System.Windows import Thickness
 
 
 class ProfileEditorWindow(forms.WPFWindow):
-    def __init__(self, xaml_path, cad_block_profiles, relations=None, truth_groups=None, child_to_root=None):
+    def __init__(self, xaml_path, cad_block_profiles, relations=None, truth_groups=None, child_to_root=None, delete_callback=None):
         self._profiles = cad_block_profiles
         self._relations = relations or {}
         self._truth_groups = truth_groups or {}
         self._child_to_root = child_to_root or {}
+        self._delete_callback = delete_callback
         self._current_profile = None
         self._current_profile_name = None
         self._current_typecfg = None
@@ -260,6 +261,28 @@ class ProfileEditorWindow(forms.WPFWindow):
                 self.ChildrenList.Items.Add(cid)
             elif cname:
                 self.ChildrenList.Items.Add(cname)
+
+    def DeleteTypesButton_Click(self, sender, args):
+        """Invoke delete flow from hosting script and refresh lists."""
+        if not self._delete_callback:
+            forms.alert("Delete logic is not available in this context.", title="Element Linker Profile Editor")
+            return
+        selection = {
+            "profile_name": self._current_profile_name,
+            "type_label": getattr(self._current_typecfg, "label", None) if self._current_typecfg else None,
+            "type_id": getattr(self._current_typecfg, "element_def_id", None) if self._current_typecfg else None,
+            "root_key": self._active_root_key or self._child_to_root.get(self._current_profile_name, self._current_profile_name),
+        }
+        result = self._delete_callback(selection)
+        if not result:
+            return
+        self._profiles = result.get("profiles", self._profiles)
+        self._relations = result.get("relations", self._relations)
+        self._truth_groups = result.get("truth_groups", self._truth_groups)
+        self._child_to_root = result.get("child_to_root", self._child_to_root)
+        self._normalize_truth_groups()
+        self._rebuild_profile_items()
+        self._apply_profile_filter(self._profile_filter)
 
     def RenameButton_Click(self, sender, args):
         if self._force_read_only or not self._in_edit_mode:

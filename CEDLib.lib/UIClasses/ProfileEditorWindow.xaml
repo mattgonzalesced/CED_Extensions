@@ -66,6 +66,11 @@
                         Margin="0,0,10,0"
                         IsEnabled="False"
                         Click="RenameButton_Click"/>
+                <Button x:Name="DeleteTypesButton"
+                        Content="Delete Types..."
+                        Width="120"
+                        Margin="0,0,10,0"
+                        Click="DeleteTypesButton_Click"/>
                 <Button x:Name="ShowChildrenButton"
                         Content="Show Children"
                         Width="120"

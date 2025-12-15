@@ -8,6 +8,7 @@ Allows editing offsets, parameters, tags, category, and is_group for each equipm
 """
 
 import copy
+import imp
 import os
 
 from pyrevit import script, forms, revit
@@ -361,12 +362,124 @@ def main():
         legacy_dict = {"profiles": equipment_defs_to_legacy(raw_defs)}
         shim_profiles = _shims_from_dict(legacy_dict)
 
+        def _run_delete_flow(selection):
+            delete_path = os.path.join(os.path.dirname(__file__), "..", "Delete YAML Profiles.pushbutton", "script.py")
+            delete_path = os.path.abspath(delete_path)
+            if not os.path.exists(delete_path):
+                forms.alert("Delete YAML Profiles script not found.", title="Edit YAML Profiles")
+                return None
+            try:
+                delete_mod = sys.modules.get("ced_delete_yaml_profiles")
+                if not delete_mod:
+                    delete_mod = imp.load_source("ced_delete_yaml_profiles", delete_path)
+            except Exception as exc:
+                forms.alert("Failed to load delete script:\n\n{}".format(exc), title="Edit YAML Profiles")
+                return None
+            try:
+                _, raw_data_for_delete = load_active_yaml_data()
+            except RuntimeError as exc:
+                forms.alert(str(exc), title="Edit YAML Profiles")
+                return None
+
+            equipment_defs = raw_data_for_delete.get("equipment_definitions") or []
+            truth_groups_local, child_to_root_local = _build_truth_groups(equipment_defs)
+
+            profile_name = (selection.get("profile_name") or "").strip() if selection else ""
+            type_id = (selection.get("type_id") or "").strip() if selection else ""
+            root_key = (selection.get("root_key") or "").strip() if selection else ""
+
+            # Determine target profiles (root + mirrors)
+            target_profiles = []
+            if root_key and truth_groups_local.get(root_key):
+                target_profiles = truth_groups_local[root_key].get("members") or []
+            elif profile_name:
+                target_profiles = [profile_name]
+
+            removed_entries = []
+            changed = False
+
+            def _find_definition(name):
+                for entry in equipment_defs:
+                    entry_name = (entry.get("name") or entry.get("id") or "").strip()
+                    if entry_name == name:
+                        return entry
+                return None
+
+            # Delete types or whole profiles across group
+            for target in target_profiles:
+                definition = _find_definition(target)
+                if not definition:
+                    continue
+                if type_id:
+                    ids_to_remove = set()
+                    ids_to_remove.add(type_id)
+                    try:
+                        delta_changed, removed_defs = delete_mod._erase_entries(equipment_defs, target, ids_to_remove)
+                    except Exception:
+                        # Fall back silently if helper unavailable
+                        delta_changed, removed_defs = False, []
+                    changed = changed or delta_changed
+                    removed_entries.extend(removed_defs or [])
+                else:
+                    # Remove entire profile/definition
+                    try:
+                        equipment_defs.remove(definition)
+                        removed_entries.append(definition)
+                        changed = True
+                    except ValueError:
+                        pass
+
+            if removed_entries:
+                try:
+                    cascade_entries = delete_mod._cascade_remove_children(equipment_defs, removed_entries)
+                    removed_entries.extend(cascade_entries or [])
+                except Exception:
+                    pass
+                removed_ids = [(entry.get("id") or "").strip() for entry in removed_entries if isinstance(entry, dict)]
+                try:
+                    delete_mod._cleanup_relations(equipment_defs, removed_ids)
+                except Exception:
+                    pass
+
+            try:
+                delete_mod._prune_anchor_only_definitions(raw_data_for_delete)
+            except Exception:
+                pass
+
+            if not changed and not removed_entries:
+                return None
+
+            raw_data_for_delete["equipment_definitions"] = equipment_defs
+            save_active_yaml_data(
+                None,
+                raw_data_for_delete,
+                "Edit YAML Profiles",
+                "Deleted type(s) via Manage YAML Profiles",
+            )
+            try:
+                _, refreshed_raw = load_active_yaml_data()
+            except RuntimeError as exc:
+                forms.alert(str(exc), title="Edit YAML Profiles")
+                return None
+            refreshed_defs = refreshed_raw.get("equipment_definitions") or []
+            refreshed_relations = _build_relations_index(refreshed_defs)
+            refreshed_truth_groups, refreshed_child_to_root = _build_truth_groups(refreshed_defs)
+            refreshed_legacy = {"profiles": equipment_defs_to_legacy(refreshed_defs)}
+            refreshed_shims = _shims_from_dict(refreshed_legacy)
+            return {
+                "profiles": refreshed_shims,
+                "relations": refreshed_relations,
+                "truth_groups": refreshed_truth_groups,
+                "child_to_root": refreshed_child_to_root,
+            }
+
         window = ProfileEditorWindow(
             xaml_path,
             shim_profiles,
             relations_index,
             truth_groups=truth_groups,
             child_to_root=child_to_root,
+            delete_callback=_run_delete_flow,
         )
         result = window.show_dialog()
         if not result:
