@@ -208,36 +208,42 @@ def _partition_locked_elements(doc, circuits, settings):
     write_equipment = getattr(settings, 'write_equipment_results', False)
 
     for circuit in circuits:
+        locked_for_writeback = False
         if _is_locked(circuit.Id):
             locked_ids.add(circuit.Id)
             _ensure_record(circuit)
             continue
-        unlocked_circuits.append(circuit)
 
-        if not (write_equipment or write_fixtures):
+        if write_equipment or write_fixtures:
+            for el in circuit.Elements:
+                if not isinstance(el, DB.FamilyInstance):
+                    continue
+                cat = el.Category
+                if not cat:
+                    continue
+                cat_id = cat.Id
+                is_fixture = cat_id == DB.ElementId(DB.BuiltInCategory.OST_ElectricalFixtures)
+                is_equipment = cat_id == DB.ElementId(DB.BuiltInCategory.OST_ElectricalEquipment)
+
+                if is_fixture and not write_fixtures:
+                    continue
+                if is_equipment and not write_equipment:
+                    continue
+
+                if _is_locked(el.Id):
+                    locked_ids.add(el.Id)
+                    rec = _ensure_record(circuit)
+                    owner = _owner_name(el.Id)
+                    if owner:
+                        rec["device_owners"].add(owner)
+                    locked_for_writeback = True
+
+        if locked_for_writeback:
+            locked_ids.add(circuit.Id)
+            _ensure_record(circuit)
             continue
 
-        for el in circuit.Elements:
-            if not isinstance(el, DB.FamilyInstance):
-                continue
-            cat = el.Category
-            if not cat:
-                continue
-            cat_id = cat.Id
-            is_fixture = cat_id == DB.ElementId(DB.BuiltInCategory.OST_ElectricalFixtures)
-            is_equipment = cat_id == DB.ElementId(DB.BuiltInCategory.OST_ElectricalEquipment)
-
-            if is_fixture and not write_fixtures:
-                continue
-            if is_equipment and not write_equipment:
-                continue
-
-            if _is_locked(el.Id):
-                locked_ids.add(el.Id)
-                rec = _ensure_record(circuit)
-                owner = _owner_name(el.Id)
-                if owner:
-                    rec["device_owners"].add(owner)
+        unlocked_circuits.append(circuit)
 
     locked_rows = []
     for rec in locked_records.values():

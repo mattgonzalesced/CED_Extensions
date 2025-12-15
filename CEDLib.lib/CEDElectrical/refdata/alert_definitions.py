@@ -55,7 +55,7 @@ ALERT_DEFINITIONS = {
     ),
     "calculation_breaker_lug_size_limit": AlertDefinition(
         "Calculations.BreakerLugSizeLimit",
-        "Calculated Hot Size {hot_size} exceeds recommended maximum for breaker size {breaker_size}A. Review feeder lengths, connected loads, and breaker size!",
+        "Calculated Hot Size #{hot_size} exceeds recommended maximum for breaker size {breaker_size}A. Review feeder lengths, connected loads, and breaker size!",
         group="Calculation",
         severity="MEDIUM",
     ),
@@ -67,7 +67,7 @@ ALERT_DEFINITIONS = {
     ),
     "design_excessive_conduit_fill": AlertDefinition(
         "Design.ExcessiveConduitFill",
-        "User-specified conduit size {conduit_size} exceeds max fill target ({conduit_fill_percentage}% < {max_fill_percentage}%).",
+        "User-specified conduit size {conduit_size} exceeds max fill target ({conduit_fill_percentage}% > {max_fill_percentage}%).",
         group="Design",
         severity="MEDIUM",
     ),
