@@ -1,5 +1,5 @@
 layout:
-  - Import-Export YAML Profiles
+  - Import-Export Profiles
   - Modify YAML Profiles
   - PlaceLinkedElements
 

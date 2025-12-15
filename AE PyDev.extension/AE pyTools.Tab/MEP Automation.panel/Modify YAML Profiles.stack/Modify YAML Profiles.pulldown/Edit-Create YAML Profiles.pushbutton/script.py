@@ -771,13 +771,7 @@ def _resolve_equipment_definition(parent_elem, data, truth_groups=None):
             resolved_name = (eq_def.get("name") or eq_def.get("id") or member_name).strip() or member_name
             return eq_def, resolved_name, False
     default_name = candidates[0] if candidates else "New Profile"
-    cad_name = forms.ask_for_string(
-        prompt="Enter a name for this equipment profile",
-        title=TITLE,
-        default=default_name,
-    )
-    if not cad_name:
-        return None, None, False
+    cad_name = default_name or "New Profile"
     sample_entry = {
         "label": default_name or cad_name,
         "category_name": _get_category(parent_elem),
