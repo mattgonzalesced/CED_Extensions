@@ -1,6 +1,6 @@
-title: Load Equipment Definition
+title: Load Profiles
 tooltip: |
-  Use Load Equipment Definition to inspect how a profile will drive placements
+  Use Load Profiles to inspect how a profile will drive placements
   without committing to creation; it is essentially a dry run that surfaces every
   linked element definition and its captured offsets or parameters.
 
