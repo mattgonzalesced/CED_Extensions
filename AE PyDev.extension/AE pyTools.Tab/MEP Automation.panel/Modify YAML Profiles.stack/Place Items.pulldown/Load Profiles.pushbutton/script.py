@@ -113,6 +113,49 @@ def _sanitize_profiles(profiles):
     return cleaned
 
 
+def _group_truth_profile_choices(raw_data, available_cads):
+    """Collapse equipment definitions by truth-source metadata so only canonical profiles appear."""
+    available = {(name or "").strip(): True for name in available_cads}
+    groups = {}
+    for eq_def in raw_data.get("equipment_definitions") or []:
+        cad_name = (eq_def.get("name") or eq_def.get("id") or "").strip()
+        if not cad_name or cad_name not in available:
+            continue
+        truth_id = (eq_def.get("ced_truth_source_id") or eq_def.get("id") or cad_name).strip()
+        if not truth_id:
+            truth_id = cad_name
+        display_name = (eq_def.get("ced_truth_source_name") or cad_name).strip() or cad_name
+        group = groups.setdefault(truth_id, {"display": display_name, "members": [], "primary": None})
+        group["members"].append(cad_name)
+        eq_id = (eq_def.get("id") or "").strip()
+        if eq_id and eq_id == truth_id:
+            group["primary"] = cad_name
+    if not groups:
+        return [{"label": name, "cad": name} for name in sorted(available_cads)]
+    display_counts = {}
+    for info in groups.values():
+        label = info.get("display") or ""
+        display_counts[label] = display_counts.get(label, 0) + 1
+    options = []
+    seen_cads = set()
+    for truth_id in sorted(groups.keys()):
+        info = groups[truth_id]
+        cad = info.get("primary") or (info.get("members") or [None])[0]
+        if not cad or cad not in available:
+            continue
+        label = info.get("display") or cad
+        if display_counts.get(label, 0) > 1:
+            label = u"{} [{}]".format(label, truth_id)
+        options.append({"label": label, "cad": cad})
+        seen_cads.add(cad)
+    # Include any cad names not covered by truth metadata
+    for cad in sorted(available_cads):
+        cad = cad.strip()
+        if cad and cad not in seen_cads:
+            options.append({"label": cad, "cad": cad})
+    return options
+
+
 def _build_repository(data):
     cleaned_defs = _sanitize_equipment_definitions(data.get("equipment_definitions") or [])
     legacy_profiles = equipment_defs_to_legacy(cleaned_defs)
@@ -197,15 +240,20 @@ def main():
         forms.alert("No equipment definitions found in {}.".format(yaml_label), title=TITLE)
         return
 
-    cad_choice = forms.SelectFromList.show(
-        cad_names,
+    grouped_choices = _group_truth_profile_choices(raw_data, cad_names)
+    option_labels = [entry["label"] for entry in grouped_choices]
+    choice_map = {entry["label"]: entry["cad"] for entry in grouped_choices}
+
+    cad_choice_label = forms.SelectFromList.show(
+        option_labels,
         title="Select equipment definition to place",
         multiselect=False,
         button_name="Load",
     )
-    if not cad_choice:
+    if not cad_choice_label:
         return
-    cad_choice = cad_choice if isinstance(cad_choice, basestring) else cad_choice[0]
+    cad_choice_label = cad_choice_label if isinstance(cad_choice_label, basestring) else cad_choice_label[0]
+    cad_choice = choice_map.get(cad_choice_label, cad_choice_label)
 
     labels = repo.labels_for_cad(cad_choice)
     if not labels:
