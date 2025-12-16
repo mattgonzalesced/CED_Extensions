@@ -52,6 +52,7 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._child_entries = {}
         self._group_order = []
         self._display_entries = []
+        self.orphan_requests = []
 
         self._normalize_truth_groups()
         self._rebuild_profile_items()
@@ -108,6 +109,7 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._current_profile = profile
         self._current_profile_name = profile_name
         self._update_parent_display()
+        self._update_profile_delete_state()
 
         # Discover TypeConfig objects by introspecting the profile
         type_list = self._discover_type_configs(profile)
@@ -141,6 +143,7 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._refresh_param_buttons()
         self._update_edit_button_state()
         self._update_rename_button_state()
+        self._update_profile_delete_state()
 
     def TypeList_SelectionChanged(self, sender, args):
         """When user picks a type label, load its data into the editor."""
@@ -284,6 +287,44 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._rebuild_profile_items()
         self._apply_profile_filter(self._profile_filter)
 
+    def DeleteProfileButton_Click(self, sender, args):
+        if not self._delete_callback:
+            forms.alert("Delete logic is not available in this context.", title="Delete Profile")
+            return
+        profile_name = self._current_profile_name
+        if not profile_name:
+            forms.alert("Select a profile to delete.", title="Delete Profile")
+            return
+        if self._force_read_only:
+            forms.alert("Select the source profile entry before deleting.", title="Delete Profile")
+            return
+        confirm = forms.alert(
+            "Delete profile '{}' and all of its types?".format(profile_name),
+            title="Delete Profile",
+            ok=False,
+            yes=True,
+            no=True,
+        )
+        if not confirm:
+            return
+        selection = {
+            "profile_name": profile_name,
+            "type_label": None,
+            "type_id": None,
+            "root_key": self._active_root_key or self._child_to_root.get(profile_name, profile_name),
+            "delete_profile": True,
+        }
+        result = self._delete_callback(selection)
+        if not result:
+            return
+        self._profiles = result.get("profiles", self._profiles)
+        self._relations = result.get("relations", self._relations)
+        self._truth_groups = result.get("truth_groups", self._truth_groups)
+        self._child_to_root = result.get("child_to_root", self._child_to_root)
+        self._normalize_truth_groups()
+        self._rebuild_profile_items()
+        self._apply_profile_filter(u"")
+
     def RenameButton_Click(self, sender, args):
         if self._force_read_only or not self._in_edit_mode:
             forms.alert("Click Edit on a source profile before renaming.", title="Element Linker Profile Editor")
@@ -323,6 +364,31 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._rebuild_profile_items()
         self._apply_profile_filter(self._profile_filter)
         self._update_rename_button_state()
+
+    def CreateOrphanButton_Click(self, sender, args):
+        name = forms.ask_for_string(
+            prompt="Enter a unique name for the orphan profile:",
+            title="Create Orphan Profile",
+        )
+        if name is None:
+            return
+        cad_name = (name or u"").strip()
+        if not cad_name:
+            forms.alert("Profile name cannot be empty.", title="Create Orphan Profile")
+            return
+        lowered = cad_name.lower()
+        for existing in self._profiles.keys():
+            if (existing or "").strip().lower() == lowered:
+                forms.alert("A profile named '{}' already exists.".format(cad_name), title="Create Orphan Profile")
+                return
+        self.orphan_requests.append(cad_name)
+        forms.alert(
+            "The window will close so you can place and select elements for '{}'.\n"
+            "After capture finishes, the editor will reopen.".format(cad_name),
+            title="Create Orphan Profile",
+        )
+        self.DialogResult = False
+        self.Close()
 
     def OkButton_Click(self, sender, args):
         """Apply edits back into the current TypeConfig's InstanceConfig."""
@@ -416,6 +482,13 @@ class ProfileEditorWindow(forms.WPFWindow):
             return
         can_rename = bool(self._in_edit_mode and not self._force_read_only and self._active_root_key)
         self.RenameButton.IsEnabled = can_rename
+        self._update_profile_delete_state()
+
+    def _update_profile_delete_state(self):
+        if not hasattr(self, "DeleteProfileButton"):
+            return
+        enabled = bool(self._current_profile_name) and not self._force_read_only and bool(self._delete_callback)
+        self.DeleteProfileButton.IsEnabled = enabled
 
     def _apply_read_only_state(self):
         read_only = (not self._in_edit_mode) or self._force_read_only
@@ -432,6 +505,7 @@ class ProfileEditorWindow(forms.WPFWindow):
             self.RemoveTagButton.IsEnabled = not read_only
         self._refresh_param_buttons()
         self._update_rename_button_state()
+        self._update_profile_delete_state()
 
     def _clear_fields(self):
         self.OffsetXBox.Text = ""
@@ -663,6 +737,25 @@ class ProfileEditorWindow(forms.WPFWindow):
             self._active_root_key = None
             self._force_read_only = False
             self._clear_fields()
+
+    def _select_profile_header(self, root_key):
+        if not root_key or not hasattr(self, "ProfileList"):
+            return
+        try:
+            items = list(self.ProfileList.Items)
+        except Exception:
+            items = []
+        for item in items:
+            tag = getattr(item, "Tag", None)
+            if not tag:
+                continue
+            if tag.get("root_key") == root_key and tag.get("is_header"):
+                self.ProfileList.SelectedItem = item
+                try:
+                    self.ProfileList.ScrollIntoView(item)
+                except Exception:
+                    pass
+                return
 
     def ProfileSearchBox_TextChanged(self, sender, args):
         text = u""
