@@ -24,6 +24,7 @@ try:
 except NameError:  # pragma: no cover
     basestring = str
 
+SAFE_HASH = u"\uff03"
 try:
     # Prefer system PyYAML if available
     import yaml  # type: ignore
@@ -182,6 +183,19 @@ def _simple_yaml_parse(raw_text):
     return {}
 
 
+def _sanitize_hash_keys(raw_text):
+    sanitized_lines = []
+    for raw_line in raw_text.splitlines():
+        line = raw_line
+        if ":" in raw_line:
+            prefix, suffix = raw_line.split(":", 1)
+            if "#" in prefix and SAFE_HASH not in prefix:
+                prefix = prefix.replace("#", SAFE_HASH)
+                line = "{}:{}".format(prefix, suffix)
+        sanitized_lines.append(line)
+    return "\n".join(sanitized_lines)
+
+
 def _yaml_dump_to_path(path, data):
     """
     Attempt to dump YAML regardless of whether safe_dump exists.
@@ -221,12 +235,12 @@ def load_data(path):
     if not os.path.exists(path):
         return {"equipment_definitions": []}
     with io.open(path, "r", encoding="utf-8") as f:
-        raw = f.read()
+        raw = _sanitize_hash_keys(f.read())
     return load_data_from_text(raw, path)
 
 
 def load_data_from_text(raw_text, source_label="<memory>"):
-    raw = raw_text or ""
+    raw = _sanitize_hash_keys(raw_text or "")
     stripped = raw.lstrip()
     if stripped.startswith("{") or stripped.startswith("["):
         try:
@@ -242,7 +256,15 @@ def load_data_from_text(raw_text, source_label="<memory>"):
 
     if data is None:
         if yaml_error:
-            raise yaml_error
+            # Attempt fallback parser before surfacing error
+            try:
+                alt_data = _simple_yaml_parse(raw)
+                if isinstance(alt_data, Mapping):
+                    data = dict(alt_data)
+            except Exception:
+                pass
+            if data is None:
+                raise yaml_error
         else:
             raise ValueError("profile data could not be parsed as YAML and does not look like JSON.")
 

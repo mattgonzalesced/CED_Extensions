@@ -15,6 +15,7 @@ from pyrevit import forms
 from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
 
 TITLE = "Export YAML File"
+SAFE_HASH = u"\uff03"
 
 try:
     basestring
@@ -30,6 +31,7 @@ def _format_scalar(value):
     if isinstance(value, (int, float)):
         return str(value)
     text = value if isinstance(value, basestring) else str(value)
+    text = text.replace(SAFE_HASH, "#")
     if text == "":
         return '""'
     needs_quotes = any(ch in text for ch in (":", "#", "{", "}", "[", "]", ",", "\n", "\r"))
@@ -44,7 +46,7 @@ def _emit_multiline_block(text, indent):
     pad = " " * indent
     lines = ["{}|".format(pad)]
     if text:
-        for line in text.splitlines():
+        for line in text.replace(SAFE_HASH, "#").splitlines():
             lines.append("{}  {}".format(pad, line))
     else:
         lines.append("{}  ".format(pad))
@@ -56,19 +58,20 @@ def _dump_yaml_lines(value, indent=0):
     if isinstance(value, dict):
         lines = []
         for key, val in value.items():
+            clean_key = (key or "").replace(SAFE_HASH, "#")
             if isinstance(val, (dict, list)):
-                lines.append("{}{}:".format(pad, key))
+                lines.append("{}{}:".format(pad, clean_key))
                 lines.extend(_dump_yaml_lines(val, indent + 2))
             elif isinstance(val, basestring) and ("\n" in val or "\r" in val):
-                lines.append("{}{}: |".format(pad, key))
-                body = val.splitlines()
+                lines.append("{}{}: |".format(pad, clean_key))
+                body = val.replace(SAFE_HASH, "#").splitlines()
                 if not body:
                     lines.append("{}  ".format(pad))
                 else:
                     for line in body:
                         lines.append("{}  {}".format(pad, line))
             else:
-                lines.append("{}{}: {}".format(pad, key, _format_scalar(val)))
+                lines.append("{}{}: {}".format(pad, clean_key, _format_scalar(val)))
         if not lines:
             lines.append("{}{{}}".format(pad))
         return lines
@@ -83,7 +86,7 @@ def _dump_yaml_lines(value, indent=0):
                 lines.extend(_dump_yaml_lines(item, indent + 2))
             elif isinstance(item, basestring) and ("\n" in item or "\r" in item):
                 lines.append("{}- |".format(pad))
-                body = item.splitlines()
+                body = item.replace(SAFE_HASH, "#").splitlines()
                 if not body:
                     lines.append("{}  ".format(pad))
                 else:

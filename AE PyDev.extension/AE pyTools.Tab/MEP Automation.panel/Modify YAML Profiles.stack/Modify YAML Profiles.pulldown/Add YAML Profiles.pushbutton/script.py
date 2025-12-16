@@ -57,6 +57,7 @@ ELEMENT_LINKER_PARAM_NAME = "Element_Linker Parameter"
 ELEMENT_LINKER_SHARED_PARAM = "Element_Linker"
 TRUTH_SOURCE_ID_KEY = "ced_truth_source_id"
 TRUTH_SOURCE_NAME_KEY = "ced_truth_source_name"
+SAFE_HASH = u"\uff03"
 
 
 
@@ -368,6 +369,87 @@ def _set_element_linker_parameter(elem, value):
     return False
 
 
+def _annotation_family_type(elem):
+    fam_name = None
+    type_name = None
+    try:
+        symbol = getattr(elem, "Symbol", None)
+        if symbol:
+            fam = getattr(symbol, "Family", None)
+            fam_name = getattr(fam, "Name", None) if fam else None
+            type_name = getattr(symbol, "Name", None)
+            if not type_name and hasattr(symbol, "get_Parameter"):
+                param = symbol.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
+                if param:
+                    type_name = param.AsString()
+    except Exception:
+        fam_name = fam_name
+    if fam_name and type_name:
+        return fam_name, type_name
+    name = getattr(elem, "Name", None)
+    return name or "", ""
+
+
+def _collect_annotation_string_params(annotation_elem):
+    results = {}
+    for param in getattr(annotation_elem, "Parameters", []) or []:
+        try:
+            definition = getattr(param, "Definition", None)
+            name = getattr(definition, "Name", None)
+        except Exception:
+            name = None
+        if not name:
+            continue
+        try:
+            storage = param.StorageType
+            is_string = storage and storage.ToString() == "String"
+        except Exception:
+            is_string = False
+        if not is_string:
+            continue
+        try:
+            if param.IsReadOnly:
+                continue
+        except Exception:
+            pass
+        try:
+            value = param.AsString()
+        except Exception:
+            value = None
+        if value:
+            safe_name = (name or "").replace("#", SAFE_HASH)
+            results[safe_name] = value
+    return results
+
+
+def _build_annotation_tag_entry(annotation_elem, host_point):
+    try:
+        cat = getattr(annotation_elem, "Category", None)
+        cat_name = getattr(cat, "Name", "") if cat else ""
+    except Exception:
+        cat_name = ""
+    if not cat_name or "generic annotation" not in cat_name.lower():
+        return None
+    ann_point = _get_point(annotation_elem)
+    if ann_point is None or host_point is None:
+        return None
+    fam_name, type_name = _annotation_family_type(annotation_elem)
+    offsets = {
+        "x_inches": _feet_to_inches(ann_point.X - host_point.X),
+        "y_inches": _feet_to_inches(ann_point.Y - host_point.Y),
+        "z_inches": _feet_to_inches(ann_point.Z - host_point.Z),
+        "rotation_deg": _get_rotation_degrees(annotation_elem),
+    }
+    params = _collect_annotation_string_params(annotation_elem)
+    return {
+        "family_name": fam_name,
+        "type_name": type_name,
+        "category_name": cat_name,
+        "parameters": params,
+        "offsets": offsets,
+    }
+
+
 def _collect_hosted_tags(elem, host_point):
     doc = getattr(elem, "Document", None)
     if doc is None or host_point is None:
@@ -382,82 +464,82 @@ def _collect_hosted_tags(elem, host_point):
             tag = doc.GetElement(dep_id)
         except Exception:
             tag = None
-        if not tag or not isinstance(tag, IndependentTag):
+        if not tag:
             continue
-        try:
-            tag_pt = tag.TagHeadPosition
-        except Exception:
-            tag_pt = None
-        tag_symbol = None
-        try:
-            tag_symbol = doc.GetElement(tag.GetTypeId())
-        except Exception:
-            tag_symbol = None
-        fam_name = None
-        type_name = None
-        category_name = None
-        if tag_symbol:
+        if isinstance(tag, IndependentTag):
             try:
-                fam_name = getattr(tag_symbol, "FamilyName", None)
-                if not fam_name:
-                    fam = getattr(tag_symbol, "Family", None)
-                    fam_name = getattr(fam, "Name", None) if fam else None
+                tag_pt = tag.TagHeadPosition
             except Exception:
-                fam_name = None
+                tag_pt = None
+            tag_symbol = None
             try:
-                type_name = getattr(tag_symbol, "Name", None)
-                if not type_name and hasattr(tag_symbol, "get_Parameter"):
-                    try:
+                tag_symbol = doc.GetElement(tag.GetTypeId())
+            except Exception:
+                tag_symbol = None
+            fam_name = None
+            type_name = None
+            category_name = None
+            if tag_symbol:
+                try:
+                    fam_name = getattr(tag_symbol, "FamilyName", None)
+                    if not fam_name:
+                        fam = getattr(tag_symbol, "Family", None)
+                        fam_name = getattr(fam, "Name", None) if fam else None
+                except Exception:
+                    fam_name = None
+                try:
+                    type_name = getattr(tag_symbol, "Name", None)
+                    if not type_name and hasattr(tag_symbol, "get_Parameter"):
                         sparam = tag_symbol.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
                         if sparam:
                             type_name = sparam.AsString()
-                    except Exception:
-                        pass
-            except Exception:
-                type_name = None
-            try:
-                cat = getattr(tag_symbol, "Category", None)
-                category_name = getattr(cat, "Name", None) if cat else None
-            except Exception:
-                category_name = None
-        if not category_name:
-            try:
-                cat = getattr(tag, "Category", None)
-                category_name = getattr(cat, "Name", None) if cat else None
-            except Exception:
-                category_name = None
-        if not fam_name:
-            try:
-                sym = getattr(tag, "Symbol", None)
-                fam = getattr(sym, "Family", None) if sym else None
-                fam_name = getattr(fam, "Name", None) if fam else fam_name
-            except Exception:
-                pass
-        if not type_name:
-            try:
-                tag_type = getattr(tag, "TagType", None)
-                type_name = getattr(tag_type, "Name", None)
-            except Exception:
-                pass
-        if not fam_name or not type_name:
+                except Exception:
+                    type_name = None
+                try:
+                    cat = getattr(tag_symbol, "Category", None)
+                    category_name = getattr(cat, "Name", None) if cat else None
+                except Exception:
+                    category_name = None
+            if not category_name:
+                try:
+                    cat = getattr(tag, "Category", None)
+                    category_name = getattr(cat, "Name", None) if cat else None
+                except Exception:
+                    category_name = None
+            if not fam_name:
+                try:
+                    sym = getattr(tag, "Symbol", None)
+                    fam = getattr(sym, "Family", None) if sym else None
+                    fam_name = getattr(fam, "Name", None) if fam else fam_name
+                except Exception:
+                    pass
+            if not type_name:
+                try:
+                    tag_type = getattr(tag, "TagType", None)
+                    type_name = getattr(tag_type, "Name", None)
+                except Exception:
+                    pass
+            offsets = {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0,
+            }
+            if tag_pt:
+                delta = tag_pt - host_point
+                offsets["x_inches"] = _feet_to_inches(delta.X)
+                offsets["y_inches"] = _feet_to_inches(delta.Y)
+            tags.append({
+                "family_name": fam_name or "",
+                "type_name": type_name or "",
+                "category_name": category_name,
+                "parameters": {},
+                "offsets": offsets,
+            })
             continue
-        offsets = {
-            "x_inches": 0.0,
-            "y_inches": 0.0,
-            "z_inches": 0.0,
-            "rotation_deg": 0.0,
-        }
-        if tag_pt:
-            delta = tag_pt - host_point
-            offsets["x_inches"] = _feet_to_inches(delta.X)
-            offsets["y_inches"] = _feet_to_inches(delta.Y)
-        tags.append({
-            "family_name": fam_name,
-            "type_name": type_name,
-            "category_name": category_name,
-            "parameters": {},
-            "offsets": offsets,
-        })
+        annotation_entry = _build_annotation_tag_entry(tag, host_point)
+        if annotation_entry:
+            tags.append(annotation_entry)
     return tags
 
 

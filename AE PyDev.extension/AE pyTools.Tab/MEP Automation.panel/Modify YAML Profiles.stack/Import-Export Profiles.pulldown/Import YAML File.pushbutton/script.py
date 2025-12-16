@@ -19,6 +19,20 @@ from LogicClasses.yaml_path_cache import get_cached_yaml_path, set_cached_yaml_p
 from ExtensibleStorage.yaml_store import seed_active_yaml  # noqa: E402
 
 DEFAULT_DATA_PATH = os.path.join(LIB_ROOT, "profileData.yaml")
+SAFE_HASH = u"\uff03"
+
+
+def _sanitize_hash_keys(raw_text):
+    sanitized_lines = []
+    for raw_line in raw_text.splitlines():
+        line = raw_line
+        if ":" in raw_line:
+            prefix, suffix = raw_line.split(":", 1)
+            if "#" in prefix and SAFE_HASH not in prefix:
+                prefix = prefix.replace("#", SAFE_HASH)
+                line = "{}:{}".format(prefix, suffix)
+        sanitized_lines.append(line)
+    return "\n".join(sanitized_lines)
 
 
 def main():
@@ -34,11 +48,12 @@ def main():
     set_cached_yaml_path(picked)
     with io.open(picked, "r", encoding="utf-8") as handle:
         raw_text = handle.read()
+    sanitized_text = _sanitize_hash_keys(raw_text)
     doc = getattr(revit, "doc", None)
     if doc is None:
         forms.alert("No active document detected; cannot store YAML in Extensible Storage.", title="Select YAML")
         return
-    seed_active_yaml(doc, picked, raw_text)
+    seed_active_yaml(doc, picked, sanitized_text)
     forms.alert(
         "Loaded '{}' into the project. All YAML operations now run from Extensible Storage.\n"
         "The original file will remain untouched until you export it again.".format(picked),

@@ -1,0 +1,270 @@
+equipment_definitions:
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 005_Scanner_Code_wStand_1033825
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "005_Scanner_Code_wStand_1033825 : Default"
+    schema_version: 1
+    id: EQ-002
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Quad Wall - Isolated Ground"
+            parameters:
+              dev-Group ID: ""
+              SLD_Component ID_CED: ""
+              CKT_Load Name_CEDT: WORKSTATION - PATIENT ED
+              CKT_Rating_CED: 20.0
+              Product Datasheet URL: ""
+              CKT_Panel_CEDT: PH
+              Load Classification_CED: Receptacle
+              SLD_Symbol ID_CED: ""
+              FLA Input_CED: 0.0
+              Power Factor_CED: 1.0
+              Wattage Input_CED: 0.0
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              Workset: 922
+              Apparent Load Input_CED: 360.0
+              CKT_Circuit Number_CEDT: 28
+              Voltage_CED: 120.0
+              Product Specification: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-002-LED-001
+                Set Definition ID: SET-002
+                Location XYZ (ft): 112.955320,80.219692,104.000000
+                Rotation (deg): 180.000000
+                Parent Rotation (deg): -0.000000
+                LevelId: 30
+                ElementId: 5671177
+                FacingOrientation: 0.000000,-1.000000,0.000000
+            id: SET-002-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -180.0
+                x_inches: -13.282876
+                y_inches: 15.616826
+                z_inches: 1248.26155747
+        id: SET-002
+        name: "005_Scanner_Code_wStand_1033825 : Default Types"
+    allow_parentless: true
+    ced_truth_source_name: "005_Scanner_Code_wStand_1033825 : Default"
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-002
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 000_Flat_Panel_Dell_19inch_Dell_1025972
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "000_Flat_Panel_Dell_19inch_Dell_1025972 : Default"
+    schema_version: 1
+    id: EQ-001
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Receptacle_CED : Quad Wall - Isolated Ground"
+            parameters:
+              dev-Group ID: ""
+              SLD_Component ID_CED: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-001-LED-001
+                Set Definition ID: SET-001
+                Location XYZ (ft): 115.205320,80.219692,104.000000
+                Rotation (deg): 180.000000
+                Parent Rotation (deg): -180.000000
+                LevelId: 30
+                ElementId: 5671176
+                FacingOrientation: 0.000000,-1.000000,0.000000
+              CKT_Rating_CED: 20.0
+              Product Datasheet URL: ""
+              CKT_Panel_CEDT: PH
+              Load Classification_CED: Receptacle
+              SLD_Symbol ID_CED: ""
+              FLA Input_CED: 0.0
+              Power Factor_CED: 1.0
+              Wattage Input_CED: 0.0
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              Workset: 922
+              Apparent Load Input_CED: 360.0
+              CKT_Circuit Number_CEDT: 35
+              Voltage_CED: 120.0
+              Product Specification: ""
+              CKT_Load Name_CEDT: PATIENT EDUCATION RCPTS
+            id: SET-001-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 1.901
+                y_inches: -16.6972
+                z_inches: 1248.2616
+        id: SET-001
+        name: "000_Flat_Panel_Dell_19inch_Dell_1025972 : Default Types"
+    allow_parentless: true
+    ced_truth_source_name: "000_Flat_Panel_Dell_19inch_Dell_1025972 : Default"
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-001
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: HEB_Sink_Hand_No Splash_1318953
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "HEB_Sink_Hand_No Splash_1318953 : Default"
+    schema_version: 1
+    id: EQ-003
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            label: "EF-U_Junction Box_CED : Wall - No Stem"
+            parameters:
+              dev-Group ID: ""
+              SLD_Component ID_CED: ""
+              CKT_Load Name_CEDT: EWH-1 - PHARMACY
+              CKT_Rating_CED: 25.0
+              Product Datasheet URL: ""
+              CKT_Panel_CEDT: PH
+              Load Classification_CED: Heating
+              SLD_Symbol ID_CED: ""
+              FLA Input_CED: 0.0
+              Power Factor_CED: 1.0
+              Wattage Input_CED: 0.0
+              Number of Poles_CED: 2
+              CKT_Schedule Notes_CEDT: ""
+              Workset: 922
+              Apparent Load Input_CED: 3000.0
+              CKT_Circuit Number_CEDT: "20,22"
+              Voltage_CED: 208.0
+              Product Specification: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-003-LED-001
+                Set Definition ID: SET-003
+                Location XYZ (ft): 108.196667,80.238601,102.000000
+                Rotation (deg): 180.000000
+                Parent Rotation (deg): -0.000000
+                LevelId: 30
+                ElementId: 5671187
+                FacingOrientation: 0.000000,-1.000000,0.000000
+            id: SET-003-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -180.0
+                x_inches: 5.350801
+                y_inches: 0.218728
+                z_inches: 1224.26155747
+          -
+            is_group: false
+            label: "EF-U_Motor Rated Switch_CED : Motor Rated Switch - 208V, 2 Pole"
+            parameters:
+              dev-Group ID: ""
+              SLD_Component ID_CED: ""
+              CKT_Load Name_CEDT: EWH-1 - PHARMACY
+              CKT_Rating_CED: 25.0
+              Product Datasheet URL: ""
+              CKT_Panel_CEDT: PH
+              Load Classification_CED: Power - General
+              SLD_Symbol ID_CED: ""
+              FLA Input_CED: 0.0
+              Power Factor_CED: 1.0
+              Wattage Input_CED: 0.0
+              Number of Poles_CED: 2
+              CKT_Schedule Notes_CEDT: ""
+              Workset: 921
+              Apparent Load Input_CED: 0.0
+              CKT_Circuit Number_CEDT: "20,22"
+              Voltage_CED: 208.0
+              Product Specification: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-003-LED-002
+                Set Definition ID: SET-003
+                Location XYZ (ft): 108.934239,80.248510,104.000000
+                Rotation (deg): 180.000000
+                Parent Rotation (deg): -0.000000
+                LevelId: 30
+                ElementId: 5671188
+                FacingOrientation: 0.000000,-1.000000,0.000000
+            id: SET-003-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -180.0
+                x_inches: 14.201668
+                y_inches: 0.337647
+                z_inches: 1248.26155747
+          -
+            is_group: false
+            label: "CED-G-MEPR Keynote  - All Shapes : Square (ELEC)"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-003-LED-003
+                Set Definition ID: SET-003
+                Location XYZ (ft): 107.953841,81.826325,104.000000
+                Rotation (deg): -180.000000
+                Parent Rotation (deg): -0.000000
+                LevelId: -1
+                ElementId: 8961338
+                FacingOrientation: -0.000000,48.000000,-0.000000
+            id: SET-003-LED-003
+            tags:
+              -
+                parameters:
+                  CED-G-NOTE #: 3
+                  CED-G-NOTE TEXT: 30A/2P/250V/NF/NEMA 1 DISCONNECT SWITCH MOUNTED IN ACCESSIBLE LOCATION. COORDINATE WITH PLUMBING INSTALLER.
+                  CED-G-SHEET #/DISCIPLINE: EE3.5
+                type_name: Square (ELEC)
+                offsets:
+                  rotation_deg: -180.000000000
+                  x_inches: 0.0
+                  y_inches: 0.0
+                  z_inches: 0.0
+                category_name: Generic Annotations
+                family_name: CED-G-MEPR Keynote  - All Shapes
+            category: Generic Annotations
+            offsets:
+              -
+                rotation_deg: -180.0
+                x_inches: 2.436894
+                y_inches: 19.271423
+                z_inches: 1248.00000000
+        id: SET-003
+        name: "HEB_Sink_Hand_No Splash_1318953 : Default Types"
+    allow_parentless: true
+    ced_truth_source_name: "HEB_Sink_Hand_No Splash_1318953 : Default"
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-003

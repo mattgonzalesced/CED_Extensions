@@ -211,6 +211,10 @@ ELEMENT_LINKER_SHARED_PARAM = "Element_Linker"
 
 
 
+SAFE_HASH = u"\uff03"
+
+
+
 
 
 
@@ -1189,6 +1193,89 @@ def _collect_params(elem):
     if any(value for key, value in found.items() if key != "dev-Group ID" and value):
         return found
     return {"dev-Group ID": found.get("dev-Group ID", "")}
+
+
+def _annotation_family_type(elem):
+    fam_name = None
+    type_name = None
+    try:
+        symbol = getattr(elem, "Symbol", None)
+        if symbol:
+            fam = getattr(symbol, "Family", None)
+            fam_name = getattr(fam, "Name", None) if fam else None
+            type_name = getattr(symbol, "Name", None)
+            if not type_name and hasattr(symbol, "get_Parameter"):
+                param = symbol.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
+                if param:
+                    type_name = param.AsString()
+    except Exception:
+        fam_name = fam_name
+    if fam_name and type_name:
+        return fam_name, type_name
+    label = getattr(elem, "Name", None)
+    return label or "", ""
+
+
+def _collect_annotation_string_params(annotation_elem):
+    results = {}
+    for param in getattr(annotation_elem, "Parameters", []) or []:
+        try:
+            definition = getattr(param, "Definition", None)
+            name = getattr(definition, "Name", None)
+        except Exception:
+            name = None
+        if not name:
+            continue
+        try:
+            storage = param.StorageType
+            is_string = storage and storage.ToString() == "String"
+        except Exception:
+            is_string = False
+        if not is_string:
+            continue
+        try:
+            if param.IsReadOnly:
+                continue
+        except Exception:
+            pass
+        try:
+            value = param.AsString()
+        except Exception:
+            value = None
+        if value:
+            safe_name = (name or "").replace("#", SAFE_HASH)
+            results[safe_name] = value
+    return results
+
+
+def _build_annotation_tag_entry(annotation_elem, host_point):
+    try:
+        cat = getattr(annotation_elem, "Category", None)
+        cat_name = getattr(cat, "Name", "") if cat else ""
+    except Exception:
+        cat_name = ""
+    if not cat_name or "generic annotation" not in cat_name.lower():
+        return None
+    ann_point = _get_point(annotation_elem)
+    if ann_point is None or host_point is None:
+        return None
+    fam_name, type_name = _annotation_family_type(annotation_elem)
+    offsets = {
+        "x_inches": _feet_to_inches(ann_point.X - host_point.X),
+        "y_inches": _feet_to_inches(ann_point.Y - host_point.Y),
+        "z_inches": _feet_to_inches(ann_point.Z - host_point.Z),
+        "rotation_deg": _get_rotation_degrees(annotation_elem),
+    }
+    params = _collect_annotation_string_params(annotation_elem)
+    return {
+        "family_name": fam_name,
+        "type_name": type_name,
+        "category_name": cat_name,
+        "parameters": params,
+        "offsets": offsets,
+    }
+
+
 def _collect_hosted_tags(elem, host_point):
 
 
@@ -1618,34 +1705,17 @@ def _level_relative_z_inches(elem, world_point):
 
 
     if not level_elem:
-
-
-
-        fallbacks = (
-
-
-
-            BuiltInParameter.SCHEDULE_LEVEL_PARAM,
-
-
-
-            BuiltInParameter.INSTANCE_REFERENCE_LEVEL_PARAM,
-
-
-
-            BuiltInParameter.FAMILY_LEVEL_PARAM,
-
-
-
-            BuiltInParameter.INSTANCE_LEVEL_PARAM,
-
-
-
+        fallback_names = (
+            "SCHEDULE_LEVEL_PARAM",
+            "INSTANCE_REFERENCE_LEVEL_PARAM",
+            "FAMILY_LEVEL_PARAM",
+            "INSTANCE_LEVEL_PARAM",
         )
 
-
-
-        for bip in fallbacks:
+        for name in fallback_names:
+            bip = getattr(BuiltInParameter, name, None)
+            if not bip:
+                continue
 
 
 
@@ -1766,30 +1836,15 @@ def _get_level_element_id(elem):
 
 
     fallback_params = (
-
-
-
-        BuiltInParameter.SCHEDULE_LEVEL_PARAM,
-
-
-
-        BuiltInParameter.INSTANCE_REFERENCE_LEVEL_PARAM,
-
-
-
-        BuiltInParameter.FAMILY_LEVEL_PARAM,
-
-
-
-        BuiltInParameter.INSTANCE_LEVEL_PARAM,
-
-
-
+        getattr(BuiltInParameter, "SCHEDULE_LEVEL_PARAM", None),
+        getattr(BuiltInParameter, "INSTANCE_REFERENCE_LEVEL_PARAM", None),
+        getattr(BuiltInParameter, "FAMILY_LEVEL_PARAM", None),
+        getattr(BuiltInParameter, "INSTANCE_LEVEL_PARAM", None),
     )
 
-
-
     for bip in fallback_params:
+        if not bip:
+            continue
 
 
 

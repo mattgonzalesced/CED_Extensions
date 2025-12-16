@@ -37,6 +37,7 @@ except NameError:  # Python 3 fallback
     basestring = str
 
 ELEMENT_LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
+SAFE_HASH = u"\uff03"
 
 
 def _parse_linker_payload(payload_text):
@@ -743,7 +744,8 @@ class PlaceElementsEngine(object):
 
         if not params_dict:
             return
-        for name, value in params_dict.items():
+        for raw_name, value in params_dict.items():
+            name = (raw_name or "").replace(SAFE_HASH, "#")
             try:
                 param = element.LookupParameter(name)
             except Exception:
