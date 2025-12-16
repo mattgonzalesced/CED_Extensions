@@ -32,7 +32,7 @@ from LogicClasses.PlaceElementsLogic import (  # noqa: E402
     ProfileRepository,
     tag_key_from_dict,
 )
-from profile_schema import equipment_defs_to_legacy  # noqa: E402
+from LogicClasses.profile_schema import equipment_defs_to_legacy  # noqa: E402
 from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
 

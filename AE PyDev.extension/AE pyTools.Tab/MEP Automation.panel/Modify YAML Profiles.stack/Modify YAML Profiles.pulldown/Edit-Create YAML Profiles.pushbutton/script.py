@@ -35,7 +35,7 @@ from LogicClasses.PlaceElementsLogic import PlaceElementsEngine, ProfileReposito
 from LogicClasses.linked_equipment import compute_offsets_from_points  # noqa: E402
 from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data  # noqa: E402
-from profile_schema import ensure_equipment_definition, get_type_set, next_led_id, equipment_defs_to_legacy  # noqa: E402
+from LogicClasses.profile_schema import ensure_equipment_definition, get_type_set, next_led_id, equipment_defs_to_legacy  # noqa: E402
 
 TITLE = "Edit/Create YAML Profiles"
 LOG = script.get_logger()

@@ -14,9 +14,9 @@ from LogicClasses.LinkedElementDefinition import LinkedElementDefinition
 from LogicClasses.PlacementRule import PlacementRule
 
 try:
-    from ..profile_schema import equipment_defs_to_legacy, load_data
-except Exception:
-    from profile_schema import equipment_defs_to_legacy, load_data  # type: ignore
+    from .profile_schema import equipment_defs_to_legacy, load_data
+except Exception:  # pragma: no cover
+    from LogicClasses.profile_schema import equipment_defs_to_legacy, load_data  # type: ignore
 
 
 class ProfileRepository(object):

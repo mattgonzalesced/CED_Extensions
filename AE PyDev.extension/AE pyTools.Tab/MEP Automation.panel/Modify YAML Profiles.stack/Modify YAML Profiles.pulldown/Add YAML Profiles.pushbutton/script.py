@@ -28,7 +28,7 @@ LIB_ROOT = os.path.abspath(
 if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
-from profile_schema import (  # noqa: E402
+from LogicClasses.profile_schema import (  # noqa: E402
     ensure_equipment_definition,
     get_type_set,
     next_led_id,

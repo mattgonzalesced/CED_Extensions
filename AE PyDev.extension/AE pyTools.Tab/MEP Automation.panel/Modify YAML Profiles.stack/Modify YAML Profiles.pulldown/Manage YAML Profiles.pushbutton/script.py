@@ -174,7 +174,7 @@ from UIClasses.ProfileEditorWindow import ProfileEditorWindow  # noqa: E402
 
 
 
-from profile_schema import (  # noqa: E402
+from LogicClasses.profile_schema import (  # noqa: E402
 
 
 

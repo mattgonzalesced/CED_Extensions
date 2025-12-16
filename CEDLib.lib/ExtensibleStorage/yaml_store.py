@@ -7,7 +7,7 @@ import json
 
 from pyrevit import revit, script
 
-from profile_schema import load_data_from_text, dump_data_to_string  # noqa: E402
+from LogicClasses.profile_schema import load_data_from_text, dump_data_to_string  # noqa: E402
 from ExtensibleStorage import ExtensibleStorage  # noqa: E402
 
 _ACTIVE_CACHE = None

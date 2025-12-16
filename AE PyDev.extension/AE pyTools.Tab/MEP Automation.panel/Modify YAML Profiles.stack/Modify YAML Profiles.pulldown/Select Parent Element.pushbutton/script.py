@@ -24,7 +24,7 @@ LIB_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "
 if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
-from profile_schema import get_type_set, next_led_id, ensure_equipment_definition  # noqa: E402
+from LogicClasses.profile_schema import get_type_set, next_led_id, ensure_equipment_definition  # noqa: E402
 from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 from LogicClasses.linked_equipment import compute_offsets_from_points, find_equipment_by_name  # noqa: E402
 from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data  # noqa: E402

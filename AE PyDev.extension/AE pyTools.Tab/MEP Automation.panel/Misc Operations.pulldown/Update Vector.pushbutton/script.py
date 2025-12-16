@@ -33,7 +33,7 @@ if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
 from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
-from profile_schema import dump_data_to_string  # noqa: E402
+from LogicClasses.profile_schema import dump_data_to_string  # noqa: E402
 from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data  # noqa: E402
 from ExtensibleStorage import ExtensibleStorage  # noqa: E402
 ELEMENT_LINKER_PARAM_NAME = "Element_Linker Parameter"
