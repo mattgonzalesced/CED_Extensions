@@ -41,12 +41,24 @@ try:
 except NameError:
     basestring = str
 
-from Autodesk.Revit.DB import Group, GroupType, XYZ, BuiltInParameter, IndependentTag, Transaction, TransactionGroup  # noqa: E402
+from Autodesk.Revit.DB import (  # noqa: E402
+    BuiltInParameter,
+
+    Group,
+    GroupType,
+    IndependentTag,
+    Transaction,
+    TransactionGroup,
+    UnitUtils,
+    XYZ,
+)
 
 ELEMENT_LINKER_PARAM_NAME = "Element_Linker Parameter"
 ELEMENT_LINKER_SHARED_PARAM = "Element_Linker"
 TRUTH_SOURCE_ID_KEY = "ced_truth_source_id"
 TRUTH_SOURCE_NAME_KEY = "ced_truth_source_name"
+
+
 
 # --------------------------------------------------------------------------- #
 # YAML helpers
@@ -183,6 +195,23 @@ def _level_relative_z_inches(elem, world_point):
 
 
 def _collect_params(elem):
+    def _convert_collected_double(target_key, param_obj, raw_value):
+        if target_key not in ("Apparent Load Input_CED", "Voltage_CED"):
+            return raw_value
+        get_unit = getattr(param_obj, "GetUnitTypeId", None)
+        if not callable(get_unit):
+            return raw_value
+        try:
+            unit_id = get_unit()
+        except Exception:
+            unit_id = None
+        if not unit_id:
+            return raw_value
+        try:
+            return UnitUtils.ConvertFromInternalUnits(raw_value, unit_id)
+        except Exception:
+            return raw_value
+
     try:
         cat = getattr(elem, "Category", None)
         cat_name = getattr(cat, "Name", "") if cat else ""
@@ -230,7 +259,7 @@ def _collect_params(elem):
             if st == "String":
                 found[target_key] = p.AsString() or ""
             elif st == "Double":
-                found[target_key] = p.AsDouble()
+                found[target_key] = _convert_collected_double(target_key, p, p.AsDouble())
             elif st == "Integer":
                 found[target_key] = p.AsInteger()
             else:

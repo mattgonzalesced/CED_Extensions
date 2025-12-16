@@ -55,37 +55,15 @@ from pyrevit import script, forms, revit
 
 
 from Autodesk.Revit.DB import (
-
-
-
     BuiltInParameter,
 
-
-
     Group,
-
-
-
     GroupType,
-
-
-
     IndependentTag,
-
-
-
     Transaction,
-
-
-
     TransactionGroup,
-
-
-
+    UnitUtils,
     XYZ,
-
-
-
 )
 
 
@@ -230,6 +208,15 @@ ELEMENT_LINKER_PARAM_NAME = "Element_Linker Parameter"
 
 
 ELEMENT_LINKER_SHARED_PARAM = "Element_Linker"
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1100,249 +1087,108 @@ def _get_point(elem):
 
 
 def _collect_params(elem):
-
-
+    def _convert_collected_double(target_key, param_obj, raw_value):
+        if target_key not in ("Apparent Load Input_CED", "Voltage_CED"):
+            return raw_value
+        get_unit = getattr(param_obj, "GetUnitTypeId", None)
+        if not callable(get_unit):
+            return raw_value
+        try:
+            unit_id = get_unit()
+        except Exception:
+            unit_id = None
+        if not unit_id:
+            return raw_value
+        try:
+            return UnitUtils.ConvertFromInternalUnits(raw_value, unit_id)
+        except Exception:
+            return raw_value
 
     try:
-
-
-
         cat = getattr(elem, "Category", None)
-
-
-
         cat_name = getattr(cat, "Name", "") if cat else ""
-
-
-
     except Exception:
-
-
-
         cat_name = ""
+    cat_lower = (cat_name or "").strip().lower()
+    power_categories = {"electrical fixtures", "electrical equipment", "electrical devices"}
+    circuit_categories = power_categories | {"lighting fixtures", "lighting devices", "data devices"}
+    capture_power = cat_lower in power_categories
+    capture_circuits = cat_lower in circuit_categories
 
-
-
-    cat_lower = (cat_name or "").lower()
-
-
-
-    is_electrical = ("electrical" in cat_lower) or ("lighting" in cat_lower) or ("data" in cat_lower)
-
-
-
-    base_targets = {
-
-
-
-        "dev-Group ID": ["dev-Group ID", "dev_Group ID"],
-
-
-
+    base_targets = {"dev-Group ID": ["dev-Group ID", "dev_Group ID"]}
+    power_targets = {
         "Number of Poles_CED": ["Number of Poles_CED", "Number of Poles_CEDT"],
-
-
-
         "Apparent Load Input_CED": ["Apparent Load Input_CED", "Apparent Load Input_CEDT"],
-
-
-
         "Voltage_CED": ["Voltage_CED", "Voltage_CEDT"],
-
-
-
+        "Load Classification_CED": ["Load Classification_CED", "Load Classification_CEDT"],
+        "FLA Input_CED": ["FLA Input_CED", "FLA Input_CEDT"],
+        "Wattage Input_CED": ["Wattage Input_CED", "Wattage Input_CEDT"],
+        "Power Factor_CED": ["Power Factor_CED", "Power Factor_CEDT"],
+        "Workset": ["Workset"],
+        "Product Datasheet URL": [
+            "Product Datasheet URL",
+            "Product Datasheet URL_CED",
+            "Product Datasheet URL_CEDT",
+        ],
+        "Product Specification": [
+            "Product Specification",
+            "Product Specification_CED",
+            "Product Specification_CEDT",
+        ],
+        "SLD_Component ID_CED": ["SLD_Component ID_CED"],
+        "SLD_Symbol ID_CED": ["SLD_Symbol ID_CED"],
     }
-
-
-
-    electrical_targets = {
-
-
-
+    circuit_targets = {
         "CKT_Rating_CED": ["CKT_Rating_CED"],
-
-
-
         "CKT_Panel_CEDT": ["CKT_Panel_CED", "CKT_Panel_CEDT"],
-
-
-
         "CKT_Schedule Notes_CEDT": ["CKT_Schedule Notes_CED", "CKT_Schedule Notes_CEDT"],
-
-
-
         "CKT_Circuit Number_CEDT": ["CKT_Circuit Number_CED", "CKT_Circuit Number_CEDT"],
-
-
-
         "CKT_Load Name_CEDT": ["CKT_Load Name_CED", "CKT_Load Name_CEDT"],
-
-
-
     }
-
-
 
     targets = dict(base_targets)
-
-
-
-    if is_electrical:
-
-
-
-        targets.update(electrical_targets)
-
-
+    if capture_power:
+        targets.update(power_targets)
+    if capture_circuits:
+        targets.update(circuit_targets)
 
     found = {key: "" for key in targets.keys()}
-
-
-
     for param in getattr(elem, "Parameters", []) or []:
-
-
-
         try:
-
-
-
             name = param.Definition.Name
-
-
-
         except Exception:
-
-
-
             continue
-
-
-
         target_key = None
-
-
-
         for out_key, aliases in targets.items():
-
-
-
             if name in aliases:
-
-
-
                 target_key = out_key
-
-
-
                 break
-
-
-
         if not target_key:
-
-
-
             continue
-
-
-
         try:
-
-
-
             storage = param.StorageType.ToString()
-
-
-
         except Exception:
-
-
-
             storage = ""
-
-
-
         try:
-
-
-
             if storage == "String":
-
-
-
                 found[target_key] = param.AsString() or ""
-
-
-
             elif storage == "Double":
-
-
-
-                found[target_key] = param.AsDouble()
-
-
-
+                found[target_key] = _convert_collected_double(target_key, param, param.AsDouble())
             elif storage == "Integer":
-
-
-
                 found[target_key] = param.AsInteger()
-
-
-
             else:
-
-
-
                 found[target_key] = param.AsValueString() or ""
-
-
-
         except Exception:
-
-
-
             continue
-
-
-
     if "dev-Group ID" not in found:
-
-
-
         found["dev-Group ID"] = ""
-
-
-
-    if not found.get("Voltage_CED"):
-
-
-
+    if capture_power and "Voltage_CED" in targets and not found.get("Voltage_CED"):
         found["Voltage_CED"] = 120
-
-
-
-    if is_electrical:
-
-
-
+    if capture_power or capture_circuits:
         return found
-
-
-
     if any(value for key, value in found.items() if key != "dev-Group ID" and value):
-
-
-
         return found
-
-
-
     return {"dev-Group ID": found.get("dev-Group ID", "")}
-
-
-
 def _collect_hosted_tags(elem, host_point):
 
 
@@ -4712,6 +4558,10 @@ if __name__ == "__main__":
 
 
     main()
+
+
+
+
 
 
 

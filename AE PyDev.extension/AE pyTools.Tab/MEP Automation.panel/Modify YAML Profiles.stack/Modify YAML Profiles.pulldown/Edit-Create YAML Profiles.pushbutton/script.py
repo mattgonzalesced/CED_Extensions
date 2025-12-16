@@ -23,6 +23,7 @@ from Autodesk.Revit.DB import (
     Transaction,
     TransactionGroup,
     Transform,
+    UnitUtils,
     XYZ,
 )
 from Autodesk.Revit.UI.Selection import ObjectType
@@ -44,7 +45,6 @@ ELEMENT_LINKER_PARAM_NAMES = ("Element_Linker", ELEMENT_LINKER_PARAM_NAME)
 TRUTH_SOURCE_ID_KEY = "ced_truth_source_id"
 TRUTH_SOURCE_NAME_KEY = "ced_truth_source_name"
 SESSION_KEY = "edit_create_yaml_session"
-
 
 try:
     basestring
@@ -285,17 +285,70 @@ def _level_relative_z_inches(elem, world_point):
 
 
 def _collect_params(elem):
-    targets = {
-        "dev-Group ID": ["dev-Group ID", "dev_Group ID"],
+    def _convert_double_value(target_key, param_obj, raw_value):
+        if target_key not in ("Apparent Load Input_CED", "Voltage_CED"):
+            return raw_value
+        get_unit = getattr(param_obj, "GetUnitTypeId", None)
+        if not callable(get_unit):
+            return raw_value
+        try:
+            unit_id = get_unit()
+        except Exception:
+            unit_id = None
+        if not unit_id:
+            return raw_value
+        try:
+            return UnitUtils.ConvertFromInternalUnits(raw_value, unit_id)
+        except Exception:
+            return raw_value
+    try:
+        cat = getattr(elem, "Category", None)
+        cat_name = getattr(cat, "Name", "") if cat else ""
+    except Exception:
+        cat_name = ""
+    cat_lower = (cat_name or "").strip().lower()
+    power_categories = {"electrical fixtures", "electrical equipment", "electrical devices"}
+    circuit_categories = power_categories | {"lighting fixtures", "lighting devices", "data devices"}
+    capture_power = cat_lower in power_categories
+    capture_circuits = cat_lower in circuit_categories
+
+    base_targets = {"dev-Group ID": ["dev-Group ID", "dev_Group ID"]}
+    power_targets = {
         "Number of Poles_CED": ["Number of Poles_CED", "Number of Poles_CEDT"],
         "Apparent Load Input_CED": ["Apparent Load Input_CED", "Apparent Load Input_CEDT"],
         "Voltage_CED": ["Voltage_CED", "Voltage_CEDT"],
+        "Load Classification_CED": ["Load Classification_CED", "Load Classification_CEDT"],
+        "FLA Input_CED": ["FLA Input_CED", "FLA Input_CEDT"],
+        "Wattage Input_CED": ["Wattage Input_CED", "Wattage Input_CEDT"],
+        "Power Factor_CED": ["Power Factor_CED", "Power Factor_CEDT"],
+        "Workset": ["Workset"],
+        "Product Datasheet URL": [
+            "Product Datasheet URL",
+            "Product Datasheet URL_CED",
+            "Product Datasheet URL_CEDT",
+        ],
+        "Product Specification": [
+            "Product Specification",
+            "Product Specification_CED",
+            "Product Specification_CEDT",
+        ],
+        "SLD_Component ID_CED": ["SLD_Component ID_CED"],
+        "SLD_Symbol ID_CED": ["SLD_Symbol ID_CED"],
+    }
+    circuit_targets = {
         "CKT_Rating_CED": ["CKT_Rating_CED"],
         "CKT_Panel_CEDT": ["CKT_Panel_CED", "CKT_Panel_CEDT"],
         "CKT_Schedule Notes_CEDT": ["CKT_Schedule Notes_CED", "CKT_Schedule Notes_CEDT"],
         "CKT_Circuit Number_CEDT": ["CKT_Circuit Number_CED", "CKT_Circuit Number_CEDT"],
         "CKT_Load Name_CEDT": ["CKT_Load Name_CED", "CKT_Load Name_CEDT"],
     }
+
+    targets = dict(base_targets)
+    if capture_power:
+        targets.update(power_targets)
+    if capture_circuits:
+        targets.update(circuit_targets)
+
     found = {key: "" for key in targets}
     for param in getattr(elem, "Parameters", []) or []:
         try:
@@ -314,17 +367,29 @@ def _collect_params(elem):
         except Exception:
             storage = None
         try:
-            if storage and storage.ToString() == "String":
+            storage_str = storage.ToString() if storage else ""
+        except Exception:
+            storage_str = ""
+        try:
+            if storage_str == "String":
                 found[target] = param.AsString() or ""
-            elif storage and storage.ToString() == "Double":
-                found[target] = param.AsDouble()
-            elif storage and storage.ToString() == "Integer":
+            elif storage_str == "Double":
+                found[target] = _convert_double_value(target, param, param.AsDouble())
+            elif storage_str == "Integer":
                 found[target] = param.AsInteger()
             else:
                 found[target] = param.AsValueString() or ""
         except Exception:
             continue
-    return found
+    if "dev-Group ID" not in found:
+        found["dev-Group ID"] = ""
+    if capture_power and "Voltage_CED" in targets and not found.get("Voltage_CED"):
+        found["Voltage_CED"] = 120
+    if capture_power or capture_circuits:
+        return found
+    if any(value for key, value in found.items() if key != "dev-Group ID" and value):
+        return found
+    return {"dev-Group ID": found.get("dev-Group ID", "")}
 
 
 def _tag_signature(name):
@@ -777,6 +842,12 @@ def _resolve_equipment_definition(parent_elem, data, truth_groups=None):
         "category_name": _get_category(parent_elem),
     }
     eq_def = ensure_equipment_definition(data, cad_name, sample_entry)
+    source_id = eq_def.get("id") or cad_name
+    if source_id:
+        if not eq_def.get(TRUTH_SOURCE_ID_KEY):
+            eq_def[TRUTH_SOURCE_ID_KEY] = source_id
+        if not eq_def.get(TRUTH_SOURCE_NAME_KEY):
+            eq_def[TRUTH_SOURCE_NAME_KEY] = cad_name
     return eq_def, cad_name, True
 
 

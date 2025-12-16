@@ -739,7 +739,7 @@ class PlaceElementsEngine(object):
                 self._apply_parameters(instance, parameters)
 
     def _apply_parameters(self, element, params_dict):
-        from Autodesk.Revit.DB import StorageType, UnitUtils, ForgeTypeId
+        from Autodesk.Revit.DB import StorageType, UnitUtils
 
         if not params_dict:
             return
@@ -758,17 +758,20 @@ class PlaceElementsEngine(object):
                     needs_va = bool(name and "Apparent Load" in name)
                     needs_voltage = bool(name and "Voltage" in name)
                     if needs_va or needs_voltage:
-                        try:
-                            unit_id = (
-                                ForgeTypeId("autodesk.unit.unit:voltAmperes-1.0.1")
-                                if needs_va
-                                else ForgeTypeId("autodesk.unit.unit:volts-1.0.1")
-                            )
-                            converted = UnitUtils.ConvertToInternalUnits(float(value), unit_id)
-                            param.Set(converted)
-                            continue
-                        except Exception:
-                            pass
+                        get_unit = getattr(param, "GetUnitTypeId", None)
+                        unit_id = None
+                        if callable(get_unit):
+                            try:
+                                unit_id = get_unit()
+                            except Exception:
+                                unit_id = None
+                        if unit_id:
+                            try:
+                                converted = UnitUtils.ConvertToInternalUnits(float(value), unit_id)
+                                param.Set(converted)
+                                continue
+                            except Exception:
+                                pass
                     param.Set(float(value))
                 elif storage_type == StorageType.String:
                     param.Set(str(value))
