@@ -28,6 +28,11 @@ try:
 except Exception:  # pragma: no cover
     ApplicationUndoRedoEventArgs = None
 
+try:
+    from Autodesk.Revit.UI.Events import DocumentSynchronizedWithCentralEventArgs
+except Exception:  # pragma: no cover
+    DocumentSynchronizedWithCentralEventArgs = None
+
 
 try:
     from pyrevit import script as _script_logger  # noqa: E402
@@ -53,6 +58,7 @@ class ExtensibleStorage(object):
     _undo_handler_delegate = None
     _doc_handler = None
     _ui_handler = None
+    _sync_handler = None
     _entry_cache = {}
     _recent_entries = {}
 
@@ -216,6 +222,46 @@ class ExtensibleStorage(object):
         cls._write_storage(doc, payload, "Initialize YAML History")
 
     @classmethod
+    def acquire_editor_lock(cls, doc, user):
+        if doc is None:
+            return None
+        payload = cls._read_storage(doc)
+        meta = payload.setdefault("meta", {})
+        lock = meta.get("editor_lock")
+        normalized_user = user or cls._current_user(doc)
+        if lock:
+            holder = lock.get("user")
+            if holder and holder != normalized_user:
+                return dict(lock)
+        meta["editor_lock"] = {
+            "user": normalized_user,
+            "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+        cls._write_storage(doc, payload, "YAML_EDITOR_LOCK")
+        return None
+
+    @classmethod
+    def release_editor_lock(cls, doc, user):
+        if doc is None:
+            return
+        payload = cls._read_storage(doc)
+        meta = payload.setdefault("meta", {})
+        lock = meta.get("editor_lock")
+        normalized_user = user or cls._current_user(doc)
+        if lock and (not lock.get("user") or lock.get("user") == normalized_user):
+            meta.pop("editor_lock", None)
+            cls._write_storage(doc, payload, "YAML_EDITOR_UNLOCK")
+
+    @classmethod
+    def current_editor_lock(cls, doc):
+        if doc is None:
+            return None
+        payload = cls._read_storage(doc)
+        meta = payload.get("meta", {})
+        lock = meta.get("editor_lock")
+        return dict(lock) if isinstance(lock, dict) else None
+
+    @classmethod
     def get_active_yaml(cls, doc):
         payload = cls._read_storage(doc)
         meta = payload.get("meta", {})
@@ -310,6 +356,16 @@ class ExtensibleStorage(object):
                 pass
         else:
             cls._log("UndoRedo handler unavailable; ApplicationUndoRedoEventArgs missing.")
+        if DocumentSynchronizedWithCentralEventArgs is not None:
+            try:
+                uiapp = __revit__
+                handler = System.EventHandler[DocumentSynchronizedWithCentralEventArgs](cls._on_doc_sync)
+                uiapp.DocumentSynchronizedWithCentral += handler
+                cls._sync_handler = handler
+                handlers_registered = True
+                cls._log("DocumentSynchronized handler registered.")
+            except Exception:
+                pass
         cls._undo_handler_registered = handlers_registered
 
     @classmethod
@@ -417,6 +473,23 @@ class ExtensibleStorage(object):
                 handled = True
         if not handled:
             cls._process_recent_entry(doc, operation, "UndoRedo")
+
+    @classmethod
+    def _on_doc_sync(cls, sender, args):
+        doc = None
+        try:
+            doc = getattr(args, "Document", None)
+        except Exception:
+            doc = None
+        if doc is None:
+            try:
+                doc = __revit__.ActiveUIDocument.Document
+            except Exception:
+                doc = None
+        if doc is None:
+            return
+        user = cls._current_user(doc)
+        cls.release_editor_lock(doc, user)
 
     @classmethod
     def _process_transaction_name(cls, doc, name, operation, source):

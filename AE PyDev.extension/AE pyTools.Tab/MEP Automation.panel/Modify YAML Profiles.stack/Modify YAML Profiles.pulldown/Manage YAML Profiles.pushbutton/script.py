@@ -185,7 +185,8 @@ from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 
 
 
-from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data  # noqa: E402
+from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data, load_active_yaml_text  # noqa: E402
+from ExtensibleStorage import ExtensibleStorage  # noqa: E402
 
 
 
@@ -306,6 +307,48 @@ def _doc_store_key(doc):
 
 
     return title.lower()
+
+
+def _normalize_yaml_path(path):
+    if not path:
+        return ""
+    try:
+        normalized = os.path.abspath(path)
+    except Exception:
+        normalized = path
+    return normalized.replace("\\", "/").lower()
+
+
+def _ensure_active_yaml_access(state):
+    expected = state.get("normalized_yaml_path") or _normalize_yaml_path(state.get("yaml_path"))
+    if not expected:
+        return True
+    try:
+        current_path, _ = load_active_yaml_text()
+    except RuntimeError as exc:
+        forms.alert(str(exc), title=TITLE)
+        return False
+    current_norm = _normalize_yaml_path(current_path)
+    if current_norm != expected:
+        current_label = get_yaml_display_name(current_path)
+        expected_label = state.get("yaml_label") or "<unknown>"
+        forms.alert(
+            "Active YAML changed from '{}' to '{}'. Another user likely took control.\n"
+            "Close Manage YAML and reopen after selecting the desired YAML.".format(expected_label, current_label),
+            title=TITLE,
+        )
+        return False
+    return True
+
+
+def _current_editor_user(doc):
+    try:
+        user = doc.Application.Username
+        if user:
+            return user
+    except Exception:
+        pass
+    return os.getenv("USERNAME") or os.getenv("USER") or "unknown"
 
 
 
@@ -3246,6 +3289,14 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
 
 
+    if not _ensure_active_yaml_access(state):
+
+
+
+        return False
+
+
+
     try:
 
 
@@ -4002,6 +4053,10 @@ def main():
 
 
 
+    lock_user = None
+
+
+
     try:
 
 
@@ -4023,6 +4078,54 @@ def main():
 
 
             return
+
+
+
+        if doc:
+
+
+
+            candidate_user = _current_editor_user(doc)
+
+
+
+            conflict = ExtensibleStorage.acquire_editor_lock(doc, candidate_user)
+
+
+
+            if conflict:
+
+
+
+                holder = conflict.get("user") or "another user"
+
+
+
+                forms.alert(
+
+
+
+                    "YAML storage is currently being edited by '{}'. Please wait for that user to finish, sync, "
+
+
+
+                    "then resync your model before editing.".format(holder),
+
+
+
+                    title=TITLE,
+
+
+
+                )
+
+
+
+                return
+
+
+
+            lock_user = candidate_user
 
 
 
@@ -4051,17 +4154,10 @@ def main():
 
 
         state = {
-
-
-
             "raw_data": raw_data,
-
-
-
             "yaml_label": yaml_label,
-
-
-
+            "yaml_path": data_path,
+            "normalized_yaml_path": _normalize_yaml_path(data_path),
         }
 
 
@@ -4427,6 +4523,14 @@ def main():
 
 
             raw_data_for_delete["equipment_definitions"] = equipment_defs
+
+
+
+            if not _ensure_active_yaml_access(state):
+
+
+
+                return None
 
 
 
@@ -4922,6 +5026,14 @@ def main():
 
 
 
+                if not _ensure_active_yaml_access(state):
+
+
+
+                    return
+
+
+
                 save_active_yaml_data(
 
 
@@ -4979,6 +5091,26 @@ def main():
 
 
     finally:
+
+
+
+        if doc and lock_user:
+
+
+
+            try:
+
+
+
+                ExtensibleStorage.release_editor_lock(doc, lock_user)
+
+
+
+            except Exception:
+
+
+
+                pass
 
 
 
