@@ -5,10 +5,11 @@ class FeederVDMethod(object):
     DEMAND = "demand"
     CONNECTED = "connected"
     EIGHTY_PERCENT = "80_percent"
+    HUNDRED_PERCENT = "100_percent"
 
     @classmethod
     def all(cls):
-        return [cls.DEMAND, cls.CONNECTED, cls.EIGHTY_PERCENT]
+        return [cls.DEMAND, cls.CONNECTED, cls.EIGHTY_PERCENT, cls.HUNDRED_PERCENT]
 
 
 class NeutralBehavior(object):
@@ -36,7 +37,13 @@ class CircuitSettings(object):
         "neutral_behavior": NeutralBehavior.MATCH_HOT,
         "max_branch_voltage_drop": 0.03,
         "max_feeder_voltage_drop": 0.02,
-        "feeder_vd_method": FeederVDMethod.DEMAND,
+        "feeder_vd_method": FeederVDMethod.EIGHTY_PERCENT,
+        "write_equipment_results": True,
+        "write_fixture_results": False,
+        "pending_clear_failed": False,
+        "last_clear_equipment_disabled": False,
+        "last_clear_fixtures_disabled": False,
+        "last_clear_success": False,
     }
 
     def __init__(self, values=None):
@@ -56,6 +63,13 @@ class CircuitSettings(object):
         # Validation
         if key == "feeder_vd_method":
             if value not in FeederVDMethod.all():
+                # backward compatibility for old persisted values
+                legacy_map = {
+                    "80_percent": FeederVDMethod.EIGHTY_PERCENT,
+                    "100_percent": FeederVDMethod.HUNDRED_PERCENT,
+                }
+                value = legacy_map.get(value, value)
+            if value not in FeederVDMethod.all():
                 raise ValueError("Invalid feeder_vd_method: {}".format(value))
 
         if key == "neutral_behavior":
@@ -65,12 +79,31 @@ class CircuitSettings(object):
         if key in ("max_conduit_fill",
                    "max_branch_voltage_drop",
                    "max_feeder_voltage_drop"):
-            float(value)  # ensures it is numeric
+            value = round(float(value), 3)  # ensures it is numeric and rounded
+
+        if key in ("write_equipment_results", "write_fixture_results"):
+            value = bool(value)
+
+        if key == "pending_clear_failed":
+            value = bool(value)
+
+        if key in (
+            "last_clear_equipment_disabled",
+            "last_clear_fixtures_disabled",
+            "last_clear_success",
+        ):
+            value = bool(value)
 
         self._values[key] = value
 
     def to_json(self):
-        return json.dumps(self._values)
+        payload = dict(self._values)
+        for key in ("max_conduit_fill", "max_branch_voltage_drop", "max_feeder_voltage_drop"):
+            try:
+                payload[key] = round(float(payload[key]), 3)
+            except Exception:
+                pass
+        return json.dumps(payload)
 
     @classmethod
     def from_json(cls, text):
@@ -133,3 +166,27 @@ class CircuitSettings(object):
     @property
     def feeder_vd_method(self):
         return self._values["feeder_vd_method"]
+
+    @property
+    def write_equipment_results(self):
+        return bool(self._values["write_equipment_results"])
+
+    @property
+    def write_fixture_results(self):
+        return bool(self._values["write_fixture_results"])
+
+    @property
+    def pending_clear_failed(self):
+        return bool(self._values.get("pending_clear_failed", False))
+
+    @property
+    def last_clear_equipment_disabled(self):
+        return bool(self._values.get("last_clear_equipment_disabled", False))
+
+    @property
+    def last_clear_fixtures_disabled(self):
+        return bool(self._values.get("last_clear_fixtures_disabled", False))
+
+    @property
+    def last_clear_success(self):
+        return bool(self._values.get("last_clear_success", False))
