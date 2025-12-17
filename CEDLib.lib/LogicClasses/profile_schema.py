@@ -338,6 +338,7 @@ def equipment_defs_to_legacy(equipment_defs):
                     "offsets": led.get("offsets") or [{}],
                     "parameters": led.get("parameters") or {},
                     "tags": led.get("tags") or [],
+                    "text_notes": led.get("text_notes") or [],
                 }
                 types.append({
                     "label": led.get("label"),
@@ -466,6 +467,7 @@ def _types_to_linked_set(equipment_def, types, seq):
             "offsets": offsets,
             "parameters": params,
             "tags": tags,
+            "text_notes": inst.get("text_notes") or [],
         })
     return {
         "id": set_id,

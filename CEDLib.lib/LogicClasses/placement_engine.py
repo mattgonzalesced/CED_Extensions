@@ -22,11 +22,15 @@ from Autodesk.Revit.DB import (
     Level,
     ViewType,
     IndependentTag,
+    TextNote,
+    TextNoteType,
+    TextNoteLeaderTypes,
     Reference,
     TagMode,
     TagOrientation,
     ElementId,
 )
+from System import Enum
 
 from LogicClasses.csv_helpers import feet_inch_to_inches
 from LogicClasses.tag_utils import tag_key_from_dict
@@ -114,6 +118,8 @@ class PlaceElementsEngine(object):
         self.transaction_name = transaction_name or "Place Elements (YAML)"
         self._init_symbol_map()
         self._init_group_map()
+        self._init_text_note_types()
+        self._build_repo_name_lookup()
 
     def _init_symbol_map(self):
         """Map 'Family : Type' to FamilySymbol."""
@@ -258,6 +264,467 @@ class PlaceElementsEngine(object):
                 continue
         # Optional debug logging removed for performance/clean output
 
+    def _build_repo_name_lookup(self):
+        self._repo_name_lookup = {}
+        try:
+            names = self.repo.cad_names()
+        except Exception:
+            names = []
+        for name in names:
+            stripped = (name or "").strip()
+            variants = set()
+            if stripped:
+                variants.add(stripped)
+                variants.add(stripped.lower())
+                if ":" in stripped:
+                    root = stripped.split(":", 1)[0].strip()
+                    if root:
+                        variants.add(root)
+                        variants.add(root.lower())
+            for variant in variants:
+                if variant and variant not in self._repo_name_lookup:
+                    self._repo_name_lookup[variant] = name
+
+    def _init_text_note_types(self):
+        self._text_note_types = {}
+        self._text_note_types_lower = {}
+        self._default_text_note_type = None
+        note_types = self._collect_text_note_types()
+        if not note_types:
+            try:
+                default_id = TextNoteType.GetDefault(self.doc)
+            except Exception:
+                default_id = None
+            if default_id:
+                try:
+                    default_type = self.doc.GetElement(default_id)
+                except Exception:
+                    default_type = None
+                if default_type:
+                    note_types = [default_type]
+        for note_type in note_types:
+            name = self._text_note_type_name(note_type)
+            if not name:
+                continue
+            self._register_text_note_label(name, note_type)
+            family = self._text_note_family_label(note_type)
+            if family:
+                combo = u"{} : {}".format(family, name).strip()
+                self._register_text_note_label(combo, note_type)
+            if self._default_text_note_type is None:
+                self._default_text_note_type = note_type
+
+    def _register_text_note_label(self, label, note_type):
+        cleaned = (label or "").strip()
+        if not cleaned:
+            return
+        self._text_note_types[cleaned] = note_type
+        lower = cleaned.lower()
+        if lower not in self._text_note_types_lower:
+            self._text_note_types_lower[lower] = note_type
+
+    def _text_note_family_label(self, note_type):
+        if note_type is None:
+            return ""
+        try:
+            family = getattr(note_type, "Family", None)
+            fam_name = getattr(family, "Name", None) if family else None
+            if fam_name:
+                return fam_name
+        except Exception:
+            fam_name = None
+        try:
+            fam_name = getattr(note_type, "FamilyName", None)
+            if fam_name:
+                return fam_name
+        except Exception:
+            fam_name = None
+        if hasattr(note_type, "get_Parameter"):
+            for bip in (BuiltInParameter.ALL_MODEL_FAMILY_NAME, BuiltInParameter.SYMBOL_FAMILY_NAME_PARAM):
+                if not bip:
+                    continue
+                try:
+                    param = note_type.get_Parameter(bip)
+                except Exception:
+                    param = None
+                if param:
+                    try:
+                        value = (param.AsString() or "").strip()
+                    except Exception:
+                        value = ""
+                    if value:
+                        return value
+        return ""
+
+    def _ensure_text_note_type(self, label):
+        cleaned = (label or "").strip()
+        if not cleaned:
+            return None
+        base = self._default_text_note_type
+        if base is None and self._text_note_types:
+            try:
+                base = list(self._text_note_types.values())[0]
+            except Exception:
+                base = None
+        if base is None:
+            return None
+        try:
+            new_type = base.Duplicate(cleaned)
+        except Exception:
+            return None
+        self._register_text_note_label(cleaned, new_type)
+        family = self._text_note_family_label(new_type)
+        if family:
+            combo = u"{} : {}".format(family, cleaned).strip()
+            self._register_text_note_label(combo, new_type)
+        return new_type
+
+    def _text_note_label_variants(self, label):
+        variants = []
+        cleaned = (label or "").strip()
+        if cleaned:
+            variants.append(cleaned)
+        if ":" in cleaned:
+            parts = [part.strip() for part in cleaned.split(":")]
+            for part in parts:
+                if part:
+                    variants.append(part)
+        if not variants:
+            variants.append("")
+        return variants
+
+    def _scan_text_note_types_in_doc(self, variants):
+        normalized = [(val or "").strip() for val in variants if val is not None]
+        normalized = [val for val in normalized if val]
+        lowered = [val.lower() for val in normalized]
+        if not normalized:
+            return None
+        note_types = self._collect_text_note_types()
+        for note_type in note_types:
+            name = self._text_note_type_name(note_type)
+            if not name:
+                continue
+            if name in normalized or name.lower() in lowered:
+                self._register_text_note_label(name, note_type)
+                family = self._text_note_family_label(note_type)
+                if family:
+                    combo = u"{} : {}".format(family, name).strip()
+                    self._register_text_note_label(combo, note_type)
+                return note_type
+        return None
+
+    def _log_text_note_types(self, requested):
+        logger = self._get_logger()
+        if not logger or not requested:
+            return
+        available = set(self._text_note_types.keys())
+        for note_type in self._collect_text_note_types():
+            name = self._text_note_type_name(note_type)
+            if name:
+                available.add(name)
+        if not available:
+            logger.info("[Place Elements] No text note styles available while looking for '%s'.", requested)
+            return
+        sample = sorted(available)
+        preview = sample[:10]
+        suffix = ""
+        if len(sample) > len(preview):
+            suffix = " (+{} more)".format(len(sample) - len(preview))
+        logger.info("[Place Elements] Available text note styles: %s%s", ", ".join(preview), suffix)
+
+    def _collect_text_note_types(self):
+        collected = []
+        seen = set()
+        logger = self._get_logger()
+        source_counts = []
+
+        def _add(elem):
+            if elem is None:
+                return
+            try:
+                key = elem.Id.IntegerValue
+            except Exception:
+                key = None
+            if key in seen or key is None:
+                return
+            seen.add(key)
+            collected.append(elem)
+
+        collectors = []
+        try:
+            collectors.append(FilteredElementCollector(self.doc).OfClass(TextNoteType))
+        except Exception:
+            pass
+        try:
+            collectors.append(
+                FilteredElementCollector(self.doc)
+                .OfCategory(BuiltInCategory.OST_TextNotes)
+                .WhereElementIsElementType()
+            )
+        except Exception:
+            pass
+        for collector in collectors:
+            try:
+                elements = list(collector)
+            except Exception:
+                elements = []
+            source_counts.append(len(elements))
+            for elem in elements:
+                _add(elem)
+
+        try:
+            note_instances = list(FilteredElementCollector(self.doc).OfClass(TextNote))
+        except Exception:
+            note_instances = []
+        source_counts.append(len(note_instances))
+        for inst in note_instances:
+            try:
+                type_id = inst.GetTypeId()
+            except Exception:
+                type_id = None
+            if not type_id:
+                continue
+            try:
+                type_elem = self.doc.GetElement(type_id)
+            except Exception:
+                type_elem = None
+            _add(type_elem)
+
+        if logger:
+            try:
+                logger.info(
+                    "[Place Elements] Text note type sources: OfClass=%s, OfCategory=%s, InstanceTypes=%s, total unique=%s",
+                    source_counts[0] if len(source_counts) > 0 else 0,
+                    source_counts[1] if len(source_counts) > 1 else 0,
+                    source_counts[2] if len(source_counts) > 2 else 0,
+                    len(collected),
+                )
+            except Exception:
+                pass
+
+        return collected
+
+    def _element_location_point(self, elem):
+        if elem is None:
+            return None
+        loc = getattr(elem, "Location", None)
+        if loc is None:
+            return None
+        try:
+            if hasattr(loc, "Point") and loc.Point is not None:
+                return loc.Point
+        except Exception:
+            pass
+        try:
+            if hasattr(loc, "Curve") and loc.Curve is not None:
+                return loc.Curve.Evaluate(0.5, True)
+        except Exception:
+            pass
+        return None
+
+    def _apply_text_note_leaders(self, text_note, leaders, host_loc):
+        if not leaders or text_note is None or host_loc is None:
+            return
+        try:
+            existing = list(getattr(text_note, "GetLeaders", lambda: [])() or [])
+        except Exception:
+            existing = []
+        for leader in existing or []:
+            try:
+                text_note.RemoveLeader(leader)
+            except Exception:
+                continue
+        logger = self._get_logger()
+        note_point = self._element_location_point(text_note)
+        host_end_offsets = {"x_inches": 0.0, "y_inches": 0.0, "z_inches": 0.0}
+        host_elbow_offsets = None
+        if note_point is not None and host_loc is not None:
+            host_elbow_offsets = {
+                "x_inches": self._feet_to_inches((note_point.X - host_loc.X) * 0.5),
+                "y_inches": self._feet_to_inches((note_point.Y - host_loc.Y) * 0.5),
+                "z_inches": self._feet_to_inches((note_point.Z - host_loc.Z) * 0.5),
+            }
+        for leader_data in leaders:
+            leader_type = self._leader_type_from_string(leader_data.get("type"))
+            try:
+                new_leader = text_note.AddLeader(leader_type)
+            except Exception:
+                continue
+            aimed = self._aim_leader_at_host(new_leader, text_note, host_loc)
+            if aimed:
+                continue
+            elif logger:
+                try:
+                    logger.info(
+                        "[Place Elements] Text note %s leader using stored offsets; host aim unavailable.",
+                        getattr(text_note, "Id", "<unknown>"),
+                    )
+                except Exception:
+                    pass
+            fallback_data = dict(leader_data)
+            if host_loc is not None:
+                fallback_data["end"] = dict(host_end_offsets)
+                if host_elbow_offsets:
+                    fallback_data["elbow"] = dict(host_elbow_offsets)
+            end_point = self._offset_dict_to_point(fallback_data.get("end"), host_loc)
+            if end_point is not None:
+                try:
+                    new_leader.SetEndPosition(end_point)
+                except Exception:
+                    pass
+            elbow_point = self._offset_dict_to_point(fallback_data.get("elbow"), host_loc)
+            if elbow_point is not None:
+                try:
+                    new_leader.SetElbowPosition(elbow_point)
+                except Exception:
+                    pass
+
+    def _aim_leader_at_host(self, leader, text_note, host_loc):
+        if leader is None or host_loc is None:
+            return False
+        logger = self._get_logger()
+        note_point = getattr(text_note, "Coord", None)
+        if note_point is None:
+            note_point = self._element_location_point(text_note)
+        target = XYZ(host_loc.X, host_loc.Y, note_point.Z) if note_point is not None else host_loc
+        if not self._set_leader_point(leader, target, primary="EndPosition"):
+            if logger:
+                try:
+                    logger.info(
+                        "[Place Elements] Failed to aim leader to host for text note %s (no setter for end position).",
+                        getattr(text_note, "Id", "<unknown>"),
+                    )
+                except Exception:
+                    pass
+            return False
+        if note_point is not None:
+            elbow = XYZ(
+                (target.X + note_point.X) * 0.5,
+                (target.Y + note_point.Y) * 0.5,
+                note_point.Z,
+            )
+            if not self._set_leader_point(leader, elbow, primary="ElbowPosition"):
+                if logger:
+                    try:
+                        logger.info(
+                            "[Place Elements] Failed to set leader elbow for text note %s (no setter for elbow).",
+                            getattr(text_note, "Id", "<unknown>"),
+                        )
+                    except Exception:
+                        pass
+        return True
+
+    def _set_leader_point(self, leader, point, primary):
+        if leader is None or point is None:
+            return False
+        candidates = []
+        if primary:
+            candidates.append(primary)
+        # Known alternate names
+        mapping = {
+            "EndPosition": ["End", "LeaderEnd"],
+            "ElbowPosition": ["Elbow", "LeaderElbow"],
+        }
+        candidates.extend(mapping.get(primary, []))
+        for name in list(candidates):
+            method = getattr(leader, "Set{}".format(name), None)
+            if callable(method):
+                try:
+                    method(point)
+                    return True
+                except Exception:
+                    continue
+            attr = getattr(leader, name, None)
+            if attr is None:
+                continue
+            try:
+                setattr(leader, name, point)
+                return True
+            except Exception:
+                continue
+        return False
+
+    def _leader_type_from_string(self, value):
+        target = "StraightLeader"
+        if value:
+            lookup = str(value).strip().lower()
+            if "arc" in lookup:
+                target = "ArcLeader"
+            elif "free" in lookup:
+                target = "FreeLeader"
+            elif "text" in lookup:
+                target = "TextNoteLeader"
+        return self._resolve_leader_enum(target)
+
+    def _resolve_leader_enum(self, name):
+        candidates = []
+        if name:
+            candidates.append(name)
+        candidates.append("StraightLeader")
+        tried = set()
+        for candidate in candidates:
+            if not candidate or candidate in tried:
+                continue
+            tried.add(candidate)
+            # direct attribute lookup
+            try:
+                enum_value = getattr(TextNoteLeaderTypes, candidate)
+                if enum_value is not None:
+                    return enum_value
+            except Exception:
+                pass
+            # Enum.Parse fallback for builds where attributes are not exposed
+            try:
+                parsed = Enum.Parse(TextNoteLeaderTypes, candidate, True)
+                if parsed is not None:
+                    return parsed
+            except Exception:
+                pass
+        try:
+            values = list(Enum.GetValues(TextNoteLeaderTypes))
+            if values:
+                return values[0]
+        except Exception:
+            pass
+        return None
+
+    def _offset_dict_to_point(self, data, origin):
+        if not data or origin is None:
+            return None
+        try:
+            x = self._inch_to_ft(data.get("x_inches", 0.0) or 0.0)
+            y = self._inch_to_ft(data.get("y_inches", 0.0) or 0.0)
+            z = self._inch_to_ft(data.get("z_inches", 0.0) or 0.0)
+        except Exception:
+            return None
+        return XYZ(origin.X + x, origin.Y + y, origin.Z + z)
+
+    def _text_note_type_name(self, note_type):
+        if note_type is None:
+            return ""
+        try:
+            name = (note_type.Name or "").strip()
+        except Exception:
+            name = ""
+        if name:
+            return name
+        if hasattr(note_type, "get_Parameter"):
+            for bip in (BuiltInParameter.ALL_MODEL_TYPE_NAME, BuiltInParameter.SYMBOL_NAME_PARAM):
+                if not bip:
+                    continue
+                try:
+                    param = note_type.get_Parameter(bip)
+                except Exception:
+                    param = None
+                if param:
+                    try:
+                        value = (param.AsString() or "").strip()
+                    except Exception:
+                        value = ""
+                    if value:
+                        return value
+        return ""
+
     def place_from_csv(self, csv_rows, cad_selection_map):
         """
         csv_rows: list of CAD CSV rows
@@ -291,7 +758,7 @@ class PlaceElementsEngine(object):
                 cad_name = (row.get("Name") or "").strip()
                 if not cad_name:
                     continue
-                labels = cad_selection_map.get(cad_name)
+                labels, repo_key = self._resolve_selection_map(cad_selection_map, cad_name)
                 if not labels:
                     continue
                 rows_with_mapping += 1
@@ -329,11 +796,12 @@ class PlaceElementsEngine(object):
                 except Exception:
                     base_rot_deg = 0.0
 
+                canonical_name = repo_key or cad_name
                 for label in labels:
-                    key = (cad_name, label)
+                    key = (canonical_name, label)
                     occ_index = occurrence_counter.get(key, 0)
                     occurrence_counter[key] = occ_index + 1
-                    linked_def = self.repo.definition_for_label(cad_name, label)
+                    linked_def = self.repo.definition_for_label(canonical_name, label)
                     if not linked_def:
                         continue
                     placed = self._place_one(linked_def, base_loc, base_rot_deg, occ_index)
@@ -367,7 +835,7 @@ class PlaceElementsEngine(object):
                             logger.warning(
                                 "[Place Linked Elements] Skipped '%s' for '%s' because the matching family/type is not loaded in this model.",
                                 label,
-                                cad_name,
+                                canonical_name,
                             )
             t.Commit()
         except Exception:
@@ -385,6 +853,51 @@ class PlaceElementsEngine(object):
             "group_missing_labels": list(self._group_fail_notfound),
             "group_error_labels": list(self._group_fail_error),
         }
+
+    def _resolve_selection_map(self, selection_map, lookup_name):
+        labels = selection_map.get(lookup_name)
+        if labels:
+            canonical = self._canonical_repo_name(lookup_name)
+            return labels, canonical
+        normalized = lookup_name.strip()
+        normalized_lower = normalized.lower()
+        normalized_root = normalized_lower.split(":", 1)[0].strip()
+        for key, value in selection_map.items():
+            if not isinstance(key, basestring):
+                continue
+            key_stripped = key.strip()
+            if key_stripped == normalized or key_stripped.lower() == normalized_lower:
+                canonical = self._canonical_repo_name(key)
+                return value, canonical
+            key_root = key_stripped.lower().split(":", 1)[0].strip()
+            if key_root and key_root == normalized_root:
+                canonical = self._canonical_repo_name(key)
+                return value, canonical
+        canonical = self._canonical_repo_name(lookup_name)
+        if canonical and canonical in selection_map:
+            return selection_map[canonical], canonical
+        return None, None
+
+    def _canonical_repo_name(self, value):
+        if not isinstance(value, basestring):
+            return value
+        stripped = value.strip()
+        if not stripped:
+            return value
+        lowered = stripped.lower()
+        root = lowered.split(":", 1)[0].strip()
+        variants = [stripped, lowered]
+        if ":" in lowered:
+            variants.append(lowered.split(":", 1)[0].strip())
+        if root and ":" in root:
+            variants.append(root.split(":", 1)[0].strip())
+        for key in variants:
+            if not key:
+                continue
+            canonical = self._repo_name_lookup.get(key)
+            if canonical:
+                return canonical
+        return stripped
 
     def _place_one(self, linked_def, base_loc, base_rot_deg, occurrence_index):
         placement = linked_def.get_placement()
@@ -426,6 +939,7 @@ class PlaceElementsEngine(object):
                 is_group = True
 
         tags = placement.get_tags() if placement else []
+        text_notes = placement.get_text_notes() if placement else []
 
         instance = None
         if is_group:
@@ -439,6 +953,7 @@ class PlaceElementsEngine(object):
             self._update_element_linker_parameter(instance, linked_def, loc, final_rot_deg)
             if self.allow_tags:
                 self._place_tags(tags, instance, loc, final_rot_deg)
+            self._place_text_notes(text_notes, loc, final_rot_deg, host_instance=instance, host_location=loc)
             return True
         return False
 
@@ -738,6 +1253,239 @@ class PlaceElementsEngine(object):
                         except Exception:
                             pass
                 self._apply_parameters(instance, parameters)
+
+    def _resolve_text_note_type(self, type_name):
+        if not self._text_note_types:
+            self._init_text_note_types()
+            if not self._text_note_types:
+                return None
+        variants = self._text_note_label_variants(type_name)
+        for variant in variants:
+            exact = self._text_note_types.get(variant)
+            if exact:
+                return exact
+            lower = variant.lower()
+            scoped = self._text_note_types_lower.get(lower)
+            if scoped:
+                return scoped
+        match = self._scan_text_note_types_in_doc(variants)
+        if match:
+            return match
+        primary = variants[0] if variants else type_name
+        self._log_text_note_types(primary)
+        created = self._ensure_text_note_type(primary)
+        if created:
+            return created
+        return self._default_text_note_type
+
+    def _convert_offset_to_tuple(self, offsets):
+        if offsets is None:
+            return None
+        if isinstance(offsets, dict):
+            return (
+                self._coerce_length(offsets.get("x_inches"), offsets.get("x")),
+                self._coerce_length(offsets.get("y_inches"), offsets.get("y")),
+                self._coerce_length(offsets.get("z_inches"), offsets.get("z")),
+            )
+        if isinstance(offsets, (list, tuple)):
+            values = list(offsets) + [0.0, 0.0, 0.0]
+            return (
+                self._coerce_float(values[0]),
+                self._coerce_float(values[1]),
+                self._coerce_float(values[2]),
+            )
+        try:
+            if hasattr(offsets, "x_inches"):
+                x_val = self._inch_to_ft(getattr(offsets, "x_inches", 0.0))
+            else:
+                x_val = self._coerce_float(getattr(offsets, "X", getattr(offsets, "x", 0.0)))
+            if hasattr(offsets, "y_inches"):
+                y_val = self._inch_to_ft(getattr(offsets, "y_inches", 0.0))
+            else:
+                y_val = self._coerce_float(getattr(offsets, "Y", getattr(offsets, "y", 0.0)))
+            if hasattr(offsets, "z_inches"):
+                z_val = self._inch_to_ft(getattr(offsets, "z_inches", 0.0))
+            else:
+                z_val = self._coerce_float(getattr(offsets, "Z", getattr(offsets, "z", 0.0)))
+            return (x_val, y_val, z_val)
+        except Exception:
+            return None
+
+    def _inch_to_ft(self, value):
+        try:
+            return float(value) / 12.0
+        except Exception:
+            return 0.0
+
+    def _coerce_length(self, inches_value, feet_value):
+        if inches_value not in (None, ""):
+            return self._inch_to_ft(inches_value)
+        if feet_value not in (None, ""):
+            try:
+                return float(feet_value)
+            except Exception:
+                return 0.0
+        return 0.0
+
+    def _coerce_float(self, value):
+        try:
+            return float(value)
+        except Exception:
+            return 0.0
+
+    def _place_text_notes(self, text_defs, base_loc, final_rot_deg, host_instance=None, host_location=None):
+        if not text_defs:
+            return
+        active_view = getattr(self.doc, "ActiveView", None)
+        if not active_view or active_view.ViewType == ViewType.ThreeD:
+            return
+        logger = self._get_logger()
+        host_point = host_location or (self._element_location_point(host_instance) if host_instance is not None else None)
+        if host_point is None:
+            host_point = self._element_location_point(host_instance)
+        origin = host_point or base_loc
+        if origin is None:
+            return
+        if logger:
+            try:
+                logger.info(
+                    "[Place Elements] Text note origin base=(%0.3f,%0.3f,%0.3f) host=(%s)",
+                    base_loc.X if base_loc else 0.0,
+                    base_loc.Y if base_loc else 0.0,
+                    base_loc.Z if base_loc else 0.0,
+                    _format_xyz(host_point) if host_point else "<none>",
+                )
+            except Exception:
+                pass
+        for note in text_defs:
+            if isinstance(note, dict):
+                text_value = (note.get("text") or "").strip()
+                offsets, rotation_delta = self._resolve_note_offset_rotation(note)
+                note_type_name = note.get("type_name")
+                width_val = note.get("width")
+                if width_val is None and note.get("width_inches") is not None:
+                    width_val = self._inch_to_ft(note.get("width_inches"))
+                leader_data = note.get("leaders") or []
+            else:
+                text_value = getattr(note, "text", "") or ""
+                offsets, rotation_delta = self._resolve_note_offset_rotation(note)
+                note_type_name = getattr(note, "type_name", None)
+                width_val = getattr(note, "width", None)
+                leader_data = getattr(note, "leaders", []) or []
+            if not text_value:
+                continue
+            note_type = self._resolve_text_note_type(note_type_name)
+            if note_type is None:
+                self._log_text_note_types(note_type_name)
+                if logger:
+                    logger.warning(
+                        "[Place Elements] Skipping text note '%s' because type '%s' is not loaded.",
+                        text_value,
+                        note_type_name or "<unspecified>",
+                    )
+                continue
+            try:
+                dx, dy, dz = offsets
+            except Exception:
+                dx = dy = dz = 0.0
+            loc = XYZ(
+                origin.X + (dx or 0.0),
+                origin.Y + (dy or 0.0),
+                origin.Z + (dz or 0.0),
+            )
+            if logger:
+                try:
+                    logger.info(
+                        "[Place Elements] Text note '%s' offsets=(%0.3f,%0.3f,%0.3f) origin=(%0.3f,%0.3f,%0.3f)",
+                        text_value,
+                        dx or 0.0,
+                        dy or 0.0,
+                        dz or 0.0,
+                        origin.X,
+                        origin.Y,
+                        origin.Z,
+                    )
+                except Exception:
+                    pass
+            total_rotation = final_rot_deg + rotation_delta
+            try:
+                created = TextNote.Create(self.doc, active_view.Id, loc, text_value, note_type.Id)
+            except Exception as exc:
+                if logger:
+                    logger.warning(
+                        "[Place Elements] Failed to place text note '%s' using type '%s': %s",
+                        text_value,
+                        note_type_name or getattr(note_type, "Name", None),
+                        exc,
+                    )
+                continue
+            if width_val:
+                try:
+                    created.Width = float(width_val)
+                except Exception:
+                    pass
+            if abs(total_rotation) > 1e-6:
+                try:
+                    axis = Line.CreateBound(loc, loc + XYZ(0, 0, 1))
+                    ElementTransformUtils.RotateElement(self.doc, created.Id, axis, math.radians(total_rotation))
+                except Exception:
+                    pass
+            if logger:
+                try:
+                    logger.info(
+                        "[Place Elements] Placed text note '%s' using type '%s' at (%0.3f,%0.3f,%0.3f).",
+                        text_value,
+                        note_type_name or getattr(note_type, "Name", None),
+                        loc.X,
+                        loc.Y,
+                        loc.Z,
+                    )
+                except Exception:
+                    pass
+            self._apply_text_note_leaders(created, leader_data, host_point or origin)
+            self._apply_parameters(created, {})
+
+    def _resolve_note_offset_rotation(self, note):
+        raw_offsets = None
+        if isinstance(note, dict):
+            raw_offsets = note.get("offsets") or note.get("offset")
+        else:
+            raw_offsets = getattr(note, "offsets", None) or getattr(note, "offset", None)
+        offsets = self._convert_offset_to_tuple(raw_offsets)
+        if offsets is None:
+            offsets = (0.0, 0.0, 0.0)
+        rotation = self._extract_note_rotation(note, raw_offsets)
+        return offsets, rotation
+
+    def _extract_note_rotation(self, note, offsets_source):
+        candidates = []
+        if isinstance(note, dict):
+            candidates.append(note.get("rotation_deg"))
+        else:
+            candidates.append(getattr(note, "rotation_deg", None))
+        if isinstance(offsets_source, dict):
+            candidates.append(offsets_source.get("rotation_deg"))
+            candidates.append(offsets_source.get("rotation"))
+        elif offsets_source is not None:
+            try:
+                candidates.append(getattr(offsets_source, "rotation_deg", None))
+            except Exception:
+                pass
+        for value in candidates:
+            if value not in (None, ""):
+                try:
+                    return float(value)
+                except Exception:
+                    continue
+        return 0.0
+
+    def _get_logger(self):
+        try:
+            from pyrevit import script
+
+            return script.get_logger()
+        except Exception:
+            return None
 
     def _apply_parameters(self, element, params_dict):
         from Autodesk.Revit.DB import StorageType, UnitUtils

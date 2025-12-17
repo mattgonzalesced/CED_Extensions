@@ -26,7 +26,7 @@ except NameError:
 
 # WPF controls for building parameter rows dynamically
 from System.Windows.Controls import StackPanel, TextBlock, TextBox, Orientation, ListBoxItem
-from System.Windows import Thickness
+from System.Windows import Thickness, TextWrapping
 
 
 class ProfileEditorWindow(forms.WPFWindow):
@@ -45,6 +45,8 @@ class ProfileEditorWindow(forms.WPFWindow):
         # cache of (param_name, TextBox) for current type
         self._param_rows = []
         self._tag_rows = []
+        self._keynote_rows = []
+        self._textnote_rows = []
         self._in_edit_mode = False
         self._force_read_only = False
         self._profile_filter = u""
@@ -71,10 +73,6 @@ class ProfileEditorWindow(forms.WPFWindow):
         """When user picks a profile, populate the Type list."""
         self._set_edit_mode(False)
         self.TypeList.Items.Clear()
-        if hasattr(self, "ChildrenList"):
-            self.ChildrenList.Items.Clear()
-        if hasattr(self, "ShowChildrenButton"):
-            self.ShowChildrenButton.IsEnabled = False
         self._current_profile = None
         self._current_profile_name = None
         self._current_typecfg = None
@@ -176,8 +174,7 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._current_typecfg = type_cfg
 
         if not type_cfg:
-            if hasattr(self, "ShowChildrenButton"):
-                self.ShowChildrenButton.IsEnabled = False
+            self._clear_annotation_lists()
             return
 
         inst_cfg = type_cfg.instance_config
@@ -202,25 +199,7 @@ class ProfileEditorWindow(forms.WPFWindow):
         for name, val in params.items():
             self._add_param_row(name, val)
 
-        # --- Tags: build editable rows ---
-        tags = []
-        if hasattr(inst_cfg, "get_tags"):
-            tags = inst_cfg.get_tags() or []
-        elif hasattr(inst_cfg, "tags"):
-            tags = inst_cfg.tags or []
-        self.TagList.Items.Clear()
-        self._tag_rows = []
-        if tags:
-            for tg in tags:
-                self._add_tag_row(tg)
-        else:
-            self._add_tag_row()
-
-        if hasattr(self, "ShowChildrenButton"):
-            has_children = bool(self._get_children_for_current_profile())
-            self.ShowChildrenButton.IsEnabled = bool(has_children and self._current_typecfg)
-        if hasattr(self, "ChildrenList"):
-            self.ChildrenList.Items.Clear()
+        self._reload_annotation_rows()
         self._apply_read_only_state()
 
     def EditButton_Click(self, sender, args):
@@ -243,27 +222,6 @@ class ProfileEditorWindow(forms.WPFWindow):
             self._set_edit_mode(False)
         else:
             self._set_edit_mode(True)
-
-    def ShowChildrenButton_Click(self, sender, args):
-        if not hasattr(self, "ChildrenList"):
-            return
-        if not self._current_typecfg:
-            forms.alert("Select a type before showing child equipment.", title="Element Linker Profile Editor")
-            return
-        self.ChildrenList.Items.Clear()
-        children = self._get_children_for_current_profile()
-        if not children:
-            self.ChildrenList.Items.Add("No child equipment definitions linked to this type.")
-            return
-        for child in children:
-            cid = child.get("id") or ""
-            cname = child.get("name") or ""
-            if cid and cname:
-                self.ChildrenList.Items.Add("{} ({})".format(cname, cid))
-            elif cid:
-                self.ChildrenList.Items.Add(cid)
-            elif cname:
-                self.ChildrenList.Items.Add(cname)
 
     def DeleteTypesButton_Click(self, sender, args):
         """Invoke delete flow from hosting script and refresh lists."""
@@ -437,28 +395,6 @@ class ProfileEditorWindow(forms.WPFWindow):
         if hasattr(self, "ParentInfoText"):
             self.ParentInfoText.Text = text
 
-    def _get_children_for_current_profile(self):
-        if not self._current_profile_name:
-            return []
-        relation = self._relation_entry()
-        children = relation.get("children") or []
-        anchor_led = None
-        if self._current_typecfg:
-            anchor_led = getattr(self._current_typecfg, "led_id", None)
-            if anchor_led:
-                anchor_led = anchor_led.strip()
-        cleaned = []
-        for child in children:
-            if not isinstance(child, dict):
-                continue
-            cid = (child.get("id") or "").strip()
-            cname = (child.get("name") or "").strip()
-            child_anchor = (child.get("anchor_led_id") or "").strip()
-            if anchor_led and child_anchor and child_anchor != anchor_led:
-                continue
-            if cid or cname:
-                cleaned.append({"id": cid, "name": cname})
-        return cleaned
 
     def _set_edit_mode(self, enabled):
         self._in_edit_mode = bool(enabled) and not self._force_read_only
@@ -497,12 +433,32 @@ class ProfileEditorWindow(forms.WPFWindow):
         for entry in self._param_rows:
             entry["value_box"].IsReadOnly = read_only
         for row in self._tag_rows:
-            for textbox in row[1:]:
-                textbox.IsReadOnly = read_only
+            for key in ("family", "type", "x", "y", "z", "rot"):
+                box = row.get(key)
+                if box:
+                    box.IsReadOnly = read_only
+        for row in self._keynote_rows:
+            for key in ("family", "type", "x", "y", "z", "rot"):
+                box = row.get(key)
+                if box:
+                    box.IsReadOnly = read_only
+        for row in self._textnote_rows:
+            for key in ("text", "type", "width", "x", "y", "z", "rot"):
+                box = row.get(key)
+                if box:
+                    box.IsReadOnly = read_only
         if hasattr(self, "AddTagButton"):
             self.AddTagButton.IsEnabled = not read_only
         if hasattr(self, "RemoveTagButton"):
             self.RemoveTagButton.IsEnabled = not read_only
+        if hasattr(self, "AddKeynoteButton"):
+            self.AddKeynoteButton.IsEnabled = not read_only
+        if hasattr(self, "RemoveKeynoteButton"):
+            self.RemoveKeynoteButton.IsEnabled = not read_only
+        if hasattr(self, "AddTextNoteButton"):
+            self.AddTextNoteButton.IsEnabled = not read_only
+        if hasattr(self, "RemoveTextNoteButton"):
+            self.RemoveTextNoteButton.IsEnabled = not read_only
         self._refresh_param_buttons()
         self._update_rename_button_state()
         self._update_profile_delete_state()
@@ -517,14 +473,225 @@ class ProfileEditorWindow(forms.WPFWindow):
         if hasattr(self, "TagList"):
             self.TagList.Items.Clear()
         self._tag_rows = []
-        if hasattr(self, "ChildrenList"):
-            self.ChildrenList.Items.Clear()
-        if hasattr(self, "ShowChildrenButton"):
-            self.ShowChildrenButton.IsEnabled = False
+        self._clear_annotation_lists()
         if hasattr(self, "ParentInfoText") and not self._current_profile_name:
             self.ParentInfoText.Text = "Parent: (none)"
         self._apply_read_only_state()
         self._refresh_param_buttons()
+
+    def _clear_annotation_lists(self):
+        if hasattr(self, "KeynoteList"):
+            self.KeynoteList.Items.Clear()
+        if hasattr(self, "TextNoteList"):
+            self.TextNoteList.Items.Clear()
+        self._keynote_rows = []
+        self._textnote_rows = []
+
+    def _reload_annotation_rows(self):
+        inst_cfg = getattr(self._current_typecfg, "instance_config", None)
+        raw_tags = []
+        raw_text_notes = []
+        if inst_cfg is not None:
+            raw_tags = getattr(inst_cfg, "tags", []) or []
+            raw_text_notes = getattr(inst_cfg, "text_notes", []) or []
+        normal_tags = [tg for tg in raw_tags if not self._is_keynote_entry(tg)]
+        keynote_tags = [tg for tg in raw_tags if self._is_keynote_entry(tg)]
+        self._populate_tag_rows(normal_tags)
+        self._populate_keynote_rows(keynote_tags)
+        self._populate_text_note_rows(raw_text_notes)
+
+    def _populate_tag_rows(self, tags):
+        if not hasattr(self, "TagList"):
+            return
+        self.TagList.Items.Clear()
+        self._tag_rows = []
+        if tags:
+            for tg in tags:
+                self._add_tag_row(tg)
+        else:
+            self._add_tag_row()
+
+    def _populate_keynote_rows(self, keynotes):
+        if not hasattr(self, "KeynoteList"):
+            return
+        self.KeynoteList.Items.Clear()
+        self._keynote_rows = []
+        if keynotes:
+            for entry in keynotes:
+                self._add_tag_row(entry, target_list_name="KeynoteList", storage_attr="_keynote_rows")
+        else:
+            self._add_tag_row(target_list_name="KeynoteList", storage_attr="_keynote_rows")
+
+    def _populate_text_note_rows(self, text_notes):
+        if not hasattr(self, "TextNoteList"):
+            return
+        self.TextNoteList.Items.Clear()
+        self._textnote_rows = []
+        if text_notes:
+            for entry in text_notes:
+                self._add_text_note_row(entry)
+        else:
+            self._add_text_note_row()
+
+    def _is_keynote_entry(self, tag_entry):
+        if isinstance(tag_entry, dict):
+            family = tag_entry.get("family_name") or tag_entry.get("family") or ""
+            category = tag_entry.get("category_name") or tag_entry.get("category") or ""
+        else:
+            family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
+            category = getattr(tag_entry, "category_name", None) or getattr(tag_entry, "category", None) or ""
+        text = "{} {}".format(family, category).lower()
+        return "keynote" in text
+
+    def _add_text_note_row(self, note=None):
+        if not hasattr(self, "TextNoteList"):
+            return
+        panel = StackPanel(Orientation=Orientation.Horizontal, Margin=Thickness(0, 0, 0, 5))
+
+        def _make_field(label_text, width, multiline=False, height=60.0):
+            container = StackPanel(Margin=Thickness(0, 0, 5, 0))
+            container.Width = width
+            lbl = TextBlock(Text=label_text, Margin=Thickness(0, 0, 0, 2))
+            box = TextBox()
+            if multiline:
+                box.AcceptsReturn = True
+                box.TextWrapping = TextWrapping.Wrap
+                box.Height = height
+            box.IsReadOnly = not self._in_edit_mode
+            container.Children.Add(lbl)
+            container.Children.Add(box)
+            panel.Children.Add(container)
+            return box
+
+        text_box = _make_field("Text", 200.0, multiline=True, height=70.0)
+        type_box = _make_field("Type", 140.0)
+        width_box = _make_field("Width (in)", 80.0)
+        x_box = _make_field("X (in)", 70.0)
+        y_box = _make_field("Y (in)", 70.0)
+        z_box = _make_field("Z (in)", 70.0)
+        rot_box = _make_field("Rot (deg)", 80.0)
+
+        if isinstance(note, dict):
+            text_box.Text = note.get("text") or ""
+            type_box.Text = note.get("type_name") or ""
+            width_box.Text = self._fmt_float(note.get("width_inches", 0.0))
+            offsets = note.get("offsets") or {}
+        else:
+            text_box.Text = getattr(note, "text", "") or ""
+            type_box.Text = getattr(note, "type_name", None) or ""
+            width_box.Text = self._fmt_float(getattr(note, "width_inches", 0.0))
+            offsets = getattr(note, "offsets", None)
+
+        if offsets:
+            x_box.Text = self._fmt_float(offsets.get("x_inches", 0.0))
+            y_box.Text = self._fmt_float(offsets.get("y_inches", 0.0))
+            z_box.Text = self._fmt_float(offsets.get("z_inches", 0.0))
+            rot_box.Text = self._fmt_float(offsets.get("rotation_deg", 0.0))
+
+        self.TextNoteList.Items.Add(panel)
+        self._textnote_rows.append({
+            "panel": panel,
+            "text": text_box,
+            "type": type_box,
+            "width": width_box,
+            "x": x_box,
+            "y": y_box,
+            "z": z_box,
+            "rot": rot_box,
+            "leaders": (note.get("leaders") if isinstance(note, dict) else getattr(note, "leaders", None)) if note else None,
+        })
+
+    def _collect_tag_configs(self, rows):
+        configs = []
+        for row in rows:
+            family_box = row.get("family")
+            type_box = row.get("type")
+            if family_box is None or type_box is None:
+                continue
+            x_box = row.get("x")
+            y_box = row.get("y")
+            z_box = row.get("z")
+            rot_box = row.get("rot")
+            original_tag = row.get("original")
+            panel_type = row.get("panel_type")
+            family = (family_box.Text or u"").strip()
+            type_name = (type_box.Text or u"").strip() or None
+            if not family and not type_name:
+                continue
+            tag_offset = OffsetConfig(
+                x_inches=self._parse_float(x_box.Text),
+                y_inches=self._parse_float(y_box.Text),
+                z_inches=self._parse_float(z_box.Text),
+                rotation_deg=self._parse_float(rot_box.Text),
+            )
+            category = self._extract_tag_category(original_tag)
+            if not category and panel_type == "_keynote_rows":
+                category = "Generic Annotations"
+            elif not category:
+                category = "Annotation Symbols"
+            parameters = self._extract_tag_parameters(original_tag)
+            configs.append(
+                TagConfig(
+                    category_name=category,
+                    family_name=family,
+                    type_name=type_name,
+                    offsets=tag_offset,
+                    parameters=parameters,
+                )
+            )
+        return configs
+
+    def _collect_text_note_entries(self):
+        notes = []
+        for row in self._textnote_rows:
+            text_box = row.get("text")
+            type_box = row.get("type")
+            width_box = row.get("width")
+            x_box = row.get("x")
+            y_box = row.get("y")
+            z_box = row.get("z")
+            rot_box = row.get("rot")
+            if text_box is None or type_box is None:
+                continue
+            text_value = (text_box.Text or u"").strip()
+            type_name = (type_box.Text or u"").strip()
+            if not text_value and not type_name:
+                continue
+            entry = {
+                "text": text_value,
+                "type_name": type_name,
+                "width_inches": self._parse_float(width_box.Text),
+                "offsets": {
+                    "x_inches": self._parse_float(x_box.Text),
+                    "y_inches": self._parse_float(y_box.Text),
+                    "z_inches": self._parse_float(z_box.Text),
+                    "rotation_deg": self._parse_float(rot_box.Text),
+                },
+            }
+            leaders = row.get("leaders")
+            if leaders:
+                entry["leaders"] = leaders
+            notes.append(entry)
+        return notes
+
+    def _extract_tag_category(self, tag):
+        if isinstance(tag, dict):
+            return tag.get("category_name") or tag.get("category")
+        if hasattr(tag, "category_name"):
+            return getattr(tag, "category_name", None)
+        if hasattr(tag, "category"):
+            return getattr(tag, "category", None)
+        return None
+
+    def _extract_tag_parameters(self, tag):
+        if isinstance(tag, dict):
+            return dict(tag.get("parameters") or {})
+        if hasattr(tag, "parameters"):
+            try:
+                return dict(tag.parameters or {})
+            except Exception:
+                return tag.parameters or {}
+        return {}
 
     def _root_group(self, root_key):
         if not root_key:
@@ -823,8 +990,9 @@ class ProfileEditorWindow(forms.WPFWindow):
     # ------------------------------------------------------------------ #
     #  Tag helpers / events
     # ------------------------------------------------------------------ #
-    def _add_tag_row(self, tag=None):
-        if not hasattr(self, "TagList"):
+    def _add_tag_row(self, tag=None, target_list_name="TagList", storage_attr="_tag_rows"):
+        list_ctrl = getattr(self, target_list_name, None)
+        if list_ctrl is None:
             return
         panel = StackPanel(Orientation=Orientation.Horizontal, Margin=Thickness(0, 0, 0, 5))
 
@@ -857,8 +1025,19 @@ class ProfileEditorWindow(forms.WPFWindow):
             z_box.Text = self._fmt_float(offsets[2])
             rot_box.Text = self._fmt_float(offsets[3])
 
-        self.TagList.Items.Add(panel)
-        self._tag_rows.append((panel, family_box, type_box, x_box, y_box, z_box, rot_box))
+        list_ctrl.Items.Add(panel)
+        storage = getattr(self, storage_attr)
+        storage.append({
+            "panel": panel,
+            "family": family_box,
+            "type": type_box,
+            "x": x_box,
+            "y": y_box,
+            "z": z_box,
+            "rot": rot_box,
+            "original": tag,
+            "panel_type": storage_attr,
+        })
 
     def _resolve_tag_parts(self, tag):
         if not tag:
@@ -903,11 +1082,51 @@ class ProfileEditorWindow(forms.WPFWindow):
         if not selected:
             return
         for idx, row in enumerate(list(self._tag_rows)):
-            panel = row[0]
+            panel = row.get("panel")
             if panel == selected:
                 self._tag_rows.pop(idx)
                 break
         self.TagList.Items.Remove(selected)
+
+    def AddKeynoteButton_Click(self, sender, args):
+        if not self._current_typecfg:
+            forms.alert("Select a type before adding keynotes.", title="Element Linker Profile Editor")
+            return
+        if not self._in_edit_mode:
+            self._set_edit_mode(True)
+        self._add_tag_row(target_list_name="KeynoteList", storage_attr="_keynote_rows")
+
+    def RemoveKeynoteButton_Click(self, sender, args):
+        if not hasattr(self, "KeynoteList"):
+            return
+        selected = self.KeynoteList.SelectedItem
+        if not selected:
+            return
+        for idx, row in enumerate(list(self._keynote_rows)):
+            if row.get("panel") == selected:
+                self._keynote_rows.pop(idx)
+                break
+        self.KeynoteList.Items.Remove(selected)
+
+    def AddTextNoteButton_Click(self, sender, args):
+        if not self._current_typecfg:
+            forms.alert("Select a type before adding text notes.", title="Element Linker Profile Editor")
+            return
+        if not self._in_edit_mode:
+            self._set_edit_mode(True)
+        self._add_text_note_row()
+
+    def RemoveTextNoteButton_Click(self, sender, args):
+        if not hasattr(self, "TextNoteList"):
+            return
+        selected = self.TextNoteList.SelectedItem
+        if not selected:
+            return
+        for idx, row in enumerate(list(self._textnote_rows)):
+            if row.get("panel") == selected:
+                self._textnote_rows.pop(idx)
+                break
+        self.TextNoteList.Items.Remove(selected)
 
     def AddParamButton_Click(self, sender, args):
         if not self._current_typecfg:
@@ -983,34 +1202,24 @@ class ProfileEditorWindow(forms.WPFWindow):
         elif hasattr(inst_cfg, "set_parameters"):
             inst_cfg.set_parameters(new_params)
 
-        # --- Tags ---
-        new_tags = []
-        for row in self._tag_rows:
-            _, family_box, type_box, x_box, y_box, z_box, rot_box = row
-            family = (family_box.Text or u"").strip()
-            type_name = (type_box.Text or u"").strip() or None
-            if not family and not type_name:
-                continue
-            tag_offset = OffsetConfig(
-                x_inches=self._parse_float(x_box.Text),
-                y_inches=self._parse_float(y_box.Text),
-                z_inches=self._parse_float(z_box.Text),
-                rotation_deg=self._parse_float(rot_box.Text),
-            )
-            new_tags.append(
-                TagConfig(
-                    category_name='Annotation Symbols',
-                    family_name=family,
-                    type_name=type_name,
-                    offsets=tag_offset,
-                )
-            )
+        # --- Tags / Keynotes ---
+        normal_tags = self._collect_tag_configs(self._tag_rows)
+        keynote_tags = self._collect_tag_configs(self._keynote_rows)
+        combined_tags = normal_tags + keynote_tags
 
         if hasattr(inst_cfg, "tags"):
-            inst_cfg.tags = new_tags
+            inst_cfg.tags = combined_tags
         elif hasattr(inst_cfg, "set_tags"):
-            inst_cfg.set_tags(new_tags)
+            inst_cfg.set_tags(combined_tags)
 
+        # --- Text Notes ---
+        text_notes = self._collect_text_note_entries()
+        if hasattr(inst_cfg, "text_notes"):
+            inst_cfg.text_notes = text_notes
+        else:
+            inst_cfg.text_notes = text_notes
+
+        self._reload_annotation_rows()
         return True
     def _add_param_row(self, name, value):
         row_panel = StackPanel()

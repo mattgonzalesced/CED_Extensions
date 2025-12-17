@@ -107,6 +107,12 @@ class ProfileRepository(object):
                     offsets = [{}]
                 offsets = [off if isinstance(off, dict) else {} for off in offsets]
 
+                def _inch_to_ft(val):
+                    try:
+                        return float(val) / 12.0
+                    except Exception:
+                        return 0.0
+
                 tag_defs = []
                 for tag_data in inst_cfg.get("tags") or []:
                     if not isinstance(tag_data, dict):
@@ -114,12 +120,6 @@ class ProfileRepository(object):
                     offsets_dict = tag_data.get("offsets") or {}
                     if not isinstance(offsets_dict, dict):
                         offsets_dict = {}
-
-                    def _inch_to_ft(val):
-                        try:
-                            return float(val) / 12.0
-                        except Exception:
-                            return 0.0
 
                     tag_defs.append({
                         "family": tag_data.get("family_name") or tag_data.get("family"),
@@ -134,6 +134,31 @@ class ProfileRepository(object):
                         "rotation_deg": float(offsets_dict.get("rotation_deg", 0.0) or 0.0),
                     })
 
+                text_note_defs = []
+                for note_data in inst_cfg.get("text_notes") or []:
+                    if not isinstance(note_data, dict):
+                        continue
+                    offsets_dict = note_data.get("offsets") or {}
+                    if not isinstance(offsets_dict, dict):
+                        offsets_dict = {}
+                    leader_defs = []
+                    for leader in note_data.get("leaders") or []:
+                        if not isinstance(leader, dict):
+                            continue
+                        leader_defs.append(dict(leader))
+                    text_note_defs.append({
+                        "text": note_data.get("text") or "",
+                        "type_name": note_data.get("type_name"),
+                        "offset": (
+                            _inch_to_ft(offsets_dict.get("x_inches", 0.0) or 0.0),
+                            _inch_to_ft(offsets_dict.get("y_inches", 0.0) or 0.0),
+                            _inch_to_ft(offsets_dict.get("z_inches", 0.0) or 0.0),
+                        ),
+                        "rotation_deg": float(offsets_dict.get("rotation_deg", 0.0) or 0.0),
+                        "width": _inch_to_ft(note_data.get("width_inches", 0.0) or 0.0),
+                        "leaders": leader_defs,
+                    })
+
                 is_group_flag = bool(type_entry.get("is_group")) or (type_entry.get("category_name") == "Model Groups")
 
                 for idx, off in enumerate(offsets):
@@ -146,6 +171,7 @@ class ProfileRepository(object):
                         rotation_degrees=float(off.get("rotation_deg", 0.0)),
                         placement_mode="group" if is_group_flag else None,
                         tags=tag_defs,
+                        text_notes=text_note_defs,
                     )
                     element_def_id = label if idx == 0 else u"{} #{}".format(label, idx + 1)
                     led = LinkedElementDefinition(

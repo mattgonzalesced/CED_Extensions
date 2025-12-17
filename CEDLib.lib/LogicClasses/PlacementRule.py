@@ -10,6 +10,7 @@ class PlacementRule(object):
         placement_mode=None,
         rotation_basis=None,
         tags=None,
+        text_notes=None,
     ):
         self._offset_xyz = tuple(offset_xyz) if offset_xyz is not None else None
         self._rotation_degrees = rotation_degrees
@@ -17,6 +18,7 @@ class PlacementRule(object):
         self._placement_mode = placement_mode
         self._rotation_basis = rotation_basis
         self._tags = list(tags) if tags else []
+        self._text_notes = list(text_notes) if text_notes else []
 
     def get_offset_xyz(self):
         return self._offset_xyz
@@ -53,6 +55,12 @@ class PlacementRule(object):
 
     def set_tags(self, value):
         self._tags = list(value) if value else []
+
+    def get_text_notes(self):
+        return list(self._text_notes or [])
+
+    def set_text_notes(self, value):
+        self._text_notes = list(value) if value else []
 
     # Helpers
     def update_offset(self, delta_xyz):

@@ -1,0 +1,218 @@
+equipment_definitions:
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 000_Flat_Panel_Dell_19inch_Dell_1025972
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "000_Flat_Panel_Dell_19inch_Dell_1025972 : Default"
+    schema_version: 1
+    id: EQ-001
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            text_notes:
+              []
+            label: "EF-U_Receptacle_CED : Quad Wall - Isolated Ground"
+            parameters:
+              dev-Group ID: ""
+              SLD_Component ID_CED: ""
+              CKT_Load Name_CEDT: PATIENT EDUCATION RCPTS
+              CKT_Rating_CED: 20.0
+              Product Datasheet URL: ""
+              CKT_Panel_CEDT: PH
+              Load Classification_CED: Receptacle
+              SLD_Symbol ID_CED: ""
+              FLA Input_CED: 0.0
+              Power Factor_CED: 1.0
+              Wattage Input_CED: 0.0
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              Workset: 922
+              Apparent Load Input_CED: 360.0
+              CKT_Circuit Number_CEDT: 35
+              Voltage_CED: 120.0
+              Product Specification: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-001-LED-001
+                Set Definition ID: SET-001
+                Location XYZ (ft): 115.205320,80.219692,104.000000
+                Rotation (deg): 180.000000
+                Parent Rotation (deg): -180.000000
+                LevelId: 30
+                ElementId: 5671176
+                FacingOrientation: 0.000000,-1.000000,0.000000
+            id: SET-001-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 1.901
+                y_inches: -16.6972
+                z_inches: 1248.2616
+        id: SET-001
+        name: "000_Flat_Panel_Dell_19inch_Dell_1025972 : Default Types"
+    allow_parentless: true
+    ced_truth_source_name: "000_Flat_Panel_Dell_19inch_Dell_1025972 : Default"
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-001
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: EF-U_Junction Box_CED
+      category: Electrical Fixtures
+      parameter_filters:
+        {}
+      type_name_pattern: Wall - No Stem
+    name: Access Control JBox
+    schema_version: 1
+    id: EQ-004
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            text_notes:
+              -
+                text: |
+                  ACCESS 
+                  CONTROL
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 25.8257
+                  y_inches: 35.3283
+                  z_inches: 83.875
+                width_inches: 0.6535
+                type_name: "Text : 3/32\" Arial - Arrow"
+            label: "EF-U_Junction Box_CED : Wall - No Stem"
+            parameters:
+              dev-Group ID: ""
+              SLD_Component ID_CED: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-004-LED-001
+                Set Definition ID: SET-004
+                Location XYZ (ft): 110.108553,73.908783,106.989583
+                Rotation (deg): 270.000000
+                LevelId: 30
+                ElementId: 5671201
+                FacingOrientation: 1.000000,0.000000,-0.000000
+              CKT_Rating_CED: 20.0
+              Product Datasheet URL: ""
+              CKT_Panel_CEDT: PH
+              Load Classification_CED: Power - General
+              SLD_Symbol ID_CED: ""
+              FLA Input_CED: 0.0
+              Power Factor_CED: 1.0
+              Wattage Input_CED: 0.0
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              Workset: 922
+              Apparent Load Input_CED: 500.0
+              CKT_Circuit Number_CEDT: 18
+              Voltage_CED: 120.0
+              Product Specification: ""
+              CKT_Load Name_CEDT: ACCESS CONTROL
+            id: SET-004-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Electrical Device Circuit Tag
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -2.2305
+                  y_inches: -11.7243
+                  z_inches: 0.0
+                category_name: Electrical Fixture Tags
+                family_name: Electrical Device Circuit Tag
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 83.875
+        id: SET-004
+        name: Access Control JBox Types
+    allow_parentless: true
+    ced_truth_source_name: Access Control JBox
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-004
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: 005_Scanner_Code_wStand_1033825
+      category: Specialty Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Default
+    name: "005_Scanner_Code_wStand_1033825 : Default"
+    schema_version: 1
+    id: EQ-002
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            text_notes:
+              []
+            label: "EF-U_Receptacle_CED : Quad Wall - Isolated Ground"
+            parameters:
+              dev-Group ID: ""
+              SLD_Component ID_CED: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-002-LED-001
+                Set Definition ID: SET-002
+                Location XYZ (ft): 112.955320,80.219692,104.000000
+                Rotation (deg): 180.000000
+                Parent Rotation (deg): -0.000000
+                LevelId: 30
+                ElementId: 5671177
+                FacingOrientation: 0.000000,-1.000000,0.000000
+              CKT_Rating_CED: 20.0
+              Product Datasheet URL: ""
+              CKT_Panel_CEDT: PH
+              Load Classification_CED: Receptacle
+              SLD_Symbol ID_CED: ""
+              FLA Input_CED: 0.0
+              Power Factor_CED: 1.0
+              Wattage Input_CED: 0.0
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              Workset: 922
+              Apparent Load Input_CED: 360.0
+              CKT_Circuit Number_CEDT: 28
+              Voltage_CED: 120.0
+              Product Specification: ""
+              CKT_Load Name_CEDT: WORKSTATION - PATIENT ED
+            id: SET-002-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -180.0
+                x_inches: -13.282876
+                y_inches: 15.616826
+                z_inches: 1248.26155747
+        id: SET-002
+        name: "005_Scanner_Code_wStand_1033825 : Default Types"
+    allow_parentless: true
+    ced_truth_source_name: "005_Scanner_Code_wStand_1033825 : Default"
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-002

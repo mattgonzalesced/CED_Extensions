@@ -56,10 +56,11 @@ from pyrevit import script, forms, revit
 
 from Autodesk.Revit.DB import (
     BuiltInParameter,
-
     Group,
     GroupType,
     IndependentTag,
+    TextNote,
+    TextNoteLeaderTypes,
     Transaction,
     TransactionGroup,
     UnitUtils,
@@ -768,6 +769,16 @@ class InstanceConfigShim(object):
 
         self.tags = shim_tags
 
+        raw_text_notes = dct.get("text_notes") or []
+
+        self.text_notes = []
+
+        for note in raw_text_notes:
+
+            if isinstance(note, dict):
+
+                self.text_notes.append(dict(note))
+
 
 
     def get_offset(self, idx):
@@ -979,6 +990,10 @@ def _dict_from_shims(profiles):
 
 
                     "tags": _serialize_tags(getattr(inst, "tags", []) or []),
+
+
+
+                    "text_notes": _serialize_text_notes(getattr(inst, "text_notes", []) or []),
 
 
 
@@ -1276,6 +1291,236 @@ def _build_annotation_tag_entry(annotation_elem, host_point):
     }
 
 
+def _build_text_note_entry(note_elem, host_point):
+    if TextNote is None or host_point is None:
+        return None
+    try:
+        if note_elem is None or not isinstance(note_elem, TextNote):
+            return None
+    except Exception:
+        return None
+    try:
+        text_value = (note_elem.Text or "").strip()
+    except Exception:
+        text_value = ""
+    if not text_value:
+        return None
+    note_point = getattr(note_elem, "Coord", None)
+    if note_point is None:
+        note_point = _get_point(note_elem)
+    if note_point is None:
+        return None
+    offsets = {
+        "x_inches": _feet_to_inches(note_point.X - host_point.X),
+        "y_inches": _feet_to_inches(note_point.Y - host_point.Y),
+        "z_inches": _feet_to_inches(note_point.Z - host_point.Z),
+        "rotation_deg": 0.0,
+    }
+    try:
+        rotation_rad = getattr(note_elem, "Rotation", 0.0) or 0.0
+        offsets["rotation_deg"] = math.degrees(rotation_rad)
+    except Exception:
+        offsets["rotation_deg"] = 0.0
+    width_inches = 0.0
+    try:
+        width_val = getattr(note_elem, "Width", None)
+        if width_val not in (None, False):
+            width_inches = float(width_val) * 12.0
+    except Exception:
+        width_inches = 0.0
+    note_type_name = ""
+    note_family_name = ""
+    try:
+        doc = getattr(note_elem, "Document", None)
+        type_id = note_elem.GetTypeId()
+    except Exception:
+        doc = None
+        type_id = None
+    if doc is not None and type_id:
+        try:
+            note_type = doc.GetElement(type_id)
+        except Exception:
+            note_type = None
+        if note_type is not None:
+            note_type_name = (getattr(note_type, "Name", None) or "").strip()
+            note_family_name = _get_text_note_family_label(note_type)
+            if not note_type_name and hasattr(note_type, "get_Parameter"):
+                fallback_params = (
+                    BuiltInParameter.ALL_MODEL_TYPE_NAME,
+                    BuiltInParameter.SYMBOL_NAME_PARAM,
+                )
+                for bip in fallback_params:
+                    if not bip:
+                        continue
+                    try:
+                        param = note_type.get_Parameter(bip)
+                    except Exception:
+                        param = None
+                    if param:
+                        try:
+                            note_type_name = (param.AsString() or "").strip()
+                        except Exception:
+                            note_type_name = ""
+                        if note_type_name:
+                            break
+    display_type = note_type_name
+    if note_family_name and note_type_name and note_family_name not in note_type_name:
+        display_type = u"{} : {}".format(note_family_name, note_type_name).strip()
+    elif note_family_name and not note_type_name:
+        display_type = note_family_name.strip()
+    elif note_type_name:
+        display_type = note_type_name.strip()
+    else:
+        display_type = ""
+    leaders = _capture_text_note_leaders(note_elem, host_point)
+    return {
+        "text": text_value,
+        "type_name": display_type,
+        "width_inches": width_inches,
+        "offsets": offsets,
+        "leaders": leaders,
+    }
+
+
+def _text_note_leader_type_label(leader):
+    """
+    Attempt to coerce the leader type into a string so we can persist it in YAML.
+    Some Revit builds expose LeaderType, others require curve inspection, so try multiple fallbacks.
+    """
+    if leader is None:
+        return None
+    # Direct property / method exposure
+    for attr in ("LeaderType", "GetLeaderType", "LeaderStyle", "GetLeaderStyle", "LeaderShape"):
+        try:
+            raw = getattr(leader, attr, None)
+            if callable(raw):
+                raw = raw()
+            if raw is not None:
+                to_string = getattr(raw, "ToString", None)
+                label = to_string() if callable(to_string) else str(raw)
+                if label:
+                    return label
+        except Exception:
+            continue
+    # Curve fallback: arc curves indicate ArcLeader, straight lines remain straight.
+    curve = getattr(leader, "Curve", None)
+    if curve is None:
+        try:
+            curve_getter = getattr(leader, "GetCurve", None)
+            curve = curve_getter() if callable(curve_getter) else None
+        except Exception:
+            curve = None
+    if curve is not None:
+        try:
+            type_info = curve.GetType()
+            type_name = getattr(type_info, "Name", None) or ""
+        except Exception:
+            try:
+                type_name = type(curve).__name__
+            except Exception:
+                type_name = ""
+        lowered = (type_name or "").lower()
+        if "arc" in lowered:
+            return "ArcLeader"
+        if "line" in lowered or "straight" in lowered:
+            return "StraightLeader"
+        if "free" in lowered:
+            return "FreeLeader"
+    try:
+        has_elbow = getattr(leader, "HasElbow", None)
+        if callable(has_elbow):
+            has_elbow = has_elbow()
+    except Exception:
+        has_elbow = None
+    # No reliable signal detected
+    return None
+
+
+def _capture_text_note_leaders(note_elem, host_point):
+    leaders = []
+    if note_elem is None or host_point is None:
+        return leaders
+    try:
+        leader_list = list(getattr(note_elem, "GetLeaders", lambda: [])() or [])
+    except Exception:
+        leader_list = []
+    logger = script.get_logger()
+    for leader in leader_list:
+        data = {}
+        leader_type_label = _text_note_leader_type_label(leader)
+        if leader_type_label:
+            data["type"] = leader_type_label
+        try:
+            end_pos = getattr(leader, "EndPosition", None)
+        except Exception:
+            end_pos = None
+        if end_pos:
+            data["end"] = _point_offsets_dict(end_pos, host_point)
+        try:
+            elbow_pos = getattr(leader, "ElbowPosition", None)
+        except Exception:
+            elbow_pos = None
+        if elbow_pos:
+            data["elbow"] = _point_offsets_dict(elbow_pos, host_point)
+        if data:
+            leaders.append(data)
+    if logger:
+        try:
+            logger.info(
+                "[Manage YAML] Captured %s leader(s) for TextNote %s: %s",
+                len(leaders),
+                getattr(getattr(note_elem, "Id", None), "IntegerValue", getattr(note_elem, "Id", None)),
+                [entry.get("type") or "<unspecified>" for entry in leaders],
+            )
+        except Exception:
+            pass
+    return leaders
+
+
+def _point_offsets_dict(point, origin):
+    if point is None or origin is None:
+        return None
+    return {
+        "x_inches": _feet_to_inches(point.X - origin.X),
+        "y_inches": _feet_to_inches(point.Y - origin.Y),
+        "z_inches": _feet_to_inches(point.Z - origin.Z),
+    }
+
+
+def _get_text_note_family_label(note_type):
+    if note_type is None:
+        return ""
+    try:
+        fam = getattr(note_type, "Family", None)
+        fam_name = getattr(fam, "Name", None) if fam else None
+        if fam_name:
+            return fam_name
+    except Exception:
+        pass
+    try:
+        family_name = getattr(note_type, "FamilyName", None)
+        if family_name:
+            return family_name
+    except Exception:
+        pass
+    if hasattr(note_type, "get_Parameter"):
+        for bip in (BuiltInParameter.ALL_MODEL_FAMILY_NAME, BuiltInParameter.SYMBOL_FAMILY_NAME_PARAM):
+            if not bip:
+                continue
+            try:
+                param = note_type.get_Parameter(bip)
+            except Exception:
+                param = None
+            if param:
+                try:
+                    value = (param.AsString() or "").strip()
+                except Exception:
+                    value = ""
+                if value:
+                    return value
+    return ""
+
+
 def _collect_hosted_tags(elem, host_point):
 
 
@@ -1288,7 +1533,7 @@ def _collect_hosted_tags(elem, host_point):
 
 
 
-        return []
+        return [], []
 
 
 
@@ -1312,6 +1557,10 @@ def _collect_hosted_tags(elem, host_point):
 
 
 
+    text_notes = []
+
+
+
     for dep_id in dep_ids:
 
 
@@ -1320,7 +1569,7 @@ def _collect_hosted_tags(elem, host_point):
 
 
 
-            tag = doc.GetElement(dep_id)
+            dep_elem = doc.GetElement(dep_id)
 
 
 
@@ -1328,47 +1577,27 @@ def _collect_hosted_tags(elem, host_point):
 
 
 
-            tag = None
+            dep_elem = None
 
 
 
-        if not isinstance(tag, IndependentTag):
+        if isinstance(dep_elem, IndependentTag):
 
 
 
-            continue
+            try:
 
 
 
-        try:
+                tag_point = dep_elem.TagHeadPosition
 
 
 
-            tag_point = tag.TagHeadPosition
+            except Exception:
 
 
 
-        except Exception:
-
-
-
-            tag_point = None
-
-
-
-        tag_symbol = None
-
-
-
-        try:
-
-
-
-            tag_symbol = doc.GetElement(tag.GetTypeId())
-
-
-
-        except Exception:
+                tag_point = None
 
 
 
@@ -1376,31 +1605,11 @@ def _collect_hosted_tags(elem, host_point):
 
 
 
-        fam_name = None
-
-
-
-        type_name = None
-
-
-
-        category_name = None
-
-
-
-        if tag_symbol:
-
-
-
             try:
 
 
 
-                fam = getattr(tag_symbol, "Family", None)
-
-
-
-                fam_name = getattr(fam, "Name", None) if fam else getattr(tag_symbol, "FamilyName", None)
+                tag_symbol = doc.GetElement(dep_elem.GetTypeId())
 
 
 
@@ -1408,139 +1617,231 @@ def _collect_hosted_tags(elem, host_point):
 
 
 
-                fam_name = None
+                tag_symbol = None
 
 
 
-            try:
+            fam_name = None
 
 
 
-                type_name = getattr(tag_symbol, "Name", None)
+            type_name = None
 
 
 
-                if not type_name and hasattr(tag_symbol, "get_Parameter"):
+            category_name = None
 
 
 
-                    param = tag_symbol.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
+            if tag_symbol:
 
 
 
-                    if param:
+                try:
 
 
 
-                        type_name = param.AsString()
+                    fam = getattr(tag_symbol, "Family", None)
 
 
 
-            except Exception:
+                    fam_name = getattr(fam, "Name", None) if fam else getattr(tag_symbol, "FamilyName", None)
 
 
 
-                type_name = None
+                except Exception:
 
 
 
-            try:
+                    fam_name = None
 
 
 
-                cat = getattr(tag_symbol, "Category", None)
+                try:
 
 
 
-                category_name = getattr(cat, "Name", None) if cat else None
+                    type_name = getattr(tag_symbol, "Name", None)
 
 
 
-            except Exception:
+                    if not type_name and hasattr(tag_symbol, "get_Parameter"):
 
 
 
-                category_name = None
+                        param = tag_symbol.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
 
 
 
-        if not fam_name:
+                        if param:
 
 
 
-            try:
+                            type_name = param.AsString()
 
 
 
-                sym = getattr(tag, "Symbol", None)
+                except Exception:
 
 
 
-                fam = getattr(sym, "Family", None) if sym else None
+                    type_name = None
 
 
 
-                fam_name = getattr(fam, "Name", None) if fam else fam_name
+                try:
 
 
 
-            except Exception:
+                    cat = getattr(tag_symbol, "Category", None)
 
 
 
-                pass
+                    category_name = getattr(cat, "Name", None) if cat else None
 
 
 
-        if not type_name:
+                except Exception:
 
 
 
-            try:
+                    category_name = None
 
 
 
-                tag_type = getattr(tag, "TagType", None)
+            if not fam_name:
 
 
 
-                type_name = getattr(tag_type, "Name", None)
+                try:
 
 
 
-            except Exception:
+                    sym = getattr(dep_elem, "Symbol", None)
 
 
 
-                type_name = None
+                    fam = getattr(sym, "Family", None) if sym else None
 
 
 
-        if not category_name:
+                    fam_name = getattr(fam, "Name", None) if fam else fam_name
 
 
 
-            try:
+                except Exception:
 
 
 
-                cat = getattr(tag, "Category", None)
+                    pass
 
 
 
-                category_name = getattr(cat, "Name", None) if cat else None
+            if not type_name:
 
 
 
-            except Exception:
+                try:
 
 
 
-                category_name = None
+                    tag_type = getattr(dep_elem, "TagType", None)
 
 
 
-        if not fam_name and not type_name:
+                    type_name = getattr(tag_type, "Name", None)
+
+
+
+                except Exception:
+
+
+
+                    type_name = None
+
+
+
+            if not category_name:
+
+
+
+                try:
+
+
+
+                    cat = getattr(dep_elem, "Category", None)
+
+
+
+                    category_name = getattr(cat, "Name", None) if cat else None
+
+
+
+                except Exception:
+
+
+
+                    category_name = None
+
+
+
+            if not fam_name and not type_name:
+
+
+
+                continue
+
+
+
+            offsets = {"x_inches": 0.0, "y_inches": 0.0, "z_inches": 0.0, "rotation_deg": 0.0}
+
+
+
+            if tag_point:
+
+
+
+                delta = tag_point - host_point
+
+
+
+                offsets["x_inches"] = _feet_to_inches(delta.X)
+
+
+
+                offsets["y_inches"] = _feet_to_inches(delta.Y)
+
+
+
+                offsets["z_inches"] = _feet_to_inches(delta.Z)
+
+
+
+            tags.append({
+
+
+
+                "family_name": fam_name or "",
+
+
+
+                "type_name": type_name or "",
+
+
+
+                "category_name": category_name,
+
+
+
+                "parameters": {},
+
+
+
+                "offsets": offsets,
+
+
+
+            })
 
 
 
@@ -1548,59 +1849,216 @@ def _collect_hosted_tags(elem, host_point):
 
 
 
-        offsets = {"x_inches": 0.0, "y_inches": 0.0, "z_inches": 0.0, "rotation_deg": 0.0}
+        text_note_entry = _build_text_note_entry(dep_elem, host_point)
 
 
 
-        if tag_point:
+        if text_note_entry:
+            text_note_entry['_ced_target_locked'] = False
 
 
 
-            delta = tag_point - host_point
+            text_notes.append(text_note_entry)
 
 
 
-            offsets["x_inches"] = _feet_to_inches(delta.X)
+    return tags, text_notes
 
 
-
-            offsets["y_inches"] = _feet_to_inches(delta.Y)
-
-
-
-            offsets["z_inches"] = _feet_to_inches(delta.Z)
-
-
-
-        tags.append({
-
-
-
-            "family_name": fam_name or "",
-
-
-
-            "type_name": type_name or "",
-
-
-
-            "category_name": category_name,
-
-
-
-            "parameters": {},
-
-
-
-            "offsets": offsets,
+def _find_closest_record_index(records, note_elem):
+    if not records or note_elem is None:
+        return None
+    note_point = getattr(note_elem, "Coord", None)
+    if note_point is None:
+        note_point = _get_point(note_elem)
+    if note_point is None:
+        return None
+    closest_idx = None
+    closest_dist = None
+    for idx, record in enumerate(records):
+        host_point = record.get("host_point")
+        if host_point is None:
+            continue
+        try:
+            dist = host_point.DistanceTo(note_point)
+        except Exception:
+            try:
+                dx = host_point.X - note_point.X
+                dy = host_point.Y - note_point.Y
+                dz = host_point.Z - note_point.Z
+                dist = math.sqrt(dx * dx + dy * dy + dz * dz)
+            except Exception:
+                continue
+        if closest_idx is None or dist < closest_dist:
+            closest_idx = idx
+            closest_dist = dist
+    return closest_idx
 
 
+def _text_note_preview(note_elem, limit=60):
+    text_value = ""
+    try:
+        text_value = getattr(note_elem, "Text", "") or ""
+    except Exception:
+        text_value = ""
+    text_value = text_value.replace("\r", " ").replace("\n", " ").strip()
+    if limit and len(text_value) > limit:
+        text_value = text_value[: limit - 3] + "..."
+    return text_value or "<text note>"
 
-        })
+
+def _record_display_label(record, index):
+    type_entry = record.get("type_entry") or {}
+    label = type_entry.get("label") or type_entry.get("id")
+    if not label:
+        element = record.get("element")
+        try:
+            symbol = getattr(element, "Symbol", None)
+            fam = getattr(symbol, "Family", None)
+            fam_name = getattr(fam, "Name", None)
+            type_name = getattr(symbol, "Name", None)
+            if fam_name or type_name:
+                label = u"{} : {}".format(fam_name or "", type_name or "").strip(": ")
+        except Exception:
+            label = None
+    if not label:
+        label = u"Element #{}".format(index + 1)
+    category = type_entry.get("category_name") or ""
+    if category:
+        return u"{} ({})".format(label, category)
+    return label
 
 
+def _select_text_note_record(element_records, note_elem, preview_text=None):
+    if not element_records:
+        return None
+    if len(element_records) == 1:
+        return 0
+    option_map = {}
+    options = []
+    for idx, record in enumerate(element_records):
+        label = _record_display_label(record, idx)
+        option = u"{:02d}. {}".format(idx + 1, label)
+        option_map[option] = idx
+        options.append(option)
+    preview = preview_text or _text_note_preview(note_elem)
+    title = u"Select equipment for text note"
+    if preview:
+        title = u"Select equipment for note: {}".format(preview)
+    try:
+        selection = forms.SelectFromList.show(
+            options,
+            title=title,
+            button_name="Point Leader",
+            multiselect=False,
+        )
+    except Exception:
+        selection = None
+    if selection:
+        chosen = selection[0]
+        return option_map.get(chosen)
+    return None
 
-    return tags
+
+def _assign_selected_text_notes(element_records, text_note_elems):
+    if not element_records or not text_note_elems:
+        return
+    for note in text_note_elems:
+        target_idx = _select_text_note_record(element_records, note)
+        if target_idx is None:
+            target_idx = _find_closest_record_index(element_records, note)
+        if target_idx is None:
+            continue
+        host_point = element_records[target_idx].get("host_point")
+        if host_point is None:
+            continue
+        note_entry = _build_text_note_entry(note, host_point)
+        if not note_entry:
+            continue
+        note_entry["_ced_target_locked"] = True
+        type_entry = element_records[target_idx].get("type_entry") or {}
+        inst_cfg = type_entry.setdefault("instance_config", {})
+        entries = inst_cfg.setdefault("text_notes", [])
+        entries.append(note_entry)
+    _rebalance_text_notes(element_records)
+
+
+def _offset_dict_to_world(offsets, origin):
+    if origin is None or offsets is None:
+        return None
+    return XYZ(
+        origin.X + _inch_to_ft(offsets.get("x_inches", 0.0) or 0.0),
+        origin.Y + _inch_to_ft(offsets.get("y_inches", 0.0) or 0.0),
+        origin.Z + _inch_to_ft(offsets.get("z_inches", 0.0) or 0.0),
+    )
+
+
+def _world_to_offset_dict(point, origin):
+    if origin is None or point is None:
+        return None
+    return {
+        "x_inches": _feet_to_inches(point.X - origin.X),
+        "y_inches": _feet_to_inches(point.Y - origin.Y),
+        "z_inches": _feet_to_inches(point.Z - origin.Z),
+    }
+
+
+def _move_note_to_record(note_entry, source_record, dest_record):
+    if not note_entry or not source_record or not dest_record:
+        return False
+    source_host = source_record.get("host_point")
+    dest_host = dest_record.get("host_point")
+    if source_host is None or dest_host is None:
+        return False
+    offsets = note_entry.get("offsets") or {}
+    world_note = _offset_dict_to_world(offsets, source_host)
+    new_offsets = _world_to_offset_dict(world_note, dest_host)
+    if new_offsets:
+        note_entry["offsets"] = new_offsets
+    for leader in note_entry.get("leaders") or []:
+        if not isinstance(leader, dict):
+            continue
+        for key in ("end", "elbow"):
+            loc = leader.get(key)
+            if not loc:
+                continue
+            world_loc = _offset_dict_to_world(loc, source_host)
+            rebased = _world_to_offset_dict(world_loc, dest_host)
+            if rebased:
+                leader[key] = rebased
+    dest_type = dest_record.get("type_entry") or {}
+    dest_inst = dest_type.setdefault("instance_config", {})
+    dest_notes = dest_inst.setdefault("text_notes", [])
+    note_entry["_ced_target_locked"] = True
+    dest_notes.append(note_entry)
+    return True
+
+
+def _rebalance_text_notes(element_records):
+    if not element_records or len(element_records) < 2:
+        return
+    for idx, record in enumerate(element_records):
+        type_entry = record.get("type_entry") or {}
+        inst_cfg = type_entry.setdefault("instance_config", {})
+        notes = list(inst_cfg.get("text_notes") or [])
+        remaining = []
+        for note in notes:
+            if note.get("_ced_target_locked"):
+                remaining.append(note)
+                continue
+            preview = (note.get("text") or "").strip()
+            target_idx = _select_text_note_record(element_records, None, preview_text=preview)
+            if target_idx is None:
+                remaining.append(note)
+                continue
+            if target_idx == idx:
+                note["_ced_target_locked"] = True
+                remaining.append(note)
+                continue
+            moved = _move_note_to_record(note, record, element_records[target_idx])
+            if not moved:
+                remaining.append(note)
+        inst_cfg["text_notes"] = remaining
 
 
 
@@ -1661,14 +2119,12 @@ def _get_rotation_degrees(elem):
 
 
 def _level_relative_z_inches(elem, world_point):
-
-
-
     if elem is None:
-
-
-
         return 0.0
+
+    direct = _instance_elevation_inches(elem)
+    if direct is not None:
+        return direct
 
 
 
@@ -1804,6 +2260,35 @@ def _level_relative_z_inches(elem, world_point):
 
 
     return _feet_to_inches(world_z - level_z)
+
+
+def _instance_elevation_inches(elem):
+    param_names = (
+        "INSTANCE_ELEV_PARAM",
+        "INSTANCE_ELEVATION_PARAM",
+        "INSTANCE_FREE_HOST_OFFSET_PARAM",
+        "INSTANCE_SILL_HEIGHT_PARAM",
+        "SILL_HEIGHT_PARAM",
+        "HEAD_HEIGHT_PARAM",
+    )
+    for name in param_names:
+        bip = getattr(BuiltInParameter, name, None)
+        if not bip:
+            continue
+        try:
+            param = elem.get_Parameter(bip)
+        except Exception:
+            param = None
+        if not param:
+            continue
+        try:
+            raw = param.AsDouble()
+        except Exception:
+            raw = None
+        if raw is None:
+            continue
+        return _feet_to_inches(raw)
+    return None
 
 
 
@@ -2216,7 +2701,7 @@ def _build_type_entry(elem, offset_vec, rot_deg, host_point):
 
 
 
-    tags = _collect_hosted_tags(elem, host_point)
+    tags, text_notes = _collect_hosted_tags(elem, host_point)
 
 
 
@@ -2269,6 +2754,10 @@ def _build_type_entry(elem, offset_vec, rot_deg, host_point):
 
 
             "tags": tags,
+
+
+
+            "text_notes": text_notes,
 
 
 
@@ -2412,11 +2901,47 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
 
 
+    explicit_text_notes = []
+
+    selected_elements = []
+
+    for elem in elems:
+
+
+
+        if isinstance(elem, TextNote):
+
+
+
+            explicit_text_notes.append(elem)
+
+
+
+            continue
+
+
+
+        selected_elements.append(elem)
+
+
+
+    if not selected_elements:
+
+
+
+        forms.alert("Select at least one host element for '{}' (text notes can be selected in addition).".format(cad_label), title=TITLE)
+
+
+
+        return False
+
+
+
     element_locations = []
 
 
 
-    for elem in elems:
+    for elem in selected_elements:
 
 
 
@@ -2497,6 +3022,11 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
 
         })
+
+
+
+    _assign_selected_text_notes(element_records, explicit_text_notes)
+    _rebalance_text_notes(element_records)
 
 
 
@@ -2596,6 +3126,10 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
 
 
+        entry_text_notes = inst_cfg.get("text_notes") or []
+
+
+
         led_id = next_led_id(type_set, equipment_def)
 
 
@@ -2641,6 +3175,10 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
 
             "tags": entry_tags,
+
+
+
+            "text_notes": entry_text_notes,
 
 
 
@@ -4597,6 +5135,142 @@ def _serialize_tags(tags):
 
 
             "offsets": offsets_dict,
+
+
+
+        })
+
+
+
+    return serialized
+
+
+
+def _serialize_text_notes(text_notes):
+
+
+
+    serialized = []
+
+
+
+    for note in text_notes:
+
+
+
+        if isinstance(note, dict):
+
+
+
+            clean = dict(note)
+
+
+
+            clean.pop("_ced_target_locked", None)
+
+
+
+            offsets = clean.get("offsets") or {}
+
+
+
+            serialized.append({
+
+
+
+                "text": clean.get("text") or "",
+
+
+
+                "type_name": clean.get("type_name"),
+
+
+
+                "width_inches": float(clean.get("width_inches", 0.0) or 0.0),
+
+
+
+                "offsets": {
+
+
+
+                    "x_inches": float(offsets.get("x_inches", 0.0) or 0.0),
+
+
+
+                    "y_inches": float(offsets.get("y_inches", 0.0) or 0.0),
+
+
+
+                    "z_inches": float(offsets.get("z_inches", 0.0) or 0.0),
+
+
+
+                    "rotation_deg": float(offsets.get("rotation_deg", 0.0) or 0.0),
+
+
+
+                },
+
+
+
+                "leaders": clean.get("leaders") or [],
+
+
+
+            })
+
+
+
+            continue
+
+
+
+        offsets = getattr(note, "offsets", None)
+
+
+
+        serialized.append({
+
+
+
+            "text": getattr(note, "text", "") or "",
+
+
+
+            "type_name": getattr(note, "type_name", None),
+
+
+
+            "width_inches": float(getattr(note, "width_inches", 0.0) or 0.0),
+
+
+
+            "offsets": {
+
+
+
+                "x_inches": float(getattr(offsets, "x_inches", 0.0) or 0.0) if offsets else 0.0,
+
+
+
+                "y_inches": float(getattr(offsets, "y_inches", 0.0) or 0.0) if offsets else 0.0,
+
+
+
+                "z_inches": float(getattr(offsets, "z_inches", 0.0) or 0.0) if offsets else 0.0,
+
+
+
+                "rotation_deg": float(getattr(offsets, "rotation_deg", 0.0) or 0.0) if offsets else 0.0,
+
+
+
+            },
+
+
+
+            "leaders": list(getattr(note, "leaders", []) or []),
 
 
 
