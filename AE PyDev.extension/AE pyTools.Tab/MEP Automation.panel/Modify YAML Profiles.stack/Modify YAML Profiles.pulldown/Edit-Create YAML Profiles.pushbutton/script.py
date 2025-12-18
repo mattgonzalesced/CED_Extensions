@@ -265,6 +265,11 @@ def _transform_rotation(rotation_deg, transform):
 def _level_relative_z_inches(elem, world_point):
     if elem is None:
         return 0.0
+
+    direct = _instance_elevation_inches(elem)
+    if direct is not None:
+        return direct
+
     doc = getattr(elem, "Document", None)
     level = None
     level_id = getattr(elem, "LevelId", None)
@@ -306,6 +311,35 @@ def _level_relative_z_inches(elem, world_point):
             level_z = 0.0
     world_z = getattr(world_point, "Z", None) or 0.0
     return _feet_to_inches(world_z - level_z)
+
+
+def _instance_elevation_inches(elem):
+    param_names = (
+        "INSTANCE_ELEV_PARAM",
+        "INSTANCE_ELEVATION_PARAM",
+        "INSTANCE_FREE_HOST_OFFSET_PARAM",
+        "INSTANCE_SILL_HEIGHT_PARAM",
+        "SILL_HEIGHT_PARAM",
+        "HEAD_HEIGHT_PARAM",
+    )
+    for name in param_names:
+        bip = getattr(BuiltInParameter, name, None)
+        if not bip:
+            continue
+        try:
+            param = elem.get_Parameter(bip)
+        except Exception:
+            param = None
+        if not param:
+            continue
+        try:
+            raw = param.AsDouble()
+        except Exception:
+            raw = None
+        if raw is None:
+            continue
+        return _feet_to_inches(raw)
+    return None
 
 
 # --------------------------------------------------------------------------- #
