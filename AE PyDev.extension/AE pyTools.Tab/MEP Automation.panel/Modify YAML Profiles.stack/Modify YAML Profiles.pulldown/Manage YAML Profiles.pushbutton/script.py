@@ -3957,7 +3957,31 @@ def _apply_truth_metadata(equipment_defs, truth_groups):
 
 
 
-    membership = {}
+    membership_by_id = {}
+
+
+
+    name_to_ids = {}
+
+
+
+    for entry in equipment_defs or []:
+
+
+
+        eq_name = (entry.get("name") or entry.get("id") or "").strip()
+
+
+
+        eq_id = (entry.get("id") or "").strip()
+
+
+
+        if eq_name and eq_id:
+
+
+
+            name_to_ids.setdefault(eq_name, []).append(eq_id)
 
 
 
@@ -3977,7 +4001,27 @@ def _apply_truth_metadata(equipment_defs, truth_groups):
 
 
 
-            membership[member] = (display_name, source_id)
+            member_name = (member or "").strip()
+
+
+
+            if not member_name:
+
+
+
+                continue
+
+
+
+            ids = name_to_ids.get(member_name) or []
+
+
+
+            if len(ids) == 1:
+
+
+
+                membership_by_id[ids[0]] = (display_name, source_id)
 
 
 
@@ -3993,7 +4037,7 @@ def _apply_truth_metadata(equipment_defs, truth_groups):
 
 
 
-        display, source_id = membership.get(eq_name, (None, None))
+        display, source_id = membership_by_id.get(eq_id, (None, None))
 
 
 
@@ -4158,6 +4202,7 @@ def main():
             "yaml_label": yaml_label,
             "yaml_path": data_path,
             "normalized_yaml_path": _normalize_yaml_path(data_path),
+            "enable_truth_links": False,
         }
 
 

@@ -110,6 +110,30 @@ def _save_session(doc, session):
 
 
 # --------------------------------------------------------------------------- #
+# Identifier helpers
+# --------------------------------------------------------------------------- #
+
+
+def _next_eq_number(data, exclude_defs=None):
+    excluded = {id(entry) for entry in (exclude_defs or []) if entry is not None}
+    max_id = 0
+    for entry in data.get("equipment_definitions") or []:
+        if excluded and id(entry) in excluded:
+            continue
+        eq_id = (entry.get("id") or "").strip()
+        if not eq_id:
+            continue
+        suffix = eq_id.split("-")[-1]
+        try:
+            num = int(suffix)
+        except Exception:
+            continue
+        if num > max_id:
+            max_id = num
+    return max_id + 1
+
+
+# --------------------------------------------------------------------------- #
 # Selection helpers
 # --------------------------------------------------------------------------- #
 
@@ -933,6 +957,13 @@ def _resolve_equipment_definition(parent_elem, data, truth_groups=None):
         "category_name": _get_category(parent_elem),
     }
     eq_def = ensure_equipment_definition(data, cad_name, sample_entry)
+    linked_set = get_type_set(eq_def)
+    next_idx = _next_eq_number(data, exclude_defs=[eq_def])
+    eq_id = "EQ-{:03d}".format(next_idx)
+    set_id = "SET-{:03d}".format(next_idx)
+    eq_def["id"] = eq_id
+    linked_set["id"] = set_id
+    linked_set["name"] = "{} Types".format(cad_name)
     source_id = eq_def.get("id") or cad_name
     if source_id:
         if not eq_def.get(TRUTH_SOURCE_ID_KEY):
