@@ -4910,7 +4910,8 @@ def main():
 
 
 
-                _apply_truth_links(updated_dict, state["truth_groups"])
+                if state.get("enable_truth_links"):
+                    _apply_truth_links(updated_dict, state["truth_groups"])
 
 
 
