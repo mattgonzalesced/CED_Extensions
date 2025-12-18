@@ -140,18 +140,27 @@ def update_connected_elements(branch, param_values, settings, locked_ids=None):
 
         # Write all parameters
         for param_name, value in param_values.items():
-            if value is None:
-                continue
             param = el.LookupParameter(param_name)
             if not param:
                 continue
             try:
-                if param.StorageType == DB.StorageType.String:
-                    param.Set(str(value))
-                elif param.StorageType == DB.StorageType.Integer:
-                    param.Set(int(value))
-                elif param.StorageType == DB.StorageType.Double:
-                    param.Set(float(value))
+                if value is None:
+                    st = param.StorageType
+                    if st == DB.StorageType.String:
+                        param.Set("")
+                    elif st == DB.StorageType.Integer:
+                        param.Set(0)
+                    elif st == DB.StorageType.Double:
+                        param.Set(0.0)
+                    elif st == DB.StorageType.ElementId:
+                        param.Set(DB.ElementId.InvalidElementId)
+                else:
+                    if param.StorageType == DB.StorageType.String:
+                        param.Set(str(value))
+                    elif param.StorageType == DB.StorageType.Integer:
+                        param.Set(int(value))
+                    elif param.StorageType == DB.StorageType.Double:
+                        param.Set(float(value))
             except Exception as e:
                 logger.debug("❌ Failed to write '{}' to element {}: {}".format(param_name, el.Id, e))
 
@@ -237,6 +246,7 @@ def _partition_locked_elements(doc, circuits, settings):
                     if owner:
                         rec["device_owners"].add(owner)
                     locked_for_writeback = True
+                    break
 
         if locked_for_writeback:
             locked_ids.add(circuit.Id)
@@ -403,7 +413,7 @@ def main():
     except Exception as e:
         t.RollBack()
         tg.RollBack()
-        logger.error("{}❌ Transaction failed: {}".format(branch.name,e))
+        logger.error("❌ Transaction failed: {}".format(e))
         return
 
 

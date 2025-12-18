@@ -193,23 +193,28 @@ def clear_downstream_results(doc, clear_equipment=False, clear_fixtures=False, l
             if (is_fixture and not clear_fixtures) or (is_equipment and not clear_equipment):
                 continue
 
-            if check_ownership and _is_locked(el.Id):
-                locked.append(
-                    {
-                        "element_id": el.Id,
-                        "owner": _owner_name(el.Id) or "",
-                        "category": cat.Name if cat else "",
-                    }
-                )
-                continue
-
             changed = False
+            has_target_param = False
             for param_name in RESULT_PARAM_NAMES:
                 param = el.LookupParameter(param_name)
                 if not param:
                     continue
+                has_target_param = True
+                if check_ownership and _is_locked(el.Id):
+                    locked.append(
+                        {
+                            "element_id": el.Id,
+                            "owner": _owner_name(el.Id) or "",
+                            "category": cat.Name if cat else "",
+                        }
+                    )
+                    has_target_param = False
+                    break
                 if _clear_param(param):
                     changed = True
+
+            if not has_target_param:
+                continue
 
             if changed:
                 if is_fixture:

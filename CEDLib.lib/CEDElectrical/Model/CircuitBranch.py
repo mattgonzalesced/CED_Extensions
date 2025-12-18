@@ -277,6 +277,7 @@ class CircuitBranch(object):
         self._conduit_type_override = None
         self._conduit_size_override = None
         self._user_clear_hot = False
+        self._user_clear_ground = False
         self._user_clear_conduit = False
 
         neutral_expected = self._expected_neutral_qty() > 0
@@ -739,6 +740,7 @@ class CircuitBranch(object):
                 self._conduit_size_override = norm
 
         self._user_clear_hot = False
+        self._user_clear_ground = False
         self._user_clear_conduit = False
 
         def _check_size(name, attr, warn_user=True, neutral_expected_flag=False):
@@ -872,14 +874,19 @@ class CircuitBranch(object):
         if self._user_clear_hot:
             self.cable.hot_qty = 0
             self.cable.neutral_qty = 0
-            self.cable.ground_qty = 0
-            self.cable.ig_qty = 0
+            # Leave ground quantities untouched; hot/neutral clear token should only clear those conductors.
             self.cable.cleared = True
             self.cable.sets = self._wire_sets_override or self.cable.sets or 1
             self.cable.material = None
             self.cable.temp_c = None
             self.cable.insulation = None
             return
+
+        if self._user_clear_ground:
+            self.cable.ground_qty = 0
+            self.cable.ig_qty = 0
+            self.cable.ground_size = None
+            self.cable.ig_size = None
 
         material_value, temp_c, insulation_value = self._resolve_wire_specs()
         self.cable.material = material_value
@@ -1212,6 +1219,8 @@ class CircuitBranch(object):
 
     @property
     def ground_wire_size(self):
+        if self._user_clear_ground:
+            return "-"
         return self._format_wire_size(self.cable.ground_size)
 
     @property
@@ -1350,6 +1359,12 @@ class CircuitBranch(object):
 
     def calculate_ground_wire_size(self):
         """EGC sizing based on breaker rating and material tables."""
+        if self._user_clear_ground:
+            self.cable.ground_size = None
+            if self.cable.ig_qty:
+                self.cable.ig_size = None
+            return
+
         if self.cable.cleared or self.calc_failed:
             self.cable.ground_size = None
             return
@@ -1408,7 +1423,7 @@ class CircuitBranch(object):
 
     def calculate_conduit_size(self):
         """Size conduit (or apply override) using CableSet + ConduitRun."""
-        if (self.cable.cleared and not self._user_clear_hot) or self.calc_failed:
+        if self.calc_failed or self._user_clear_hot or self.cable.cleared:
             self._clear_conduit_data()
             return
 
@@ -1542,6 +1557,13 @@ class CircuitBranch(object):
         override = self._normalize_wire_size(self._wire_ground_size_override)
         if not override:
             return False
+
+        if self._is_clear_token(override):
+            self._user_clear_ground = True
+            self.cable.ground_size = None
+            if self.cable.ig_qty:
+                self.cable.ig_size = None
+            return True
 
         if override in ALLOWED_WIRE_SIZES:
             self.cable.ground_size = override
@@ -2041,6 +2063,8 @@ class CircuitBranch(object):
 
     def _check_ground_design_limits(self):
         if (
+            self._user_clear_ground
+            or
             self.cable.cleared
             or self.calc_failed
             or not self.cable.ground_size
@@ -2124,6 +2148,9 @@ class CircuitBranch(object):
         return None
 
     def _upsize_ground_for_voltage_drop(self):
+        if self._user_clear_ground:
+            return
+
         gnd_size = self.cable.ground_size
         gnd_qty = self.cable.ground_qty or 0
         if not gnd_size or gnd_qty == 0:
