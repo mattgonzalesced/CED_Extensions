@@ -3389,7 +3389,7 @@ def _has_negative_z(value):
 
 
 
-        return float(value) < 0.0
+        numeric = float(value)
 
 
 
@@ -3398,6 +3398,18 @@ def _has_negative_z(value):
 
 
         return False
+
+
+
+    if abs(numeric) < 1e-6:
+
+
+
+        return False
+
+
+
+    return numeric < 0.0
 
 
 
