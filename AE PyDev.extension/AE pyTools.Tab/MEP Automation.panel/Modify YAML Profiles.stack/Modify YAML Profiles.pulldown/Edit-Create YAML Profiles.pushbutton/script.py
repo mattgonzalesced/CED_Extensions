@@ -19,6 +19,7 @@ from Autodesk.Revit.DB import (
     FilteredElementCollector,
     Group,
     IndependentTag,
+    TextNote,
     RevitLinkInstance,
     Transaction,
     TransactionGroup,
@@ -508,15 +509,272 @@ def _build_annotation_tag_entry(annotation_elem, host_point):
     }
 
 
+def _point_offsets_dict(point, origin):
+    if point is None or origin is None:
+        return None
+    return {
+        "x_inches": _feet_to_inches(point.X - origin.X),
+        "y_inches": _feet_to_inches(point.Y - origin.Y),
+        "z_inches": _feet_to_inches(point.Z - origin.Z),
+    }
+
+
+def _get_text_note_family_label(note_type):
+    if note_type is None:
+        return ""
+    try:
+        fam = getattr(note_type, "Family", None)
+        fam_name = getattr(fam, "Name", None) if fam else None
+        if fam_name:
+            return fam_name
+    except Exception:
+        pass
+    try:
+        family_name = getattr(note_type, "FamilyName", None)
+        if family_name:
+            return family_name
+    except Exception:
+        pass
+    if hasattr(note_type, "get_Parameter"):
+        for bip in (BuiltInParameter.ALL_MODEL_FAMILY_NAME, BuiltInParameter.SYMBOL_FAMILY_NAME_PARAM):
+            if not bip:
+                continue
+            try:
+                param = note_type.get_Parameter(bip)
+            except Exception:
+                param = None
+            if param:
+                try:
+                    value = (param.AsString() or "").strip()
+                except Exception:
+                    value = ""
+                if value:
+                    return value
+    return ""
+
+
+def _text_note_leader_type_label(leader):
+    if leader is None:
+        return None
+    for attr in ("LeaderType", "GetLeaderType", "LeaderStyle", "GetLeaderStyle", "LeaderShape"):
+        try:
+            raw = getattr(leader, attr, None)
+            if callable(raw):
+                raw = raw()
+            if raw is not None:
+                to_string = getattr(raw, "ToString", None)
+                label = to_string() if callable(to_string) else str(raw)
+                if label:
+                    return label
+        except Exception:
+            continue
+    curve = getattr(leader, "Curve", None)
+    if curve is None:
+        try:
+            curve_getter = getattr(leader, "GetCurve", None)
+            curve = curve_getter() if callable(curve_getter) else None
+        except Exception:
+            curve = None
+    if curve is not None:
+        try:
+            type_info = curve.GetType()
+            type_name = getattr(type_info, "Name", None) or ""
+        except Exception:
+            try:
+                type_name = type(curve).__name__
+            except Exception:
+                type_name = ""
+        lowered = (type_name or "").lower()
+        if "arc" in lowered:
+            return "ArcLeader"
+        if "line" in lowered or "straight" in lowered:
+            return "StraightLeader"
+        if "free" in lowered:
+            return "FreeLeader"
+    try:
+        has_elbow = getattr(leader, "HasElbow", None)
+        if callable(has_elbow):
+            has_elbow = has_elbow()
+    except Exception:
+        has_elbow = None
+    return None
+
+
+def _capture_text_note_leaders(note_elem, host_point):
+    leaders = []
+    if note_elem is None or host_point is None:
+        return leaders
+    try:
+        leader_list = list(getattr(note_elem, "GetLeaders", lambda: [])() or [])
+    except Exception:
+        leader_list = []
+    for leader in leader_list:
+        data = {}
+        label = _text_note_leader_type_label(leader)
+        if label:
+            data["type"] = label
+        try:
+            end_pos = getattr(leader, "EndPosition", None)
+        except Exception:
+            end_pos = None
+        if end_pos:
+            data["end"] = _point_offsets_dict(end_pos, host_point)
+        try:
+            elbow_pos = getattr(leader, "ElbowPosition", None)
+        except Exception:
+            elbow_pos = None
+        if elbow_pos:
+            data["elbow"] = _point_offsets_dict(elbow_pos, host_point)
+        if data:
+            leaders.append(data)
+    return leaders
+
+
+def _build_text_note_entry(note_elem, host_point):
+    if TextNote is None or host_point is None:
+        return None
+    try:
+        if note_elem is None or not isinstance(note_elem, TextNote):
+            return None
+    except Exception:
+        return None
+    try:
+        text_value = (note_elem.Text or "").strip()
+    except Exception:
+        text_value = ""
+    if not text_value:
+        return None
+    note_point = getattr(note_elem, "Coord", None)
+    if note_point is None:
+        note_point = _get_point(note_elem)
+    if note_point is None:
+        return None
+    offsets = {
+        "x_inches": _feet_to_inches(note_point.X - host_point.X),
+        "y_inches": _feet_to_inches(note_point.Y - host_point.Y),
+        "z_inches": _feet_to_inches(note_point.Z - host_point.Z),
+        "rotation_deg": 0.0,
+    }
+    try:
+        rotation_val = getattr(note_elem, "Rotation", None)
+        if rotation_val not in (None, False):
+            offsets["rotation_deg"] = math.degrees(rotation_val)
+    except Exception:
+        pass
+    width_inches = 0.0
+    try:
+        width_val = getattr(note_elem, "Width", None)
+        if width_val not in (None, False):
+            width_inches = float(width_val) * 12.0
+    except Exception:
+        width_inches = 0.0
+    note_type_name = ""
+    note_family_name = ""
+    doc = getattr(note_elem, "Document", None)
+    type_id = None
+    try:
+        type_id = note_elem.GetTypeId()
+    except Exception:
+        type_id = None
+    note_type = None
+    if doc is not None and type_id:
+        try:
+            note_type = doc.GetElement(type_id)
+        except Exception:
+            note_type = None
+    if note_type is not None:
+        note_type_name = (getattr(note_type, "Name", None) or "").strip()
+        if not note_type_name and hasattr(note_type, "get_Parameter"):
+            for bip in (BuiltInParameter.ALL_MODEL_TYPE_NAME, BuiltInParameter.SYMBOL_NAME_PARAM):
+                if not bip:
+                    continue
+                try:
+                    param = note_type.get_Parameter(bip)
+                except Exception:
+                    param = None
+                if param:
+                    try:
+                        candidate = (param.AsString() or "").strip()
+                    except Exception:
+                        candidate = ""
+                    if candidate:
+                        note_type_name = candidate
+                        break
+        note_family_name = _get_text_note_family_label(note_type)
+    display_type = ""
+    if note_family_name and note_type_name:
+        display_type = u"{} : {}".format(note_family_name.strip(), note_type_name.strip())
+    elif note_family_name:
+        display_type = note_family_name.strip()
+    else:
+        display_type = note_type_name.strip()
+    leaders = _capture_text_note_leaders(note_elem, host_point)
+    return {
+        "text": text_value,
+        "type_name": display_type,
+        "width_inches": width_inches,
+        "offsets": offsets,
+        "leaders": leaders,
+    }
+
+
+def _find_closest_child_entry(entries, note_elem):
+    if not entries or note_elem is None:
+        return None
+    note_point = getattr(note_elem, "Coord", None)
+    if note_point is None:
+        note_point = _get_point(note_elem)
+    if note_point is None:
+        return None
+    closest_idx = None
+    closest_dist = None
+    for idx, entry in enumerate(entries):
+        host_point = entry.get("point")
+        if host_point is None:
+            continue
+        try:
+            dist = host_point.DistanceTo(note_point)
+        except Exception:
+            try:
+                dx = host_point.X - note_point.X
+                dy = host_point.Y - note_point.Y
+                dz = host_point.Z - note_point.Z
+                dist = math.sqrt(dx * dx + dy * dy + dz * dz)
+            except Exception:
+                continue
+        if closest_idx is None or dist < closest_dist:
+            closest_idx = idx
+            closest_dist = dist
+    return closest_idx
+
+
+def _assign_selected_text_notes(child_entries, note_elems):
+    if not child_entries or not note_elems:
+        return
+    for note in note_elems:
+        target_idx = _find_closest_child_entry(child_entries, note)
+        if target_idx is None:
+            continue
+        host_point = child_entries[target_idx].get("point")
+        if host_point is None:
+            continue
+        entry = _build_text_note_entry(note, host_point)
+        if not entry:
+            continue
+        notes = child_entries[target_idx].setdefault("text_notes", [])
+        notes.append(entry)
+
+
 def _collect_hosted_tags(elem, host_point):
     doc = getattr(elem, "Document", None)
     if not doc or host_point is None:
-        return []
+        return [], []
     try:
         dep_ids = list(elem.GetDependentElements(None))
     except Exception:
         dep_ids = []
     tags = []
+    text_notes = []
     for dep_id in dep_ids:
         try:
             tag = doc.GetElement(dep_id)
@@ -614,7 +872,11 @@ def _collect_hosted_tags(elem, host_point):
         annotation_entry = _build_annotation_tag_entry(tag, host_point)
         if annotation_entry:
             tags.append(annotation_entry)
-    return tags
+            continue
+        text_entry = _build_text_note_entry(tag, host_point)
+        if text_entry:
+            text_notes.append(text_entry)
+    return tags, text_notes
 
 
 def _normalize_angle(value):
@@ -872,7 +1134,7 @@ def _truth_group_metadata(equipment_defs):
 def _gather_child_entries(elements, parent_point, parent_rotation, parent_elem):
     entries = []
     for elem in elements:
-        if elem is None or isinstance(elem, IndependentTag):
+        if elem is None or isinstance(elem, IndependentTag) or isinstance(elem, TextNote):
             continue
         if parent_elem is not None and getattr(elem, "Id", None) == getattr(parent_elem, "Id", None):
             continue
@@ -884,6 +1146,8 @@ def _gather_child_entries(elements, parent_point, parent_rotation, parent_elem):
         offsets["z_inches"] = _level_relative_z_inches(elem, point)
         if isinstance(elem, Group):
             offsets["rotation_deg"] = _normalize_angle(rotation - parent_rotation)
+        tags, hosted_notes = _collect_hosted_tags(elem, point)
+        params = _collect_params(elem)
         led_entry = {
             "element": elem,
             "point": point,
@@ -892,8 +1156,9 @@ def _gather_child_entries(elements, parent_point, parent_rotation, parent_elem):
             "category": _get_category(elem),
             "is_group": isinstance(elem, Group),
             "offsets": offsets,
-            "parameters": _collect_params(elem),
-            "tags": _collect_hosted_tags(elem, point),
+            "parameters": params,
+            "tags": tags,
+            "text_notes": hosted_notes,
         }
         entries.append(led_entry)
     return entries
@@ -1024,10 +1289,19 @@ def _run_selection_flow(doc, data, context, truth_groups, child_to_group, parent
             forms.alert("No elements were selected.", title=TITLE)
             return
 
-        child_entries = _gather_child_entries(picked, parent_point, parent_rotation, parent_elem)
+        text_note_elems = []
+        host_candidates = []
+        for elem in picked:
+            if isinstance(elem, TextNote):
+                text_note_elems.append(elem)
+                continue
+            host_candidates.append(elem)
+
+        child_entries = _gather_child_entries(host_candidates, parent_point, parent_rotation, parent_elem)
         if not child_entries:
             forms.alert("None of the selected elements produced valid entries.", title=TITLE)
             return
+        _assign_selected_text_notes(child_entries, text_note_elems)
 
         linked_set = get_type_set(eq_def)
         linked_set["linked_element_definitions"] = []
@@ -1035,14 +1309,18 @@ def _run_selection_flow(doc, data, context, truth_groups, child_to_group, parent
         for entry in child_entries:
             led_id = next_led_id(linked_set, eq_def)
             offsets = dict(entry["offsets"])
+            entry_params = dict(entry.get("parameters") or {})
+            entry_tags = list(entry.get("tags") or [])
+            entry_text_notes = list(entry.get("text_notes") or [])
             led_entry = {
                 "id": led_id,
                 "label": entry["label"],
                 "category": entry["category"],
                 "is_group": entry["is_group"],
                 "offsets": [offsets],
-                "parameters": dict(entry["parameters"]),
-                "tags": entry["tags"],
+                "parameters": entry_params,
+                "tags": entry_tags,
+                "text_notes": entry_text_notes,
             }
             payload = _build_element_linker_payload(
                 led_id,
