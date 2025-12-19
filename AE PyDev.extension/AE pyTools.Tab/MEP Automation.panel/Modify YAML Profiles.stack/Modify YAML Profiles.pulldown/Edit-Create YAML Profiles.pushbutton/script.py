@@ -384,7 +384,6 @@ def _collect_params(elem):
         "FLA Input_CED": ["FLA Input_CED", "FLA Input_CEDT"],
         "Wattage Input_CED": ["Wattage Input_CED", "Wattage Input_CEDT"],
         "Power Factor_CED": ["Power Factor_CED", "Power Factor_CEDT"],
-        "Workset": ["Workset"],
         "Product Datasheet URL": [
             "Product Datasheet URL",
             "Product Datasheet URL_CED",
