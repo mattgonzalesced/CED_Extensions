@@ -1,0 +1,78 @@
+<Window
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Sync One-Line Data"
+        Height="720" Width="980"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResizeWithGrip">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <TextBox x:Name="SearchBox" Width="280" TextChanged="SearchBox_TextChanged"/>
+            <TextBlock Text="Legend:" VerticalAlignment="Center" Margin="20,0,6,0"/>
+            <TextBlock Text="●" Foreground="Green" VerticalAlignment="Center" Margin="0,0,4,0"/>
+            <TextBlock Text="Linked" VerticalAlignment="Center" Margin="0,0,12,0"/>
+            <TextBlock Text="●" Foreground="Orange" VerticalAlignment="Center" Margin="0,0,4,0"/>
+            <TextBlock Text="Outdated" VerticalAlignment="Center" Margin="0,0,12,0"/>
+            <TextBlock Text="●" Foreground="Red" VerticalAlignment="Center" Margin="0,0,4,0"/>
+            <TextBlock Text="Missing" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <GroupBox Grid.Row="1" Header="Model Elements">
+            <ListBox x:Name="ElementsList" Margin="5">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <CheckBox IsChecked="{Binding is_checked}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding status_symbol}" Foreground="{Binding status_brush}" Margin="0,0,6,0"/>
+                                <TextBlock Text="{Binding display_text}"/>
+                            </StackPanel>
+                        </CheckBox>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </GroupBox>
+
+        <Grid Grid.Row="2" Margin="0,10,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                <TextBlock Text="Detail Item Family" Margin="0,0,0,4"/>
+                <ComboBox x:Name="DetailFamilyCombo" SelectionChanged="DetailFamilyCombo_SelectionChanged"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                <TextBlock Text="Detail Item Type" Margin="0,0,0,4"/>
+                <ComboBox x:Name="DetailTypeCombo"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Margin="0,0,8,0">
+                <TextBlock Text="Tag Family (Optional)" Margin="0,0,0,4"/>
+                <ComboBox x:Name="TagFamilyCombo" SelectionChanged="TagFamilyCombo_SelectionChanged"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="3">
+                <TextBlock Text="Tag Type" Margin="0,0,0,4"/>
+                <ComboBox x:Name="TagTypeCombo"/>
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="CreateButton" Content="Create Detail Items" Width="170" Margin="0,0,10,0" Click="CreateButton_Click"/>
+            <Button x:Name="SyncButton" Content="Sync Selected" Width="130" Margin="0,0,10,0" Click="SyncButton_Click"/>
+            <Button x:Name="CancelButton" Content="Cancel" Width="90" Click="CancelButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
