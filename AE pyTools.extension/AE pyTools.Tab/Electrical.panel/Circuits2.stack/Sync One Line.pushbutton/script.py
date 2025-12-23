@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 from pyrevit import revit, DB, script, forms
+import System
 from Autodesk.Revit.Exceptions import OperationCanceledException
 from CEDElectrical.Domain.one_line_sync import OneLineSyncService
 from CEDElectrical.Domain.one_line_tree import build_system_tree
@@ -51,6 +52,13 @@ def build_list_items(associations, tree_order):
     return items
 
 
+def set_selection(ids):
+    id_list = System.Collections.Generic.List[DB.ElementId]()
+    for elem_id in ids:
+        id_list.Add(elem_id)
+    revit.uidoc.Selection.SetElementIds(id_list)
+
+
 def get_circuit_sort_key(branch):
     val = branch.circuit_number or ""
     try:
@@ -67,6 +75,15 @@ def build_tree_order(associations, doc):
     ordered = []
     visited = set()
     tree = build_system_tree(doc)
+    circuit_assocs = [assoc for assoc in associations if assoc.kind == "circuit"]
+    circuits_by_base = {}
+    for assoc in circuit_assocs:
+        try:
+            base_eq = assoc.model_elem.BaseEquipment
+        except Exception:
+            base_eq = None
+        base_id = base_eq.Id.IntegerValue if base_eq else None
+        circuits_by_base.setdefault(base_id, []).append(assoc)
 
     def add_assoc(assoc, indent):
         if not assoc:
@@ -77,22 +94,36 @@ def build_tree_order(associations, doc):
         ordered.append((assoc, indent))
         visited.add(assoc_id)
 
+    def walk_circuit_assoc(assoc, indent):
+        add_assoc(assoc, indent)
+        system = assoc.model_elem
+        if hasattr(system, "Elements"):
+            for elem in list(system.Elements):
+                if elem.Category and int(elem.Category.Id.IntegerValue) == int(DB.BuiltInCategory.OST_ElectricalEquipment):
+                    child_node = tree.get_node(elem.Id)
+                    if child_node:
+                        walk_node(child_node, indent + 1)
+                    else:
+                        add_assoc(assoc_by_id.get(elem.Id.IntegerValue), indent + 1)
+                else:
+                    add_assoc(assoc_by_id.get(elem.Id.IntegerValue), indent + 1)
+
     def walk_node(node, indent):
         add_assoc(assoc_by_id.get(node.element_id.IntegerValue), indent)
-        for branch in sorted(node.downstream, key=get_circuit_sort_key):
-            add_assoc(assoc_by_id.get(branch.element_id.IntegerValue), indent + 1)
-            system = branch.system
-            if hasattr(system, "Elements"):
-                for elem in list(system.Elements):
-                    if elem.Category and int(elem.Category.Id.IntegerValue) == int(DB.BuiltInCategory.OST_ElectricalEquipment):
-                        child_node = tree.get_node(elem.Id)
-                        if child_node:
-                            walk_node(child_node, indent + 2)
-                    else:
-                        add_assoc(assoc_by_id.get(elem.Id.IntegerValue), indent + 2)
+        circuits = []
+        for branch in node.downstream:
+            assoc = assoc_by_id.get(branch.element_id.IntegerValue)
+            if assoc:
+                circuits.append(assoc)
+        for assoc in sorted(circuits, key=lambda a: get_circuit_sort_key(a.model_elem)):
+            walk_circuit_assoc(assoc, indent + 1)
 
     for root in sorted(tree.root_nodes, key=lambda n: n.panel_name or ""):
         walk_node(root, 0)
+
+    unassigned_circuits = circuits_by_base.get(None, [])
+    for assoc in sorted(unassigned_circuits, key=lambda a: get_circuit_sort_key(a.model_elem)):
+        walk_circuit_assoc(assoc, 0)
 
     for assoc in associations:
         if assoc.model_elem.Id.IntegerValue not in visited:
@@ -149,7 +180,10 @@ def main():
 
         warnings = service.get_link_warnings(selected_associations)
         if warnings:
-            forms.alert("Sync completed with warnings:\n\n- " + "\n- ".join(warnings))
+            output = script.get_output()
+            output.print_md("## Sync One-Line Warnings")
+            for warning in warnings:
+                output.print_md("* {}".format(warning))
         else:
             forms.alert("Synced {} element(s).".format(updated))
 
@@ -175,9 +209,11 @@ def main():
             base_point = revit.uidoc.Selection.PickPoint("Pick insertion point for detail items")
         except OperationCanceledException:
             window.Show()
+            window.Activate()
             return
         finally:
             window.Show()
+            window.Activate()
 
         associations_to_create = [assoc for assoc in selected_associations if assoc.detail_elem is None]
         if not associations_to_create:
@@ -195,14 +231,49 @@ def main():
 
         warnings = service.get_link_warnings(created)
         if warnings:
-            forms.alert("Created {} detail item(s) with warnings:\n\n- {}".format(
-                len(created), "\n- ".join(warnings)))
+            output = script.get_output()
+            output.print_md("## Create Detail Items Warnings")
+            for warning in warnings:
+                output.print_md("* {}".format(warning))
         else:
             forms.alert("Created {} detail item(s) and synced {} element(s).".format(len(created), updated))
 
+    def on_selection_changed(item):
+        if not item:
+            window.set_detail_panel("(none)", "-", "-", [])
+            return
+        assoc = item.association
+        detail_id = "-" if not assoc.detail_elem else str(assoc.detail_elem.Id.IntegerValue)
+        model_id = str(assoc.model_elem.Id.IntegerValue)
+        label = get_element_label(assoc)
+        summary = []
+        comparisons = service.compare_values(assoc)
+        for comp in comparisons:
+            status = "OK" if comp["match"] else "Outdated"
+            summary.append("{}: {} | Model='{}' Detail='{}'".format(
+                status, comp["param"], comp["model"], comp["detail"]))
+        window.set_detail_panel(label, model_id, detail_id, summary)
+
+    def on_select_model():
+        items = window.ElementsList.SelectedItems
+        if not items or items.Count == 0:
+            return
+        assoc = items[0].association
+        set_selection([assoc.model_elem.Id])
+
+    def on_select_detail():
+        items = window.ElementsList.SelectedItems
+        if not items or items.Count == 0:
+            return
+        assoc = items[0].association
+        if assoc.detail_elem:
+            set_selection([assoc.detail_elem.Id])
+
     window = SyncOneLineWindow(XAML_PATH, list_items, detail_symbols, tag_symbols,
-                               on_sync=on_sync, on_create=on_create)
-    window.ShowDialog()
+                               on_sync=on_sync, on_create=on_create,
+                               on_select_model=on_select_model, on_select_detail=on_select_detail,
+                               on_selection_changed=on_selection_changed)
+    window.Show()
 
 
 if __name__ == "__main__":

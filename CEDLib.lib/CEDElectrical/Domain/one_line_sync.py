@@ -341,12 +341,7 @@ class OneLineSyncService(object):
         return "linked"
 
     def is_outdated(self, assoc):
-        if assoc.kind == "circuit":
-            value_map = CIRCUIT_VALUE_MAP
-        elif assoc.kind == "panel":
-            value_map = PANEL_VALUE_MAP
-        else:
-            value_map = DEVICE_VALUE_MAP
+        value_map = self.get_value_map(assoc)
 
         for detail_param, model_param in value_map.items():
             model_val = self.get_model_param_value(assoc.model_elem, model_param)
@@ -355,6 +350,27 @@ class OneLineSyncService(object):
                 return True
 
         return False
+
+    def get_value_map(self, assoc):
+        if assoc.kind == "circuit":
+            return CIRCUIT_VALUE_MAP
+        if assoc.kind == "panel":
+            return PANEL_VALUE_MAP
+        return DEVICE_VALUE_MAP
+
+    def compare_values(self, assoc):
+        results = []
+        value_map = self.get_value_map(assoc)
+        for detail_param, model_param in value_map.items():
+            model_val = self.get_model_param_value(assoc.model_elem, model_param)
+            detail_val = self.get_detail_param_value(assoc.detail_elem, detail_param) if assoc.detail_elem else None
+            results.append({
+                "param": detail_param,
+                "model": model_val,
+                "detail": detail_val,
+                "match": self._normalize(model_val) == self._normalize(detail_val)
+            })
+        return results
 
     def sync_associations(self, associations):
         updated = 0
@@ -459,7 +475,7 @@ class OneLineSyncService(object):
 
             if tag_symbol:
                 try:
-                    tag_point = DB.XYZ(base_point.X + (spacing * index), base_point.Y - spacing, base_point.Z)
+                    tag_point = DB.XYZ(base_point.X + (spacing * index), base_point.Y, base_point.Z)
                     tag = DB.IndependentTag.Create(self.doc, view.Id,
                                                    DB.Reference(detail_item),
                                                    False,

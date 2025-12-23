@@ -29,20 +29,46 @@
             <Button x:Name="SelectNoneButton" Content="Select None" Width="90" Click="SelectNoneButton_Click"/>
         </StackPanel>
 
-        <GroupBox Grid.Row="1" Header="Model Elements">
-            <ListBox x:Name="ElementsList" Margin="5" SelectionMode="Extended">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <CheckBox IsChecked="{Binding is_checked}" Click="ItemCheckBox_Click">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding status_symbol}" Foreground="{Binding status_brush}" Margin="0,0,6,0"/>
-                                <TextBlock Text="{Binding display_text}"/>
-                            </StackPanel>
-                        </CheckBox>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </GroupBox>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="320"/>
+            </Grid.ColumnDefinitions>
+            <GroupBox Grid.Column="0" Header="Model Elements">
+                <ListBox x:Name="ElementsList" Margin="5" SelectionMode="Extended" SelectionChanged="ElementsList_SelectionChanged">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="22"/>
+                                    <ColumnDefinition Width="22"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <CheckBox Grid.Column="0" IsChecked="{Binding is_checked}" Click="ItemCheckBox_Click" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding status_symbol}" Foreground="{Binding status_brush}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="{Binding display_text}" VerticalAlignment="Center"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </GroupBox>
+            <GroupBox Grid.Column="1" Header="Selection Details" Margin="10,0,0,0">
+                <StackPanel Margin="6">
+                    <TextBlock Text="Selected:" FontWeight="Bold" Margin="0,0,0,4"/>
+                    <TextBlock x:Name="SelectedLabelText" Text="(none)" TextWrapping="Wrap"/>
+                    <TextBlock Text="Model Element Id:" FontWeight="Bold" Margin="0,8,0,2"/>
+                    <TextBlock x:Name="ModelIdText" Text="-" />
+                    <TextBlock Text="Detail Item Id:" FontWeight="Bold" Margin="0,8,0,2"/>
+                    <TextBlock x:Name="DetailIdText" Text="-" />
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,8">
+                        <Button x:Name="SelectModelButton" Content="Select Model" Width="130" Margin="0,0,8,0" Click="SelectModelButton_Click"/>
+                        <Button x:Name="SelectDetailButton" Content="Select Detail" Width="130" Click="SelectDetailButton_Click"/>
+                    </StackPanel>
+                    <TextBlock Text="Parameter Status:" FontWeight="Bold" Margin="0,4,0,4"/>
+                    <ListBox x:Name="DetailStatusList" Height="240"/>
+                </StackPanel>
+            </GroupBox>
+        </Grid>
 
         <Grid Grid.Row="2" Margin="0,10,0,10">
             <Grid.ColumnDefinitions>

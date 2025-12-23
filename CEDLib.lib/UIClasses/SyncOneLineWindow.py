@@ -17,7 +17,8 @@ class SyncOneLineListItem(object):
 
 
 class SyncOneLineWindow(forms.WPFWindow):
-    def __init__(self, xaml_path, items, detail_symbols, tag_symbols, on_sync=None, on_create=None):
+    def __init__(self, xaml_path, items, detail_symbols, tag_symbols, on_sync=None, on_create=None,
+                 on_select_model=None, on_select_detail=None, on_selection_changed=None):
         forms.WPFWindow.__init__(self, xaml_path)
 
         self._all_items = items
@@ -25,6 +26,9 @@ class SyncOneLineWindow(forms.WPFWindow):
         self._tag_symbols = tag_symbols or []
         self._on_sync = on_sync
         self._on_create = on_create
+        self._on_select_model = on_select_model
+        self._on_select_detail = on_select_detail
+        self._on_selection_changed = on_selection_changed
         self._sort_mode = "Flat"
 
         self._build_detail_combo()
@@ -70,7 +74,8 @@ class SyncOneLineWindow(forms.WPFWindow):
                 item.display_text = item.tree_text
             else:
                 item.display_text = item.base_text
-        self.ElementsList.ItemsSource = items
+        self.ElementsList.ItemsSource = None
+        self.ElementsList.ItemsSource = list(items)
 
     def _status_allowed(self, status):
         if status == "linked":
@@ -173,6 +178,27 @@ class SyncOneLineWindow(forms.WPFWindow):
 
     def refresh_items(self):
         self._refresh_list(self._filter_items(self.SearchBox.Text))
+
+    def ElementsList_SelectionChanged(self, sender, args):
+        selected_item = None
+        if self.ElementsList.SelectedItems and self.ElementsList.SelectedItems.Count > 0:
+            selected_item = self.ElementsList.SelectedItems[0]
+        if self._on_selection_changed:
+            self._on_selection_changed(selected_item)
+
+    def SelectModelButton_Click(self, sender, args):
+        if self._on_select_model:
+            self._on_select_model()
+
+    def SelectDetailButton_Click(self, sender, args):
+        if self._on_select_detail:
+            self._on_select_detail()
+
+    def set_detail_panel(self, label_text, model_id_text, detail_id_text, status_lines):
+        self.SelectedLabelText.Text = label_text or "(none)"
+        self.ModelIdText.Text = model_id_text or "-"
+        self.DetailIdText.Text = detail_id_text or "-"
+        self.DetailStatusList.ItemsSource = status_lines or []
 
 
 def status_symbol(status):
