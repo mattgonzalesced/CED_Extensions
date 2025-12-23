@@ -49,6 +49,11 @@ class ExtensibleStorage(object):
     SCHEMA_NAME = "CED_YamlHistory"
     HISTORY_FIELD_NAME = "HistoryJson"
     META_FIELD_NAME = "MetadataJson"
+    HISTORY_CHUNKS_FIELD_NAME = "HistoryJsonChunks"
+    META_CHUNKS_FIELD_NAME = "MetadataJsonChunks"
+    SCHEMA_VERSION = 2
+    MAX_ES_STRING = 16 * 1024 * 1024
+    CHUNK_SIZE = 8 * 1024 * 1024
 
     DIFF_FORMAT = "ndiff"
     TRANSACTION_PREFIX = "YAML_HISTORY::"
@@ -626,27 +631,163 @@ class ExtensibleStorage(object):
 
     @classmethod
     def _schema_and_fields(cls, doc):
+        return cls._schema_and_fields_versioned(doc, prefer_chunked=False)
+
+    @classmethod
+    def _schema_and_fields_versioned(cls, doc, prefer_chunked=False):
         doc_key = getattr(doc, "Title", "unknown")
-        if doc_key in cls._schema_cache:
-            return cls._schema_cache[doc_key]
-        schema = Schema.Lookup(_make_doc_guid(doc))
-        if schema is None:
-            builder = SchemaBuilder(_make_doc_guid(doc))
-            builder.SetSchemaName(cls.SCHEMA_NAME)
-            builder.SetDocumentation("Stores YAML history deltas.")
-            history_field = builder.AddSimpleField(cls.HISTORY_FIELD_NAME, String)
-            meta_field = builder.AddSimpleField(cls.META_FIELD_NAME, String)
-            doc_field = builder.AddSimpleField("DocGuid", String)
-            schema = builder.Finish()
+        cache = cls._schema_cache.get(doc_key, {})
+        if not prefer_chunked and cache.get("default"):
+            return cache["default"]
+        if prefer_chunked and cache.get("v2"):
+            return cache["v2"]
+
+        schema_v2 = Schema.Lookup(_make_doc_guid(doc, version=2))
+        if schema_v2 is not None:
+            packed = cls._pack_schema(schema_v2, version=2)
+            cache["v2"] = packed
+            cache["default"] = packed
+            cls._schema_cache[doc_key] = cache
+            return packed
+
+        schema_v1 = Schema.Lookup(_make_doc_guid(doc, version=1))
+        if schema_v1 is not None and not prefer_chunked:
+            packed = cls._pack_schema(schema_v1, version=1)
+            cache["v1"] = packed
+            cache["default"] = packed
+            cls._schema_cache[doc_key] = cache
+            return packed
+
+        schema_v2 = cls._build_schema_v2(doc)
+        packed = cls._pack_schema(schema_v2, version=2)
+        cache["v2"] = packed
+        cache["default"] = packed
+        cls._schema_cache[doc_key] = cache
+        return packed
+
+    @classmethod
+    def _build_schema_v2(cls, doc):
+        builder = SchemaBuilder(_make_doc_guid(doc, version=2))
+        builder.SetSchemaName("{}_v2".format(cls.SCHEMA_NAME))
+        builder.SetDocumentation("Stores YAML history deltas (chunked).")
+        builder.AddSimpleField(cls.HISTORY_FIELD_NAME, String)
+        builder.AddSimpleField(cls.META_FIELD_NAME, String)
+        try:
+            builder.AddArrayField(cls.HISTORY_CHUNKS_FIELD_NAME, String)
+            builder.AddArrayField(cls.META_CHUNKS_FIELD_NAME, String)
+        except Exception:
+            # If array fields are unavailable, continue with only simple fields.
+            pass
+        builder.AddSimpleField("DocGuid", String)
+        return builder.Finish()
+
+    @classmethod
+    def _pack_schema(cls, schema, version):
         history_field = schema.GetField(cls.HISTORY_FIELD_NAME)
         meta_field = schema.GetField(cls.META_FIELD_NAME)
-        doc_key = getattr(doc, "Title", "unknown")
-        cls._schema_cache[doc_key] = (schema, history_field, meta_field)
-        return schema, history_field, meta_field
+        history_chunks_field = None
+        meta_chunks_field = None
+        if version >= 2:
+            history_chunks_field = schema.GetField(cls.HISTORY_CHUNKS_FIELD_NAME)
+            meta_chunks_field = schema.GetField(cls.META_CHUNKS_FIELD_NAME)
+        doc_field = schema.GetField("DocGuid")
+        return (schema, history_field, meta_field, history_chunks_field, meta_chunks_field, doc_field, version)
+
+    @classmethod
+    def _read_chunked_field(cls, entity, base_field, chunks_field):
+        chunks = cls._get_chunk_list(entity, chunks_field)
+        if chunks:
+            return "".join(chunks)
+        if base_field:
+            try:
+                return entity.Get[str](base_field)
+            except Exception:
+                return None
+        return None
+
+    @classmethod
+    def _write_chunked_field(cls, entity, base_field, chunks_field, value):
+        value = value or ""
+        if chunks_field and len(value) > cls.MAX_ES_STRING:
+            chunks = cls._split_chunks(value, cls.CHUNK_SIZE)
+            cls._set_chunk_list(entity, chunks_field, chunks)
+            if base_field:
+                entity.Set[str](base_field, "")
+            return
+        if chunks_field:
+            cls._set_chunk_list(entity, chunks_field, [])
+        if base_field:
+            entity.Set[str](base_field, value)
+
+    @classmethod
+    def _split_chunks(cls, text, chunk_size):
+        if not text:
+            return []
+        size = max(1, int(chunk_size or 1))
+        return [text[i:i + size] for i in range(0, len(text), size)]
+
+    @classmethod
+    def _get_chunk_list(cls, entity, chunks_field):
+        if not chunks_field:
+            return None
+        try:
+            from System.Collections.Generic import IList, List
+        except Exception:
+            IList = None
+            List = None
+        if IList:
+            try:
+                chunks = entity.Get[IList[String]](chunks_field)
+                if chunks is not None:
+                    return list(chunks)
+            except Exception:
+                pass
+        if List:
+            try:
+                chunks = entity.Get[List[String]](chunks_field)
+                if chunks is not None:
+                    return list(chunks)
+            except Exception:
+                pass
+        try:
+            chunks = entity.Get[Array[String]](chunks_field)
+            if chunks is not None:
+                return list(chunks)
+        except Exception:
+            pass
+        return None
+
+    @classmethod
+    def _set_chunk_list(cls, entity, chunks_field, chunks):
+        if not chunks_field:
+            return
+        chunks = chunks or []
+        try:
+            from System.Collections.Generic import List
+        except Exception:
+            List = None
+        if List:
+            try:
+                list_obj = List[String]()
+                for chunk in chunks:
+                    list_obj.Add(chunk)
+                entity.Set[List[String]](chunks_field, list_obj)
+                return
+            except Exception:
+                pass
+        try:
+            arr = Array[String](chunks)
+            entity.Set[Array[String]](chunks_field, arr)
+        except Exception:
+            # Last resort: store as empty to avoid oversize strings.
+            try:
+                entity.Set[str](chunks_field, "")
+            except Exception:
+                pass
 
     @classmethod
     def _read_storage(cls, doc):
-        schema, history_field, meta_field = cls._schema_and_fields(doc)
+        schema, history_field, meta_field, history_chunks_field, meta_chunks_field, doc_field, version = cls._schema_and_fields(doc)
         payload = {"entries": [], "meta": {"next_seq": 1}}
         project_info = getattr(doc, "ProjectInformation", None)
         if project_info is None:
@@ -655,12 +796,11 @@ class ExtensibleStorage(object):
         needed_guid = cls._normalize_guid(doc)
         if not entity or not entity.IsValid():
             return payload
-        doc_guid_field = schema.GetField("DocGuid")
-        doc_guid = entity.Get[str](doc_guid_field) if doc_guid_field else None
+        doc_guid = entity.Get[str](doc_field) if doc_field else None
         if doc_guid and doc_guid != needed_guid:
             return payload
-        history_json = entity.Get[str](history_field)
-        meta_json = entity.Get[str](meta_field)
+        history_json = cls._read_chunked_field(entity, history_field, history_chunks_field)
+        meta_json = cls._read_chunked_field(entity, meta_field, meta_chunks_field)
         if history_json:
             try:
                 payload["entries"] = json.loads(history_json)
@@ -677,9 +817,16 @@ class ExtensibleStorage(object):
 
     @classmethod
     def _write_storage(cls, doc, payload, transaction_name=None):
-        schema, history_field, meta_field = cls._schema_and_fields(doc)
         history_json = json.dumps(payload.get("entries", []))
         meta_json = json.dumps(payload.get("meta", {}))
+        needs_chunking = (
+            len(history_json or "") > cls.MAX_ES_STRING
+            or len(meta_json or "") > cls.MAX_ES_STRING
+        )
+        schema, history_field, meta_field, history_chunks_field, meta_chunks_field, doc_field, version = cls._schema_and_fields_versioned(
+            doc,
+            prefer_chunked=needs_chunking,
+        )
         project_info = getattr(doc, "ProjectInformation", None)
         if project_info is None:
             raise RuntimeError("ProjectInformation element is required for ExtensibleStorage writes.")
@@ -688,11 +835,10 @@ class ExtensibleStorage(object):
             entity = project_info.GetEntity(schema)
             if not entity or not entity.IsValid():
                 entity = Entity(schema)
-            entity.Set[str](history_field, history_json)
-            entity.Set[str](meta_field, meta_json)
-            doc_guid_field = schema.GetField("DocGuid")
-            if doc_guid_field:
-                entity.Set[str](doc_guid_field, cls._normalize_guid(doc))
+            cls._write_chunked_field(entity, history_field, history_chunks_field, history_json)
+            cls._write_chunked_field(entity, meta_field, meta_chunks_field, meta_json)
+            if doc_field:
+                entity.Set[str](doc_field, cls._normalize_guid(doc))
             project_info.SetEntity(entity)
 
         # Always wrap in our own transaction so Undo stack records it
@@ -898,12 +1044,19 @@ class ExtensibleStorage(object):
         return os.getenv("USERNAME") or os.getenv("USER") or "unknown"
 
 
-def _make_doc_guid(doc):
+def _make_doc_guid(doc, version=1):
     """Generate document-specific GUID to avoid schema conflicts between models."""
+    return _make_doc_guid_versioned(doc, version=version)
+
+
+def _make_doc_guid_versioned(doc, version):
     import hashlib
     import uuid
     title = getattr(doc, "Title", "unknown")
-    hash_bytes = hashlib.md5((title + "9f6633b1d77f49ef93905111fbb16d82").encode('utf-8')).digest()
+    salt = "9f6633b1d77f49ef93905111fbb16d82"
+    if version == 2:
+        salt = "e7f1c8d43e7f4c4f9b4ebcc2f4b54c51"
+    hash_bytes = hashlib.md5((title + salt).encode("utf-8")).digest()
     guid_str = str(uuid.UUID(bytes=hash_bytes))
     return Guid(guid_str)
 

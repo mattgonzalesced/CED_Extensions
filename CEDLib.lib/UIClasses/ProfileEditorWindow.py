@@ -196,8 +196,8 @@ class ProfileEditorWindow(forms.WPFWindow):
         if not params and hasattr(inst_cfg, "parameters"):
             params = inst_cfg.parameters or {}
 
-        for name, val in params.items():
-            self._add_param_row(name, val)
+        for name in sorted(params.keys(), key=lambda key: (key or "").strip().lower()):
+            self._add_param_row(name, params.get(name))
 
         self._reload_annotation_rows()
         self._apply_read_only_state()
