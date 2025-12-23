@@ -60,7 +60,14 @@ def set_selection(ids):
 
 
 def get_circuit_sort_key(branch):
-    val = branch.circuit_number or ""
+    val = None
+    try:
+        val = branch.CircuitNumber
+    except Exception:
+        try:
+            val = branch.circuit_number
+        except Exception:
+            val = ""
     try:
         return int(val)
     except Exception:

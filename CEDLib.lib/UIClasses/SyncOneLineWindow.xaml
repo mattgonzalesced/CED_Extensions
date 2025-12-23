@@ -44,7 +44,7 @@
                                     <ColumnDefinition Width="22"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <CheckBox Grid.Column="0" IsChecked="{Binding is_checked}" Click="ItemCheckBox_Click" VerticalAlignment="Center"/>
+                                <CheckBox Grid.Column="0" Width="16" Margin="2,0,2,0" IsChecked="{Binding is_checked}" Click="ItemCheckBox_Click" VerticalAlignment="Center" HorizontalAlignment="Left" Focusable="False"/>
                                 <TextBlock Grid.Column="1" Text="{Binding status_symbol}" Foreground="{Binding status_brush}" VerticalAlignment="Center"/>
                                 <TextBlock Grid.Column="2" Text="{Binding display_text}" VerticalAlignment="Center"/>
                             </Grid>
