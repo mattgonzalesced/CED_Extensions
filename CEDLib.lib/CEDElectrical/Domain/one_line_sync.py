@@ -461,11 +461,19 @@ class OneLineSyncService(object):
             .OfCategory(DB.BuiltInCategory.OST_DetailComponents) \
             .WhereElementIsElementType() \
             .ToElements()
-        return list(symbols)
+        return [sym for sym in symbols
+                if isinstance(sym, DB.FamilySymbol)
+                and sym.Family
+                and sym.Family.Name
+                and sym.Family.Name.startswith("SLD-")]
 
     def collect_tag_symbols(self):
         symbols = DB.FilteredElementCollector(self.doc) \
             .OfCategory(DB.BuiltInCategory.OST_DetailComponentTags) \
             .WhereElementIsElementType() \
             .ToElements()
-        return list(symbols)
+        return [sym for sym in symbols
+                if isinstance(sym, DB.FamilySymbol)
+                and sym.Family
+                and sym.Family.Name
+                and sym.Family.Name.startswith("DI-Tag_SLD")]

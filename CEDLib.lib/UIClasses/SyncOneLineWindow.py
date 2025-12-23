@@ -31,9 +31,12 @@ class SyncOneLineWindow(forms.WPFWindow):
         families = []
         seen = set()
         for symbol in self._detail_symbols:
-            family_name = symbol.Family.Name
+            family = getattr(symbol, "Family", None)
+            if not family:
+                continue
+            family_name = family.Name
             if family_name not in seen:
-                families.append(symbol.Family)
+                families.append(family)
                 seen.add(family_name)
 
         self.DetailFamilyCombo.ItemsSource = families
@@ -44,9 +47,12 @@ class SyncOneLineWindow(forms.WPFWindow):
         families = []
         seen = set()
         for symbol in self._tag_symbols:
-            family_name = symbol.Family.Name
+            family = getattr(symbol, "Family", None)
+            if not family:
+                continue
+            family_name = family.Name
             if family_name not in seen:
-                families.append(symbol.Family)
+                families.append(family)
                 seen.add(family_name)
 
         families.insert(0, None)
