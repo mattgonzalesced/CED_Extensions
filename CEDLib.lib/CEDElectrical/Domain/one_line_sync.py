@@ -10,8 +10,7 @@ DETAIL_PARAM_CKT_NUMBER = "CKT_Circuit Number_CEDT"
 DETAIL_PARAM_PANEL_NAME = "Panel Name_CEDT"
 DETAIL_PARAM_SC_PANEL_ID = "SC_Panel ElementId"
 DETAIL_PARAM_SC_CIRCUIT_ID = "SC_Circuit ElementId"
-DETAIL_PARAM_SC_MODEL_ID = "SC_Model ElementId"
-MODEL_PARAM_SC_DETAIL_ID = "SC_Detail ElementId"
+SLD_COMPONENT_ID_PARAM = "SLD_Component ID_CED"
 
 DEVICE_CATEGORY_IDS = [
     DB.ElementId(DB.BuiltInCategory.OST_ElectricalFixtures),
@@ -255,7 +254,7 @@ class OneLineSyncService(object):
         return None
 
     def build_detail_lookup(self, detail_items):
-        detail_by_model_id = {}
+        detail_by_component_id = {}
         detail_by_id = {}
         detail_by_circuit = {}
         detail_by_panel = {}
@@ -263,9 +262,9 @@ class OneLineSyncService(object):
         for ditem in detail_items:
             detail_by_id[str(ditem.Id.IntegerValue)] = ditem
 
-            model_id = self.get_detail_param_value(ditem, DETAIL_PARAM_SC_MODEL_ID)
-            if model_id:
-                detail_by_model_id[str(model_id).strip()] = ditem
+            component_id = self.get_detail_param_value(ditem, SLD_COMPONENT_ID_PARAM)
+            if component_id:
+                detail_by_component_id[str(component_id).strip()] = ditem
 
             panel_val = self.get_detail_param_value(ditem, DETAIL_PARAM_CKT_PANEL)
             cnum_val = self.get_detail_param_value(ditem, DETAIL_PARAM_CKT_NUMBER)
@@ -278,18 +277,14 @@ class OneLineSyncService(object):
             elif panel_val:
                 detail_by_panel[str(panel_val)] = ditem
 
-        return detail_by_model_id, detail_by_id, detail_by_circuit, detail_by_panel
+        return detail_by_component_id, detail_by_id, detail_by_circuit, detail_by_panel
 
-    def get_associated_detail(self, model_elem, model_id, detail_by_model_id, detail_by_id, fallback_key=None,
+    def get_associated_detail(self, model_elem, model_id, detail_by_component_id, detail_by_id, fallback_key=None,
                               detail_by_circuit=None, detail_by_panel=None):
         detail_elem = None
-
-        detail_id_val = self.get_model_param_value(model_elem, MODEL_PARAM_SC_DETAIL_ID, allow_type_fallback=False)
-        if detail_id_val:
-            detail_elem = detail_by_id.get(str(detail_id_val).strip())
-
-        if not detail_elem:
-            detail_elem = detail_by_model_id.get(str(model_id))
+        component_id = self.get_model_param_value(model_elem, SLD_COMPONENT_ID_PARAM, allow_type_fallback=False)
+        if component_id:
+            detail_elem = detail_by_component_id.get(str(component_id).strip())
 
         if not detail_elem and fallback_key:
             if detail_by_circuit and isinstance(fallback_key, tuple):
@@ -305,26 +300,26 @@ class OneLineSyncService(object):
         devices = self.collect_devices()
         detail_items = self.collect_detail_items()
 
-        detail_by_model_id, detail_by_id, detail_by_circuit, detail_by_panel = self.build_detail_lookup(detail_items)
+        detail_by_component_id, detail_by_id, detail_by_circuit, detail_by_panel = self.build_detail_lookup(detail_items)
         associations = []
 
         for circuit in circuits:
             key = self.get_circuit_key(circuit)
-            detail_elem = self.get_associated_detail(circuit, circuit.Id.IntegerValue, detail_by_model_id, detail_by_id,
+            detail_elem = self.get_associated_detail(circuit, circuit.Id.IntegerValue, detail_by_component_id, detail_by_id,
                                                      fallback_key=key, detail_by_circuit=detail_by_circuit)
             assoc = SyncAssociation(circuit, detail_elem, "circuit", key=key)
             associations.append(assoc)
 
         for panel in panels:
             key = self.get_panel_key(panel)
-            detail_elem = self.get_associated_detail(panel, panel.Id.IntegerValue, detail_by_model_id, detail_by_id,
+            detail_elem = self.get_associated_detail(panel, panel.Id.IntegerValue, detail_by_component_id, detail_by_id,
                                                      fallback_key=key, detail_by_panel=detail_by_panel)
             assoc = SyncAssociation(panel, detail_elem, "panel", key=key)
             associations.append(assoc)
 
         for device in devices:
             key = self.get_device_circuit_key(device)
-            detail_elem = self.get_associated_detail(device, device.Id.IntegerValue, detail_by_model_id, detail_by_id,
+            detail_elem = self.get_associated_detail(device, device.Id.IntegerValue, detail_by_component_id, detail_by_id,
                                                      fallback_key=key, detail_by_circuit=detail_by_circuit)
             assoc = SyncAssociation(device, detail_elem, "device", key=key)
             associations.append(assoc)
@@ -377,9 +372,38 @@ class OneLineSyncService(object):
 
         return updated
 
-    def _sync_common_ids(self, assoc):
-        self.set_param_value(assoc.detail_elem, DETAIL_PARAM_SC_MODEL_ID, str(assoc.model_elem.Id.IntegerValue))
-        self.set_param_value(assoc.model_elem, MODEL_PARAM_SC_DETAIL_ID, str(assoc.detail_elem.Id.IntegerValue))
+    def get_link_warnings(self, associations):
+        warnings = []
+        for assoc in associations:
+            if not assoc.detail_elem:
+                warnings.append("{} {} (Id {}) missing detail item".format(
+                    assoc.kind.capitalize(),
+                    assoc.model_elem.Name if hasattr(assoc.model_elem, "Name") else "Element",
+                    assoc.model_elem.Id.IntegerValue))
+                continue
+
+            model_val = self.get_model_param_value(assoc.model_elem, SLD_COMPONENT_ID_PARAM, allow_type_fallback=False)
+            detail_val = self.get_detail_param_value(assoc.detail_elem, SLD_COMPONENT_ID_PARAM)
+            if not model_val and not detail_val:
+                warnings.append("Missing SLD_Component ID_CED for model {} and detail {} ({} Id {}, detail Id {})".format(
+                    assoc.kind,
+                    assoc.detail_elem.Name if hasattr(assoc.detail_elem, "Name") else "Detail Item",
+                    assoc.kind.capitalize(),
+                    assoc.model_elem.Id.IntegerValue,
+                    assoc.detail_elem.Id.IntegerValue))
+        return warnings
+
+    def _sync_component_id(self, assoc):
+        model_val = self.get_model_param_value(assoc.model_elem, SLD_COMPONENT_ID_PARAM, allow_type_fallback=False)
+        detail_val = self.get_detail_param_value(assoc.detail_elem, SLD_COMPONENT_ID_PARAM)
+        if model_val:
+            self.set_param_value(assoc.detail_elem, SLD_COMPONENT_ID_PARAM, str(model_val))
+        elif detail_val:
+            self.set_param_value(assoc.model_elem, SLD_COMPONENT_ID_PARAM, str(detail_val))
+        else:
+            default_id = str(assoc.model_elem.Id.IntegerValue)
+            self.set_param_value(assoc.model_elem, SLD_COMPONENT_ID_PARAM, default_id)
+            self.set_param_value(assoc.detail_elem, SLD_COMPONENT_ID_PARAM, default_id)
 
     def _sync_circuit(self, assoc):
         for detail_param, model_param in CIRCUIT_VALUE_MAP.items():
@@ -394,7 +418,7 @@ class OneLineSyncService(object):
         except Exception:
             pass
 
-        self._sync_common_ids(assoc)
+        self._sync_component_id(assoc)
         return 1
 
     def _sync_panel(self, assoc):
@@ -403,7 +427,7 @@ class OneLineSyncService(object):
             self.set_param_value(assoc.detail_elem, detail_param, value)
 
         self.set_param_value(assoc.detail_elem, DETAIL_PARAM_SC_PANEL_ID, str(assoc.model_elem.Id.IntegerValue))
-        self._sync_common_ids(assoc)
+        self._sync_component_id(assoc)
         return 1
 
     def _sync_device(self, assoc):
@@ -411,36 +435,31 @@ class OneLineSyncService(object):
             value = self.get_model_param_value(assoc.model_elem, model_param)
             self.set_param_value(assoc.detail_elem, detail_param, value)
 
-        self._sync_common_ids(assoc)
+        self._sync_component_id(assoc)
         return 1
 
     # ------------------------------------------------------------------
     # Detail item creation
     # ------------------------------------------------------------------
-    def create_detail_items(self, associations, detail_symbol, view, tag_symbol=None):
+    def create_detail_items(self, associations, detail_symbol, view, base_point, tag_symbol=None):
         created = []
-        if not detail_symbol or not view:
+        if not detail_symbol or not view or not base_point:
             return created
 
         if not detail_symbol.IsActive:
             detail_symbol.Activate()
 
-        base_x = 0.0
-        base_y = 0.0
         spacing = 5.0
 
         for index, assoc in enumerate(associations):
-            if assoc.kind != "panel":
-                continue
-
-            location = DB.XYZ(base_x + (spacing * index), base_y, 0)
+            location = DB.XYZ(base_point.X + (spacing * index), base_point.Y, base_point.Z)
             detail_item = self.doc.Create.NewFamilyInstance(location, detail_symbol, view)
             assoc.detail_elem = detail_item
             created.append(assoc)
 
             if tag_symbol:
                 try:
-                    tag_point = DB.XYZ(base_x + (spacing * index), base_y - spacing, 0)
+                    tag_point = DB.XYZ(base_point.X + (spacing * index), base_point.Y - spacing, base_point.Z)
                     tag = DB.IndependentTag.Create(self.doc, view.Id,
                                                    DB.Reference(detail_item),
                                                    False,

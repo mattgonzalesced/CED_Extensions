@@ -6,25 +6,30 @@ from System.Windows.Media import Brushes
 
 
 class SyncOneLineListItem(object):
-    def __init__(self, association, display_text, status_symbol, status_brush):
+    def __init__(self, association, base_text, tree_text, status_symbol, status_brush):
         self.association = association
-        self.display_text = display_text
+        self.base_text = base_text
+        self.tree_text = tree_text
+        self.display_text = base_text
         self.status_symbol = status_symbol
         self.status_brush = status_brush
         self.is_checked = False
 
 
 class SyncOneLineWindow(forms.WPFWindow):
-    def __init__(self, xaml_path, items, detail_symbols, tag_symbols):
+    def __init__(self, xaml_path, items, detail_symbols, tag_symbols, on_sync=None, on_create=None):
         forms.WPFWindow.__init__(self, xaml_path)
 
         self._all_items = items
         self._detail_symbols = detail_symbols or []
         self._tag_symbols = tag_symbols or []
-        self.requested_action = None
+        self._on_sync = on_sync
+        self._on_create = on_create
+        self._sort_mode = "Flat"
 
         self._build_detail_combo()
         self._build_tag_combo()
+        self.SortModeCombo.SelectedIndex = 0
         self._refresh_list(self._all_items)
 
     def _build_detail_combo(self):
@@ -60,14 +65,32 @@ class SyncOneLineWindow(forms.WPFWindow):
         self.TagFamilyCombo.SelectedIndex = 0
 
     def _refresh_list(self, items):
+        for item in items:
+            if self._sort_mode == "Tree":
+                item.display_text = item.tree_text
+            else:
+                item.display_text = item.base_text
         self.ElementsList.ItemsSource = items
 
-    def _filter_items(self, search_text):
-        if not search_text:
-            return self._all_items
+    def _status_allowed(self, status):
+        if status == "linked":
+            return bool(self.FilterLinked.IsChecked)
+        if status == "outdated":
+            return bool(self.FilterOutdated.IsChecked)
+        if status == "missing":
+            return bool(self.FilterMissing.IsChecked)
+        return True
 
-        search_text = search_text.lower()
-        return [item for item in self._all_items if search_text in item.display_text.lower()]
+    def _filter_items(self, search_text):
+        search_text = (search_text or "").lower()
+        filtered = []
+        for item in self._all_items:
+            if not self._status_allowed(item.association.status):
+                continue
+            text = item.display_text.lower()
+            if not search_text or search_text in text:
+                filtered.append(item)
+        return filtered
 
     def _update_detail_types(self):
         family = self.DetailFamilyCombo.SelectedItem
@@ -103,6 +126,15 @@ class SyncOneLineWindow(forms.WPFWindow):
     def SearchBox_TextChanged(self, sender, args):
         self._refresh_list(self._filter_items(self.SearchBox.Text))
 
+    def FilterStatus_Changed(self, sender, args):
+        self._refresh_list(self._filter_items(self.SearchBox.Text))
+
+    def SortModeCombo_SelectionChanged(self, sender, args):
+        item = self.SortModeCombo.SelectedItem
+        if item:
+            self._sort_mode = item.Content
+        self._refresh_list(self._filter_items(self.SearchBox.Text))
+
     def DetailFamilyCombo_SelectionChanged(self, sender, args):
         self._update_detail_types()
 
@@ -110,16 +142,37 @@ class SyncOneLineWindow(forms.WPFWindow):
         self._update_tag_types()
 
     def CreateButton_Click(self, sender, args):
-        self.requested_action = "create"
-        self.Close()
+        if self._on_create:
+            self._on_create()
 
     def SyncButton_Click(self, sender, args):
-        self.requested_action = "sync"
-        self.Close()
+        if self._on_sync:
+            self._on_sync()
 
     def CancelButton_Click(self, sender, args):
-        self.requested_action = None
         self.Close()
+
+    def ItemCheckBox_Click(self, sender, args):
+        selected = list(self.ElementsList.SelectedItems)
+        if not selected:
+            selected = [sender.DataContext]
+        new_state = sender.IsChecked
+        for item in selected:
+            item.is_checked = new_state
+        self._refresh_list(self._filter_items(self.SearchBox.Text))
+
+    def SelectAllButton_Click(self, sender, args):
+        for item in self._all_items:
+            item.is_checked = True
+        self._refresh_list(self._filter_items(self.SearchBox.Text))
+
+    def SelectNoneButton_Click(self, sender, args):
+        for item in self._all_items:
+            item.is_checked = False
+        self._refresh_list(self._filter_items(self.SearchBox.Text))
+
+    def refresh_items(self):
+        self._refresh_list(self._filter_items(self.SearchBox.Text))
 
 
 def status_symbol(status):

@@ -15,21 +15,25 @@
 
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
             <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,6,0"/>
-            <TextBox x:Name="SearchBox" Width="280" TextChanged="SearchBox_TextChanged"/>
-            <TextBlock Text="Legend:" VerticalAlignment="Center" Margin="20,0,6,0"/>
-            <TextBlock Text="●" Foreground="Green" VerticalAlignment="Center" Margin="0,0,4,0"/>
-            <TextBlock Text="Linked" VerticalAlignment="Center" Margin="0,0,12,0"/>
-            <TextBlock Text="●" Foreground="Orange" VerticalAlignment="Center" Margin="0,0,4,0"/>
-            <TextBlock Text="Outdated" VerticalAlignment="Center" Margin="0,0,12,0"/>
-            <TextBlock Text="●" Foreground="Red" VerticalAlignment="Center" Margin="0,0,4,0"/>
-            <TextBlock Text="Missing" VerticalAlignment="Center"/>
+            <TextBox x:Name="SearchBox" Width="220" TextChanged="SearchBox_TextChanged"/>
+            <TextBlock Text="Status:" VerticalAlignment="Center" Margin="12,0,6,0"/>
+            <CheckBox x:Name="FilterLinked" Content="Linked" IsChecked="True" Margin="0,0,8,0" Checked="FilterStatus_Changed" Unchecked="FilterStatus_Changed"/>
+            <CheckBox x:Name="FilterOutdated" Content="Outdated" IsChecked="True" Margin="0,0,8,0" Checked="FilterStatus_Changed" Unchecked="FilterStatus_Changed"/>
+            <CheckBox x:Name="FilterMissing" Content="Missing" IsChecked="True" Margin="0,0,12,0" Checked="FilterStatus_Changed" Unchecked="FilterStatus_Changed"/>
+            <TextBlock Text="Sort:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <ComboBox x:Name="SortModeCombo" Width="120" SelectionChanged="SortModeCombo_SelectionChanged">
+                <ComboBoxItem Content="Flat"/>
+                <ComboBoxItem Content="Tree"/>
+            </ComboBox>
+            <Button x:Name="SelectAllButton" Content="Select All" Width="90" Margin="12,0,6,0" Click="SelectAllButton_Click"/>
+            <Button x:Name="SelectNoneButton" Content="Select None" Width="90" Click="SelectNoneButton_Click"/>
         </StackPanel>
 
         <GroupBox Grid.Row="1" Header="Model Elements">
-            <ListBox x:Name="ElementsList" Margin="5">
+            <ListBox x:Name="ElementsList" Margin="5" SelectionMode="Extended">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <CheckBox IsChecked="{Binding is_checked}">
+                        <CheckBox IsChecked="{Binding is_checked}" Click="ItemCheckBox_Click">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding status_symbol}" Foreground="{Binding status_brush}" Margin="0,0,6,0"/>
                                 <TextBlock Text="{Binding display_text}"/>
@@ -50,22 +54,22 @@
 
             <StackPanel Grid.Column="0" Margin="0,0,8,0">
                 <TextBlock Text="Detail Item Family" Margin="0,0,0,4"/>
-                <ComboBox x:Name="DetailFamilyCombo" SelectionChanged="DetailFamilyCombo_SelectionChanged"/>
+                <ComboBox x:Name="DetailFamilyCombo" DisplayMemberPath="Name" SelectionChanged="DetailFamilyCombo_SelectionChanged"/>
             </StackPanel>
 
             <StackPanel Grid.Column="1" Margin="0,0,8,0">
                 <TextBlock Text="Detail Item Type" Margin="0,0,0,4"/>
-                <ComboBox x:Name="DetailTypeCombo"/>
+                <ComboBox x:Name="DetailTypeCombo" DisplayMemberPath="Name"/>
             </StackPanel>
 
             <StackPanel Grid.Column="2" Margin="0,0,8,0">
                 <TextBlock Text="Tag Family (Optional)" Margin="0,0,0,4"/>
-                <ComboBox x:Name="TagFamilyCombo" SelectionChanged="TagFamilyCombo_SelectionChanged"/>
+                <ComboBox x:Name="TagFamilyCombo" DisplayMemberPath="Name" SelectionChanged="TagFamilyCombo_SelectionChanged"/>
             </StackPanel>
 
             <StackPanel Grid.Column="3">
                 <TextBlock Text="Tag Type" Margin="0,0,0,4"/>
-                <ComboBox x:Name="TagTypeCombo"/>
+                <ComboBox x:Name="TagTypeCombo" DisplayMemberPath="Name"/>
             </StackPanel>
         </Grid>
 
