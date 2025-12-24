@@ -3,8 +3,8 @@ import os
 from pyrevit import revit, DB, script, forms
 import System
 from Autodesk.Revit.Exceptions import OperationCanceledException
-from Autodesk.Revit.UI import IExternalEventHandler, ExternalEvent
 from CEDElectrical.Domain.one_line_sync import OneLineSyncService
+from pyrevitmep.event import CustomizableEvent
 import UIClasses.SyncOneLineWindow as sync_ui
 from UIClasses.SyncOneLineWindow import SyncOneLineWindow, SyncOneLineListItem, status_symbol
 
@@ -12,8 +12,8 @@ logger = script.get_logger()
 
 XAML_PATH = os.path.join(os.path.dirname(sync_ui.__file__), "SyncOneLineWindow.xaml")
 _ONE_LINE_WINDOW = None
-_ONE_LINE_HANDLER = None
 _ONE_LINE_EVENT = None
+ENABLE_ONE_LINE_LOG = True
 
 
 def get_element_label(assoc):
@@ -264,146 +264,123 @@ def refresh_statuses(service, items):
         item.status_brush = brush
 
 
-class OneLineExternalEventHandler(IExternalEventHandler):
-    def __init__(self, window, service, doc, view, items):
-        self._window = window
-        self._service = service
-        self._doc = doc
-        self._view = view
-        self._items = items
-        self._action = None
-        self._payload = None
+def log_action(message):
+    if ENABLE_ONE_LINE_LOG:
+        output = script.get_output()
+        output.print_md("* {}".format(message))
 
-    def GetName(self):
-        return "Sync One Line External Event"
 
-    def set_action(self, action, payload=None):
-        self._action = action
-        self._payload = payload
+def execute_sync(window, service, doc, items):
+    log_action("Sync Selected clicked.")
+    selected_associations = window.get_selected_associations()
+    if not selected_associations:
+        forms.alert("Please select at least one element.")
+        return
 
-    def Execute(self, uiapp):
-        if not self._action:
-            return
+    t = DB.Transaction(doc, "Sync One-Line Detail Items")
+    t.Start()
+    updated = service.sync_associations(selected_associations)
+    t.Commit()
 
-        action = self._action
-        payload = self._payload
-        self._action = None
-        self._payload = None
+    refresh_statuses(service, items)
+    window.refresh_items()
 
-        if action == "sync":
-            self._execute_sync()
-        elif action == "create":
-            self._execute_create()
-        elif action == "select_model":
-            self._execute_select(model=True)
-        elif action == "select_detail":
-            self._execute_select(model=False)
-        elif action == "update_details":
-            self._execute_update_details(payload)
+    warnings = service.get_link_warnings(selected_associations)
+    if warnings:
+        output = script.get_output()
+        output.print_md("## Sync One-Line Warnings")
+        for warning in warnings:
+            output.print_md("* {}".format(warning))
+    else:
+        forms.alert("Synced {} element(s).".format(updated))
 
-    def _execute_sync(self):
-        selected_associations = self._window.get_selected_associations()
-        if not selected_associations:
-            forms.alert("Please select at least one element.")
-            return
 
-        t = DB.Transaction(self._doc, "Sync One-Line Detail Items")
-        t.Start()
-        updated = self._service.sync_associations(selected_associations)
-        t.Commit()
+def execute_create(window, service, doc, view, items):
+    log_action("Create Detail Items clicked.")
+    if not ensure_detail_view(view):
+        forms.alert("Active view must support detail items.")
+        return
 
-        refresh_statuses(self._service, self._items)
-        self._window.refresh_items()
+    selected_associations = window.get_selected_associations()
+    if not selected_associations:
+        forms.alert("Please select at least one element.")
+        return
 
-        warnings = self._service.get_link_warnings(selected_associations)
-        if warnings:
-            output = script.get_output()
-            output.print_md("## Sync One-Line Warnings")
-            for warning in warnings:
-                output.print_md("* {}".format(warning))
-        else:
-            forms.alert("Synced {} element(s).".format(updated))
+    detail_symbol = window.get_selected_detail_symbol()
+    if not detail_symbol:
+        forms.alert("Select a detail item family and type before creating.")
+        return
 
-    def _execute_create(self):
-        if not ensure_detail_view(self._view):
-            forms.alert("Active view must support detail items.")
-            return
+    tag_symbol = window.get_selected_tag_symbol()
 
-        selected_associations = self._window.get_selected_associations()
-        if not selected_associations:
-            forms.alert("Please select at least one element.")
-            return
+    try:
+        window.Hide()
+        start_point = revit.uidoc.Selection.PickPoint("Pick start point for detail items")
+        end_point = revit.uidoc.Selection.PickPoint("Pick end point for detail items")
+    except OperationCanceledException:
+        window.Show()
+        window.Activate()
+        return
+    finally:
+        window.Show()
+        window.Activate()
 
-        detail_symbol = self._window.get_selected_detail_symbol()
-        if not detail_symbol:
-            forms.alert("Select a detail item family and type before creating.")
-            return
+    associations_to_create = [assoc for assoc in selected_associations if assoc.detail_elem is None]
+    if not associations_to_create:
+        forms.alert("Selected elements already have detail items.")
+        return
 
-        tag_symbol = self._window.get_selected_tag_symbol()
+    points = build_placement_points(start_point, end_point, len(associations_to_create))
 
-        try:
-            self._window.Hide()
-            start_point = revit.uidoc.Selection.PickPoint("Pick start point for detail items")
-            end_point = revit.uidoc.Selection.PickPoint("Pick end point for detail items")
-        except OperationCanceledException:
-            self._window.Show()
-            self._window.Activate()
-            return
-        finally:
-            self._window.Show()
-            self._window.Activate()
+    t = DB.Transaction(doc, "Create One-Line Detail Items")
+    t.Start()
+    created = service.create_detail_items(associations_to_create, detail_symbol, view, points, tag_symbol)
+    updated = service.sync_associations(created)
+    t.Commit()
 
-        associations_to_create = [assoc for assoc in selected_associations if assoc.detail_elem is None]
-        if not associations_to_create:
-            forms.alert("Selected elements already have detail items.")
-            return
+    refresh_statuses(service, items)
+    window.refresh_items()
 
-        points = build_placement_points(start_point, end_point, len(associations_to_create))
+    warnings = service.get_link_warnings(created)
+    if warnings:
+        output = script.get_output()
+        output.print_md("## Create Detail Items Warnings")
+        for warning in warnings:
+            output.print_md("* {}".format(warning))
+    else:
+        forms.alert("Created {} detail item(s) and synced {} element(s).".format(len(created), updated))
 
-        t = DB.Transaction(self._doc, "Create One-Line Detail Items")
-        t.Start()
-        created = self._service.create_detail_items(associations_to_create, detail_symbol, self._view, points, tag_symbol)
-        updated = self._service.sync_associations(created)
-        t.Commit()
 
-        refresh_statuses(self._service, self._items)
-        self._window.refresh_items()
+def execute_select(window, model=True):
+    action = "Select Model" if model else "Select Detail"
+    log_action("{} clicked.".format(action))
+    items = window.ElementsList.SelectedItems
+    if not items or items.Count == 0:
+        return
+    assoc = items[0].association
+    if model:
+        set_selection([assoc.model_elem.Id])
+    else:
+        if assoc.detail_elem:
+            set_selection([assoc.detail_elem.Id])
 
-        warnings = self._service.get_link_warnings(created)
-        if warnings:
-            output = script.get_output()
-            output.print_md("## Create Detail Items Warnings")
-            for warning in warnings:
-                output.print_md("* {}".format(warning))
-        else:
-            forms.alert("Created {} detail item(s) and synced {} element(s).".format(len(created), updated))
 
-    def _execute_select(self, model=True):
-        items = self._window.ElementsList.SelectedItems
-        if not items or items.Count == 0:
-            return
-        assoc = items[0].association
-        if model:
-            set_selection([assoc.model_elem.Id])
-        else:
-            if assoc.detail_elem:
-                set_selection([assoc.detail_elem.Id])
-
-    def _execute_update_details(self, item):
-        if not item:
-            self._window.set_detail_panel("(none)", "-", "-", [])
-            return
-        assoc = item.association
-        detail_id = "-" if not assoc.detail_elem else str(assoc.detail_elem.Id.IntegerValue)
-        model_id = str(assoc.model_elem.Id.IntegerValue)
-        label = get_element_label(assoc)
-        summary = []
-        comparisons = self._service.compare_values(assoc)
-        for comp in comparisons:
-            status = "OK" if comp["match"] else "Outdated"
-            summary.append("{}: {} | Model='{}' Detail='{}'".format(
-                status, comp["param"], comp["model"], comp["detail"]))
-        self._window.set_detail_panel(label, model_id, detail_id, summary)
+def execute_update_details(window, service, item):
+    log_action("Selection changed.")
+    if not item:
+        window.set_detail_panel("(none)", "-", "-", [])
+        return
+    assoc = item.association
+    detail_id = "-" if not assoc.detail_elem else str(assoc.detail_elem.Id.IntegerValue)
+    model_id = str(assoc.model_elem.Id.IntegerValue)
+    label = get_element_label(assoc)
+    summary = []
+    comparisons = service.compare_values(assoc)
+    for comp in comparisons:
+        status = "OK" if comp["match"] else "Outdated"
+        summary.append("{}: {} | Model='{}' Detail='{}'".format(
+            status, comp["param"], comp["model"], comp["detail"]))
+    window.set_detail_panel(label, model_id, detail_id, summary)
 
 
 def main():
@@ -430,22 +407,16 @@ def main():
     global _ONE_LINE_HANDLER
     global _ONE_LINE_EVENT
 
-    handler = OneLineExternalEventHandler(None, service, doc, view, list_items)
-    external_event = ExternalEvent.Create(handler)
-    _ONE_LINE_HANDLER = handler
-    _ONE_LINE_EVENT = external_event
-
-    def raise_action(action, payload=None):
-        handler.set_action(action, payload)
-        external_event.Raise()
+    customizable_event = CustomizableEvent()
+    customizable_event.logger = logger
+    _ONE_LINE_EVENT = customizable_event
 
     window = SyncOneLineWindow(XAML_PATH, flat_items, tree_items, detail_symbols, tag_symbols,
-                               on_sync=lambda: raise_action("sync"),
-                               on_create=lambda: raise_action("create"),
-                               on_select_model=lambda: raise_action("select_model"),
-                               on_select_detail=lambda: raise_action("select_detail"),
-                               on_selection_changed=lambda item: raise_action("update_details", item))
-    handler._window = window
+                               on_sync=lambda: customizable_event.raise_event(execute_sync, window, service, doc, list_items),
+                               on_create=lambda: customizable_event.raise_event(execute_create, window, service, doc, view, list_items),
+                               on_select_model=lambda: customizable_event.raise_event(execute_select, window, True),
+                               on_select_detail=lambda: customizable_event.raise_event(execute_select, window, False),
+                               on_selection_changed=lambda item: customizable_event.raise_event(execute_update_details, window, service, item))
     _ONE_LINE_WINDOW = window
     window.Show()
 
