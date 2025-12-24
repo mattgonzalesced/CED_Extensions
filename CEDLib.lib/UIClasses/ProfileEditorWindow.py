@@ -55,6 +55,7 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._group_order = []
         self._display_entries = []
         self.orphan_requests = []
+        self.add_equipment_request = None
 
         self._normalize_truth_groups()
         self._rebuild_profile_items()
@@ -348,6 +349,31 @@ class ProfileEditorWindow(forms.WPFWindow):
         self.DialogResult = False
         self.Close()
 
+    def AddEquipmentButton_Click(self, sender, args):
+        if self._force_read_only:
+            root_key = self._active_root_key or self._child_to_root.get(self._current_profile_name, self._current_profile_name)
+            root_display = self._root_display_name(root_key) if root_key else None
+            if root_display:
+                msg = "Select the non-indented '{}' entry to edit merged profiles.".format(root_display)
+            else:
+                msg = "Select a source profile to edit."
+            forms.alert(msg, title="Add Equipment to Profiles")
+            return
+        if not self._current_profile_name:
+            forms.alert("Select a profile before adding equipment.", title="Add Equipment to Profiles")
+            return
+        if self._in_edit_mode and not self._save_current_typecfg():
+            return
+        target_name = self._current_profile_name or self._root_source_profile(self._active_root_key) or self._active_root_key
+        self.add_equipment_request = target_name
+        forms.alert(
+            "The window will close so you can select elements to add to '{}'.\n"
+            "After capture finishes, the editor will reopen.".format(target_name),
+            title="Add Equipment to Profiles",
+        )
+        self.DialogResult = False
+        self.Close()
+
     def OkButton_Click(self, sender, args):
         """Apply edits back into the current TypeConfig's InstanceConfig."""
         if not self._save_current_typecfg():
@@ -425,6 +451,13 @@ class ProfileEditorWindow(forms.WPFWindow):
             return
         enabled = bool(self._current_profile_name) and not self._force_read_only and bool(self._delete_callback)
         self.DeleteProfileButton.IsEnabled = enabled
+        self._update_add_equipment_button_state()
+
+    def _update_add_equipment_button_state(self):
+        if not hasattr(self, "AddEquipmentButton"):
+            return
+        enabled = bool(self._current_profile_name) and not self._force_read_only
+        self.AddEquipmentButton.IsEnabled = enabled
 
     def _apply_read_only_state(self):
         read_only = (not self._in_edit_mode) or self._force_read_only

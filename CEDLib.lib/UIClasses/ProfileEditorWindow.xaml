@@ -60,10 +60,17 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                <Button x:Name="AddEquipmentButton"
+                        Content="Add Equipment to Profiles"
+                        Width="210"
+                        Margin="0,0,0,5"
+                        Click="AddEquipmentButton_Click"
+                        IsEnabled="False"/>
                 <TextBlock x:Name="ParentInfoText"
                            Text="Parent: (none)"
                            FontWeight="Bold"
-                           Margin="0,0,0,5"/>
+                           Margin="0,0,0,5"
+                           Visibility="Collapsed"/>
                 <GroupBox Header="Types">
                     <ListBox x:Name="TypeList"
                              Height="120"
