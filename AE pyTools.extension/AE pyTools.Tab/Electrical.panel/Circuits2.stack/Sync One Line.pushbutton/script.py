@@ -79,9 +79,9 @@ def build_list_items(associations, tree_order):
     assoc_to_item = {}
     for assoc in associations:
         label = get_element_label(assoc)
-        display = "{} (Id {})".format(label, assoc.model_elem.Id.IntegerValue)
-        symbol, brush = status_symbol(assoc.status)
         kind_symbol = get_kind_symbol(assoc)
+        display = "{} {}".format(kind_symbol, label)
+        symbol, brush = status_symbol(assoc.status)
         item = SyncOneLineListItem(assoc, display, display, symbol, brush, kind_symbol)
         items.append(item)
         assoc_to_item[assoc] = item
@@ -151,10 +151,13 @@ def get_circuit_sort_key(branch):
 
 def is_spare_or_space(system):
     try:
-        cnum = system.CircuitNumber or ""
-        return "spare" in cnum.lower() or "space" in cnum.lower()
+        param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_TYPE)
+        if param:
+            val = param.AsValueString() or param.AsString() or ""
+            return "spare" in val.lower() or "space" in val.lower()
     except Exception:
         return False
+    return False
 
 
 def get_assigned_systems(equipment):
@@ -283,6 +286,7 @@ def execute_sync(window, service, doc, items):
 
     refresh_statuses(service, items)
     window.refresh_items()
+    window.Activate()
 
     warnings = service.get_link_warnings(selected_associations)
     if warnings:
@@ -314,8 +318,12 @@ def execute_create(window, service, doc, view, items):
 
     try:
         window.Hide()
-        start_point = revit.uidoc.Selection.PickPoint("Pick start point for detail items")
-        end_point = revit.uidoc.Selection.PickPoint("Pick end point for detail items")
+        if len(associations_to_create) == 1:
+            start_point = revit.uidoc.Selection.PickPoint("Pick insertion point for detail item")
+            end_point = start_point
+        else:
+            start_point = revit.uidoc.Selection.PickPoint("Pick start point for detail items")
+            end_point = revit.uidoc.Selection.PickPoint("Pick end point for detail items")
     except OperationCanceledException:
         window.Show()
         window.Activate()
@@ -339,6 +347,7 @@ def execute_create(window, service, doc, view, items):
 
     refresh_statuses(service, items)
     window.refresh_items()
+    window.Activate()
 
     warnings = service.get_link_warnings(created)
     if warnings:
@@ -374,6 +383,9 @@ def execute_update_details(window, service, item):
     model_id = str(assoc.model_elem.Id.IntegerValue)
     label = get_element_label(assoc)
     summary = []
+    summary.append("Status: {}".format(assoc.status))
+    if not assoc.detail_elem:
+        summary.append("Missing detail item.")
     comparisons = service.compare_values(assoc)
     for comp in comparisons:
         status = "OK" if comp["match"] else "Outdated"
