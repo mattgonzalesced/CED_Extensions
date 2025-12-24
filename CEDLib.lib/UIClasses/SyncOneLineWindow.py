@@ -17,11 +17,13 @@ class SyncOneLineListItem(object):
 
 
 class SyncOneLineWindow(forms.WPFWindow):
-    def __init__(self, xaml_path, items, detail_symbols, tag_symbols, on_sync=None, on_create=None,
+    def __init__(self, xaml_path, flat_items, tree_items, detail_symbols, tag_symbols, on_sync=None, on_create=None,
                  on_select_model=None, on_select_detail=None, on_selection_changed=None):
         forms.WPFWindow.__init__(self, xaml_path)
 
-        self._all_items = items
+        self._flat_items = flat_items
+        self._tree_items = tree_items
+        self._all_items = list(flat_items)
         self._detail_symbols = detail_symbols or []
         self._tag_symbols = tag_symbols or []
         self._on_sync = on_sync
@@ -88,8 +90,9 @@ class SyncOneLineWindow(forms.WPFWindow):
 
     def _filter_items(self, search_text):
         search_text = (search_text or "").lower()
+        base_items = self._tree_items if self._sort_mode == "Tree" else self._flat_items
         filtered = []
-        for item in self._all_items:
+        for item in base_items:
             if not self._status_allowed(item.association.status):
                 continue
             text = item.display_text.lower()
