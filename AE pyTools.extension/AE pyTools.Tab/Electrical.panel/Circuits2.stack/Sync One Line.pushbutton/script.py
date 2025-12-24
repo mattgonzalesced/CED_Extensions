@@ -60,15 +60,27 @@ def sort_key_flat(assoc):
     return (category_order, get_element_label(assoc))
 
 
+def get_kind_symbol(assoc):
+    if assoc.kind == "panel":
+        return u"\u25A0"
+    if assoc.kind == "device":
+        return u"\u25CF"
+    if assoc.kind == "circuit":
+        if getattr(assoc, "is_spare", False):
+            return u"\u25B7"
+        return u"\u25B6"
+    return u"\u25A1"
+
+
 def build_list_items(associations, tree_order):
     items = []
     assoc_to_item = {}
     for assoc in associations:
         label = get_element_label(assoc)
-        kind_label = assoc.kind.capitalize()
-        display = "[{}] {} (Id {})".format(kind_label, label, assoc.model_elem.Id.IntegerValue)
+        display = "{} (Id {})".format(label, assoc.model_elem.Id.IntegerValue)
         symbol, brush = status_symbol(assoc.status)
-        item = SyncOneLineListItem(assoc, display, display, symbol, brush)
+        kind_symbol = get_kind_symbol(assoc)
+        item = SyncOneLineListItem(assoc, display, display, symbol, brush, kind_symbol)
         items.append(item)
         assoc_to_item[assoc] = item
 
@@ -96,6 +108,30 @@ def set_selection(ids):
     revit.uidoc.Selection.SetElementIds(id_list)
 
 
+def build_placement_points(start_point, end_point, count):
+    if count <= 1:
+        return [start_point]
+
+    dx = end_point.X - start_point.X
+    dy = end_point.Y - start_point.Y
+    dz = end_point.Z - start_point.Z
+    tol = 1e-6
+    if abs(dx) >= abs(dy):
+        step_x = dx / float(count - 1)
+        step_y = 0.0
+    else:
+        step_x = 0.0
+        step_y = dy / float(count - 1)
+    step_z = dz / float(count - 1) if abs(dz) > tol else 0.0
+
+    points = []
+    for idx in range(count):
+        points.append(DB.XYZ(start_point.X + step_x * idx,
+                             start_point.Y + step_y * idx,
+                             start_point.Z + step_z * idx))
+    return points
+
+
 def get_circuit_sort_key(branch):
     val = None
     try:
@@ -109,6 +145,14 @@ def get_circuit_sort_key(branch):
         return int(val)
     except Exception:
         return str(val)
+
+
+def is_spare_or_space(system):
+    try:
+        cnum = system.CircuitNumber or ""
+        return "spare" in cnum.lower() or "space" in cnum.lower()
+    except Exception:
+        return False
 
 
 def get_assigned_systems(equipment):
@@ -158,6 +202,8 @@ def build_tree_order(associations, doc):
 
     def walk_circuit(system, indent):
         assoc = assoc_by_id.get(system.Id.IntegerValue)
+        if assoc:
+            assoc.is_spare = is_spare_or_space(system)
         add_assoc(assoc, indent)
         elements = []
         try:
@@ -294,7 +340,8 @@ class OneLineExternalEventHandler(IExternalEventHandler):
 
         try:
             self._window.Hide()
-            base_point = revit.uidoc.Selection.PickPoint("Pick insertion point for detail items")
+            start_point = revit.uidoc.Selection.PickPoint("Pick start point for detail items")
+            end_point = revit.uidoc.Selection.PickPoint("Pick end point for detail items")
         except OperationCanceledException:
             self._window.Show()
             self._window.Activate()
@@ -308,9 +355,11 @@ class OneLineExternalEventHandler(IExternalEventHandler):
             forms.alert("Selected elements already have detail items.")
             return
 
+        points = build_placement_points(start_point, end_point, len(associations_to_create))
+
         t = DB.Transaction(self._doc, "Create One-Line Detail Items")
         t.Start()
-        created = self._service.create_detail_items(associations_to_create, detail_symbol, self._view, base_point, tag_symbol)
+        created = self._service.create_detail_items(associations_to_create, detail_symbol, self._view, points, tag_symbol)
         updated = self._service.sync_associations(created)
         t.Commit()
 

@@ -457,25 +457,23 @@ class OneLineSyncService(object):
     # ------------------------------------------------------------------
     # Detail item creation
     # ------------------------------------------------------------------
-    def create_detail_items(self, associations, detail_symbol, view, base_point, tag_symbol=None):
+    def create_detail_items(self, associations, detail_symbol, view, points, tag_symbol=None):
         created = []
-        if not detail_symbol or not view or not base_point:
+        if not detail_symbol or not view or not points:
             return created
 
         if not detail_symbol.IsActive:
             detail_symbol.Activate()
 
-        spacing = 5.0
-
         for index, assoc in enumerate(associations):
-            location = DB.XYZ(base_point.X + (spacing * index), base_point.Y, base_point.Z)
+            location = points[index]
             detail_item = self.doc.Create.NewFamilyInstance(location, detail_symbol, view)
             assoc.detail_elem = detail_item
             created.append(assoc)
 
             if tag_symbol:
                 try:
-                    tag_point = DB.XYZ(base_point.X + (spacing * index), base_point.Y, base_point.Z)
+                    tag_point = location
                     tag = DB.IndependentTag.Create(self.doc, view.Id,
                                                    DB.Reference(detail_item),
                                                    False,

@@ -16,10 +16,8 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
             <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,6,0"/>
             <TextBox x:Name="SearchBox" Width="220" TextChanged="SearchBox_TextChanged"/>
-            <TextBlock Text="Status:" VerticalAlignment="Center" Margin="12,0,6,0"/>
-            <CheckBox x:Name="FilterLinked" Content="Linked" IsChecked="True" Margin="0,0,8,0" Checked="FilterStatus_Changed" Unchecked="FilterStatus_Changed"/>
-            <CheckBox x:Name="FilterOutdated" Content="Outdated" IsChecked="True" Margin="0,0,8,0" Checked="FilterStatus_Changed" Unchecked="FilterStatus_Changed"/>
-            <CheckBox x:Name="FilterMissing" Content="Missing" IsChecked="True" Margin="0,0,12,0" Checked="FilterStatus_Changed" Unchecked="FilterStatus_Changed"/>
+            <TextBlock Text="Filters:" VerticalAlignment="Center" Margin="12,0,6,0"/>
+            <Button x:Name="FilterToggleButton" Content="Filters ▾" Width="90" Click="FilterToggleButton_Click"/>
             <TextBlock Text="Sort:" VerticalAlignment="Center" Margin="0,0,6,0"/>
             <ComboBox x:Name="SortModeCombo" Width="120" SelectionChanged="SortModeCombo_SelectionChanged">
                 <ComboBoxItem Content="Flat"/>
@@ -28,6 +26,19 @@
             <Button x:Name="SelectAllButton" Content="Select All" Width="90" Margin="12,0,6,0" Click="SelectAllButton_Click"/>
             <Button x:Name="SelectNoneButton" Content="Select None" Width="90" Click="SelectNoneButton_Click"/>
         </StackPanel>
+        <Border x:Name="FilterPanel" Grid.Row="0" Margin="0,32,0,0" Background="WhiteSmoke" BorderBrush="Gray" BorderThickness="1" Padding="8" Visibility="Collapsed">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Status:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <CheckBox x:Name="FilterLinked" Content="Linked" IsChecked="True" Margin="0,0,8,0" Checked="FilterStatus_Changed" Unchecked="FilterStatus_Changed"/>
+                <CheckBox x:Name="FilterOutdated" Content="Outdated" IsChecked="True" Margin="0,0,8,0" Checked="FilterStatus_Changed" Unchecked="FilterStatus_Changed"/>
+                <CheckBox x:Name="FilterMissing" Content="Missing" IsChecked="True" Margin="0,0,12,0" Checked="FilterStatus_Changed" Unchecked="FilterStatus_Changed"/>
+                <TextBlock Text="Category:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <CheckBox x:Name="FilterEquipment" Content="Equipment" IsChecked="True" Margin="0,0,6,0" Checked="FilterStatus_Changed" Unchecked="FilterStatus_Changed"/>
+                <CheckBox x:Name="FilterCircuit" Content="Circuit" IsChecked="True" Margin="0,0,6,0" Checked="FilterStatus_Changed" Unchecked="FilterStatus_Changed"/>
+                <CheckBox x:Name="FilterDevice" Content="Device" IsChecked="True" Margin="0,0,6,0" Checked="FilterStatus_Changed" Unchecked="FilterStatus_Changed"/>
+                <CheckBox x:Name="FilterSpare" Content="Spare/Space" IsChecked="True" Checked="FilterStatus_Changed" Unchecked="FilterStatus_Changed"/>
+            </StackPanel>
+        </Border>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -45,7 +56,7 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <CheckBox Grid.Column="0" Width="16" Margin="2,0,2,0" IsChecked="{Binding is_checked}" Click="ItemCheckBox_Click" VerticalAlignment="Center" HorizontalAlignment="Left" Focusable="False"/>
-                                <TextBlock Grid.Column="1" Text="{Binding status_symbol}" Foreground="{Binding status_brush}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding kind_symbol}" Foreground="{Binding status_brush}" VerticalAlignment="Center"/>
                                 <TextBlock Grid.Column="2" Text="{Binding display_text}" VerticalAlignment="Center"/>
                             </Grid>
                         </DataTemplate>

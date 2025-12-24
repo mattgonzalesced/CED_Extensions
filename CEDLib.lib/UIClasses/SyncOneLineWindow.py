@@ -3,16 +3,18 @@
 
 from pyrevit import forms
 from System.Windows.Media import Brushes
+import System
 
 
 class SyncOneLineListItem(object):
-    def __init__(self, association, base_text, tree_text, status_symbol, status_brush):
+    def __init__(self, association, base_text, tree_text, status_symbol, status_brush, kind_symbol):
         self.association = association
         self.base_text = base_text
         self.tree_text = tree_text
         self.display_text = base_text
         self.status_symbol = status_symbol
         self.status_brush = status_brush
+        self.kind_symbol = kind_symbol
         self.is_checked = False
 
 
@@ -32,6 +34,7 @@ class SyncOneLineWindow(forms.WPFWindow):
         self._on_select_detail = on_select_detail
         self._on_selection_changed = on_selection_changed
         self._sort_mode = "Flat"
+        self._filters_visible = False
 
         self._build_detail_combo()
         self._build_tag_combo()
@@ -88,12 +91,26 @@ class SyncOneLineWindow(forms.WPFWindow):
             return bool(self.FilterMissing.IsChecked)
         return True
 
+    def _category_allowed(self, kind, is_spare=False):
+        if kind == "panel":
+            return bool(self.FilterEquipment.IsChecked)
+        if kind == "device":
+            return bool(self.FilterDevice.IsChecked)
+        if kind == "circuit":
+            if is_spare:
+                return bool(self.FilterSpare.IsChecked)
+            return bool(self.FilterCircuit.IsChecked)
+        return True
+
     def _filter_items(self, search_text):
         search_text = (search_text or "").lower()
         base_items = self._tree_items if self._sort_mode == "Tree" else self._flat_items
         filtered = []
         for item in base_items:
             if not self._status_allowed(item.association.status):
+                continue
+            is_spare = getattr(item.association, "is_spare", False)
+            if not self._category_allowed(item.association.kind, is_spare):
                 continue
             text = item.display_text.lower()
             if not search_text or search_text in text:
@@ -142,6 +159,10 @@ class SyncOneLineWindow(forms.WPFWindow):
         if item:
             self._sort_mode = item.Content
         self._refresh_list(self._filter_items(self.SearchBox.Text))
+
+    def FilterToggleButton_Click(self, sender, args):
+        self._filters_visible = not self._filters_visible
+        self.FilterPanel.Visibility = System.Windows.Visibility.Visible if self._filters_visible else System.Windows.Visibility.Collapsed
 
     def DetailFamilyCombo_SelectionChanged(self, sender, args):
         self._update_detail_types()
