@@ -4,7 +4,6 @@ from pyrevit import revit, DB, script, forms
 import System
 from Autodesk.Revit.Exceptions import OperationCanceledException
 from CEDElectrical.Domain.one_line_sync import OneLineSyncService
-from pyrevitmep.event import CustomizableEvent
 import UIClasses.SyncOneLineWindow as sync_ui
 from UIClasses.SyncOneLineWindow import SyncOneLineWindow, SyncOneLineListItem, status_symbol
 
@@ -12,7 +11,7 @@ logger = script.get_logger()
 
 XAML_PATH = os.path.join(os.path.dirname(sync_ui.__file__), "SyncOneLineWindow.xaml")
 _ONE_LINE_WINDOW = None
-_ONE_LINE_EVENT = None
+_ONE_LINE_OUTPUT = None
 ENABLE_ONE_LINE_LOG = True
 
 
@@ -266,8 +265,8 @@ def refresh_statuses(service, items):
 
 def log_action(message):
     if ENABLE_ONE_LINE_LOG:
-        output = script.get_output()
-        output.print_md("* {}".format(message))
+        if _ONE_LINE_OUTPUT:
+            _ONE_LINE_OUTPUT.print_md("* {}".format(message))
 
 
 def execute_sync(window, service, doc, items):
@@ -407,18 +406,19 @@ def main():
     global _ONE_LINE_HANDLER
     global _ONE_LINE_EVENT
 
-    customizable_event = CustomizableEvent()
-    customizable_event.logger = logger
-    _ONE_LINE_EVENT = customizable_event
+    output = script.get_output()
+    output.close_others()
+    global _ONE_LINE_OUTPUT
+    _ONE_LINE_OUTPUT = output
 
     window = SyncOneLineWindow(XAML_PATH, flat_items, tree_items, detail_symbols, tag_symbols,
-                               on_sync=lambda: customizable_event.raise_event(execute_sync, window, service, doc, list_items),
-                               on_create=lambda: customizable_event.raise_event(execute_create, window, service, doc, view, list_items),
-                               on_select_model=lambda: customizable_event.raise_event(execute_select, window, True),
-                               on_select_detail=lambda: customizable_event.raise_event(execute_select, window, False),
-                               on_selection_changed=lambda item: customizable_event.raise_event(execute_update_details, window, service, item))
+                               on_sync=lambda: execute_sync(window, service, doc, list_items),
+                               on_create=lambda: execute_create(window, service, doc, view, list_items),
+                               on_select_model=lambda: execute_select(window, True),
+                               on_select_detail=lambda: execute_select(window, False),
+                               on_selection_changed=lambda item: execute_update_details(window, service, item))
     _ONE_LINE_WINDOW = window
-    window.Show()
+    window.ShowDialog()
 
 
 if __name__ == "__main__":
