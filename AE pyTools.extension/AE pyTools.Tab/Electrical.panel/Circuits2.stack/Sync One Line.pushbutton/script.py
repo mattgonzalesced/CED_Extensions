@@ -4,7 +4,6 @@ from pyrevit import revit, DB, script, forms
 import System
 from Autodesk.Revit.Exceptions import OperationCanceledException
 from CEDElectrical.Domain.one_line_sync import OneLineSyncService
-from CEDElectrical.Domain.one_line_tree import build_system_tree
 import UIClasses.SyncOneLineWindow as sync_ui
 from UIClasses.SyncOneLineWindow import SyncOneLineWindow, SyncOneLineListItem, status_symbol
 
@@ -26,10 +25,38 @@ def get_element_label(assoc):
         except Exception:
             cnum = ""
         return "{} {}".format(panel_name, cnum).strip()
+    if assoc.kind == "device":
+        try:
+            symbol = elem.Symbol
+            if symbol and symbol.Family:
+                return "{}: {} - {}".format(symbol.Family.Name, symbol.Name, elem.Name)
+        except Exception:
+            pass
     try:
         return elem.Name
     except Exception:
         return "Element {}".format(elem.Id.IntegerValue)
+
+
+def sort_key_flat(assoc):
+    order = {"circuit": 0, "panel": 1, "device": 2}
+    category_order = order.get(assoc.kind, 3)
+    if assoc.kind == "circuit":
+        panel = ""
+        cnum = ""
+        try:
+            base = assoc.model_elem.BaseEquipment
+            panel = base.Name if base else ""
+        except Exception:
+            panel = ""
+        try:
+            cnum = assoc.model_elem.CircuitNumber
+        except Exception:
+            cnum = ""
+        return (category_order, panel, get_circuit_sort_key(assoc.model_elem), str(cnum))
+    if assoc.kind == "panel":
+        return (category_order, get_element_label(assoc))
+    return (category_order, get_element_label(assoc))
 
 
 def build_list_items(associations, tree_order):
@@ -74,6 +101,34 @@ def get_circuit_sort_key(branch):
         return str(val)
 
 
+def get_assigned_systems(equipment):
+    try:
+        mep = equipment.MEPModel
+        if not mep:
+            return []
+        return list(mep.GetAssignedElectricalSystems())
+    except Exception:
+        return []
+
+
+def get_connected_systems(equipment):
+    try:
+        mep = equipment.MEPModel
+        if not mep:
+            return []
+        return list(mep.GetElectricalSystems())
+    except Exception:
+        return []
+
+
+def is_root_equipment(equipment):
+    assigned = get_assigned_systems(equipment)
+    if not assigned:
+        return False
+    connected = get_connected_systems(equipment)
+    return len(assigned) == len(connected)
+
+
 def build_tree_order(associations, doc):
     assoc_by_id = {}
     for assoc in associations:
@@ -81,16 +136,6 @@ def build_tree_order(associations, doc):
 
     ordered = []
     visited = set()
-    tree = build_system_tree(doc)
-    circuit_assocs = [assoc for assoc in associations if assoc.kind == "circuit"]
-    circuits_by_base = {}
-    for assoc in circuit_assocs:
-        try:
-            base_eq = assoc.model_elem.BaseEquipment
-        except Exception:
-            base_eq = None
-        base_id = base_eq.Id.IntegerValue if base_eq else None
-        circuits_by_base.setdefault(base_id, []).append(assoc)
 
     def add_assoc(assoc, indent):
         if not assoc:
@@ -101,36 +146,42 @@ def build_tree_order(associations, doc):
         ordered.append((assoc, indent))
         visited.add(assoc_id)
 
-    def walk_circuit_assoc(assoc, indent):
+    def walk_circuit(system, indent):
+        assoc = assoc_by_id.get(system.Id.IntegerValue)
         add_assoc(assoc, indent)
-        system = assoc.model_elem
-        if hasattr(system, "Elements"):
-            for elem in list(system.Elements):
-                if elem.Category and int(elem.Category.Id.IntegerValue) == int(DB.BuiltInCategory.OST_ElectricalEquipment):
-                    child_node = tree.get_node(elem.Id)
-                    if child_node:
-                        walk_node(child_node, indent + 1)
-                    else:
-                        add_assoc(assoc_by_id.get(elem.Id.IntegerValue), indent + 1)
-                else:
-                    add_assoc(assoc_by_id.get(elem.Id.IntegerValue), indent + 1)
+        elements = []
+        try:
+            elements = list(system.Elements)
+        except Exception:
+            elements = []
+        for elem in elements:
+            if elem.Category and int(elem.Category.Id.IntegerValue) == int(DB.BuiltInCategory.OST_ElectricalEquipment):
+                walk_equipment(elem, indent + 1)
+            else:
+                add_assoc(assoc_by_id.get(elem.Id.IntegerValue), indent + 1)
 
-    def walk_node(node, indent):
-        add_assoc(assoc_by_id.get(node.element_id.IntegerValue), indent)
-        circuits = []
-        for branch in node.downstream:
-            assoc = assoc_by_id.get(branch.element_id.IntegerValue)
-            if assoc:
-                circuits.append(assoc)
-        for assoc in sorted(circuits, key=lambda a: get_circuit_sort_key(a.model_elem)):
-            walk_circuit_assoc(assoc, indent + 1)
+    def walk_equipment(equipment, indent):
+        assoc = assoc_by_id.get(equipment.Id.IntegerValue)
+        add_assoc(assoc, indent)
+        systems = get_assigned_systems(equipment)
+        for system in sorted(systems, key=get_circuit_sort_key):
+            walk_circuit(system, indent + 1)
 
-    for root in sorted(tree.root_nodes, key=lambda n: n.panel_name or ""):
-        walk_node(root, 0)
+    equipment_assocs = [assoc for assoc in associations if assoc.kind == "panel"]
+    root_equipment = []
+    for assoc in equipment_assocs:
+        try:
+            if is_root_equipment(assoc.model_elem):
+                root_equipment.append(assoc.model_elem)
+        except Exception:
+            continue
 
-    unassigned_circuits = circuits_by_base.get(None, [])
-    for assoc in sorted(unassigned_circuits, key=lambda a: get_circuit_sort_key(a.model_elem)):
-        walk_circuit_assoc(assoc, 0)
+    for equip in sorted(root_equipment, key=lambda e: e.Name or ""):
+        walk_equipment(equip, 0)
+
+    circuit_assocs = [assoc for assoc in associations if assoc.kind == "circuit"]
+    for assoc in sorted(circuit_assocs, key=lambda a: get_circuit_sort_key(a.model_elem)):
+        add_assoc(assoc, 0)
 
     for assoc in associations:
         if assoc.model_elem.Id.IntegerValue not in visited:
@@ -166,7 +217,8 @@ def main():
         return
 
     tree_order = build_tree_order(associations, doc)
-    list_items = build_list_items(associations, tree_order)
+    sorted_associations = sorted(associations, key=sort_key_flat)
+    list_items = build_list_items(sorted_associations, tree_order)
 
     detail_symbols = service.collect_detail_symbols()
     tag_symbols = service.collect_tag_symbols()
