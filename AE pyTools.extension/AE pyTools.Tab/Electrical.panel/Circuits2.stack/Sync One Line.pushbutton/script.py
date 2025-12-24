@@ -11,6 +11,9 @@ from UIClasses.SyncOneLineWindow import SyncOneLineWindow, SyncOneLineListItem, 
 logger = script.get_logger()
 
 XAML_PATH = os.path.join(os.path.dirname(sync_ui.__file__), "SyncOneLineWindow.xaml")
+_ONE_LINE_WINDOW = None
+_ONE_LINE_HANDLER = None
+_ONE_LINE_EVENT = None
 
 
 def get_element_label(assoc):
@@ -423,8 +426,14 @@ def main():
     detail_symbols = service.collect_detail_symbols()
     tag_symbols = service.collect_tag_symbols()
 
+    global _ONE_LINE_WINDOW
+    global _ONE_LINE_HANDLER
+    global _ONE_LINE_EVENT
+
     handler = OneLineExternalEventHandler(None, service, doc, view, list_items)
     external_event = ExternalEvent.Create(handler)
+    _ONE_LINE_HANDLER = handler
+    _ONE_LINE_EVENT = external_event
 
     def raise_action(action, payload=None):
         handler.set_action(action, payload)
@@ -437,6 +446,7 @@ def main():
                                on_select_detail=lambda: raise_action("select_detail"),
                                on_selection_changed=lambda item: raise_action("update_details", item))
     handler._window = window
+    _ONE_LINE_WINDOW = window
     window.Show()
 
 
