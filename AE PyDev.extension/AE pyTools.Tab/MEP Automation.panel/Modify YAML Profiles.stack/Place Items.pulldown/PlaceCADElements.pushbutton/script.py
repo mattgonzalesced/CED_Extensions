@@ -13,8 +13,10 @@ import sys
 from pyrevit import revit, forms
 
 # Add CEDLib.lib to sys.path so LogicClasses/UIClasses can be imported
-# (need to climb out of pushbutton/pulldown/panel/tab/extension)
-LIB_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib"))
+# (relative to extension root: ...\AE PyDev.extension\AE pyTools.Tab\...)
+LIB_ROOT = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "..", "CEDLib.lib")
+)
 if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 

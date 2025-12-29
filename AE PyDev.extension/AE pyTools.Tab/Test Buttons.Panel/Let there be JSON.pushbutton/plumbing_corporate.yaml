@@ -1,0 +1,1153 @@
+equipment_definitions:
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    parameter_filters: {}
+    type_name_pattern: Square
+  name: EX'G WALL TOILET
+  schema_version: 1
+  id: EQ-001
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-001-LED-001
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-001-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'P_Commercial Water Closet : P_Default'
+      parameters: {}
+      id: SET-001-LED-003
+      tags: []
+      category: Model
+      offsets:
+      - rotation_deg: 270.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-001
+    name: EX'G WALL TOILET Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    parameter_filters: {}
+    type_name_pattern: Square
+  name: Locker-Sink-Sloan-Trough-Enclosure
+  schema_version: 1
+  id: EQ-002
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-002-LED-001
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-002-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'P_Commercial Lavatory ADA : P_Default'
+      parameters: {}
+      id: SET-002-LED-003
+      tags: []
+      category: Model
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-002
+    name: Locker-Sink-Sloan-Trough-Enclosure Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: Locker-Sink-Sloan-Trough-Enclosure
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    parameter_filters: {}
+    type_name_pattern: Square
+  name: NEW URINAL
+  schema_version: 1
+  id: EQ-003
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-003-LED-001
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-003-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'P_Commercial Urinal : P_Default'
+      parameters: {}
+      id: SET-003-LED-003
+      tags: []
+      category: Model
+      offsets:
+      - rotation_deg: 270.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-003
+    name: NEW URINAL Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: NEW URINAL
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    parameter_filters: {}
+    type_name_pattern: Square
+  name: EX'G MOPSINK
+  schema_version: 1
+  id: EQ-004
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-004-LED-001
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-004-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'P_Sink Fixture - Janitorial, Vertical : P_Default'
+      parameters: {}
+      id: SET-004-LED-003
+      tags: []
+      category: Model
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-004
+    name: EX'G MOPSINK Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G MOPSINK
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    parameter_filters: {}
+    type_name_pattern: Square
+  name: EX'G ADA DF
+  schema_version: 1
+  id: EQ-005
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-005-LED-001
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-005-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'P_Electric Water Cooler - Dual Height : P_Default'
+      parameters: {}
+      id: SET-005-LED-003
+      tags: []
+      category: Model
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-005
+    name: EX'G ADA DF Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G ADA DF
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: P_2 inch (50) Floor Drain, Horizontal with Trap Primer
+    category: Model
+    parameter_filters: {}
+    type_name_pattern: P_Default
+  name: Floor Drain 1
+  schema_version: 1
+  id: EQ-006
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'P_2 inch (50) Floor Drain, Horizontal with Trap Primer : P_Default'
+      parameters: {}
+      id: SET-006-LED-001
+      tags: []
+      category: Model
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-006
+    name: Floor Drain 1 Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: Floor Drain 1
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: P_2 inch (50) Floor Drain, Horizontal with Trap Primer
+    category: Model group
+    parameter_filters: {}
+    type_name_pattern: P_Default
+  name: Floor Drain 2
+  schema_version: 1
+  id: EQ-007
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'P_2 inch (50) Floor Drain, Horizontal with Trap Primer : P_Default'
+      parameters: {}
+      id: SET-007-LED-001
+      tags: []
+      category: Model group
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-007
+    name: Floor Drain 2 Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: Floor Drain 2
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 108 CARDIO
+  schema_version: 1
+  id: EQ-008
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-008
+    name: Room Name 108 CARDIO Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 109 CIRCUIT
+  schema_version: 1
+  id: EQ-009
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-009
+    name: Room Name 109 CIRCUIT Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    parameter_filters: {}
+    type_name_pattern: Square
+  name: Room Name 105C JAN.
+  schema_version: 1
+  id: EQ-010
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-010-LED-001
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-010-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-010-LED-003
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-010
+    name: Room Name 105C JAN. Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: Water Heater Assembly
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 105D STORAGE
+  schema_version: 1
+  id: EQ-011
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-011
+    name: Room Name 105D STORAGE Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 107 MOBILITY ROOM FUNCTIONAL TRAINING/
+  schema_version: 1
+  id: EQ-012
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-012
+    name: Room Name 107 MOBILITY ROOM FUNCTIONAL TRAINING/ Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 106 UTILITY/STORAGE
+  schema_version: 1
+  id: EQ-013
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-013
+    name: Room Name 106 UTILITY/STORAGE Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 111 FREE WEIGHTS
+  schema_version: 1
+  id: EQ-014
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-014
+    name: Room Name 111 FREE WEIGHTS Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 105 LOCKER ROOM MEN'S
+  schema_version: 1
+  id: EQ-015
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-015
+    name: Room Name 105 LOCKER ROOM MEN'S Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: P_2 inch (50) Floor Drain, Horizontal with Trap Primer
+    category: Model group
+    parameter_filters: {}
+    type_name_pattern: P_Default
+  name: Room Name 105A TOILET
+  schema_version: 1
+  id: EQ-016
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'P_2 inch (50) Floor Drain, Horizontal with Trap Primer : P_Default'
+      parameters: {}
+      id: SET-016-LED-001
+      tags: []
+      category: Model group
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-016
+    name: Room Name 105A TOILET Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: Floor Drain 2
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 110 STRENGTH
+  schema_version: 1
+  id: EQ-017
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-017
+    name: Room Name 110 STRENGTH Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 100 VESTIBULE
+  schema_version: 1
+  id: EQ-018
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-018
+    name: Room Name 100 VESTIBULE Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 101A BREAK ROOM EMPLOYEE
+  schema_version: 1
+  id: EQ-019
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-019
+    name: Room Name 101A BREAK ROOM EMPLOYEE Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 101B ROOM IT
+  schema_version: 1
+  id: EQ-020
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-020
+    name: Room Name 101B ROOM IT Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 101 RECEPTION
+  schema_version: 1
+  id: EQ-021
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-021
+    name: Room Name 101 RECEPTION Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 102 CHECK-IN
+  schema_version: 1
+  id: EQ-022
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-022
+    name: Room Name 102 CHECK-IN Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 103 CARD SPA BLACK
+  schema_version: 1
+  id: EQ-023
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-023
+    name: Room Name 103 CARD SPA BLACK Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 103B ANGEL BEAUTY
+  schema_version: 1
+  id: EQ-024
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-024
+    name: Room Name 103B ANGEL BEAUTY Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    parameter_filters: {}
+    type_name_pattern: Square
+  name: Room Name 105B SHOWER
+  schema_version: 1
+  id: EQ-025
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-025-LED-001
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-025-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-025-LED-003
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-025-LED-004
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'P_Shower Rough-In : P_Default'
+      parameters: {}
+      id: SET-025-LED-005
+      tags: []
+      category: Model
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 12.0
+        y_inches: 108.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'P_Shower Rough-In : P_Default'
+      parameters: {}
+      id: SET-025-LED-006
+      tags: []
+      category: Model
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 12.0
+        y_inches: -108.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'P_Shower Rough-In 2 : P_Default'
+      parameters: {}
+      id: SET-025-LED-007
+      tags: []
+      category: Model
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: -94.0
+        y_inches: 108.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'P_2 inch (50) Floor Drain, Horizontal with Trap Primer : P_Default'
+      parameters: {}
+      id: SET-025-LED-008
+      tags: []
+      category: Model
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-025
+    name: Room Name 105B SHOWER Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: Showers
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 103C TANNING
+  schema_version: 1
+  id: EQ-026
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-026
+    name: Room Name 103C TANNING Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 103E TANNING
+  schema_version: 1
+  id: EQ-027
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-027
+    name: Room Name 103E TANNING Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 103F TANNING
+  schema_version: 1
+  id: EQ-028
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-028
+    name: Room Name 103F TANNING Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 103G TANNING
+  schema_version: 1
+  id: EQ-029
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-029
+    name: Room Name 103G TANNING Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 103A HYDROMASSAGE
+  schema_version: 1
+  id: EQ-030
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-030
+    name: Room Name 103A HYDROMASSAGE Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 104 LOCKER ROOM WOMEN'S
+  schema_version: 1
+  id: EQ-031
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-031
+    name: Room Name 104 LOCKER ROOM WOMEN'S Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    parameter_filters: {}
+    type_name_pattern: Square
+  name: Room Name 104B SHOWER
+  schema_version: 1
+  id: EQ-032
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-032-LED-001
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-032-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-032-LED-003
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-032-LED-004
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'P_Shower Rough-In : P_Default'
+      parameters: {}
+      id: SET-032-LED-005
+      tags: []
+      category: Model
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 12.0
+        y_inches: -108.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'P_Shower Rough-In : P_Default'
+      parameters: {}
+      id: SET-032-LED-006
+      tags: []
+      category: Model
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: -94.0
+        y_inches: -108.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'P_Shower Rough-In 2 : P_Default'
+      parameters: {}
+      id: SET-032-LED-007
+      tags: []
+      category: Model
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: -94.0
+        y_inches: -108.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'P_2 inch (50) Floor Drain, Horizontal with Trap Primer : P_Default'
+      parameters: {}
+      id: SET-032-LED-008
+      tags: []
+      category: Model
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-032
+    name: Room Name 104B SHOWER Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: Showers
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    parameter_filters: {}
+    type_name_pattern: Square
+  name: Room Name 104C JAN.
+  schema_version: 1
+  id: EQ-033
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-033-LED-001
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-033-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': ''
+      id: SET-033-LED-003
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-033
+    name: Room Name 104C JAN. Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: Water Heater Assembly
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: P_2 inch (50) Floor Drain, Horizontal with Trap Primer
+    category: Model group
+    parameter_filters: {}
+    type_name_pattern: P_Default
+  name: Room Name 104A TOILET
+  schema_version: 1
+  id: EQ-034
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'P_2 inch (50) Floor Drain, Horizontal with Trap Primer : P_Default'
+      parameters: {}
+      id: SET-034-LED-001
+      tags: []
+      category: Model group
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-034
+    name: Room Name 104A TOILET Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: Floor Drain 1
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 104D STORAGE
+  schema_version: 1
+  id: EQ-035
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-035
+    name: Room Name 104D STORAGE Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: ''
+    category: ''
+    parameter_filters: {}
+    type_name_pattern: ''
+  name: Room Name 103D HYBRID
+  schema_version: 1
+  id: EQ-036
+  linked_sets:
+  - linked_element_definitions: []
+    id: SET-036
+    name: Room Name 103D HYBRID Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: P_Electric Water Heater on Floor
+    category: Model
+    parameter_filters: {}
+    type_name_pattern: P_Default
+  name: Room Name 101A ROOM MECHANICAL
+  schema_version: 1
+  id: EQ-037
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'P_Electric Water Heater on Floor : P_Default'
+      parameters: {}
+      id: SET-037-LED-001
+      tags: []
+      category: Model
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-037
+    name: Room Name 101A ROOM MECHANICAL Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: Water Heater Assembly

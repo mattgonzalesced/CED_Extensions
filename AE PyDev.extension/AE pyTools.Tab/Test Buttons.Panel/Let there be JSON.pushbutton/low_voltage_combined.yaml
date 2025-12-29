@@ -1,0 +1,1623 @@
+equipment_definitions:
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_Tele & Data Outlet_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Data - Wall
+  name: PF_Plan TV Video Wall
+  schema_version: 1
+  id: EQ-001
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-001-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-001-LED-002
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 12.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-001-LED-003
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: -12.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-001-LED-004
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 24.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-001-LED-005
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: -24.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-001-LED-006
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 36.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-001-LED-007
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: -36.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-001-LED-008
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 48.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TV Video Wall
+        Symbol Label_CEDT: TV
+      id: SET-001-LED-009
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: -48.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 2
+      id: SET-001-LED-010
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 20.0
+        y_inches: -40.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 6
+      id: SET-001-LED-011
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 40.0
+        y_inches: -40.0
+        z_inches: 0.0
+    id: SET-001
+    name: PF_Plan TV Video Wall Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_Tele & Data Outlet_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Data - Wall
+  name: PF_Plan TV
+  schema_version: 1
+  id: EQ-002
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: 27TV
+        Symbol Label_CEDT: TV
+      id: SET-002-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 2
+      id: SET-002-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 6
+      id: SET-002-LED-003
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 36.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-002
+    name: PF_Plan TV Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_Tele & Data Outlet_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Data - Wall
+  name: 27TV
+  schema_version: 1
+  id: EQ-003
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: 27TV
+        Symbol Label_CEDT: TV
+      id: SET-003-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 2
+      id: SET-003-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 6
+      id: SET-003-LED-003
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 36.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-003
+    name: 27TV Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_Tele & Data Outlet_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Data - Wall
+  name: 27 tv
+  schema_version: 1
+  id: EQ-004
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: 27TV
+        Symbol Label_CEDT: TV
+      id: SET-004-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 2
+      id: SET-004-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 6
+      id: SET-004-LED-003
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 36.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-004
+    name: 27 tv Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_Tele & Data Outlet_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Data - Wall
+  name: 55 tv
+  schema_version: 1
+  id: EQ-005
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: 27TV
+        Symbol Label_CEDT: TV
+      id: SET-005-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 2
+      id: SET-005-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 6
+      id: SET-005-LED-003
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 36.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-005
+    name: 55 tv Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_Tele & Data Outlet_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Data - Wall
+  name: 60 tv
+  schema_version: 1
+  id: EQ-006
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: 27TV
+        Symbol Label_CEDT: TV
+      id: SET-006-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 2
+      id: SET-006-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 6
+      id: SET-006-LED-003
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 36.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-006
+    name: 60 tv Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_Tele & Data Outlet_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Data - Wall
+  name: 43 tv
+  schema_version: 1
+  id: EQ-007
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: 43 tv
+        Symbol Label_CEDT: TV
+      id: SET-007-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 2
+      id: SET-007-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 6
+      id: SET-007-LED-003
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 26.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-007
+    name: 43 tv Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_Tele & Data Outlet_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Data - Wall
+  name: 65tv
+  schema_version: 1
+  id: EQ-008
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: 65tv
+        Symbol Label_CEDT: TV
+      id: SET-008-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 2
+      id: SET-008-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 6
+      id: SET-008-LED-003
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 26.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-008
+    name: 65tv Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_Tele & Data Outlet_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Data - Wall
+  name: 70tv
+  schema_version: 1
+  id: EQ-009
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: 70tv
+        Symbol Label_CEDT: TV
+      id: SET-009-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 6
+      id: SET-009-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-009
+    name: 70tv Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_Tele & Data Outlet_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Data - Wall
+  name: 75TV
+  schema_version: 1
+  id: EQ-010
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: 75TV
+        Symbol Label_CEDT: TV
+      id: SET-010-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 6
+      id: SET-010-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-010
+    name: 75TV Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_General Low Voltage Device_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Speaker
+  name: BCS Speaker
+  schema_version: 1
+  id: EQ-011
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Speaker'
+      parameters:
+        dev-Group ID: BEAUTYANGEL - Speaker
+      id: SET-011-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-011
+    name: BCS Speaker Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: Speaker with electrical
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_General Low Voltage Device_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Junction Box - Wall
+  name: BCS_Beauty Angel
+  schema_version: 1
+  id: EQ-012
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Junction Box - Wall'
+      parameters:
+        dev-Group ID: BEAUTYANGEL - PULLBOX
+      id: SET-012-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: BEAUTYANGEL
+      id: SET-012-LED-002
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Speaker'
+      parameters:
+        dev-Group ID: BEAUTYANGEL - Speaker
+      id: SET-012-LED-003
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 5
+      id: SET-012-LED-004
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-012
+    name: BCS_Beauty Angel Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_Tele & Data Outlet_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Data - Wall
+  name: BCS_Cryolounge
+  schema_version: 1
+  id: EQ-013
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: CRYO
+      id: SET-013-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 6.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-013
+    name: BCS_Cryolounge Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_Tele & Data Outlet_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Data - Ceiling
+  name: PF_FAN 1
+  schema_version: 1
+  id: EQ-014
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Ceiling'
+      parameters:
+        dev-Group ID: Fan 1
+      id: SET-014-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 10
+      id: SET-014-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-014
+    name: PF_FAN 1 Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_General Low Voltage Device_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Junction Box - Wall
+  name: BCS_Tanning Bed 42.4
+  schema_version: 1
+  id: EQ-015
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Junction Box - Wall'
+      parameters:
+        dev-Group ID: HM62A
+      id: SET-015-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: HM62A
+      id: SET-015-LED-002
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Speaker'
+      parameters:
+        dev-Group ID: HM62A
+      id: SET-015-LED-003
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 5
+      id: SET-015-LED-004
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-015
+    name: BCS_Tanning Bed 42.4 Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_General Low Voltage Device_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Junction Box - Wall
+  name: PF Tanning 42-3 TLT PLT
+  schema_version: 1
+  id: EQ-016
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Junction Box - Wall'
+      parameters:
+        dev-Group ID: PF Tanning 42-3 TLT PLT
+      id: SET-016-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF Tanning 42-3 TLT PLT
+      id: SET-016-LED-002
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Speaker'
+      parameters:
+        dev-Group ID: PF Tanning 42-3 TLT PLT
+      id: SET-016-LED-003
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 5
+      id: SET-016-LED-004
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-016
+    name: PF Tanning 42-3 TLT PLT Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_General Low Voltage Device_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Junction Box - Wall
+  name: BCS_Upright Tanning
+  schema_version: 1
+  id: EQ-017
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Junction Box - Wall'
+      parameters:
+        dev-Group ID: HM62B_Up tanning
+      id: SET-017-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: HM62B_Up tanning
+      id: SET-017-LED-002
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Speaker'
+      parameters:
+        dev-Group ID: HM62B_Up tanning
+      id: SET-017-LED-003
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 5
+      id: SET-017-LED-004
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-017
+    name: BCS_Upright Tanning Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_General Low Voltage Device_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Junction Box - Wall
+  name: BCS_Hydro Lounge
+  schema_version: 1
+  id: EQ-018
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Junction Box - Wall'
+      parameters:
+        dev-Group ID: HM63C (Hydromassage)
+      id: SET-018-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 12.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-018
+    name: BCS_Hydro Lounge Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_General Low Voltage Device_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Junction Box - Wall
+  name: BCS_Hybrid Tanning Booth
+  schema_version: 1
+  id: EQ-019
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Junction Box - Wall'
+      parameters:
+        dev-Group ID: HM62E Hybrid Tanning Booth
+      id: SET-019-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 18.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: HM62E Hybrid Tanning Booth
+      id: SET-019-LED-002
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 24.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Speaker'
+      parameters:
+        dev-Group ID: HM62E Hybrid Tanning Booth
+      id: SET-019-LED-003
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 30.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 5
+      id: SET-019-LED-004
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-019
+    name: BCS_Hybrid Tanning Booth Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_General Low Voltage Device_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Junction Box - Wall
+  name: Hybrid Light Bed HM62D
+  schema_version: 1
+  id: EQ-020
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Junction Box - Wall'
+      parameters:
+        dev-Group ID: Hybrid Light Bed HM62D
+      id: SET-020-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 20.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: Hybrid Light Bed HM62D
+      id: SET-020-LED-002
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 30.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : Speaker'
+      parameters:
+        dev-Group ID: Hybrid Light Bed HM62D
+      id: SET-020-LED-003
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 40.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 5
+      id: SET-020-LED-004
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-020
+    name: Hybrid Light Bed HM62D Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_Tele & Data Outlet_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Data - Wall
+  name: PF_Plan Computer
+  schema_version: 1
+  id: EQ-021
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan Computer
+      id: SET-021-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 10.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 3
+      id: SET-021-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-021
+    name: PF_Plan Computer Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_Tele & Data Outlet_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Data - Wall
+  name: PF_Plan Phone
+  schema_version: 1
+  id: EQ-022
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan Phone
+      id: SET-022-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-022
+    name: PF_Plan Phone Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: PF_Plan Phone
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_Tele & Data Outlet_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Data - Wall
+  name: PF_Plan TMAX
+  schema_version: 1
+  id: EQ-023
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Wall'
+      parameters:
+        dev-Group ID: PF_Plan TMAX
+      id: SET-023-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: -70.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 4
+      id: SET-023-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 16.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-023
+    name: PF_Plan TMAX Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_Tele & Data Outlet_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: Data - Floor
+  name: BCS_SmarteCarte Massage Chair
+  schema_version: 1
+  id: EQ-024
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Data - Floor'
+      parameters:
+        dev-group ID: SmarteCarte Massage Chair
+      id: SET-024-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 10.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 13
+      id: SET-024-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 5.0
+        y_inches: 8.0
+        z_inches: 0.0
+    id: SET-024
+    name: BCS_SmarteCarte Massage Chair Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: Manual Key Note- All Shapes
+    category: Generic Annotations
+    parameter_filters: {}
+    type_name_pattern: Square
+  name: Room Name 107A /STORAGE ROOM ELECTRICAL/UTILITY
+  schema_version: 1
+  id: EQ-025
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 13
+      id: SET-025-LED-001
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 14
+      id: SET-025-LED-002
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 15
+      id: SET-025-LED-003
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    id: SET-025
+    name: Room Name 107A /STORAGE ROOM ELECTRICAL/UTILITY Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_General Low Voltage Device_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: VC
+  name: Room Name 101A IT ROOM
+  schema_version: 1
+  id: EQ-026
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : VC'
+      parameters:
+        dev-Group ID: Room Name 101A IT ROOM
+      id: SET-026-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : VC'
+      parameters:
+        dev-Group ID: Room Name 101A IT ROOM
+      id: SET-026-LED-002
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 12.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : AMP'
+      parameters:
+        dev-Group ID: Room Name 101A IT ROOM
+      id: SET-026-LED-003
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: -12.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Tele & Data - Wall'
+      parameters:
+        dev-Group ID: Room Name 101A IT ROOM
+      id: SET-026-LED-004
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: -24.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 7
+      id: SET-026-LED-005
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 24.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 12
+      id: SET-026-LED-006
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 20.0
+        y_inches: 24.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 8
+      id: SET-026-LED-007
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 48.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 9
+      id: SET-026-LED-008
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 20.0
+        y_inches: 48.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 11
+      id: SET-026-LED-009
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 72.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 10
+      id: SET-026-LED-010
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 20.0
+        y_inches: 72.0
+        z_inches: 0.0
+    id: SET-026
+    name: Room Name 101A IT ROOM Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: DD-U_General Low Voltage Device_CED
+    category: Data Devices
+    parameter_filters: {}
+    type_name_pattern: VC
+  name: Room Name 101B ROOM IT
+  schema_version: 1
+  id: EQ-027
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : VC'
+      parameters:
+        dev-Group ID: Room Name 101A IT ROOM
+      id: SET-027-LED-001
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : VC'
+      parameters:
+        dev-Group ID: Room Name 101A IT ROOM
+      id: SET-027-LED-002
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 12.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_General Low Voltage Device_CED : AMP'
+      parameters:
+        dev-Group ID: Room Name 101A IT ROOM
+      id: SET-027-LED-003
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: -12.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'DD-U_Tele & Data Outlet_CED : Tele & Data - Wall'
+      parameters:
+        dev-Group ID: Room Name 101A IT ROOM
+      id: SET-027-LED-004
+      tags: []
+      category: Data Devices
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: -24.0
+        y_inches: 0.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 7
+      id: SET-027-LED-005
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 24.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 12
+      id: SET-027-LED-006
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 20.0
+        y_inches: 24.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 8
+      id: SET-027-LED-007
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 48.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 9
+      id: SET-027-LED-008
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 20.0
+        y_inches: 48.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 11
+      id: SET-027-LED-009
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 0.0
+        y_inches: 72.0
+        z_inches: 0.0
+    - is_group: true
+      label: 'Manual Key Note- All Shapes : Square'
+      parameters:
+        'CED-G-NOTE #': 10
+      id: SET-027-LED-010
+      tags: []
+      category: Generic Annotations
+      offsets:
+      - rotation_deg: 0.0
+        x_inches: 20.0
+        y_inches: 72.0
+        z_inches: 0.0
+    id: SET-027
+    name: Room Name 101B ROOM IT Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties:
+    notes: EX'G WALL TOILET
