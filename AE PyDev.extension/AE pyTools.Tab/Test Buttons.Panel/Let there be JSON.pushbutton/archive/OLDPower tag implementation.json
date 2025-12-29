@@ -1,0 +1,327 @@
+{
+    "Stepmill (C5X-5PL-PF)": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Stepmill (C5X-5PL-PF)",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1920",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L1",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "STAIRMASTER",
+                            "CKT_Schedule Notes_CEDT": ""
+
+                        },
+                        "OFFSET" : {
+                            "x" : 5,
+                            "y" : 5
+                        },
+                        "TAGS": [
+                            {
+                            "EF-Tag_Electrical Fixtures_CED": {
+                                "Panel & Circuit Number": {
+                                    "OFFSET": {
+                                        "x": 10,
+                                        "y": 0,
+                                        "z": 0,
+                                        "r": 0
+                                    }
+                                }
+                            }
+                        },
+                            {
+                            "EF-Tag_Electrical Fixtures_CED": {
+                                "Elevation (Feet - Inches)": {
+                                    "OFFSET": {
+                                        "x": 0,
+                                        "y": -5,
+                                        "z": 0,
+                                        "r": 45
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" :[
+            {
+                "Manual Key Note- All Shapes" : {
+                    "Square" : {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "13",
+                            "dev-Group ID" : "Stepmill"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],       
+        "Notes": "Exercise equipment power"
+    },
+    "PF_Plan Computer": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan Computer",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "25",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "CHECK-IN RECEPT",
+                            "CKT_Schedule Notes_CEDT": ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations": [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "7"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Exercise equipment power"
+    },
+    "PF_Plan TMAX": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TMAX",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "4",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TMAX RECEPT",
+                            "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : 8,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TMAX",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "4",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TMAX RECEPT",
+                            "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : 5,
+                            "y" : 0
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TMAX",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "4",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TMAX RECEPT",
+                            "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : -4,
+                            "y" : -26
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TMAX",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "4",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TMAX RECEPT",
+                            "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : 8,
+                            "y" : -128
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TMAX",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "4",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TMAX RECEPT",
+                            "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : 5,
+                            "y" : -120
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TMAX",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "180",
+                            "Load Classification_CED": "C",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L3",
+                            "CKT_Circuit Number_CEDT": "4",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TMAX RECEPT",
+                            "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET" :{
+                            "x" : -4,
+                            "y" : -94
+                        }
+                    }
+                }
+            },
+            {
+                "EF-U_Junction Box_CED": {
+                    "Wall - With Stem": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TMAX",
+                            "Apparent Load Input_CED" : "180"
+                        },
+                        "OFFSET" :{
+                            "x" : 0,
+                            "y" : -60
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations": [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "8"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "First receptacle is for the actual PF plan block, remaining recepts are for signage if applicable"
+    },
+    "Treadmill (T5X-5PL-PF)": {
+        "Electrical_Fixture": [
+            {
+                "EF-U_Receptacle_CED": {
+                    "Duplex Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Treadmill (T5X-5PL-PF)",
+                            "FLA Input_CED": "0",
+                            "Apparent Load Input_CED" : "1920",
+                            "Load Classification_CED": "NC",
+                            "Voltage_CED" : "120",
+                            "Number of Poles_CED" : "1",
+                            "CKT_Panel_CEDT" : "L1",
+                            "CKT_Circuit Number_CEDT": "DEDICATED",
+                            "CKT_Rating_CED": "20",
+                            "CKT_Load Name_CEDT": "TREADMILL",
+                            "CKT_Schedule Notes_CEDT": ""
+                        },
+                        "OFFSET":{
+                            "x" : -48,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations": [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "13"
+                        },
+                        "OFFSET":{
+                            "x" : 5,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Exercise equipment power"
+    }
+}

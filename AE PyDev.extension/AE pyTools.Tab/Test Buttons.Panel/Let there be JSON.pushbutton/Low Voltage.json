@@ -41,6 +41,216 @@
             }
         ]
     },
+    "27 tv": {
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "27TV",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 18,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "PF_Plan TV": {
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "27TV",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 18,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "55 tv": {
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "27TV",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 18,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "60 TV": {
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "27TV",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 18,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "65 tv": {
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "27TV",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 18,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
     "43 tv": {
         "Data_Devices": [
             {
