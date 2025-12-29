@@ -3372,6 +3372,156 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
 
 
+def _capture_profile_additions(doc, cad_name, state, refresh_callback, yaml_label):
+
+    if doc is None:
+        forms.alert("No active document detected.", title=TITLE)
+        return False
+
+    data = state.get("raw_data") or {}
+    cad_label = (cad_name or "").strip()
+    if not cad_label:
+        forms.alert("Profile name cannot be empty.", title=TITLE)
+        return False
+
+    equipment_def = _find_definition_by_name(data, cad_label)
+    if not equipment_def:
+        forms.alert("Could not locate profile '{}' in {}.".format(cad_label, yaml_label), title=TITLE)
+        return False
+
+    forms.alert(
+        "Select the elements to add to '{}'.\nClick Finish when you've picked them."
+        .format(cad_label),
+        title=TITLE,
+    )
+
+    try:
+        elems = revit.pick_elements(message="Select element(s) to add to '{}'".format(cad_label))
+    except Exception:
+        try:
+            elem = revit.pick_element(message="Select element to add to '{}'".format(cad_label))
+        except Exception:
+            elem = None
+        elems = [elem] if elem else []
+
+    if not elems:
+        forms.alert("No elements were selected for '{}'.".format(cad_label), title=TITLE)
+        return False
+
+    explicit_text_notes = []
+    selected_elements = []
+    for elem in elems:
+        if isinstance(elem, TextNote):
+            explicit_text_notes.append(elem)
+            continue
+        selected_elements.append(elem)
+
+    if not selected_elements:
+        forms.alert(
+            "Select at least one host element for '{}' (text notes can be selected in addition)."
+            .format(cad_label),
+            title=TITLE,
+        )
+        return False
+
+    element_locations = []
+    for elem in selected_elements:
+        loc = _get_point(elem)
+        if loc is not None:
+            element_locations.append((elem, loc))
+
+    if not element_locations:
+        forms.alert("Could not read locations from the selected elements.", title=TITLE)
+        return False
+
+    sum_x = sum(loc.X for _, loc in element_locations)
+    sum_y = sum(loc.Y for _, loc in element_locations)
+    sum_z = sum(loc.Z for _, loc in element_locations)
+    count = float(len(element_locations))
+    centroid = XYZ(sum_x / count, sum_y / count, sum_z / count)
+
+    element_records = []
+    for elem, loc in element_locations:
+        rel_vec = loc - centroid
+        type_entry = _build_type_entry(elem, rel_vec, 0.0, loc)
+        element_records.append({
+            "element": elem,
+            "host_point": loc,
+            "type_entry": type_entry,
+        })
+
+    _assign_selected_text_notes(element_records, explicit_text_notes)
+    _rebalance_text_notes(element_records)
+
+    if not element_records:
+        forms.alert("No valid elements were found.", title=TITLE)
+        return False
+
+    type_set = get_type_set(equipment_def)
+    set_id = type_set.get("id") or (equipment_def.get("id") or cad_label)
+    led_list = type_set.setdefault("linked_element_definitions", [])
+
+    metadata_updates = []
+    for record in element_records:
+        entry = record["type_entry"]
+        inst_cfg = entry.setdefault("instance_config", {})
+        entry_offsets = inst_cfg.get("offsets") or [{}]
+        entry_params = inst_cfg.setdefault("parameters", {})
+        entry_tags = inst_cfg.get("tags") or []
+        entry_text_notes = inst_cfg.get("text_notes") or []
+
+        led_id = next_led_id(type_set, equipment_def)
+        payload = _build_element_linker_payload(led_id, set_id, record["element"], record["host_point"])
+        entry_params[ELEMENT_LINKER_PARAM_NAME] = payload
+        metadata_updates.append((record["element"], payload))
+
+        led_list.append({
+            "id": led_id,
+            "label": entry.get("label"),
+            "category": entry.get("category_name"),
+            "is_group": bool(entry.get("is_group")),
+            "offsets": entry_offsets,
+            "parameters": entry_params,
+            "tags": entry_tags,
+            "text_notes": entry_text_notes,
+        })
+
+    if metadata_updates and doc:
+        txn = Transaction(doc, "Add Equipment to Profile ({})".format(cad_label))
+        try:
+            txn.Start()
+            for element, payload in metadata_updates:
+                _set_element_linker_parameter(element, payload)
+            txn.Commit()
+        except Exception:
+            try:
+                txn.RollBack()
+            except Exception:
+                pass
+
+    if not _ensure_active_yaml_access(state):
+        return False
+
+    try:
+        save_active_yaml_data(
+            None,
+            state["raw_data"],
+            TITLE,
+            "Added {} element(s) to '{}'".format(len(element_records), cad_label),
+        )
+    except Exception as exc:
+        forms.alert("Failed to save {}\n\n{}".format(yaml_label, exc), title=TITLE)
+        return False
+
+    refresh_callback()
+    forms.alert(
+        "Added {} element(s) to '{}'.\nReload placement tools to use the updates."
+        .format(len(element_records), cad_label),
+        title=TITLE,
+    )
+    return True
+
+
 def _has_negative_z(value):
 
 
@@ -4947,6 +5097,23 @@ def main():
 
 
                 continue
+            add_equipment_request = getattr(window, "add_equipment_request", None)
+
+            if add_equipment_request:
+
+                doc = getattr(revit, "doc", None)
+
+                if _capture_profile_additions(doc, add_equipment_request, state, _refresh_state_from_defs, yaml_label):
+
+                    success = True
+
+                    _refresh_state_from_defs()
+
+                    continue
+
+                return
+
+
 
 
 
