@@ -794,6 +794,23 @@ def _parse_float(value, default=None):
         return default
 
 
+def _parse_int(value, default=None):
+    if value is None:
+        return default
+    if isinstance(value, basestring):
+        cleaned = value.strip()
+        if not cleaned:
+            return default
+        try:
+            return int(cleaned)
+        except Exception:
+            return default
+    try:
+        return int(value)
+    except Exception:
+        return default
+
+
 def _parse_element_linker_payload(payload_text):
     if not payload_text:
         return {}
@@ -810,6 +827,7 @@ def _parse_element_linker_payload(payload_text):
         "location": _parse_xyz_string(entries.get("Location XYZ (ft)")),
         "rotation_deg": _parse_float(entries.get("Rotation (deg)"), 0.0),
         "parent_rotation_deg": _parse_float(entries.get("Parent Rotation (deg)")),
+        "parent_element_id": _parse_int(entries.get("Parent ElementId")),
         "facing": _parse_xyz_string(entries.get("FacingOrientation")),
         "raw": entries,
     }
@@ -821,13 +839,14 @@ def _format_xyz(vec):
     return "{:.6f},{:.6f},{:.6f}".format(vec.X, vec.Y, vec.Z)
 
 
-def _build_linker_payload(led_id, set_id, location, rotation_deg, level_id, element_id, facing, parent_rotation):
+def _build_linker_payload(led_id, set_id, location, rotation_deg, level_id, element_id, facing, parent_rotation, parent_element_id=None):
     lines = [
         "Linked Element Definition ID: {}".format(led_id or ""),
         "Set Definition ID: {}".format(set_id or ""),
         "Location XYZ (ft): {}".format(_format_xyz(location)),
         "Rotation (deg): {:.6f}".format(rotation_deg or 0.0),
         "Parent Rotation (deg): {:.6f}".format(parent_rotation or 0.0),
+        "Parent ElementId: {}".format(parent_element_id if parent_element_id is not None else ""),
         "LevelId: {}".format(level_id if level_id is not None else ""),
         "ElementId: {}".format(element_id if element_id is not None else ""),
         "FacingOrientation: {}".format(_format_xyz(facing)),
@@ -975,6 +994,7 @@ def _apply_offsets_to_similar(doc, elements, original_local_offset, original_rot
                 getattr(getattr(elem, "Id", None), "IntegerValue", None),
                 getattr(elem, "FacingOrientation", None),
                 base_rotation,
+                payload.get("parent_element_id"),
             )
             _write_element_linker_payload(elem, new_payload_text)
 
@@ -1345,6 +1365,7 @@ def main():
         getattr(getattr(elem, "Id", None), "IntegerValue", None),
         getattr(elem, "FacingOrientation", None),
         base_rotation,
+        payload.get("parent_element_id"),
     )
     _write_element_linker_payload(elem, updated_payload_text)
 

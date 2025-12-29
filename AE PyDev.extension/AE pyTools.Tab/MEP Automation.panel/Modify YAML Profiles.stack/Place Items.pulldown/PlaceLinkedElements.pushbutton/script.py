@@ -48,8 +48,8 @@ def _place_requests(doc, repo, selection_map, rows, default_level=None):
     return engine.place_from_csv(rows, selection_map)
 
 
-def _build_row(name, point, rotation_deg):
-    return {
+def _build_row(name, point, rotation_deg, parent_element_id=None):
+    row = {
         "Name": name,
         "Count": "1",
         "Position X": str(point.X * 12.0),
@@ -57,6 +57,9 @@ def _build_row(name, point, rotation_deg):
         "Position Z": str(point.Z * 12.0),
         "Rotation": str(rotation_deg or 0.0)
     }
+    if parent_element_id is not None:
+        row["Parent ElementId"] = str(parent_element_id)
+    return row
 
 
 def _normalize_name(value):
@@ -165,6 +168,7 @@ def _parse_payload_pose(payload_text):
     location = None
     rotation = None
     parent_rotation = None
+    parent_element_id = None
     for raw_line in payload_text.splitlines():
         line = raw_line.strip()
         if not line or ":" not in line:
@@ -184,6 +188,11 @@ def _parse_payload_pose(payload_text):
                 parent_rotation = float(value)
             except Exception:
                 parent_rotation = None
+        elif key.startswith("parent elementid"):
+            try:
+                parent_element_id = int(value)
+            except Exception:
+                parent_element_id = None
         elif key.startswith("rotation"):
             try:
                 rotation = float(value)
@@ -193,7 +202,7 @@ def _parse_payload_pose(payload_text):
         return None
     point = XYZ(location[0], location[1], location[2])
     final_rotation = parent_rotation if parent_rotation is not None else (rotation or 0.0)
-    return {"point": point, "rotation": final_rotation}
+    return {"point": point, "rotation": final_rotation, "parent_element_id": parent_element_id}
 
 
 def _get_element_point(elem):
@@ -272,12 +281,13 @@ def _collect_placeholders(doc, normalized_targets):
     if not normalized_targets:
         return placements
 
-    def _store(name, point, rotation):
+    def _store(name, point, rotation, parent_element_id):
         if not name or point is None:
             return
         placements.setdefault(name, []).append({
             "point": point,
             "rotation": rotation,
+            "parent_element_id": parent_element_id,
         })
 
     collector = FilteredElementCollector(doc).WhereElementIsNotElementType()
@@ -293,9 +303,13 @@ def _collect_placeholders(doc, normalized_targets):
         if point is None:
             continue
         rotation = _angle_from_vector(_get_orientation_vector(elem))
+        try:
+            parent_element_id = elem.Id.IntegerValue
+        except Exception:
+            parent_element_id = None
         for name in variants:
             if name in normalized_targets:
-                _store(name, point, rotation)
+                _store(name, point, rotation, parent_element_id)
 
     for link_inst in FilteredElementCollector(doc).OfClass(RevitLinkInstance):
         link_doc = link_inst.GetLinkDocument()
@@ -325,9 +339,13 @@ def _collect_placeholders(doc, normalized_targets):
                 except Exception:
                     pass
             rotation = _angle_from_vector(vec)
+            try:
+                parent_element_id = inst.Id.IntegerValue
+            except Exception:
+                parent_element_id = None
             for name in variants:
                 if name in normalized_targets:
-                    _store(name, point, rotation)
+                    _store(name, point, rotation, parent_element_id)
 
     return placements
 
@@ -350,7 +368,11 @@ def _anchor_rows_for_cad(repo, cad_name):
                 break
         pose = _parse_payload_pose(payload)
         if pose:
-            rows.append({"point": pose["point"], "rotation": pose["rotation"]})
+            rows.append({
+                "point": pose["point"],
+                "rotation": pose["rotation"],
+                "parent_element_id": pose.get("parent_element_id"),
+            })
     return rows
 
 
@@ -424,7 +446,7 @@ def main():
             rotation = match.get("rotation")
             if point is None:
                 continue
-            rows.append(_build_row(cad_name, point, rotation))
+            rows.append(_build_row(cad_name, point, rotation, match.get("parent_element_id")))
             any_row = True
         if any_row:
             placed_defs.add(cad_name)

@@ -94,13 +94,14 @@ def _format_xyz(vec):
     return "{:.6f},{:.6f},{:.6f}".format(vec.X, vec.Y, vec.Z)
 
 
-def _build_linker_payload(led_id, set_id, location, rotation_deg, level_id, element_id, facing):
+def _build_linker_payload(led_id, set_id, location, rotation_deg, level_id, element_id, facing, parent_element_id=None):
     rotation = float(rotation_deg or 0.0)
     lines = [
         "Linked Element Definition ID: {}".format(led_id or ""),
         "Set Definition ID: {}".format(set_id or ""),
         "Location XYZ (ft): {}".format(_format_xyz(location)),
         "Rotation (deg): {:.6f}".format(rotation),
+        "Parent ElementId: {}".format(parent_element_id if parent_element_id is not None else ""),
         "LevelId: {}".format(level_id if level_id is not None else ""),
         "ElementId: {}".format(element_id if element_id is not None else ""),
         "FacingOrientation: {}".format(_format_xyz(facing)),
@@ -795,6 +796,16 @@ class PlaceElementsEngine(object):
                     base_rot_deg = float(row.get("Rotation", 0.0))
                 except Exception:
                     base_rot_deg = 0.0
+                parent_element_id = None
+                parent_raw = row.get("Parent ElementId")
+                if parent_raw not in (None, ""):
+                    try:
+                        parent_element_id = int(parent_raw)
+                    except Exception:
+                        try:
+                            parent_element_id = int(float(parent_raw))
+                        except Exception:
+                            parent_element_id = None
 
                 canonical_name = repo_key or cad_name
                 for label in labels:
@@ -804,7 +815,7 @@ class PlaceElementsEngine(object):
                     linked_def = self.repo.definition_for_label(canonical_name, label)
                     if not linked_def:
                         continue
-                    placed = self._place_one(linked_def, base_loc, base_rot_deg, occ_index)
+                    placed = self._place_one(linked_def, base_loc, base_rot_deg, occ_index, parent_element_id)
                     if placed:
                         placed_count += 1
                         placement = linked_def.get_placement()
@@ -899,7 +910,7 @@ class PlaceElementsEngine(object):
                 return canonical
         return stripped
 
-    def _place_one(self, linked_def, base_loc, base_rot_deg, occurrence_index):
+    def _place_one(self, linked_def, base_loc, base_rot_deg, occurrence_index, parent_element_id=None):
         placement = linked_def.get_placement()
         offset_xyz = placement.get_offset_xyz() if placement else None
         offset = offset_xyz or (0.0, 0.0, 0.0)
@@ -950,7 +961,7 @@ class PlaceElementsEngine(object):
             self._apply_recorded_level(instance, linked_def)
             if abs(final_rot_deg) > 1e-6:
                 self._rotate_instance(instance, loc, final_rot_deg)
-            self._update_element_linker_parameter(instance, linked_def, loc, final_rot_deg)
+            self._update_element_linker_parameter(instance, linked_def, loc, final_rot_deg, parent_element_id)
             if self.allow_tags:
                 self._place_tags(tags, instance, loc, final_rot_deg)
             self._place_text_notes(text_notes, loc, final_rot_deg, host_instance=instance, host_location=loc)
@@ -1569,7 +1580,7 @@ class PlaceElementsEngine(object):
                 continue
         return success
 
-    def _update_element_linker_parameter(self, instance, linked_def, location, rotation_deg):
+    def _update_element_linker_parameter(self, instance, linked_def, location, rotation_deg, parent_element_id=None):
         if not instance or not linked_def:
             return
         template = self._get_linker_template(linked_def)
@@ -1598,6 +1609,7 @@ class PlaceElementsEngine(object):
             level_id=level_id,
             element_id=element_id,
             facing=facing,
+            parent_element_id=parent_element_id,
         )
         self._set_element_linker_param(instance, payload)
 

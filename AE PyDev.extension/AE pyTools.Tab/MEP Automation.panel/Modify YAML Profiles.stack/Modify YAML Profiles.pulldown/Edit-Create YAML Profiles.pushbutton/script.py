@@ -1107,7 +1107,7 @@ def _place_existing_configuration(doc, data, cad_name, parent_point, parent_rota
         LOG.warning("Failed to place existing profile: %s", exc)
 
 
-def _build_element_linker_payload(led_id, set_id, elem, host_point, rotation_override=None, parent_rotation=None):
+def _build_element_linker_payload(led_id, set_id, elem, host_point, rotation_override=None, parent_rotation=None, parent_elem_id=None):
     point = host_point or _get_point(elem)
     rot = rotation_override if rotation_override is not None else _get_rotation_degrees(elem)
     level_id = getattr(getattr(elem, "LevelId", None), "IntegerValue", None)
@@ -1119,6 +1119,7 @@ def _build_element_linker_payload(led_id, set_id, elem, host_point, rotation_ove
         "Location XYZ (ft): {:.6f},{:.6f},{:.6f}".format(point.X, point.Y, point.Z) if point else "Location XYZ (ft):",
         "Rotation (deg): {:.6f}".format(rot or 0.0),
         "Parent Rotation (deg): {}".format("{:.6f}".format(parent_rotation) if parent_rotation is not None else ""),
+        "Parent ElementId: {}".format(parent_elem_id if parent_elem_id is not None else ""),
         "LevelId: {}".format(level_id if level_id is not None else ""),
         "ElementId: {}".format(elem_id if elem_id is not None else ""),
         "FacingOrientation: {}".format("{:.6f},{:.6f},{:.6f}".format(facing.X, facing.Y, facing.Z) if facing else ""),
@@ -1309,6 +1310,14 @@ def _run_selection_flow(doc, data, context, truth_groups, child_to_group, parent
                 parent_elem = doc.GetElement(ElementId(int(elem_id)))
             except Exception:
                 parent_elem = None
+    parent_elem_id = None
+    if parent_elem is not None:
+        try:
+            parent_elem_id = parent_elem.Id.IntegerValue
+        except Exception:
+            parent_elem_id = None
+    if parent_elem_id is None:
+        parent_elem_id = context.get("parent_element_id")
 
     trans_group = TransactionGroup(doc, TITLE)
     trans_group.Start()
@@ -1362,6 +1371,7 @@ def _run_selection_flow(doc, data, context, truth_groups, child_to_group, parent
                 entry["point"],
                 entry["rotation_deg"],
                 parent_rotation,
+                parent_elem_id,
             )
             led_entry["parameters"][ELEMENT_LINKER_PARAM_NAME] = payload
             metadata_updates.append((entry["element"], payload))

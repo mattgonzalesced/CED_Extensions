@@ -279,7 +279,7 @@ def _normalize_angle(angle_deg):
     return value
 
 
-def _build_element_linker_payload(led_id, set_id, elem, host_point, rotation_override=None, parent_rotation_deg=None):
+def _build_element_linker_payload(led_id, set_id, elem, host_point, rotation_override=None, parent_rotation_deg=None, parent_elem_id=None):
     point = host_point or _get_point(elem)
     rotation_deg = _get_rotation(elem) if rotation_override is None else rotation_override
     level_id = _get_level_element_id(elem)
@@ -294,6 +294,7 @@ def _build_element_linker_payload(led_id, set_id, elem, host_point, rotation_ove
         "Location XYZ (ft): {}".format(_format_xyz(point)),
         "Rotation (deg): {:.6f}".format(rotation_deg),
         "Parent Rotation (deg): {}".format("{:.6f}".format(parent_rotation_deg) if parent_rotation_deg is not None else ""),
+        "Parent ElementId: {}".format(parent_elem_id if parent_elem_id is not None else ""),
         "LevelId: {}".format(level_id if level_id is not None else ""),
         "ElementId: {}".format(elem_id),
         "FacingOrientation: {}".format(_format_xyz(facing)),
@@ -676,6 +677,12 @@ def _parse_payload(text):
             payload["parent_rotation_deg"] = float(parent_rot)
         except Exception:
             payload["parent_rotation_deg"] = None
+    parent_elem = payload.get("parent elementid")
+    if parent_elem:
+        try:
+            payload["parent_element_id"] = int(parent_elem)
+        except Exception:
+            payload["parent_element_id"] = None
     led_token = payload.get("linked element definition id")
     if led_token:
         payload["led_id"] = led_token.strip()
@@ -1000,9 +1007,21 @@ def _seed_parent_equipment_definition(parent_elem, data, link_transform=None):
         forms.alert("Could not determine the parent element's location.", title=TITLE)
         return None
     parent_rotation = _transform_rotation(_get_rotation(parent_elem), link_transform)
+    try:
+        parent_elem_id = parent_elem.Id.IntegerValue
+    except Exception:
+        parent_elem_id = None
     led_id = "{}-LED-000".format(set_id)
     params = dict(_collect_params(parent_elem) or {})
-    payload = _build_element_linker_payload(led_id, set_id, parent_elem, parent_point, parent_rotation, parent_rotation)
+    payload = _build_element_linker_payload(
+        led_id,
+        set_id,
+        parent_elem,
+        parent_point,
+        parent_rotation,
+        parent_rotation,
+        parent_elem_id,
+    )
     params[ELEMENT_LINKER_PARAM_NAME] = payload
     led_entry = {
         "id": led_id,
@@ -1178,6 +1197,10 @@ def main():
         parent_name = parent_info["eq_name"] or parent_info.get("eq_id") or "(unknown)"
         parent_origin_point = parent_info.get("element_point") or parent_info.get("base_point")
         parent_rotation = parent_info.get("rotation_deg") or 0.0
+        try:
+            parent_elem_id = parent_elem.Id.IntegerValue
+        except Exception:
+            parent_elem_id = None
         if parent_origin_point is None:
             forms.alert("Could not determine the parent element's location.", title=TITLE)
             return
@@ -1216,6 +1239,7 @@ def main():
                 child["point"],
                 child_rotation,
                 parent_rotation,
+                parent_elem_id,
             )
             params[ELEMENT_LINKER_PARAM_NAME] = payload
             led_entry = {
