@@ -6,7 +6,7 @@ import os
 import sys
 
 from pyrevit import revit, forms, script
-from Autodesk.Revit.DB import BuiltInParameter, FamilyInstance, FilteredElementCollector, Group, RevitLinkInstance, XYZ
+from Autodesk.Revit.DB import BuiltInParameter, FamilyInstance, FilteredElementCollector, Group, Level, RevitLinkInstance, XYZ
 
 LIB_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib"))
 if LIB_ROOT not in sys.path:
@@ -48,7 +48,7 @@ def _place_requests(doc, repo, selection_map, rows, default_level=None):
     return engine.place_from_csv(rows, selection_map)
 
 
-def _build_row(name, point, rotation_deg, parent_element_id=None):
+def _build_row(name, point, rotation_deg, parent_element_id=None, level_id=None):
     row = {
         "Name": name,
         "Count": "1",
@@ -59,6 +59,8 @@ def _build_row(name, point, rotation_deg, parent_element_id=None):
     }
     if parent_element_id is not None:
         row["Parent ElementId"] = str(parent_element_id)
+    if level_id is not None:
+        row["LevelId"] = str(level_id)
     return row
 
 
@@ -67,6 +69,86 @@ def _normalize_name(value):
         return ""
     normalized = " ".join(str(value).strip().lower().split())
     return normalized
+
+
+def _normalize_level_name(value):
+    if not value:
+        return ""
+    normalized = " ".join(str(value).strip().lower().split())
+    return normalized
+
+
+def _get_element_level(elem):
+    if elem is None:
+        return None
+    doc = getattr(elem, "Document", None)
+    level_id = getattr(elem, "LevelId", None)
+    if level_id and doc:
+        try:
+            if getattr(level_id, "IntegerValue", None) not in (None, -1):
+                level = doc.GetElement(level_id)
+                if level is not None:
+                    return level
+        except Exception:
+            pass
+    if not hasattr(elem, "get_Parameter"):
+        return None
+    level_params = (
+        BuiltInParameter.FAMILY_LEVEL_PARAM,
+        BuiltInParameter.INSTANCE_LEVEL_PARAM,
+        BuiltInParameter.INSTANCE_REFERENCE_LEVEL_PARAM,
+        BuiltInParameter.SCHEDULE_LEVEL_PARAM,
+    )
+    for bip in level_params:
+        if bip is None:
+            continue
+        try:
+            param = elem.get_Parameter(bip)
+        except Exception:
+            param = None
+        if not param:
+            continue
+        try:
+            level_id = param.AsElementId()
+        except Exception:
+            level_id = None
+        if level_id and doc:
+            try:
+                level = doc.GetElement(level_id)
+            except Exception:
+                level = None
+            if level is not None:
+                return level
+    return None
+
+
+def _collect_host_levels(doc):
+    by_name = {}
+    try:
+        levels = list(FilteredElementCollector(doc).OfClass(Level))
+    except Exception:
+        levels = []
+    for level in levels:
+        name = getattr(level, "Name", None)
+        if not name:
+            continue
+        norm = _normalize_level_name(name)
+        if norm:
+            by_name.setdefault(norm, []).append(level)
+    return by_name
+
+
+def _resolve_host_level(link_level, host_level_by_name):
+    if not link_level or not host_level_by_name:
+        return None
+    name = getattr(link_level, "Name", None)
+    if not name:
+        return None
+    norm = _normalize_level_name(name)
+    candidates = host_level_by_name.get(norm)
+    if candidates:
+        return candidates[0]
+    return None
 
 
 def _get_symbol(elem):
@@ -169,6 +251,7 @@ def _parse_payload_pose(payload_text):
     rotation = None
     parent_rotation = None
     parent_element_id = None
+    level_id = None
     for raw_line in payload_text.splitlines():
         line = raw_line.strip()
         if not line or ":" not in line:
@@ -193,6 +276,14 @@ def _parse_payload_pose(payload_text):
                 parent_element_id = int(value)
             except Exception:
                 parent_element_id = None
+        elif key.startswith("levelid"):
+            try:
+                level_id = int(value)
+            except Exception:
+                try:
+                    level_id = int(float(value))
+                except Exception:
+                    level_id = None
         elif key.startswith("rotation"):
             try:
                 rotation = float(value)
@@ -202,7 +293,12 @@ def _parse_payload_pose(payload_text):
         return None
     point = XYZ(location[0], location[1], location[2])
     final_rotation = parent_rotation if parent_rotation is not None else (rotation or 0.0)
-    return {"point": point, "rotation": final_rotation, "parent_element_id": parent_element_id}
+    return {
+        "point": point,
+        "rotation": final_rotation,
+        "parent_element_id": parent_element_id,
+        "level_id": level_id,
+    }
 
 
 def _get_element_point(elem):
@@ -280,14 +376,17 @@ def _collect_placeholders(doc, normalized_targets):
     placements = {}
     if not normalized_targets:
         return placements
+    host_level_by_name = _collect_host_levels(doc)
 
-    def _store(name, point, rotation, parent_element_id):
+    def _store(name, point, rotation, parent_element_id, level=None, level_name=None):
         if not name or point is None:
             return
         placements.setdefault(name, []).append({
             "point": point,
             "rotation": rotation,
             "parent_element_id": parent_element_id,
+            "level": level,
+            "level_name": level_name,
         })
 
     collector = FilteredElementCollector(doc).WhereElementIsNotElementType()
@@ -303,13 +402,15 @@ def _collect_placeholders(doc, normalized_targets):
         if point is None:
             continue
         rotation = _angle_from_vector(_get_orientation_vector(elem))
+        level = _get_element_level(elem)
+        level_name = getattr(level, "Name", None) if level else None
         try:
             parent_element_id = elem.Id.IntegerValue
         except Exception:
             parent_element_id = None
         for name in variants:
             if name in normalized_targets:
-                _store(name, point, rotation, parent_element_id)
+                _store(name, point, rotation, parent_element_id, level, level_name)
 
     for link_inst in FilteredElementCollector(doc).OfClass(RevitLinkInstance):
         link_doc = link_inst.GetLinkDocument()
@@ -339,13 +440,16 @@ def _collect_placeholders(doc, normalized_targets):
                 except Exception:
                     pass
             rotation = _angle_from_vector(vec)
+            link_level = _get_element_level(inst)
+            host_level = _resolve_host_level(link_level, host_level_by_name)
+            level_name = getattr(link_level, "Name", None) if link_level else None
             try:
                 parent_element_id = inst.Id.IntegerValue
             except Exception:
                 parent_element_id = None
             for name in variants:
                 if name in normalized_targets:
-                    _store(name, point, rotation, parent_element_id)
+                    _store(name, point, rotation, parent_element_id, host_level, level_name)
 
     return placements
 
@@ -372,6 +476,7 @@ def _anchor_rows_for_cad(repo, cad_name):
                 "point": pose["point"],
                 "rotation": pose["rotation"],
                 "parent_element_id": pose.get("parent_element_id"),
+                "level_id": pose.get("level_id"),
             })
     return rows
 
@@ -427,6 +532,7 @@ def main():
     selection_map = {}
     placed_defs = set()
     missing_labels = []
+    missing_levels = []
     for cad_name in equipment_names:
         normalized = _normalize_name(cad_name)
         matches = placeholders.get(normalized)
@@ -446,7 +552,20 @@ def main():
             rotation = match.get("rotation")
             if point is None:
                 continue
-            rows.append(_build_row(cad_name, point, rotation, match.get("parent_element_id")))
+            level_id_val = match.get("level_id")
+            if level_id_val is None:
+                level = match.get("level")
+                if level is not None:
+                    try:
+                        level_id_val = level.Id.IntegerValue
+                    except Exception:
+                        level_id_val = None
+            if level_id_val is None:
+                level_name = match.get("level_name")
+                if level_name:
+                    missing_levels.append((cad_name, level_name))
+                continue
+            rows.append(_build_row(cad_name, point, rotation, match.get("parent_element_id"), level_id_val))
             any_row = True
         if any_row:
             placed_defs.add(cad_name)
@@ -461,14 +580,7 @@ def main():
         )
         return
 
-    level = None
-    level_sel = forms.select_levels(multiple=False)
-    if isinstance(level_sel, list) and level_sel:
-        level = level_sel[0]
-    elif level_sel:
-        level = level_sel
-
-    results = _place_requests(doc, repo, selection_map, rows, default_level=level)
+    results = _place_requests(doc, repo, selection_map, rows, default_level=None)
     placed = results.get("placed", 0)
     summary = [
         "Processed {} linked element(s).".format(len(rows)),
@@ -499,6 +611,18 @@ def main():
         summary.extend(" - {}".format(name) for name in sample)
         if len(missing_labels) > len(sample):
             summary.append("   (+{} more)".format(len(missing_labels) - len(sample)))
+
+    if missing_levels:
+        summary.append("")
+        summary.append("Skipped (no matching host level):")
+        seen = set()
+        for name, level_name in missing_levels:
+            label = "{} -> {}".format(name, level_name)
+            if label in seen:
+                continue
+            seen.add(label)
+        for item in sorted(seen):
+            summary.append(" - {}".format(item))
 
     forms.alert("\n".join(summary), title=TITLE)
 

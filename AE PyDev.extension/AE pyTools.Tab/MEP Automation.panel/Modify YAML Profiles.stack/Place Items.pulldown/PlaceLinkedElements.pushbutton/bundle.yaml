@@ -8,9 +8,9 @@ tooltip: |
   project contains host families or linked groups whose names align with the
   equipment definitions you want to place.
 
-  When prompted, confirm the level, review the summary of matched hosts, and let
-  the engine process each entry; it sets Element_Linker metadata so QA/QC and
-  Undo integration work seamlessly.
+  The engine assigns each placement to the linked element's level, reviews the
+  summary of matched hosts, and sets Element_Linker metadata so QA/QC and Undo
+  integration work seamlessly.
 
   After placement, inspect the resulting families, run QAQC if needed, and commit
   any required tweaks through Add, Edit, or Merge before exporting the updated

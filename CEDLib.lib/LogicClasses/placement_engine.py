@@ -726,6 +726,33 @@ class PlaceElementsEngine(object):
                         return value
         return ""
 
+    def _resolve_row_level(self, row):
+        if not isinstance(row, dict):
+            return None
+        level_value = row.get("LevelId")
+        if level_value in (None, ""):
+            return None
+        if isinstance(level_value, Level):
+            return level_value
+        if hasattr(level_value, "IntegerValue"):
+            try:
+                element = self.doc.GetElement(level_value)
+            except Exception:
+                element = None
+            if isinstance(element, Level):
+                return element
+        try:
+            level_id = int(level_value)
+        except Exception:
+            return None
+        try:
+            element = self.doc.GetElement(ElementId(level_id))
+        except Exception:
+            element = None
+        if isinstance(element, Level):
+            return element
+        return None
+
     def place_from_csv(self, csv_rows, cad_selection_map):
         """
         csv_rows: list of CAD CSV rows
@@ -740,6 +767,7 @@ class PlaceElementsEngine(object):
             if level is None:
                 raise Exception("No Level found in this document; cannot place elements.")
         self.default_level = level
+        fallback_level = level
 
         occurrence_counter = {}
         total_rows = 0
@@ -807,6 +835,12 @@ class PlaceElementsEngine(object):
                         except Exception:
                             parent_element_id = None
 
+                row_level = self._resolve_row_level(row)
+                if row_level is not None:
+                    self.default_level = row_level
+                else:
+                    self.default_level = fallback_level
+
                 canonical_name = repo_key or cad_name
                 for label in labels:
                     key = (canonical_name, label)
@@ -848,8 +882,10 @@ class PlaceElementsEngine(object):
                                 label,
                                 canonical_name,
                             )
+            self.default_level = fallback_level
             t.Commit()
         except Exception:
+            self.default_level = fallback_level
             t.RollBack()
             raise
 
