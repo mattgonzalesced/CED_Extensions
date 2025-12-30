@@ -45,6 +45,16 @@ except NameError:
     basestring = str
 
 
+class _MissingChoice(object):
+    def __init__(self, label, data, checked=True):
+        self.label = label
+        self.data = data
+        self.checked = checked
+
+    def __str__(self):
+        return self.label
+
+
 def _normalize_full_name(value):
     if not value:
         return ""
@@ -439,19 +449,25 @@ def main():
         return
 
     missing.sort(key=lambda row: row[0].lower())
-    lines = [
-        "Linked elements that look like missing profiles:",
-    ]
+    items = []
     for linked_name, best, count in missing:
         if count > 1:
-            lines.append("- {} (x{}) -> {}".format(linked_name, count, best))
+            label = "{} (x{}) -> {}".format(linked_name, count, best)
         else:
-            lines.append("- {} -> {}".format(linked_name, best))
-    lines.extend(["", "Create profiles for these now?"])
+            label = "{} -> {}".format(linked_name, best)
+        items.append(_MissingChoice(label, (linked_name, best, count), checked=True))
 
-    create_now = forms.alert("\n".join(lines), title=TITLE, ok=False, yes=True, no=True)
-    if not create_now:
+    selected = forms.SelectFromList.show(
+        items,
+        title=TITLE,
+        multiselect=True,
+        button_name="Create Selected",
+        width=900,
+        height=600,
+    )
+    if not selected:
         return
+    missing = [item.data for item in selected]
 
     equipment_defs = data.get("equipment_definitions") or []
     existing_norms = {

@@ -3,6 +3,7 @@
 
 import math
 import os
+import re
 import sys
 
 from pyrevit import revit, forms, script
@@ -27,6 +28,7 @@ except NameError:
 
 TRUTH_SOURCE_ID_KEY = "ced_truth_source_id"
 TRUTH_SOURCE_NAME_KEY = "ced_truth_source_name"
+LEVEL_NUMBER_RE = re.compile(r"(?:^|\b)(?:level|lvl|l)\s*0*([0-9]+)\b", re.IGNORECASE)
 
 
 def _build_repository(data):
@@ -64,6 +66,22 @@ def _build_row(name, point, rotation_deg, parent_element_id=None, level_id=None)
     return row
 
 
+def _placement_key(point, rotation_deg, level_id, parent_element_id):
+    if point is None:
+        return None
+    try:
+        x = round(float(point.X), 6)
+        y = round(float(point.Y), 6)
+        z = round(float(point.Z), 6)
+    except Exception:
+        return None
+    try:
+        rot = round(float(rotation_deg or 0.0), 3)
+    except Exception:
+        rot = 0.0
+    return (level_id, parent_element_id, x, y, z, rot)
+
+
 def _normalize_name(value):
     if not value:
         return ""
@@ -76,6 +94,21 @@ def _normalize_level_name(value):
         return ""
     normalized = " ".join(str(value).strip().lower().split())
     return normalized
+
+
+def _compact_level_text(value):
+    if not value:
+        return ""
+    return re.sub(r"[^a-z0-9]+", "", str(value).strip().lower())
+
+
+def _extract_level_number(value):
+    if not value:
+        return None
+    match = LEVEL_NUMBER_RE.search(str(value))
+    if match:
+        return match.group(1)
+    return None
 
 
 def _get_element_level(elem):
@@ -93,13 +126,14 @@ def _get_element_level(elem):
             pass
     if not hasattr(elem, "get_Parameter"):
         return None
-    level_params = (
-        BuiltInParameter.FAMILY_LEVEL_PARAM,
-        BuiltInParameter.INSTANCE_LEVEL_PARAM,
-        BuiltInParameter.INSTANCE_REFERENCE_LEVEL_PARAM,
-        BuiltInParameter.SCHEDULE_LEVEL_PARAM,
+    level_param_names = (
+        "FAMILY_LEVEL_PARAM",
+        "INSTANCE_LEVEL_PARAM",
+        "INSTANCE_REFERENCE_LEVEL_PARAM",
+        "SCHEDULE_LEVEL_PARAM",
     )
-    for bip in level_params:
+    for param_name in level_param_names:
+        bip = getattr(BuiltInParameter, param_name, None)
         if bip is None:
             continue
         try:
@@ -148,6 +182,37 @@ def _resolve_host_level(link_level, host_level_by_name):
     candidates = host_level_by_name.get(norm)
     if candidates:
         return candidates[0]
+    best = None
+    best_len = 0
+    for key, levels in host_level_by_name.items():
+        if not key or key not in norm:
+            continue
+        if len(key) > best_len and levels:
+            best = levels[0]
+            best_len = len(key)
+    if best:
+        return best
+    compact_norm = _compact_level_text(norm)
+    if compact_norm:
+        compact_best = None
+        compact_len = 0
+        for key, levels in host_level_by_name.items():
+            if not key or not levels:
+                continue
+            compact_key = _compact_level_text(key)
+            if compact_key and compact_key in compact_norm and len(compact_key) > compact_len:
+                compact_best = levels[0]
+                compact_len = len(compact_key)
+        if compact_best:
+            return compact_best
+    link_num = _extract_level_number(norm)
+    if link_num:
+        for key, levels in host_level_by_name.items():
+            if not key or not levels:
+                continue
+            host_num = _extract_level_number(key)
+            if host_num == link_num:
+                return levels[0]
     return None
 
 
@@ -533,6 +598,8 @@ def main():
     placed_defs = set()
     missing_labels = []
     missing_levels = []
+    deduped_rows = 0
+    seen_rows = set()
     for cad_name in equipment_names:
         normalized = _normalize_name(cad_name)
         matches = placeholders.get(normalized)
@@ -565,6 +632,12 @@ def main():
                 if level_name:
                     missing_levels.append((cad_name, level_name))
                 continue
+            row_key = _placement_key(point, rotation, level_id_val, match.get("parent_element_id"))
+            if row_key in seen_rows:
+                deduped_rows += 1
+                continue
+            if row_key is not None:
+                seen_rows.add(row_key)
             rows.append(_build_row(cad_name, point, rotation, match.get("parent_element_id"), level_id_val))
             any_row = True
         if any_row:
@@ -573,11 +646,23 @@ def main():
                 successful_groups.add(group_key)
 
     if not rows:
-        forms.alert(
+        summary = [
             "No placements were generated. Ensure equipment definitions include linked types "
             "and that matching linked elements exist in the model.",
-            title=TITLE,
-        )
+        ]
+        if missing_levels:
+            summary.append("")
+            summary.append("Skipped (no matching host level):")
+            seen = set()
+            for name, level_name in missing_levels:
+                label = "{} -> {}".format(name, level_name)
+                seen.add(label)
+            for item in sorted(seen):
+                summary.append(" - {}".format(item))
+        if deduped_rows:
+            summary.append("")
+            summary.append("Skipped {} duplicate placement row(s).".format(deduped_rows))
+        forms.alert("\n".join(summary), title=TITLE)
         return
 
     results = _place_requests(doc, repo, selection_map, rows, default_level=None)
@@ -623,6 +708,10 @@ def main():
             seen.add(label)
         for item in sorted(seen):
             summary.append(" - {}".format(item))
+
+    if deduped_rows:
+        summary.append("")
+        summary.append("Skipped {} duplicate placement row(s).".format(deduped_rows))
 
     forms.alert("\n".join(summary), title=TITLE)
 
