@@ -226,15 +226,29 @@ def split_groups_by_poles(groups, logger=None):
 
 
 def assemble_groups(items, client_helpers, position_group_size, logger):
-    dedicated, nongrouped, tvtruss, normal = [], [], [], list(items)
+    working_items = list(items)
+    groups = []
+
+    if client_helpers and hasattr(client_helpers, "create_position_groups"):
+        try:
+            position_groups, remaining = client_helpers.create_position_groups(
+                working_items, make_group, logger=logger
+            )
+            if position_groups:
+                groups.extend(position_groups)
+            if remaining is not None:
+                working_items = list(remaining)
+        except Exception as ex:
+            if logger:
+                logger.warning("Client create_position_groups failed: {}".format(ex))
+
+    dedicated, nongrouped, tvtruss, normal = [], [], [], list(working_items)
     if client_helpers and hasattr(client_helpers, "classify_items"):
         try:
-            dedicated, nongrouped, tvtruss, normal = client_helpers.classify_items(items)
+            dedicated, nongrouped, tvtruss, normal = client_helpers.classify_items(working_items)
         except Exception as ex:
             if logger:
                 logger.warning("Client classify_items failed: {}".format(ex))
-
-    groups = []
 
     if dedicated:
         groups.extend(create_dedicated_groups(dedicated))

@@ -110,13 +110,23 @@ def _build_linker_payload(led_id, set_id, location, rotation_deg, level_id, elem
 
 
 class PlaceElementsEngine(object):
-    def __init__(self, doc, repo, default_level=None, tag_view_map=None, allow_tags=True, transaction_name="Place Elements (YAML)"):
+    def __init__(
+        self,
+        doc,
+        repo,
+        default_level=None,
+        tag_view_map=None,
+        allow_tags=True,
+        transaction_name="Place Elements (YAML)",
+        apply_recorded_level=True,
+    ):
         self.doc = doc
         self.repo = repo
         self.default_level = default_level
         self.tag_view_map = tag_view_map or {}
         self.allow_tags = bool(allow_tags)
         self.transaction_name = transaction_name or "Place Elements (YAML)"
+        self.apply_recorded_level = bool(apply_recorded_level)
         self._init_symbol_map()
         self._init_group_map()
         self._init_text_note_types()
@@ -994,7 +1004,8 @@ class PlaceElementsEngine(object):
         if not instance:
             instance = self._place_symbol(label, family, type_name, linked_def, loc, offset[2])
         if instance:
-            self._apply_recorded_level(instance, linked_def)
+            if self.apply_recorded_level:
+                self._apply_recorded_level(instance, linked_def)
             if abs(final_rot_deg) > 1e-6:
                 self._rotate_instance(instance, loc, final_rot_deg)
             self._update_element_linker_parameter(instance, linked_def, loc, final_rot_deg, parent_element_id)

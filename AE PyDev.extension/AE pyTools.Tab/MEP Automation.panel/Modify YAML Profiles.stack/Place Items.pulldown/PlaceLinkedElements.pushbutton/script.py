@@ -46,6 +46,7 @@ def _place_requests(doc, repo, selection_map, rows, default_level=None):
         default_level=default_level,
         allow_tags=False,
         transaction_name="Place Linked Elements",
+        apply_recorded_level=False,
     )
     return engine.place_from_csv(rows, selection_map)
 
@@ -107,8 +108,35 @@ def _extract_level_number(value):
         return None
     match = LEVEL_NUMBER_RE.search(str(value))
     if match:
-        return match.group(1)
+        try:
+            return int(match.group(1))
+        except Exception:
+            return None
     return None
+
+
+def _score_level_match(link_norm, host_norm):
+    if not link_norm or not host_norm:
+        return 0
+    if host_norm == link_norm:
+        return 100
+    score = 0
+    if host_norm in link_norm:
+        score = max(score, 80 + len(host_norm))
+    if link_norm in host_norm:
+        score = max(score, 70 + len(link_norm))
+    link_compact = _compact_level_text(link_norm)
+    host_compact = _compact_level_text(host_norm)
+    if link_compact and host_compact:
+        if link_compact == host_compact:
+            score = max(score, 90)
+        if host_compact in link_compact or link_compact in host_compact:
+            score = max(score, 60 + min(len(link_compact), len(host_compact)))
+    link_num = _extract_level_number(link_norm)
+    host_num = _extract_level_number(host_norm)
+    if link_num and host_num and link_num == host_num:
+        score = max(score, 50)
+    return score
 
 
 def _get_element_level(elem):
@@ -131,6 +159,8 @@ def _get_element_level(elem):
         "INSTANCE_LEVEL_PARAM",
         "INSTANCE_REFERENCE_LEVEL_PARAM",
         "SCHEDULE_LEVEL_PARAM",
+        "LEVEL_PARAM",
+        "WALL_BASE_CONSTRAINT",
     )
     for param_name in level_param_names:
         bip = getattr(BuiltInParameter, param_name, None)
@@ -156,6 +186,102 @@ def _get_element_level(elem):
     return None
 
 
+def _get_parent_element(elem):
+    if elem is None:
+        return None
+    parent = None
+    if isinstance(elem, FamilyInstance):
+        try:
+            parent = getattr(elem, "SuperComponent", None)
+        except Exception:
+            parent = None
+        if parent is None:
+            try:
+                parent = getattr(elem, "Host", None)
+            except Exception:
+                parent = None
+    return parent
+
+
+def _get_parent_level(elem):
+    parent = _get_parent_element(elem)
+    if parent is None:
+        return None
+    return _get_element_level(parent)
+
+
+def _get_level_name_from_param(elem):
+    if elem is None or not hasattr(elem, "get_Parameter"):
+        return None
+    level_param_names = (
+        "FAMILY_LEVEL_PARAM",
+        "INSTANCE_LEVEL_PARAM",
+        "INSTANCE_REFERENCE_LEVEL_PARAM",
+        "SCHEDULE_LEVEL_PARAM",
+        "LEVEL_PARAM",
+        "WALL_BASE_CONSTRAINT",
+    )
+    for param_name in level_param_names:
+        bip = getattr(BuiltInParameter, param_name, None)
+        if bip is None:
+            continue
+        try:
+            param = elem.get_Parameter(bip)
+        except Exception:
+            param = None
+        if not param or not param.HasValue:
+            continue
+        value = None
+        try:
+            value = param.AsValueString()
+        except Exception:
+            value = None
+        if not value:
+            try:
+                value = param.AsString()
+            except Exception:
+                value = None
+        if value:
+            text = str(value).strip()
+            if text:
+                return text
+    for name in ("Level", "Reference Level", "Schedule Level", "Base Constraint"):
+        try:
+            param = elem.LookupParameter(name)
+        except Exception:
+            param = None
+        if param and param.HasValue:
+            value = None
+            try:
+                value = param.AsString()
+            except Exception:
+                value = None
+            if not value:
+                try:
+                    value = param.AsValueString()
+                except Exception:
+                    value = None
+            if value:
+                text = str(value).strip()
+                if text:
+                    return text
+    return None
+
+
+def _prefer_parent_level(level, parent_level):
+    if parent_level is None:
+        return level
+    if level is None:
+        return parent_level
+    parent_name = getattr(parent_level, "Name", None)
+    level_name = getattr(level, "Name", None)
+    parent_num = _extract_level_number(parent_name)
+    level_num = _extract_level_number(level_name)
+    if parent_num and (level_num is None or parent_num != level_num):
+        return parent_level
+    return level
+
+
 def _collect_host_levels(doc):
     by_name = {}
     try:
@@ -172,48 +298,43 @@ def _collect_host_levels(doc):
     return by_name
 
 
+def _resolve_host_level_name(level_name, host_level_by_name):
+    if not level_name or not host_level_by_name:
+        return None
+    norm = _normalize_level_name(level_name)
+    candidates = host_level_by_name.get(norm)
+    if candidates:
+        return candidates[0]
+    link_num = _extract_level_number(norm)
+    candidate_map = host_level_by_name
+    if link_num is not None:
+        filtered = {}
+        for key, levels in host_level_by_name.items():
+            if not key or not levels:
+                continue
+            if _extract_level_number(key) == link_num:
+                filtered[key] = levels
+        if filtered:
+            candidate_map = filtered
+    best = None
+    best_score = 0
+    for key, levels in candidate_map.items():
+        if not key or not levels:
+            continue
+        score = _score_level_match(norm, key)
+        if score > best_score:
+            best_score = score
+            best = levels[0]
+    return best
+
+
 def _resolve_host_level(link_level, host_level_by_name):
     if not link_level or not host_level_by_name:
         return None
     name = getattr(link_level, "Name", None)
     if not name:
         return None
-    norm = _normalize_level_name(name)
-    candidates = host_level_by_name.get(norm)
-    if candidates:
-        return candidates[0]
-    best = None
-    best_len = 0
-    for key, levels in host_level_by_name.items():
-        if not key or key not in norm:
-            continue
-        if len(key) > best_len and levels:
-            best = levels[0]
-            best_len = len(key)
-    if best:
-        return best
-    compact_norm = _compact_level_text(norm)
-    if compact_norm:
-        compact_best = None
-        compact_len = 0
-        for key, levels in host_level_by_name.items():
-            if not key or not levels:
-                continue
-            compact_key = _compact_level_text(key)
-            if compact_key and compact_key in compact_norm and len(compact_key) > compact_len:
-                compact_best = levels[0]
-                compact_len = len(compact_key)
-        if compact_best:
-            return compact_best
-    link_num = _extract_level_number(norm)
-    if link_num:
-        for key, levels in host_level_by_name.items():
-            if not key or not levels:
-                continue
-            host_num = _extract_level_number(key)
-            if host_num == link_num:
-                return levels[0]
-    return None
+    return _resolve_host_level_name(name, host_level_by_name)
 
 
 def _get_symbol(elem):
@@ -505,9 +626,18 @@ def _collect_placeholders(doc, normalized_targets):
                 except Exception:
                     pass
             rotation = _angle_from_vector(vec)
-            link_level = _get_element_level(inst)
-            host_level = _resolve_host_level(link_level, host_level_by_name)
-            level_name = getattr(link_level, "Name", None) if link_level else None
+            parent = _get_parent_element(inst)
+            parent_level = _get_element_level(parent)
+            link_level = _prefer_parent_level(_get_element_level(inst), parent_level)
+            level_name = (
+                (getattr(parent_level, "Name", None) if parent_level else None)
+                or _get_level_name_from_param(parent)
+                or _get_level_name_from_param(inst)
+                or (getattr(link_level, "Name", None) if link_level else None)
+            )
+            host_level = _resolve_host_level_name(level_name, host_level_by_name) or _resolve_host_level(
+                link_level, host_level_by_name
+            )
             try:
                 parent_element_id = inst.Id.IntegerValue
             except Exception:
