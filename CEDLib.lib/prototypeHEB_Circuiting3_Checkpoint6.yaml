@@ -174,80 +174,68 @@ equipment_definitions:
   -
     prompt_on_parent_mismatch: "false"
     parent_filter:
-      family_name_pattern: 008_HEBUDDY MINI KIOSK MACHINE_1210692
+      family_name_pattern: 009_RefgCase_Berry_Self_Contained_6_1302263
       category: Specialty Equipment
       parameter_filters:
         {}
       type_name_pattern: Default
-    name: "008_HEBUDDY MINI KIOSK MACHINE_1210692 : Default"
+    name: "009_RefgCase_Berry_Self_Contained_6_1302263 : Default"
     schema_version: 1
-    id: EQ-173
+    id: EQ-245
     linked_sets:
       -
         linked_element_definitions:
           -
             is_group: true
             text_notes:
-              -
-                text: |
-                  HE
-                  BUDDY
-                width_inches: 0.317716535433
-                type_name: "Text : 1/16\" Arial"
-                offsets:
-                  rotation_deg: 0.0
-                  x_inches: 13.542881906
-                  y_inches: 3.21086660504
-                  z_inches: -1272.0
-                leaders:
-                  []
+              []
             label: "EF-U_Receptacle_CED : Duplex Wall"
             parameters:
               dev-Group ID: ""
               SLD_Component ID_CED: ""
-              CKT_Load Name_CEDT: HEBUDDY
+              CKT_Load Name_CEDT: BERRY CASE
               CKT_Rating_CED: 20.0
               Product Datasheet URL: ""
-              CKT_Panel_CEDT: FL
-              Load Classification_CED: Receptacle
+              CKT_Panel_CEDT: PR
+              Load Classification_CED: Refrigeration
               SLD_Symbol ID_CED: ""
               FLA Input_CED: 0.0
               Power Factor_CED: 1.0
               Wattage Input_CED: 0.0
               Number of Poles_CED: 1
               CKT_Schedule Notes_CEDT: ""
-              Apparent Load Input_CED: 500.0
-              CKT_Circuit Number_CEDT: 9
+              Apparent Load Input_CED: 1920.0
+              CKT_Circuit Number_CEDT: 17
               Voltage_CED: 120.0
               Product Specification: ""
               Element_Linker Parameter: |
-                Linked Element Definition ID: SET-173-LED-001
-                Set Definition ID: SET-173
-                Location XYZ (ft): 334.602381,37.276984,106.000000
-                Rotation (deg): 0.000000
-                Parent Rotation (deg): 180.000000
+                Linked Element Definition ID: SET-245-LED-001
+                Set Definition ID: SET-245
+                Location XYZ (ft): 435.979517,50.526209,100.000000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): -90.000000
                 LevelId: 30
-                ElementId: 7691211
-                FacingOrientation: 0.000000,1.000000,0.000000
-            id: SET-173-LED-001
+                ElementId: 8557688
+                FacingOrientation: -1.000000,0.000000,0.000000
+            id: SET-245-LED-001
             tags:
               []
             category: Electrical Fixtures
             offsets:
               -
                 rotation_deg: -180.0
-                x_inches: 0.0
-                y_inches: 11.860191
-                z_inches: 72.0
-        id: SET-173
-        name: "008_HEBUDDY MINI KIOSK MACHINE_1210692 : Default Types"
+                x_inches: -6.739893
+                y_inches: 24.92189
+                z_inches: -5.11590769747e-13
+        id: SET-245
+        name: "009_RefgCase_Berry_Self_Contained_6_1302263 : Default Types"
     allow_parentless: "true"
-    ced_truth_source_name: "008_HEBUDDY MINI KIOSK MACHINE_1210692 : Default"
+    ced_truth_source_name: "009_RefgCase_Berry_Self_Contained_6_1302263 : Default"
     allow_unmatched_parents: "true"
     version: 1
     equipment_properties:
       {}
-    ced_truth_source_id: EQ-173
+    ced_truth_source_id: EQ-245
   -
     prompt_on_parent_mismatch: "false"
     parent_filter:
@@ -336,14 +324,14 @@ equipment_definitions:
   -
     prompt_on_parent_mismatch: "false"
     parent_filter:
-      family_name_pattern: HEB_CASE 90 OS WEDGE  ID5SL CHEESE_BLACK_1312517
+      family_name_pattern: 012_RefgCase_Sushi_Q3SP_4ft_Black_1306834
       category: Specialty Equipment
       parameter_filters:
         {}
       type_name_pattern: Default
-    name: "HEB_CASE 90 OS WEDGE  ID5SL CHEESE_BLACK_1312517 : Default"
+    name: "012_RefgCase_Sushi_Q3SP_4ft_Black_1306834 : Default"
     schema_version: 1
-    id: EQ-215
+    id: EQ-235
     linked_sets:
       -
         linked_element_definitions:
@@ -355,15 +343,7 @@ equipment_definitions:
             parameters:
               dev-Group ID: ""
               SLD_Component ID_CED: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-215-LED-001
-                Set Definition ID: SET-215
-                Location XYZ (ft): 387.673212,235.460939,101.500000
-                Rotation (deg): 0.000000
-                Parent Rotation (deg): 90.000000
-                LevelId: 30
-                ElementId: 7664460
-                FacingOrientation: 0.000000,1.000000,0.000000
+              CKT_Load Name_CEDT: RASF12a-d
               CKT_Rating_CED: 20.0
               Product Datasheet URL: ""
               CKT_Panel_CEDT: RB
@@ -375,37 +355,87 @@ equipment_definitions:
               Number of Poles_CED: 1
               CKT_Schedule Notes_CEDT: ""
               Apparent Load Input_CED: ""
-              CKT_Circuit Number_CEDT: 75
+              CKT_Circuit Number_CEDT: 26
               Voltage_CED: 120.0
               Product Specification: ""
-              CKT_Load Name_CEDT: RCDE12a-c
-            id: SET-215-LED-001
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-235-LED-001
+                Set Definition ID: SET-235
+                Location XYZ (ft): 437.087029,135.217301,101.500000
+                Rotation (deg): 180.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 6249717
+                FacingOrientation: -0.000000,-1.000000,0.000000
+            id: SET-235-LED-001
             tags:
               []
             category: Electrical Fixtures
             offsets:
               -
                 rotation_deg: -90.0
-                x_inches: -23.88076
-                y_inches: -16.386778
+                x_inches: 18.061228
+                y_inches: -15.581244
                 z_inches: 18.0
           -
             is_group: true
             text_notes:
               []
-            label: "CED-R-Hussmann 90 OS WEDGE ID5SL : Default"
+            label: "EF-U_General Electrical Box-Unbalanced_CED-HEB : Refrig Case - Case Controller"
+            parameters:
+              dev-Group ID: ""
+              SLD_Component ID_CED: ""
+              CKT_Load Name_CEDT: RASF12a-d
+              CKT_Rating_CED: 20.0
+              Product Datasheet URL: ""
+              CKT_Panel_CEDT: RB
+              Load Classification_CED: Refrigeration
+              SLD_Symbol ID_CED: ""
+              FLA Input_CED: ""
+              Power Factor_CED: 1.0
+              Wattage Input_CED: ""
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              Apparent Load Input_CED: ""
+              CKT_Circuit Number_CEDT: 26
+              Voltage_CED: 120.0
+              Product Specification: ""
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-235-LED-002
+                Set Definition ID: SET-235
+                Location XYZ (ft): 437.169438,138.235466,101.500000
+                Rotation (deg): 180.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 7657998
+                FacingOrientation: -0.000000,-1.000000,0.000000
+            id: SET-235-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: -90.0
+                x_inches: -18.156753
+                y_inches: -14.592339
+                z_inches: 18.0
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-Hussmann Q3SP 4FT W GLASS SHELF : Default"
             parameters:
               dev-Group ID: ""
               Element_Linker Parameter: |
-                Linked Element Definition ID: SET-215-LED-002
-                Set Definition ID: SET-215
-                Location XYZ (ft): 386.307647,237.549887,100.000000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
+                Linked Element Definition ID: SET-235-LED-003
+                Set Definition ID: SET-235
+                Location XYZ (ft): 438.385467,136.722403,100.000000
+                Rotation (deg): 270.000000
+                Parent Rotation (deg): -90.000000
                 LevelId: 30
-                ElementId: 8472780
-                FacingOrientation: -1.000000,0.000000,0.000000
-            id: SET-215-LED-002
+                ElementId: 8464738
+                FacingOrientation: 1.000000,-0.000000,0.000000
+            id: SET-235-LED-003
             tags:
               -
                 parameters:
@@ -413,9 +443,9 @@ equipment_definitions:
                 type_name: CED-R-1st System
                 offsets:
                   rotation_deg: 0.0
-                  x_inches: -19.7504366579
-                  y_inches: 1.19328951189
-                  z_inches: 42.8744780334
+                  x_inches: 11.9187950968
+                  y_inches: -3.41060513165e-13
+                  z_inches: 27.5000000000
                 category_name: Mechanical Equipment Tags
                 family_name: CED-R-System Tag
               -
@@ -424,9 +454,9 @@ equipment_definitions:
                 type_name: CED-R-1st System
                 offsets:
                   rotation_deg: 0.0
-                  x_inches: -18.0296779841
-                  y_inches: 0.000168867300772
-                  z_inches: 42.8744780334
+                  x_inches: 11.9187950968
+                  y_inches: -3.41060513165e-13
+                  z_inches: 27.5000000000
                 category_name: Mechanical Equipment Tags
                 family_name: CED-R-System Tag
               -
@@ -435,9 +465,9 @@ equipment_definitions:
                 type_name: CED-R-1st System
                 offsets:
                   rotation_deg: 0.0
-                  x_inches: -18.0296779841
-                  y_inches: 0.000168867300772
-                  z_inches: 42.8744780334
+                  x_inches: 11.9187950968
+                  y_inches: -3.41060513165e-13
+                  z_inches: 27.5000000000
                 category_name: Mechanical Equipment Tags
                 family_name: CED-R-System Tag
               -
@@ -446,9 +476,9 @@ equipment_definitions:
                 type_name: CED-R-1st System
                 offsets:
                   rotation_deg: 0.0
-                  x_inches: -18.0296779841
-                  y_inches: 0.000168867300772
-                  z_inches: 42.8744780334
+                  x_inches: 11.9187950968
+                  y_inches: -3.41060513165e-13
+                  z_inches: 27.5000000000
                 category_name: Mechanical Equipment Tags
                 family_name: CED-R-System Tag
               -
@@ -457,9 +487,9 @@ equipment_definitions:
                 type_name: CED-R-1st System
                 offsets:
                   rotation_deg: 0.0
-                  x_inches: -18.0296779841
-                  y_inches: 0.000168867300772
-                  z_inches: 42.8744780334
+                  x_inches: 11.9187950968
+                  y_inches: -3.41060513165e-13
+                  z_inches: 27.5000000000
                 category_name: Mechanical Equipment Tags
                 family_name: CED-R-System Tag
               -
@@ -468,27 +498,27 @@ equipment_definitions:
                 type_name: CED-R-1st System
                 offsets:
                   rotation_deg: 0.0
-                  x_inches: -18.0296779841
-                  y_inches: 0.000168867300772
-                  z_inches: 42.8744780334
+                  x_inches: 11.9187950968
+                  y_inches: -3.41060513165e-13
+                  z_inches: 27.5000000000
                 category_name: Mechanical Equipment Tags
                 family_name: CED-R-System Tag
             category: Mechanical Equipment
             offsets:
               -
                 rotation_deg: 0.0
-                x_inches: 1.186612
-                y_inches: 0.0
+                x_inches: 0.0
+                y_inches: 1.5e-05
                 z_inches: 0.0
-        id: SET-215
-        name: "HEB_CASE 90 OS WEDGE  ID5SL CHEESE_BLACK_1312517 : Default Types"
+        id: SET-235
+        name: "012_RefgCase_Sushi_Q3SP_4ft_Black_1306834 : Default Types"
     allow_parentless: "true"
-    ced_truth_source_name: "HEB_CASE 90 OS WEDGE  ID5SL CHEESE_BLACK_1312517 : Default"
+    ced_truth_source_name: "012_RefgCase_Sushi_Q3SP_4ft_Black_1306834 : Default"
     allow_unmatched_parents: "true"
     version: 1
     equipment_properties:
       {}
-    ced_truth_source_id: EQ-215
+    ced_truth_source_id: EQ-235
   -
     prompt_on_parent_mismatch: "false"
     parent_filter:
@@ -2462,15 +2492,7 @@ equipment_definitions:
             parameters:
               dev-Group ID: ""
               SLD_Component ID_CED: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-102-LED-001
-                Set Definition ID: SET-102
-                Location XYZ (ft): 383.648315,229.424629,104.500000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): -90.000000
-                LevelId: 30
-                ElementId: 9101030
-                FacingOrientation: -1.000000,-0.000000,0.000000
+              CKT_Load Name_CEDT: RECEPT - DELI PREP
               CKT_Rating_CED: 20.0
               Power Factor_CED: 1.0
               CKT_Panel_CEDT: DA
@@ -2485,7 +2507,15 @@ equipment_definitions:
               Apparent Load Input_CED: 400.0
               Voltage_CED: 120.0
               Product Specification: ""
-              CKT_Load Name_CEDT: RECEPT - DELI PREP
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-102-LED-001
+                Set Definition ID: SET-102
+                Location XYZ (ft): 383.648315,229.424629,104.500000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): -90.000000
+                LevelId: 30
+                ElementId: 9101030
+                FacingOrientation: -1.000000,-0.000000,0.000000
             id: SET-102-LED-001
             tags:
               []
@@ -5125,6 +5155,21 @@ equipment_definitions:
             parameters:
               dev-Group ID: ""
               SLD_Component ID_CED: ""
+              CKT_Load Name_CEDT: SMARTLEVERS - ROTI PREP
+              CKT_Rating_CED: 20.0
+              Power Factor_CED: 1.0
+              CKT_Panel_CEDT: MT
+              FLA Input_CED: 0.0
+              Load Classification_CED: Receptacle
+              Product Datasheet URL: ""
+              SLD_Symbol ID_CED: ""
+              Wattage Input_CED: 0.0
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: TABLE
+              Apparent Load Input_CED: 180.0
+              Voltage_CED: 120.0
+              Product Specification: ""
               Element_Linker Parameter: |
                 Linked Element Definition ID: SET-067-LED-001
                 Set Definition ID: SET-067
@@ -5134,21 +5179,6 @@ equipment_definitions:
                 LevelId: 30
                 ElementId: 8553596
                 FacingOrientation: 1.000000,-0.000000,0.000000
-              CKT_Rating_CED: 20.0
-              Product Datasheet URL: ""
-              CKT_Panel_CEDT: MT
-              Load Classification_CED: Receptacle
-              SLD_Symbol ID_CED: ""
-              FLA Input_CED: 0.0
-              Power Factor_CED: 1.0
-              Wattage Input_CED: 0.0
-              Number of Poles_CED: 1
-              CKT_Schedule Notes_CEDT: ""
-              Apparent Load Input_CED: 180.0
-              CKT_Circuit Number_CEDT: 39
-              Voltage_CED: 120.0
-              Product Specification: ""
-              CKT_Load Name_CEDT: SMARTLEVERS - ROTI PREP
             id: SET-067-LED-001
             tags:
               -
@@ -5157,9 +5187,9 @@ equipment_definitions:
                 type_name: Elevation (Inches)
                 offsets:
                   rotation_deg: 0.0
-                  x_inches: 6.07718699873
-                  y_inches: 5.25000000000
-                  z_inches: -3.41060513165e-13
+                  x_inches: 6.0772
+                  y_inches: 5.25
+                  z_inches: 0.0
                 category_name: Annotation Symbols
                 family_name: EF-Tag_Electrical Fixtures_CED
             category: Electrical Fixtures
@@ -5167,7 +5197,7 @@ equipment_definitions:
               -
                 rotation_deg: 180.0
                 x_inches: 3.0
-                y_inches: 17.081874
+                y_inches: 17.0819
                 z_inches: 44.0
         id: SET-067
         name: "000_METRO SMARTLEVER_4ft_Workstation_1307603 : Default Types"
@@ -10757,17 +10787,17 @@ equipment_definitions:
               SLD_Component ID_CED: ""
               CKT_Load Name_CEDT: SMARTLEVERS - ROTI PREP
               CKT_Rating_CED: 20.0
-              Product Datasheet URL: ""
-              CKT_Panel_CEDT: MT
-              Load Classification_CED: Receptacle
-              SLD_Symbol ID_CED: ""
-              FLA Input_CED: 0.0
               Power Factor_CED: 1.0
+              CKT_Panel_CEDT: MT
+              FLA Input_CED: 0.0
+              Load Classification_CED: Receptacle
+              Product Datasheet URL: ""
+              SLD_Symbol ID_CED: ""
               Wattage Input_CED: 0.0
               Number of Poles_CED: 1
               CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: TABLE
               Apparent Load Input_CED: 180.0
-              CKT_Circuit Number_CEDT: 39
               Voltage_CED: 120.0
               Product Specification: ""
               Element_Linker Parameter: |
@@ -10787,17 +10817,17 @@ equipment_definitions:
                 type_name: Elevation (Inches)
                 offsets:
                   rotation_deg: 0.0
-                  x_inches: 6.07718699873
-                  y_inches: 6.74999999999
-                  z_inches: -3.41060513165e-13
+                  x_inches: 6.0772
+                  y_inches: 6.75
+                  z_inches: 0.0
                 category_name: Annotation Symbols
                 family_name: EF-Tag_Electrical Fixtures_CED
             category: Electrical Fixtures
             offsets:
               -
                 rotation_deg: 180.0
-                x_inches: 12.450206
-                y_inches: 18.060378
+                x_inches: 12.4502
+                y_inches: 18.0604
                 z_inches: 44.0
           -
             is_group: true
@@ -10809,17 +10839,17 @@ equipment_definitions:
               SLD_Component ID_CED: ""
               CKT_Load Name_CEDT: SMARTLEVERS - ROTI PREP
               CKT_Rating_CED: 20.0
-              Product Datasheet URL: ""
-              CKT_Panel_CEDT: MT
-              Load Classification_CED: Receptacle
-              SLD_Symbol ID_CED: ""
-              FLA Input_CED: 0.0
               Power Factor_CED: 1.0
+              CKT_Panel_CEDT: MT
+              FLA Input_CED: 0.0
+              Load Classification_CED: Receptacle
+              Product Datasheet URL: ""
+              SLD_Symbol ID_CED: ""
               Wattage Input_CED: 0.0
               Number of Poles_CED: 1
               CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: TABLE
               Apparent Load Input_CED: 180.0
-              CKT_Circuit Number_CEDT: 39
               Voltage_CED: 120.0
               Product Specification: ""
               Element_Linker Parameter: |
@@ -10839,17 +10869,17 @@ equipment_definitions:
                 type_name: Elevation (Inches)
                 offsets:
                   rotation_deg: 0.0
-                  x_inches: 7.57718699873
-                  y_inches: 5.25000000000
-                  z_inches: -3.41060513165e-13
+                  x_inches: 7.5772
+                  y_inches: 5.25
+                  z_inches: 0.0
                 category_name: Annotation Symbols
                 family_name: EF-Tag_Electrical Fixtures_CED
             category: Electrical Fixtures
             offsets:
               -
                 rotation_deg: 180.0
-                x_inches: 44.40933
-                y_inches: 18.060378
+                x_inches: 44.4093
+                y_inches: 18.0604
                 z_inches: 44.0
         id: SET-068
         name: "000_METRO SMARTLEVER_8ft_Workstation_3 : Default Types"
@@ -12028,17 +12058,17 @@ equipment_definitions:
               SLD_Component ID_CED: ""
               CKT_Load Name_CEDT: SMART LEVELER
               CKT_Rating_CED: 20.0
-              Product Datasheet URL: ""
-              CKT_Panel_CEDT: BA
-              Load Classification_CED: Receptacle
-              SLD_Symbol ID_CED: ""
-              FLA Input_CED: 0.0
               Power Factor_CED: 1.0
+              CKT_Panel_CEDT: BA
+              FLA Input_CED: 0.0
+              Load Classification_CED: Receptacle
+              Product Datasheet URL: ""
+              SLD_Symbol ID_CED: ""
               Wattage Input_CED: 0.0
               Number of Poles_CED: 1
               CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: TABLE
               Apparent Load Input_CED: 400.0
-              CKT_Circuit Number_CEDT: 9
               Voltage_CED: 120.0
               Product Specification: ""
               Element_Linker Parameter: |
@@ -12058,16 +12088,16 @@ equipment_definitions:
                 type_name: Elevation (Inches)
                 offsets:
                   rotation_deg: 0.0
-                  x_inches: 13.0417551502
-                  y_inches: -1.08122866894
-                  z_inches: -3.41060513165e-13
+                  x_inches: 13.0418
+                  y_inches: -1.0812
+                  z_inches: 0.0
                 category_name: Annotation Symbols
                 family_name: EF-Tag_Electrical Fixtures_CED
             category: Electrical Fixtures
             offsets:
               -
                 rotation_deg: -180.0
-                x_inches: -2.471592
+                x_inches: -2.4716
                 y_inches: 17.0
                 z_inches: 44.0
         id: SET-080
@@ -14945,6 +14975,21 @@ equipment_definitions:
             parameters:
               dev-Group ID: ""
               SLD_Component ID_CED: ""
+              CKT_Load Name_CEDT: ""
+              CKT_Rating_CED: 0.0
+              Power Factor_CED: 1.0
+              CKT_Panel_CEDT: ""
+              FLA Input_CED: 0.0
+              Load Classification_CED: Receptacle
+              Product Datasheet URL: ""
+              SLD_Symbol ID_CED: ""
+              Wattage Input_CED: 0.0
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              Apparent Load Input_CED: 180.0
+              Voltage_CED: 120.0
+              Product Specification: ""
               Element_Linker Parameter: |
                 Linked Element Definition ID: SET-089-LED-001
                 Set Definition ID: SET-089
@@ -14954,21 +14999,6 @@ equipment_definitions:
                 LevelId: 30
                 ElementId: 8490746
                 FacingOrientation: 0.000000,1.000000,0.000000
-              CKT_Rating_CED: 0.0
-              Product Datasheet URL: ""
-              CKT_Panel_CEDT: ""
-              Load Classification_CED: Receptacle
-              SLD_Symbol ID_CED: ""
-              FLA Input_CED: 0.0
-              Power Factor_CED: 1.0
-              Wattage Input_CED: 0.0
-              Number of Poles_CED: 1
-              CKT_Schedule Notes_CEDT: ""
-              Apparent Load Input_CED: 180.0
-              CKT_Circuit Number_CEDT: ""
-              Voltage_CED: 120.0
-              Product Specification: ""
-              CKT_Load Name_CEDT: ""
             id: SET-089-LED-001
             tags:
               []
@@ -14976,8 +15006,8 @@ equipment_definitions:
             offsets:
               -
                 rotation_deg: 90.0
-                x_inches: -25.339478
-                y_inches: 17.000015
+                x_inches: -25.3395
+                y_inches: 17.0
                 z_inches: 96.0
           -
             is_group: true
@@ -22667,17 +22697,17 @@ equipment_definitions:
               SLD_Component ID_CED: ""
               CKT_Load Name_CEDT: HOT PLATE 1 - DELI PREP
               CKT_Rating_CED: 20.0
-              Product Datasheet URL: ""
-              CKT_Panel_CEDT: DA
-              Load Classification_CED: Kitchen Equipment - Non-Dwelling Unit
-              SLD_Symbol ID_CED: ""
-              FLA Input_CED: 0.0
               Power Factor_CED: 1.0
+              CKT_Panel_CEDT: DA
+              FLA Input_CED: 0.0
+              Load Classification_CED: Kitchen Equipment - Non-Dwelling Unit
+              Product Datasheet URL: ""
+              SLD_Symbol ID_CED: ""
               Wattage Input_CED: 0.0
               Number of Poles_CED: 1
               CKT_Schedule Notes_CEDT: ""
-              Apparent Load Input_CED: 1250.0
               CKT_Circuit Number_CEDT: 40
+              Apparent Load Input_CED: 1250.0
               Voltage_CED: 120.0
               Product Specification: ""
               Element_Linker Parameter: |
@@ -22697,16 +22727,16 @@ equipment_definitions:
                 type_name: Elevation (Inches)
                 offsets:
                   rotation_deg: 0.0
-                  x_inches: 13.8677178436
-                  y_inches: -5.73002252434
-                  z_inches: -3.41060513165e-13
+                  x_inches: 13.8677
+                  y_inches: -5.73
+                  z_inches: 0.0
                 category_name: Annotation Symbols
                 family_name: EF-Tag_Electrical Fixtures_CED
             category: Electrical Fixtures
             offsets:
               -
                 rotation_deg: -180.0
-                x_inches: -5.029456
+                x_inches: -5.0295
                 y_inches: 15.1875
                 z_inches: 44.0
           -
@@ -30437,79 +30467,91 @@ equipment_definitions:
   -
     prompt_on_parent_mismatch: "false"
     parent_filter:
-      family_name_pattern: 009_RefgCase_Berry_Self_Contained_6_1302263
+      family_name_pattern: 008_HEBUDDY MINI KIOSK MACHINE_1210692
       category: Specialty Equipment
       parameter_filters:
         {}
       type_name_pattern: Default
-    name: "009_RefgCase_Berry_Self_Contained_6_1302263 : Default"
+    name: "008_HEBUDDY MINI KIOSK MACHINE_1210692 : Default"
     schema_version: 1
-    id: EQ-245
+    id: EQ-173
     linked_sets:
       -
         linked_element_definitions:
           -
             is_group: true
             text_notes:
-              []
+              -
+                text: |
+                  HE
+                  BUDDY
+                width_inches: 0.317716535433
+                type_name: "Text : 1/16\" Arial"
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 13.542881906
+                  y_inches: 3.21086660504
+                  z_inches: -1272.0
+                leaders:
+                  []
             label: "EF-U_Receptacle_CED : Duplex Wall"
             parameters:
               dev-Group ID: ""
               SLD_Component ID_CED: ""
-              CKT_Load Name_CEDT: BERRY CASE
+              CKT_Load Name_CEDT: HEBUDDY
               CKT_Rating_CED: 20.0
               Product Datasheet URL: ""
-              CKT_Panel_CEDT: PR
-              Load Classification_CED: Refrigeration
+              CKT_Panel_CEDT: FL
+              Load Classification_CED: Receptacle
               SLD_Symbol ID_CED: ""
               FLA Input_CED: 0.0
               Power Factor_CED: 1.0
               Wattage Input_CED: 0.0
               Number of Poles_CED: 1
               CKT_Schedule Notes_CEDT: ""
-              Apparent Load Input_CED: 1920.0
-              CKT_Circuit Number_CEDT: 17
+              Apparent Load Input_CED: 500.0
+              CKT_Circuit Number_CEDT: 9
               Voltage_CED: 120.0
               Product Specification: ""
               Element_Linker Parameter: |
-                Linked Element Definition ID: SET-245-LED-001
-                Set Definition ID: SET-245
-                Location XYZ (ft): 435.979517,50.526209,100.000000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): -90.000000
+                Linked Element Definition ID: SET-173-LED-001
+                Set Definition ID: SET-173
+                Location XYZ (ft): 334.602381,37.276984,106.000000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): 180.000000
                 LevelId: 30
-                ElementId: 8557688
-                FacingOrientation: -1.000000,0.000000,0.000000
-            id: SET-245-LED-001
+                ElementId: 7691211
+                FacingOrientation: 0.000000,1.000000,0.000000
+            id: SET-173-LED-001
             tags:
               []
             category: Electrical Fixtures
             offsets:
               -
                 rotation_deg: -180.0
-                x_inches: -6.739893
-                y_inches: 24.92189
-                z_inches: -5.11590769747e-13
-        id: SET-245
-        name: "009_RefgCase_Berry_Self_Contained_6_1302263 : Default Types"
+                x_inches: 0.0
+                y_inches: 11.860191
+                z_inches: 72.0
+        id: SET-173
+        name: "008_HEBUDDY MINI KIOSK MACHINE_1210692 : Default Types"
     allow_parentless: "true"
-    ced_truth_source_name: "009_RefgCase_Berry_Self_Contained_6_1302263 : Default"
+    ced_truth_source_name: "008_HEBUDDY MINI KIOSK MACHINE_1210692 : Default"
     allow_unmatched_parents: "true"
     version: 1
     equipment_properties:
       {}
-    ced_truth_source_id: EQ-245
+    ced_truth_source_id: EQ-173
   -
     prompt_on_parent_mismatch: "false"
     parent_filter:
-      family_name_pattern: 012_RefgCase_Sushi_Q3SP_4ft_Black_1306834
+      family_name_pattern: HEB_CASE 90 OS WEDGE  ID5SL CHEESE_BLACK_1312517
       category: Specialty Equipment
       parameter_filters:
         {}
       type_name_pattern: Default
-    name: "012_RefgCase_Sushi_Q3SP_4ft_Black_1306834 : Default"
+    name: "HEB_CASE 90 OS WEDGE  ID5SL CHEESE_BLACK_1312517 : Default"
     schema_version: 1
-    id: EQ-235
+    id: EQ-215
     linked_sets:
       -
         linked_element_definitions:
@@ -30521,7 +30563,15 @@ equipment_definitions:
             parameters:
               dev-Group ID: ""
               SLD_Component ID_CED: ""
-              CKT_Load Name_CEDT: RASF12a-d
+              Element_Linker Parameter: |
+                Linked Element Definition ID: SET-215-LED-001
+                Set Definition ID: SET-215
+                Location XYZ (ft): 387.673212,235.460939,101.500000
+                Rotation (deg): 0.000000
+                Parent Rotation (deg): 90.000000
+                LevelId: 30
+                ElementId: 7664460
+                FacingOrientation: 0.000000,1.000000,0.000000
               CKT_Rating_CED: 20.0
               Product Datasheet URL: ""
               CKT_Panel_CEDT: RB
@@ -30533,87 +30583,37 @@ equipment_definitions:
               Number of Poles_CED: 1
               CKT_Schedule Notes_CEDT: ""
               Apparent Load Input_CED: ""
-              CKT_Circuit Number_CEDT: 26
+              CKT_Circuit Number_CEDT: 75
               Voltage_CED: 120.0
               Product Specification: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-235-LED-001
-                Set Definition ID: SET-235
-                Location XYZ (ft): 437.087029,135.217301,101.500000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): -90.000000
-                LevelId: 30
-                ElementId: 6249717
-                FacingOrientation: -0.000000,-1.000000,0.000000
-            id: SET-235-LED-001
+              CKT_Load Name_CEDT: RCDE12a-c
+            id: SET-215-LED-001
             tags:
               []
             category: Electrical Fixtures
             offsets:
               -
                 rotation_deg: -90.0
-                x_inches: 18.061228
-                y_inches: -15.581244
+                x_inches: -23.88076
+                y_inches: -16.386778
                 z_inches: 18.0
           -
             is_group: true
             text_notes:
               []
-            label: "EF-U_General Electrical Box-Unbalanced_CED-HEB : Refrig Case - Case Controller"
-            parameters:
-              dev-Group ID: ""
-              SLD_Component ID_CED: ""
-              CKT_Load Name_CEDT: RASF12a-d
-              CKT_Rating_CED: 20.0
-              Product Datasheet URL: ""
-              CKT_Panel_CEDT: RB
-              Load Classification_CED: Refrigeration
-              SLD_Symbol ID_CED: ""
-              FLA Input_CED: ""
-              Power Factor_CED: 1.0
-              Wattage Input_CED: ""
-              Number of Poles_CED: 1
-              CKT_Schedule Notes_CEDT: ""
-              Apparent Load Input_CED: ""
-              CKT_Circuit Number_CEDT: 26
-              Voltage_CED: 120.0
-              Product Specification: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-235-LED-002
-                Set Definition ID: SET-235
-                Location XYZ (ft): 437.169438,138.235466,101.500000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): -90.000000
-                LevelId: 30
-                ElementId: 7657998
-                FacingOrientation: -0.000000,-1.000000,0.000000
-            id: SET-235-LED-002
-            tags:
-              []
-            category: Electrical Fixtures
-            offsets:
-              -
-                rotation_deg: -90.0
-                x_inches: -18.156753
-                y_inches: -14.592339
-                z_inches: 18.0
-          -
-            is_group: true
-            text_notes:
-              []
-            label: "CED-R-Hussmann Q3SP 4FT W GLASS SHELF : Default"
+            label: "CED-R-Hussmann 90 OS WEDGE ID5SL : Default"
             parameters:
               dev-Group ID: ""
               Element_Linker Parameter: |
-                Linked Element Definition ID: SET-235-LED-003
-                Set Definition ID: SET-235
-                Location XYZ (ft): 438.385467,136.722403,100.000000
-                Rotation (deg): 270.000000
-                Parent Rotation (deg): -90.000000
+                Linked Element Definition ID: SET-215-LED-002
+                Set Definition ID: SET-215
+                Location XYZ (ft): 386.307647,237.549887,100.000000
+                Rotation (deg): 90.000000
+                Parent Rotation (deg): 90.000000
                 LevelId: 30
-                ElementId: 8464738
-                FacingOrientation: 1.000000,-0.000000,0.000000
-            id: SET-235-LED-003
+                ElementId: 8472780
+                FacingOrientation: -1.000000,0.000000,0.000000
+            id: SET-215-LED-002
             tags:
               -
                 parameters:
@@ -30621,9 +30621,9 @@ equipment_definitions:
                 type_name: CED-R-1st System
                 offsets:
                   rotation_deg: 0.0
-                  x_inches: 11.9187950968
-                  y_inches: -3.41060513165e-13
-                  z_inches: 27.5000000000
+                  x_inches: -19.7504366579
+                  y_inches: 1.19328951189
+                  z_inches: 42.8744780334
                 category_name: Mechanical Equipment Tags
                 family_name: CED-R-System Tag
               -
@@ -30632,9 +30632,9 @@ equipment_definitions:
                 type_name: CED-R-1st System
                 offsets:
                   rotation_deg: 0.0
-                  x_inches: 11.9187950968
-                  y_inches: -3.41060513165e-13
-                  z_inches: 27.5000000000
+                  x_inches: -18.0296779841
+                  y_inches: 0.000168867300772
+                  z_inches: 42.8744780334
                 category_name: Mechanical Equipment Tags
                 family_name: CED-R-System Tag
               -
@@ -30643,9 +30643,9 @@ equipment_definitions:
                 type_name: CED-R-1st System
                 offsets:
                   rotation_deg: 0.0
-                  x_inches: 11.9187950968
-                  y_inches: -3.41060513165e-13
-                  z_inches: 27.5000000000
+                  x_inches: -18.0296779841
+                  y_inches: 0.000168867300772
+                  z_inches: 42.8744780334
                 category_name: Mechanical Equipment Tags
                 family_name: CED-R-System Tag
               -
@@ -30654,9 +30654,9 @@ equipment_definitions:
                 type_name: CED-R-1st System
                 offsets:
                   rotation_deg: 0.0
-                  x_inches: 11.9187950968
-                  y_inches: -3.41060513165e-13
-                  z_inches: 27.5000000000
+                  x_inches: -18.0296779841
+                  y_inches: 0.000168867300772
+                  z_inches: 42.8744780334
                 category_name: Mechanical Equipment Tags
                 family_name: CED-R-System Tag
               -
@@ -30665,9 +30665,9 @@ equipment_definitions:
                 type_name: CED-R-1st System
                 offsets:
                   rotation_deg: 0.0
-                  x_inches: 11.9187950968
-                  y_inches: -3.41060513165e-13
-                  z_inches: 27.5000000000
+                  x_inches: -18.0296779841
+                  y_inches: 0.000168867300772
+                  z_inches: 42.8744780334
                 category_name: Mechanical Equipment Tags
                 family_name: CED-R-System Tag
               -
@@ -30676,24 +30676,24 @@ equipment_definitions:
                 type_name: CED-R-1st System
                 offsets:
                   rotation_deg: 0.0
-                  x_inches: 11.9187950968
-                  y_inches: -3.41060513165e-13
-                  z_inches: 27.5000000000
+                  x_inches: -18.0296779841
+                  y_inches: 0.000168867300772
+                  z_inches: 42.8744780334
                 category_name: Mechanical Equipment Tags
                 family_name: CED-R-System Tag
             category: Mechanical Equipment
             offsets:
               -
                 rotation_deg: 0.0
-                x_inches: 0.0
-                y_inches: 1.5e-05
+                x_inches: 1.186612
+                y_inches: 0.0
                 z_inches: 0.0
-        id: SET-235
-        name: "012_RefgCase_Sushi_Q3SP_4ft_Black_1306834 : Default Types"
+        id: SET-215
+        name: "HEB_CASE 90 OS WEDGE  ID5SL CHEESE_BLACK_1312517 : Default Types"
     allow_parentless: "true"
-    ced_truth_source_name: "012_RefgCase_Sushi_Q3SP_4ft_Black_1306834 : Default"
+    ced_truth_source_name: "HEB_CASE 90 OS WEDGE  ID5SL CHEESE_BLACK_1312517 : Default"
     allow_unmatched_parents: "true"
     version: 1
     equipment_properties:
       {}
-    ced_truth_source_id: EQ-235
+    ced_truth_source_id: EQ-215
