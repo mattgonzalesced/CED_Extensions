@@ -2,159 +2,142 @@
 """
 Audit Linked Model
 ------------------
-Counts every placed linked element (instances with Element_Linker metadata) in
-the active model and shows a searchable, modeless list that can remain open
-while the user runs other commands.
+Scan linked documents for element names that do not have profiles in the active
+YAML, but look like close name matches to existing profiles.
 """
 
-from __future__ import division, absolute_import, print_function
-
+import copy
 import os
+import re
 import sys
 from collections import Counter
+from difflib import SequenceMatcher
 
 from pyrevit import forms, revit, script
-from Autodesk.Revit.DB import FilteredElementCollector, FamilyInstance, Group, RevitLinkInstance
+from Autodesk.Revit.DB import (
+    FilteredElementCollector,
+    FamilyInstance,
+    Group,
+    RevitLinkInstance,
+)
 
 LIB_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib"))
 if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
-from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
+from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data  # noqa: E402
 
 TITLE = "Audit Linked Model"
-LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
-XAML_PATH = script.get_bundle_file("AuditWindow.xaml")
 LOG = script.get_logger()
-_AUDIT_WINDOW = None
+
+DIRECTION_TOKENS = {
+    "left", "right", "lh", "rh", "l", "r", "lhs", "rhs", "left-hand", "right-hand",
+}
+VERSION_TOKEN_RE = re.compile(r"^v\\d+$", re.IGNORECASE)
+SEPARATORS_RE = re.compile(r"[_/\\\\-]+")
+NON_ALNUM_RE = re.compile(r"[^a-zA-Z0-9 ]+")
+MIN_PARTIAL_SCORE = 80.0
+MIN_COMMON_TOKENS = 2
+
+try:
+    basestring
+except NameError:
+    basestring = str
 
 
-def _get_selected_link_title():
-    try:
-        selection = revit.get_selection()
-        elems = list(selection.elements)
-    except Exception:
-        elems = []
-    for elem in elems or []:
-        if isinstance(elem, RevitLinkInstance):
-            link_doc = None
-            try:
-                link_doc = elem.GetLinkDocument()
-            except Exception:
-                link_doc = None
-            if link_doc:
-                title = getattr(link_doc, "Title", None)
-                if title:
-                    return title
-            name = getattr(elem, "Name", None)
-            if name:
-                return name
-    return None
-
-
-def _get_element_linker_payload(elem):
-    for name in LINKER_PARAM_NAMES:
-        try:
-            param = elem.LookupParameter(name)
-        except Exception:
-            param = None
-        if not param:
-            continue
-        try:
-            value = param.AsString()
-        except Exception:
-            value = None
-        if value:
-            text = value.strip()
-            if text:
-                return text
-    return ""
-
-
-def _extract_led_id(payload):
-    if not payload:
+def _normalize_full_name(value):
+    if not value:
         return ""
-    target_key = "linked element definition id"
-    for raw_line in payload.splitlines():
-        line = raw_line.strip()
-        if not line or ":" not in line:
+    text = SEPARATORS_RE.sub(" ", str(value))
+    text = NON_ALNUM_RE.sub(" ", text)
+    return " ".join(text.lower().split())
+
+
+def _tokenize_name(value):
+    normalized = _normalize_full_name(value)
+    return [token for token in normalized.split() if token]
+
+
+def _strip_trailing_id_tokens(tokens):
+    while tokens:
+        tail = tokens[-1]
+        if tail.isdigit() or VERSION_TOKEN_RE.match(tail):
+            tokens = tokens[:-1]
             continue
-        key, _, remainder = line.partition(":")
-        if key.strip().lower() == target_key:
-            return remainder.strip()
-    return ""
+        break
+    return tokens
 
 
-def _load_led_metadata():
-    data_path, data = load_active_yaml_data()
-    lookup = {}
-    for eq in data.get("equipment_definitions") or []:
-        eq_name = (eq.get("name") or eq.get("id") or "").strip()
-        for linked_set in eq.get("linked_sets") or []:
-            for led in linked_set.get("linked_element_definitions") or []:
-                if not isinstance(led, dict):
-                    continue
-                led_id = (led.get("id") or led.get("led_id") or "").strip()
-                if not led_id:
-                    continue
-                label = (led.get("label") or led.get("name") or "").strip()
-                if not label and led.get("parameters"):
-                    label = eq_name
-                lookup[led_id.lower()] = {
-                    "led_id": led_id,
-                    "label": label or led_id,
-                    "equipment": eq_name,
-                }
-    return data_path, lookup
+def _strip_numeric_prefix(tokens):
+    while tokens and tokens[0].isdigit() and len(tokens[0]) <= 3:
+        tokens = tokens[1:]
+    return tokens
 
 
-def _iter_source_documents(doc):
-    seen = set()
-
-    def _mark(target):
-        if target is None:
-            return False
-        try:
-            key = target.GetHashCode()
-        except Exception:
-            key = id(target)
-        if key in seen:
-            return False
-        seen.add(key)
-        return True
-
-    if _mark(doc):
-        yield doc
-    if doc is None:
-        return
-    try:
-        link_instances = FilteredElementCollector(doc).OfClass(RevitLinkInstance)
-    except Exception:
-        link_instances = []
-    for link in link_instances:
-        try:
-            link_doc = link.GetLinkDocument()
-        except Exception:
-            link_doc = None
-        if _mark(link_doc):
-            yield link_doc
+def _strip_direction_tokens(tokens):
+    return [token for token in tokens if token not in DIRECTION_TOKENS]
 
 
-def _iter_host_candidates(doc):
-    if doc is None:
-        return
-    collectors = []
-    try:
-        collectors.append(FilteredElementCollector(doc).OfClass(FamilyInstance).WhereElementIsNotElementType())
-    except Exception:
-        pass
-    try:
-        collectors.append(FilteredElementCollector(doc).OfClass(Group).WhereElementIsNotElementType())
-    except Exception:
-        pass
-    for collector in collectors:
-        for elem in collector:
-            yield elem
+def _base_key(value):
+    if not value:
+        return ""
+    tokens = _tokenize_name(value)
+    tokens = _strip_numeric_prefix(tokens)
+    tokens = _strip_trailing_id_tokens(tokens)
+    tokens = _strip_direction_tokens(tokens)
+    base = " ".join(tokens)
+    return base or _normalize_full_name(value)
+
+
+def token_set_ratio(a, b):
+    a_tokens = set((a or "").lower().split())
+    b_tokens = set((b or "").lower().split())
+    if not a_tokens or not b_tokens:
+        return 0.0
+    common = " ".join(sorted(a_tokens & b_tokens))
+    a_diff = " ".join(sorted(a_tokens - b_tokens))
+    b_diff = " ".join(sorted(b_tokens - a_tokens))
+    return max(
+        SequenceMatcher(None, common, (common + " " + a_diff).strip()).ratio(),
+        SequenceMatcher(None, common, (common + " " + b_diff).strip()).ratio()
+    ) * 100.0
+
+
+def _head_key(value):
+    if not value:
+        return ""
+    head = str(value).split(":", 1)[0].strip()
+    return _normalize_full_name(head)
+
+
+def _match_tokens(value):
+    if not value:
+        return []
+    tokens = _tokenize_name(value)
+    tokens = _strip_numeric_prefix(tokens)
+    tokens = _strip_trailing_id_tokens(tokens)
+    tokens = _strip_direction_tokens(tokens)
+    return tokens
+
+
+def _token_overlap_count(left, right):
+    left_tokens = set(_match_tokens(left))
+    right_tokens = set(_match_tokens(right))
+    if not left_tokens or not right_tokens:
+        return 0
+    return len(left_tokens & right_tokens)
+
+
+def _best_match_name(target, candidates):
+    target_norm = _normalize_full_name(target)
+    best = None
+    best_score = -1.0
+    for name in candidates:
+        score = token_set_ratio(target_norm, _normalize_full_name(name))
+        if score > best_score:
+            best_score = score
+            best = name
+    return best, best_score
 
 
 def _build_label(elem):
@@ -175,273 +158,363 @@ def _build_label(elem):
             return name
     except Exception:
         pass
-    return "Unnamed Element"
+    return ""
 
 
-def _collect_instance_counts(doc):
-    doc_counts = {}
-    details = {}
-    for source_doc in _iter_source_documents(doc):
-        doc_title = getattr(source_doc, "Title", None) or "Active Document"
-        counter = doc_counts.setdefault(doc_title, Counter())
-        for elem in _iter_host_candidates(source_doc):
-            label = _build_label(elem)
-            payload = _get_element_linker_payload(elem)
-            led_id = (_extract_led_id(payload) or "").strip() if payload else ""
-            key = u"{}||{}".format(label, led_id.lower())
-            counter[key] += 1
-            entry = details.setdefault(
-                key,
-                {"led_id": led_id, "label": label, "doc_titles": set()},
-            )
-            entry["doc_titles"].add(doc_title)
-    return doc_counts, details
+def _split_label(label):
+    cleaned = (label or "").strip()
+    if not cleaned:
+        return "", ""
+    if ":" in cleaned:
+        fam_part, type_part = cleaned.split(":", 1)
+        return fam_part.strip(), type_part.strip()
+    return cleaned, ""
 
 
-class AuditWindow(forms.WPFWindow):
-    def __init__(self):
-        super(AuditWindow, self).__init__(XAML_PATH)
-        self.doc = revit.doc
-        self.entries = []
-        self.filtered = []
-        self.total_instances = 0
-        self.current_doc_total = 0
-        self._doc_counts = {}
-        self._details = {}
-        self._led_lookup = {}
-        self._selected_doc_name = _get_selected_link_title()
-        self.Loaded += self._on_loaded
-        self.Closed += self._on_closed
-        self.SearchButton.Click += self._apply_filter
-        self.RefreshButton.Click += self._refresh_entries
-        self._doc_populating = False
-        try:
-            self.DocCombo.SelectionChanged += self._on_doc_selection_changed
-        except Exception:
-            pass
-        try:
-            self.set_modeless()
-        except Exception:
-            pass
-        self._refresh_entries()
+def _iter_link_docs(doc):
+    if doc is None:
+        return
+    seen = set()
 
-    def _sanitize_count_text(self):
-        text = (self.CountBox.Text or "").strip()
-        cleaned = "".join(ch for ch in text if ch.isdigit())
-        if cleaned != text:
-            try:
-                caret = self.CountBox.SelectionStart
-            except Exception:
-                caret = None
-            self.CountBox.Text = cleaned
-            if caret is not None:
-                try:
-                    self.CountBox.SelectionStart = min(caret, len(cleaned))
-                except Exception:
-                    pass
-        return cleaned
-
-    def _on_loaded(self, sender, args):
-        try:
-            if self.DocCombo.Items.Count > 0 and self.DocCombo.SelectedIndex < 0:
-                self.DocCombo.SelectedIndex = 0
-            self.SearchBox.Focus()
-        except Exception:
-            pass
-
-    def _on_doc_selection_changed(self, sender=None, args=None):
-        if getattr(self, "_doc_populating", False):
+    def _walk(source_doc):
+        if source_doc is None:
             return
+        link_instances = []
         try:
-            name = self.DocCombo.SelectedItem
+            link_instances = FilteredElementCollector(source_doc).OfClass(RevitLinkInstance)
         except Exception:
-            name = None
-        text = str(name or "").strip()
-        if text and text.lower() != "all documents":
-            self._selected_doc_name = text
-        else:
-            self._selected_doc_name = None
-        self._update_entries_for_selection()
-        self._apply_filter()
-
-    def _refresh_entries(self, sender=None, args=None):
-        if not self.doc:
-            forms.alert("No active document.", title=TITLE)
-            self.Close()
-            return
-        self.SearchButton.IsEnabled = False
-        self.SummaryLabel.Text = "Scanning linked elements..."
-        try:
+            link_instances = []
+        for link in link_instances:
             try:
-                _, led_lookup = _load_led_metadata()
-            except RuntimeError:
-                led_lookup = {}
-            doc_counts, details = _collect_instance_counts(self.doc)
-            self._led_lookup = led_lookup
-            self._doc_counts = doc_counts
-            self._details = details
-            self._populate_doc_combo(doc_counts)
-            self._update_entries_for_selection()
-            self._apply_filter()
-        except RuntimeError as exc:
-            self.entries = []
-            self.total_instances = 0
-            self.ResultsList.ItemsSource = []
-            self.SummaryLabel.Text = str(exc)
-        except Exception as exc:  # pragma: no cover - best effort logging
-            LOG.error("Failed to build audit list: %s", exc)
-            forms.alert("Failed to audit linked model.\n{}".format(exc), title=TITLE)
-            self.Close()
-        finally:
-            if getattr(self, "SearchButton", None):
-                self.SearchButton.IsEnabled = True
-
-    def _populate_doc_combo(self, doc_counts):
-        combo = getattr(self, "DocCombo", None)
-        if combo is None:
-            return
-        items = ["All Documents"] + sorted(doc_counts.keys())
-        self._doc_populating = True
-        try:
-            try:
-                combo.ItemsSource = items
+                link_doc = link.GetLinkDocument()
             except Exception:
-                combo.Items.Clear()
-                for entry in items:
-                    combo.Items.Add(entry)
-            preferred = _get_selected_link_title() or self._selected_doc_name
-            if preferred and preferred in doc_counts:
-                self._selected_doc_name = preferred
-                target = preferred
-            else:
-                self._selected_doc_name = None
-                target = "All Documents"
-            try:
-                combo.SelectedItem = target
-            except Exception:
-                combo.SelectedIndex = 0
-        finally:
-            self._doc_populating = False
-
-    def _update_entries_for_selection(self):
-        doc_counts = self._doc_counts or {}
-        if self._selected_doc_name and self._selected_doc_name in doc_counts:
-            counts = doc_counts[self._selected_doc_name]
-            self.current_doc_total = sum(counts.values())
-        else:
-            combined = Counter()
-            for counter in doc_counts.values():
-                combined.update(counter)
-            counts = combined
-            self.current_doc_total = sum(counts.values())
-        self.entries = self._build_entries_from_counts(counts)
-        self.total_instances = self.current_doc_total
-
-    def _build_entries_from_counts(self, counts):
-        details = getattr(self, "_details", {}) or {}
-        led_lookup = getattr(self, "_led_lookup", {}) or {}
-        entries = []
-        sort_key = []
-        for key in counts.keys():
-            info = details.get(key, {})
-            sort_key.append((info.get("label") or key, key))
-        for _, key in sorted(sort_key, key=lambda pair: pair[0].lower()):
-            qty = counts.get(key, 0)
-            if qty <= 0:
+                link_doc = None
+            if link_doc is None:
                 continue
-            info = details.get(key, {})
-            led_id = info.get("led_id") or ""
-            lookup = led_lookup.get(led_id.lower()) if led_id else None
-            label = lookup.get("label") if lookup and lookup.get("label") else info.get("label")
-            eq_name = lookup.get("equipment") if lookup else ""
-            display_label = label or eq_name or led_id or info.get("label") or "Linked Element"
-            display = display_label
-            if eq_name and eq_name not in display_label:
-                display = u"{} ({})".format(display_label, eq_name)
-            if led_id:
-                display = u"{}  [{}]".format(display, led_id)
-            doc_titles = ", ".join(sorted(info.get("doc_titles") or []))
-            entries.append({
-                "display": display,
-                "count": qty,
-                "search": u"{} {} {} {}".format(
-                    (display_label or "").lower(),
-                    (led_id or "").lower(),
-                    (eq_name or "").lower(),
-                    doc_titles.lower(),
-                ),
-            })
-        return entries
+            try:
+                key = link_doc.GetHashCode()
+            except Exception:
+                key = id(link_doc)
+            if key in seen:
+                continue
+            seen.add(key)
+            yield link_doc
+            for nested in _walk(link_doc):
+                yield nested
 
-    def _get_min_count(self):
-        raw = (self.CountBox.Text or "").strip()
-        if not raw:
-            return 0
+    for linked_doc in _walk(doc):
+        yield linked_doc
+
+
+def _collect_linked_names(doc):
+    counts = Counter()
+    for link_doc in _iter_link_docs(doc):
         try:
-            value = int(float(raw))
+            fam_collector = FilteredElementCollector(link_doc).OfClass(FamilyInstance).WhereElementIsNotElementType()
         except Exception:
-            value = 0
-        if value < 0:
-            value = 0
-        return value
+            fam_collector = []
+        for elem in fam_collector:
+            label = _build_label(elem)
+            if label:
+                counts[label] += 1
+        try:
+            group_collector = FilteredElementCollector(link_doc).OfClass(Group).WhereElementIsNotElementType()
+        except Exception:
+            group_collector = []
+        for elem in group_collector:
+            label = _build_label(elem)
+            if label:
+                counts[label] += 1
+    return counts
 
-    def _apply_filter(self, sender=None, args=None):
-        self._sanitize_count_text()
-        query = (self.SearchBox.Text or "").strip().lower()
-        min_count = self._get_min_count()
-        if not self.entries:
-            self.ResultsList.ItemsSource = []
-            doc_label = getattr(self, "_selected_doc_name", "All Documents")
-            if doc_label and doc_label != "All Documents":
-                self.SummaryLabel.Text = "No linked elements were found in '{}'.".format(doc_label)
+
+def _collect_profile_names(data):
+    names = set()
+    for eq in data.get("equipment_definitions") or []:
+        raw = eq.get("name") or eq.get("id")
+        if raw:
+            names.add(str(raw).strip())
+        for linked_set in eq.get("linked_sets") or []:
+            for led in linked_set.get("linked_element_definitions") or []:
+                if not isinstance(led, dict):
+                    continue
+                label = led.get("label") or led.get("name") or ""
+                if label:
+                    names.add(str(label).strip())
+    return names
+
+
+def _find_equipment_def_by_name(data, name):
+    if not name:
+        return None
+    target = str(name).strip()
+    if not target:
+        return None
+    for eq in data.get("equipment_definitions") or []:
+        eq_name = (eq.get("name") or eq.get("id") or "").strip()
+        if eq_name == target:
+            return eq
+    return None
+
+
+def _find_equipment_def_by_label(data, label):
+    if not label:
+        return None
+    target = str(label).strip()
+    if not target:
+        return None
+    for eq in data.get("equipment_definitions") or []:
+        for linked_set in eq.get("linked_sets") or []:
+            for led in linked_set.get("linked_element_definitions") or []:
+                if not isinstance(led, dict):
+                    continue
+                led_label = (led.get("label") or led.get("name") or "").strip()
+                if led_label == target:
+                    return eq
+    return None
+
+
+def _next_eq_number(data):
+    max_id = 0
+    for eq in data.get("equipment_definitions") or []:
+        eq_id = (eq.get("id") or "").strip()
+        if eq_id.upper().startswith("EQ-"):
+            try:
+                num = int(eq_id.split("-")[-1])
+            except Exception:
+                continue
+            if num > max_id:
+                max_id = num
+    return max_id + 1
+
+
+def _next_set_number(data):
+    max_id = 0
+    for eq in data.get("equipment_definitions") or []:
+        for linked_set in eq.get("linked_sets") or []:
+            set_id = (linked_set.get("id") or "").strip()
+            if not set_id.upper().startswith("SET-"):
+                continue
+            try:
+                num = int(set_id.split("-")[-1])
+            except Exception:
+                continue
+            if num > max_id:
+                max_id = num
+    return max_id + 1
+
+
+def _rewrite_linker_payload(params, old_set_id, new_set_id, old_led_id, new_led_id):
+    if not isinstance(params, dict):
+        return
+    for key in ("Element_Linker Parameter", "Element_Linker"):
+        value = params.get(key)
+        if not isinstance(value, basestring):
+            continue
+        updated = value
+        if old_set_id:
+            updated = updated.replace(old_set_id, new_set_id)
+        if old_led_id:
+            updated = updated.replace(old_led_id, new_led_id)
+        if updated != value:
+            params[key] = updated
+
+
+def _clone_equipment_def(source_eq, new_name, new_eq_id, next_set_num):
+    eq_copy = copy.deepcopy(source_eq)
+    eq_copy["id"] = new_eq_id
+    eq_copy["name"] = new_name
+    truth_id = source_eq.get("ced_truth_source_id") or source_eq.get("id") or source_eq.get("name") or new_eq_id
+    truth_name = source_eq.get("ced_truth_source_name") or source_eq.get("name") or new_name
+    eq_copy["ced_truth_source_id"] = truth_id
+    eq_copy["ced_truth_source_name"] = truth_name
+
+    parent_filter = eq_copy.get("parent_filter")
+    if isinstance(parent_filter, dict):
+        family_name, type_name = _split_label(new_name)
+        if family_name:
+            parent_filter["family_name_pattern"] = family_name
+        if ":" in (new_name or ""):
+            parent_filter["type_name_pattern"] = type_name or "*"
+
+    linked_sets = eq_copy.get("linked_sets") or []
+    if not linked_sets:
+        new_set_id = "SET-{:03d}".format(next_set_num)
+        next_set_num += 1
+        eq_copy["linked_sets"] = [{
+            "id": new_set_id,
+            "name": "{} Types".format(new_name),
+            "linked_element_definitions": [],
+        }]
+        return eq_copy, next_set_num
+
+    for idx, linked_set in enumerate(linked_sets):
+        if not isinstance(linked_set, dict):
+            continue
+        old_set_id = linked_set.get("id")
+        new_set_id = "SET-{:03d}".format(next_set_num)
+        next_set_num += 1
+        linked_set["id"] = new_set_id
+        if idx == 0:
+            linked_set["name"] = "{} Types".format(new_name)
+        led_list = linked_set.get("linked_element_definitions") or []
+        counter = 0
+        for led in led_list:
+            if not isinstance(led, dict):
+                continue
+            old_led_id = led.get("id")
+            if led.get("is_parent_anchor"):
+                new_led_id = "{}-LED-000".format(new_set_id)
             else:
-                self.SummaryLabel.Text = "No linked elements were found."
-            return
-        def _matches(entry):
-            if entry.get("count", 0) < min_count:
-                return False
-            if not query:
-                return True
-            return query in entry.get("search", "")
-
-        results = [entry for entry in self.entries if _matches(entry)]
-        self.ResultsList.ItemsSource = results
-        doc_total = getattr(self, "current_doc_total", sum(entry["count"] for entry in self.entries))
-        filtered_total = sum(entry["count"] for entry in results)
-        doc_label = getattr(self, "_selected_doc_name", None) or "All Documents"
-        self.SummaryLabel.Text = "Document: {} | Showing {} of {} types | Filtered instances: {} | Document total: {}".format(
-            doc_label,
-            len(results),
-            len(self.entries),
-            filtered_total,
-            doc_total,
-        )
-
-    def _on_closed(self, sender, args):
-        global _AUDIT_WINDOW
-        if _AUDIT_WINDOW is self:
-            _AUDIT_WINDOW = None
+                counter += 1
+                new_led_id = "{}-LED-{:03d}".format(new_set_id, counter)
+            led["id"] = new_led_id
+            _rewrite_linker_payload(led.get("parameters"), old_set_id, new_set_id, old_led_id, new_led_id)
+    return eq_copy, next_set_num
 
 
 def main():
-    if not revit.doc:
+    doc = getattr(revit, "doc", None)
+    if doc is None:
         forms.alert("No active Revit document.", title=TITLE)
         return
-    if not XAML_PATH or not os.path.exists(XAML_PATH):
-        forms.alert("Missing window definition (AuditWindow.xaml).", title=TITLE)
-        return
-    global _AUDIT_WINDOW
-    existing = _AUDIT_WINDOW
     try:
-        if existing and getattr(existing, "IsVisible", False):
-            existing.Activate()
-            existing._refresh_entries()
-            return
-    except Exception:
-        pass
-    window = AuditWindow()
-    _AUDIT_WINDOW = window
-    window.show()
+        _, data = load_active_yaml_data()
+    except Exception as exc:
+        forms.alert(str(exc), title=TITLE)
+        return
+
+    profile_names = _collect_profile_names(data)
+    if not profile_names:
+        forms.alert("No profiles found in the active YAML.", title=TITLE)
+        return
+
+    profile_norms = {_normalize_full_name(name) for name in profile_names if name}
+    profile_base_map = {}
+    profile_default_heads = set()
+    for name in profile_names:
+        base = _base_key(name)
+        if not base:
+            continue
+        profile_base_map.setdefault(base, []).append(name)
+        head, type_name = _split_label(name)
+        type_norm = _normalize_full_name(type_name)
+        if type_norm == "default":
+            head_norm = _normalize_full_name(head)
+            if head_norm:
+                profile_default_heads.add(head_norm)
+
+    linked_counts = _collect_linked_names(doc)
+    if not linked_counts:
+        forms.alert("No linked elements found in any linked documents.", title=TITLE)
+        return
+
+    missing = []
+    for linked_name, count in linked_counts.items():
+        norm = _normalize_full_name(linked_name)
+        if norm in profile_norms:
+            continue
+        if ":" not in linked_name and norm in profile_default_heads:
+            continue
+        base = _base_key(linked_name)
+        if not base:
+            continue
+        candidates = profile_base_map.get(base) or []
+        if candidates:
+            best, _ = _best_match_name(linked_name, candidates)
+            if best:
+                missing.append((linked_name, best, count))
+            continue
+        best, score = _best_match_name(linked_name, profile_names)
+        if not best:
+            continue
+        if score < MIN_PARTIAL_SCORE:
+            continue
+        if _token_overlap_count(linked_name, best) < MIN_COMMON_TOKENS:
+            continue
+        missing.append((linked_name, best, count))
+
+    if not missing:
+        forms.alert("No close-name profile gaps found in linked documents.", title=TITLE)
+        return
+
+    missing.sort(key=lambda row: row[0].lower())
+    lines = [
+        "Linked elements that look like missing profiles:",
+    ]
+    for linked_name, best, count in missing:
+        if count > 1:
+            lines.append("- {} (x{}) -> {}".format(linked_name, count, best))
+        else:
+            lines.append("- {} -> {}".format(linked_name, best))
+    lines.extend(["", "Create profiles for these now?"])
+
+    create_now = forms.alert("\n".join(lines), title=TITLE, ok=False, yes=True, no=True)
+    if not create_now:
+        return
+
+    equipment_defs = data.get("equipment_definitions") or []
+    existing_norms = {
+        _normalize_full_name(eq.get("name") or eq.get("id") or "")
+        for eq in equipment_defs
+        if isinstance(eq, dict)
+    }
+    next_eq_num = _next_eq_number(data)
+    next_set_num = _next_set_number(data)
+    created = []
+    skipped_existing = []
+    skipped_unresolved = []
+    for linked_name, best, _ in missing:
+        new_norm = _normalize_full_name(linked_name)
+        if new_norm in existing_norms:
+            skipped_existing.append(linked_name)
+            continue
+        source_eq = _find_equipment_def_by_name(data, best) or _find_equipment_def_by_label(data, best)
+        if not source_eq:
+            skipped_unresolved.append((linked_name, best))
+            continue
+        new_eq_id = "EQ-{:03d}".format(next_eq_num)
+        next_eq_num += 1
+        eq_copy, next_set_num = _clone_equipment_def(source_eq, linked_name, new_eq_id, next_set_num)
+        equipment_defs.append(eq_copy)
+        existing_norms.add(new_norm)
+        created.append((linked_name, best))
+
+    if not created:
+        forms.alert("No new profiles were created.", title=TITLE)
+        return
+
+    try:
+        save_active_yaml_data(
+            None,
+            data,
+            "Audit Linked Model",
+            "Created {} profile(s) from audit results".format(len(created)),
+        )
+    except Exception as exc:
+        forms.alert("Failed to save updates:\n\n{}".format(exc), title=TITLE)
+        return
+
+    summary = [
+        "Created {} profile(s).".format(len(created)),
+    ]
+    summary.extend(" - {} -> {}".format(name, best) for name, best in created[:20])
+    if len(created) > 20:
+        summary.append(" (+{} more)".format(len(created) - 20))
+    if skipped_existing:
+        summary.append("")
+        summary.append("Skipped existing:")
+        summary.extend(" - {}".format(name) for name in skipped_existing[:10])
+        if len(skipped_existing) > 10:
+            summary.append(" (+{} more)".format(len(skipped_existing) - 10))
+    if skipped_unresolved:
+        summary.append("")
+        summary.append("Skipped (no source profile found):")
+        summary.extend(" - {} -> {}".format(name, best) for name, best in skipped_unresolved[:10])
+        if len(skipped_unresolved) > 10:
+            summary.append(" (+{} more)".format(len(skipped_unresolved) - 10))
+
+    forms.alert("\n".join(summary), title=TITLE)
 
 
 if __name__ == "__main__":
