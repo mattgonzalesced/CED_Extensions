@@ -11,6 +11,7 @@ are tagged.
 import math
 import os
 import sys
+import re
 
 from pyrevit import revit, forms
 from Autodesk.Revit.DB import (
@@ -54,13 +55,28 @@ def _build_repository(data):
 def _parse_linker_payload(text):
     if not text:
         return {}
+    payload = str(text)
     entries = {}
-    for raw_line in str(text).splitlines():
-        line = raw_line.strip()
-        if not line or ":" not in line:
-            continue
-        key, _, remainder = line.partition(":")
-        entries[key.strip()] = remainder.strip()
+    if "\n" in payload:
+        for raw_line in payload.splitlines():
+            line = raw_line.strip()
+            if not line or ":" not in line:
+                continue
+            key, _, remainder = line.partition(":")
+            entries[key.strip()] = remainder.strip()
+    else:
+        pattern = re.compile(
+            r"(Linked Element Definition ID|Set Definition ID|Location XYZ \(ft\)|"
+            r"Rotation \(deg\)|Parent Rotation \(deg\)|Parent ElementId|LevelId|"
+            r"ElementId|FacingOrientation)\s*:\s*"
+        )
+        matches = list(pattern.finditer(payload))
+        for idx, match in enumerate(matches):
+            key = match.group(1)
+            start = match.end()
+            end = matches[idx + 1].start() if idx + 1 < len(matches) else len(payload)
+            value = payload[start:end].strip().rstrip(",")
+            entries[key] = value.strip(" ,")
     return {
         "led_id": entries.get("Linked Element Definition ID", "").strip(),
         "set_id": entries.get("Set Definition ID", "").strip(),

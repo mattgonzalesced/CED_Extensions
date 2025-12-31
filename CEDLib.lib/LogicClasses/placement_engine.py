@@ -5,6 +5,7 @@ Placement engine that consumes profile definitions and places Revit elements.
 
 import os
 import math
+import re
 
 from Autodesk.Revit.DB import (
     Transaction,
@@ -47,13 +48,29 @@ SAFE_HASH = u"\uff03"
 def _parse_linker_payload(payload_text):
     if not payload_text:
         return {}
+    text = str(payload_text)
     entries = {}
-    for raw_line in payload_text.splitlines():
-        line = raw_line.strip()
-        if not line or ":" not in line:
-            continue
-        key, _, remainder = line.partition(":")
-        entries[key.strip()] = remainder.strip()
+    if "\n" in text:
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            if not line or ":" not in line:
+                continue
+            key, _, remainder = line.partition(":")
+            entries[key.strip()] = remainder.strip()
+    else:
+        pattern = re.compile(
+            r"(Linked Element Definition ID|Set Definition ID|Location XYZ \(ft\)|"
+            r"Rotation \(deg\)|Parent Rotation \(deg\)|Parent ElementId|LevelId|"
+            r"ElementId|FacingOrientation)\s*:\s*"
+        )
+        matches = list(pattern.finditer(text))
+        for idx, match in enumerate(matches):
+            key = match.group(1)
+            start = match.end()
+            end = matches[idx + 1].start() if idx + 1 < len(matches) else len(text)
+            value = text[start:end].strip().rstrip(",")
+            entries[key] = value.strip(" ,")
+
     def _as_int(value):
         try:
             return int(value)
@@ -94,19 +111,20 @@ def _format_xyz(vec):
     return "{:.6f},{:.6f},{:.6f}".format(vec.X, vec.Y, vec.Z)
 
 
-def _build_linker_payload(led_id, set_id, location, rotation_deg, level_id, element_id, facing, parent_element_id=None):
+def _build_linker_payload(led_id, set_id, location, rotation_deg, level_id, element_id, facing, parent_rotation_deg=None):
     rotation = float(rotation_deg or 0.0)
-    lines = [
+    parent_rotation = float(parent_rotation_deg or 0.0)
+    parts = [
         "Linked Element Definition ID: {}".format(led_id or ""),
         "Set Definition ID: {}".format(set_id or ""),
         "Location XYZ (ft): {}".format(_format_xyz(location)),
         "Rotation (deg): {:.6f}".format(rotation),
-        "Parent ElementId: {}".format(parent_element_id if parent_element_id is not None else ""),
+        "Parent Rotation (deg): {:.6f}".format(parent_rotation),
         "LevelId: {}".format(level_id if level_id is not None else ""),
         "ElementId: {}".format(element_id if element_id is not None else ""),
         "FacingOrientation: {}".format(_format_xyz(facing)),
     ]
-    return "\n".join(lines).strip()
+    return ", ".join(parts).strip()
 
 
 class PlaceElementsEngine(object):
@@ -1008,7 +1026,14 @@ class PlaceElementsEngine(object):
                 self._apply_recorded_level(instance, linked_def)
             if abs(final_rot_deg) > 1e-6:
                 self._rotate_instance(instance, loc, final_rot_deg)
-            self._update_element_linker_parameter(instance, linked_def, loc, final_rot_deg, parent_element_id)
+            self._update_element_linker_parameter(
+                instance,
+                linked_def,
+                loc,
+                final_rot_deg,
+                base_rot_deg,
+                parent_element_id,
+            )
             if self.allow_tags:
                 self._place_tags(tags, instance, loc, final_rot_deg)
             self._place_text_notes(text_notes, loc, final_rot_deg, host_instance=instance, host_location=loc)
@@ -1627,7 +1652,15 @@ class PlaceElementsEngine(object):
                 continue
         return success
 
-    def _update_element_linker_parameter(self, instance, linked_def, location, rotation_deg, parent_element_id=None):
+    def _update_element_linker_parameter(
+        self,
+        instance,
+        linked_def,
+        location,
+        rotation_deg,
+        parent_rotation_deg=None,
+        parent_element_id=None,
+    ):
         if not instance or not linked_def:
             return
         template = self._get_linker_template(linked_def)
@@ -1656,7 +1689,7 @@ class PlaceElementsEngine(object):
             level_id=level_id,
             element_id=element_id,
             facing=facing,
-            parent_element_id=parent_element_id,
+            parent_rotation_deg=parent_rotation_deg,
         )
         self._set_element_linker_param(instance, payload)
 
