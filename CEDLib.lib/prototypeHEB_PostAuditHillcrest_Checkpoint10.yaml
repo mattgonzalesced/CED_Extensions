@@ -1820,7 +1820,7 @@ equipment_definitions:
             is_group: true
             text_notes:
               []
-            label: "EF-U_Equipment Connection-Unbalanced_CED-HEB : Equip Connection - 208/1ph"
+            label: "EF-U_Balanced Power Connector_CED : 208/2P"
             parameters:
               dev-Group ID: ""
               SLD_Component ID_CED: ""
@@ -2184,7 +2184,7 @@ equipment_definitions:
             is_group: true
             text_notes:
               []
-            label: "EF-U_Equipment Connection-Unbalanced_CED-HEB : Equip Connection - 208/1ph"
+            label: "EF-U_Balanced Power Connector_CED : 208/2P"
             parameters:
               dev-Group ID: ""
               SLD_Component ID_CED: ""
