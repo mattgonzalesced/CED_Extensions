@@ -43,6 +43,10 @@ except NameError:  # Python 3 fallback
 
 ELEMENT_LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
 SAFE_HASH = u"\uff03"
+PARENT_PARAMETER_PATTERN = re.compile(
+    r'^\s*parent_parameter\s*:\s*(?:"([^"]+)"|\'([^\']+)\')\s*$',
+    re.IGNORECASE,
+)
 
 
 def _parse_linker_payload(payload_text):
@@ -1042,6 +1046,13 @@ class PlaceElementsEngine(object):
         if loc.Z < 0.0:
             loc = XYZ(loc.X, loc.Y, 1.0)
 
+        parent_element = None
+        if parent_element_id not in (None, ""):
+            try:
+                parent_element = self.doc.GetElement(ElementId(int(parent_element_id)))
+            except Exception:
+                parent_element = None
+
         label = linked_def.get_element_def_id()
         family = linked_def.get_family()
         type_name = linked_def.get_type()
@@ -1060,7 +1071,7 @@ class PlaceElementsEngine(object):
         if is_group:
             instance = self._place_group(label, family, type_name, linked_def, loc, gtype, detail_type)
         if not instance:
-            instance = self._place_symbol(label, family, type_name, linked_def, loc, offset[2])
+            instance = self._place_symbol(label, family, type_name, linked_def, loc, offset[2], parent_element)
         if instance:
             if self.apply_recorded_level:
                 self._apply_recorded_level(instance, linked_def)
@@ -1205,7 +1216,7 @@ class PlaceElementsEngine(object):
         except Exception:
             return False
 
-    def _place_symbol(self, label, family_name, type_name, linked_def, location, z_offset_feet):
+    def _place_symbol(self, label, family_name, type_name, linked_def, location, z_offset_feet, parent_element=None):
         symbol = self.symbol_label_map.get(label)
         if not symbol and family_name and type_name:
             key = u"{} : {}".format(family_name, type_name)
@@ -1240,7 +1251,7 @@ class PlaceElementsEngine(object):
                     if elev_param and not elev_param.IsReadOnly:
                         elev_param.Set(z_offset_feet)
 
-            self._apply_parameters(instance, linked_def.get_static_params())
+            self._apply_parameters(instance, linked_def.get_static_params(), parent_element)
             return instance
         except Exception:
             return None
@@ -1612,7 +1623,156 @@ class PlaceElementsEngine(object):
         except Exception:
             return None
 
-    def _apply_parameters(self, element, params_dict):
+    def _extract_parent_parameter_name(self, value):
+        if not isinstance(value, basestring):
+            return None
+        match = PARENT_PARAMETER_PATTERN.match(value)
+        if not match:
+            return None
+        name = (match.group(1) or match.group(2) or "").strip()
+        if not name:
+            return None
+        return name.replace(SAFE_HASH, "#")
+
+    def _get_param_unit_type_id(self, param):
+        get_unit = getattr(param, "GetUnitTypeId", None)
+        if callable(get_unit):
+            try:
+                return get_unit()
+            except Exception:
+                return None
+        return None
+
+    def _apply_parent_parameter(self, child_param, parent_element, parent_param_name):
+        if not child_param or child_param.IsReadOnly or not parent_param_name:
+            return False
+        if not parent_element:
+            return False
+        try:
+            parent_param = parent_element.LookupParameter(parent_param_name)
+        except Exception:
+            parent_param = None
+        if not parent_param:
+            return False
+
+        from Autodesk.Revit.DB import StorageType, UnitUtils
+
+        try:
+            child_storage = child_param.StorageType
+        except Exception:
+            return False
+        try:
+            parent_storage = parent_param.StorageType
+        except Exception:
+            parent_storage = None
+
+        def _parent_string_value():
+            try:
+                value = parent_param.AsString()
+            except Exception:
+                value = None
+            if value not in (None, ""):
+                return value
+            try:
+                return parent_param.AsValueString()
+            except Exception:
+                return None
+
+        if child_storage == StorageType.String:
+            value = _parent_string_value()
+            if value is None:
+                value = ""
+            try:
+                child_param.Set(str(value))
+                return True
+            except Exception:
+                return False
+
+        def _parent_numeric_value():
+            if parent_storage == StorageType.Double:
+                try:
+                    internal = parent_param.AsDouble()
+                except Exception:
+                    internal = None
+                parent_unit_id = self._get_param_unit_type_id(parent_param)
+                if parent_unit_id is not None and internal is not None:
+                    try:
+                        return UnitUtils.ConvertFromInternalUnits(float(internal), parent_unit_id), True
+                    except Exception:
+                        pass
+                raw = _parent_string_value()
+                if raw not in (None, ""):
+                    try:
+                        return float(raw), True
+                    except Exception:
+                        pass
+                if internal is not None:
+                    return float(internal), False
+                return None, False
+            if parent_storage == StorageType.Integer:
+                try:
+                    return float(parent_param.AsInteger()), True
+                except Exception:
+                    return None, False
+            raw = _parent_string_value()
+            if raw not in (None, ""):
+                try:
+                    return float(raw), True
+                except Exception:
+                    return None, False
+            return None, False
+
+        if child_storage == StorageType.Integer:
+            value, is_display = _parent_numeric_value()
+            if value is None:
+                return False
+            child_unit_id = self._get_param_unit_type_id(child_param)
+            if child_unit_id is not None and is_display:
+                try:
+                    value = UnitUtils.ConvertToInternalUnits(float(value), child_unit_id)
+                except Exception:
+                    pass
+            try:
+                child_param.Set(int(round(value)))
+                return True
+            except Exception:
+                return False
+
+        if child_storage == StorageType.Double:
+            value, is_display = _parent_numeric_value()
+            if value is None:
+                return False
+            child_unit_id = self._get_param_unit_type_id(child_param)
+            if child_unit_id is not None and is_display:
+                try:
+                    value = UnitUtils.ConvertToInternalUnits(float(value), child_unit_id)
+                except Exception:
+                    pass
+            try:
+                child_param.Set(float(value))
+                return True
+            except Exception:
+                return False
+
+        if child_storage == StorageType.ElementId:
+            if parent_storage == StorageType.ElementId:
+                try:
+                    child_param.Set(parent_param.AsElementId())
+                    return True
+                except Exception:
+                    return False
+            return False
+
+        raw = _parent_string_value()
+        if raw is None:
+            return False
+        try:
+            child_param.Set(str(raw))
+            return True
+        except Exception:
+            return False
+
+    def _apply_parameters(self, element, params_dict, parent_element=None):
         from Autodesk.Revit.DB import StorageType, UnitUtils
 
         if not params_dict:
@@ -1624,6 +1784,10 @@ class PlaceElementsEngine(object):
             except Exception:
                 param = None
             if not param or param.IsReadOnly:
+                continue
+            parent_param_name = self._extract_parent_parameter_name(value)
+            if parent_param_name:
+                self._apply_parent_parameter(param, parent_element, parent_param_name)
                 continue
             try:
                 storage_type = param.StorageType
