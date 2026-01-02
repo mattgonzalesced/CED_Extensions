@@ -59,7 +59,7 @@ def _parse_linker_payload(payload_text):
             entries[key.strip()] = remainder.strip()
     else:
         pattern = re.compile(
-            r"(Linked Element Definition ID|Set Definition ID|Location XYZ \(ft\)|"
+            r"(Linked Element Definition ID|Set Definition ID|Host Name|Location XYZ \(ft\)|"
             r"Rotation \(deg\)|Parent Rotation \(deg\)|Parent ElementId|LevelId|"
             r"ElementId|FacingOrientation)\s*:\s*"
         )
@@ -97,6 +97,7 @@ def _parse_linker_payload(payload_text):
     return {
         "led_id": (entries.get("Linked Element Definition ID", "") or "").strip(),
         "set_id": (entries.get("Set Definition ID", "") or "").strip(),
+        "host_name": (entries.get("Host Name", "") or "").strip(),
         "level_id": _as_int(entries.get("LevelId", "")),
         "element_id": _as_int(entries.get("ElementId", "")),
         "location": _as_xyz(entries.get("Location XYZ (ft)", "")),
@@ -111,12 +112,23 @@ def _format_xyz(vec):
     return "{:.6f},{:.6f},{:.6f}".format(vec.X, vec.Y, vec.Z)
 
 
-def _build_linker_payload(led_id, set_id, location, rotation_deg, level_id, element_id, facing, parent_rotation_deg=None):
+def _build_linker_payload(
+    led_id,
+    set_id,
+    location,
+    rotation_deg,
+    level_id,
+    element_id,
+    facing,
+    parent_rotation_deg=None,
+    host_name=None,
+):
     rotation = float(rotation_deg or 0.0)
     parent_rotation = float(parent_rotation_deg or 0.0)
     parts = [
         "Linked Element Definition ID: {}".format(led_id or ""),
         "Set Definition ID: {}".format(set_id or ""),
+        "Host Name: {}".format(host_name or ""),
         "Location XYZ (ft): {}".format(_format_xyz(location)),
         "Rotation (deg): {:.6f}".format(rotation),
         "Parent Rotation (deg): {:.6f}".format(parent_rotation),
@@ -877,7 +889,14 @@ class PlaceElementsEngine(object):
                     linked_def = self.repo.definition_for_label(canonical_name, label)
                     if not linked_def:
                         continue
-                    placed = self._place_one(linked_def, base_loc, base_rot_deg, occ_index, parent_element_id)
+                    placed = self._place_one(
+                        linked_def,
+                        base_loc,
+                        base_rot_deg,
+                        occ_index,
+                        parent_element_id,
+                        canonical_name,
+                    )
                     if placed:
                         placed_count += 1
                         placement = linked_def.get_placement()
@@ -974,7 +993,7 @@ class PlaceElementsEngine(object):
                 return canonical
         return stripped
 
-    def _place_one(self, linked_def, base_loc, base_rot_deg, occurrence_index, parent_element_id=None):
+    def _place_one(self, linked_def, base_loc, base_rot_deg, occurrence_index, parent_element_id=None, host_name=None):
         placement = linked_def.get_placement()
         offset_xyz = placement.get_offset_xyz() if placement else None
         offset = offset_xyz or (0.0, 0.0, 0.0)
@@ -1033,6 +1052,7 @@ class PlaceElementsEngine(object):
                 final_rot_deg,
                 base_rot_deg,
                 parent_element_id,
+                host_name,
             )
             if self.allow_tags:
                 self._place_tags(tags, instance, loc, final_rot_deg)
@@ -1660,6 +1680,7 @@ class PlaceElementsEngine(object):
         rotation_deg,
         parent_rotation_deg=None,
         parent_element_id=None,
+        host_name=None,
     ):
         if not instance or not linked_def:
             return
@@ -1690,6 +1711,7 @@ class PlaceElementsEngine(object):
             element_id=element_id,
             facing=facing,
             parent_rotation_deg=parent_rotation_deg,
+            host_name=host_name,
         )
         self._set_element_linker_param(instance, payload)
 
