@@ -100,6 +100,7 @@ def _parse_linker_payload(payload_text):
         "host_name": (entries.get("Host Name", "") or "").strip(),
         "level_id": _as_int(entries.get("LevelId", "")),
         "element_id": _as_int(entries.get("ElementId", "")),
+        "parent_element_id": _as_int(entries.get("Parent ElementId", "")),
         "location": _as_xyz(entries.get("Location XYZ (ft)", "")),
         "rotation": _as_float(entries.get("Rotation (deg)", "")),
         "parent_rotation": _as_float(entries.get("Parent Rotation (deg)", "")),
@@ -122,6 +123,7 @@ def _build_linker_payload(
     facing,
     parent_rotation_deg=None,
     host_name=None,
+    parent_element_id=None,
 ):
     rotation = float(rotation_deg or 0.0)
     parent_rotation = float(parent_rotation_deg or 0.0)
@@ -132,6 +134,7 @@ def _build_linker_payload(
         "Location XYZ (ft): {}".format(_format_xyz(location)),
         "Rotation (deg): {:.6f}".format(rotation),
         "Parent Rotation (deg): {:.6f}".format(parent_rotation),
+        "Parent ElementId: {}".format(parent_element_id if parent_element_id is not None else ""),
         "LevelId: {}".format(level_id if level_id is not None else ""),
         "ElementId: {}".format(element_id if element_id is not None else ""),
         "FacingOrientation: {}".format(_format_xyz(facing)),
@@ -1712,6 +1715,7 @@ class PlaceElementsEngine(object):
             facing=facing,
             parent_rotation_deg=parent_rotation_deg,
             host_name=host_name,
+            parent_element_id=parent_element_id,
         )
         self._set_element_linker_param(instance, payload)
 
