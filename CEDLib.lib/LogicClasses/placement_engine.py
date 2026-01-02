@@ -59,7 +59,7 @@ def _parse_linker_payload(payload_text):
             entries[key.strip()] = remainder.strip()
     else:
         pattern = re.compile(
-            r"(Linked Element Definition ID|Set Definition ID|Host Name|Location XYZ \(ft\)|"
+            r"(Linked Element Definition ID|Set Definition ID|Host Name|Parent_location|Location XYZ \(ft\)|"
             r"Rotation \(deg\)|Parent Rotation \(deg\)|Parent ElementId|LevelId|"
             r"ElementId|FacingOrientation)\s*:\s*"
         )
@@ -98,6 +98,7 @@ def _parse_linker_payload(payload_text):
         "led_id": (entries.get("Linked Element Definition ID", "") or "").strip(),
         "set_id": (entries.get("Set Definition ID", "") or "").strip(),
         "host_name": (entries.get("Host Name", "") or "").strip(),
+        "parent_location": _as_xyz(entries.get("Parent_location", "")),
         "level_id": _as_int(entries.get("LevelId", "")),
         "element_id": _as_int(entries.get("ElementId", "")),
         "parent_element_id": _as_int(entries.get("Parent ElementId", "")),
@@ -112,6 +113,18 @@ def _format_xyz(vec):
         return ""
     return "{:.6f},{:.6f},{:.6f}".format(vec.X, vec.Y, vec.Z)
 
+def _format_xyz_value(value):
+    if not value:
+        return ""
+    try:
+        return "{:.6f},{:.6f},{:.6f}".format(value.X, value.Y, value.Z)
+    except Exception:
+        pass
+    try:
+        return "{:.6f},{:.6f},{:.6f}".format(value[0], value[1], value[2])
+    except Exception:
+        return ""
+
 
 def _build_linker_payload(
     led_id,
@@ -124,13 +137,18 @@ def _build_linker_payload(
     parent_rotation_deg=None,
     host_name=None,
     parent_element_id=None,
+    parent_location=None,
 ):
     rotation = float(rotation_deg or 0.0)
     parent_rotation = float(parent_rotation_deg or 0.0)
+    parent_location_text = _format_xyz_value(parent_location)
+    if not parent_location_text:
+        parent_location_text = "Not found"
     parts = [
         "Linked Element Definition ID: {}".format(led_id or ""),
         "Set Definition ID: {}".format(set_id or ""),
         "Host Name: {}".format(host_name or ""),
+        "Parent_location: {}".format(parent_location_text),
         "Location XYZ (ft): {}".format(_format_xyz(location)),
         "Rotation (deg): {:.6f}".format(rotation),
         "Parent Rotation (deg): {:.6f}".format(parent_rotation),
@@ -1056,6 +1074,7 @@ class PlaceElementsEngine(object):
                 base_rot_deg,
                 parent_element_id,
                 host_name,
+                base_loc,
             )
             if self.allow_tags:
                 self._place_tags(tags, instance, loc, final_rot_deg)
@@ -1684,6 +1703,7 @@ class PlaceElementsEngine(object):
         parent_rotation_deg=None,
         parent_element_id=None,
         host_name=None,
+        parent_location=None,
     ):
         if not instance or not linked_def:
             return
@@ -1716,6 +1736,7 @@ class PlaceElementsEngine(object):
             parent_rotation_deg=parent_rotation_deg,
             host_name=host_name,
             parent_element_id=parent_element_id,
+            parent_location=parent_location,
         )
         self._set_element_linker_param(instance, payload)
 
