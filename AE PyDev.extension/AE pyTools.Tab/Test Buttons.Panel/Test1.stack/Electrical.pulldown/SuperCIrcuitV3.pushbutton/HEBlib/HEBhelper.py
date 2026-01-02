@@ -121,6 +121,12 @@ _POSITION_RULES = [
     {"keyword": "ARTISAN BREAD", "group_size": 3},
     {"keyword": "MADIX CLEAN", "group_size": 3},
     {"keyword": "MADIX DIRTY", "group_size": 3},
+    {
+        "keyword": "ELECTRIC CARTS",
+        "cluster_radius": 5.0,
+        "max_group_load": 1800.0,
+        "include_singles": True,
+    },
 ]
 
 
@@ -504,23 +510,25 @@ def _cluster_by_radius(items, radius):
     visited = set()
     while remaining:
         seed = remaining.pop(0)
-        if seed in visited:
+        seed_key = _item_key(seed)
+        if seed_key in visited:
             continue
         cluster = [seed]
         queue = [seed]
-        visited.add(seed)
+        visited.add(seed_key)
         while queue:
             current = queue.pop(0)
             current_point = current.get("location")
             if current_point is None:
                 continue
             for other in list(remaining):
-                if other in visited:
+                other_key = _item_key(other)
+                if other_key in visited:
                     continue
                 dist = _distance(current_point, other.get("location"))
                 if dist is None or dist > radius_val:
                     continue
-                visited.add(other)
+                visited.add(other_key)
                 queue.append(other)
                 cluster.append(other)
                 remaining.remove(other)
@@ -529,6 +537,66 @@ def _cluster_by_radius(items, radius):
         else:
             singles.extend(cluster)
     return grouped, singles
+
+
+def _item_key(item):
+    if not item:
+        return None
+    element = item.get("element")
+    elem_id = getattr(getattr(element, "Id", None), "IntegerValue", None)
+    if elem_id is not None:
+        return elem_id
+    return id(item)
+
+
+def _parse_load_value(value):
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).strip()
+    if not text:
+        return None
+    digits = []
+    for ch in text:
+        if ch.isdigit() or ch == ".":
+            digits.append(ch)
+    if not digits:
+        return None
+    try:
+        number = float("".join(digits))
+    except ValueError:
+        return None
+    if "KVA" in text.upper():
+        number *= 1000.0
+    return number
+
+
+def _split_members_by_load(members, max_total_load):
+    if not members:
+        return []
+    try:
+        limit = float(max_total_load)
+    except Exception:
+        return [list(members)]
+    if limit <= 0:
+        return [list(members)]
+    ordered = sorted(members, key=_position_sort_key)
+    groups = []
+    current = []
+    current_total = 0.0
+    for member in ordered:
+        load = _parse_load_value(member.get("rating")) or 0.0
+        if current and (current_total + load) > limit:
+            groups.append(current)
+            current = [member]
+            current_total = load
+        else:
+            current.append(member)
+            current_total += load
+    if current:
+        groups.append(current)
+    return groups
 
 
 def _sanitize_token(value, fallback="X"):
@@ -582,14 +650,24 @@ def create_position_groups(items, make_group, logger=None):
         rule = members[0].get("_heb_position_rule") or {}
         group_size = int(rule.get("group_size") or 1)
         cluster_radius = rule.get("cluster_radius")
+        max_group_load = rule.get("max_group_load")
+        include_singles = bool(rule.get("include_singles"))
         label = rule.get("label")
         space_label = members[0].get("space_label")
         keyword = rule.get("keyword") or "KEY"
         if cluster_radius:
             position_groups, remainder = _cluster_by_radius(members, cluster_radius)
-            remaining.extend(remainder)
+            if include_singles and remainder:
+                position_groups.extend([[item] for item in remainder])
+            elif remainder:
+                remaining.extend(remainder)
         else:
             position_groups = _cluster_by_nearest(members, group_size)
+        if max_group_load:
+            split_groups = []
+            for cluster in position_groups:
+                split_groups.extend(_split_members_by_load(cluster, max_group_load))
+            position_groups = split_groups
         for pos_index, cluster in enumerate(position_groups, start=1):
             count_key = (bucket_key[1], keyword)
             counters[count_key] = counters.get(count_key, 0) + 1
