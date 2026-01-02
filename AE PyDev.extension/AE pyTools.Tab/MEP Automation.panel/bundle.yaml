@@ -1,6 +1,7 @@
-layout:
+﻿layout:
   - Modify YAML Profiles
   - QAQC
   - Where da stuff
+  - Post Audit
+  - Post Audit Compare
   - Misc Operations
-
