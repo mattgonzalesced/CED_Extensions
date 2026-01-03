@@ -617,7 +617,7 @@ def inspect_parent_parameters():
 
 def main():
     parameter_mapping = {
-        "Mark": "Equipment ID_CEDT",
+        "Note Number": "Symbol Label_CEDT",
         "Family and Type": "Equipment Remarks_CEDT",
         "Voltage_CED":"Voltage_CED",
         "Number of Poles_CED":"Number of Poles_CED",
