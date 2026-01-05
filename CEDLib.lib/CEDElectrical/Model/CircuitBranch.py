@@ -11,6 +11,7 @@ from CEDElectrical.Model.circuit_settings import (
     CircuitSettings,
     FeederVDMethod,
     NeutralBehavior,
+    IsolatedGroundBehavior,
 )
 from CEDElectrical.refdata.ampacity_table import WIRE_AMPACITY_TABLE
 from CEDElectrical.refdata.conductor_area_table import CONDUCTOR_AREA_TABLE
@@ -274,6 +275,7 @@ class CircuitBranch(object):
         self._wire_hot_size_override = None
         self._wire_neutral_size_override = None
         self._wire_ground_size_override = None
+        self._wire_ig_size_override = None
         self._conduit_type_override = None
         self._conduit_size_override = None
         self._user_clear_hot = False
@@ -627,6 +629,9 @@ class CircuitBranch(object):
                 self._wire_ground_size_override = self._get_param_value(
                     SHARED_PARAMS['CKT_Wire Ground Size_CEDT']['GUID']
                 )
+                self._wire_ig_size_override = self._get_param_value(
+                    SHARED_PARAMS['CKT_Wire Isolated Ground Size_CEDT']['GUID']
+                )
         except Exception as e:
             logger.debug("_load_overrides failed for {}: {}".format(self.name, e))
 
@@ -783,6 +788,28 @@ class CircuitBranch(object):
             neutral_expected_flag=neutral_expected,
         )
         _check_size("ground", "_wire_ground_size_override", warn_user=self._auto_calculate_override)
+        ig_expected = self._include_isolated_ground and not self._user_clear_hot
+        if not ig_expected:
+            self._wire_ig_size_override = None
+        elif self._wire_ig_size_override is not None:
+            raw = self._wire_ig_size_override
+            if self._is_clear_token(raw):
+                self._wire_ig_size_override = None
+            else:
+                norm = self._normalize_wire_size(raw)
+                if norm not in CONDUCTOR_AREA_TABLE:
+                    if self._auto_calculate_override:
+                        self.log_warning(
+                            Alerts.InvalidCircuitProperty(
+                                "Isolated ground size",
+                                raw,
+                                None,
+                            ),
+                            category="Overrides",
+                        )
+                    self._wire_ig_size_override = None
+                else:
+                    self._wire_ig_size_override = norm
 
         # Manual-only validations below
         if not self._auto_calculate_override:
@@ -1383,10 +1410,40 @@ class CircuitBranch(object):
         # Track upsizing if the hots grew for voltage-drop/ampacity reasons
         self._upsize_ground_for_voltage_drop()
 
-        if self.cable.ig_qty:
-            self.cable.ig_size = self.cable.ground_size
-
         self._check_ground_design_limits()
+
+    def calculate_isolated_ground_wire_size(self):
+        if self.cable.cleared or self.calc_failed:
+            self.cable.ig_size = None
+            return
+
+        if self.cable.ig_qty == 0:
+            self.cable.ig_size = None
+            return
+
+        behavior = getattr(
+            self.settings,
+            "isolated_ground_behavior",
+            IsolatedGroundBehavior.MATCH_GROUND,
+        )
+
+        if not self._auto_calculate_override:
+            self.cable.ig_size = self.cable.ground_size
+            return
+
+        if behavior == IsolatedGroundBehavior.MATCH_GROUND:
+            self.cable.ig_size = self.cable.ground_size
+            return
+
+        if behavior == IsolatedGroundBehavior.MANUAL:
+            if self._try_override_isolated_ground_size():
+                return
+
+        if self._auto_calculate_override and self._wire_ig_size_override:
+            if self._try_override_isolated_ground_size():
+                return
+
+        self.cable.ig_size = self.cable.ig_size or self.cable.ground_size
 
     def _calculate_service_ground_size(self):
         hot_size = self.cable.hot_size
@@ -1403,8 +1460,6 @@ class CircuitBranch(object):
 
         service_ground = self._lookup_service_ground_size(hot_size, material)
         self.cable.ground_size = service_ground
-        if self.cable.ig_qty:
-            self.cable.ig_size = self.cable.ground_size
 
     def calculate_conduit_size(self):
         """Size conduit (or apply override) using CableSet + ConduitRun."""
@@ -1545,8 +1600,6 @@ class CircuitBranch(object):
 
         if override in ALLOWED_WIRE_SIZES:
             self.cable.ground_size = override
-            if self.cable.ig_qty:
-                self.cable.ig_size = override
             return True
 
         alert = (
@@ -1555,6 +1608,23 @@ class CircuitBranch(object):
             else Alerts.InvalidEquipmentGround(self._wire_ground_size_override)
         )
         self.log_warning(alert)
+        return False
+
+    def _try_override_isolated_ground_size(self):
+        override = self._normalize_wire_size(self._wire_ig_size_override)
+        if not override:
+            return False
+
+        if override in ALLOWED_WIRE_SIZES:
+            self.cable.ig_size = override
+            return True
+
+        self.log_warning(
+            "Isolated ground size override '{}' invalid; using calculated isolated ground size.".format(
+                self._wire_ig_size_override
+            ),
+            category="Overrides",
+        )
         return False
 
     def _auto_hot_sizing(self, rating):
