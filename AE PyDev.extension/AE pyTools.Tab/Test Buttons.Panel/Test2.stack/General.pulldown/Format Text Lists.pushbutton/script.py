@@ -417,32 +417,101 @@ class ListConfigWindow(forms.WPFWindow):
         self._autofix_enabled_rows()
         # NO GridLevels.Items.Refresh()
 
-def add_spacing_soft_returns_only(textnote):
+def add_spacing_soft_returns_only(textnote, between_only=True):
     """
-    Adds a soft return (\v) at the end of each non-empty paragraph.
-    Does NOT attempt to detect list vs non-list. Fast + reliable.
+    Adds visual spacing to an *already formatted* Revit list by appending '\v'
+    to list paragraphs, then reapplying the existing list formatting.
+
+    between_only=True:
+        only add spacing between consecutive list items (recommended).
+    between_only=False:
+        add spacing after every list paragraph.
     """
+    if not textnote:
+        return
+
     src = normalize_newlines(textnote.Text or u"")
     lines = src.split(u"\n")
+    if not lines:
+        return
 
+    # Snapshot formatted text BEFORE edits
+    fmt_before = textnote.GetFormattedText()
+
+    # Paragraph starts for current text
+    starts_before = map_line_starts(lines)
+
+    # Capture per-paragraph list metadata from the EXISTING formatted note
+    # We only need list type + indent level.
+    para_meta = []
+    for i in range(len(lines)):
+        ln = lines[i]
+        ln_len = len(ln)
+        if ln_len <= 0:
+            para_meta.append({"is_list": False, "list_type": None, "indent": None})
+            continue
+
+        tr = TextRange(starts_before[i], ln_len)
+
+        # These API calls exist on FormattedText in the Revit API.
+        # If something unexpected happens, we fall back to non-list.
+        try:
+            lt = fmt_before.GetListType(tr)
+            ind = fmt_before.GetIndentLevel(tr)
+        except Exception:
+            lt = None
+            ind = None
+
+        is_list = (lt is not None)
+        para_meta.append({"is_list": is_list, "list_type": lt, "indent": ind})
+
+    # Build new lines with \v inserted
     out_lines = []
     for i in range(len(lines)):
         ln = lines[i]
-        if ln.strip() == u"":
-            out_lines.append(ln)
+        meta = para_meta[i]
+
+        if meta["is_list"] and ln.strip() != u"":
+            add_vt = True
+            if between_only:
+                # Only if next paragraph is also a list item
+                if i >= len(lines) - 1:
+                    add_vt = False
+                else:
+                    add_vt = bool(para_meta[i + 1]["is_list"])
+
+            if add_vt and not ln.endswith(u"\v"):
+                ln = ln + u"\v"
+
+        out_lines.append(ln)
+
+    # Write updated text
+    textnote.Text = denormalize_to_revit(u"\n".join(out_lines))
+
+    # Reapply list formatting to paragraphs that were lists before
+    fmt_after = textnote.GetFormattedText()
+    starts_after = map_line_starts(out_lines)
+
+    for i in range(len(out_lines)):
+        meta = para_meta[i]
+        if not meta["is_list"]:
             continue
 
-        # already has trailing \v? leave it
-        if ln.endswith(u"\v"):
-            out_lines.append(ln)
-        else:
-            out_lines.append(ln + u"\v")
+        ln_len = len(out_lines[i])
+        if ln_len <= 0:
+            continue
 
-    # write back text (this may reset formatting in some cases)
-    # so preserve existing formatted text object and re-apply it after setting text
-    fmt = textnote.GetFormattedText()
-    textnote.Text = denormalize_to_revit(u"\n".join(out_lines))
-    textnote.SetFormattedText(fmt)
+        tr = TextRange(starts_after[i], ln_len)
+
+        try:
+            fmt_after.SetListType(tr, meta["list_type"])
+            # indent can be None on some weird cases
+            if meta["indent"] is not None:
+                fmt_after.SetIndentLevel(tr, meta["indent"])
+        except Exception as ex:
+            LOGGER.warning("Reapply list formatting failed at paragraph {}: {}".format(i, ex))
+
+    textnote.SetFormattedText(fmt_after)
 
 
 def pick_single_textnote():

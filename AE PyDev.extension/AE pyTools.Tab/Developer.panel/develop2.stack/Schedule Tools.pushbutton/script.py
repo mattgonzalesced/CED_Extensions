@@ -28,15 +28,17 @@ COMMON_FIELDS = [
 ]
 
 FIELDS_TO_ADD = [
-    "Circuit 1 Description_CEDT",
-    "Circuit 1 Voltage_CED",
-    "Circuit 1 Phase_CED",
-    "Circuit 1 Number of Poles_CED",
-    "Circuit 1 FLA_CED",
-    "Circuit 1 MCA_CED",
-    "Circuit 1 MOCP_CED",
-    "Circuit 1 Apparent Load_CED",
-    "Circuit 1 Remarks_CEDT"
+    "Folder",
+    "Discipline"
+    # "Circuit 1 Description_CEDT",
+    # "Circuit 1 Voltage_CED",
+    # "Circuit 1 Phase_CED",
+    # "Circuit 1 Number of Poles_CED",
+    # "Circuit 1 FLA_CED",
+    # "Circuit 1 MCA_CED",
+    # "Circuit 1 MOCP_CED",
+    # "Circuit 1 Apparent Load_CED",
+    # "Circuit 1 Remarks_CEDT"
     # "Circuit 2 Connection_CED",
     # "Circuit 2 Description_CEDT",
     # "Circuit 2 Load Classification_CED",
@@ -79,11 +81,13 @@ FIELDS_TO_UNHIDE = [
 ]
 
 FIELDS_TO_HIDE = [
-    "Circuit 1 Number of Poles_CED",
-    "Circuit 1 Remarks_CEDT",
-    "Circuit 1 Description_CEDT",
-    "Circuit 2 Number of Poles_CED",
-    "Circuit 2 Remarks_CEDT"
+    "Folder",
+    "Discipline"
+    # "Circuit 1 Number of Poles_CED",
+    # "Circuit 1 Remarks_CEDT",
+    # "Circuit 1 Description_CEDT",
+    # "Circuit 2 Number of Poles_CED",
+    # "Circuit 2 Remarks_CEDT"
     # "Circuit 2 Apparent Load_CED",
     # "Circuit 1 Apparent Load_CED"
 
@@ -1160,35 +1164,35 @@ def main():
             # --- Add desired fields ---
             schedulable_map = get_schedulable_fields(schedule)
             fields_to_add = []
-            for name in FIELDS_TO_ADD:
+            for name in COMMON_FIELDS:
                 for sf in schedulable_map.values():
                     if get_schedulable_field_name(sf) == name:
                         fields_to_add.append(sf)
                         break
-            #
+
             with revit.Transaction("Add Fields", doc=doc):
-                add_schedulable_fields_to_schedule(schedule, fields_to_add)
+                add_schedulable_fields_to_schedule(schedule,fields_to_add )
 
-            with revit.Transaction("Unhide Fields", doc=doc):
-                unhide_fields(schedule, FIELDS_TO_UNHIDE)
+            # with revit.Transaction("Unhide Fields", doc=doc):
+            #     unhide_fields(schedule, FIELDS_TO_UNHIDE)
 
-            # with revit.Transaction("Hide Fields", doc=doc):
-            #     hide_fields(schedule, FIELDS_TO_HIDE)
+            with revit.Transaction("Hide Fields", doc=doc):
+                hide_fields(schedule, FIELDS_TO_HIDE)
 
             # --- Reorder ---
-            with revit.Transaction("Reorder Fields", doc=doc):
-                reorder_fields(definition, FIELDS_TO_ADD, position="after", anchor_name="Phase")
+            # with revit.Transaction("Reorder Fields", doc=doc):
+            #     reorder_fields(definition, FIELDS_TO_ADD, position="after", anchor_name="Sheet Name")
 
-            # --- Remove unwanted fields ---
-            with revit.Transaction("Remove Fields", doc=doc):
-                remove_schedulable_fields_from_schedule(schedule, FIELDS_TO_REMOVE)
+            # # --- Remove unwanted fields ---
+            # with revit.Transaction("Remove Fields", doc=doc):
+            #     remove_schedulable_fields_from_schedule(schedule, FIELDS_TO_REMOVE)
 
-            with revit.Transaction("Modify Field Format Options"):
-
-                modify_schedule_field_format_options("Circuit 1 Apparent Load_CED", schedule, display_units, 0.1,
-                                                 display_symbol,
-                                                 True, False, False, True)
-
+            # with revit.Transaction("Modify Field Format Options"):
+            #
+            #     modify_schedule_field_format_options("Circuit 1 Apparent Load_CED", schedule, display_units, 0.1,
+            #                                      display_symbol,
+            #                                      True, False, False, True)
+            #
 
              # Example 2: With find/replace rules
             find_replace_rules = {"Circuit 1 Description_CEDT":"Circuit Description",
@@ -1208,7 +1212,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main_create_combined_param()
+    main()
 
 """Remove/Add/Reorder Example
 
