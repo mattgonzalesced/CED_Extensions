@@ -2,26 +2,51 @@ from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI import *
 from pyrevit import revit, forms
 from System.Collections.Generic import List
+import re
 
 doc = revit.doc
 uidoc = revit.uidoc
 
-# ---- prompt user ----
-user_input = forms.ask_for_string(
-    default="",
-    prompt="Enter ElementId from the LINKED model:",
-    title="Select Linked Element by ID"
-)
+def get_parent_element_id(element):
+    """
+    Returns the Parent ElementId from the Element_Linker parameter.
 
-if not user_input:
-    forms.alert("No ElementId provided.", exitscript=True)
+    Args:
+        element: Revit element object
 
-try:
-    linked_elem_id_int = int(user_input)
-    if linked_elem_id_int <= 0:
-        raise ValueError
-except ValueError:
-    forms.alert("ElementId must be a positive integer.", exitscript=True)
+    Returns:
+        int: Parent ElementId as an integer, or None if not found
+    """
+    # Get the Element_Linker parameter
+    param = element.LookupParameter("Element_Linker")
+
+    if param and param.HasValue:
+        current_value = param.AsString()
+
+        # Extract Parent ElementId using regex
+        match = re.search(r'Parent ElementId:(\d+)', current_value)
+
+        if match:
+            return int(match.group(1))
+
+    return None
+
+# ---- get selected element ----
+selection = uidoc.Selection.GetElementIds()
+
+if not selection or selection.Count == 0:
+    forms.alert("Please select an element first.", exitscript=True)
+
+if selection.Count > 1:
+    forms.alert("Please select only one element.", exitscript=True)
+
+selected_elem = doc.GetElement(list(selection)[0])
+
+# ---- get linked element id from parameter ----
+linked_elem_id_int = get_parent_element_id(selected_elem)
+
+if not linked_elem_id_int:
+    forms.alert("Element_Linker parameter not found or has no Parent ElementId.", exitscript=True)
 
 target_id = ElementId(linked_elem_id_int)
 
@@ -93,24 +118,41 @@ overall_min = None
 overall_max = None
 
 for link, linked_elem in found_link_elems:
-    bbox = linked_elem.get_BoundingBox(None)
-    if not bbox:
-        continue
-    host_min, host_max = _transform_bbox_to_host(link, bbox)
-    if overall_min is None:
-        overall_min = host_min
-        overall_max = host_max
+    t = link.GetTotalTransform()
+
+    # Try to get the element's location point
+    location = linked_elem.Location
+    if hasattr(location, 'Point'):
+        # Transform the location point to host coordinates
+        center_point = t.OfPoint(location.Point)
+
+        # Create a small bounding box around the location point (10 feet radius)
+        offset = 10.0
+        overall_min = XYZ(center_point.X - offset, center_point.Y - offset, center_point.Z - offset)
+        overall_max = XYZ(center_point.X + offset, center_point.Y + offset, center_point.Z + offset)
     else:
-        overall_min = XYZ(
-            min(overall_min.X, host_min.X),
-            min(overall_min.Y, host_min.Y),
-            min(overall_min.Z, host_min.Z),
-        )
-        overall_max = XYZ(
-            max(overall_max.X, host_max.X),
-            max(overall_max.Y, host_max.Y),
-            max(overall_max.Z, host_max.Z),
-        )
+        # Fallback to bounding box if no location point
+        link_doc = link.GetLinkDocument()
+        bbox = linked_elem.get_BoundingBox(link_doc.ActiveView)
+        if not bbox:
+            bbox = linked_elem.get_BoundingBox(None)
+        if not bbox:
+            continue
+        host_min, host_max = _transform_bbox_to_host(link, bbox)
+        if overall_min is None:
+            overall_min = host_min
+            overall_max = host_max
+        else:
+            overall_min = XYZ(
+                min(overall_min.X, host_min.X),
+                min(overall_min.Y, host_min.Y),
+                min(overall_min.Z, host_min.Z),
+            )
+            overall_max = XYZ(
+                max(overall_max.X, host_max.X),
+                max(overall_max.Y, host_max.Y),
+                max(overall_max.Z, host_max.Z),
+            )
 
 if ui_view and overall_min and overall_max:
     ui_view.ZoomAndCenterRectangle(overall_min, overall_max)
