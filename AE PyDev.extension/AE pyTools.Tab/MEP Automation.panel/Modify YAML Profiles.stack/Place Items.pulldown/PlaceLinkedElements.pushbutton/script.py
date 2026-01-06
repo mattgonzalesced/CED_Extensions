@@ -139,6 +139,22 @@ def _score_level_match(link_norm, host_norm):
     return score
 
 
+def _find_level_one(doc):
+    if doc is None:
+        return None
+    targets = {"level1", "level01", "lvl1", "l1"}
+    try:
+        levels = list(FilteredElementCollector(doc).OfClass(Level))
+    except Exception:
+        levels = []
+    for level in levels:
+        name = getattr(level, "Name", None)
+        key = _compact_level_text(name)
+        if key in targets:
+            return level
+    return None
+
+
 def _get_element_level(elem):
     if elem is None:
         return None
@@ -728,8 +744,16 @@ def main():
     placed_defs = set()
     missing_labels = []
     missing_levels = []
+    fallback_levels = []
     deduped_rows = 0
     seen_rows = set()
+    default_level = _find_level_one(doc)
+    default_level_id = None
+    if default_level is not None:
+        try:
+            default_level_id = default_level.Id.IntegerValue
+        except Exception:
+            default_level_id = None
     for cad_name in equipment_names:
         normalized = _normalize_name(cad_name)
         matches = placeholders.get(normalized)
@@ -759,9 +783,14 @@ def main():
                         level_id_val = None
             if level_id_val is None:
                 level_name = match.get("level_name")
-                if level_name:
-                    missing_levels.append((cad_name, level_name))
-                continue
+                if default_level_id is not None:
+                    level_id_val = default_level_id
+                    if level_name:
+                        fallback_levels.append((cad_name, level_name))
+                else:
+                    if level_name:
+                        missing_levels.append((cad_name, level_name))
+                    continue
             row_key = _placement_key(point, rotation, level_id_val, match.get("parent_element_id"))
             if row_key in seen_rows:
                 deduped_rows += 1
@@ -780,6 +809,9 @@ def main():
             "No placements were generated. Ensure equipment definitions include linked types "
             "and that matching linked elements exist in the model.",
         ]
+        if not default_level_id:
+            summary.append("")
+            summary.append("Level 1 not found in host model; could not apply default placement level.")
         if missing_levels:
             summary.append("")
             summary.append("Skipped (no matching host level):")
@@ -838,6 +870,10 @@ def main():
             seen.add(label)
         for item in sorted(seen):
             summary.append(" - {}".format(item))
+
+    if fallback_levels:
+        summary.append("")
+        summary.append("Defaulted to Level 1 (no matching host level): {}".format(len(fallback_levels)))
 
     if deduped_rows:
         summary.append("")
