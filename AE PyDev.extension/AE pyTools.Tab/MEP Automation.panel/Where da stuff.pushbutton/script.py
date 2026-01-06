@@ -23,8 +23,8 @@ def get_parent_element_id(element):
     if param and param.HasValue:
         current_value = param.AsString()
 
-        # Extract Parent ElementId using regex
-        match = re.search(r'Parent ElementId:(\d+)', current_value)
+        # Extract Parent ElementId using regex (allow optional spaces)
+        match = re.search(r'Parent ElementId:\s*(\d+)', current_value)
 
         if match:
             return int(match.group(1))
