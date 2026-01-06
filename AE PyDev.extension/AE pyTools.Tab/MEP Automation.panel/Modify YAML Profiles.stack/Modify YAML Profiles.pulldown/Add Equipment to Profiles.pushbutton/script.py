@@ -20,6 +20,7 @@ from Autodesk.Revit.DB import (
     Transaction,
     TransactionGroup,
     Transform,
+    UnitUtils,
     XYZ,
 )
 from Autodesk.Revit.UI.Selection import ObjectType
@@ -223,7 +224,21 @@ def _collect_params(elem):
             if storage == "String":
                 found[target_key] = param.AsString() or ""
             elif storage == "Double":
-                found[target_key] = param.AsDouble()
+                internal = param.AsDouble()
+                unit_id = None
+                get_unit = getattr(param, "GetUnitTypeId", None)
+                if callable(get_unit):
+                    try:
+                        unit_id = get_unit()
+                    except Exception:
+                        unit_id = None
+                if unit_id is not None:
+                    try:
+                        found[target_key] = UnitUtils.ConvertFromInternalUnits(float(internal), unit_id)
+                    except Exception:
+                        found[target_key] = internal
+                else:
+                    found[target_key] = internal
             elif storage == "Integer":
                 found[target_key] = param.AsInteger()
             else:
@@ -622,6 +637,7 @@ def _build_child_entries(elements):
         entry = {
             "element": elem,
             "point": point,
+            "local_point": point,
             "rotation_deg": _get_rotation(elem),
             "label": label,
             "is_group": is_group,
@@ -780,6 +796,9 @@ def _inches_to_feet(value):
 def _level_relative_z_inches(elem, world_point):
     if elem is None:
         return 0.0
+    direct = _instance_elevation_inches(elem)
+    if direct is not None:
+        return direct
     doc = getattr(elem, "Document", None)
     level_elem = None
     level_id = getattr(elem, "LevelId", None)
@@ -825,6 +844,35 @@ def _level_relative_z_inches(elem, world_point):
     world_z = world_point.Z if world_point else 0.0
     relative_ft = world_z - level_elev
     return _feet_to_inches(relative_ft)
+
+
+def _instance_elevation_inches(elem):
+    param_names = (
+        "INSTANCE_ELEV_PARAM",
+        "INSTANCE_ELEVATION_PARAM",
+        "INSTANCE_FREE_HOST_OFFSET_PARAM",
+        "INSTANCE_SILL_HEIGHT_PARAM",
+        "SILL_HEIGHT_PARAM",
+        "HEAD_HEIGHT_PARAM",
+    )
+    for name in param_names:
+        bip = getattr(BuiltInParameter, name, None)
+        if not bip:
+            continue
+        try:
+            param = elem.get_Parameter(bip)
+        except Exception:
+            param = None
+        if not param:
+            continue
+        try:
+            raw = param.AsDouble()
+        except Exception:
+            raw = None
+        if raw is None:
+            continue
+        return _feet_to_inches(raw)
+    return None
 
 
 def _rotate_xy(vec, angle_deg):
@@ -1153,17 +1201,17 @@ def main():
             )
         return
 
-        parent_eq = parent_info["eq_def"]
-        parent_name = parent_info["eq_name"] or parent_info.get("eq_id") or "(unknown)"
-        parent_origin_point = parent_info.get("element_point") or parent_info.get("base_point")
-        parent_rotation = parent_info.get("rotation_deg") or 0.0
-        try:
-            parent_elem_id = parent_elem.Id.IntegerValue
-        except Exception:
-            parent_elem_id = None
-        if parent_origin_point is None:
-            forms.alert("Could not determine the parent element's location.", title=TITLE)
-            return
+    parent_eq = parent_info["eq_def"]
+    parent_name = parent_info["eq_name"] or parent_info.get("eq_id") or "(unknown)"
+    parent_origin_point = parent_info.get("element_point") or parent_info.get("base_point")
+    parent_rotation = parent_info.get("rotation_deg") or 0.0
+    try:
+        parent_elem_id = parent_elem.Id.IntegerValue
+    except Exception:
+        parent_elem_id = None
+    if parent_origin_point is None:
+        forms.alert("Could not determine the parent element's location.", title=TITLE)
+        return
 
     forms.alert("Select the elements to add to the profile.", title=TITLE)
     try:
@@ -1185,6 +1233,8 @@ def main():
         for entry in child_entries:
             child_elem = entry.get("element")
             if parent_doc is not None and getattr(child_elem, "Document", None) is parent_doc:
+                if entry.get("local_point") is None:
+                    entry["local_point"] = entry.get("point")
                 entry["point"] = _transform_point(entry.get("point"), parent_transform)
                 entry["rotation_deg"] = _transform_rotation(entry.get("rotation_deg"), parent_transform)
 
@@ -1204,7 +1254,8 @@ def main():
         for child in child_entries:
             child_rotation = child.get("rotation_deg")
             offsets = compute_offsets_from_points(parent_origin_point, parent_rotation, child["point"], child_rotation)
-            offsets["z_inches"] = _level_relative_z_inches(child["element"], child["point"])
+            z_point = child.get("local_point") or child.get("point")
+            offsets["z_inches"] = _level_relative_z_inches(child["element"], z_point)
             if child.get("is_group"):
                 rel_rot = _normalize_angle((child_rotation or 0.0) - (parent_rotation or 0.0))
                 offsets["rotation_deg"] = rel_rot
