@@ -1,105 +1,517 @@
 # -*- coding: utf-8 -*-
 # IronPython 2.7 / pyRevit / Revit API
-# Sections reset lists. Levels:
-#   A.       -> UpperCaseLetters, indent 1
-#   1.       -> ArabicNumbers,   indent 2
-#   1.A.     -> LowerCaseLetters, indent 3
-# Removes true blank lines; preserves section headers;
-# Optional vertical tabs can add visual spacing between list items.
+#
+# UI-driven TextNote list formatter (5 rows configurable)
+# - PatternType detection (source prefixes)
+# - Replace with Revit list type + indent
+# - Optional section header split/reset (spec mode)
+# - Removes true blank lines
+# - Merges indented hard-wrap continuation lines into previous list item using '\v'
+# - Optional '\v' between list items (blank_between flag)
 
 import re
 
 from Autodesk.Revit.DB import Transaction, TextRange, ListType
 from pyrevit import revit, DB, forms, script
+from pyrevit.forms import Reactive, reactive
 
 LOGGER = script.get_logger()
 
+# e.g. "15100.02 INTENT" or "3.01  INSTALLATION" or "1.07 SUBMITTALS"
+RE_SECTION_HEADER = re.compile(r'^\s*\d{1,5}\.\d+(\s|$)')
+
 
 class PatternType(object):
-    """Logical pattern types. You never touch regex directly."""
-    UPPER = "UPPER"      # A. B. C. AA. AB.
-    LOWER = "LOWER"      # a. b. c. (available if you want it)
-    NUMERIC = "NUMERIC"  # 1. 2. 3.
-    NUMDOT = "NUMDOT"    # 1.A. 1.a. 2.AA.
+    UPPER = "UPPER"              # A. B. C. AA. AB.
+    LOWER = "LOWER"              # a. b. c.
+    NUMERIC = "NUMERIC"          # 1. 2. 3.
+    DECIMAL = "DECIMAL"          # 1.1 1.2 2.1
+    TRIDECIMAL = "TRIDECIMAL"    # 1.1.1 1.1.2 2.3.4
+    NUMDOT = "NUMDOT"            # 1.A. 1.a. 2.AA.
+
+
+PATTERN_EXAMPLES = {
+    PatternType.NUMERIC: "1. 2. 3.",
+    PatternType.DECIMAL: "1.1 1.2 2.1",
+    PatternType.TRIDECIMAL: "1.1.1 1.1.2 2.3.4",
+    PatternType.UPPER: "A. B. C. AA.",
+    PatternType.LOWER: "a. b. c.",
+    PatternType.NUMDOT: "1.A. 2.B. 10.AA.",
+}
+
+
+REVIT_LIST_KEYS = [
+    "Bullet",
+    "ArabicNumbers",
+    "LowerCaseLetters",
+    "UpperCaseLetters",
+]
+
+REVIT_LIST_EXAMPLES = {
+    "Bullet": u"• • •",
+    "ArabicNumbers": "1. 2. 3.",
+    "LowerCaseLetters": "a. b. c.",
+    "UpperCaseLetters": "A. B. C.",
+}
+
+REVIT_LIST_KEY_TO_ENUM = {
+    "Bullet": ListType.Bullet,
+    "ArabicNumbers": ListType.ArabicNumbers,
+    "LowerCaseLetters": ListType.LowerCaseLetters,
+    "UpperCaseLetters": ListType.UpperCaseLetters,
+}
+
+
+
+class OptionItem(object):
+    def __init__(self, key, display):
+        self.Key = key
+        self.Display = display
+
+class TokenType(object):
+    DOT = "DOT"        # 1.
+    RPAREN = "RPAREN"  # 1)
+    DASH = "DASH"      # 1 -
+
+class LevelRow(Reactive):
+    def __init__(self, level_index):
+        Reactive.__init__(self)
+        self._level_index = level_index
+
+        self._enabled = False
+
+        self._pattern_key = ""
+        self._token_key = ""
+        self._revit_list_key = ""
+        self._indent = ""  # keep blank until enabled
+
+        self._blank_before = False
+        self._blank_between = False
+        self._blank_after = False
+
+    @reactive
+    def LevelIndex(self):
+        return self._level_index
+
+    @reactive
+    def Enabled(self):
+        return self._enabled
+
+    @Enabled.setter
+    def Enabled(self, value):
+        self._enabled = bool(value)
+
+    @reactive
+    def PatternKey(self):
+        return self._pattern_key
+
+    @PatternKey.setter
+    def PatternKey(self, value):
+        self._pattern_key = value or ""
+
+    @reactive
+    def TokenKey(self):
+        return self._token_key
+
+    @TokenKey.setter
+    def TokenKey(self, value):
+        self._token_key = value or ""
+
+    @reactive
+    def RevitListKey(self):
+        return self._revit_list_key
+
+    @RevitListKey.setter
+    def RevitListKey(self, value):
+        self._revit_list_key = value or ""
+
+    @reactive
+    def Indent(self):
+        return self._indent
+
+    @Indent.setter
+    def Indent(self, value):
+        if value is None:
+            self._indent = ""
+        else:
+            self._indent = str(value)
+
+    @reactive
+    def BlankBefore(self):
+        return self._blank_before
+
+    @BlankBefore.setter
+    def BlankBefore(self, value):
+        self._blank_before = bool(value)
+
+    @reactive
+    def BlankBetween(self):
+        return self._blank_between
+
+    @BlankBetween.setter
+    def BlankBetween(self, value):
+        self._blank_between = bool(value)
+
+    @reactive
+    def BlankAfter(self):
+        return self._blank_after
+
+    @BlankAfter.setter
+    def BlankAfter(self, value):
+        self._blank_after = bool(value)
+
+    def clear_row(self):
+        self.PatternKey = ""
+        self.TokenKey = ""
+        self.RevitListKey = ""
+        self.Indent = ""
+        self.BlankBefore = False
+        self.BlankBetween = False
+        self.BlankAfter = False
+
+    def apply_defaults_for_level(self):
+        self.Indent = str(self.LevelIndex - 1)  # 0..4
+
+        if self.LevelIndex == 1:
+            self.PatternKey = PatternType.NUMERIC
+            self.TokenKey = TokenType.DOT
+            self.RevitListKey = "ArabicNumbers"
+        elif self.LevelIndex == 2:
+            self.PatternKey = PatternType.LOWER
+            self.TokenKey = TokenType.DOT
+            self.RevitListKey = "LowerCaseLetters"
+        elif self.LevelIndex == 3:
+            self.PatternKey = PatternType.UPPER
+            self.TokenKey = TokenType.DOT
+            self.RevitListKey = "UpperCaseLetters"
+        else:
+            self.PatternKey = PatternType.NUMERIC
+            self.TokenKey = TokenType.DOT
+            self.RevitListKey = "ArabicNumbers"
+
+
+
+
+
 
 
 class ListLevel(object):
     def __init__(self, pattern_type, list_type, indent,
-                 blank_before=False, blank_between=False, blank_after=False):
-        """
-        pattern_type : PatternType constant (UPPER, LOWER, NUMERIC, NUMDOT)
-        list_type    : Revit ListType (UpperCaseLetters, ArabicNumbers, etc.)
-        indent       : integer indent level for SetIndentLevel
-        blank_* flags:
-            blank_before  : real blank line before a *run* of this list level (not used yet)
-            blank_between : use vertical tabs between items of this level
-            blank_after   : real blank line after a run of this level (not used yet)
-        """
+                 blank_before=False, blank_between=False, blank_after=False,
+                 token_type=None):
         self.pattern_type = pattern_type
         self.list_type = list_type
         self.indent = indent
         self.blank_before = blank_before
         self.blank_between = blank_between
         self.blank_after = blank_after
+        self.token_type = token_type or TokenType.DOT
 
-        # Bind the appropriate regex based on pattern_type
-        if pattern_type == PatternType.UPPER:
-            # A. B. C. AA. AB. ...
-            self.regex = re.compile(r'^\s*([A-Z]{1,3})\.\s*')
-        elif pattern_type == PatternType.LOWER:
-            # a. b. c. ...
-            self.regex = re.compile(r'^\s*([a-z]{1,3})\.\s*')
-        elif pattern_type == PatternType.NUMERIC:
-            # 1. 2. 3. ...
-            self.regex = re.compile(r'^\s*(\d+)\.\s*(?!\d)')
-        elif pattern_type == PatternType.NUMDOT:
-            # 1.A. 1.a. 2.AA. ...
-            self.regex = re.compile(r'^\s*\d+\.\s*([A-Za-z]{1,3})\.\s*')
+        if self.token_type == TokenType.RPAREN:
+            token_re = r'\)'
+            tail_re = r'(?:\s*|$)'
+        elif self.token_type == TokenType.DASH:
+            token_re = r'\s*-\s*'
+            tail_re = r'(?:\s*|$)'
         else:
-            # Fallback: never match
+            token_re = r'\.'
+            tail_re = r'(?:\s+|$)'   # IMPORTANT: keep strict for DOT
+
+
+        if pattern_type == PatternType.UPPER:
+            self.regex = re.compile(r'^\s*([A-Z]{1,3})' + token_re + tail_re)
+        elif pattern_type == PatternType.LOWER:
+            self.regex = re.compile(r'^\s*([a-z]{1,3})' + token_re + tail_re)
+        elif pattern_type == PatternType.NUMERIC:
+            self.regex = re.compile(r'^\s*(\d+)\.(?!\d)(?:\s+|$)')
+        elif pattern_type == PatternType.DECIMAL:
+            # 17.1. or 17.1  (but NOT 17.1.2)
+            self.regex = re.compile(r'^\s*(\d+)\.(\d+)(?:\.(?!\d)|\s+|$)')
+        elif pattern_type == PatternType.TRIDECIMAL:
+            # 17.1.2. or 17.1.2 (but NOT 17.1.2.3)
+            self.regex = re.compile(r'^\s*(\d+)\.(\d+)\.(\d+)(?:\.(?!\d)|\s+|$)')
+
+        elif pattern_type == PatternType.NUMDOT:
+            self.regex = re.compile(r'^\s*\d+\.\s*([A-Za-z]{1,3})\.(?:\s+|$)')
+        else:
             self.regex = re.compile(r'^(?!)')
+
 
     def match(self, text):
         return self.regex.match(text)
 
 
-# -------- SECTION HEADER PATTERN (for splitting & spacing) --------
-# e.g. "15100.02 INTENT" or "3.01  INSTALLATION" or "1.07 SUBMITTALS"
-RE_SECTION_HEADER = re.compile(r'^\s*\d{1,5}\.\d+(\s|$)')
+class ListConfigWindow(forms.WPFWindow):
+    def __init__(self, xaml_path):
+        # Gate all UI events until the window is loaded
+        self._ui_ready = False
+
+        forms.WPFWindow.__init__(self, xaml_path)
+
+        # dropdown options
+        self.PatternOptions = []
+        for key in [PatternType.NUMERIC, PatternType.DECIMAL, PatternType.TRIDECIMAL,
+                    PatternType.NUMDOT, PatternType.UPPER, PatternType.LOWER]:
+            self.PatternOptions.append(OptionItem(key, key))
+
+        self.RevitListOptions = []
+        for key in REVIT_LIST_KEYS:
+            self.RevitListOptions.append(OptionItem(key, key))
+
+        self.TokenOptions = []
+        for key in [TokenType.DOT, TokenType.RPAREN, TokenType.DASH]:
+            self.TokenOptions.append(OptionItem(key, key))
+
+        # 5 rows
+        self.Levels = []
+        for i in range(1, 6):
+            self.Levels.append(LevelRow(i))
+
+        # enable first two by default
+        self.Levels[0].Enabled = True
+        self.Levels[0].apply_defaults_for_level()
+
+        self.Levels[1].Enabled = True
+        self.Levels[1].apply_defaults_for_level()
+
+        # remaining disabled + cleared
+        for idx in [2, 3, 4]:
+            self.Levels[idx].Enabled = False
+            self.Levels[idx].clear_row()
+
+        self.ChkOperateExisting.IsChecked = False
+
+        # bind window context
+        self.DataContext = self
+
+        # spec mode default off
+        self.ChkSectionHeaders.IsChecked = False
+
+        # DO NOT autofix here (causes event storm during grid load)
+
+        # wiring
+        self.BtnCancel.Click += self._on_cancel
+        self.BtnRun.Click += self._on_run
+
+        # Mark UI ready only after window is loaded and grid is created
+        try:
+            self.Loaded += self._on_loaded
+        except Exception:
+            # Some hosts don’t expose Loaded; if so, we’ll just enable immediately
+            self._ui_ready = True
+
+        self._ok = False
+
+    def _on_loaded(self, sender, args):
+        # Now it’s safe to normalize once
+        try:
+            self._autofix_enabled_rows()
+        except Exception:
+            pass
+
+        self._ui_ready = True
 
 
-# -------- LIST LEVEL CONFIG (this is the part you tweak) --------
-LIST_LEVELS = [
-    # Level 1: A. B. C. AA. AB. ...
-    ListLevel(
-        PatternType.UPPER,
-        list_type=ListType.UpperCaseLetters,
-        indent=1,
-        blank_before=False,
-        blank_between=False,   # NO vertical tabs between A. items
-        blank_after=False
-    ),
+    def _on_cancel(self, sender, args):
+        self._ok = False
+        self.Close()
 
-    # Level 2: 1. 2. 3. ...
-    ListLevel(
-        PatternType.NUMERIC,
-        list_type=ListType.ArabicNumbers,
-        indent=2,
-        blank_before=False,
-        blank_between=False,   # NO vertical tabs between 1. items
-        blank_after=False
-    ),
+    def _on_run(self, sender, args):
+        try:
+            # Commit any pending edits in the grid (combobox/checkbox/textbox)
+            self.GridLevels.CommitEdit()
+            self.GridLevels.CommitEdit()
+        except Exception:
+            pass
 
-    # Level 3: 1.A. 1.a. 2.AA. ...
-    ListLevel(
-        PatternType.LOWER,
-        list_type=ListType.LowerCaseLetters,
-        indent=3,
-        blank_before=False,
-        blank_between=False,   # NO vertical tabs between 1.A. items
-        blank_after=False
-    ),
-]
+        try:
+            self._autofix_enabled_rows()
+        except Exception:
+            pass
+
+        self._ok = True
+        self.Close()
+
+    @property
+    def ok(self):
+        return self._ok
+
+    @property
+    def enable_section_headers(self):
+        try:
+            return bool(self.ChkSectionHeaders.IsChecked)
+        except Exception:
+            return False
+
+    @property
+    def operate_existing(self):
+        try:
+            return bool(self.ChkOperateExisting.IsChecked)
+        except Exception:
+            return False
+
+    def _autofix_enabled_rows(self):
+        """
+        - Disabled rows are cleared (blank display)
+        - Enabled rows get defaults if empty
+        - Enabled indent values are enforced to be strictly increasing (>= prev + 1)
+        - If you bump level 1 to 1, level 2+ auto becomes 2,3,4...
+        """
+        # 1) Clear disabled / ensure defaults for enabled
+        for row in self.Levels:
+            if not row.Enabled:
+                row.clear_row()
+                continue
+
+            # if enabled but values missing, restore defaults
+            if not row.PatternKey or not row.RevitListKey:
+                row.apply_defaults_for_level()
+
+            if not row.TokenKey:
+                row.TokenKey = TokenType.DOT
+
+            if row.Indent in (None, ""):
+                row.Indent = str(row.LevelIndex - 1)
+
+        # 2) Enforce indents increasing across enabled rows
+        enabled = [r for r in self.Levels if r.Enabled]
+        enabled.sort(key=lambda x: x.LevelIndex)
+
+        prev = None
+        for r in enabled:
+            try:
+                cur = int(r.Indent)
+            except Exception:
+                cur = r.LevelIndex - 1
+
+            if cur < 0:
+                cur = 0
+
+            if prev is not None and cur <= prev:
+                cur = prev + 1
+
+            r.Indent = str(cur)
+            prev = cur
+
+    # These two are called by XAML event hooks (I’m giving you the handlers now)
+    def EnabledChanged(self, sender, args):
+        if not self._ui_ready:
+            return
+
+        row = getattr(sender, "DataContext", None)
+        if not row:
+            return
+
+        if row.Enabled:
+            row.apply_defaults_for_level()
+        else:
+            row.clear_row()
+
+        self._autofix_enabled_rows()
+        # NO GridLevels.Items.Refresh() — do not force rebuilds
+
+    def IndentLostFocus(self, sender, args):
+        if not self._ui_ready:
+            return
+
+        self._autofix_enabled_rows()
+        # NO GridLevels.Items.Refresh()
+
+def add_spacing_soft_returns_only(textnote, between_only=True):
+    """
+    Adds visual spacing to an *already formatted* Revit list by appending '\v'
+    to list paragraphs, then reapplying the existing list formatting.
+
+    between_only=True:
+        only add spacing between consecutive list items (recommended).
+    between_only=False:
+        add spacing after every list paragraph.
+    """
+    if not textnote:
+        return
+
+    src = normalize_newlines(textnote.Text or u"")
+    lines = src.split(u"\n")
+    if not lines:
+        return
+
+    # Snapshot formatted text BEFORE edits
+    fmt_before = textnote.GetFormattedText()
+
+    # Paragraph starts for current text
+    starts_before = map_line_starts(lines)
+
+    # Capture per-paragraph list metadata from the EXISTING formatted note
+    # We only need list type + indent level.
+    para_meta = []
+    for i in range(len(lines)):
+        ln = lines[i]
+        ln_len = len(ln)
+        if ln_len <= 0:
+            para_meta.append({"is_list": False, "list_type": None, "indent": None})
+            continue
+
+        tr = TextRange(starts_before[i], ln_len)
+
+        # These API calls exist on FormattedText in the Revit API.
+        # If something unexpected happens, we fall back to non-list.
+        try:
+            lt = fmt_before.GetListType(tr)
+            ind = fmt_before.GetIndentLevel(tr)
+        except Exception:
+            lt = None
+            ind = None
+
+        is_list = (lt is not None)
+        para_meta.append({"is_list": is_list, "list_type": lt, "indent": ind})
+
+    # Build new lines with \v inserted
+    out_lines = []
+    for i in range(len(lines)):
+        ln = lines[i]
+        meta = para_meta[i]
+
+        if meta["is_list"] and ln.strip() != u"":
+            add_vt = True
+            if between_only:
+                # Only if next paragraph is also a list item
+                if i >= len(lines) - 1:
+                    add_vt = False
+                else:
+                    add_vt = bool(para_meta[i + 1]["is_list"])
+
+            if add_vt and not ln.endswith(u"\v"):
+                ln = ln + u"\v"
+
+        out_lines.append(ln)
+
+    # Write updated text
+    textnote.Text = denormalize_to_revit(u"\n".join(out_lines))
+
+    # Reapply list formatting to paragraphs that were lists before
+    fmt_after = textnote.GetFormattedText()
+    starts_after = map_line_starts(out_lines)
+
+    for i in range(len(out_lines)):
+        meta = para_meta[i]
+        if not meta["is_list"]:
+            continue
+
+        ln_len = len(out_lines[i])
+        if ln_len <= 0:
+            continue
+
+        tr = TextRange(starts_after[i], ln_len)
+
+        try:
+            fmt_after.SetListType(tr, meta["list_type"])
+            # indent can be None on some weird cases
+            if meta["indent"] is not None:
+                fmt_after.SetIndentLevel(tr, meta["indent"])
+        except Exception as ex:
+            LOGGER.warning("Reapply list formatting failed at paragraph {}: {}".format(i, ex))
+
+    textnote.SetFormattedText(fmt_after)
 
 
 def pick_single_textnote():
@@ -135,12 +547,6 @@ def denormalize_to_revit(text_with_lf):
 
 
 def clean_internal_tabs(line_text):
-    """
-    Clean tabs INSIDE a list line (not headers).
-    - Remove any tab characters.
-    - Collapse runs of spaces/tabs to a single space.
-    - Remove internal '\v' but preserve a trailing '\v' if present.
-    """
     if not line_text:
         return line_text
 
@@ -150,9 +556,7 @@ def clean_internal_tabs(line_text):
     else:
         core = line_text
 
-    # Replace any run of tabs/spaces with a single space
     core = re.sub(u'[ \t]+', u' ', core)
-    # Remove internal vertical tabs (should not exist here)
     core = core.replace(u"\v", u"")
 
     if has_trailing_vt:
@@ -160,8 +564,88 @@ def clean_internal_tabs(line_text):
     return core
 
 
-def split_into_sections(lines):
-    """Return list of { 'header': str or None, 'body': [str,...] } split at numeric section headers."""
+def is_indented_continuation(raw_line):
+    if not raw_line:
+        return False
+    return raw_line.startswith(u"\t") or raw_line.startswith(u" ") or raw_line.startswith(u"\u00A0")
+
+
+def strip_leading_whitespace(line_text):
+    return re.sub(u'^[ \t\u00A0]+', u'', line_text)
+
+
+def build_list_levels_from_rows(rows):
+    # Keep only enabled rows, in level order (1..5)
+    enabled_rows = [r for r in rows if r.Enabled]
+    enabled_rows.sort(key=lambda x: x.LevelIndex)
+
+    if not enabled_rows:
+        return []
+
+    # Parse user indents and enforce: indent[i] >= indent[i-1] + 1
+    parsed = []
+    for r in enabled_rows:
+        try:
+            val = int(r.Indent)
+        except Exception:
+            val = r.LevelIndex - 1
+
+        if val < 0:
+            val = 0
+
+        parsed.append(val)
+
+    enforced = []
+    for i in range(len(parsed)):
+        if i == 0:
+            enforced.append(parsed[i])
+        else:
+            prev = enforced[i - 1]
+            cur = parsed[i]
+
+            # Preserve gaps if user chose a larger indent,
+            # but enforce at least +1 deeper than previous.
+            if cur <= prev:
+                cur = prev + 1
+
+            enforced.append(cur)
+
+    # Build ListLevel objects using enforced indents
+    levels = []
+    for i in range(len(enabled_rows)):
+        row = enabled_rows[i]
+
+        list_enum = REVIT_LIST_KEY_TO_ENUM.get(row.RevitListKey, None)
+        if list_enum is None:
+            list_enum = ListType.ArabicNumbers
+
+        # Optional: log if we changed the indent
+        if enforced[i] != parsed[i]:
+            LOGGER.debug("Indent auto-fix: Level {} from {} to {}".format(
+                row.LevelIndex, parsed[i], enforced[i]
+            ))
+
+        levels.append(
+            ListLevel(
+                row.PatternKey,
+                list_type=list_enum,
+                indent=enforced[i],
+                blank_before=bool(row.BlankBefore),
+                blank_between=bool(row.BlankBetween),
+                blank_after=bool(row.BlankAfter),
+                token_type=row.TokenKey
+            )
+        )
+
+
+    return levels
+
+
+
+def split_into_sections(lines, enable_section_headers):
+    if not enable_section_headers:
+        return [{"header": None, "body": list(lines)}]
+
     sections = []
     current_header = None
     current_body = []
@@ -187,44 +671,29 @@ def split_into_sections(lines):
     return sections
 
 
-def classify_and_strip(line_text):
-    """
-    Try each configured ListLevel.
-    Returns (level_object_or_None, indent_or_None, stripped_text).
-    Tab cleaning ONLY happens for list content.
-    """
-    for level in LIST_LEVELS:
+def classify_and_strip(line_text, list_levels):
+    for level in list_levels:
         match_obj = level.match(line_text)
         if match_obj:
             stripped = line_text[match_obj.end():]
             stripped = clean_internal_tabs(stripped)
-            return level, level.indent, stripped
-    return None, None, line_text
+            return level, stripped
+    return None, line_text
 
 
-def rebuild_text_and_meta(sections):
-    """
-    Build final paragraphs and per-paragraph metadata.
-    - Section headers become plain paragraphs (level None) and reset lists.
-    - True blank lines from source are removed (prevents numbered empties).
-    - Insert a real blank line before a numeric section header if the previous
-      paragraph was a list paragraph.
-    Returns (final_lines, meta_per_line) where meta_per_line[i]["level"] is
-    either a ListLevel or None.
-    """
+def rebuild_text_and_meta(sections, list_levels, enable_section_headers):
     final_lines = []
     meta_per_line = []
-    last_level = None  # level of the last appended paragraph (None for headers/plain text)
+    last_level = None
 
     for section in sections:
         header = section["header"]
         body_lines = section["body"]
 
-        # ---- SECTION HEADER ----
+        # header paragraph resets list run
         if header is not None:
             header_text = header.strip()
             if header_text != u"":
-                # If last appended paragraph was a list, insert a blank line
                 if last_level is not None and len(final_lines) > 0:
                     final_lines.append(u"")
                     meta_per_line.append({"level": None})
@@ -234,16 +703,23 @@ def rebuild_text_and_meta(sections):
                 meta_per_line.append({"level": None})
                 last_level = None
 
-        # ---- SECTION BODY ----
         for raw_line in body_lines:
             if raw_line.strip() == u"":
-                # drop blanks entirely from the source
                 continue
 
-            level, indent, content = classify_and_strip(raw_line)
+            # merge hard-wrapped continuations into previous list item
+            if last_level is not None and is_indented_continuation(raw_line):
+                peek_level, _ = classify_and_strip(raw_line, list_levels)
+                if peek_level is None and (not enable_section_headers or not RE_SECTION_HEADER.match(raw_line)):
+                    cont = strip_leading_whitespace(raw_line)
+                    cont = clean_internal_tabs(cont)
+                    if cont.strip() != u"":
+                        final_lines[-1] = final_lines[-1] + u"\v" + cont
+                    continue
 
-            if content.strip() == u"" and level is not None:
-                # avoid empty list items
+            level, content = classify_and_strip(raw_line, list_levels)
+
+            if level is not None and content.strip() == u"":
                 continue
 
             final_lines.append(content)
@@ -254,30 +730,21 @@ def rebuild_text_and_meta(sections):
 
 
 def add_vertical_tabs_at_list_runs(final_lines, meta_per_line):
-    """
-    Optionally append '\v' to list paragraphs according to level.blank_between.
-    - If blank_between is True and the next paragraph is also a list, we append '\v'.
-    - Tabs are cleaned from list lines either way.
-    Returns a new list of lines (same length as final_lines).
-    """
     augmented = []
     total = len(final_lines)
 
-    for index in range(total):
-        line = final_lines[index]
-        level = meta_per_line[index]["level"]
+    for i in range(total):
+        line = final_lines[i]
+        level = meta_per_line[i]["level"]
 
         if level is not None:
-            # determine whether next is a list paragraph
-            if index < total - 1:
-                next_level = meta_per_line[index + 1]["level"]
+            if i < total - 1:
+                next_level = meta_per_line[i + 1]["level"]
             else:
                 next_level = None
 
-            # Always clean tabs for list lines
             line = clean_internal_tabs(line)
 
-            # Only add '\v' if this level's config says so AND the next is also list
             if level.blank_between and next_level is not None:
                 if not line.endswith(u"\v"):
                     line = line + u"\v"
@@ -288,42 +755,82 @@ def add_vertical_tabs_at_list_runs(final_lines, meta_per_line):
 
 
 def map_line_starts(lines_for_write):
-    """Return the starting character index of each paragraph after joining with '\r'."""
     starts = []
-    running_index = 0
-    for text_line in lines_for_write:
-        starts.append(running_index)
-        # each paragraph ends with '\r'
-        running_index += len(text_line) + 1
+    running = 0
+    for ln in lines_for_write:
+        starts.append(running)
+        running += len(ln) + 1  # +1 for '\r'
     return starts
 
 
 def apply_formatting_to_textnote(textnote, lines_for_write, meta_per_line):
-    """Write content and apply list formatting per paragraph."""
+    # Write full text
     text_with_lf = u"\n".join(lines_for_write)
-    text_with_cr = denormalize_to_revit(text_with_lf)
-    textnote.Text = text_with_cr
+    textnote.Text = denormalize_to_revit(text_with_lf)
 
     starts = map_line_starts(lines_for_write)
     fmt = textnote.GetFormattedText()
 
-    count = len(lines_for_write)
-    for index in range(count):
+    # Collect list paragraphs
+    items = []
+    for index in range(len(lines_for_write)):
         level = meta_per_line[index]["level"]
         if level is None:
             continue
 
         start_char = starts[index]
-        length = len(lines_for_write[index]) + 1  # include trailing '\r'
-        text_range = TextRange(start_char, length)
+        length = len(lines_for_write[index])
+        if length <= 0:
+            continue
 
+        items.append({
+            "index": index,
+            "level": level,
+            "start": start_char,
+            "length": length,
+            "indent": level.indent,
+        })
+
+    if not items:
+        textnote.SetFormattedText(fmt)
+        return
+
+    # Determine top-level indent (minimum indent among list items)
+    min_indent = None
+    for it in items:
+        if min_indent is None or it["indent"] < min_indent:
+            min_indent = it["indent"]
+
+    # Pass 1: apply indents (order doesn't matter much)
+    for it in items:
+        tr = TextRange(it["start"], it["length"])
         try:
-            fmt.SetListType(text_range, level.list_type)
-            fmt.SetIndentLevel(text_range, level.indent)
+            fmt.SetIndentLevel(tr, it["indent"])
         except Exception as ex:
-            LOGGER.warning("List format failed at paragraph {}: {}".format(index, ex))
+            LOGGER.warning("SetIndentLevel failed at paragraph {}: {}".format(it["index"], ex))
+
+    # Pass 2: apply list types deepest -> shallowest
+    # (This avoids deeper levels overriding earlier top-level list templates)
+    items_by_indent = sorted(items, key=lambda x: x["indent"], reverse=True)
+    for it in items_by_indent:
+        tr = TextRange(it["start"], it["length"])
+        try:
+            fmt.SetListType(tr, it["level"].list_type)
+        except Exception as ex:
+            LOGGER.warning("SetListType failed at paragraph {}: {}".format(it["index"], ex))
+
+    # Pass 3: reapply top-level list type (min indent) to ensure it sticks
+    for it in items:
+        if it["indent"] != min_indent:
+            continue
+        tr = TextRange(it["start"], it["length"])
+        try:
+            fmt.SetListType(tr, it["level"].list_type)
+        except Exception as ex:
+            LOGGER.warning("Top-level SetListType reapply failed at paragraph {}: {}".format(it["index"], ex))
 
     textnote.SetFormattedText(fmt)
+
 
 
 def main():
@@ -332,25 +839,45 @@ def main():
         forms.alert("Please select a single Text Note.", exitscript=True)
         return
 
+    xaml_path = script.get_bundle_file("ListConfigWindow.xaml")
+    dlg = ListConfigWindow(xaml_path)
+    dlg.ShowDialog()
+
+    if not dlg.ok:
+        return
+
+    enable_section_headers = dlg.enable_section_headers
+    list_levels = build_list_levels_from_rows(dlg.Levels)
+
+    if not list_levels:
+        forms.alert("No enabled rows. Nothing to do.", ok=True)
+        return
+
     source_text = normalize_newlines(textnote.Text or u"")
     source_lines = source_text.split(u"\n")
 
-    # 1) Split by numeric section headers (each section resets lists)
-    sections = split_into_sections(source_lines)
-
-    # 2) Build paragraphs and metadata (indents and list levels); no '\v' yet
-    final_lines, meta_per_line = rebuild_text_and_meta(sections)
-
-    # 3) Add '\v' between list items only if the level's blank_between is True
+    sections = split_into_sections(source_lines, enable_section_headers)
+    final_lines, meta_per_line = rebuild_text_and_meta(sections, list_levels, enable_section_headers)
     augmented_lines = add_vertical_tabs_at_list_runs(final_lines, meta_per_line)
 
-    # 4) Write and format against the augmented lines
-    with Transaction(revit.doc, "Format TextNote Lists (configurable)") as tx:
+    operate_existing = dlg.operate_existing
+
+    with Transaction(revit.doc, "Format TextNote Lists (UI)") as tx:
         tx.Start()
-        apply_formatting_to_textnote(textnote, augmented_lines, meta_per_line)
+
+        if operate_existing:
+            # spacing only, no rebuild
+            add_spacing_soft_returns_only(textnote)
+        else:
+            # your existing rebuild pipeline
+            sections = split_into_sections(source_lines, enable_section_headers)
+            final_lines, meta_per_line = rebuild_text_and_meta(sections, list_levels, enable_section_headers)
+            augmented_lines = add_vertical_tabs_at_list_runs(final_lines, meta_per_line)
+            apply_formatting_to_textnote(textnote, augmented_lines, meta_per_line)
+
         tx.Commit()
 
-    forms.alert("Done. Lists formatted; indicators removed; list tabs cleaned; section breaks spaced.", ok=True)
+    forms.alert("Done.", ok=True)
 
 
 if __name__ == "__main__":
