@@ -1661,12 +1661,15 @@ class CircuitBranch(object):
 
         while sets <= max_sets and not solution_found:
             start_index = 0
+            min_index = None
             if sets > base_sets:
+                min_index = self._wire_index("1/0")
                 for i, (w, _) in enumerate(wire_set):
                     if w == "1/0":
                         start_index = i
                         break
             elif base_wire:
+                min_index = self._wire_index(base_wire)
                 for i, (w, _) in enumerate(wire_set):
                     if w == base_wire:
                         start_index = i
@@ -1678,6 +1681,9 @@ class CircuitBranch(object):
             for wire, ampacity in wire_set[start_index:]:
                 if wire not in ALLOWED_WIRE_SIZES:
                     continue
+                if min_index is not None and min_index != -1:
+                    if self._wire_index(wire) < min_index:
+                        continue
 
                 over_soft_limit = False
                 if max_feeder_size and self._is_wire_larger_than_limit(wire, max_feeder_size):
@@ -2221,6 +2227,11 @@ class CircuitBranch(object):
 
         if not actual_hot_cmil or not base_hot_cmil:
             return
+
+        if base_hot_size:
+            base_vd = self._safe_voltage_drop_calc(base_hot_size, base_sets)
+            if base_vd is not None and base_vd <= self.max_voltage_drop:
+                return
 
         actual_total_hot = actual_hot_cmil * hot_qty * (self.cable.sets or 1)
         base_total_hot = base_hot_cmil * hot_qty * base_sets
