@@ -784,6 +784,11 @@ class CircuitBranch(object):
             setattr(self, attr, norm)
 
         _check_size("hot", "_wire_hot_size_override", warn_user=self._auto_calculate_override)
+        if self._user_clear_hot:
+            self._wire_neutral_size_override = None
+            self._wire_ground_size_override = "-"
+            self._wire_ig_size_override = "-"
+            return
         neutral_expected = neutral_expected and not self._user_clear_hot
         _check_size(
             "neutral",
@@ -794,11 +799,11 @@ class CircuitBranch(object):
         _check_size("ground", "_wire_ground_size_override", warn_user=self._auto_calculate_override)
         ig_expected = self._include_isolated_ground and not self._user_clear_hot and not self._user_clear_ground
         if not ig_expected:
-            self._wire_ig_size_override = None
+            self._wire_ig_size_override = "-" if self._user_clear_ground else None
         elif self._wire_ig_size_override is not None:
             raw = self._wire_ig_size_override
             if self._is_clear_token(raw):
-                self._wire_ig_size_override = None
+                self._wire_ig_size_override = "-" if self._user_clear_ground else None
             else:
                 norm = self._normalize_wire_size(raw)
                 if norm not in CONDUCTOR_AREA_TABLE:
@@ -1247,10 +1252,14 @@ class CircuitBranch(object):
 
     @property
     def ground_wire_size(self):
+        if self._user_clear_hot or self._user_clear_ground:
+            return "-"
         return self._format_wire_size(self.cable.ground_size)
 
     @property
     def isolated_ground_wire_size(self):
+        if self._user_clear_hot or self._user_clear_ground:
+            return "-"
         if self.isolated_ground_wire_quantity == 0:
             return ""
         return self._format_wire_size(self.cable.ig_size)
