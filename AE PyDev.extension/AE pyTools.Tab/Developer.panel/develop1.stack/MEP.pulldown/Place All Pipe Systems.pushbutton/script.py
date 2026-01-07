@@ -35,7 +35,7 @@ if not active_level:
     forms.alert("No Level found in the project.", exitscript=True)
 
 # Retrieve all piping system instances using FilteredElementCollector.
-all_piping_system_instances = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipingSystem).ToElements()
+all_piping_system_instances = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipingSystem).WhereElementIsElementType().ToElements()
 if not all_piping_system_instances:
     forms.alert("No piping systems found in the project.", exitscript=True)
 

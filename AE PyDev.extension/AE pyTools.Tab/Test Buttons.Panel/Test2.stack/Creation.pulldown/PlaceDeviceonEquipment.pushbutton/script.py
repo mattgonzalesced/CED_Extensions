@@ -460,6 +460,199 @@ class PlacementInfo(object):
 # ___________________________________________________________________________
 # HELPER FUNCTIONS
 # ___________________________________________________________________________
+def get_selected_generic_annotation_instance():
+    """Return the single selected Generic Annotation FamilyInstance, or None."""
+    sel = revit.get_selection()
+    if not sel or len(sel) != 1:
+        return None
+
+    try:
+        elem = doc.GetElement(sel[0].Id)
+    except Exception:
+        return None
+
+    if not isinstance(elem, DB.FamilyInstance):
+        return None
+
+    # Must be Generic Annotation + view specific
+    try:
+        if elem.Category and elem.Category.Id.IntegerValue != int(DB.BuiltInCategory.OST_GenericAnnotation):
+            return None
+    except Exception:
+        return None
+
+    if not elem.ViewSpecific:
+        return None
+
+    if not elem.Symbol:
+        return None
+
+    return elem
+
+
+def pick_generic_annotation_type(title_text):
+    """Pick a Generic Annotation FamilySymbol (type) from the project."""
+    symbols = (DB.FilteredElementCollector(doc)
+               .OfCategory(DB.BuiltInCategory.OST_GenericAnnotation)
+               .OfClass(DB.FamilySymbol)
+               .ToElements())
+
+    if not symbols or len(symbols) == 0:
+        forms.alert("No Generic Annotation types found in the project.", exitscript=True)
+
+    labels = []
+    by_label = {}
+    for sym in symbols:
+        fam_name = query.get_name(sym.Family)
+        sym_name = query.get_name(sym)
+        label = "{} | {}".format(fam_name, sym_name)
+        labels.append(label)
+        by_label[label] = sym
+
+    labels.sort()
+
+    picked = forms.SelectFromList.show(
+        labels,
+        title=title_text,
+        multiselect=False
+    )
+    if not picked:
+        script.exit()
+
+    return by_label[picked]
+
+
+def collect_generic_annotation_instances_across_all_views(source_symbol_id):
+    """
+    Collect ALL view-specific Generic Annotation instances (FamilyInstance)
+    whose Symbol.Id matches source_symbol_id, across ALL views.
+    """
+    instances = (DB.FilteredElementCollector(doc)
+                 .OfCategory(DB.BuiltInCategory.OST_GenericAnnotation)
+                 .WhereElementIsNotElementType()
+                 .ToElements())
+
+    results = []
+    for inst in instances:
+        try:
+            if not isinstance(inst, DB.FamilyInstance):
+                continue
+            if not inst.ViewSpecific:
+                continue
+            if not inst.Symbol:
+                continue
+            if inst.Symbol.Id != source_symbol_id:
+                continue
+            if inst.OwnerViewId == DB.ElementId.InvalidElementId:
+                continue
+            results.append(inst)
+        except Exception:
+            continue
+
+    return results
+
+
+def pick_source_and_target_symbols_with_selection_behavior():
+    """
+    Behavior:
+    - If exactly 1 Generic Annotation instance is selected:
+        Use its Symbol as SOURCE; prompt for TARGET only.
+    - Otherwise:
+        Prompt for SOURCE and TARGET.
+    Returns:
+        (source_symbol, target_symbol)
+    """
+    selected_inst = get_selected_generic_annotation_instance()
+
+    if selected_inst:
+        source_symbol = selected_inst.Symbol
+        logger.info("Using selected element as SOURCE: {} | {}".format(
+            query.get_name(source_symbol.Family), query.get_name(source_symbol)
+        ))
+
+        target_symbol = pick_generic_annotation_type("Pick TARGET Generic Annotation Type (place these)")
+        if target_symbol.Id == source_symbol.Id:
+            forms.alert("Target type matches the selected source type. Nothing to do.", exitscript=True)
+
+        return source_symbol, target_symbol
+
+    # No valid single selection => pick both
+    source_symbol = pick_generic_annotation_type("Pick SOURCE Generic Annotation Type (replace these)")
+    target_symbol = pick_generic_annotation_type("Pick TARGET Generic Annotation Type (place these)")
+
+    if target_symbol.Id == source_symbol.Id:
+        forms.alert("Source and Target are the same type. Nothing to do.", exitscript=True)
+
+    return source_symbol, target_symbol
+
+
+def replace_generic_annotations_across_all_views(parameter_mapping, delete_source=True):
+    """
+    Replaces ALL instances of a source Generic Annotation TYPE across ALL views
+    with a target Generic Annotation TYPE, in their corresponding views,
+    copying parameters using existing ChildElement.copy_parameters().
+
+    Source/target picking behavior:
+    - If exactly 1 Generic Annotation instance is selected: SOURCE = that instance's type, pick TARGET
+    - Else: pick SOURCE and TARGET
+    """
+    source_symbol, target_symbol = pick_source_and_target_symbols_with_selection_behavior()
+
+    source_instances = collect_generic_annotation_instances_across_all_views(source_symbol.Id)
+
+    if not source_instances:
+        forms.alert("No instances of the selected SOURCE type were found in any view.", exitscript=True)
+
+    logger.info("Found {} source annotation(s) across all views.".format(len(source_instances)))
+
+    placed_count = 0
+    deleted_count = 0
+    failed = []
+
+    family_name = query.get_name(target_symbol.Family)
+    symbol_name = query.get_name(target_symbol)
+
+    with DB.Transaction(doc, "Replace Generic Annotations Across All Views") as t:
+        t.Start()
+
+        for src in source_instances:
+            try:
+                parent = ParentElement.from_family_instance(src)
+                if not parent:
+                    failed.append(src.Id)
+                    continue
+
+                child = ChildElement.from_parent_and_symbol(
+                    parent,
+                    symbol=target_symbol,
+                    family_name=family_name,
+                    symbol_name=symbol_name,
+                    element_type="FamilyInstance"
+                )
+
+                child.place()
+                child.copy_parameters(parameter_mapping)
+
+                placed_count += 1
+
+                if delete_source:
+                    doc.Delete(src.Id)
+                    deleted_count += 1
+
+            except Exception as ex:
+                logger.error("Failed replacing annotation {}: {}".format(src.Id.IntegerValue, ex))
+                failed.append(src.Id)
+
+        t.Commit()
+
+    logger.info("Replacement complete.")
+    logger.info("Placed: {} | Deleted: {} | Failed: {}".format(placed_count, deleted_count, len(failed)))
+
+    if failed:
+        logger.warning("Failed ElementIds:")
+        for fid in failed:
+            logger.warning(" - {}".format(fid.IntegerValue))
+
 
 def pick_reference_elements():
     """Prompt user to select reference elements if none are selected."""
@@ -613,6 +806,16 @@ def inspect_parent_parameters():
             value = parent.get_parameter_value(name)
             logger.info("[Type] {} = {}".format(name, value))
 
+def main_replace_across_all_views():
+    parameter_mapping = {
+        "CED-G-NOTE #": "Keynote Value",
+        "CED-G-NOTE TEXT": "Keynote Description",
+        "Note Number": "Symbol Label_CEDT",
+        "CED-G-SHEET #/DISCIPLINE": "Keynote Category",
+        "FLA_CED": "FLA Input_CED",
+    }
+
+    replace_generic_annotations_across_all_views(parameter_mapping, delete_source=True)
 
 
 def main():
@@ -692,4 +895,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main_replace_across_all_views()
