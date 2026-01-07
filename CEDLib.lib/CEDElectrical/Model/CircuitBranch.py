@@ -299,6 +299,9 @@ class CircuitBranch(object):
         # prep pipeline
         self._load_core_inputs()
         self._load_overrides()
+        self._wire_info = self._get_wire_info_for_rating()
+        self._base_cable_defaults = CableSet.from_defaults(self._wire_info)
+        self._base_conduit_defaults = ConduitRun.from_defaults(self._wire_info)
         self._validate_overrides()
         self._setup_structural_quantities()
 
@@ -522,9 +525,9 @@ class CircuitBranch(object):
             logger.debug("_load_core_inputs flags failed for {}: {}".format(self.name, e))
 
         # wire info defaults
-        self._wire_info = self._get_wire_info_for_rating()
-        self._base_cable_defaults = CableSet.from_defaults(self._wire_info)
-        self._base_conduit_defaults = ConduitRun.from_defaults(self._wire_info)
+        self._wire_info = None
+        self._base_cable_defaults = None
+        self._base_conduit_defaults = None
 
     def _get_wire_info_for_rating(self):
         if not self.is_power_circuit:
@@ -566,10 +569,13 @@ class CircuitBranch(object):
             except Exception:
                 material_preference = None
 
+        if material_preference not in ("CU", "AL"):
+            material_preference = None
+
         chosen = self._select_material_defaults(material_preference, self._wire_info_by_material)
-        if chosen is None and material_preference and material_preference != "CU":
+        if chosen is None and material_preference == "AL":
             self.log_warning(
-                "Breaker {} has no defaults for {}; using copper baseline instead.".format(
+                "Breaker {} has no defaults for {}; using copper defaults instead.".format(
                     rating_key, material_preference
                 )
             )
@@ -580,19 +586,9 @@ class CircuitBranch(object):
     def _select_material_defaults(self, preferred_material, material_map):
         if not isinstance(material_map, dict):
             return material_map
-        preferred_key = (preferred_material or "").upper() if preferred_material else None
-
-        for key in (preferred_key, "CU", "AL"):
-            if not key:
-                continue
-            selected = material_map.get(key)
-            if selected:
-                return selected
-        # return first non-None entry
-        for val in material_map.values():
-            if val:
-                return val
-        return None
+        if preferred_material:
+            return material_map.get(preferred_material)
+        return material_map.get("CU")
 
     def _load_overrides(self):
         try:
