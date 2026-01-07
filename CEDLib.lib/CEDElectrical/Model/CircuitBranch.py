@@ -1665,7 +1665,12 @@ class CircuitBranch(object):
 
         while sets <= max_sets and not solution_found:
             start_index = 0
-            if base_wire:
+            if sets > base_sets:
+                for i, (w, _) in enumerate(wire_set):
+                    if w == "1/0":
+                        start_index = i
+                        break
+            elif base_wire:
                 for i, (w, _) in enumerate(wire_set):
                     if w == base_wire:
                         start_index = i

@@ -32,6 +32,7 @@ BREAKER_FRAME_SWITCH_TABLE = {
     2000: {'frame': 2000, 'switch': 2000},
     2500: {'frame': 2500, 'switch': 2500},
     3000: {'frame': 3000, 'switch': 3000},
+    3500: {'frame': 3500, 'switch': 3500},
     4000: {'frame': 4000, 'switch': 4000},
     5000: {'frame': 5000, 'switch': 5000},
     6000: {'frame': 6000, 'switch': 6000}

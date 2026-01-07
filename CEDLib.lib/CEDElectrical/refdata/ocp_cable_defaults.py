@@ -2,6 +2,18 @@
 
 # Auto-generated minimal OCP cable defaults (CU baseline)
 
+from CEDElectrical.refdata.ampacity_table import WIRE_AMPACITY_TABLE
+from CEDElectrical.refdata.egc_table import EGC_TABLE
+from CEDElectrical.refdata.service_ground_table import SERVICE_GROUND_TABLE
+
+ALLOWED_WIRE_SIZES = [
+    "12", "10", "8", "6", "4", "3", "2", "1",
+    "1/0", "2/0", "3/0", "4/0",
+    "250", "300", "350", "400",
+    "500", "600", "700", "750", "800", "1000",
+    "1250", "1500", "1750", "2000",
+]
+
 OCP_CABLE_DEFAULTS = {15: {'AL': None,
       'CU': {'conduit_type': 'EMT',
              'max_lug_qty': 1,
@@ -409,3 +421,103 @@ OCP_CABLE_DEFAULTS = {15: {'AL': None,
                'wire_material': 'CU',
                'wire_service_ground_size': '2/0',
                'wire_temperature_rating': '75 C'}}}
+
+
+def _wire_index(wire):
+    try:
+        return ALLOWED_WIRE_SIZES.index(wire)
+    except ValueError:
+        return -1
+
+
+def _is_wire_larger_than_limit(wire, limit_wire):
+    idx = _wire_index(wire)
+    limit_idx = _wire_index(limit_wire)
+    if idx == -1 or limit_idx == -1:
+        return False
+    return idx > limit_idx
+
+
+def _lookup_egc_size(amps, material):
+    table = EGC_TABLE.get(material)
+    if not table:
+        return None
+    for threshold, size in table:
+        if amps <= threshold:
+            return size
+    return table[-1][1]
+
+
+def _lookup_service_ground_size(hot_size, material):
+    table = SERVICE_GROUND_TABLE.get(material)
+    if not table:
+        return None
+
+    normalized = str(hot_size).strip()
+    if normalized.endswith('"'):
+        normalized = normalized[:-1]
+    normalized = normalized.upper().replace(" ", "")
+
+    for conductor, ground in table:
+        if conductor == normalized:
+            return ground
+    return table[-1][1]
+
+
+def _pick_al_hot_size(rating, temp_c, max_sets, max_lug_size):
+    wire_set = WIRE_AMPACITY_TABLE.get("AL", {}).get(temp_c, [])
+    if not wire_set:
+        return None, None
+
+    for sets in range(1, max_sets + 1):
+        for wire, ampacity in wire_set:
+            if wire not in ALLOWED_WIRE_SIZES:
+                continue
+            if max_lug_size and _is_wire_larger_than_limit(wire, max_lug_size):
+                continue
+            if ampacity * sets >= rating:
+                return wire, sets
+
+    fallback_wire = wire_set[-1][0]
+    return fallback_wire, max_sets
+
+
+for rating, defaults in OCP_CABLE_DEFAULTS.items():
+    if defaults.get("AL") is not None:
+        continue
+    cu_defaults = defaults.get("CU")
+    if not cu_defaults:
+        continue
+
+    temp_c = 75
+    temp_str = cu_defaults.get("wire_temperature_rating", "75 C")
+    try:
+        temp_c = int(str(temp_str).replace("C", "").strip())
+    except Exception:
+        temp_c = 75
+
+    max_sets = cu_defaults.get("max_lug_qty", 1) or 1
+    max_lug_size = cu_defaults.get("max_lug_size")
+
+    hot_size, sets = _pick_al_hot_size(rating, temp_c, max_sets, max_lug_size)
+    if not hot_size:
+        hot_size = cu_defaults.get("wire_hot_size")
+        sets = cu_defaults.get("number_of_parallel_sets", 1) or 1
+
+    ground_size = _lookup_egc_size(rating, "AL") or cu_defaults.get("wire_ground_size")
+    service_ground = _lookup_service_ground_size(hot_size, "AL") or cu_defaults.get(
+        "wire_service_ground_size"
+    )
+
+    defaults["AL"] = {
+        "conduit_type": cu_defaults.get("conduit_type"),
+        "max_lug_qty": max_sets,
+        "max_lug_size": max_lug_size,
+        "number_of_parallel_sets": sets,
+        "wire_ground_size": ground_size,
+        "wire_hot_size": hot_size,
+        "wire_insulation": cu_defaults.get("wire_insulation"),
+        "wire_material": "AL",
+        "wire_service_ground_size": service_ground,
+        "wire_temperature_rating": cu_defaults.get("wire_temperature_rating"),
+    }
