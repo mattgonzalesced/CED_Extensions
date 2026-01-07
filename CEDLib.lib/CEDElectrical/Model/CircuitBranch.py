@@ -746,7 +746,8 @@ class CircuitBranch(object):
 
         def _check_size(name, attr, warn_user=True, neutral_expected_flag=False):
             raw = getattr(self, attr)
-            if raw is None:
+            if raw is None or raw == "":
+                setattr(self, attr, None)
                 return
             if self._is_clear_token(raw):
                 if name == "hot":
@@ -802,7 +803,9 @@ class CircuitBranch(object):
             self._wire_ig_size_override = "-" if self._user_clear_ground else None
         elif self._wire_ig_size_override is not None:
             raw = self._wire_ig_size_override
-            if self._is_clear_token(raw):
+            if raw == "":
+                self._wire_ig_size_override = None
+            elif self._is_clear_token(raw):
                 self._wire_ig_size_override = "-" if self._user_clear_ground else None
             else:
                 norm = self._normalize_wire_size(raw)
