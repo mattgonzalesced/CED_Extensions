@@ -798,6 +798,8 @@ class CircuitBranch(object):
             neutral_expected_flag=neutral_expected,
         )
         _check_size("ground", "_wire_ground_size_override", warn_user=self._auto_calculate_override)
+        if self._user_clear_ground:
+            self._wire_ig_size_override = "-"
         ig_expected = self._include_isolated_ground and not self._user_clear_hot and not self._user_clear_ground
         if not ig_expected:
             self._wire_ig_size_override = "-" if self._user_clear_ground else None
@@ -1574,9 +1576,12 @@ class CircuitBranch(object):
             total_amp = ampacity * sets
 
             # Accept override even if it fails VD or breaker, but warn
-            if not self._is_ampacity_acceptable(rating, total_amp, self.circuit_load_current):
+            circuit_load_current = self.circuit_load_current
+            if circuit_load_current is None or circuit_load_current <= 0:
+                circuit_load_current = rating
+            if not self._is_ampacity_acceptable(rating, total_amp, circuit_load_current):
                 self.log_warning(
-                    Alerts.InsufficientAmpacity(sets, "#{}".format(w), total_amp, self.circuit_load_current),
+                    Alerts.InsufficientAmpacity(sets, "#{}".format(w), total_amp, circuit_load_current),
                 )
 
             vd = self._safe_voltage_drop_calc(w, sets)
@@ -1637,6 +1642,8 @@ class CircuitBranch(object):
     def _try_override_isolated_ground_size(self):
         override = self._normalize_wire_size(self._wire_ig_size_override)
         if not override:
+            return False
+        if self._is_clear_token(override):
             return False
 
         if override in ALLOWED_WIRE_SIZES:
