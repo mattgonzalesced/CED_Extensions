@@ -34,6 +34,52 @@ except Exception:  # pragma: no cover - IronPython fallback
     except Exception:
         yaml = None
 
+ELEMENT_LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
+
+
+class _ElementLinkerString(str):
+    pass
+
+
+def _wrap_element_linker_strings(value):
+    if isinstance(value, Mapping):
+        wrapped = {}
+        for key, item in value.items():
+            if key in ELEMENT_LINKER_PARAM_NAMES and isinstance(item, basestring):
+                text = str(item)
+                if "\r" in text:
+                    text = text.replace("\r\n", "\n").replace("\r", "\n")
+                wrapped[key] = _ElementLinkerString(text)
+            else:
+                wrapped[key] = _wrap_element_linker_strings(item)
+        return wrapped
+    if isinstance(value, list):
+        return [_wrap_element_linker_strings(item) for item in value]
+    return value
+
+
+def _build_element_linker_dumper():
+    if not yaml:
+        return None
+    dumper_base = getattr(yaml, "SafeDumper", None)
+    if dumper_base is None:
+        return None
+
+    class ElementLinkerDumper(dumper_base):
+        pass
+
+    def _represent_element_linker_string(dumper, data):
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style='"')
+
+    try:
+        ElementLinkerDumper.add_representer(_ElementLinkerString, _represent_element_linker_string)
+    except Exception:
+        return None
+    return ElementLinkerDumper
+
+
+_ELEMENT_LINKER_DUMPER = _build_element_linker_dumper()
+
 
 def _to_python(value):
     """
@@ -204,7 +250,7 @@ def _yaml_dump_to_path(path, data):
     if not yaml:
         return False
 
-    if hasattr(yaml, "dump_dict"):
+    if hasattr(yaml, "dump_dict") and not getattr(yaml, "safe_dump", None) and not getattr(yaml, "dump", None):
         try:
             yaml.dump_dict(data, path)
             return True
@@ -215,15 +261,18 @@ def _yaml_dump_to_path(path, data):
     if dumper is None:
         return False
 
+    prepared = _wrap_element_linker_strings(data)
     kwargs = {"default_flow_style": False, "sort_keys": False, "allow_unicode": True}
+    if _ELEMENT_LINKER_DUMPER is not None:
+        kwargs["Dumper"] = _ELEMENT_LINKER_DUMPER
     try:
         with io.open(path, "w", encoding="utf-8") as stream:
-            dumper(data, stream, **kwargs)
+            dumper(prepared, stream, **kwargs)
         return True
     except TypeError:
         try:
             with io.open(path, "w", encoding="utf-8") as stream:
-                dumper(data, stream)
+                dumper(prepared, stream)
             return True
         except Exception:
             return False
@@ -315,11 +364,14 @@ def dump_data_to_string(data):
     if yaml:
         dumper = getattr(yaml, "safe_dump", None) or getattr(yaml, "dump", None)
         if dumper:
+            prepared = _wrap_element_linker_strings(payload)
             kwargs = {"default_flow_style": False, "sort_keys": False, "allow_unicode": True}
             try:
-                return dumper(payload, **kwargs)
+                if _ELEMENT_LINKER_DUMPER is not None:
+                    kwargs["Dumper"] = _ELEMENT_LINKER_DUMPER
+                return dumper(prepared, **kwargs)
             except TypeError:
-                return dumper(payload)
+                return dumper(prepared)
     return json.dumps(payload, indent=2)
 
 

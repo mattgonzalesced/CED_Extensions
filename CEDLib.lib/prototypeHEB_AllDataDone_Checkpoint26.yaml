@@ -238,16 +238,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-005-LED-003
-                Set Definition ID: SET-005
-                Location XYZ (ft): 115.711436,80.220373,101.250000
-                Rotation (deg): -0.000000
-                Parent Rotation (deg): 180.000000
-                Parent ElementId: 7245085
-                LevelId: 30
-                ElementId: 8435066
-                FacingOrientation: -0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-005-LED-003\nSet Definition ID: SET-005\nLocation XYZ (ft): 115.711436,80.220373,101.250000\nRotation (deg): -0.000000\nParent Rotation (deg): 180.000000\nParent ElementId: 7245085\nLevelId: 30\nElementId: 8435066\nFacingOrientation: -0.000000,-1.000000,-0.000000\n"
             id: SET-005-LED-003
             tags:
               []
@@ -742,16 +733,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-235-LED-004
-                Set Definition ID: SET-235
-                Location XYZ (ft): 436.384052,137.981844,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 988188
-                LevelId: 30
-                ElementId: 8601051
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-235-LED-004\nSet Definition ID: SET-235\nLocation XYZ (ft): 436.384052,137.981844,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 988188\nLevelId: 30\nElementId: 8601051\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
             id: SET-235-LED-004
             tags:
               []
@@ -775,16 +757,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-235-LED-005
-                Set Definition ID: SET-235
-                Location XYZ (ft): 436.555610,135.630742,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 988188
-                LevelId: 30
-                ElementId: 8601074
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-235-LED-005\nSet Definition ID: SET-235\nLocation XYZ (ft): 436.555610,135.630742,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 988188\nLevelId: 30\nElementId: 8601074\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
             id: SET-235-LED-005
             tags:
               []
@@ -1021,16 +994,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-247-LED-003
-                Set Definition ID: SET-247
-                Location XYZ (ft): 435.693876,100.739200,101.250000
-                Rotation (deg): -40.000000
-                Parent Rotation (deg): 180.000000
-                Parent ElementId: 4558936
-                LevelId: 30
-                ElementId: 8965544
-                FacingOrientation: -0.642788,-0.766044,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-247-LED-003\nSet Definition ID: SET-247\nLocation XYZ (ft): 435.693876,100.739200,101.250000\nRotation (deg): -40.000000\nParent Rotation (deg): 180.000000\nParent ElementId: 4558936\nLevelId: 30\nElementId: 8965544\nFacingOrientation: -0.642788,-0.766044,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -1256,16 +1220,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-012-LED-002
-                Set Definition ID: SET-012
-                Location XYZ (ft): 93.452277,58.740525,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 7245240
-                LevelId: 30
-                ElementId: 8435084
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-012-LED-002\nSet Definition ID: SET-012\nLocation XYZ (ft): 93.452277,58.740525,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 7245240\nLevelId: 30\nElementId: 8435084\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -1446,16 +1401,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-024-LED-003
-                Set Definition ID: SET-024
-                Location XYZ (ft): 118.358529,25.615525,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7245063
-                LevelId: 30
-                ElementId: 8600862
-                FacingOrientation: -1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-024-LED-003\nSet Definition ID: SET-024\nLocation XYZ (ft): 118.358529,25.615525,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7245063\nLevelId: 30\nElementId: 8600862\nFacingOrientation: -1.000000,-0.000000,-0.000000\n"
             id: SET-024-LED-003
             tags:
               []
@@ -1479,16 +1425,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-024-LED-004
-                Set Definition ID: SET-024
-                Location XYZ (ft): 118.358529,27.157192,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7245063
-                LevelId: 30
-                ElementId: 8600863
-                FacingOrientation: -1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-024-LED-004\nSet Definition ID: SET-024\nLocation XYZ (ft): 118.358529,27.157192,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7245063\nLevelId: 30\nElementId: 8600863\nFacingOrientation: -1.000000,-0.000000,-0.000000\n"
             id: SET-024-LED-004
             tags:
               []
@@ -1512,16 +1449,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-024-LED-005
-                Set Definition ID: SET-024
-                Location XYZ (ft): 118.358529,28.698859,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7245063
-                LevelId: 30
-                ElementId: 8600865
-                FacingOrientation: -1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-024-LED-005\nSet Definition ID: SET-024\nLocation XYZ (ft): 118.358529,28.698859,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7245063\nLevelId: 30\nElementId: 8600865\nFacingOrientation: -1.000000,-0.000000,-0.000000\n"
             id: SET-024-LED-005
             tags:
               []
@@ -1878,16 +1806,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-018-LED-003
-                Set Definition ID: SET-018
-                Location XYZ (ft): 118.389777,38.632166,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7245062
-                LevelId: 30
-                ElementId: 8600858
-                FacingOrientation: -1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-018-LED-003\nSet Definition ID: SET-018\nLocation XYZ (ft): 118.389777,38.632166,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7245062\nLevelId: 30\nElementId: 8600858\nFacingOrientation: -1.000000,-0.000000,-0.000000\n"
             id: SET-018-LED-003
             tags:
               []
@@ -1911,16 +1830,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-018-LED-004
-                Set Definition ID: SET-018
-                Location XYZ (ft): 118.389777,39.792610,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7245062
-                LevelId: 30
-                ElementId: 8600859
-                FacingOrientation: -1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-018-LED-004\nSet Definition ID: SET-018\nLocation XYZ (ft): 118.389777,39.792610,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7245062\nLevelId: 30\nElementId: 8600859\nFacingOrientation: -1.000000,-0.000000,-0.000000\n"
             id: SET-018-LED-004
             tags:
               []
@@ -1944,16 +1854,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-018-LED-005
-                Set Definition ID: SET-018
-                Location XYZ (ft): 118.358529,40.948859,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7245062
-                LevelId: 30
-                ElementId: 8600861
-                FacingOrientation: -1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-018-LED-005\nSet Definition ID: SET-018\nLocation XYZ (ft): 118.358529,40.948859,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7245062\nLevelId: 30\nElementId: 8600861\nFacingOrientation: -1.000000,-0.000000,-0.000000\n"
             id: SET-018-LED-005
             tags:
               []
@@ -2341,7 +2242,7 @@ equipment_definitions:
               Parent Rotation (deg): -0.0
               Product Datasheet URL: ""
               LevelId: 8142365
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-320-LED-001
@@ -2400,7 +2301,7 @@ equipment_definitions:
               Parent Rotation (deg): -0.0
               Product Datasheet URL: ""
               LevelId: 8142365
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-320-LED-002
@@ -2439,16 +2340,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-320-LED-003
-                Set Definition ID: SET-320
-                Location XYZ (ft): 92.671029,237.825059,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 7244685
-                LevelId: 30
-                ElementId: 8435706
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-320-LED-003\nSet Definition ID: SET-320\nLocation XYZ (ft): 92.671029,237.825059,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 7244685\nLevelId: 30\nElementId: 8435706\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -2525,7 +2417,7 @@ equipment_definitions:
               Parent Rotation (deg): -82.808785
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-314-LED-001
@@ -2553,7 +2445,7 @@ equipment_definitions:
             label: "EF-U_Junction Box_CED : Wall - With Stem"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               FacingOrientation: "0.000000,1.000000,0.000000"
               CKT_Rating_CED: 20.0
               Linked Element Definition ID: SET-314-LED-002
@@ -3308,16 +3200,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-177-LED-002
-                Set Definition ID: SET-177
-                Location XYZ (ft): 305.273270,37.282192,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): 0.000000
-                Parent ElementId: 6540660
-                LevelId: 30
-                ElementId: 8660100
-                FacingOrientation: 0.000000,1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-177-LED-002\nSet Definition ID: SET-177\nLocation XYZ (ft): 305.273270,37.282192,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): 0.000000\nParent ElementId: 6540660\nLevelId: 30\nElementId: 8660100\nFacingOrientation: 0.000000,1.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -3665,16 +3548,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-238-LED-003
-                Set Definition ID: SET-238
-                Location XYZ (ft): 468.857205,130.635887,101.250000
-                Rotation (deg): 0.000000
-                Parent Rotation (deg): -0.000000
-                Parent ElementId: 4558786
-                LevelId: 30
-                ElementId: 8600989
-                FacingOrientation: 0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-238-LED-003\nSet Definition ID: SET-238\nLocation XYZ (ft): 468.857205,130.635887,101.250000\nRotation (deg): 0.000000\nParent Rotation (deg): -0.000000\nParent ElementId: 4558786\nLevelId: 30\nElementId: 8600989\nFacingOrientation: 0.000000,-1.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -3791,16 +3665,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CP_Catalina Printer Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-167-LED-002
-                Set Definition ID: SET-167
-                Location XYZ (ft): 348.974987,57.665675,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 6149360
-                LevelId: 30
-                ElementId: 8612243
-                FacingOrientation: 1.000000,-0.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-167-LED-002\nSet Definition ID: SET-167\nLocation XYZ (ft): 348.974987,57.665675,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 6149360\nLevelId: 30\nElementId: 8612243\nFacingOrientation: 1.000000,-0.000000,0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -3824,16 +3689,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CR_Cash Register"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-167-LED-003
-                Set Definition ID: SET-167
-                Location XYZ (ft): 348.977904,55.825735,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 6149360
-                LevelId: 30
-                ElementId: 8612246
-                FacingOrientation: 1.000000,-0.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-167-LED-003\nSet Definition ID: SET-167\nLocation XYZ (ft): 348.977904,55.825735,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 6149360\nLevelId: 30\nElementId: 8612246\nFacingOrientation: 1.000000,-0.000000,0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -3994,16 +3850,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-023-LED-002
-                Set Definition ID: SET-023
-                Location XYZ (ft): 118.874178,32.083772,106.000000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7246517
-                LevelId: 30
-                ElementId: 8435719
-                FacingOrientation: 1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-023-LED-002\nSet Definition ID: SET-023\nLocation XYZ (ft): 118.874178,32.083772,106.000000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7246517\nLevelId: 30\nElementId: 8435719\nFacingOrientation: 1.000000,0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -4490,16 +4337,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-216-LED-003
-                Set Definition ID: SET-216
-                Location XYZ (ft): 347.333718,156.417762,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 6474905
-                LevelId: 30
-                ElementId: 8612122
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-216-LED-003\nSet Definition ID: SET-216\nLocation XYZ (ft): 347.333718,156.417762,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 6474905\nLevelId: 30\nElementId: 8612122\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -4807,7 +4645,7 @@ equipment_definitions:
                               {}:
                                 {}
               -
-                text: |
+                text: "\n"
                 width_inches: 0.734251968504
                 type_name: "Text : 3/32\\\\\\\\" Arial"
                 offsets:
@@ -5727,16 +5565,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CR_Cash Register"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-010-LED-008
-                Set Definition ID: SET-010
-                Location XYZ (ft): 93.452277,65.573859,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7465190
-                LevelId: 30
-                ElementId: 8600849
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-010-LED-008\nSet Definition ID: SET-010\nLocation XYZ (ft): 93.452277,65.573859,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7465190\nLevelId: 30\nElementId: 8600849\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -5760,16 +5589,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-010-LED-009
-                Set Definition ID: SET-010
-                Location XYZ (ft): 93.452277,67.262374,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7465190
-                LevelId: 30
-                ElementId: 8600850
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-010-LED-009\nSet Definition ID: SET-010\nLocation XYZ (ft): 93.452277,67.262374,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7465190\nLevelId: 30\nElementId: 8600850\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -5793,16 +5613,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : T_Wall Telephone Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-010-LED-010
-                Set Definition ID: SET-010
-                Location XYZ (ft): 93.452277,68.970707,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7465190
-                LevelId: 30
-                ElementId: 8600851
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-010-LED-010\nSet Definition ID: SET-010\nLocation XYZ (ft): 93.452277,68.970707,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7465190\nLevelId: 30\nElementId: 8600851\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -5826,16 +5637,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : T_Wall Telephone Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-010-LED-011
-                Set Definition ID: SET-010
-                Location XYZ (ft): 93.452277,72.813442,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7465190
-                LevelId: 30
-                ElementId: 9179374
-                FacingOrientation: 1.000000,-0.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-010-LED-011\nSet Definition ID: SET-010\nLocation XYZ (ft): 93.452277,72.813442,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7465190\nLevelId: 30\nElementId: 9179374\nFacingOrientation: 1.000000,-0.000000,0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -5859,16 +5661,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-010-LED-012
-                Set Definition ID: SET-010
-                Location XYZ (ft): 93.452277,71.896775,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7465190
-                LevelId: 30
-                ElementId: 9179456
-                FacingOrientation: 1.000000,-0.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-010-LED-012\nSet Definition ID: SET-010\nLocation XYZ (ft): 93.452277,71.896775,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7465190\nLevelId: 30\nElementId: 9179456\nFacingOrientation: 1.000000,-0.000000,0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -5892,16 +5685,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CR_Cash Register"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-010-LED-013
-                Set Definition ID: SET-010
-                Location XYZ (ft): 93.441886,70.980109,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7465190
-                LevelId: 30
-                ElementId: 9179520
-                FacingOrientation: 1.000000,-0.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-010-LED-013\nSet Definition ID: SET-010\nLocation XYZ (ft): 93.441886,70.980109,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7465190\nLevelId: 30\nElementId: 9179520\nFacingOrientation: 1.000000,-0.000000,0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -6056,7 +5840,7 @@ equipment_definitions:
             label: "EF-U_Receptacle_CED : Specialty Floor - 208V/3Ph"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               FacingOrientation: "0.000000,-1.000000,0.000000"
               CKT_Rating_CED: 20.0
               Linked Element Definition ID: SET-088-LED-002
@@ -6143,7 +5927,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-324-LED-001
@@ -6198,7 +5982,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-324-LED-002
@@ -6253,7 +6037,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-324-LED-003
@@ -6476,16 +6260,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-166-LED-002
-                Set Definition ID: SET-166
-                Location XYZ (ft): 360.100027,58.446973,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 6156068
-                LevelId: 30
-                ElementId: 8434748
-                FacingOrientation: -1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-166-LED-002\nSet Definition ID: SET-166\nLocation XYZ (ft): 360.100027,58.446973,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 6156068\nLevelId: 30\nElementId: 8434748\nFacingOrientation: -1.000000,-0.000000,-0.000000\n"
             id: SET-166-LED-002
             tags:
               []
@@ -6509,16 +6284,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-166-LED-003
-                Set Definition ID: SET-166
-                Location XYZ (ft): 360.256277,56.625033,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 6156068
-                LevelId: 30
-                ElementId: 8434757
-                FacingOrientation: -1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-166-LED-003\nSet Definition ID: SET-166\nLocation XYZ (ft): 360.256277,56.625033,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 6156068\nLevelId: 30\nElementId: 8434757\nFacingOrientation: -1.000000,-0.000000,-0.000000\n"
             id: SET-166-LED-003
             tags:
               []
@@ -6837,16 +6603,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-222-LED-004
-                Set Definition ID: SET-222
-                Location XYZ (ft): 297.559436,144.088395,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): 180.000000
-                Parent ElementId: 5950458
-                LevelId: 30
-                ElementId: 8612171
-                FacingOrientation: 0.000000,1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-222-LED-004\nSet Definition ID: SET-222\nLocation XYZ (ft): 297.559436,144.088395,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): 180.000000\nParent ElementId: 5950458\nLevelId: 30\nElementId: 8612171\nFacingOrientation: 0.000000,1.000000,-0.000000\n"
             id: SET-222-LED-004
             tags:
               []
@@ -6971,16 +6728,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-014-LED-002
-                Set Definition ID: SET-014
-                Location XYZ (ft): 93.452277,50.819204,104.000000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 7246802
-                LevelId: 30
-                ElementId: 8724437
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-014-LED-002\nSet Definition ID: SET-014\nLocation XYZ (ft): 93.452277,50.819204,104.000000\nRotation (deg): 90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 7246802\nLevelId: 30\nElementId: 8724437\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -7454,7 +7202,7 @@ equipment_definitions:
               Parent Rotation (deg): -0.0
               Product Datasheet URL: ""
               LevelId: 8142365
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-319-LED-001
@@ -7513,7 +7261,7 @@ equipment_definitions:
               Parent Rotation (deg): -0.0
               Product Datasheet URL: ""
               LevelId: 8142365
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-319-LED-002
@@ -7560,16 +7308,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-319-LED-003
-                Set Definition ID: SET-319
-                Location XYZ (ft): 92.671029,272.606183,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 180.000000
-                Parent ElementId: 7244225
-                LevelId: 30
-                ElementId: 8600651
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-319-LED-003\nSet Definition ID: SET-319\nLocation XYZ (ft): 92.671029,272.606183,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 180.000000\nParent ElementId: 7244225\nLevelId: 30\nElementId: 8600651\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
             id: SET-319-LED-003
             tags:
               []
@@ -7783,7 +7522,7 @@ equipment_definitions:
             is_group: true
             text_notes:
               -
-                text: |
+                text: "\n"
                 width_inches: 1.04173228346
                 type_name: Elevation (Inches)
                 offsets:
@@ -8007,16 +7746,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-168-LED-002
-                Set Definition ID: SET-168
-                Location XYZ (ft): 348.974987,63.637958,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7268417
-                LevelId: 30
-                ElementId: 8612241
-                FacingOrientation: 1.000000,-0.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-168-LED-002\nSet Definition ID: SET-168\nLocation XYZ (ft): 348.974987,63.637958,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7268417\nLevelId: 30\nElementId: 8612241\nFacingOrientation: 1.000000,-0.000000,0.000000\n"
             id: SET-168-LED-002
             tags:
               []
@@ -8040,16 +7770,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-168-LED-003
-                Set Definition ID: SET-168
-                Location XYZ (ft): 348.977904,61.800393,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7268417
-                LevelId: 30
-                ElementId: 8612245
-                FacingOrientation: 1.000000,-0.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-168-LED-003\nSet Definition ID: SET-168\nLocation XYZ (ft): 348.977904,61.800393,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7268417\nLevelId: 30\nElementId: 8612245\nFacingOrientation: 1.000000,-0.000000,0.000000\n"
             id: SET-168-LED-003
             tags:
               []
@@ -8065,16 +7786,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CP_Catalina Printer Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-168-LED-004
-                Set Definition ID: SET-168
-                Location XYZ (ft): 332.044320,57.665675,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 6148810
-                LevelId: 30
-                ElementId: 8612225
-                FacingOrientation: 1.000000,-0.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-168-LED-004\nSet Definition ID: SET-168\nLocation XYZ (ft): 332.044320,57.665675,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 6148810\nLevelId: 30\nElementId: 8612225\nFacingOrientation: 1.000000,-0.000000,0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -8098,16 +7810,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CR_Cash Register"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-168-LED-005
-                Set Definition ID: SET-168
-                Location XYZ (ft): 332.047237,55.825735,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 6148810
-                LevelId: 30
-                ElementId: 8612228
-                FacingOrientation: 1.000000,-0.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-168-LED-005\nSet Definition ID: SET-168\nLocation XYZ (ft): 332.047237,55.825735,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 6148810\nLevelId: 30\nElementId: 8612228\nFacingOrientation: 1.000000,-0.000000,0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -8184,7 +7887,7 @@ equipment_definitions:
               Parent Rotation (deg): 270.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-326-LED-001
@@ -8239,7 +7942,7 @@ equipment_definitions:
               Parent Rotation (deg): 270.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-326-LED-002
@@ -8294,7 +7997,7 @@ equipment_definitions:
               Parent Rotation (deg): 270.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-326-LED-003
@@ -8528,16 +8231,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-223-LED-003
-                Set Definition ID: SET-223
-                Location XYZ (ft): 381.500077,110.125749,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 5532325
-                LevelId: 30
-                ElementId: 8612134
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-223-LED-003\nSet Definition ID: SET-223\nLocation XYZ (ft): 381.500077,110.125749,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 5532325\nLevelId: 30\nElementId: 8612134\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -8618,7 +8312,7 @@ equipment_definitions:
               Parent ElementId: 4109868
               Voltage_CED: 120.0
               ElementId: 8689009
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
             id: SET-258-LED-006
             tags:
               []:
@@ -9985,7 +9679,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-315-LED-001
@@ -10443,16 +10137,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-207-LED-004
-                Set Definition ID: SET-207
-                Location XYZ (ft): 400.707946,215.190010,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 989961
-                LevelId: 30
-                ElementId: 8601024
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-207-LED-004\nSet Definition ID: SET-207\nLocation XYZ (ft): 400.707946,215.190010,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 989961\nLevelId: 30\nElementId: 8601024\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -10476,16 +10161,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-207-LED-005
-                Set Definition ID: SET-207
-                Location XYZ (ft): 407.158838,225.424724,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 989961
-                LevelId: 30
-                ElementId: 8728299
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-207-LED-005\nSet Definition ID: SET-207\nLocation XYZ (ft): 407.158838,225.424724,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 989961\nLevelId: 30\nElementId: 8728299\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -10867,16 +10543,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-233-LED-003
-                Set Definition ID: SET-233
-                Location XYZ (ft): 381.187070,122.994520,101.250000
-                Rotation (deg): 18.000000
-                Parent Rotation (deg): -67.500000
-                Parent ElementId: 989261
-                LevelId: 30
-                ElementId: 8601084
-                FacingOrientation: 0.309017,-0.951057,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-233-LED-003\nSet Definition ID: SET-233\nLocation XYZ (ft): 381.187070,122.994520,101.250000\nRotation (deg): 18.000000\nParent Rotation (deg): -67.500000\nParent ElementId: 989261\nLevelId: 30\nElementId: 8601084\nFacingOrientation: 0.309017,-0.951057,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -10954,7 +10621,7 @@ equipment_definitions:
                               {}:
                                 {}
               -
-                text: |
+                text: "\n"
                 width_inches: 0.734251968504
                 type_name: "Text : 3/32\\\\\\\\" Arial"
                 offsets:
@@ -11426,16 +11093,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-234-LED-003
-                Set Definition ID: SET-234
-                Location XYZ (ft): 388.359671,147.794345,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 989299
-                LevelId: 30
-                ElementId: 8601076
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-234-LED-003\nSet Definition ID: SET-234\nLocation XYZ (ft): 388.359671,147.794345,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 989299\nLevelId: 30\nElementId: 8601076\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -13120,16 +12778,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-209-LED-010
-                Set Definition ID: SET-209
-                Location XYZ (ft): 422.564614,144.713494,101.250000
-                Rotation (deg): 0.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 4109641
-                LevelId: 30
-                ElementId: 8600992
-                FacingOrientation: 0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-209-LED-010\nSet Definition ID: SET-209\nLocation XYZ (ft): 422.564614,144.713494,101.250000\nRotation (deg): 0.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 4109641\nLevelId: 30\nElementId: 8600992\nFacingOrientation: 0.000000,-1.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -13153,16 +12802,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-209-LED-011
-                Set Definition ID: SET-209
-                Location XYZ (ft): 423.516380,158.949749,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 4109641
-                LevelId: 30
-                ElementId: 8601048
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-209-LED-011\nSet Definition ID: SET-209\nLocation XYZ (ft): 423.516380,158.949749,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 4109641\nLevelId: 30\nElementId: 8601048\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -13186,16 +12826,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-209-LED-012
-                Set Definition ID: SET-209
-                Location XYZ (ft): 417.312923,148.636682,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 4109641
-                LevelId: 30
-                ElementId: 8601053
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-209-LED-012\nSet Definition ID: SET-209\nLocation XYZ (ft): 417.312923,148.636682,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 4109641\nLevelId: 30\nElementId: 8601053\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -13219,16 +12850,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-209-LED-013
-                Set Definition ID: SET-209
-                Location XYZ (ft): 418.158427,163.018534,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 4109641
-                LevelId: 30
-                ElementId: 8724449
-                FacingOrientation: 0.000000,1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-209-LED-013\nSet Definition ID: SET-209\nLocation XYZ (ft): 418.158427,163.018534,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 4109641\nLevelId: 30\nElementId: 8724449\nFacingOrientation: 0.000000,1.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -13502,16 +13124,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-175-LED-002
-                Set Definition ID: SET-175
-                Location XYZ (ft): 318.039174,37.282192,101.250000
-                Rotation (deg): -0.000000
-                Parent Rotation (deg): -0.000000
-                Parent ElementId: 4789825
-                LevelId: 30
-                ElementId: 9171908
-                FacingOrientation: 0.000000,1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-175-LED-002\nSet Definition ID: SET-175\nLocation XYZ (ft): 318.039174,37.282192,101.250000\nRotation (deg): -0.000000\nParent Rotation (deg): -0.000000\nParent ElementId: 4789825\nLevelId: 30\nElementId: 9171908\nFacingOrientation: 0.000000,1.000000,-0.000000\n"
             id: SET-175-LED-002
             tags:
               []
@@ -13812,16 +13425,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-227-LED-004
-                Set Definition ID: SET-227
-                Location XYZ (ft): 375.458839,61.225962,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7068542
-                LevelId: 30
-                ElementId: 8993954
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-227-LED-004\nSet Definition ID: SET-227\nLocation XYZ (ft): 375.458839,61.225962,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7068542\nLevelId: 30\nElementId: 8993954\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
             id: SET-227-LED-004
             tags:
               []
@@ -14286,16 +13890,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-224-LED-003
-                Set Definition ID: SET-224
-                Location XYZ (ft): 381.500077,100.151253,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 5532332
-                LevelId: 30
-                ElementId: 8612135
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-224-LED-003\nSet Definition ID: SET-224\nLocation XYZ (ft): 381.500077,100.151253,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 5532332\nLevelId: 30\nElementId: 8612135\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
             id: SET-224-LED-003
             tags:
               []
@@ -14532,16 +14127,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-242-LED-003
-                Set Definition ID: SET-242
-                Location XYZ (ft): 516.628670,42.745527,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 7231706
-                LevelId: 30
-                ElementId: 9164010
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-242-LED-003\nSet Definition ID: SET-242\nLocation XYZ (ft): 516.628670,42.745527,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 7231706\nLevelId: 30\nElementId: 9164010\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -14959,16 +14545,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-220-LED-005
-                Set Definition ID: SET-220
-                Location XYZ (ft): 480.817502,67.631054,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7486394
-                LevelId: 30
-                ElementId: 8601071
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-220-LED-005\nSet Definition ID: SET-220\nLocation XYZ (ft): 480.817502,67.631054,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7486394\nLevelId: 30\nElementId: 8601071\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -15578,7 +15155,7 @@ equipment_definitions:
               Parent Rotation (deg): 270.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-327-LED-001
@@ -15633,7 +15210,7 @@ equipment_definitions:
               Parent Rotation (deg): 270.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-327-LED-002
@@ -15688,7 +15265,7 @@ equipment_definitions:
               Parent Rotation (deg): 270.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-327-LED-003
@@ -16004,16 +15581,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-237-LED-004
-                Set Definition ID: SET-237
-                Location XYZ (ft): 447.826567,130.635887,101.250000
-                Rotation (deg): 0.000000
-                Parent Rotation (deg): 0.000000
-                Parent ElementId: 6831866
-                LevelId: 30
-                ElementId: 8601049
-                FacingOrientation: 0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-237-LED-004\nSet Definition ID: SET-237\nLocation XYZ (ft): 447.826567,130.635887,101.250000\nRotation (deg): 0.000000\nParent Rotation (deg): 0.000000\nParent ElementId: 6831866\nLevelId: 30\nElementId: 8601049\nFacingOrientation: 0.000000,-1.000000,-0.000000\n"
             id: SET-237-LED-004
             tags:
               []
@@ -16037,16 +15605,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-237-LED-005
-                Set Definition ID: SET-237
-                Location XYZ (ft): 441.421969,130.511881,101.250000
-                Rotation (deg): 0.000000
-                Parent Rotation (deg): 0.000000
-                Parent ElementId: 6831866
-                LevelId: 30
-                ElementId: 8601050
-                FacingOrientation: 0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-237-LED-005\nSet Definition ID: SET-237\nLocation XYZ (ft): 441.421969,130.511881,101.250000\nRotation (deg): 0.000000\nParent Rotation (deg): 0.000000\nParent ElementId: 6831866\nLevelId: 30\nElementId: 8601050\nFacingOrientation: 0.000000,-1.000000,-0.000000\n"
             id: SET-237-LED-005
             tags:
               []
@@ -17022,16 +16581,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-116-LED-002
-                Set Definition ID: SET-116
-                Location XYZ (ft): 381.381279,31.290820,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 3782761
-                LevelId: 30
-                ElementId: 8660097
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-116-LED-002\nSet Definition ID: SET-116\nLocation XYZ (ft): 381.381279,31.290820,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 3782761\nLevelId: 30\nElementId: 8660097\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
             id: SET-116-LED-002
             tags:
               []
@@ -17511,7 +17061,7 @@ equipment_definitions:
             label: "EF-U_Receptacle_CED : Cord Drop - 208V/3Ph"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               FacingOrientation: "0.000000,1.000000,0.000000"
               CKT_Rating_CED: 20.0
               Linked Element Definition ID: SET-091-LED-002
@@ -18222,16 +17772,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-193-LED-003
-                Set Definition ID: SET-193
-                Location XYZ (ft): 212.544238,252.370529,101.250000
-                Rotation (deg): 0.000000
-                Parent Rotation (deg): 0.000000
-                Parent ElementId: 985866
-                LevelId: 30
-                ElementId: 8601014
-                FacingOrientation: 0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-193-LED-003\nSet Definition ID: SET-193\nLocation XYZ (ft): 212.544238,252.370529,101.250000\nRotation (deg): 0.000000\nParent Rotation (deg): 0.000000\nParent ElementId: 985866\nLevelId: 30\nElementId: 8601014\nFacingOrientation: 0.000000,-1.000000,-0.000000\n"
             id: SET-193-LED-003
             tags:
               []
@@ -18938,16 +18479,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : T_Wall Telephone Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-280-LED-004
-                Set Definition ID: SET-280
-                Location XYZ (ft): 113.775195,50.948859,104.000000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7245182
-                LevelId: 30
-                ElementId: 8600853
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-280-LED-004\nSet Definition ID: SET-280\nLocation XYZ (ft): 113.775195,50.948859,104.000000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7245182\nLevelId: 30\nElementId: 8600853\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -18971,16 +18503,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-280-LED-005
-                Set Definition ID: SET-280
-                Location XYZ (ft): 113.775195,47.766766,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7245182
-                LevelId: 30
-                ElementId: 8600854
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-280-LED-005\nSet Definition ID: SET-280\nLocation XYZ (ft): 113.775195,47.766766,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7245182\nLevelId: 30\nElementId: 8600854\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -19004,16 +18527,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CR_Cash Register"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-280-LED-006
-                Set Definition ID: SET-280
-                Location XYZ (ft): 113.785612,49.386359,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7245182
-                LevelId: 30
-                ElementId: 8724431
-                FacingOrientation: -1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-280-LED-006\nSet Definition ID: SET-280\nLocation XYZ (ft): 113.785612,49.386359,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7245182\nLevelId: 30\nElementId: 8724431\nFacingOrientation: -1.000000,-0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -19266,16 +18780,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-228-LED-003
-                Set Definition ID: SET-228
-                Location XYZ (ft): 355.368775,105.178338,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 988702
-                LevelId: 30
-                ElementId: 8612130
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-228-LED-003\nSet Definition ID: SET-228\nLocation XYZ (ft): 355.368775,105.178338,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 988702\nLevelId: 30\nElementId: 8612130\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
             id: SET-228-LED-003
             tags:
               []
@@ -19520,16 +19025,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-243-LED-003
-                Set Definition ID: SET-243
-                Location XYZ (ft): 483.879427,23.812403,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): 180.000000
-                Parent ElementId: 4559232
-                LevelId: 30
-                ElementId: 8601064
-                FacingOrientation: 0.000000,1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-243-LED-003\nSet Definition ID: SET-243\nLocation XYZ (ft): 483.879427,23.812403,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): 180.000000\nParent ElementId: 4559232\nLevelId: 30\nElementId: 8601064\nFacingOrientation: 0.000000,1.000000,-0.000000\n"
             id: SET-243-LED-003
             tags:
               []
@@ -19774,16 +19270,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-230-LED-003
-                Set Definition ID: SET-230
-                Location XYZ (ft): 368.608923,122.355993,101.250000
-                Rotation (deg): -0.000000
-                Parent Rotation (deg): 0.000000
-                Parent ElementId: 989034
-                LevelId: 30
-                ElementId: 8601079
-                FacingOrientation: -0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-230-LED-003\nSet Definition ID: SET-230\nLocation XYZ (ft): 368.608923,122.355993,101.250000\nRotation (deg): -0.000000\nParent Rotation (deg): 0.000000\nParent ElementId: 989034\nLevelId: 30\nElementId: 8601079\nFacingOrientation: -0.000000,-1.000000,-0.000000\n"
             id: SET-230-LED-003
             tags:
               []
@@ -20120,16 +19607,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-115-LED-002
-                Set Definition ID: SET-115
-                Location XYZ (ft): 381.381279,33.135719,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): -0.000000
-                Parent ElementId: 3782758
-                LevelId: 30
-                ElementId: 8660095
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-115-LED-002\nSet Definition ID: SET-115\nLocation XYZ (ft): 381.381279,33.135719,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): -0.000000\nParent ElementId: 3782758\nLevelId: 30\nElementId: 8660095\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -20366,16 +19844,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-009-LED-004
-                Set Definition ID: SET-009
-                Location XYZ (ft): 94.653515,80.215211,104.000000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): -180.000000
-                Parent ElementId: 7245088
-                LevelId: 30
-                ElementId: 8600643
-                FacingOrientation: -0.000000,-1.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-009-LED-004\nSet Definition ID: SET-009\nLocation XYZ (ft): 94.653515,80.215211,104.000000\nRotation (deg): 180.000000\nParent Rotation (deg): -180.000000\nParent ElementId: 7245088\nLevelId: 30\nElementId: 8600643\nFacingOrientation: -0.000000,-1.000000,0.000000\n"
             id: SET-009-LED-004
             tags:
               []
@@ -20535,7 +20004,7 @@ equipment_definitions:
               Parent Rotation (deg): 270.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-323-LED-001
@@ -20590,7 +20059,7 @@ equipment_definitions:
               Parent Rotation (deg): 270.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-323-LED-002
@@ -20645,7 +20114,7 @@ equipment_definitions:
               Parent Rotation (deg): 270.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-323-LED-003
@@ -21113,7 +20582,7 @@ equipment_definitions:
             is_group: true
             text_notes:
               -
-                text: |
+                text: "\n"
                 width_inches: 0.6535
                 type_name: Elevation (Inches)
                 offsets:
@@ -22099,16 +21568,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-188-LED-003
-                Set Definition ID: SET-188
-                Location XYZ (ft): 302.936731,139.188978,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 988858
-                LevelId: 30
-                ElementId: 8612175
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-188-LED-003\nSet Definition ID: SET-188\nLocation XYZ (ft): 302.936731,139.188978,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 988858\nLevelId: 30\nElementId: 8612175\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -22512,7 +21972,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-335-LED-001
@@ -24163,16 +23623,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-226-LED-004
-                Set Definition ID: SET-226
-                Location XYZ (ft): 375.542172,76.809295,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 3778868
-                LevelId: 30
-                ElementId: 8993950
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-226-LED-004\nSet Definition ID: SET-226\nLocation XYZ (ft): 375.542172,76.809295,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 3778868\nLevelId: 30\nElementId: 8993950\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -24619,16 +24070,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-176-LED-002
-                Set Definition ID: SET-176
-                Location XYZ (ft): 314.174251,37.282192,101.250000
-                Rotation (deg): -0.000000
-                Parent Rotation (deg): 0.000000
-                Parent ElementId: 4789827
-                LevelId: 30
-                ElementId: 8992812
-                FacingOrientation: 0.000000,1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-176-LED-002\nSet Definition ID: SET-176\nLocation XYZ (ft): 314.174251,37.282192,101.250000\nRotation (deg): -0.000000\nParent Rotation (deg): 0.000000\nParent ElementId: 4789827\nLevelId: 30\nElementId: 8992812\nFacingOrientation: 0.000000,1.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -24962,16 +24404,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-034-LED-004
-                Set Definition ID: SET-034
-                Location XYZ (ft): 442.885285,109.403823,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 4558928
-                LevelId: 30
-                ElementId: 8965546
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-034-LED-004\nSet Definition ID: SET-034\nLocation XYZ (ft): 442.885285,109.403823,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 4558928\nLevelId: 30\nElementId: 8965546\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -24995,16 +24428,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-034-LED-005
-                Set Definition ID: SET-034
-                Location XYZ (ft): 442.968618,106.359570,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 4558928
-                LevelId: 30
-                ElementId: 8965547
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-034-LED-005\nSet Definition ID: SET-034\nLocation XYZ (ft): 442.968618,106.359570,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 4558928\nLevelId: 30\nElementId: 8965547\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -25083,7 +24507,7 @@ equipment_definitions:
               Parent Rotation (deg): -99.322069
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-321-LED-001
@@ -25142,7 +24566,7 @@ equipment_definitions:
               Parent Rotation (deg): -99.322069
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-321-LED-002
@@ -26126,7 +25550,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 8142365
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-317-LED-001
@@ -26255,7 +25679,7 @@ equipment_definitions:
             is_group: true
             text_notes:
               -
-                text: |
+                text: "\n"
                 width_inches: 0.963779527559
                 type_name: Elevation (Inches)
                 offsets:
@@ -27571,16 +26995,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-208-LED-003
-                Set Definition ID: SET-208
-                Location XYZ (ft): 401.257934,194.811230,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): 180.000000
-                Parent ElementId: 5300809
-                LevelId: 30
-                ElementId: 8601036
-                FacingOrientation: 0.000000,1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-208-LED-003\nSet Definition ID: SET-208\nLocation XYZ (ft): 401.257934,194.811230,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): 180.000000\nParent ElementId: 5300809\nLevelId: 30\nElementId: 8601036\nFacingOrientation: 0.000000,1.000000,-0.000000\n"
             id: SET-208-LED-003
             tags:
               []
@@ -27968,16 +27383,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-120-LED-005
-                Set Definition ID: SET-120
-                Location XYZ (ft): 295.936652,19.657192,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): 180.000000
-                Parent ElementId: 7434993
-                LevelId: 30
-                ElementId: 8660102
-                FacingOrientation: 0.000000,1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-120-LED-005\nSet Definition ID: SET-120\nLocation XYZ (ft): 295.936652,19.657192,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): 180.000000\nParent ElementId: 7434993\nLevelId: 30\nElementId: 8660102\nFacingOrientation: 0.000000,1.000000,-0.000000\n"
             id: SET-120-LED-005
             tags:
               []
@@ -28001,16 +27407,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-120-LED-006
-                Set Definition ID: SET-120
-                Location XYZ (ft): 293.088270,19.657192,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): 180.000000
-                Parent ElementId: 7434993
-                LevelId: 30
-                ElementId: 8660108
-                FacingOrientation: 0.000000,1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-120-LED-006\nSet Definition ID: SET-120\nLocation XYZ (ft): 293.088270,19.657192,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): 180.000000\nParent ElementId: 7434993\nLevelId: 30\nElementId: 8660108\nFacingOrientation: 0.000000,1.000000,-0.000000\n"
             id: SET-120-LED-006
             tags:
               []
@@ -28828,16 +28225,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-241-LED-003
-                Set Definition ID: SET-241
-                Location XYZ (ft): 495.307165,119.459204,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 5187534
-                LevelId: 30
-                ElementId: 8601054
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-241-LED-003\nSet Definition ID: SET-241\nLocation XYZ (ft): 495.307165,119.459204,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 5187534\nLevelId: 30\nElementId: 8601054\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
             id: SET-241-LED-003
             tags:
               []
@@ -28906,7 +28294,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-329-LED-001
@@ -28961,7 +28349,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-329-LED-002
@@ -29109,16 +28497,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-013-LED-002
-                Set Definition ID: SET-013
-                Location XYZ (ft): 93.452277,54.735871,104.000000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 7245119
-                LevelId: 30
-                ElementId: 8435083
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-013-LED-002\nSet Definition ID: SET-013\nLocation XYZ (ft): 93.452277,54.735871,104.000000\nRotation (deg): 90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 7245119\nLevelId: 30\nElementId: 8435083\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
             id: SET-013-LED-002
             tags:
               []
@@ -30311,7 +29690,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-331-LED-001
@@ -30915,16 +30294,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-191-LED-004
-                Set Definition ID: SET-191
-                Location XYZ (ft): 106.893036,233.595776,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 985586
-                LevelId: 30
-                ElementId: 8612201
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-191-LED-004\nSet Definition ID: SET-191\nLocation XYZ (ft): 106.893036,233.595776,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 985586\nLevelId: 30\nElementId: 8612201\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -31097,7 +30467,7 @@ equipment_definitions:
             label: "EF-U_Receptacle_CED : Cord Drop - 208V/3Ph"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               FacingOrientation: "0.000000,1.000000,0.000000"
               CKT_Rating_CED: 20.0
               Linked Element Definition ID: SET-042-LED-004
@@ -31134,7 +30504,7 @@ equipment_definitions:
             label: "EF-U_Receptacle_CED : Cord Drop - 120V/1Ph"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               FacingOrientation: "0.000000,1.000000,0.000000"
               CKT_Rating_CED: 20.0
               Linked Element Definition ID: SET-042-LED-005
@@ -31171,7 +30541,7 @@ equipment_definitions:
             label: "EF-U_Receptacle_CED : Cord Drop - 120V/1Ph"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               FacingOrientation: "0.000000,1.000000,0.000000"
               CKT_Rating_CED: 20.0
               Linked Element Definition ID: SET-042-LED-006
@@ -31314,16 +30684,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-135-LED-002
-                Set Definition ID: SET-135
-                Location XYZ (ft): 92.702279,197.447978,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 7244513
-                LevelId: 30
-                ElementId: 8600881
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-135-LED-002\nSet Definition ID: SET-135\nLocation XYZ (ft): 92.702279,197.447978,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 7244513\nLevelId: 30\nElementId: 8600881\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
             id: SET-135-LED-002
             tags:
               []
@@ -31448,16 +30809,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-131-LED-002
-                Set Definition ID: SET-131
-                Location XYZ (ft): 86.304112,240.855109,101.250000
-                Rotation (deg): -0.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 6840437
-                LevelId: 30
-                ElementId: 8435707
-                FacingOrientation: -0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-131-LED-002\nSet Definition ID: SET-131\nLocation XYZ (ft): 86.304112,240.855109,101.250000\nRotation (deg): -0.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 6840437\nLevelId: 30\nElementId: 8435707\nFacingOrientation: -0.000000,-1.000000,-0.000000\n"
             id: SET-131-LED-002
             tags:
               []
@@ -32417,16 +31769,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-189-LED-003
-                Set Definition ID: SET-189
-                Location XYZ (ft): 302.936731,118.681522,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 988862
-                LevelId: 30
-                ElementId: 8612173
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-189-LED-003\nSet Definition ID: SET-189\nLocation XYZ (ft): 302.936731,118.681522,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 988862\nLevelId: 30\nElementId: 8612173\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
             id: SET-189-LED-003
             tags:
               []
@@ -32671,16 +32014,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-190-LED-003
-                Set Definition ID: SET-190
-                Location XYZ (ft): 97.514921,211.051586,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7244301
-                LevelId: 30
-                ElementId: 8612204
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-190-LED-003\nSet Definition ID: SET-190\nLocation XYZ (ft): 97.514921,211.051586,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7244301\nLevelId: 30\nElementId: 8612204\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
             id: SET-190-LED-003
             tags:
               []
@@ -32882,7 +32216,7 @@ equipment_definitions:
               Parent ElementId: 6350373
               Voltage_CED: 208.0
               ElementId: 8615216
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
             id: SET-086-LED-002
             tags:
               []:
@@ -33553,7 +32887,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-318-LED-001
@@ -34876,16 +34210,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-248-LED-003
-                Set Definition ID: SET-248
-                Location XYZ (ft): 438.540975,100.671672,101.250000
-                Rotation (deg): 0.000000
-                Parent Rotation (deg): -0.000000
-                Parent ElementId: 4558935
-                LevelId: 30
-                ElementId: 8965542
-                FacingOrientation: 0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-248-LED-003\nSet Definition ID: SET-248\nLocation XYZ (ft): 438.540975,100.671672,101.250000\nRotation (deg): 0.000000\nParent Rotation (deg): -0.000000\nParent ElementId: 4558935\nLevelId: 30\nElementId: 8965542\nFacingOrientation: 0.000000,-1.000000,-0.000000\n"
             id: SET-248-LED-003
             tags:
               []
@@ -35432,7 +34757,7 @@ equipment_definitions:
             label: "EF-U_Balanced Power Connector_CED : 120V/1P"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               FacingOrientation: "0.000000,-1.000000,0.000000"
               CKT_Rating_CED: 20.0
               Linked Element Definition ID: SET-302-LED-006
@@ -35469,7 +34794,7 @@ equipment_definitions:
             label: "EF-U_Balanced Power Connector_CED : 120V/1P"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               FacingOrientation: "0.000000,-1.000000,0.000000"
               CKT_Rating_CED: 20.0
               Linked Element Definition ID: SET-302-LED-007
@@ -35523,7 +34848,7 @@ equipment_definitions:
               Parent ElementId: 7069326
               Voltage_CED: 120.0
               ElementId: 8615602
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
             id: SET-302-LED-008
             tags:
               []:
@@ -35560,7 +34885,7 @@ equipment_definitions:
               Parent ElementId: 7069326
               Voltage_CED: 120.0
               ElementId: 8616638
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
             id: SET-302-LED-009
             tags:
               []:
@@ -35676,16 +35001,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-076-LED-002
-                Set Definition ID: SET-076
-                Location XYZ (ft): 520.795829,137.946630,108.000000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 5142284
-                LevelId: 30
-                ElementId: 8724458
-                FacingOrientation: -1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-076-LED-002\nSet Definition ID: SET-076\nLocation XYZ (ft): 520.795829,137.946630,108.000000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 5142284\nLevelId: 30\nElementId: 8724458\nFacingOrientation: -1.000000,-0.000000,-0.000000\n"
             id: SET-076-LED-002
             tags:
               []
@@ -35756,7 +35072,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-316-LED-001
@@ -36337,16 +35653,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-016-LED-003
-                Set Definition ID: SET-016
-                Location XYZ (ft): 103.699777,55.634288,104.000000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 7246952
-                LevelId: 30
-                ElementId: 8435069
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-016-LED-003\nSet Definition ID: SET-016\nLocation XYZ (ft): 103.699777,55.634288,104.000000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 7246952\nLevelId: 30\nElementId: 8435069\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
             id: SET-016-LED-003
             tags:
               []
@@ -36936,16 +36243,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-214-LED-003
-                Set Definition ID: SET-214
-                Location XYZ (ft): 388.558655,221.983883,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 989313
-                LevelId: 30
-                ElementId: 8601045
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-214-LED-003\nSet Definition ID: SET-214\nLocation XYZ (ft): 388.558655,221.983883,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 989313\nLevelId: 30\nElementId: 8601045\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
             id: SET-214-LED-003
             tags:
               []
@@ -36997,7 +36295,7 @@ equipment_definitions:
             is_group: true
             text_notes:
               -
-                text: |
+                text: "\n"
                 width_inches: 0.22125984252
                 type_name: Elevation (Inches)
                 offsets:
@@ -37475,16 +36773,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-240-LED-003
-                Set Definition ID: SET-240
-                Location XYZ (ft): 494.128409,130.868276,101.250000
-                Rotation (deg): -0.000000
-                Parent Rotation (deg): -0.000000
-                Parent ElementId: 6001276
-                LevelId: 30
-                ElementId: 8601060
-                FacingOrientation: -0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-240-LED-003\nSet Definition ID: SET-240\nLocation XYZ (ft): 494.128409,130.868276,101.250000\nRotation (deg): -0.000000\nParent Rotation (deg): -0.000000\nParent ElementId: 6001276\nLevelId: 30\nElementId: 8601060\nFacingOrientation: -0.000000,-1.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -37801,7 +37090,7 @@ equipment_definitions:
               ElementId: 8615147
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-007-LED-002
@@ -37826,16 +37115,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-007-LED-003
-                Set Definition ID: SET-007
-                Location XYZ (ft): 104.642191,80.220373,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 7245167
-                LevelId: 30
-                ElementId: 8600645
-                FacingOrientation: -0.000000,-1.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-007-LED-003\nSet Definition ID: SET-007\nLocation XYZ (ft): 104.642191,80.220373,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 7245167\nLevelId: 30\nElementId: 8600645\nFacingOrientation: -0.000000,-1.000000,0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -38450,16 +37730,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-196-LED-003
-                Set Definition ID: SET-196
-                Location XYZ (ft): 340.875052,252.370529,101.250000
-                Rotation (deg): 0.000000
-                Parent Rotation (deg): -0.000000
-                Parent ElementId: 990198
-                LevelId: 30
-                ElementId: 8601005
-                FacingOrientation: 0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-196-LED-003\nSet Definition ID: SET-196\nLocation XYZ (ft): 340.875052,252.370529,101.250000\nRotation (deg): 0.000000\nParent Rotation (deg): -0.000000\nParent ElementId: 990198\nLevelId: 30\nElementId: 8601005\nFacingOrientation: 0.000000,-1.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -38491,16 +37762,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-196-LED-004
-                Set Definition ID: SET-196
-                Location XYZ (ft): 435.437137,252.403167,101.250000
-                Rotation (deg): 0.000000
-                Parent Rotation (deg): -0.000000
-                Parent ElementId: 1975347
-                LevelId: 30
-                ElementId: 8600997
-                FacingOrientation: 0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-196-LED-004\nSet Definition ID: SET-196\nLocation XYZ (ft): 435.437137,252.403167,101.250000\nRotation (deg): 0.000000\nParent Rotation (deg): -0.000000\nParent ElementId: 1975347\nLevelId: 30\nElementId: 8600997\nFacingOrientation: 0.000000,-1.000000,-0.000000\n"
             id: SET-196-LED-004
             tags:
               []
@@ -39165,16 +38427,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-213-LED-003
-                Set Definition ID: SET-213
-                Location XYZ (ft): 372.940772,239.391910,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): 180.000000
-                Parent ElementId: 989314
-                LevelId: 30
-                ElementId: 8601042
-                FacingOrientation: 0.000000,1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-213-LED-003\nSet Definition ID: SET-213\nLocation XYZ (ft): 372.940772,239.391910,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): 180.000000\nParent ElementId: 989314\nLevelId: 30\nElementId: 8601042\nFacingOrientation: 0.000000,1.000000,-0.000000\n"
             id: SET-213-LED-003
             tags:
               []
@@ -39722,7 +38975,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-322-LED-001
@@ -39983,16 +39236,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-095-LED-003
-                Set Definition ID: SET-095
-                Location XYZ (ft): 388.342388,208.768034,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 989563
-                LevelId: 30
-                ElementId: 8601046
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-095-LED-003\nSet Definition ID: SET-095\nLocation XYZ (ft): 388.342388,208.768034,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 989563\nLevelId: 30\nElementId: 8601046\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
             id: SET-095-LED-003
             tags:
               []
@@ -40229,16 +39473,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-195-LED-003
-                Set Definition ID: SET-195
-                Location XYZ (ft): 403.317885,252.403167,101.250000
-                Rotation (deg): 0.000000
-                Parent Rotation (deg): -0.000000
-                Parent ElementId: 990208
-                LevelId: 30
-                ElementId: 8601000
-                FacingOrientation: 0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-195-LED-003\nSet Definition ID: SET-195\nLocation XYZ (ft): 403.317885,252.403167,101.250000\nRotation (deg): 0.000000\nParent Rotation (deg): -0.000000\nParent ElementId: 990208\nLevelId: 30\nElementId: 8601000\nFacingOrientation: 0.000000,-1.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -40452,16 +39687,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-011-LED-002
-                Set Definition ID: SET-011
-                Location XYZ (ft): 93.452277,61.785513,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 7245136
-                LevelId: 30
-                ElementId: 9179671
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-011-LED-002\nSet Definition ID: SET-011\nLocation XYZ (ft): 93.452277,61.785513,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 7245136\nLevelId: 30\nElementId: 9179671\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
             id: SET-011-LED-002
             tags:
               []
@@ -40619,7 +39845,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-333-LED-001
@@ -41211,16 +40437,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CR_Cash Register"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-110-LED-005
-                Set Definition ID: SET-110
-                Location XYZ (ft): 357.926834,14.779726,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 6529649
-                LevelId: 30
-                ElementId: 8728290
-                FacingOrientation: 1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-110-LED-005\nSet Definition ID: SET-110\nLocation XYZ (ft): 357.926834,14.779726,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 6529649\nLevelId: 30\nElementId: 8728290\nFacingOrientation: 1.000000,0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -41244,16 +40461,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CP_Catalina Printer Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-110-LED-006
-                Set Definition ID: SET-110
-                Location XYZ (ft): 357.926834,18.032192,101.500000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 6529649
-                LevelId: 30
-                ElementId: 8728291
-                FacingOrientation: 1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-110-LED-006\nSet Definition ID: SET-110\nLocation XYZ (ft): 357.926834,18.032192,101.500000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 6529649\nLevelId: 30\nElementId: 8728291\nFacingOrientation: 1.000000,0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -41277,16 +40485,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : T_Wall Telephone Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-110-LED-007
-                Set Definition ID: SET-110
-                Location XYZ (ft): 357.926834,16.365525,104.000000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 6529649
-                LevelId: 30
-                ElementId: 8728292
-                FacingOrientation: 1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-110-LED-007\nSet Definition ID: SET-110\nLocation XYZ (ft): 357.926834,16.365525,104.000000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 6529649\nLevelId: 30\nElementId: 8728292\nFacingOrientation: 1.000000,0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -41577,16 +40776,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-221-LED-004
-                Set Definition ID: SET-221
-                Location XYZ (ft): 466.727024,68.375089,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): 180.000000
-                Parent ElementId: 7486386
-                LevelId: 30
-                ElementId: 8601070
-                FacingOrientation: 0.000000,1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-221-LED-004\nSet Definition ID: SET-221\nLocation XYZ (ft): 466.727024,68.375089,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): 180.000000\nParent ElementId: 7486386\nLevelId: 30\nElementId: 8601070\nFacingOrientation: 0.000000,1.000000,-0.000000\n"
             id: SET-221-LED-004
             tags:
               []
@@ -41813,16 +41003,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-015-LED-004
-                Set Definition ID: SET-015
-                Location XYZ (ft): 113.775195,56.948859,104.000000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7245183
-                LevelId: 30
-                ElementId: 8600646
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-015-LED-004\nSet Definition ID: SET-015\nLocation XYZ (ft): 113.775195,56.948859,104.000000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7245183\nLevelId: 30\nElementId: 8600646\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
             id: SET-015-LED-004
             tags:
               []
@@ -41846,16 +41027,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-015-LED-005
-                Set Definition ID: SET-015
-                Location XYZ (ft): 113.775195,53.782192,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7245183
-                LevelId: 30
-                ElementId: 8600647
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-015-LED-005\nSet Definition ID: SET-015\nLocation XYZ (ft): 113.775195,53.782192,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7245183\nLevelId: 30\nElementId: 8600647\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
             id: SET-015-LED-005
             tags:
               []
@@ -41879,16 +41051,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-015-LED-006
-                Set Definition ID: SET-015
-                Location XYZ (ft): 113.785612,55.386359,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7245183
-                LevelId: 30
-                ElementId: 8724432
-                FacingOrientation: -1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-015-LED-006\nSet Definition ID: SET-015\nLocation XYZ (ft): 113.785612,55.386359,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7245183\nLevelId: 30\nElementId: 8724432\nFacingOrientation: -1.000000,-0.000000,-0.000000\n"
             id: SET-015-LED-006
             tags:
               []
@@ -42125,16 +41288,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-205-LED-003
-                Set Definition ID: SET-205
-                Location XYZ (ft): 436.555610,143.405710,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 4558791
-                LevelId: 30
-                ElementId: 8601052
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-205-LED-003\nSet Definition ID: SET-205\nLocation XYZ (ft): 436.555610,143.405710,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 4558791\nLevelId: 30\nElementId: 8601052\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -42451,7 +41605,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-330-LED-001
@@ -42790,16 +41944,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-232-LED-003
-                Set Definition ID: SET-232
-                Location XYZ (ft): 388.359671,135.548326,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 989265
-                LevelId: 30
-                ElementId: 8601077
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-232-LED-003\nSet Definition ID: SET-232\nLocation XYZ (ft): 388.359671,135.548326,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 989265\nLevelId: 30\nElementId: 8601077\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
             id: SET-232-LED-003
             tags:
               []
@@ -43132,16 +42277,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-017-LED-003
-                Set Definition ID: SET-017
-                Location XYZ (ft): 111.988737,34.873205,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7245101
-                LevelId: 30
-                ElementId: 8600847
-                FacingOrientation: -1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-017-LED-003\nSet Definition ID: SET-017\nLocation XYZ (ft): 111.988737,34.873205,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7245101\nLevelId: 30\nElementId: 8600847\nFacingOrientation: -1.000000,-0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -43863,16 +42999,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-229-LED-003
-                Set Definition ID: SET-229
-                Location XYZ (ft): 362.618679,122.355993,101.250000
-                Rotation (deg): -0.000000
-                Parent Rotation (deg): 0.000000
-                Parent ElementId: 4780400
-                LevelId: 30
-                ElementId: 8601080
-                FacingOrientation: -0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-229-LED-003\nSet Definition ID: SET-229\nLocation XYZ (ft): 362.618679,122.355993,101.250000\nRotation (deg): -0.000000\nParent Rotation (deg): 0.000000\nParent ElementId: 4780400\nLevelId: 30\nElementId: 8601080\nFacingOrientation: -0.000000,-1.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -44490,16 +43617,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-212-LED-003
-                Set Definition ID: SET-212
-                Location XYZ (ft): 366.929065,239.391910,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): 180.000000
-                Parent ElementId: 989315
-                LevelId: 30
-                ElementId: 8601041
-                FacingOrientation: 0.000000,1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-212-LED-003\nSet Definition ID: SET-212\nLocation XYZ (ft): 366.929065,239.391910,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): 180.000000\nParent ElementId: 989315\nLevelId: 30\nElementId: 8601041\nFacingOrientation: 0.000000,1.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -45976,16 +45094,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-211-LED-003
-                Set Definition ID: SET-211
-                Location XYZ (ft): 358.939498,239.391910,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): 180.000000
-                Parent ElementId: 5109492
-                LevelId: 30
-                ElementId: 8601040
-                FacingOrientation: 0.000000,1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-211-LED-003\nSet Definition ID: SET-211\nLocation XYZ (ft): 358.939498,239.391910,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): 180.000000\nParent ElementId: 5109492\nLevelId: 30\nElementId: 8601040\nFacingOrientation: 0.000000,1.000000,-0.000000\n"
             id: SET-211-LED-003
             tags:
               []
@@ -46375,16 +45484,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-194-LED-003
-                Set Definition ID: SET-194
-                Location XYZ (ft): 351.403525,252.611501,101.250000
-                Rotation (deg): 0.000000
-                Parent Rotation (deg): 0.000000
-                Parent ElementId: 990179
-                LevelId: 30
-                ElementId: 8601004
-                FacingOrientation: 0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-194-LED-003\nSet Definition ID: SET-194\nLocation XYZ (ft): 351.403525,252.611501,101.250000\nRotation (deg): 0.000000\nParent Rotation (deg): 0.000000\nParent ElementId: 990179\nLevelId: 30\nElementId: 8601004\nFacingOrientation: 0.000000,-1.000000,-0.000000\n"
             id: SET-194-LED-003
             tags:
               []
@@ -46921,16 +46021,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-239-LED-003
-                Set Definition ID: SET-239
-                Location XYZ (ft): 476.448595,130.635887,101.250000
-                Rotation (deg): 0.000000
-                Parent Rotation (deg): 0.000000
-                Parent ElementId: 7223504
-                LevelId: 30
-                ElementId: 8600988
-                FacingOrientation: 0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-239-LED-003\nSet Definition ID: SET-239\nLocation XYZ (ft): 476.448595,130.635887,101.250000\nRotation (deg): 0.000000\nParent Rotation (deg): 0.000000\nParent ElementId: 7223504\nLevelId: 30\nElementId: 8600988\nFacingOrientation: 0.000000,-1.000000,-0.000000\n"
             id: SET-239-LED-003
             tags:
               []
@@ -46997,7 +46088,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-330-LED-001
@@ -47726,16 +46817,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-143-LED-007
-                Set Definition ID: SET-143
-                Location XYZ (ft): 249.551333,317.646775,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): -0.000000
-                Parent ElementId: 5531772
-                LevelId: 30
-                ElementId: 8619469
-                FacingOrientation: -0.000000,-1.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-143-LED-007\nSet Definition ID: SET-143\nLocation XYZ (ft): 249.551333,317.646775,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): -0.000000\nParent ElementId: 5531772\nLevelId: 30\nElementId: 8619469\nFacingOrientation: -0.000000,-1.000000,0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -47759,16 +46841,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-143-LED-008
-                Set Definition ID: SET-143
-                Location XYZ (ft): 257.312948,317.646775,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): -0.000000
-                Parent ElementId: 5531772
-                LevelId: 30
-                ElementId: 8619471
-                FacingOrientation: -0.000000,-1.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-143-LED-008\nSet Definition ID: SET-143\nLocation XYZ (ft): 257.312948,317.646775,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): -0.000000\nParent ElementId: 5531772\nLevelId: 30\nElementId: 8619471\nFacingOrientation: -0.000000,-1.000000,0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -47792,16 +46865,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-143-LED-009
-                Set Definition ID: SET-143
-                Location XYZ (ft): 254.423003,317.646775,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): -0.000000
-                Parent ElementId: 5531772
-                LevelId: 30
-                ElementId: 8619472
-                FacingOrientation: -0.000000,-1.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-143-LED-009\nSet Definition ID: SET-143\nLocation XYZ (ft): 254.423003,317.646775,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): -0.000000\nParent ElementId: 5531772\nLevelId: 30\nElementId: 8619472\nFacingOrientation: -0.000000,-1.000000,0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -47825,16 +46889,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-143-LED-010
-                Set Definition ID: SET-143
-                Location XYZ (ft): 251.974886,317.646775,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): -0.000000
-                Parent ElementId: 5531772
-                LevelId: 30
-                ElementId: 8619473
-                FacingOrientation: -0.000000,-1.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-143-LED-010\nSet Definition ID: SET-143\nLocation XYZ (ft): 251.974886,317.646775,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): -0.000000\nParent ElementId: 5531772\nLevelId: 30\nElementId: 8619473\nFacingOrientation: -0.000000,-1.000000,0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -47858,16 +46913,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-143-LED-011
-                Set Definition ID: SET-143
-                Location XYZ (ft): 259.516032,317.646775,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): -0.000000
-                Parent ElementId: 5531772
-                LevelId: 30
-                ElementId: 8619477
-                FacingOrientation: -0.000000,-1.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-143-LED-011\nSet Definition ID: SET-143\nLocation XYZ (ft): 259.516032,317.646775,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): -0.000000\nParent ElementId: 5531772\nLevelId: 30\nElementId: 8619477\nFacingOrientation: -0.000000,-1.000000,0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -48176,16 +47222,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-202-LED-004
-                Set Definition ID: SET-202
-                Location XYZ (ft): 436.510143,187.732823,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 3602825
-                LevelId: 30
-                ElementId: 8601030
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-202-LED-004\nSet Definition ID: SET-202\nLocation XYZ (ft): 436.510143,187.732823,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 3602825\nLevelId: 30\nElementId: 8601030\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
             id: SET-202-LED-004
             tags:
               []
@@ -48209,16 +47246,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-202-LED-005
-                Set Definition ID: SET-202
-                Location XYZ (ft): 436.510143,194.566156,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 3602825
-                LevelId: 30
-                ElementId: 9163630
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-202-LED-005\nSet Definition ID: SET-202\nLocation XYZ (ft): 436.510143,194.566156,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 3602825\nLevelId: 30\nElementId: 9163630\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
             id: SET-202-LED-005
             tags:
               []
@@ -48601,7 +47629,7 @@ equipment_definitions:
               Parent Rotation (deg): 270.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-325-LED-001
@@ -48656,7 +47684,7 @@ equipment_definitions:
               Parent Rotation (deg): 270.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-325-LED-002
@@ -48711,7 +47739,7 @@ equipment_definitions:
               Parent Rotation (deg): 270.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-325-LED-003
@@ -48778,7 +47806,7 @@ equipment_definitions:
             is_group: true
             text_notes:
               -
-                text: |
+                text: "\n"
                 width_inches: 1.40670276265
                 type_name: "Text : 3/32\\\\\\\\" Arial - Transparent Background"
                 offsets:
@@ -49699,16 +48727,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-122-LED-003
-                Set Definition ID: SET-122
-                Location XYZ (ft): 301.358527,28.813442,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -0.000000
-                Parent ElementId: 7434939
-                LevelId: 30
-                ElementId: 8660104
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-122-LED-003\nSet Definition ID: SET-122\nLocation XYZ (ft): 301.358527,28.813442,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -0.000000\nParent ElementId: 7434939\nLevelId: 30\nElementId: 8660104\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
             id: SET-122-LED-003
             tags:
               []
@@ -49777,7 +48796,7 @@ equipment_definitions:
               Parent Rotation (deg): 360.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-328-LED-001
@@ -49832,7 +48851,7 @@ equipment_definitions:
               Parent Rotation (deg): 360.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-328-LED-002
@@ -49887,7 +48906,7 @@ equipment_definitions:
               Parent Rotation (deg): 360.0
               Product Datasheet URL: ""
               LevelId: 1344350
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-328-LED-003
@@ -50160,16 +49179,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-121-LED-003
-                Set Definition ID: SET-121
-                Location XYZ (ft): 294.254152,30.709275,101.250000
-                Rotation (deg): -0.000000
-                Parent Rotation (deg): -0.000000
-                Parent ElementId: 7434943
-                LevelId: 30
-                ElementId: 8660106
-                FacingOrientation: -0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-121-LED-003\nSet Definition ID: SET-121\nLocation XYZ (ft): 294.254152,30.709275,101.250000\nRotation (deg): -0.000000\nParent Rotation (deg): -0.000000\nParent ElementId: 7434943\nLevelId: 30\nElementId: 8660106\nFacingOrientation: -0.000000,-1.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -50193,16 +49203,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-121-LED-004
-                Set Definition ID: SET-121
-                Location XYZ (ft): 292.329160,30.667609,101.250000
-                Rotation (deg): -0.000000
-                Parent Rotation (deg): -0.000000
-                Parent ElementId: 7434943
-                LevelId: 30
-                ElementId: 8660107
-                FacingOrientation: -0.000000,-1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-121-LED-004\nSet Definition ID: SET-121\nLocation XYZ (ft): 292.329160,30.667609,101.250000\nRotation (deg): -0.000000\nParent Rotation (deg): -0.000000\nParent ElementId: 7434943\nLevelId: 30\nElementId: 8660107\nFacingOrientation: -0.000000,-1.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -50277,7 +49278,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-334-LED-001
@@ -51072,16 +50073,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-206-LED-007
-                Set Definition ID: SET-206
-                Location XYZ (ft): 400.707946,227.352296,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 989962
-                LevelId: 30
-                ElementId: 8601023
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-206-LED-007\nSet Definition ID: SET-206\nLocation XYZ (ft): 400.707946,227.352296,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 989962\nLevelId: 30\nElementId: 8601023\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
             id: SET-206-LED-007
             tags:
               []
@@ -51105,16 +50097,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-206-LED-008
-                Set Definition ID: SET-206
-                Location XYZ (ft): 401.663237,237.686849,101.250000
-                Rotation (deg): 180.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 989962
-                LevelId: 30
-                ElementId: 8601038
-                FacingOrientation: 0.000000,1.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-206-LED-008\nSet Definition ID: SET-206\nLocation XYZ (ft): 401.663237,237.686849,101.250000\nRotation (deg): 180.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 989962\nLevelId: 30\nElementId: 8601038\nFacingOrientation: 0.000000,1.000000,-0.000000\n"
             id: SET-206-LED-008
             tags:
               []
@@ -51138,16 +50121,7 @@ equipment_definitions:
               Apparent Load Input_CED: 0.0
               CKT_Circuit Number_CEDT: ""
               Voltage_CED: 24.0
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-206-LED-009
-                Set Definition ID: SET-206
-                Location XYZ (ft): 407.158838,233.487224,101.250000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 989962
-                LevelId: 30
-                ElementId: 8728298
-                FacingOrientation: 1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-206-LED-009\nSet Definition ID: SET-206\nLocation XYZ (ft): 407.158838,233.487224,101.250000\nRotation (deg): 90.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 989962\nLevelId: 30\nElementId: 8728298\nFacingOrientation: 1.000000,-0.000000,-0.000000\n"
             id: SET-206-LED-009
             tags:
               []
@@ -51246,16 +50220,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-123-LED-002
-                Set Definition ID: SET-123
-                Location XYZ (ft): 92.671029,267.459480,101.250000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): -180.000000
-                Parent ElementId: 7244222
-                LevelId: 30
-                ElementId: 8600868
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-123-LED-002\nSet Definition ID: SET-123\nLocation XYZ (ft): 92.671029,267.459480,101.250000\nRotation (deg): -90.000000\nParent Rotation (deg): -180.000000\nParent ElementId: 7244222\nLevelId: 30\nElementId: 8600868\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -51330,7 +50295,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: "\n"
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-334-LED-001
@@ -51581,16 +50546,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-021-LED-003
-                Set Definition ID: SET-021
-                Location XYZ (ft): 103.699777,45.002177,104.000000
-                Rotation (deg): -90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7246938
-                LevelId: 30
-                ElementId: 8435173
-                FacingOrientation: -1.000000,-0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-021-LED-003\nSet Definition ID: SET-021\nLocation XYZ (ft): 103.699777,45.002177,104.000000\nRotation (deg): -90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7246938\nLevelId: 30\nElementId: 8435173\nFacingOrientation: -1.000000,-0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -52009,16 +50965,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-236-LED-003
-                Set Definition ID: SET-236
-                Location XYZ (ft): 439.404421,131.260401,101.250000
-                Rotation (deg): -23.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 988186
-                LevelId: 30
-                ElementId: 8601075
-                FacingOrientation: -0.390731,-0.920505,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-236-LED-003\nSet Definition ID: SET-236\nLocation XYZ (ft): 439.404421,131.260401,101.250000\nRotation (deg): -23.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 988186\nLevelId: 30\nElementId: 8601075\nFacingOrientation: -0.390731,-0.920505,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -54110,7 +53057,7 @@ equipment_definitions:
             is_group: true
             text_notes:
               -
-                text: |
+                text: "\n"
                 width_inches: 0.317716535433
                 type_name: "Text : 1/16\\\\\\\\" Arial"
                 offsets:
@@ -54404,16 +53351,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-215-LED-003
-                Set Definition ID: SET-215
-                Location XYZ (ft): 386.864352,237.974210,101.250000
-                Rotation (deg): 139.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 989312
-                LevelId: 30
-                ElementId: 8601043
-                FacingOrientation: 0.656059,0.754710,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-215-LED-003\nSet Definition ID: SET-215\nLocation XYZ (ft): 386.864352,237.974210,101.250000\nRotation (deg): 139.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 989312\nLevelId: 30\nElementId: 8601043\nFacingOrientation: 0.656059,0.754710,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               Number of Poles_CED: 1
@@ -54495,16 +53433,7 @@ equipment_definitions:
               CKT_Panel_CEDT: ""
               CKT_Schedule Notes_CEDT: ""
               CKT_Circuit Number_CEDT: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-336-LED-001
-                Set Definition ID: SET-336
-                Location XYZ (ft): 62.108527,95.034534,101.250000
-                Rotation (deg): 270.000000
-                Parent Rotation (deg): -90.000000
-                Parent ElementId: 6455530
-                LevelId: 30
-                ElementId: 8600984
-                FacingOrientation: 1.000000,-0.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-336-LED-001\nSet Definition ID: SET-336\nLocation XYZ (ft): 62.108527,95.034534,101.250000\nRotation (deg): 270.000000\nParent Rotation (deg): -90.000000\nParent ElementId: 6455530\nLevelId: 30\nElementId: 8600984\nFacingOrientation: 1.000000,-0.000000,0.000000\n"
             id: SET-336-LED-001
             tags:
               []
@@ -54555,16 +53484,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-337-LED-001
-                Set Definition ID: SET-337
-                Location XYZ (ft): 62.108527,96.602996,104.000000
-                Rotation (deg): 270.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 6459255
-                LevelId: 30
-                ElementId: 9179813
-                FacingOrientation: 1.000000,-0.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-337-LED-001\nSet Definition ID: SET-337\nLocation XYZ (ft): 62.108527,96.602996,104.000000\nRotation (deg): 270.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 6459255\nLevelId: 30\nElementId: 9179813\nFacingOrientation: 1.000000,-0.000000,0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               CKT_Schedule Notes_CEDT: ""
@@ -54620,16 +53540,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : TV_Pinpoint Time Clock "
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-338-LED-001
-                Set Definition ID: SET-338
-                Location XYZ (ft): 440.618525,196.028167,104.000000
-                Rotation (deg): 90.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 7491781
-                LevelId: 30
-                ElementId: 9650547
-                FacingOrientation: -1.000000,0.000000,0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-338-LED-001\nSet Definition ID: SET-338\nLocation XYZ (ft): 440.618525,196.028167,104.000000\nRotation (deg): 90.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 7491781\nLevelId: 30\nElementId: 9650547\nFacingOrientation: -1.000000,0.000000,0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               CKT_Schedule Notes_CEDT: ""
@@ -54685,16 +53596,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
-                Linked Element Definition ID: SET-339-LED-001
-                Set Definition ID: SET-339
-                Location XYZ (ft): 383.636426,216.166134,103.666667
-                Rotation (deg): 270.000000
-                Parent Rotation (deg): 90.000000
-                Parent ElementId: 6339835
-                LevelId: 30
-                ElementId: 9529958
-                FacingOrientation: -1.000000,0.000000,-0.000000
+              Element_Linker Parameter: "Linked Element Definition ID: SET-339-LED-001\nSet Definition ID: SET-339\nLocation XYZ (ft): 383.636426,216.166134,103.666667\nRotation (deg): 270.000000\nParent Rotation (deg): 90.000000\nParent ElementId: 6339835\nLevelId: 30\nElementId: 9529958\nFacingOrientation: -1.000000,0.000000,-0.000000\n"
               CKT_Rating_CED: 0.0
               CKT_Panel_CEDT: ""
               CKT_Schedule Notes_CEDT: ""
