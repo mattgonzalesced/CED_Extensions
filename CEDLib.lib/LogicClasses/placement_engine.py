@@ -1851,6 +1851,25 @@ class PlaceElementsEngine(object):
         setattr(linked_def, "_ced_linker_template", cache)
         return cache
 
+    def _is_pipe_category(self, element):
+        if element is None:
+            return False
+        cat = getattr(element, "Category", None)
+        if not cat:
+            return False
+        try:
+            cat_id = cat.Id.IntegerValue
+        except Exception:
+            cat_id = None
+        for bip in (BuiltInCategory.OST_PipeFitting, BuiltInCategory.OST_PipeAccessory):
+            try:
+                if cat_id == int(bip):
+                    return True
+            except Exception:
+                continue
+        name = (getattr(cat, "Name", "") or "").lower()
+        return ("pipe fitting" in name) or ("pipe accessory" in name)
+
     def _set_element_linker_param(self, element, payload_value):
         if not element or not payload_value:
             return False
@@ -1883,10 +1902,12 @@ class PlaceElementsEngine(object):
         if not instance or not linked_def:
             return
         template = self._get_linker_template(linked_def)
-        if not template or not template.get("led_id"):
-            return
+        if not template:
+            template = {}
         led_id = template.get("led_id")
         set_id = template.get("set_id")
+        if not led_id and not set_id and not self._is_pipe_category(instance):
+            return
         level_id = None
         level_ref = getattr(instance, "LevelId", None)
         if level_ref is not None:
