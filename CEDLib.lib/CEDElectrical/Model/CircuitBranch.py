@@ -279,7 +279,6 @@ class CircuitBranch(object):
         self._conduit_type_override = None
         self._conduit_size_override = None
         self._user_clear_hot = False
-        self._user_clear_neutral = False
         self._user_clear_ground = False
         self._user_clear_conduit = False
 
@@ -742,7 +741,6 @@ class CircuitBranch(object):
                 self._conduit_size_override = norm
 
         self._user_clear_hot = False
-        self._user_clear_neutral = False
         self._user_clear_ground = False
         self._user_clear_conduit = False
 
@@ -751,8 +749,14 @@ class CircuitBranch(object):
             if raw is None:
                 return
             if self._is_clear_token(raw):
-                setattr(self, "_user_clear_{}".format(name), True)
-                setattr(self, attr, "-")
+                if name == "hot":
+                    self._user_clear_hot = True
+                    setattr(self, attr, "-")
+                elif name == "ground":
+                    self._user_clear_ground = True
+                    setattr(self, attr, "-")
+                else:
+                    setattr(self, attr, None)
                 return
             if name == "neutral" and not neutral_expected_flag:
                 setattr(self, attr, None)
@@ -788,7 +792,7 @@ class CircuitBranch(object):
             neutral_expected_flag=neutral_expected,
         )
         _check_size("ground", "_wire_ground_size_override", warn_user=self._auto_calculate_override)
-        ig_expected = self._include_isolated_ground and not self._user_clear_hot
+        ig_expected = self._include_isolated_ground and not self._user_clear_hot and not self._user_clear_ground
         if not ig_expected:
             self._wire_ig_size_override = None
         elif self._wire_ig_size_override is not None:
@@ -908,11 +912,9 @@ class CircuitBranch(object):
             self.cable.insulation = None
             return
 
-        if self._user_clear_neutral:
-            self.cable.neutral_qty = 0
-
         if self._user_clear_ground:
             self.cable.ground_qty = 0
+            self.cable.ig_qty = 0
 
         material_value, temp_c, insulation_value = self._resolve_wire_specs()
         self.cable.material = material_value
@@ -1353,10 +1355,6 @@ class CircuitBranch(object):
 
     def calculate_neutral_wire_size(self):
         if self.cable.cleared or self.calc_failed:
-            self.cable.neutral_size = None
-            return
-
-        if self._user_clear_neutral:
             self.cable.neutral_size = None
             return
 
