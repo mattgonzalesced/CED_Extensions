@@ -331,6 +331,7 @@ def equipment_defs_to_legacy(equipment_defs):
         cad_name = eq.get("name") or eq.get("id") or "Unknown"
         types = []
         for linked_set in eq.get("linked_sets") or []:
+            set_id = linked_set.get("id")
             for led in linked_set.get("linked_element_definitions") or []:
                 if led.get("is_parent_anchor"):
                     continue
@@ -345,6 +346,7 @@ def equipment_defs_to_legacy(equipment_defs):
                     "category_name": led.get("category"),
                     "is_group": bool(led.get("is_group")),
                     "led_id": led.get("id"),
+                    "set_id": set_id,
                     "instance_config": inst_cfg,
                 })
         legacy.append({

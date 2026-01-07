@@ -84,6 +84,8 @@ class ProfileRepository(object):
             for type_entry in prof.get("types") or []:
                 if not isinstance(type_entry, dict):
                     continue
+                led_id = type_entry.get("led_id")
+                set_id = type_entry.get("set_id")
                 label = (type_entry.get("label") or "").strip()
                 if not label:
                     continue
@@ -186,6 +188,10 @@ class ProfileRepository(object):
                         is_optional=False,
                         is_parent_anchor=bool(type_entry.get("is_parent_anchor")),
                     )
+                    if led_id:
+                        setattr(led, "_ced_led_id", led_id)
+                    if set_id:
+                        setattr(led, "_ced_set_id", set_id)
                     linked_defs.append(led)
 
             linked_set = LinkedElementSet(

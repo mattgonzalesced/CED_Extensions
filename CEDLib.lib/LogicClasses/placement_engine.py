@@ -1836,6 +1836,17 @@ class PlaceElementsEngine(object):
                 }
                 setattr(linked_def, "_ced_linker_template", cache)
                 return cache
+        led_id = getattr(linked_def, "_ced_led_id", None)
+        set_id = getattr(linked_def, "_ced_set_id", None)
+        if led_id or set_id:
+            cache = {
+                "param_name": None,
+                "led_id": led_id,
+                "set_id": set_id,
+                "level_id": None,
+            }
+            setattr(linked_def, "_ced_linker_template", cache)
+            return cache
         cache = {}
         setattr(linked_def, "_ced_linker_template", cache)
         return cache
