@@ -35,6 +35,7 @@ except Exception:  # pragma: no cover - IronPython fallback
         yaml = None
 
 ELEMENT_LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
+ESCAPED_QUOTE_KEYS = ("label", "type_name")
 
 
 class _ElementLinkerString(str):
@@ -56,6 +57,25 @@ def _wrap_element_linker_strings(value):
     if isinstance(value, list):
         return [_wrap_element_linker_strings(item) for item in value]
     return value
+
+
+def _normalize_escaped_quotes(value):
+    if isinstance(value, Mapping):
+        cleaned = {}
+        for key, item in value.items():
+            if key in ESCAPED_QUOTE_KEYS and isinstance(item, basestring):
+                cleaned[key] = str(item).replace('\\"', '"')
+            else:
+                cleaned[key] = _normalize_escaped_quotes(item)
+        return cleaned
+    if isinstance(value, list):
+        return [_normalize_escaped_quotes(item) for item in value]
+    return value
+
+
+def _prepare_dump_payload(payload):
+    normalized = _normalize_escaped_quotes(payload)
+    return _wrap_element_linker_strings(normalized)
 
 
 def _build_element_linker_dumper():
@@ -261,7 +281,7 @@ def _yaml_dump_to_path(path, data):
     if dumper is None:
         return False
 
-    prepared = _wrap_element_linker_strings(data)
+    prepared = _prepare_dump_payload(data)
     kwargs = {"default_flow_style": False, "sort_keys": False, "allow_unicode": True}
     if _ELEMENT_LINKER_DUMPER is not None:
         kwargs["Dumper"] = _ELEMENT_LINKER_DUMPER
@@ -293,7 +313,7 @@ def load_data_from_text(raw_text, source_label="<memory>"):
     stripped = raw.lstrip()
     if stripped.startswith("{") or stripped.startswith("["):
         try:
-            return json.loads(raw or "{}")
+            return _normalize_escaped_quotes(json.loads(raw or "{}"))
         except Exception:
             pass
     data = None
@@ -316,6 +336,8 @@ def load_data_from_text(raw_text, source_label="<memory>"):
                 raise yaml_error
         else:
             raise ValueError("profile data could not be parsed as YAML and does not look like JSON.")
+
+    data = _normalize_escaped_quotes(data)
 
     if "equipment_definitions" in data:
         defs = data.get("equipment_definitions") or []
@@ -364,7 +386,7 @@ def dump_data_to_string(data):
     if yaml:
         dumper = getattr(yaml, "safe_dump", None) or getattr(yaml, "dump", None)
         if dumper:
-            prepared = _wrap_element_linker_strings(payload)
+            prepared = _prepare_dump_payload(payload)
             kwargs = {"default_flow_style": False, "sort_keys": False, "allow_unicode": True}
             try:
                 if _ELEMENT_LINKER_DUMPER is not None:
