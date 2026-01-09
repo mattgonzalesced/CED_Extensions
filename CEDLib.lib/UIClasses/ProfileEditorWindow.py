@@ -30,12 +30,13 @@ from System.Windows import Thickness, TextWrapping
 
 
 class ProfileEditorWindow(forms.WPFWindow):
-    def __init__(self, xaml_path, cad_block_profiles, relations=None, truth_groups=None, child_to_root=None, delete_callback=None):
+    def __init__(self, xaml_path, cad_block_profiles, relations=None, truth_groups=None, child_to_root=None, delete_callback=None, change_type_callback=None):
         self._profiles = cad_block_profiles
         self._relations = relations or {}
         self._truth_groups = truth_groups or {}
         self._child_to_root = child_to_root or {}
         self._delete_callback = delete_callback
+        self._change_type_callback = change_type_callback
         self._current_profile = None
         self._current_profile_name = None
         self._current_typecfg = None
@@ -112,28 +113,8 @@ class ProfileEditorWindow(forms.WPFWindow):
 
         # Discover TypeConfig objects by introspecting the profile
         type_list = self._discover_type_configs(profile)
-
-        label_totals = {}
-        for tc in type_list:
-            lbl = getattr(tc, "label", None) or "<Unnamed>"
-            label_totals[lbl] = label_totals.get(lbl, 0) + 1
-
-        label_indices = {}
-        for tc in type_list:
-            lbl = getattr(tc, "label", None) or "<Unnamed>"
-            led_id = getattr(tc, "led_id", None)
-            label_indices[lbl] = label_indices.get(lbl, 0) + 1
-            display = lbl
-            if led_id:
-                display = u"{} [{}]".format(lbl, led_id)
-            elif label_totals.get(lbl, 0) > 1:
-                display = u"{} [#{}]".format(lbl, label_indices[lbl])
-            self.TypeList.Items.Add(display)
-            self._type_lookup[display] = tc
-
-        if self.TypeList.Items.Count > 0:
-            self.TypeList.SelectedIndex = 0
-        else:
+        self._populate_type_list(type_list, select_first=True)
+        if self.TypeList.Items.Count == 0:
             forms.alert(
                 "No TypeConfigs found for profile:\n\n{}".format(profile_name),
                 title="Element Linker Profile Editor"
@@ -374,6 +355,56 @@ class ProfileEditorWindow(forms.WPFWindow):
         self.DialogResult = False
         self.Close()
 
+    def ChangeTypeButton_Click(self, sender, args):
+        if self._force_read_only:
+            root_key = self._active_root_key or self._child_to_root.get(self._current_profile_name, self._current_profile_name)
+            root_display = self._root_display_name(root_key) if root_key else None
+            if root_display:
+                msg = "Select the non-indented '{}' entry to edit merged profiles.".format(root_display)
+            else:
+                msg = "Select a source profile to edit."
+            forms.alert(msg, title="Element Linker Profile Editor")
+            return
+        if not self._current_typecfg:
+            forms.alert("Select a type before changing it.", title="Element Linker Profile Editor")
+            return
+        if not self._change_type_callback:
+            forms.alert("Change type is not available in this context.", title="Element Linker Profile Editor")
+            return
+        if getattr(self._current_typecfg, "is_group", False):
+            forms.alert("Change type is not available for model group entries.", title="Element Linker Profile Editor")
+            return
+        if self._in_edit_mode and not self._save_current_typecfg():
+            return
+        current_label = getattr(self._current_typecfg, "label", None)
+        try:
+            selection = self._change_type_callback(current_label)
+        except Exception as exc:
+            forms.alert("Change type failed: {}".format(exc), title="Element Linker Profile Editor")
+            return
+        if not selection:
+            return
+        if isinstance(selection, dict):
+            family_name = (selection.get("family") or selection.get("family_name") or "").strip()
+            type_name = (selection.get("type") or selection.get("type_name") or "").strip()
+            category_name = (selection.get("category") or selection.get("category_name") or "").strip()
+        else:
+            try:
+                family_name, type_name, category_name = selection
+            except Exception:
+                forms.alert("Change type selection was not valid.", title="Element Linker Profile Editor")
+                return
+        if not family_name or not type_name:
+            forms.alert("Change type selection was missing a family or type.", title="Element Linker Profile Editor")
+            return
+        new_label = u"{} : {}".format(family_name, type_name).strip()
+        self._current_typecfg.label = new_label
+        self._current_typecfg.is_group = False
+        if category_name:
+            self._current_typecfg.category_name = category_name
+        type_list = self._discover_type_configs(self._current_profile)
+        self._populate_type_list(type_list, select_typecfg=self._current_typecfg, select_first=False)
+
     def OkButton_Click(self, sender, args):
         """Apply edits back into the current TypeConfig's InstanceConfig."""
         if not self._save_current_typecfg():
@@ -452,12 +483,19 @@ class ProfileEditorWindow(forms.WPFWindow):
         enabled = bool(self._current_profile_name) and not self._force_read_only and bool(self._delete_callback)
         self.DeleteProfileButton.IsEnabled = enabled
         self._update_add_equipment_button_state()
+        self._update_change_type_button_state()
 
     def _update_add_equipment_button_state(self):
         if not hasattr(self, "AddEquipmentButton"):
             return
         enabled = bool(self._current_profile_name) and not self._force_read_only
         self.AddEquipmentButton.IsEnabled = enabled
+
+    def _update_change_type_button_state(self):
+        if not hasattr(self, "ChangeTypeButton"):
+            return
+        enabled = bool(self._current_typecfg) and not self._force_read_only and bool(self._change_type_callback)
+        self.ChangeTypeButton.IsEnabled = enabled
 
     def _apply_read_only_state(self):
         read_only = (not self._in_edit_mode) or self._force_read_only
@@ -495,6 +533,7 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._refresh_param_buttons()
         self._update_rename_button_state()
         self._update_profile_delete_state()
+        self._update_change_type_button_state()
 
     def _clear_fields(self):
         self.OffsetXBox.Text = ""
@@ -519,6 +558,35 @@ class ProfileEditorWindow(forms.WPFWindow):
             self.TextNoteList.Items.Clear()
         self._keynote_rows = []
         self._textnote_rows = []
+
+    def _populate_type_list(self, type_list, select_typecfg=None, select_first=False):
+        self.TypeList.Items.Clear()
+        self._type_lookup = {}
+        if not type_list:
+            return
+        label_totals = {}
+        for tc in type_list:
+            lbl = getattr(tc, "label", None) or "<Unnamed>"
+            label_totals[lbl] = label_totals.get(lbl, 0) + 1
+        label_indices = {}
+        selected_display = None
+        for tc in type_list:
+            lbl = getattr(tc, "label", None) or "<Unnamed>"
+            led_id = getattr(tc, "led_id", None)
+            label_indices[lbl] = label_indices.get(lbl, 0) + 1
+            display = lbl
+            if led_id:
+                display = u"{} [{}]".format(lbl, led_id)
+            elif label_totals.get(lbl, 0) > 1:
+                display = u"{} [#{}]".format(lbl, label_indices[lbl])
+            self.TypeList.Items.Add(display)
+            self._type_lookup[display] = tc
+            if select_typecfg is not None and tc is select_typecfg:
+                selected_display = display
+        if selected_display:
+            self.TypeList.SelectedItem = selected_display
+        elif select_first and self.TypeList.Items.Count > 0:
+            self.TypeList.SelectedIndex = 0
 
     def _reload_annotation_rows(self):
         inst_cfg = getattr(self._current_typecfg, "instance_config", None)

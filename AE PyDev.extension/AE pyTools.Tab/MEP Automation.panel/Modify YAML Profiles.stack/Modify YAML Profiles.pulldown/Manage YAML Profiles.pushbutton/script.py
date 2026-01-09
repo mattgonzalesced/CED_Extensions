@@ -56,6 +56,8 @@ from pyrevit import script, forms, revit
 
 from Autodesk.Revit.DB import (
     BuiltInParameter,
+    FamilySymbol,
+    FilteredElementCollector,
     Group,
     GroupType,
     IndependentTag,
@@ -214,6 +216,58 @@ ELEMENT_LINKER_SHARED_PARAM = "Element_Linker"
 
 
 SAFE_HASH = u"\uff03"
+
+
+def _pick_loaded_family_type(current_label=None):
+    doc = getattr(revit, "doc", None)
+    if doc is None:
+        forms.alert("No active Revit document found.", title=TITLE)
+        return None
+    options = []
+    option_map = {}
+    try:
+        symbols = list(FilteredElementCollector(doc).OfClass(FamilySymbol).ToElements())
+    except Exception:
+        symbols = []
+    for sym in symbols:
+        try:
+            fam = getattr(sym, "Family", None)
+            fam_name = getattr(fam, "Name", None) or getattr(sym, "FamilyName", None)
+            type_param = sym.get_Parameter(BuiltInParameter.ALL_MODEL_TYPE_NAME)
+            type_name = type_param.AsString() if type_param else None
+            if not type_name:
+                type_name = getattr(sym, "Name", None)
+            if not fam_name or not type_name:
+                continue
+            label = u"{} : {}".format(fam_name, type_name)
+            if label in option_map:
+                continue
+            try:
+                category_name = sym.Category.Name if sym.Category else None
+            except Exception:
+                category_name = None
+            option_map[label] = {
+                "family": fam_name,
+                "type": type_name,
+                "category": category_name,
+            }
+            options.append(label)
+        except Exception:
+            continue
+    if not options:
+        forms.alert("No loaded family types found in the model.", title=TITLE)
+        return None
+    options.sort(key=lambda value: value.lower())
+    selection = forms.SelectFromList.show(
+        options,
+        title="Select Family Type",
+        button_name="Select Type",
+        multiselect=False,
+    )
+    if not selection:
+        return None
+    chosen = selection[0] if isinstance(selection, list) else selection
+    return option_map.get(chosen)
 
 
 
@@ -4953,6 +5007,10 @@ def main():
 
 
                 delete_callback=_run_delete_flow,
+
+
+
+                change_type_callback=_pick_loaded_family_type,
 
 
 

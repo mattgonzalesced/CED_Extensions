@@ -92,6 +92,12 @@
                         Margin="0,0,10,0"
                         IsEnabled="False"
                         Click="RenameButton_Click"/>
+                <Button x:Name="ChangeTypeButton"
+                        Content="Change Type..."
+                        Width="130"
+                        Margin="0,0,10,0"
+                        IsEnabled="False"
+                        Click="ChangeTypeButton_Click"/>
                 <Button x:Name="DeleteTypesButton"
                         Content="Delete Types..."
                         Width="120"
