@@ -30,13 +30,14 @@ from System.Windows import Thickness, TextWrapping
 
 
 class ProfileEditorWindow(forms.WPFWindow):
-    def __init__(self, xaml_path, cad_block_profiles, relations=None, truth_groups=None, child_to_root=None, delete_callback=None, change_type_callback=None):
+    def __init__(self, xaml_path, cad_block_profiles, relations=None, truth_groups=None, child_to_root=None, delete_callback=None, change_type_callback=None, change_group_callback=None):
         self._profiles = cad_block_profiles
         self._relations = relations or {}
         self._truth_groups = truth_groups or {}
         self._child_to_root = child_to_root or {}
         self._delete_callback = delete_callback
         self._change_type_callback = change_type_callback
+        self._change_group_callback = change_group_callback
         self._current_profile = None
         self._current_profile_name = None
         self._current_typecfg = None
@@ -371,37 +372,71 @@ class ProfileEditorWindow(forms.WPFWindow):
         if not self._change_type_callback:
             forms.alert("Change type is not available in this context.", title="Element Linker Profile Editor")
             return
-        if getattr(self._current_typecfg, "is_group", False):
-            forms.alert("Change type is not available for model group entries.", title="Element Linker Profile Editor")
-            return
         if self._in_edit_mode and not self._save_current_typecfg():
             return
         current_label = getattr(self._current_typecfg, "label", None)
-        try:
-            selection = self._change_type_callback(current_label)
-        except Exception as exc:
-            forms.alert("Change type failed: {}".format(exc), title="Element Linker Profile Editor")
+        chooser = None
+        if self._change_type_callback and self._change_group_callback:
+            chooser = forms.SelectFromList.show(
+                ["Family Types", "Model Groups"],
+                title="Change Type",
+                button_name="Choose",
+                multiselect=False,
+            )
+        if not chooser and self._change_type_callback and not self._change_group_callback:
+            chooser = "Family Types"
+        if not chooser and self._change_group_callback and not self._change_type_callback:
+            chooser = "Model Groups"
+        if not chooser:
             return
-        if not selection:
-            return
-        if isinstance(selection, dict):
-            family_name = (selection.get("family") or selection.get("family_name") or "").strip()
-            type_name = (selection.get("type") or selection.get("type_name") or "").strip()
-            category_name = (selection.get("category") or selection.get("category_name") or "").strip()
+
+        if chooser == "Model Groups":
+            try:
+                selection = self._change_group_callback(current_label)
+            except Exception as exc:
+                forms.alert("Change type failed: {}".format(exc), title="Element Linker Profile Editor")
+                return
         else:
             try:
-                family_name, type_name, category_name = selection
-            except Exception:
-                forms.alert("Change type selection was not valid.", title="Element Linker Profile Editor")
+                selection = self._change_type_callback(current_label)
+            except Exception as exc:
+                forms.alert("Change type failed: {}".format(exc), title="Element Linker Profile Editor")
                 return
-        if not family_name or not type_name:
-            forms.alert("Change type selection was missing a family or type.", title="Element Linker Profile Editor")
+        if not selection:
             return
-        new_label = u"{} : {}".format(family_name, type_name).strip()
-        self._current_typecfg.label = new_label
-        self._current_typecfg.is_group = False
-        if category_name:
-            self._current_typecfg.category_name = category_name
+        if chooser == "Model Groups":
+            group_label = None
+            category_name = None
+            if isinstance(selection, dict):
+                group_label = (selection.get("label") or selection.get("name") or "").strip()
+                category_name = (selection.get("category") or selection.get("category_name") or "").strip()
+            else:
+                group_label = (selection or "").strip()
+            if not group_label:
+                forms.alert("Change type selection was missing a group type.", title="Element Linker Profile Editor")
+                return
+            self._current_typecfg.label = group_label
+            self._current_typecfg.is_group = True
+            self._current_typecfg.category_name = category_name or "Model Groups"
+        else:
+            if isinstance(selection, dict):
+                family_name = (selection.get("family") or selection.get("family_name") or "").strip()
+                type_name = (selection.get("type") or selection.get("type_name") or "").strip()
+                category_name = (selection.get("category") or selection.get("category_name") or "").strip()
+            else:
+                try:
+                    family_name, type_name, category_name = selection
+                except Exception:
+                    forms.alert("Change type selection was not valid.", title="Element Linker Profile Editor")
+                    return
+            if not family_name or not type_name:
+                forms.alert("Change type selection was missing a family or type.", title="Element Linker Profile Editor")
+                return
+            new_label = u"{} : {}".format(family_name, type_name).strip()
+            self._current_typecfg.label = new_label
+            self._current_typecfg.is_group = False
+            if category_name:
+                self._current_typecfg.category_name = category_name
         type_list = self._discover_type_configs(self._current_profile)
         self._populate_type_list(type_list, select_typecfg=self._current_typecfg, select_first=False)
 
@@ -494,7 +529,9 @@ class ProfileEditorWindow(forms.WPFWindow):
     def _update_change_type_button_state(self):
         if not hasattr(self, "ChangeTypeButton"):
             return
-        enabled = bool(self._current_typecfg) and not self._force_read_only and bool(self._change_type_callback)
+        enabled = bool(self._current_typecfg) and not self._force_read_only and (
+            bool(self._change_type_callback) or bool(self._change_group_callback)
+        )
         self.ChangeTypeButton.IsEnabled = enabled
 
     def _apply_read_only_state(self):

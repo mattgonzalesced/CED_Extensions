@@ -1,4 +1,5 @@
-layout:
+﻿layout:
   - Load Profiles
   - PlaceLinkedElements
+  - PlaceByRoom
   - PlaceCADElements

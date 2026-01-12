@@ -270,6 +270,48 @@ def _pick_loaded_family_type(current_label=None):
     return option_map.get(chosen)
 
 
+def _pick_loaded_group_type(current_label=None):
+    doc = getattr(revit, "doc", None)
+    if doc is None:
+        forms.alert("No active Revit document found.", title=TITLE)
+        return None
+    options = []
+    option_map = {}
+    try:
+        group_types = list(FilteredElementCollector(doc).OfClass(GroupType).ToElements())
+    except Exception:
+        group_types = []
+    for gtype in group_types:
+        try:
+            cat = getattr(gtype, "Category", None)
+            cat_name = cat.Name if cat else None
+        except Exception:
+            cat_name = None
+        if cat_name and cat_name.lower() != "model groups":
+            continue
+        name = getattr(gtype, "Name", None)
+        if not name:
+            continue
+        if name in option_map:
+            continue
+        option_map[name] = {"label": name, "category": cat_name or "Model Groups"}
+        options.append(name)
+    if not options:
+        forms.alert("No model group types found in the model.", title=TITLE)
+        return None
+    options.sort(key=lambda value: value.lower())
+    selection = forms.SelectFromList.show(
+        options,
+        title="Select Model Group Type",
+        button_name="Select Group",
+        multiselect=False,
+    )
+    if not selection:
+        return None
+    chosen = selection[0] if isinstance(selection, list) else selection
+    return option_map.get(chosen)
+
+
 
 
 
@@ -5011,6 +5053,10 @@ def main():
 
 
                 change_type_callback=_pick_loaded_family_type,
+
+
+
+                change_group_callback=_pick_loaded_group_type,
 
 
 
