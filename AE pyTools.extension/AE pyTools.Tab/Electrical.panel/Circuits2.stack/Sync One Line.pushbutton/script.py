@@ -254,7 +254,7 @@ def _linkify_id(output, id_value):
     try:
         return output.linkify(DB.ElementId(int(id_value)))
     except Exception:
-        return ""
+    return ""
 
 
 def _format_detail_entry(output, detail_id, detail_label):
@@ -273,15 +273,13 @@ def _print_mapped_group(output, header_text, groups, header_label_key, header_id
         group_link = _linkify_id(output, group.get(header_id_key))
         group_name = group.get(header_label_key) or empty_label
         header = "{} <b>{}</b>".format(group_link, group_name).strip()
-        output.print_html("<div>{}</div>".format(header))
+        output.print_html("<div style='font-size: 13px;'>{}</div>".format(header))
         items = group.get("details", [])
-        if not items:
-            continue
-        output.print_html("<ul>")
-        for detail_id, detail_label in items:
-            entry = _format_detail_entry(output, detail_id, detail_label)
-            output.print_html("<li>{}</li>".format(entry))
-        output.print_html("</ul>")
+        if items:
+            for detail_id, detail_label in items:
+                entry = _format_detail_entry(output, detail_id, detail_label)
+                output.print_html("<div style='margin-left: 20px;'>{}</div>".format(entry))
+        output.print_html("<br/>")
 
 
 def _print_unmapped_details(output, unmapped_details):
@@ -289,11 +287,10 @@ def _print_unmapped_details(output, unmapped_details):
     if not unmapped_details:
         output.print_md("* None")
         return
-    output.print_html("<ul>")
     for detail_id, detail_label in unmapped_details:
         entry = _format_detail_entry(output, detail_id, detail_label)
-        output.print_html("<li>{}</li>".format(entry))
-    output.print_html("</ul>")
+        output.print_html("<div style='margin-left: 20px;'>{}</div>".format(entry))
+    output.print_html("<br/>")
 
 
 def update_devices_with_sc_ids(circuit):
@@ -375,13 +372,19 @@ def _collect_panels(doc, option_filter):
 
     for pnl in pnl_collector:
         pname = get_model_param_value(pnl, DB.BuiltInParameter.RBS_ELEC_PANEL_NAME)
+        try:
+            mep_model = getattr(pnl, "MEPModel", None)
+            connector_manager = mep_model.ConnectorManager if mep_model else None
+        except Exception:
+            connector_manager = None
         if pname:
-            pdata = {}
-            for detail_param_name, bip in PANEL_VALUE_MAP.items():
-                pdata[detail_param_name] = get_model_param_value(pnl, bip)
-            pdata[DETAIL_PARAM_SC_PANEL_ID] = str(pnl.Id.IntegerValue)
-            panel_map[str(pname)] = pdata
-            panel_map_by_id[str(pnl.Id.IntegerValue)] = pdata
+            if connector_manager:
+                pdata = {}
+                for detail_param_name, bip in PANEL_VALUE_MAP.items():
+                    pdata[detail_param_name] = get_model_param_value(pnl, bip)
+                pdata[DETAIL_PARAM_SC_PANEL_ID] = str(pnl.Id.IntegerValue)
+                panel_map[str(pname)] = pdata
+                panel_map_by_id[str(pnl.Id.IntegerValue)] = pdata
         else:
             logger.debug("  Panel " + str(pnl.Id) + " has no name => skipping")
 
@@ -469,8 +472,6 @@ def _build_output_summary(detail_items, circuit_map, circuit_map_by_id, panel_ma
             pdict = panel_map_by_id[panel_id_lookup]
         if not pdict and pname_val:
             pdict = panel_map.get(str(pname_val))
-        if not pdict and cpanel_val:
-            pdict = panel_map.get(str(cpanel_val))
 
         detail_label = get_detail_type_label(revit.doc, ditem)
         detail_id = str(ditem.Id.IntegerValue)
