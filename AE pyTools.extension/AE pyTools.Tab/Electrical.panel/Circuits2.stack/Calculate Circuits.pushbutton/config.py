@@ -10,6 +10,7 @@ from CEDElectrical.Model.circuit_settings import (
     NeutralBehavior,
     IsolatedGroundBehavior,
     WireMaterialDisplay,
+    WireStringSeparator,
 )
 from CEDElectrical.Domain import settings_manager
 
@@ -57,6 +58,8 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.isolated_ground_behavior_cb.GotFocus += lambda s, e: self._set_help_context('isolated_ground_behavior')
         self.wire_material_display_cb.SelectionChanged += self._on_value_changed
         self.wire_material_display_cb.GotFocus += lambda s, e: self._set_help_context('wire_material_display')
+        self.wire_string_separator_cb.SelectionChanged += self._on_value_changed
+        self.wire_string_separator_cb.GotFocus += lambda s, e: self._set_help_context('wire_string_separator')
         self.feeder_vd_method_cb.SelectionChanged += self._on_value_changed
         self.feeder_vd_method_cb.GotFocus += lambda s, e: self._set_help_context('feeder_vd_method')
         self.write_equipment_cb.Checked += self._on_value_changed
@@ -82,6 +85,9 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.wire_material_display_default.Text = u"(Default: {})".format(
             self._describe_material_display(self.defaults.wire_material_display)
         )
+        self.wire_string_separator_default.Text = u"(Default: {})".format(
+            self._describe_wire_separator(self.defaults.wire_string_separator)
+        )
         self.max_branch_vd_default.Text = u"(Default: {}%)".format(self._percent_value(self.defaults.max_branch_voltage_drop))
         self.max_feeder_vd_default.Text = u"(Default: {}%)".format(self._percent_value(self.defaults.max_feeder_voltage_drop))
         self.feeder_vd_method_default.Text = u"(Default: {})".format(self._describe_feeder_method(self.defaults.feeder_vd_method))
@@ -96,6 +102,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self._select_combo_by_tag(self.neutral_behavior_cb, self.settings.neutral_behavior)
         self._select_combo_by_tag(self.isolated_ground_behavior_cb, self.settings.isolated_ground_behavior)
         self._select_combo_by_tag(self.wire_material_display_cb, self.settings.wire_material_display)
+        self._select_combo_by_tag(self.wire_string_separator_cb, self.settings.wire_string_separator)
         self._select_combo_by_tag(self.feeder_vd_method_cb, self.settings.feeder_vd_method)
 
         self.write_equipment_cb.IsChecked = bool(self.settings.write_equipment_results)
@@ -124,6 +131,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
         updated.set('neutral_behavior', self._get_combo_tag(self.neutral_behavior_cb))
         updated.set('isolated_ground_behavior', self._get_combo_tag(self.isolated_ground_behavior_cb))
         updated.set('wire_material_display', self._get_combo_tag(self.wire_material_display_cb))
+        updated.set('wire_string_separator', self._get_combo_tag(self.wire_string_separator_cb))
         updated.set('max_branch_voltage_drop', self._parse_percent_field(self.max_branch_vd_tb, 0.001, 1.0, self.max_branch_vd_warn, 0.05))
         updated.set('max_feeder_voltage_drop', self._parse_percent_field(self.max_feeder_vd_tb, 0.001, 1.0, self.max_feeder_vd_warn, 0.05))
         updated.set('feeder_vd_method', self._get_combo_tag(self.feeder_vd_method_cb))
@@ -167,6 +175,10 @@ class CircuitSettingsWindow(forms.WPFWindow):
             self.wire_material_display_cb,
             self._is_default('wire_material_display', self._get_combo_tag(self.wire_material_display_cb)),
         )
+        self._apply_default_style(
+            self.wire_string_separator_cb,
+            self._is_default('wire_string_separator', self._get_combo_tag(self.wire_string_separator_cb)),
+        )
         self._apply_default_style(self.feeder_vd_method_cb, self._is_default('feeder_vd_method', fd_value))
         self._apply_default_style(self.write_equipment_cb, self._is_default('write_equipment_results', bool(self.write_equipment_cb.IsChecked)))
         self._apply_default_style(self.write_fixtures_cb, self._is_default('write_fixture_results', bool(self.write_fixtures_cb.IsChecked)))
@@ -197,6 +209,12 @@ class CircuitSettingsWindow(forms.WPFWindow):
             WireMaterialDisplay.ALL: "Show material for Copper and Aluminum",
         }.get(value, value)
 
+    def _describe_wire_separator(self, value):
+        return {
+            WireStringSeparator.PLUS: "Use \"+\" separators",
+            WireStringSeparator.COMMA: "Use \",\" separators",
+        }.get(value, value)
+
     def _describe_feeder_method(self, value):
         return {
             FeederVDMethod.DEMAND: "Demand Load",
@@ -212,6 +230,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
             'neutral_behavior': "Determines how neutrals are sized when in manual override mode (in automatic mode, neutral size always matches the hot size).",
             'isolated_ground_behavior': "Determines how isolated grounds are sized when in manual override mode (in automatic mode, isolated ground size always matches the ground size).",
             'wire_material_display': "Controls when the material suffix (CU/AL) is shown in wire string outputs.",
+            'wire_string_separator': "Controls the separator used between wire parts in wire string outputs.",
             'max_branch_voltage_drop': "Target maximum voltage drop for branch circuits. In automatic mode, calculated sizes will grow until this threshold is met. In manual override mode, the tool will alert the user if this threshold is exceeded.",
             'max_feeder_voltage_drop': "Target maximum voltage drop for feeder circuits. In automatic mode, calculated sizes will grow until this threshold is met. In manual override mode, the tool will alert the user if this threshold is exceeded.",
             'feeder_vd_method': "Which feeder load basis to use for voltage drop calculations and automatic sizing (only applies to feeder circuits that supply panels, switchboards, and transformers). Branch circuits are always based on connected load.",
@@ -239,6 +258,10 @@ class CircuitSettingsWindow(forms.WPFWindow):
                 WireMaterialDisplay.AL_ONLY: "[Show material for Aluminum only] Only AL circuits include the material suffix.",
                 WireMaterialDisplay.ALL: "[Show material for Copper and Aluminum] Both CU and AL circuits include the material suffix.",
             },
+            'wire_string_separator': {
+                WireStringSeparator.PLUS: "[Use \"+\" separators] Wire parts are separated with plus signs.",
+                WireStringSeparator.COMMA: "[Use \",\" separators] Wire parts are separated with commas.",
+            },
             'min_conduit_size': {
                 '1/2"': u"Selected: 1/2\"",
                 '3/4"': u"Selected: 3/4\"",
@@ -253,7 +276,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
         key = self._help_key or ''
         preview = self._help_texts().get(key, "Select a field to see what it controls.")
         option_detail = None
-        if key in ('feeder_vd_method', 'neutral_behavior', 'isolated_ground_behavior', 'wire_material_display', 'min_conduit_size'):
+        if key in ('feeder_vd_method', 'neutral_behavior', 'isolated_ground_behavior', 'wire_material_display', 'wire_string_separator', 'min_conduit_size'):
             combo = getattr(self, key + '_cb', None)
             if combo:
                 option_detail = self._option_help().get(key, {}).get(self._get_combo_tag(combo), None)

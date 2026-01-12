@@ -1965,7 +1965,9 @@ class CircuitBranch(object):
         if ig_qty and ig_size:
             parts.append("{}{}{}IG".format(ig_qty, wp, ig_size))
 
-        final = ", ".join(parts)
+        separator_setting = getattr(self.settings, "wire_string_separator", "comma")
+        separator = " + " if separator_setting == "plus" else ", "
+        final = separator.join(parts)
         if not final:
             return "-"
         return final
