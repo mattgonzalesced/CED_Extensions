@@ -237,6 +237,18 @@ class Alerts(object):
         }
 
     @staticmethod
+    def InsufficientAmpacityBreaker(wire_sets, wire_size, circuit_ampacity, breaker_rating):
+        return {
+            "definition": get_alert_definition("design_insufficient_ampacity_breaker"),
+            "data": {
+                "wire_sets": wire_sets,
+                "wire_size": wire_size,
+                "circuit_ampacity": circuit_ampacity,
+                "breaker_rating": int(round(breaker_rating)),
+            },
+        }
+
+    @staticmethod
     def UndersizedOCP(circuit_load_current, breaker_rating):
         return {
             "definition": get_alert_definition("design_undersized_ocp"),

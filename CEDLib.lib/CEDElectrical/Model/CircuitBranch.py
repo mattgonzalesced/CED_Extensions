@@ -814,11 +814,7 @@ class CircuitBranch(object):
                 if norm not in CONDUCTOR_AREA_TABLE:
                     if self._auto_calculate_override:
                         self.log_warning(
-                            Alerts.InvalidCircuitProperty(
-                                "Isolated ground size",
-                                raw,
-                                None,
-                            ),
+                            Alerts.InvalidIsolatedGround(raw),
                             category="Overrides",
                         )
                     self._wire_ig_size_override = None
@@ -1577,11 +1573,13 @@ class CircuitBranch(object):
 
             # Accept override even if it fails VD or breaker, but warn
             circuit_load_current = self.circuit_load_current
-            if circuit_load_current is None or circuit_load_current <= 0:
-                circuit_load_current = rating
-            if not self._is_ampacity_acceptable(rating, total_amp, circuit_load_current):
+            if circuit_load_current is not None and circuit_load_current > 0 and total_amp < circuit_load_current:
                 self.log_warning(
                     Alerts.InsufficientAmpacity(sets, "#{}".format(w), total_amp, circuit_load_current),
+                )
+            elif not self._is_ampacity_acceptable(rating, total_amp, circuit_load_current):
+                self.log_warning(
+                    Alerts.InsufficientAmpacityBreaker(sets, "#{}".format(w), total_amp, rating),
                 )
 
             vd = self._safe_voltage_drop_calc(w, sets)
