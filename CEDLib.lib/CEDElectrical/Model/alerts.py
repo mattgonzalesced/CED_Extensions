@@ -146,6 +146,13 @@ class Alerts(object):
         }
 
     @staticmethod
+    def InvalidIsolatedGround(override_value):
+        return {
+            "definition": get_alert_definition("overrides_invalid_isolated_ground"),
+            "data": {"override_value": override_value},
+        }
+
+    @staticmethod
     def NonStandardOCPRating(breaker_size, next_size):
         return {
             "definition": get_alert_definition("design_non_standard_ocp_rating"),
