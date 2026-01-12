@@ -1914,6 +1914,19 @@ class CircuitBranch(object):
     # -----------------------------------------------------------------
     # Wire / conduit callout strings
     # -----------------------------------------------------------------
+    def _get_wire_material_suffix(self, include_parens=False):
+        material = (self.wire_material or "").strip().upper()
+        if not material:
+            return ""
+        display_mode = getattr(self.settings, "wire_material_display", "al_only")
+        if display_mode == "all":
+            suffix = material
+        else:
+            suffix = material if material != "CU" else ""
+        if not suffix:
+            return ""
+        return " ({})".format(suffix) if include_parens else suffix
+
     def get_wire_set_string(self):
         if self.cable.cleared or self.calc_failed:
             return "-"
@@ -1952,13 +1965,10 @@ class CircuitBranch(object):
         if ig_qty and ig_size:
             parts.append("{}{}{}IG".format(ig_qty, wp, ig_size))
 
-        material = self.wire_material or ""
-        suffix = material if material.upper() != "CU" else ""
-
-        final = " + ".join(parts)
+        final = ", ".join(parts)
         if not final:
             return "-"
-        return "{} {}".format(final, suffix) if suffix else final
+        return final
 
     def get_wire_size_callout(self):
         if self.cable.cleared or self.calc_failed:
@@ -1968,9 +1978,10 @@ class CircuitBranch(object):
         wire_str = self.get_wire_set_string()
         if wire_str == "-":
             return "-"
+        suffix = self._get_wire_material_suffix(include_parens=True)
         if sets > 1:
-            return "({}) {}".format(sets, wire_str)
-        return wire_str
+            return "({}) {}{}".format(sets, wire_str, suffix)
+        return "{}{}".format(wire_str, suffix)
 
     def get_conduit_and_wire_size(self):
         if (self.conduit.cleared or self.calc_failed) and (self.cable.cleared or self.calc_failed):
@@ -1991,7 +2002,9 @@ class CircuitBranch(object):
         if wire_callout == "-":
             return "{}{}".format(prefix, conduit_str)
 
-        return "{}{}-({})".format(prefix, conduit_str, wire_callout)
+        suffix = self._get_wire_material_suffix(include_parens=False)
+        material_suffix = " {}".format(suffix) if suffix else ""
+        return "{}{}-({}){}".format(prefix, conduit_str, wire_callout, material_suffix)
 
     # -----------------------------------------------------------------
     # Utility helpers

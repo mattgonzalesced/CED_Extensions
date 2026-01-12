@@ -30,6 +30,15 @@ class IsolatedGroundBehavior(object):
         return [cls.MATCH_GROUND, cls.MANUAL]
 
 
+class WireMaterialDisplay(object):
+    AL_ONLY = "al_only"
+    ALL = "all"
+
+    @classmethod
+    def all(cls):
+        return [cls.AL_ONLY, cls.ALL]
+
+
 class CircuitSettings(object):
     DEFAULTS = {
         # ORIGINAL settings you still need internally:
@@ -45,6 +54,7 @@ class CircuitSettings(object):
         "max_conduit_fill": 0.36,
         "neutral_behavior": NeutralBehavior.MATCH_HOT,
         "isolated_ground_behavior": IsolatedGroundBehavior.MATCH_GROUND,
+        "wire_material_display": WireMaterialDisplay.AL_ONLY,
         "max_branch_voltage_drop": 0.03,
         "max_feeder_voltage_drop": 0.02,
         "feeder_vd_method": FeederVDMethod.EIGHTY_PERCENT,
@@ -89,6 +99,10 @@ class CircuitSettings(object):
         if key == "isolated_ground_behavior":
             if value not in IsolatedGroundBehavior.all():
                 raise ValueError("Invalid isolated_ground_behavior: {}".format(value))
+
+        if key == "wire_material_display":
+            if value not in WireMaterialDisplay.all():
+                raise ValueError("Invalid wire_material_display: {}".format(value))
 
         if key in ("max_conduit_fill",
                    "max_branch_voltage_drop",
@@ -172,6 +186,10 @@ class CircuitSettings(object):
     @property
     def isolated_ground_behavior(self):
         return self._values["isolated_ground_behavior"]
+
+    @property
+    def wire_material_display(self):
+        return self._values["wire_material_display"]
 
     @property
     def max_branch_voltage_drop(self):
