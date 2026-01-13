@@ -230,6 +230,7 @@ def _ensure_drafting_view(doc):
 
 def _collect_circuits(doc, option_filter):
     circuit_map = {}
+    circuited_panel_names = set()
 
     ckt_collector = DB.FilteredElementCollector(doc) \
         .OfClass(DB.Electrical.ElectricalSystem) \
@@ -239,6 +240,10 @@ def _collect_circuits(doc, option_filter):
     for ckt in ckt_collector:
         pval = get_model_param_value(ckt, DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM)
         cnum = get_model_param_value(ckt, DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER)
+
+        if pval:
+            circuited_panel_names.add(str(pval))
+
         if pval and cnum:
             key = (str(pval), str(cnum))
             cdata = {}
@@ -246,14 +251,12 @@ def _collect_circuits(doc, option_filter):
                 cdata[detail_param_name] = get_model_param_value(ckt, bip)
             cdata["circuit_id"] = str(ckt.Id.IntegerValue)
             circuit_map[key] = cdata
-        else:
-            logger.debug("  Circuit " + str(ckt.Id) + " missing panel or circuit # => skipping")
 
-    return ckt_collector, circuit_map
+    return ckt_collector, circuit_map, circuited_panel_names
 
 
 def _collect_panels(doc, option_filter):
-    panel_map = {}
+    panel_map = {}          # name -> [pdata, pdata, ...]
     panel_map_by_id = {}
 
     pnl_collector = DB.FilteredElementCollector(doc) \
@@ -264,23 +267,62 @@ def _collect_panels(doc, option_filter):
 
     for pnl in pnl_collector:
         pname = get_model_param_value(pnl, DB.BuiltInParameter.RBS_ELEC_PANEL_NAME)
-        try:
-            mep_model = getattr(pnl, "MEPModel", None)
-            connector_manager = mep_model.ConnectorManager if mep_model else None
-        except Exception:
-            connector_manager = None
-        if pname:
-            if connector_manager:
-                pdata = {}
-                for detail_param_name, bip in PANEL_VALUE_MAP.items():
-                    pdata[detail_param_name] = get_model_param_value(pnl, bip)
-                pdata["panel_id"] = str(pnl.Id.IntegerValue)
-                panel_map[str(pname)] = pdata
-                panel_map_by_id[str(pnl.Id.IntegerValue)] = pdata
-        else:
-            logger.debug("  Panel " + str(pnl.Id) + " has no name => skipping")
+        if not pname:
+            continue
+
+        pdata = {}
+        for detail_param_name, bip in PANEL_VALUE_MAP.items():
+            pdata[detail_param_name] = get_model_param_value(pnl, bip)
+
+        pdata["panel_id"] = str(pnl.Id.IntegerValue)
+        pdata["_element"] = pnl  # keep element for sorting/debug
+
+        key = str(pname)
+        panel_map.setdefault(key, []).append(pdata)
+        panel_map_by_id[pdata["panel_id"]] = pdata
 
     return panel_map, panel_map_by_id
+
+def _resolve_panel_by_name(panel_name, panel_map, circuited_panel_names, warnings):
+    candidates = panel_map.get(panel_name)
+    if not candidates:
+        return None
+
+    # Prefer circuited panels
+    if panel_name in circuited_panel_names:
+        circuited = []
+        for pdata in candidates:
+            pnl = pdata.get("_element")
+            if pnl:
+                try:
+                    mep = pnl.MEPModel
+                    if mep and mep.GetElectricalSystems():
+                        circuited.append(pdata)
+                except:
+                    pass
+
+        if circuited:
+            if len(circuited) > 1:
+                warnings.append(
+                    "Multiple circuited panels named '" + panel_name +
+                    "' found. Using lowest ElementId."
+                )
+            return sorted(
+                circuited,
+                key=lambda d: int(d["panel_id"])
+            )[0]
+
+    # Fallback: deterministic placeholder
+    if len(candidates) > 1:
+        warnings.append(
+            "Multiple panels named '" + panel_name +
+            "' found (no circuits). Using lowest ElementId."
+        )
+
+    return sorted(
+        candidates,
+        key=lambda d: int(d["panel_id"])
+    )[0]
 
 
 def _collect_detail_items(doc, option_filter, active_view):
@@ -296,72 +338,97 @@ def _collect_detail_items(doc, option_filter, active_view):
     logger.debug("Collected " + str(len(detail_items)) + " detail item(s).")
     return detail_items
 
+def _get_circuit_sort_key(circuit_label):
+    """
+    Returns an integer circuit number if possible, otherwise a high fallback
+    so non-numeric circuits sort last.
+    Expected format: 'DP1 / 12 - LOAD'
+    """
+    try:
+        if "/" in circuit_label:
+            right = circuit_label.split("/", 1)[1]
+            num_part = right.split("-", 1)[0].strip()
+            return int(num_part)
+    except:
+        pass
+    return 999999
 
-def _build_output_summary(detail_items, circuit_map, panel_map, panel_map_by_id):
-    panel_summary = {}
+def _build_output_summary(detail_items, circuit_map, panel_map, panel_map_by_id, circuited_panel_names, warnings):
+    equipment_rows = {}   # panel_name -> {"panel_ids": set(), "detail_ids": set()}
+    circuit_rows = {}     # (ckt_panel, ckt_number) -> {"circuit_ids": set(), "detail_ids": set()}
     unmapped_details = []
     mapped_panel_names = set()
+
     for ditem in detail_items:
-        cpanel_val = get_detail_param_value(ditem, DETAIL_PARAM_CKT_PANEL)
-        cnum_val = get_detail_param_value(ditem, DETAIL_PARAM_CKT_NUMBER)
-        pname_val = get_detail_param_value(ditem, DETAIL_PARAM_PANEL_NAME)
-
-        cdict = None
-        if cpanel_val and cnum_val:
-            ckey = (str(cpanel_val), str(cnum_val))
-            cdict = circuit_map.get(ckey)
-
-        pdict = None
-        if pname_val:
-            pdict = panel_map.get(str(pname_val))
-
         detail_id = str(ditem.Id.IntegerValue)
 
-        panel_name_key = None
-        if cdict:
-            panel_name_key = cdict.get(DETAIL_PARAM_CKT_PANEL, "")
-        if not panel_name_key and pdict:
-            panel_name_key = pdict.get(DETAIL_PARAM_PANEL_NAME) or pdict.get(DETAIL_PARAM_CKT_PANEL, "")
+        pname_val = get_detail_param_value(ditem, DETAIL_PARAM_PANEL_NAME)
+        cpanel_val = get_detail_param_value(ditem, DETAIL_PARAM_CKT_PANEL)
+        cnum_val = get_detail_param_value(ditem, DETAIL_PARAM_CKT_NUMBER)
 
-        if panel_name_key:
-            if panel_name_key not in panel_summary:
-                panel_summary[panel_name_key] = {
-                    "name": panel_name_key or "(Unnamed Panel)",
-                    "ids": set(),
-                    "detail_ids": set(),
-                    "circuits": {}
-                }
-            panel_lookup = panel_map.get(panel_name_key)
-            if panel_lookup:
-                panel_id = panel_lookup.get("panel_id")
-                if panel_id:
-                    panel_summary[panel_name_key]["ids"].add(panel_id)
+        had_mapping = False
 
-        if cdict and panel_name_key:
-            cpanel_name = cdict.get(DETAIL_PARAM_CKT_PANEL, "")
-            cnum_name = cdict.get(DETAIL_PARAM_CKT_NUMBER, "")
-            load_name = cdict.get(DETAIL_PARAM_CKT_LOAD_NAME, "")
-            circuit_label = "{} / {} - {}".format(cpanel_name or "", cnum_name or "", load_name or "").strip()
-            circuit_key = circuit_label or "(Unnamed Circuit)"
-            circuits = panel_summary[panel_name_key]["circuits"]
-            if circuit_key not in circuits:
-                circuits[circuit_key] = {
-                    "label": circuit_label or "(Unnamed Circuit)",
-                    "ids": set(),
+        # -------------------------
+        # EE mapping (Panel Name)
+        # -------------------------
+        if pname_val:
+            panel_name = str(pname_val)
+            row = equipment_rows.get(panel_name)
+            if not row:
+                pdict = _resolve_panel_by_name(panel_name, panel_map, circuited_panel_names, warnings)
+                row = {
+                    "panel_ids": set(),
                     "detail_ids": set()
                 }
-            circuit_id = cdict.get("circuit_id")
-            if circuit_id:
-                circuits[circuit_key]["ids"].add(circuit_id)
-            circuits[circuit_key]["detail_ids"].add(detail_id)
-        if pdict and panel_name_key:
-            panel_summary[panel_name_key]["detail_ids"].add(detail_id)
-            mapped_panel_names.add(panel_name_key)
+                if pdict:
+                    pid = pdict.get("panel_id")
+                    if pid:
+                        row["panel_ids"].add(pid)
+                equipment_rows[panel_name] = row
 
-        if not cdict and not pdict:
-            detail_label = get_detail_type_label(revit.doc, ditem)
-            unmapped_details.append((detail_id, detail_label))
+            row["detail_ids"].add(detail_id)
+            mapped_panel_names.add(panel_name)
+            had_mapping = True
 
+        # -------------------------
+        # EC mapping (CKT Panel + Number)
+        # -------------------------
+        if cpanel_val and cnum_val:
+            ckt_panel = str(cpanel_val)
+            ckt_number = str(cnum_val)
+            ckey = (ckt_panel, ckt_number)
+
+            row = circuit_rows.get(ckey)
+            if not row:
+                row = {
+                    "ckt_panel": ckt_panel,
+                    "ckt_number": ckt_number,
+                    "load_name": "",
+                    "circuit_ids": set(),
+                    "detail_ids": set()
+                }
+
+                cdict = circuit_map.get(ckey)
+                if cdict:
+                    cid = cdict.get("circuit_id")
+                    if cid:
+                        row["circuit_ids"].add(cid)
+
+                    row["load_name"] = cdict.get(DETAIL_PARAM_CKT_LOAD_NAME) or ""
+
+                circuit_rows[ckey] = row
+
+            row["detail_ids"].add(detail_id)
+            had_mapping = True
+
+        # -------------------------
+        # Truly unmapped detail item
+        # -------------------------
+        if not had_mapping:
+            label = get_detail_type_label(revit.doc, ditem)
+            unmapped_details.append((detail_id, label))
+
+    # Unmapped model equipment = panels never referenced by Panel Name in detail items
     unmapped_panels = []
     for panel_id, pdata in panel_map_by_id.items():
         panel_name = pdata.get(DETAIL_PARAM_PANEL_NAME) or pdata.get(DETAIL_PARAM_CKT_PANEL, "") or "(Unnamed Panel)"
@@ -371,46 +438,79 @@ def _build_output_summary(detail_items, circuit_map, panel_map, panel_map_by_id)
                 "ids": [panel_id]
             })
 
-    return panel_summary, unmapped_details, unmapped_panels
+    return equipment_rows, circuit_rows, unmapped_details, unmapped_panels
 
 
-def _render_summary(panel_summary, unmapped_details, unmapped_panels):
+
+
+def _render_summary(equipment_rows, circuit_rows, unmapped_details, unmapped_panels, warnings):
+
     output = script.get_output()
     output.close_others()
     output.print_md("## Sync One Line Results")
 
     headers = ["Element", "Category", "Name", "Detail Items", "Detail Count"]
+
+    # -------------------------
+    # Warnings
+    # -------------------------
+    if warnings:
+        output.print_md("### Warnings")
+        for w in sorted(set(warnings)):
+            output.print_md("- " + w)
+
+    # -------------------------
+    # Build flattened panel order
+    # -------------------------
+    panel_names = set()
+    panel_names.update(equipment_rows.keys())
+    panel_names.update([row["ckt_panel"] for row in circuit_rows.values()])
+
+    def _ckt_sort_key(row):
+        try:
+            return int(row.get("ckt_number"))
+        except:
+            return 999999
+
     table_data = []
-    if panel_summary:
-        for panel_key in sorted(panel_summary.keys()):
-            panel = panel_summary[panel_key]
-            panel_ids = panel.get("ids", set())
-            panel_link = _linkify_ids(output, panel_ids)
-            panel_details = panel.get("detail_ids", set())
-            detail_link = _linkify_ids(output, panel_details)
+
+    for panel_name in sorted(panel_names, key=lambda x: x.upper()):
+
+        # ---- EE row (if exists) ----
+        if panel_name in equipment_rows:
+            erow = equipment_rows[panel_name]
             table_data.append([
-                panel_link,
+                _linkify_ids(output, erow.get("panel_ids", set())),
                 "EE",
-                panel.get("name") or "(Unnamed Panel)",
-                detail_link,
-                str(len(panel_details))
+                panel_name,
+                _linkify_ids(output, erow.get("detail_ids", set())),
+                str(len(erow.get("detail_ids", set())))
             ])
-            circuits = panel.get("circuits", {})
-            for circuit_key in sorted(circuits.keys()):
-                circuit = circuits[circuit_key]
-                circuit_ids = circuit.get("ids", set())
-                circuit_link = _linkify_ids(output, circuit_ids)
-                circuit_details = circuit.get("detail_ids", set())
-                circuit_detail_link = _linkify_ids(output, circuit_details)
-                table_data.append([
-                    circuit_link,
-                    "EC",
-                    circuit.get("label") or "(Unnamed Circuit)",
-                    circuit_detail_link,
-                    str(len(circuit_details))
-                ])
-    else:
+
+        # ---- EC rows for this panel ----
+        panel_circuits = [
+            row for row in circuit_rows.values()
+            if row.get("ckt_panel") == panel_name
+        ]
+
+        for crow in sorted(panel_circuits, key=_ckt_sort_key):
+            label = (
+                panel_name + " / " +
+                str(crow.get("ckt_number")) +
+                (" - " + crow.get("load_name") if crow.get("load_name") else "")
+            )
+
+            table_data.append([
+                _linkify_ids(output, crow.get("circuit_ids", set())),
+                "EC",
+                label,
+                _linkify_ids(output, crow.get("detail_ids", set())),
+                str(len(crow.get("detail_ids", set())))
+            ])
+
+    if not table_data:
         table_data.append(["", "", "None", "", "0"])
+
     output.print_table(
         table_data=table_data,
         title="Panels & Circuits",
@@ -418,16 +518,19 @@ def _render_summary(panel_summary, unmapped_details, unmapped_panels):
         formats=["", "", "", "", ""]
     )
 
+    # -------------------------
+    # Unmapped Detail Items
+    # -------------------------
     detail_table_data = []
     if unmapped_details:
         for detail_id, detail_label in sorted(unmapped_details, key=lambda d: (d[1] or "", d[0])):
-            detail_link = _linkify_ids(output, [detail_id])
             detail_table_data.append([
-                detail_link,
+                _linkify_ids(output, [detail_id]),
                 detail_label or "(Unnamed Detail Item)"
             ])
     else:
         detail_table_data.append(["", "None"])
+
     output.print_table(
         table_data=detail_table_data,
         title="Unmapped Detail Items",
@@ -435,12 +538,14 @@ def _render_summary(panel_summary, unmapped_details, unmapped_panels):
         formats=["", ""]
     )
 
+    # -------------------------
+    # Unmapped Model Equipment
+    # -------------------------
     equipment_table_data = []
     if unmapped_panels:
         for panel in sorted(unmapped_panels, key=lambda p: p.get("name") or ""):
-            panel_link = _linkify_ids(output, panel.get("ids", []))
             equipment_table_data.append([
-                panel_link,
+                _linkify_ids(output, panel.get("ids", [])),
                 "EE",
                 panel.get("name") or "(Unnamed Panel)",
                 "",
@@ -448,12 +553,14 @@ def _render_summary(panel_summary, unmapped_details, unmapped_panels):
             ])
     else:
         equipment_table_data.append(["", "", "None", "", "0"])
+
     output.print_table(
         table_data=equipment_table_data,
         title="Unmapped Model Equipment",
         columns=headers,
         formats=["", "", "", "", ""]
     )
+
 
 def main():
     doc = revit.doc
@@ -469,7 +576,8 @@ def main():
     # design option filter
     option_filter = DB.ElementDesignOptionFilter(DB.ElementId.InvalidElementId)
 
-    ckt_collector, circuit_map = _collect_circuits(doc, option_filter)
+    warnings = []
+    ckt_collector, circuit_map, circuited_panel_names = _collect_circuits(doc, option_filter)
 
     # 2) Build panel dictionary keyed by panel_name
     logger.debug("Collecting panels...")
@@ -508,25 +616,34 @@ def main():
             changed = True
 
         # Resolve panel data: Panel Name -> CKT_Panel fallback
+        # Resolve panel data (best candidate when duplicates exist)
         pdict = None
-        if not pdict and pname_val:
+
+        # Primary: detail item explicitly represents equipment by Panel Name
+        if pname_val:
             panel_lookup_name = str(pname_val)
-            if panel_lookup_name in panel_map:
-                pdict = panel_map[panel_lookup_name]
-                logger.debug("    Found panel data for '" + panel_lookup_name + "' (from " + DETAIL_PARAM_PANEL_NAME + ")")
+            pdict = _resolve_panel_by_name(panel_lookup_name, panel_map, circuited_panel_names, warnings)
+            if pdict:
+                logger.debug(
+                    "    Resolved panel '" + panel_lookup_name + "' (from " + DETAIL_PARAM_PANEL_NAME + ") to ElementId " + str(
+                        pdict.get("panel_id")))
             else:
-                logger.debug("    No panel data in panel_map for '" + panel_lookup_name + "' (from " + DETAIL_PARAM_PANEL_NAME + ")")
-        if not pdict and cpanel_val:
+                logger.debug(
+                    "    No panel candidates found for '" + panel_lookup_name + "' (from " + DETAIL_PARAM_PANEL_NAME + ")")
+
+        # Fallback: infer equipment panel name from circuit panel name ONLY if Panel Name missing
+        elif cpanel_val:
             panel_lookup_name = str(cpanel_val)
-            if not pname_val:
-                logger.debug("    Panel reference missing '" + DETAIL_PARAM_PANEL_NAME + "' so inferring from '" + DETAIL_PARAM_CKT_PANEL + "' value '" + panel_lookup_name + "'")
+            logger.debug(
+                "    Panel reference missing '" + DETAIL_PARAM_PANEL_NAME + "' so inferring from '" + DETAIL_PARAM_CKT_PANEL + "' value '" + panel_lookup_name + "'")
+            pdict = _resolve_panel_by_name(panel_lookup_name, panel_map, circuited_panel_names, warnings)
+            if pdict:
+                logger.debug(
+                    "    Resolved panel '" + panel_lookup_name + "' (from " + DETAIL_PARAM_CKT_PANEL + ") to ElementId " + str(
+                        pdict.get("panel_id")))
             else:
-                logger.debug("    Panel name '" + str(pname_val) + "' not found; trying '" + DETAIL_PARAM_CKT_PANEL + "' value '" + panel_lookup_name + "' instead")
-            if panel_lookup_name in panel_map:
-                pdict = panel_map[panel_lookup_name]
-                logger.debug("    Found panel data for '" + panel_lookup_name + "' (from " + DETAIL_PARAM_CKT_PANEL + ")")
-            else:
-                logger.debug("    No panel data in panel_map for '" + panel_lookup_name + "' (from " + DETAIL_PARAM_CKT_PANEL + ")")
+                logger.debug(
+                    "    No panel candidates found for '" + panel_lookup_name + "' (from " + DETAIL_PARAM_CKT_PANEL + ")")
 
         if pdict:
             for detail_pname, pval in pdict.items():
@@ -542,11 +659,13 @@ def main():
     t.Commit()
     logger.info("Sync finished. Updated " + str(update_count) + " detail item(s).")
 
-    panel_summary, unmapped_details, unmapped_panels = _build_output_summary(
+    equipment_rows, circuit_rows, unmapped_details, unmapped_panels = _build_output_summary(
         detail_items,
         circuit_map,
         panel_map,
-        panel_map_by_id
+        panel_map_by_id,
+        circuited_panel_names,
+        warnings
     )
 
     choice = forms.alert(
@@ -556,11 +675,7 @@ def main():
         no=True
     )
     if choice:
-        _render_summary(
-            panel_summary,
-            unmapped_details,
-            unmapped_panels
-        )
+        _render_summary(equipment_rows, circuit_rows, unmapped_details, unmapped_panels, warnings)
 
 
 if __name__ == "__main__":
