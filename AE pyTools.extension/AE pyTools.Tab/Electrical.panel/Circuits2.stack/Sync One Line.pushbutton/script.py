@@ -178,49 +178,6 @@ def is_not_in_group(element):
     return element.GroupId == DB.ElementId.InvalidElementId
 
 
-def element_has_sc_params(elem):
-    """
-    Returns True if the element has any parameters whose names start with 'SC_'.
-    Used so we only flag missing references on elements expecting SC_ data.
-    """
-    try:
-        for param in elem.Parameters:
-            try:
-                definition = param.Definition
-                if definition:
-                    pname = definition.Name
-                    if pname and pname.startswith("SC_"):
-                        return True
-            except Exception as exc:
-                logger.debug("element_has_sc_params: Failed checking param on {}: {}".format(elem.Id, exc))
-                continue
-    except Exception as exc:
-        logger.debug("element_has_sc_params: Could not iterate params on {}: {}".format(elem.Id, exc))
-    return False
-
-
-def describe_detail_item(doc, detail_elem):
-    """
-    Returns (name, owner_view_name) tuple for reporting back to the user.
-    """
-    try:
-        name = detail_elem.Name
-    except Exception:
-        name = ""
-
-    view_name = ""
-    try:
-        owner_view_id = getattr(detail_elem, "OwnerViewId", None)
-        if owner_view_id and owner_view_id != DB.ElementId.InvalidElementId:
-            owner_view = doc.GetElement(owner_view_id)
-            if owner_view:
-                view_name = owner_view.Name
-    except Exception as exc:
-        logger.debug("describe_detail_item: Failed getting view for {}: {}".format(detail_elem.Id, exc))
-
-    return name, view_name
-
-
 def get_detail_type_label(doc, detail_elem):
     try:
         type_elem = doc.GetElement(detail_elem.GetTypeId())
@@ -348,19 +305,13 @@ def _collect_panels(doc, option_filter):
 
     for pnl in pnl_collector:
         pname = get_model_param_value(pnl, DB.BuiltInParameter.RBS_ELEC_PANEL_NAME)
-        try:
-            mep_model = getattr(pnl, "MEPModel", None)
-            connector_manager = mep_model.ConnectorManager if mep_model else None
-        except Exception:
-            connector_manager = None
         if pname:
-            if connector_manager:
-                pdata = {}
-                for detail_param_name, bip in PANEL_VALUE_MAP.items():
-                    pdata[detail_param_name] = get_model_param_value(pnl, bip)
-                pdata[DETAIL_PARAM_SC_PANEL_ID] = str(pnl.Id.IntegerValue)
-                panel_map[str(pname)] = pdata
-                panel_map_by_id[str(pnl.Id.IntegerValue)] = pdata
+            pdata = {}
+            for detail_param_name, bip in PANEL_VALUE_MAP.items():
+                pdata[detail_param_name] = get_model_param_value(pnl, bip)
+            pdata[DETAIL_PARAM_SC_PANEL_ID] = str(pnl.Id.IntegerValue)
+            panel_map[str(pname)] = pdata
+            panel_map_by_id[str(pnl.Id.IntegerValue)] = pdata
         else:
             logger.debug("  Panel " + str(pnl.Id) + " has no name => skipping")
 
@@ -385,14 +336,11 @@ def _build_output_summary(detail_items, circuit_map, circuit_map_by_id, panel_ma
     panel_summary = {}
     unmapped_details = []
     mapped_panel_names = set()
-    sc_missing_reference_records = []
-
     for ditem in detail_items:
         cpanel_val = get_detail_param_value(ditem, DETAIL_PARAM_CKT_PANEL)
         cnum_val = get_detail_param_value(ditem, DETAIL_PARAM_CKT_NUMBER)
         pname_val = get_detail_param_value(ditem, DETAIL_PARAM_PANEL_NAME)
 
-        missing_contexts = []
         sc_circuit_id_val = get_detail_param_value(ditem, DETAIL_PARAM_SC_CIRCUIT_ID)
         sc_panel_id_val = get_detail_param_value(ditem, DETAIL_PARAM_SC_PANEL_ID)
 
@@ -407,34 +355,6 @@ def _build_output_summary(detail_items, circuit_map, circuit_map_by_id, panel_ma
             panel_id_lookup = str(sc_panel_id_val).strip()
             if not panel_id_lookup or panel_id_lookup == "0":
                 panel_id_lookup = None
-
-        has_circuit_reference = bool(circuit_id_lookup) or (cpanel_val and cnum_val)
-        if not has_circuit_reference:
-            missing_fields = []
-            if not circuit_id_lookup:
-                missing_fields.append(DETAIL_PARAM_SC_CIRCUIT_ID)
-            if not cpanel_val:
-                missing_fields.append(DETAIL_PARAM_CKT_PANEL)
-            if not cnum_val:
-                missing_fields.append(DETAIL_PARAM_CKT_NUMBER)
-            missing_contexts.append({
-                "context": "Circuit reference",
-                "fields": missing_fields
-            })
-
-        has_panel_reference = bool(panel_id_lookup) or bool(pname_val) or bool(cpanel_val)
-        if not has_panel_reference:
-            missing_fields = []
-            if not panel_id_lookup:
-                missing_fields.append(DETAIL_PARAM_SC_PANEL_ID)
-            if not pname_val:
-                missing_fields.append(DETAIL_PARAM_PANEL_NAME)
-            if not cpanel_val:
-                missing_fields.append(DETAIL_PARAM_CKT_PANEL)
-            missing_contexts.append({
-                "context": "Panel reference",
-                "fields": missing_fields
-            })
 
         cdict = None
         if circuit_id_lookup and circuit_id_lookup in circuit_map_by_id:
@@ -494,15 +414,6 @@ def _build_output_summary(detail_items, circuit_map, circuit_map_by_id, panel_ma
             detail_label = get_detail_type_label(revit.doc, ditem)
             unmapped_details.append((detail_id, detail_label))
 
-        if missing_contexts and element_has_sc_params(ditem):
-            name, view_name = describe_detail_item(revit.doc, ditem)
-            sc_missing_reference_records.append({
-                "id": ditem.Id.IntegerValue,
-                "name": name,
-                "view": view_name,
-                "contexts": missing_contexts
-            })
-
     unmapped_panels = []
     for panel_id, pdata in panel_map_by_id.items():
         panel_name = pdata.get(DETAIL_PARAM_PANEL_NAME) or pdata.get(DETAIL_PARAM_CKT_PANEL, "") or "(Unnamed Panel)"
@@ -512,10 +423,10 @@ def _build_output_summary(detail_items, circuit_map, circuit_map_by_id, panel_ma
                 "ids": [panel_id]
             })
 
-    return panel_summary, unmapped_details, unmapped_panels, sc_missing_reference_records
+    return panel_summary, unmapped_details, unmapped_panels
 
 
-def _render_summary(panel_summary, unmapped_details, unmapped_panels, sc_missing_reference_records):
+def _render_summary(panel_summary, unmapped_details, unmapped_panels):
     output = script.get_output()
     output.close_others()
     output.print_md("## Sync One Line Results")
@@ -596,19 +507,6 @@ def _render_summary(panel_summary, unmapped_details, unmapped_panels, sc_missing
         formats=["", "", "", "", ""]
     )
 
-    if sc_missing_reference_records:
-        output.print_md("## SC Detail Items Skipped")
-        for record in sc_missing_reference_records:
-            label_name = record["name"] if record["name"] else "(Unnamed Detail Item)"
-            base_label = "`{}` (Id {})".format(label_name, record["id"])
-            if record["view"]:
-                base_label += " in view '{}'".format(record["view"])
-            context_msgs = []
-            for ctx in record["contexts"]:
-                context_msgs.append(ctx["context"] + " missing: " + ", ".join(ctx["fields"]))
-            output.print_md("* {} – {}".format(base_label, "; ".join(context_msgs)))
-
-
 def main():
     doc = revit.doc
     logger.info("=== Syncing Circuit/Panel param values to detail items ===")
@@ -637,8 +535,6 @@ def main():
     t.Start()
     update_count = 0
     sc_device_update_count = 0
-    sc_missing_reference_records = []
-
     for ckt in ckt_collector:
         sc_device_update_count += update_devices_with_sc_ids(ckt)
 
@@ -652,7 +548,6 @@ def main():
         logger.debug("    cpanel_val='" + str(cpanel_val) + "' cnum_val='" + str(cnum_val) + "' pname_val='" + str(
             pname_val) + "'")
         changed = False
-        missing_contexts = []
         sc_circuit_id_val = get_detail_param_value(ditem, DETAIL_PARAM_SC_CIRCUIT_ID)
         sc_panel_id_val = get_detail_param_value(ditem, DETAIL_PARAM_SC_PANEL_ID)
 
@@ -667,34 +562,6 @@ def main():
             panel_id_lookup = str(sc_panel_id_val).strip()
             if not panel_id_lookup or panel_id_lookup == "0":
                 panel_id_lookup = None
-
-        has_circuit_reference = bool(circuit_id_lookup) or (cpanel_val and cnum_val)
-        if not has_circuit_reference:
-            missing_fields = []
-            if not circuit_id_lookup:
-                missing_fields.append(DETAIL_PARAM_SC_CIRCUIT_ID)
-            if not cpanel_val:
-                missing_fields.append(DETAIL_PARAM_CKT_PANEL)
-            if not cnum_val:
-                missing_fields.append(DETAIL_PARAM_CKT_NUMBER)
-            missing_contexts.append({
-                "context": "Circuit reference",
-                "fields": missing_fields
-            })
-
-        has_panel_reference = bool(panel_id_lookup) or bool(pname_val) or bool(cpanel_val)
-        if not has_panel_reference:
-            missing_fields = []
-            if not panel_id_lookup:
-                missing_fields.append(DETAIL_PARAM_SC_PANEL_ID)
-            if not pname_val:
-                missing_fields.append(DETAIL_PARAM_PANEL_NAME)
-            if not cpanel_val:
-                missing_fields.append(DETAIL_PARAM_CKT_PANEL)
-            missing_contexts.append({
-                "context": "Panel reference",
-                "fields": missing_fields
-            })
 
         # Resolve circuit data by ElementId first, then by (panel, number)
         cdict = None
@@ -755,21 +622,12 @@ def main():
         else:
             logger.debug("    => No changes for this detail item.")
 
-        if missing_contexts and element_has_sc_params(ditem):
-            name, view_name = describe_detail_item(doc, ditem)
-            sc_missing_reference_records.append({
-                "id": ditem.Id.IntegerValue,
-                "name": name,
-                "view": view_name,
-                "contexts": missing_contexts
-            })
-
     t.Commit()
     logger.info(
         "Sync finished. Updated " + str(update_count) + " detail item(s) and propagated SC ids to " + str(
             sc_device_update_count) + " device(s).")
 
-    panel_summary, unmapped_details, unmapped_panels, sc_missing_reference_records = _build_output_summary(
+    panel_summary, unmapped_details, unmapped_panels = _build_output_summary(
         detail_items,
         circuit_map,
         circuit_map_by_id,
@@ -787,8 +645,7 @@ def main():
         _render_summary(
             panel_summary,
             unmapped_details,
-            unmapped_panels,
-            sc_missing_reference_records
+            unmapped_panels
         )
 
 
