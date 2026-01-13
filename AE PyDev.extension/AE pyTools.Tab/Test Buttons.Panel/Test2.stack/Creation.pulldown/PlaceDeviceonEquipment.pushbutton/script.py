@@ -457,6 +457,13 @@ class PlacementInfo(object):
             self.location_point, self.level_id, self.owner_view_id, self.facing_orientation
         )
 
+class LeaderData(object):
+    def __init__(self, elbow, end):
+        self.elbow = elbow
+        self.end = end
+
+
+
 # ___________________________________________________________________________
 # HELPER FUNCTIONS
 # ___________________________________________________________________________
@@ -586,6 +593,125 @@ def pick_source_and_target_symbols_with_selection_behavior():
     return source_symbol, target_symbol
 
 
+def get_annotation_leaders(annotation_instance):
+    """
+    Extract leader geometry from a Generic Annotation instance.
+
+    Returns:
+        list[LeaderData]
+    """
+    leader_data = []
+
+    try:
+        leaders = annotation_instance.GetLeaders()
+        if not leaders:
+            return leader_data
+
+        for leader in leaders:
+            try:
+                end = leader.End
+                elbow = leader.Elbow
+                leader_data.append(LeaderData(elbow,end))
+            except Exception:
+                continue
+
+    except Exception as ex:
+        logger.debug(
+            "Failed reading leaders from {}: {}".format(
+                annotation_instance.Id.IntegerValue, ex
+            )
+        )
+
+    return leader_data
+
+
+def apply_annotation_leaders(target_instance, leader_data_list):
+    """
+    Apply leaders to a Generic Annotation instance.
+    Leaders must be added, regenerated, then modified.
+    """
+    if not leader_data_list:
+        return
+
+    try:
+        # Step 1: add leaders (do NOT touch geometry yet)
+        for _ in leader_data_list:
+            target_instance.addLeader()
+
+        # Step 2: force Revit to actually create them
+        doc.Regenerate()
+
+        # Step 3: fetch the newly created leaders
+        new_leaders = target_instance.GetLeaders()
+        if not new_leaders:
+            return
+
+        # Step 4: apply geometry (safe now)
+        for leader, ld in zip(new_leaders, leader_data_list):
+            try:
+                leader.End = ld.end
+                if ld.elbow:
+                    leader.Elbow = ld.elbow
+            except Exception:
+                continue
+
+    except Exception as ex:
+        logger.warning(
+            "Failed applying leaders to {}: {}".format(
+                target_instance.Id.IntegerValue, ex
+            )
+        )
+
+def apply_annotation_leaders_batch(target_to_leaderdata):
+    """
+    Batch-add and apply leaders to Generic Annotation instances.
+    Exactly one regenerate. Correct point ordering.
+    """
+    if not target_to_leaderdata:
+        return
+
+    # 1) Add leaders only
+    for target_id, leader_data_list in target_to_leaderdata.items():
+        if not leader_data_list:
+            continue
+
+        target = doc.GetElement(target_id)
+        if not target:
+            continue
+
+        for _ in leader_data_list:
+            target.addLeader()
+
+    # 2) Single regenerate
+    doc.Regenerate()
+
+    # 3) Apply geometry (ORDER MATTERS)
+    for target_id, leader_data_list in target_to_leaderdata.items():
+        if not leader_data_list:
+            continue
+
+        target = doc.GetElement(target_id)
+        if not target:
+            continue
+
+        leaders = target.GetLeaders()
+        if not leaders:
+            continue
+
+        for leader, ld in zip(leaders, leader_data_list):
+            try:
+                if ld.elbow:
+                    # Bent leader: elbow FIRST, then end
+                    leader.End = ld.end
+                    leader.Elbow = ld.elbow
+                else:
+                    # Straight leader
+                    leader.End = ld.end
+            except Exception:
+                continue
+
+
+
 def replace_generic_annotations_across_all_views(parameter_mapping, delete_source=True):
     """
     Replaces ALL instances of a source Generic Annotation TYPE across ALL views
@@ -612,41 +738,78 @@ def replace_generic_annotations_across_all_views(parameter_mapping, delete_sourc
     family_name = query.get_name(target_symbol.Family)
     symbol_name = query.get_name(target_symbol)
 
-    with DB.Transaction(doc, "Replace Generic Annotations Across All Views") as t:
-        t.Start()
+    target_leader_map = {}  # ElementId -> [LeaderData]
 
-        for src in source_instances:
-            try:
-                parent = ParentElement.from_family_instance(src)
-                if not parent:
-                    failed.append(src.Id)
-                    continue
 
-                child = ChildElement.from_parent_and_symbol(
-                    parent,
-                    symbol=target_symbol,
-                    family_name=family_name,
-                    symbol_name=symbol_name,
-                    element_type="FamilyInstance"
-                )
+    tg = DB.TransactionGroup(doc, "Replace Generic Annotations Across All Views")
+    tg.Start()
 
-                child.place()
-                child.copy_parameters(parameter_mapping)
+    # ----------------------------------------------------------------------
+    # Transaction 1: Place + copy parameters + delete source
+    # ----------------------------------------------------------------------
+    t1 = DB.Transaction(doc, "Place Replacement Annotations")
+    t1.Start()
 
-                placed_count += 1
+    for src in source_instances:
+        try:
+            parent = ParentElement.from_family_instance(src)
+            leader_data = get_annotation_leaders(src)
 
-                if delete_source:
-                    doc.Delete(src.Id)
-                    deleted_count += 1
-
-            except Exception as ex:
-                logger.error("Failed replacing annotation {}: {}".format(src.Id.IntegerValue, ex))
+            if not parent:
                 failed.append(src.Id)
+                continue
 
-        t.Commit()
+            child = ChildElement.from_parent_and_symbol(
+                parent,
+                symbol=target_symbol,
+                family_name=family_name,
+                symbol_name=symbol_name,
+                element_type="FamilyInstance"
+            )
 
+            child.place()
+            child.copy_parameters(parameter_mapping)
+
+            if leader_data:
+                target_leader_map[child.child_id] = leader_data
+            placed_count += 1
+
+            if delete_source:
+                doc.Delete(src.Id)
+                deleted_count += 1
+
+        except Exception as ex:
+            logger.error(
+                "Failed replacing annotation {}: {}".format(
+                    src.Id.IntegerValue, ex
+                )
+            )
+            failed.append(src.Id)
+
+    t1.Commit()
+
+    # ----------------------------------------------------------------------
+    # Transaction 2: Reapply leaders
+    # ----------------------------------------------------------------------
+    if target_leader_map:
+        t2 = DB.Transaction(doc, "Reapply Annotation Leaders")
+        t2.Start()
+
+        apply_annotation_leaders_batch(target_leader_map)
+
+        t2.Commit()
+
+    tg.Assimilate()
+
+    # ----------------------------------------------------------------------
+    # Logging
+    # ----------------------------------------------------------------------
     logger.info("Replacement complete.")
-    logger.info("Placed: {} | Deleted: {} | Failed: {}".format(placed_count, deleted_count, len(failed)))
+    logger.info(
+        "Placed: {} | Deleted: {} | Failed: {}".format(
+            placed_count, deleted_count, len(failed)
+        )
+    )
 
     if failed:
         logger.warning("Failed ElementIds:")
@@ -810,9 +973,8 @@ def main_replace_across_all_views():
     parameter_mapping = {
         "CED-G-NOTE #": "Keynote Value",
         "CED-G-NOTE TEXT": "Keynote Description",
-        "Note Number": "Symbol Label_CEDT",
         "CED-G-SHEET #/DISCIPLINE": "Keynote Category",
-        "FLA_CED": "FLA Input_CED",
+
     }
 
     replace_generic_annotations_across_all_views(parameter_mapping, delete_source=True)
