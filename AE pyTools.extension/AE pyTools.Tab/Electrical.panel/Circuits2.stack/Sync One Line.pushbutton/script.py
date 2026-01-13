@@ -269,18 +269,18 @@ def _print_panel_group(output, panel):
     header = "{} <b style='color:#1b3a5d;'>{}</b>".format(panel_link, panel_name).strip()
     output.print_html("<div style='font-size: 13px;'>{}</div>".format(header))
 
-    circuits = panel.get("circuits", [])
+    circuits = sorted(panel.get("circuits", []), key=lambda c: c.get("label") or "")
     for circuit in circuits:
         circuit_link = _linkify_id(output, circuit.get("id"))
         circuit_label = circuit.get("label") or "(Unnamed Circuit)"
         circuit_header = "{} <b style='color:#1b5e20;'>{}</b>".format(circuit_link, circuit_label).strip()
         output.print_html("<div style='margin-left: 20px;'>{}</div>".format(circuit_header))
-        items = circuit.get("details", [])
+        items = sorted(circuit.get("details", []), key=lambda d: d[1] or "")
         for detail_id, detail_label in items:
             entry = _format_detail_entry(output, detail_id, detail_label)
             output.print_html("<div style='margin-left: 40px;'>{}</div>".format(entry))
 
-    panel_items = panel.get("details", [])
+    panel_items = sorted(panel.get("details", []), key=lambda d: d[1] or "")
     for detail_id, detail_label in panel_items:
         entry = _format_detail_entry(output, detail_id, detail_label)
         output.print_html("<div style='margin-left: 20px;'>{}</div>".format(entry))
@@ -559,8 +559,8 @@ def _render_summary(mapped_panels, unmapped_details, sc_missing_reference_record
 
     output.print_html("<h3>Panels</h3>")
     if mapped_panels:
-        for panel in mapped_panels.values():
-            _print_panel_group(output, panel)
+        for panel_key in sorted(mapped_panels.keys()):
+            _print_panel_group(output, mapped_panels[panel_key])
     else:
         output.print_md("* None")
     _print_unmapped_details(output, unmapped_details)
