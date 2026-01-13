@@ -73,9 +73,44 @@ def _normalize_escaped_quotes(value):
     return value
 
 
+def _is_empty_map(value):
+    return isinstance(value, Mapping) and not value
+
+
+def _is_empty_map_key(key):
+    if isinstance(key, Mapping):
+        return not key
+    if isinstance(key, basestring):
+        return key.strip() == "{}"
+    return False
+
+
+def _cleanup_empty_maps(value):
+    if isinstance(value, Mapping):
+        empty_key_count = sum(1 for key in value.keys() if _is_empty_map_key(key))
+        cleaned = {}
+        for key, item in value.items():
+            if _is_empty_map_key(key) and empty_key_count > 1:
+                continue
+            cleaned[key] = _cleanup_empty_maps(item)
+        if not cleaned:
+            return {}
+        return cleaned
+    if isinstance(value, list):
+        cleaned_list = []
+        for item in value:
+            cleaned_item = _cleanup_empty_maps(item)
+            if _is_empty_map(cleaned_item):
+                continue
+            cleaned_list.append(cleaned_item)
+        return cleaned_list
+    return value
+
+
 def _prepare_dump_payload(payload):
     normalized = _normalize_escaped_quotes(payload)
-    return _wrap_element_linker_strings(normalized)
+    cleaned = _cleanup_empty_maps(normalized)
+    return _wrap_element_linker_strings(cleaned)
 
 
 def _build_element_linker_dumper():
@@ -313,7 +348,7 @@ def load_data_from_text(raw_text, source_label="<memory>"):
     stripped = raw.lstrip()
     if stripped.startswith("{") or stripped.startswith("["):
         try:
-            return _normalize_escaped_quotes(json.loads(raw or "{}"))
+            return _cleanup_empty_maps(_normalize_escaped_quotes(json.loads(raw or "{}")))
         except Exception:
             pass
     data = None
@@ -337,7 +372,7 @@ def load_data_from_text(raw_text, source_label="<memory>"):
         else:
             raise ValueError("profile data could not be parsed as YAML and does not look like JSON.")
 
-    data = _normalize_escaped_quotes(data)
+    data = _cleanup_empty_maps(_normalize_escaped_quotes(data))
 
     if "equipment_definitions" in data:
         defs = data.get("equipment_definitions") or []
@@ -358,7 +393,7 @@ def load_data_from_text(raw_text, source_label="<memory>"):
                     diag_path = os.path.join(os.path.dirname(source_label), "profileData_load_diag.json")
                     with io.open(diag_path, "w", encoding="utf-8") as diag_file:
                         json.dump(diag_payload, diag_file, indent=2)
-                return alt_data
+                return _cleanup_empty_maps(_normalize_escaped_quotes(alt_data))
         except Exception as fallback_ex:
             diag_payload["error"] = str(fallback_ex)
         if source_label and os.path.exists(os.path.dirname(source_label)):

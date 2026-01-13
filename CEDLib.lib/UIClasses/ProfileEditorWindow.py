@@ -236,24 +236,38 @@ class ProfileEditorWindow(forms.WPFWindow):
         if not profile_name:
             forms.alert("Select a profile to delete.", title="Delete Profile")
             return
+        root_key = self._active_root_key or self._child_to_root.get(profile_name, profile_name)
         if self._force_read_only:
-            forms.alert("Select the source profile entry before deleting.", title="Delete Profile")
-            return
-        confirm = forms.alert(
-            "Delete profile '{}' and all of its types?".format(profile_name),
-            title="Delete Profile",
-            ok=False,
-            yes=True,
-            no=True,
-        )
+            confirm = forms.alert(
+                "Delete merged profile '{}' only?".format(profile_name),
+                title="Delete Profile",
+                ok=False,
+                yes=True,
+                no=True,
+            )
+        else:
+            group = self._truth_groups.get(root_key) if root_key else None
+            members = list(group.get("members") or []) if group else []
+            merged_count = max(len(members) - 1, 0)
+            if merged_count:
+                prompt = "Delete profile '{}' and its {} merged profile(s)?".format(profile_name, merged_count)
+            else:
+                prompt = "Delete profile '{}' and all of its types?".format(profile_name)
+            confirm = forms.alert(
+                prompt,
+                title="Delete Profile",
+                ok=False,
+                yes=True,
+                no=True,
+            )
         if not confirm:
             return
         selection = {
             "profile_name": profile_name,
             "type_label": None,
             "type_id": None,
-            "root_key": self._active_root_key or self._child_to_root.get(profile_name, profile_name),
-            "delete_profile": True,
+            "root_key": root_key,
+            "delete_profile": bool(self._force_read_only),
         }
         result = self._delete_callback(selection)
         if not result:
@@ -515,7 +529,7 @@ class ProfileEditorWindow(forms.WPFWindow):
     def _update_profile_delete_state(self):
         if not hasattr(self, "DeleteProfileButton"):
             return
-        enabled = bool(self._current_profile_name) and not self._force_read_only and bool(self._delete_callback)
+        enabled = bool(self._current_profile_name) and bool(self._delete_callback)
         self.DeleteProfileButton.IsEnabled = enabled
         self._update_add_equipment_button_state()
         self._update_change_type_button_state()
