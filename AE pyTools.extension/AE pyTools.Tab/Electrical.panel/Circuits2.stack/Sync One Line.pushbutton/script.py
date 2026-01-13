@@ -248,54 +248,43 @@ def element_category_in_targets(elem):
     return False
 
 
-def _linkify_id(output, id_value):
+def _linkify_id(output, id_value, link_text=None):
     if not id_value:
         return ""
     try:
-        return output.linkify(DB.ElementId(int(id_value)))
+        return output.linkify(DB.ElementId(int(id_value)), link_text)
     except Exception:
         return ""
 
 
-def _format_detail_entry(output, detail_id, detail_label):
-    link = _linkify_id(output, detail_id)
-    suffix = " - " + detail_label if detail_label else ""
-    return "{}{}".format(link, suffix)
+def _linkify_ids(output, id_values):
+    if not id_values:
+        return ""
+    unique_ids = sorted(set([str(val) for val in id_values if val]))
+    if not unique_ids:
+        return ""
+    if len(unique_ids) == 1:
+        return _linkify_id(output, unique_ids[0], unique_ids[0])
+    element_ids = [DB.ElementId(int(val)) for val in unique_ids]
+    return output.linkify(element_ids, "Select")
 
 
-def _print_panel_group(output, panel):
-    panel_link = _linkify_id(output, panel.get("id"))
-    panel_name = panel.get("name") or "(Unnamed Panel)"
-    header = "{} <b style='color:#1b3a5d;'>{}</b>".format(panel_link, panel_name).strip()
-    output.print_html("<div style='font-size: 13px;'>{}</div>".format(header))
-
-    circuits = sorted(panel.get("circuits", []), key=lambda c: c.get("label") or "")
-    for circuit in circuits:
-        circuit_link = _linkify_id(output, circuit.get("id"))
-        circuit_label = circuit.get("label") or "(Unnamed Circuit)"
-        circuit_header = "{} <b style='color:#1b5e20;'>{}</b>".format(circuit_link, circuit_label).strip()
-        output.print_html("<div style='margin-left: 20px;'>{}</div>".format(circuit_header))
-        items = sorted(circuit.get("details", []), key=lambda d: d[1] or "")
-        for detail_id, detail_label in items:
-            entry = _format_detail_entry(output, detail_id, detail_label)
-            output.print_html("<div style='margin-left: 40px;'>{}</div>".format(entry))
-
-    panel_items = sorted(panel.get("details", []), key=lambda d: d[1] or "")
-    for detail_id, detail_label in panel_items:
-        entry = _format_detail_entry(output, detail_id, detail_label)
-        output.print_html("<div style='margin-left: 20px;'>{}</div>".format(entry))
-
-    output.print_html("<br/>")
+def _print_table_header(output, title, headers):
+    output.print_html("<h3>{}</h3>".format(title))
+    header_html = "".join(["<th style='text-align:left;padding:4px;border-bottom:1px solid #ccc;'>{}</th>".format(h)
+                           for h in headers])
+    output.print_html("<table style='border-collapse:collapse;width:100%;'>")
+    output.print_html("<tr>{}</tr>".format(header_html))
 
 
-def _print_unmapped_details(output, unmapped_details):
-    output.print_html("<h3>Unmapped Detail Items</h3>")
-    if not unmapped_details:
-        output.print_md("* None")
-        return
-    for detail_id, detail_label in unmapped_details:
-        entry = _format_detail_entry(output, detail_id, detail_label)
-        output.print_html("<div style='margin-left: 20px;'>{}</div>".format(entry))
+def _print_table_row(output, cells):
+    row_html = "".join(["<td style='padding:4px;border-bottom:1px solid #eee;'>{}</td>".format(c)
+                        for c in cells])
+    output.print_html("<tr>{}</tr>".format(row_html))
+
+
+def _print_table_footer(output):
+    output.print_html("</table>")
     output.print_html("<br/>")
 
 
@@ -412,7 +401,7 @@ def _collect_detail_items(doc, option_filter, active_view):
 
 
 def _build_output_summary(detail_items, circuit_map, circuit_map_by_id, panel_map, panel_map_by_id):
-    mapped_panels = {}
+    panel_summary = {}
     unmapped_details = []
     sc_missing_reference_records = []
 
@@ -478,41 +467,27 @@ def _build_output_summary(detail_items, circuit_map, circuit_map_by_id, panel_ma
         if not pdict and pname_val:
             pdict = panel_map.get(str(pname_val))
 
-        detail_label = get_detail_type_label(revit.doc, ditem)
         detail_id = str(ditem.Id.IntegerValue)
 
         panel_name_key = None
         panel_id = None
-        if pdict:
-            panel_id = pdict.get(DETAIL_PARAM_SC_PANEL_ID)
-            panel_name_key = pdict.get(DETAIL_PARAM_PANEL_NAME) or pdict.get(DETAIL_PARAM_CKT_PANEL, "")
-        if not panel_name_key and cdict:
+        if cdict:
             panel_name_key = cdict.get(DETAIL_PARAM_CKT_PANEL, "")
+        if not panel_name_key and pdict:
+            panel_name_key = pdict.get(DETAIL_PARAM_PANEL_NAME) or pdict.get(DETAIL_PARAM_CKT_PANEL, "")
 
         if panel_name_key:
-            if panel_name_key not in mapped_panels:
-                mapped_panels[panel_name_key] = {
+            if panel_name_key not in panel_summary:
+                panel_summary[panel_name_key] = {
                     "name": panel_name_key or "(Unnamed Panel)",
-                    "id": panel_id,
-                    "details": [],
-                    "circuits": []
+                    "ids": set(),
+                    "detail_ids": set(),
+                    "circuits": {}
                 }
-            if panel_id and not mapped_panels[panel_name_key].get("id"):
-                mapped_panels[panel_name_key]["id"] = panel_id
-
-        if pdict:
-            panel_name = pdict.get(DETAIL_PARAM_PANEL_NAME) or pdict.get(DETAIL_PARAM_CKT_PANEL, "")
-            panel_key = panel_name or "(Unnamed Panel)"
-            if panel_key not in mapped_panels:
-                mapped_panels[panel_key] = {
-                    "name": panel_name or "(Unnamed Panel)",
-                    "id": panel_id,
-                    "details": [],
-                    "circuits": []
-                }
-            mapped_panels[panel_key]["details"].append((detail_id, detail_label))
-            if panel_id and not mapped_panels[panel_key].get("id"):
-                mapped_panels[panel_key]["id"] = panel_id
+            if pdict:
+                panel_id = pdict.get(DETAIL_PARAM_SC_PANEL_ID)
+            if panel_id:
+                panel_summary[panel_name_key]["ids"].add(panel_id)
 
         if cdict and panel_name_key:
             circuit_id = cdict.get(DETAIL_PARAM_SC_CIRCUIT_ID)
@@ -520,24 +495,22 @@ def _build_output_summary(detail_items, circuit_map, circuit_map_by_id, panel_ma
             cnum_name = cdict.get(DETAIL_PARAM_CKT_NUMBER, "")
             load_name = cdict.get(DETAIL_PARAM_CKT_LOAD_NAME, "")
             circuit_label = "{} / {} - {}".format(cpanel_name or "", cnum_name or "", load_name or "").strip()
-            circuit_key = circuit_id or circuit_label
-            circuits = mapped_panels[panel_name_key]["circuits"]
-            existing = None
-            for item in circuits:
-                if item.get("key") == circuit_key:
-                    existing = item
-                    break
-            if not existing:
-                existing = {
-                    "key": circuit_key,
+            circuit_key = circuit_label or "(Unnamed Circuit)"
+            circuits = panel_summary[panel_name_key]["circuits"]
+            if circuit_key not in circuits:
+                circuits[circuit_key] = {
                     "label": circuit_label or "(Unnamed Circuit)",
-                    "id": circuit_id,
-                    "details": []
+                    "ids": set(),
+                    "detail_ids": set()
                 }
-                circuits.append(existing)
-            existing["details"].append((detail_id, detail_label))
+            if circuit_id:
+                circuits[circuit_key]["ids"].add(circuit_id)
+            circuits[circuit_key]["detail_ids"].add(detail_id)
+        elif pdict and panel_name_key:
+            panel_summary[panel_name_key]["detail_ids"].add(detail_id)
 
         if not cdict and not pdict:
+            detail_label = get_detail_type_label(revit.doc, ditem)
             unmapped_details.append((detail_id, detail_label))
 
         if missing_contexts and element_has_sc_params(ditem):
@@ -549,21 +522,93 @@ def _build_output_summary(detail_items, circuit_map, circuit_map_by_id, panel_ma
                 "contexts": missing_contexts
             })
 
-    return mapped_panels, unmapped_details, sc_missing_reference_records
+    unmapped_panels = []
+    for panel_id, pdata in panel_map_by_id.items():
+        panel_name = pdata.get(DETAIL_PARAM_PANEL_NAME) or pdata.get(DETAIL_PARAM_CKT_PANEL, "") or "(Unnamed Panel)"
+        summary = panel_summary.get(panel_name)
+        has_details = False
+        if summary:
+            if summary["detail_ids"]:
+                has_details = True
+            else:
+                for circuit_data in summary["circuits"].values():
+                    if circuit_data["detail_ids"]:
+                        has_details = True
+                        break
+        if not has_details:
+            unmapped_panels.append({
+                "name": panel_name,
+                "ids": [panel_id]
+            })
+
+    return panel_summary, unmapped_details, unmapped_panels, sc_missing_reference_records
 
 
-def _render_summary(mapped_panels, unmapped_details, sc_missing_reference_records):
+def _render_summary(panel_summary, unmapped_details, unmapped_panels, sc_missing_reference_records):
     output = script.get_output()
     output.close_others()
     output.print_md("## Sync One Line Results")
 
-    output.print_html("<h3>Panels</h3>")
-    if mapped_panels:
-        for panel_key in sorted(mapped_panels.keys()):
-            _print_panel_group(output, mapped_panels[panel_key])
+    headers = ["Element", "Category", "Name", "Detail Items", "Detail Count"]
+    _print_table_header(output, "Panels & Circuits", headers)
+    if panel_summary:
+        for panel_key in sorted(panel_summary.keys()):
+            panel = panel_summary[panel_key]
+            panel_ids = panel.get("ids", set())
+            panel_link = _linkify_ids(output, panel_ids)
+            panel_details = panel.get("detail_ids", set())
+            detail_link = _linkify_ids(output, panel_details)
+            _print_table_row(output, [
+                panel_link,
+                "EE",
+                panel.get("name") or "(Unnamed Panel)",
+                detail_link,
+                str(len(panel_details))
+            ])
+            circuits = panel.get("circuits", {})
+            for circuit_key in sorted(circuits.keys()):
+                circuit = circuits[circuit_key]
+                circuit_ids = circuit.get("ids", set())
+                circuit_link = _linkify_ids(output, circuit_ids)
+                circuit_details = circuit.get("detail_ids", set())
+                circuit_detail_link = _linkify_ids(output, circuit_details)
+                _print_table_row(output, [
+                    circuit_link,
+                    "EC",
+                    circuit.get("label") or "(Unnamed Circuit)",
+                    circuit_detail_link,
+                    str(len(circuit_details))
+                ])
     else:
-        output.print_md("* None")
-    _print_unmapped_details(output, unmapped_details)
+        _print_table_row(output, ["", "", "None", "", "0"])
+    _print_table_footer(output)
+
+    _print_table_header(output, "Unmapped Detail Items", ["Element", "Name"])
+    if unmapped_details:
+        for detail_id, detail_label in sorted(unmapped_details, key=lambda d: (d[1] or "", d[0])):
+            detail_link = _linkify_ids(output, [detail_id])
+            _print_table_row(output, [
+                detail_link,
+                detail_label or "(Unnamed Detail Item)"
+            ])
+    else:
+        _print_table_row(output, ["", "None"])
+    _print_table_footer(output)
+
+    _print_table_header(output, "Unmapped Model Equipment", headers)
+    if unmapped_panels:
+        for panel in sorted(unmapped_panels, key=lambda p: p.get("name") or ""):
+            panel_link = _linkify_ids(output, panel.get("ids", []))
+            _print_table_row(output, [
+                panel_link,
+                "EE",
+                panel.get("name") or "(Unnamed Panel)",
+                "",
+                "0"
+            ])
+    else:
+        _print_table_row(output, ["", "", "None", "", "0"])
+    _print_table_footer(output)
 
     if sc_missing_reference_records:
         output.print_md("## SC Detail Items Skipped")
@@ -738,7 +783,7 @@ def main():
         "Sync finished. Updated " + str(update_count) + " detail item(s) and propagated SC ids to " + str(
             sc_device_update_count) + " device(s).")
 
-    mapped_panels, unmapped_details, sc_missing_reference_records = _build_output_summary(
+    panel_summary, unmapped_details, unmapped_panels, sc_missing_reference_records = _build_output_summary(
         detail_items,
         circuit_map,
         circuit_map_by_id,
@@ -754,8 +799,9 @@ def main():
     )
     if choice:
         _render_summary(
-            mapped_panels,
+            panel_summary,
             unmapped_details,
+            unmapped_panels,
             sc_missing_reference_records
         )
 
