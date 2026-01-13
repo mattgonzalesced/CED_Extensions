@@ -244,6 +244,7 @@ def _collect_circuits(doc, option_filter):
             cdata = {}
             for detail_param_name, bip in CIRCUIT_VALUE_MAP.items():
                 cdata[detail_param_name] = get_model_param_value(ckt, bip)
+            cdata["circuit_id"] = str(ckt.Id.IntegerValue)
             circuit_map[key] = cdata
         else:
             logger.debug("  Circuit " + str(ckt.Id) + " missing panel or circuit # => skipping")
@@ -349,8 +350,11 @@ def _build_output_summary(detail_items, circuit_map, panel_map, panel_map_by_id)
                     "ids": set(),
                     "detail_ids": set()
                 }
+            circuit_id = cdict.get("circuit_id")
+            if circuit_id:
+                circuits[circuit_key]["ids"].add(circuit_id)
             circuits[circuit_key]["detail_ids"].add(detail_id)
-        if pdict and panel_name_key and not cdict:
+        if pdict and panel_name_key:
             panel_summary[panel_name_key]["detail_ids"].add(detail_id)
             mapped_panel_names.add(panel_name_key)
 
