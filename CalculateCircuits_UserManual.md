@@ -40,6 +40,9 @@ Access via **Calculate Circuits Settings**. Defaults are italic/gray; user selec
 - **Neutral Behavior**
   - Determines how neutrals are sized when in manual override mode (in automatic mode, neutral size always matches the hot size).
   - Options: `[Match hot conductors]` neutral matches hots; `[Manual Neutral]` user specifies neutral independently in manual mode.
+- **Isolated Ground Behavior**
+  - Controls how isolated grounds size when in manual override mode (automatic mode always matches the equipment ground).
+  - Options: `[Match ground conductors]` isolated ground size mirrors equipment ground; `[Manual Isolated Ground]` user specifies isolated ground size independently in manual mode.
 - **Max Branch Voltage Drop**
   - Target maximum voltage drop for branch circuits. In automatic mode, calculated sizes will grow until this threshold is met. In manual override mode, the tool will alert the user if this threshold is exceeded.
 - **Max Feeder Voltage Drop**
@@ -49,6 +52,12 @@ Access via **Calculate Circuits Settings**. Defaults are italic/gray; user selec
   - Options: `[80% of Breaker]`, `[100% of Breaker]`, `[Demand Load]`, `[Connected Load]`. If demand exceeds the breaker percentage options, the higher demand governs.
 - **Write Results (Equipment / Fixtures & Devices)**
   - When enabled, calculated values write back to downstream elements. Disabling either option prompts to clear stored circuit data from that category.
+- **Wire Material Display**
+  - Controls when the wire material suffix is shown in wire size strings.
+  - Options: `[Show material for Aluminum only]` and `[Show material for Copper and Aluminum]`.
+- **Wire String Separator**
+  - Controls the separator used in wire size strings.
+  - Options: `[Use "+" separators]` or `[Use "," separators]`.
 
 ## Voltage Drop Behavior
 - Branch circuits always use connected load for VD calculations.
@@ -100,6 +109,32 @@ Access via **Calculate Circuits Settings**. Defaults are italic/gray; user selec
     - (Design) message
 - Developer logging can be toggled separately from user-facing alerts.
 
+### Standard Alerts Reference
+The following alerts are available during Calculate Circuits runs:
+
+| Alert ID | Meaning |
+| --- | --- |
+| Overrides.InvalidCircuitProperty | A user-specified property (wire material, temperature, insulation, conduit type) was invalid; defaults are used instead. |
+| Overrides.InvalidEquipmentGround | A user-specified equipment ground size was invalid; the tool sizes it per NEC 250.122. |
+| Overrides.InvalidServiceGround | A user-specified service ground size was invalid; the tool sizes it per NEC 250.102(c). |
+| Overrides.InvalidHotWire | A user-specified hot conductor size was invalid; the calculated size is used instead. |
+| Overrides.InvalidConduit | A user-specified conduit size was invalid; the calculated size is used instead. |
+| Overrides.InvalidIsolatedGround | A user-specified isolated ground size was invalid; the equipment ground size is used instead. |
+| Design.NonStandardOCPRating | The breaker rating is non-standard; the next standard size is used for calculations. |
+| Design.BreakerLugSizeLimitOverride | User override exceeds recommended lug size for the breaker. |
+| Design.BreakerLugQuantityLimitOverride | User override exceeds recommended parallel set limit for the breaker. |
+| Calculations.BreakerLugSizeLimit | Calculated hot size exceeds recommended lug size for the breaker. |
+| Calculations.BreakerLugQuantityLimit | Calculated parallel set count exceeds recommended lug limit for the breaker. |
+| Design.ExcessiveConduitFill | User-specified conduit size exceeds the max fill target. |
+| Design.UndersizedWireEGC | User-specified equipment ground size is undersized per NEC 250.122. |
+| Design.UndersizedWireServiceGround | User-specified service ground size is undersized per NEC 250.102. |
+| Design.ExcessiveVoltDrop | User-specified wire fails the voltage drop check. |
+| Design.InsufficientAmpacity | User-specified wire fails ampacity check versus circuit load. |
+| Design.InsufficientAmpacityBreaker | User-specified wire fails ampacity check versus breaker rating. |
+| Design.UndersizedOCP | User-specified breaker rating is undersized relative to circuit load. |
+| Calculations.WireSizingFailed | Automatic wire sizing failed; calculation could not complete. |
+| Calculations.ConduitSizingFailed | Automatic conduit sizing failed; calculation could not complete. |
+
 ## Manual Mode Tips
 - Keep materials/insulation/temperature valid so ampacity/VD use the intended tables.
 - Use clearing tokens intentionally; they stay stored for future runs and drive circuit type/conduit-only behavior.
@@ -146,4 +181,3 @@ Access via **Calculate Circuits Settings**. Defaults are italic/gray; user selec
 - Review grouped alerts at the end of a run for any circuit. Critical alerts indicate sizing could not complete.
 - If values look wrong, confirm materials/insulation are valid and that clearing tokens were not left unintentionally.
 - Ensure downstream write-back is enabled if you expect parameters on equipment/fixtures to update.
-
