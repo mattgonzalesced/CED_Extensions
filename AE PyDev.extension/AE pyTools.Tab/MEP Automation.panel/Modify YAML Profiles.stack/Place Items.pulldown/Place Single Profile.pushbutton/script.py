@@ -8,10 +8,19 @@ at a picked point.
 """
 
 import os
+import re
 import sys
 
 from pyrevit import revit, forms, script
 from Autodesk.Revit.DB import XYZ
+from System.Windows.Forms import (
+    Button,
+    CheckBox,
+    DialogResult,
+    Form,
+    FormBorderStyle,
+    FormStartPosition,
+)
 
 LIB_ROOT = os.path.abspath(
     os.path.join(
@@ -113,9 +122,21 @@ def _sanitize_profiles(profiles):
     return cleaned
 
 
-def _group_truth_profile_choices(raw_data, available_cads):
+def _is_independent_name(cad_name):
+    if not cad_name:
+        return False
+    trimmed = cad_name.strip()
+    if re.match(r"^\d{3}", trimmed):
+        return False
+    return not trimmed.lower().startswith("heb")
+
+
+def _group_truth_profile_choices(raw_data, available_cads, independent_only=False):
     """Collapse equipment definitions by truth-source metadata so only canonical profiles appear."""
-    available = {(name or "").strip(): True for name in available_cads}
+    if independent_only:
+        available = {(name or "").strip(): True for name in available_cads if _is_independent_name(name)}
+    else:
+        available = {(name or "").strip(): True for name in available_cads}
     groups = {}
     for eq_def in raw_data.get("equipment_definitions") or []:
         cad_name = (eq_def.get("name") or eq_def.get("id") or "").strip()
@@ -151,9 +172,52 @@ def _group_truth_profile_choices(raw_data, available_cads):
     # Include any cad names not covered by truth metadata
     for cad in sorted(available_cads):
         cad = cad.strip()
-        if cad and cad not in seen_cads:
+        if cad and cad not in seen_cads and cad in available:
             options.append({"label": cad, "cad": cad})
     return options
+
+
+def _ask_profile_filter():
+    form = Form()
+    form.Text = "Load Profiles"
+    form.FormBorderStyle = FormBorderStyle.FixedDialog
+    form.StartPosition = FormStartPosition.CenterScreen
+    form.MinimizeBox = False
+    form.MaximizeBox = False
+    form.ShowInTaskbar = False
+    form.Width = 360
+    form.Height = 140
+
+    checkbox = CheckBox()
+    checkbox.Text = "Show only Independent Profiles"
+    checkbox.AutoSize = True
+    checkbox.Left = 12
+    checkbox.Top = 12
+
+    ok_button = Button()
+    ok_button.Text = "OK"
+    ok_button.DialogResult = DialogResult.OK
+    ok_button.Left = 180
+    ok_button.Top = 60
+    ok_button.Width = 70
+
+    cancel_button = Button()
+    cancel_button.Text = "Cancel"
+    cancel_button.DialogResult = DialogResult.Cancel
+    cancel_button.Left = 260
+    cancel_button.Top = 60
+    cancel_button.Width = 70
+
+    form.Controls.Add(checkbox)
+    form.Controls.Add(ok_button)
+    form.Controls.Add(cancel_button)
+    form.AcceptButton = ok_button
+    form.CancelButton = cancel_button
+
+    result = form.ShowDialog()
+    if result != DialogResult.OK:
+        return None
+    return bool(checkbox.Checked)
 
 
 def _build_repository(data):
@@ -240,7 +304,10 @@ def main():
         forms.alert("No equipment definitions found in {}.".format(yaml_label), title=TITLE)
         return
 
-    grouped_choices = _group_truth_profile_choices(raw_data, cad_names)
+    independent_only = _ask_profile_filter()
+    if independent_only is None:
+        return
+    grouped_choices = _group_truth_profile_choices(raw_data, cad_names, independent_only=independent_only)
     option_labels = [entry["label"] for entry in grouped_choices]
     choice_map = {entry["label"]: entry["cad"] for entry in grouped_choices}
 
