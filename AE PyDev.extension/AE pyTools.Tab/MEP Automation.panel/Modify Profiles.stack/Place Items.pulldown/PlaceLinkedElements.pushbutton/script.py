@@ -155,6 +155,42 @@ def _find_level_one(doc):
     return None
 
 
+def _find_closest_level(levels, z_value):
+    if not levels or z_value is None:
+        return None
+    closest = None
+    closest_dist = None
+    for level in levels:
+        try:
+            elev = float(level.Elevation)
+        except Exception:
+            continue
+        dist = abs(elev - z_value)
+        if closest_dist is None or dist < closest_dist:
+            closest = level
+            closest_dist = dist
+    if closest is None:
+        return None
+    name = getattr(closest, "Name", None)
+    if name and "xx - legend" in str(name).lower():
+        above = []
+        try:
+            closest_elev = float(closest.Elevation)
+        except Exception:
+            return closest
+        for level in levels:
+            try:
+                elev = float(level.Elevation)
+            except Exception:
+                continue
+            if elev > closest_elev:
+                above.append((elev, level))
+        if above:
+            above.sort(key=lambda item: item[0])
+            return above[0][1]
+    return closest
+
+
 def _get_element_level(elem):
     if elem is None:
         return None
@@ -574,6 +610,73 @@ def _transform_point(transform, point):
         return point
 
 
+def _get_link_transform(link_inst):
+    if link_inst is None:
+        return None
+    try:
+        return link_inst.GetTotalTransform()
+    except Exception:
+        try:
+            return link_inst.GetTransform()
+        except Exception:
+            return None
+
+
+def _combine_transform(parent_transform, child_transform):
+    if parent_transform is None:
+        return child_transform
+    if child_transform is None:
+        return parent_transform
+    try:
+        return parent_transform.Multiply(child_transform)
+    except Exception:
+        return None
+
+
+def _doc_key(doc):
+    if doc is None:
+        return None
+    try:
+        path = doc.PathName
+    except Exception:
+        path = None
+    if not path:
+        try:
+            path = doc.Title
+        except Exception:
+            path = None
+    if not path:
+        try:
+            path = str(doc.GetHashCode())
+        except Exception:
+            path = None
+    return path
+
+
+def _walk_link_documents(doc, parent_transform, doc_chain):
+    if doc is None:
+        return
+    doc_key = _doc_key(doc)
+    if doc_key and doc_key in doc_chain:
+        return
+    next_chain = set(doc_chain or set())
+    if doc_key:
+        next_chain.add(doc_key)
+    for link_inst in FilteredElementCollector(doc).OfClass(RevitLinkInstance):
+        link_doc = link_inst.GetLinkDocument()
+        if link_doc is None:
+            continue
+        transform = _combine_transform(parent_transform, _get_link_transform(link_inst))
+        yield link_doc, transform
+        for nested in _walk_link_documents(link_doc, transform, next_chain):
+            yield nested
+
+
+def _iter_link_documents(doc):
+    for link_doc, transform in _walk_link_documents(doc, None, set()):
+        yield link_doc, transform
+
+
 def _collect_placeholders(doc, normalized_targets):
     placements = {}
     if not normalized_targets:
@@ -614,17 +717,7 @@ def _collect_placeholders(doc, normalized_targets):
             if name in normalized_targets:
                 _store(name, point, rotation, parent_element_id, level, level_name)
 
-    for link_inst in FilteredElementCollector(doc).OfClass(RevitLinkInstance):
-        link_doc = link_inst.GetLinkDocument()
-        if link_doc is None:
-            continue
-        try:
-            transform = link_inst.GetTotalTransform()
-        except Exception:
-            try:
-                transform = link_inst.GetTransform()
-            except Exception:
-                transform = None
+    for link_doc, transform in _iter_link_documents(doc):
         linked_instances = FilteredElementCollector(link_doc).OfClass(FamilyInstance)
         for inst in linked_instances:
             variants = _name_variants(inst)
@@ -745,6 +838,7 @@ def main():
     missing_labels = []
     missing_levels = []
     fallback_levels = []
+    nearest_level_fallbacks = []
     deduped_rows = 0
     seen_rows = set()
     default_level = _find_level_one(doc)
@@ -754,6 +848,11 @@ def main():
             default_level_id = default_level.Id.IntegerValue
         except Exception:
             default_level_id = None
+    try:
+        host_levels = list(FilteredElementCollector(doc).OfClass(Level))
+    except Exception:
+        host_levels = []
+
     for cad_name in equipment_names:
         normalized = _normalize_name(cad_name)
         matches = placeholders.get(normalized)
@@ -788,9 +887,20 @@ def main():
                     if level_name:
                         fallback_levels.append((cad_name, level_name))
                 else:
-                    if level_name:
-                        missing_levels.append((cad_name, level_name))
-                    continue
+                    nearest = _find_closest_level(host_levels, point.Z if point else None)
+                    if nearest is not None:
+                        try:
+                            level_id_val = nearest.Id.IntegerValue
+                        except Exception:
+                            level_id_val = None
+                        if level_id_val is not None:
+                            nearest_level_fallbacks.append((cad_name, getattr(nearest, "Name", None)))
+                    if level_id_val is None:
+                        if level_name:
+                            missing_levels.append((cad_name, level_name))
+                        else:
+                            missing_levels.append((cad_name, "(no level info)"))
+                        continue
             row_key = _placement_key(point, rotation, level_id_val, match.get("parent_element_id"))
             if row_key in seen_rows:
                 deduped_rows += 1
@@ -846,10 +956,7 @@ def main():
     if unmatched_defs:
         summary.append("")
         summary.append("No matching linked elements for:")
-        sample = unmatched_defs[:5]
-        summary.extend(" - {}".format(name) for name in sample)
-        if len(unmatched_defs) > len(sample):
-            summary.append("   (+{} more)".format(len(unmatched_defs) - len(sample)))
+        summary.extend(" - {}".format(name) for name in unmatched_defs)
 
     if missing_labels:
         summary.append("")
@@ -874,6 +981,9 @@ def main():
     if fallback_levels:
         summary.append("")
         summary.append("Defaulted to Level 1 (no matching host level): {}".format(len(fallback_levels)))
+    if nearest_level_fallbacks:
+        summary.append("")
+        summary.append("Defaulted to nearest host level by elevation: {}".format(len(nearest_level_fallbacks)))
 
     if deduped_rows:
         summary.append("")
