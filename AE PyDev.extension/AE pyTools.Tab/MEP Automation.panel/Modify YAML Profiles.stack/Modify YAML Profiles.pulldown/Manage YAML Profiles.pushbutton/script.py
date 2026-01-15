@@ -3340,7 +3340,7 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
 
 
-        txn = Transaction(doc, "Create Orphan Profile ({})".format(cad_label))
+        txn = Transaction(doc, "Create Independant Profile ({})".format(cad_label))
 
 
 
@@ -3412,7 +3412,7 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
 
 
-            "Captured {} orphan element(s) for '{}'".format(len(element_records), cad_label),
+            "Captured {} independant element(s) for '{}'".format(len(element_records), cad_label),
 
 
 
@@ -3440,7 +3440,7 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
 
 
-        "Saved {} orphan element(s) to '{}'.\nReload placement tools to use the updates.".format(
+        "Saved {} independant element(s) to '{}'.\nReload placement tools to use the updates.".format(
 
 
 
@@ -4936,7 +4936,7 @@ def main():
 
 
 
-                    "Capture pending orphan profile '{}' now?\nSelect Yes to pick its elements, or No to keep waiting."
+                    "Capture pending independant profile '{}' now?\nSelect Yes to pick its elements, or No to keep waiting."
 
 
 
@@ -5104,7 +5104,7 @@ def main():
 
 
 
-                        "Capture orphan profile '{}' now?\nSelect Yes to pick elements, or No to place equipment first and resume later."
+                        "Capture independant profile '{}' now?\nSelect Yes to pick elements, or No to place equipment first and resume later."
 
 
 

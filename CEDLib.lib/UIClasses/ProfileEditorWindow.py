@@ -322,25 +322,25 @@ class ProfileEditorWindow(forms.WPFWindow):
 
     def CreateOrphanButton_Click(self, sender, args):
         name = forms.ask_for_string(
-            prompt="Enter a unique name for the orphan profile:",
-            title="Create Orphan Profile",
+            prompt="Enter a unique name for the independant profile:",
+            title="Create Independant Profile",
         )
         if name is None:
             return
         cad_name = (name or u"").strip()
         if not cad_name:
-            forms.alert("Profile name cannot be empty.", title="Create Orphan Profile")
+            forms.alert("Profile name cannot be empty.", title="Create Independant Profile")
             return
         lowered = cad_name.lower()
         for existing in self._profiles.keys():
             if (existing or "").strip().lower() == lowered:
-                forms.alert("A profile named '{}' already exists.".format(cad_name), title="Create Orphan Profile")
+                forms.alert("A profile named '{}' already exists.".format(cad_name), title="Create Independant Profile")
                 return
         self.orphan_requests.append(cad_name)
         forms.alert(
             "The window will close so you can place and select elements for '{}'.\n"
             "After capture finishes, the editor will reopen.".format(cad_name),
-            title="Create Orphan Profile",
+            title="Create Independant Profile",
         )
         self.DialogResult = False
         self.Close()

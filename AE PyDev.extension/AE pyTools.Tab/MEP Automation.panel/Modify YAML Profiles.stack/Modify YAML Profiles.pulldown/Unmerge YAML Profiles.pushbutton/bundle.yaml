@@ -1,0 +1,9 @@
+title: Unmerge YAML Profiles
+tooltip: |
+  Detach a merged profile from its truth-source group so it becomes independent again.
+
+  Select a merged group (non-indented source), then choose the merged profile
+  you want to unmerge. The tool resets that profile's truth-source metadata so
+  it appears as its own unindented entry in Manage YAML Profiles.
+
+  This only updates YAML metadata; no Revit elements are deleted.
