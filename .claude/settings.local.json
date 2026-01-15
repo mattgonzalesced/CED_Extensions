@@ -3,7 +3,8 @@
     "allow": [
       "Bash(python:*)",
       "Bash(grep:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Read(//c/Users/m.gonzales/OneDrive - CoolSys Inc/Desktop/python/Cutsheet Scraping - H-E-B/Project Mates.pushbutton/**)"
     ],
     "deny": [],
     "ask": []
