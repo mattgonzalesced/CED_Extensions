@@ -1,6 +1,6 @@
-title: Load Profiles
+title: Place Single Profile
 tooltip: |
-  Use Load Profiles to inspect how a profile will drive placements
+  Use Place Single Profile to inspect how a profile will drive placements
   without committing to creation; it is essentially a dry run that surfaces every
   linked element definition and its captured offsets or parameters.
 
