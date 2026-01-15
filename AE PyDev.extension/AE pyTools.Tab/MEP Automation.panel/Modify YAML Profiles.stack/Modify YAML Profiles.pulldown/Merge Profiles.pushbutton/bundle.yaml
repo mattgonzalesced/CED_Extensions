@@ -1,4 +1,4 @@
-title: Merge YAML Profiles
+title: Merge Profiles
 tooltip: |
   Launch Merge YAML Profiles when two equipment definitions describe identical
   assemblies but differ only by naming convention; it lets you treat one entry as

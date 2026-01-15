@@ -1,4 +1,4 @@
-title: Unmerge YAML Profiles
+title: Unmerge Profiles
 tooltip: |
   Detach a merged profile from its truth-source group so it becomes independent again.
 
