@@ -1,0 +1,142 @@
+Manage YAML Profiles UI (Designer Guide)
+========================================
+
+What this window edits
+----------------------
+- Edits the active YAML stored inside the Revit model.
+- Profiles are CAD names; each profile has one or more Types.
+- Edits here affect what Place Linked Elements, Load Profiles, and other tools use.
+
+Profiles list (left panel)
+--------------------------
+- Search box filters by CAD name.
+- Non-indented entries are source profiles (editable).
+- Indented entries are merged profiles (read-only copies of the source).
+- Parent display shows the linked parent name/id when available.
+
+Types list (right, top)
+-----------------------
+- Select a Type before editing offsets, parameters, tags, keynotes, or text notes.
+- If a profile has no types, you cannot edit until a type exists.
+
+Buttons and what they do
+------------------------
+
+Create Independent Profile
+Purpose:
+- Start a brand-new profile that is not tied to a picked parent yet.
+Steps:
+1) Click Create Independent Profile.
+2) Enter a unique profile name.
+3) The window closes so you can place/select elements in the model.
+4) When capture finishes, the editor reopens.
+Notes:
+- If you choose to pause, the profile is saved to a pending list and you can resume later.
+
+Delete Profile
+Purpose:
+- Remove a profile and its types from the active YAML.
+Steps:
+1) Select a profile in the list.
+2) Click Delete Profile.
+3) Confirm the prompt.
+Notes:
+- If you delete a merged (indented) profile, only that copy is removed.
+- If you delete a source profile, you will be warned if it has merged children.
+
+Add Equipment to Profiles
+Purpose:
+- Append new linked items to an existing profile.
+Steps:
+1) Select a profile in the list.
+2) Click Add Equipment to Profiles.
+3) The window closes so you can pick elements to add.
+4) When capture finishes, the editor reopens.
+Notes:
+- This does not overwrite existing linked items.
+
+Edit / Done
+Purpose:
+- Toggle edit mode for the selected type.
+Steps:
+1) Select a profile and a type.
+2) Click Edit to unlock fields.
+3) Make changes, then click Done to apply them.
+Notes:
+- If the profile is merged (indented), Edit is disabled.
+
+Rename Profile
+Purpose:
+- Rename the source profile group (truth-source name).
+Steps:
+1) Select a source profile (non-indented).
+2) Click Edit, then click Rename Profile.
+3) Enter a new name.
+Notes:
+- Rename is disabled on merged (indented) entries.
+
+Change Type...
+Purpose:
+- Swap the family/type or model group for the selected type.
+Steps:
+1) Select a type.
+2) Click Change Type...
+3) Choose Family Types or Model Groups, then pick the new type.
+Notes:
+- Only loaded families or model groups are available.
+
+Delete Types...
+Purpose:
+- Remove type configurations from the selected profile.
+Steps:
+1) Select a profile (and a type if prompted).
+2) Click Delete Types...
+3) Follow the delete prompts to choose what to remove.
+
+Add Parameter / Delete Parameter
+Purpose:
+- Add or remove instance parameter values stored with the type.
+Steps:
+1) Click Edit to unlock fields.
+2) Click Add Parameter, enter a name and value.
+3) To remove, select a parameter row and click Delete Parameter.
+Notes:
+- Parameter names must be unique within the type.
+
+Add Tag / Remove Selected (Tags)
+Purpose:
+- Add or remove tag definitions with offsets.
+Steps:
+1) Click Edit to unlock fields.
+2) Click Add Tag and fill in Family/Type and offsets.
+3) Select a row and click Remove Selected to delete it.
+
+Add Keynote / Remove Selected (Keynotes)
+Purpose:
+- Add or remove keynote tag definitions with offsets.
+Steps:
+1) Click Edit to unlock fields.
+2) Click Add Keynote and fill in Family/Type and offsets.
+3) Select a row and click Remove Selected to delete it.
+
+Add Text Note / Remove Selected (Text Notes)
+Purpose:
+- Add or remove text note definitions with offsets.
+Steps:
+1) Click Edit to unlock fields.
+2) Click Add Text Note and fill in the details.
+3) Select a row and click Remove Selected to delete it.
+
+OK / Cancel
+-----------
+OK:
+- Saves your current edits and closes the window.
+Cancel:
+- Closes without saving.
+
+Notes and watchouts
+-------------------
+- Always click OK to save. Closing the window or hitting Cancel discards changes.
+- Merged (indented) profiles are read-only; edit the non-indented source.
+- If you close the Manage Profiles window before clicking OK, edits are not saved.
+- Add Equipment and Create Independent temporarily close the editor; it reopens after capture.

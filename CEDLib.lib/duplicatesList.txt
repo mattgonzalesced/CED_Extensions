@@ -1,0 +1,157 @@
+Duplicate labels within linked_element_definitions
+Count: 115
+
+LABEL|000_Compactor_Trash_20YD_1|000_Compactor_Trash_20YD_1 Types|EF-U_Balanced Power Connector_CED : 480V/3P|2
+LABEL|000_Compactor_Trash_20YD_1|000_Compactor_Trash_20YD_1 Types|EF-U_Receptacle_CED : Duplex Wall - GFCI|3
+LABEL|000_Compactor_Trash_20YD_1032481 : Default|000_Compactor_Trash_20YD_1032481 : Default Types|EF-U_Balanced Power Connector_CED : 480V/3P|2
+LABEL|000_Compactor_Trash_20YD_1032481 : Default|000_Compactor_Trash_20YD_1032481 : Default Types|EF-U_Receptacle_CED : Duplex Wall - GFCI|3
+LABEL|000_Compactor_Trash_34YD_1|000_Compactor_Trash_34YD_1 Types|EF-U_Balanced Power Connector_CED : 480V/3P|2
+LABEL|000_Compactor_Trash_34YD_1|000_Compactor_Trash_34YD_1 Types|EF-U_Receptacle_CED : Duplex Wall - GFCI|2
+LABEL|000_Compactor_Trash_34YD_1029696 : Default|000_Compactor_Trash_34YD_1029696 : Default Types|EF-U_Balanced Power Connector_CED : 480V/3P|2
+LABEL|000_Compactor_Trash_34YD_1029696 : Default|000_Compactor_Trash_34YD_1029696 : Default Types|EF-U_Receptacle_CED : Duplex Wall - GFCI|2
+LABEL|000_METRO SMARTLEVER_8ft_Workstation_1|000_METRO SMARTLEVER_8ft_Workstation_1 Types|EF-U_Receptacle_CED : Duplex Wall - GFCI Horizontal|2
+LABEL|000_METRO SMARTLEVER_8ft_Workstation_1307601|000_METRO SMARTLEVER_8ft_Workstation_1307601 Types|EF-U_Receptacle_CED : Duplex Wall - GFCI Horizontal|2
+LABEL|000_METRO SMARTLEVER_8ft_Workstation_2|000_METRO SMARTLEVER_8ft_Workstation_2 Types|EF-U_Receptacle_CED : Duplex Wall - GFCI Horizontal|2
+LABEL|000_METRO SMARTLEVER_8ft_Workstation_3 : Default|000_METRO SMARTLEVER_8ft_Workstation_3 : Default Types|EF-U_Receptacle_CED : Duplex Wall - GFCI Horizontal|2
+LABEL|000_Oven_Combi_Giorik_12pan_gas_1212858 : Default|000_Oven_Combi_Giorik_12pan_gas_1212858 : Default Types|EF-U_Receptacle_CED : Duplex Wall|2
+LABEL|000_RefgCase_DualTemp_12'_1212039 : Default|000_RefgCase_DualTemp_12'_1212039 : Default Types|DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet|2
+LABEL|000_RefgCase_DualTemp_12'_1212039 : Default|000_RefgCase_DualTemp_12'_1212039 : Default Types|RCD-U_General Refrigeration Device_CED : Case Controller|2
+LABEL|000_RefgCase_DualTemp_12'_1212042 : Default|000_RefgCase_DualTemp_12'_1212042 : Default Types|DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet|3
+LABEL|000_RefgCase_DualTemp_12'_1212042 : Default|000_RefgCase_DualTemp_12'_1212042 : Default Types|RCD-U_General Refrigeration Device_CED : Case Controller|3
+LABEL|000_RefgCase_DualTemp_20'_1212044 : Default|000_RefgCase_DualTemp_20'_1212044 : Default Types|CED-R-Hussmann FWE : Default|2
+LABEL|000_RefgCase_DualTemp_20'_1212044 : Default|000_RefgCase_DualTemp_20'_1212044 : Default Types|DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet|4
+LABEL|000_RefgCase_DualTemp_20'_1212044 : Default|000_RefgCase_DualTemp_20'_1212044 : Default Types|EF-U_Receptacle_CED : Duplex Wall|2
+LABEL|000_RefgCase_DualTemp_20'_1212044 : Default|000_RefgCase_DualTemp_20'_1212044 : Default Types|RCD-U_General Refrigeration Device_CED : Case Controller|4
+LABEL|000_RefgCase_DualTemp_8'_1031653 : Default|000_RefgCase_DualTemp_8'_1031653 : Default Types|DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet|2
+LABEL|000_RefgCase_DualTemp_8'_1031653 : Default|000_RefgCase_DualTemp_8'_1031653 : Default Types|RCD-U_General Refrigeration Device_CED : Case Controller|2
+LABEL|000_Table_SS_30x72_wUnSh_Splash_1005602 : Default|000_Table_SS_30x72_wUnSh_Splash_1005602 : Default Types|EF-U_Receptacle_CED : Duplex Wall - GFCI|2
+LABEL|001_Scrubber_Buffer_Vendor Provided : Default|001_Scrubber_Buffer_Vendor Provided : Default Types|EF-U_Receptacle_CED : Duplex Wall|2
+LABEL|001_Workstation_Manager_11_1034173 : Default|001_Workstation_Manager_11_1034173 : Default Types|DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet|5
+LABEL|001_Workstation_Manager_11_1034173 : Default|001_Workstation_Manager_11_1034173 : Default Types|EF-U_Receptacle_CED : Quad Wall|3
+LABEL|001_Workstation_Manager_11_1034173 : Default|001_Workstation_Manager_11_1034173 : Default Types|EF-U_Receptacle_CED : Quad Wall - Isolated Ground|3
+LABEL|002_Case_8ft_Q3-MV-8R_REM_French_Door_Hussmann_1 : Default|002_Case_8ft_Q3-MV-8R_REM_French_Door_Hussmann_1 : Default Types|DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet|2
+LABEL|002_Case_8ft_Q3-MV-8R_REM_French_Door_Hussmann_1 : Default|002_Case_8ft_Q3-MV-8R_REM_French_Door_Hussmann_1 : Default Types|RCD-U_General Refrigeration Device_CED : Case Controller|2
+LABEL|002_Case_8ft_Q3-MV-8R_REM_French_Door_Hussmann_1304256|002_Case_8ft_Q3-MV-8R_REM_French_Door_Hussmann_1 : Default Types|DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet|2
+LABEL|002_Case_8ft_Q3-MV-8R_REM_French_Door_Hussmann_1304256|002_Case_8ft_Q3-MV-8R_REM_French_Door_Hussmann_1 : Default Types|RCD-U_General Refrigeration Device_CED : Case Controller|2
+LABEL|002_RefgCase_ID5SL_8_Pearl_1211936 : Default|002_RefgCase_ID5SL_8_Pearl_1211936 : Default Types|DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet|2
+LABEL|002_Wrap_Station_Digi_LH_1033680 : Default|002_Wrap_Station_Digi_LH_1033680 : Default Types|EF-U_Receptacle_CED : Cord Drop - 120V/1Ph|2
+LABEL|002_Wrap_Station_Hand_1033681 : Default|002_Wrap_Station_Hand_1033681 : Default Types|EF-U_Receptacle_CED : Duplex Wall - GFCI|2
+LABEL|003_Donut_Fryer_1208264|003_Donut_Fryer_1208264 Types|EF-U_Balanced Power Connector_CED : 120V/1P|2
+LABEL|003_Donut_Fryer_1208264|003_Donut_Fryer_1208264 Types|EF-U_Motor Rated Switch_CED : Motor Rated Switch - 120V, 1 Pole|2
+LABEL|003_Donut_Fryer_1208264 : 003_Donut_Fryer_1208264|003_Donut_Fryer_1208264 : 003_Donut_Fryer_1208264 Types|EF-U_Balanced Power Connector_CED : 120V/1P|2
+LABEL|003_Donut_Fryer_1208264 : 003_Donut_Fryer_1208264|003_Donut_Fryer_1208264 : 003_Donut_Fryer_1208264 Types|EF-U_Motor Rated Switch_CED : Motor Rated Switch - 120V, 1 Pole|2
+LABEL|003_Slicer_Bread_1002280 : Default|003_Slicer_Bread_1002280 : Default Types|EF-U_Receptacle_CED : Duplex Floor|2
+LABEL|003_Tortilla_Machine_GrandeMax_1206082 : Default|003_Tortilla_Machine_GrandeMax_1206082 : Default Types|EF-U_Junction Box_CED : Floor|2
+LABEL|004_TY_POS_Station_1032769 : Default|004_TY_POS_Station_1032769 : Default Types|EF-U_Receptacle_CED : Duplex Wall - Isolated Ground|2
+LABEL|005_Workstation_Assembly_1034092 : Default|005_Workstation_Assembly_1034092 : Default Types|EF-U_Receptacle_CED : Quad Wall - Isolated Ground|2
+LABEL|005_Workstation_DropOff_TAS_1|005_Workstation_DropOff_TAS_1 Types|EF-U_Receptacle_CED : Quad Wall - Isolated Ground|2
+LABEL|005_Workstation_DropOff_TAS_1038290 : Default|005_Workstation_DropOff_TAS_1038290 : Default Types|EF-U_Receptacle_CED : Quad Wall - Isolated Ground|2
+LABEL|005_Workstation_Packing_1034122 : Default|005_Workstation_Packing_1034122 : Default Types|EF-U_Receptacle_CED : Quad Wall - Isolated Ground|2
+LABEL|005_Workstation_Packing_Add-on_1034098.0001 : Default|005_Workstation_Packing_Add-on_1034098.0001 : Default Types|EF-U_Receptacle_CED : Quad Wall - Isolated Ground|2
+LABEL|005_Workstation_PatientEd_1210409 : Default|005_Workstation_PatientEd_1210409 : Default Types|EF-U_Receptacle_CED : Quad Wall - Isolated Ground|2
+LABEL|005_Workstation_PickUp_1034091|005_Workstation_PickUp_1034091 Types|EF-U_Receptacle_CED : Quad Wall - Isolated Ground|3
+LABEL|005_Workstation_PickUp_TAS_1038291 : Default|005_Workstation_PickUp_TAS_1038291 : Default Types|EF-U_Receptacle_CED : Quad Wall - Isolated Ground|3
+LABEL|005_Workstation_Verification_1034095 : Default|005_Workstation_Verification_1034095 : Default Types|EF-U_Receptacle_CED : Quad Wall - Isolated Ground|2
+LABEL|005_Workstation_WorkRoom_1034101 : Default|005_Workstation_WorkRoom_1034101 : Default Types|EF-U_Receptacle_CED : Quad Wall - Isolated Ground|3
+LABEL|005_Worskstation_Counseling_1034090 : Default|005_Worskstation_Counseling_1034090 : Default Types|EF-U_Receptacle_CED : Quad Wall - Isolated Ground|2
+LABEL|006_FriJado_1300636 : Default|006_FriJado_1300636 : Default Types|EF-U_Receptacle_CED : Specialty Wall - 208V/3Ph|2
+LABEL|006_Steamer_Accutemp_Doublestack_withStand_1212156 : Default|006_Steamer_Accutemp_Doublestack_withStand_1212156 : Default Types|EF-U_Motor Rated Switch_CED : Motor Rated Switch - 120V, 1 Pole|2
+LABEL|006_Steamer_Accutemp_Doublestack_withStand_1212156 : Default|006_Steamer_Accutemp_Doublestack_withStand_1212156 : Default Types|EF-U_Receptacle_CED : Duplex Wall|2
+LABEL|008_Checkstand_Metal_LH_1317548 : Default|008_Checkstand_Metal_LH_1317548 : Default Types|EF-U_Junction Box_CED : Wall - No Stem|3
+LABEL|008_Ice_Maker_Bagger_1203808 : Default|008_Ice_Maker_Bagger_1203808 : Default Types|EF-U_Receptacle_CED : Duplex Wall|2
+LABEL|008_Ice_Maker_Bagger_1203808 : Default|008_Ice_Maker_Bagger_1203808 : Default Types|EF-U_Receptacle_CED : Specialty Wall - 208V/1Ph|2
+LABEL|011BC_Workstation_CC_1200445 : Default|011BC_Workstation_CC_1200445 : Default Types|DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet|2
+LABEL|011BC_Workstation_CC_1200445 : Default|011BC_Workstation_CC_1200445 : Default Types|EF-U_Receptacle_CED : Duplex Wall - Controlled|2
+LABEL|011BC_Workstation_CC_1200445 : Default|011BC_Workstation_CC_1200445 : Default Types|EF-U_Receptacle_CED : Quad Wall - Isolated Ground|2
+LABEL|011BC_Workstation_CC_Open_1034852 : Default|011BC_Workstation_CC_Open_1034852 : Default Types|DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet|2
+LABEL|011_Credenza With Doors_1309448 : Default|011_Credenza With Doors_1309448 : Default Types|EF-U_Receptacle_CED : Duplex Wall - Isolated Ground|2
+LABEL|011_Millwork Cabinet With Microwave Opening _1311739 : Default|011_Millwork Cabinet With Microwave Opening _1311739 : Default Types|EF-U_Receptacle_CED : Duplex Wall - GFCI|3
+LABEL|012_RefgCase_Sushi_Q3SP_12ft_Black_1306839 : Default|012_RefgCase_Sushi_Q3SP_12ft_Black_1306839 : Default Types|DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet|2
+LABEL|012_RefgCase_Sushi_Q3SP_12ft_Black_1306839 : Default|012_RefgCase_Sushi_Q3SP_12ft_Black_1306839 : Default Types|RCD-U_General Refrigeration Device_CED : Case Controller|2
+LABEL|012_RefgCase_Sushi_Q3SP_4ft_Black_1306834 : Default|012_RefgCase_Sushi_Q3SP_4ft_Black_1306834 : Default Types|DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet|2
+LABEL|012_RefgCase_Sushi_Q3SP_4ft_Black_1306834 : Default|012_RefgCase_Sushi_Q3SP_4ft_Black_1306834 : Default Types|RCD-U_General Refrigeration Device_CED : Case Controller|2
+LABEL|012_RefgCase_Sushi_Q3SP_8ft_Black_1|012_RefgCase_Sushi_Q3SP_8ft_Black_1 Types|RCD-U_General Refrigeration Device_CED : Case Controller|2
+LABEL|012_RefgCase_Sushi_Q3SP_8ft_Black_1306837 : Default|012_RefgCase_Sushi_Q3SP_8ft_Black_1306837 : Default Types|DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet|2
+LABEL|012_RefgCase_Sushi_Q3SP_8ft_Black_1306837 : Default|012_RefgCase_Sushi_Q3SP_8ft_Black_1306837 : Default Types|RCD-U_General Refrigeration Device_CED : Case Controller|2
+LABEL|025_CC KIOSK_BABY BEAR_SMALL FORMAT_LH_1304819|025_CC KIOSK_BABY BEAR_SMALL FORMAT_LH_1304819 Types|EF-U_Receptacle_CED : Duplex Wall - GFCI|3
+LABEL|025_COOKING CONNECTION KIOSK_BABY BEAR_SMALL FORMAT_RIGHT HAND_9053377-7_RH_1 : Default 2|025_COOKING CONNECTION KIOSK_BABY BEAR_SMALL FORMAT_RIGHT HAND_9053377-7_RH_1 : Default 2 Types|DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet|2
+LABEL|025_COOKING CONNECTION KIOSK_BABY BEAR_SMALL FORMAT_RIGHT HAND_9053377-7_RH_1 : Default 2|025_COOKING CONNECTION KIOSK_BABY BEAR_SMALL FORMAT_RIGHT HAND_9053377-7_RH_1 : Default 2 Types|EF-U_Receptacle_CED : Duplex Wall - GFCI|3
+LABEL|025_RANGE - IMPERIALRANGE 24 INCH WIDE_BURNERS ON LEFT AND CHARBROILER ON RIGHT_1304346_v21 : Default|025_RANGE - IMPERIALRANGE 24 INCH WIDE_BURNERS ON LEFT AND CHARBROILER ON RIGHT_1304346_v21 : Default Types|EF-U_Receptacle_CED : Duplex Wall|2
+LABEL|025_RANGE - IMPERIALRANGE 24 INCH WIDE_BURNERS ON RIGHT AND CHARBROILER ON LEFT_1304319_v21|025_RANGE - IMPERIALRANGE 24 INCH WIDE_BURNERS ON RIGHT AND CHARBROILER ON LEFT_1304319_v21 Types|EF-U_Balanced Power Connector_CED : 120V/1P|2
+LABEL|025_RANGE - IMPERIALRANGE 24 INCH WIDE_BURNERS ON RIGHT AND CHARBROILER ON LEFT_1304319_v21|025_RANGE - IMPERIALRANGE 24 INCH WIDE_BURNERS ON RIGHT AND CHARBROILER ON LEFT_1304319_v21 Types|EF-U_Motor Rated Switch_CED : Motor Rated Switch - 120V, 1 Pole|2
+LABEL|025_RANGE - IMPERIALRANGE 24 INCH WIDE_BURNERS ON RIGHT AND CHARBROILER ON LEFT_1304319_v21|025_RANGE - IMPERIALRANGE 24 INCH WIDE_BURNERS ON RIGHT AND CHARBROILER ON LEFT_1304319_v21 Types|EF-U_Receptacle_CED : Duplex Wall|2
+LABEL|Business Center 42" height Recepts|Business Center 42" height Recepts Types|EF-U_Receptacle_CED : Duplex Wall|2
+LABEL|Business Center Dry Pipe Air Compressor|Business Center Dry Pipe Air Compressor Types|EF-U_Junction Box_CED : Wall - No Stem|2
+LABEL|Business Center Dry Pipe Air Compressor|Business Center Dry Pipe Air Compressor Types|EF-U_Motor Rated Switch_CED : Motor Rated Switch - 120V, 1 Pole|2
+LABEL|Business Center Hood Lights and Control|Business Center Hood Lights and Control Types|EF-U_Motor Rated Switch_CED : Motor Rated Switch - 120V, 1 Pole|2
+LABEL|Curbside Phone Locker Recepts (5)|Curbside Phone Locker Recepts (5) Types|EF-U_Receptacle_CED : Duplex Wall|5
+LABEL|Dairy Coolers Recepts|Dairy Coolers Recepts Types|EF-U_Receptacle_CED : Quad Wall - Isolated Ground|6
+LABEL|Electrical Room GWH|Electrical Room GWH Types|EF-U_Motor Rated Switch_CED : Motor Rated Switch - 120V, 1 Pole|2
+LABEL|Electrical Room Junction Boxes|Electrical Room Junction Boxes Types|EF-U_Junction Box_CED : Wall - No Stem|6
+LABEL|Electrical Room MOOD Recepts|Electrical Room MOOD Recepts Types|EF-U_Receptacle_CED : Quad Wall - Isolated Ground|3
+LABEL|HEB_10' DRIVE UP MILLWORK_1317988 : Default|HEB_10' DRIVE UP MILLWORK_1317988 : Default Types|DD-U_General Low Voltage Device_CED-HEB : CR_Cash Register|2
+LABEL|HEB_10' DRIVE UP MILLWORK_1317988 : Default|HEB_10' DRIVE UP MILLWORK_1317988 : Default Types|DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet|2
+LABEL|HEB_10' DRIVE UP MILLWORK_1317988 : Default|HEB_10' DRIVE UP MILLWORK_1317988 : Default Types|DD-U_General Low Voltage Device_CED-HEB : T_Wall Telephone Outlet|2
+LABEL|HEB_10' DRIVE UP MILLWORK_1317988 : Default|HEB_10' DRIVE UP MILLWORK_1317988 : Default Types|EF-U_Receptacle_CED : Quad Wall|2
+LABEL|HEB_10' DRIVE UP MILLWORK_1317988 : Default|HEB_10' DRIVE UP MILLWORK_1317988 : Default Types|EF-U_Receptacle_CED : Quad Wall - Isolated Ground|5
+LABEL|HEB_2 DR REF TRM END CAP NN BLK BLK_1317595 : Default|HEB_2 DR REF TRM END CAP NN BLK BLK_1317595 : Default Types|EF-U_Receptacle_CED : Duplex Wall|2
+LABEL|HEB_6FT SMARTLEVER_1307748 : Default|HEB_6FT SMARTLEVER_1307748 : Default Types|EF-U_Receptacle_CED : Duplex Wall - GFCI|2
+LABEL|HEB_72'' Chef's Base TRBC72_1201714 : Default|HEB_72'' Chef's Base TRBC72_1201714 : Default Types|EF-U_Balanced Power Connector_CED : 120V/1P|2
+LABEL|HEB_72'' Chef's Base TRBC72_1201714 : Default|HEB_72'' Chef's Base TRBC72_1201714 : Default Types|EF-U_Motor Rated Switch_CED : Motor Rated Switch - 120V, 1 Pole|2
+LABEL|HEB_72'' Chef's Base TRBC72_1201714 : Default|HEB_72'' Chef's Base TRBC72_1201714 : Default Types|EF-U_Receptacle_CED : Duplex Wall|2
+LABEL|HEB_CASE_12' JGB2 TDAL-N5_1317403 : Default|HEB_CASE_12' JGB2 TDAL-N5_1317403 : Default Types|RCD-U_General Refrigeration Device_CED : Case Controller|2
+LABEL|HEB_CASE_END CASE TDAL-N5_1317407 : Default|HEB_CASE_END CASE TDAL-N5_1317407 : Default Types|EF-U_Receptacle_CED : Duplex Wall|2
+LABEL|HEB_METRO SMARTLEVER_8ft_Workstation_1319408 : Default|HEB_METRO SMARTLEVER_8ft_Workstation_1319408 : Default Types|EF-U_Receptacle_CED : Duplex Floor|2
+LABEL|HEB_Small Moms Pod_1311863 : Default|HEB_Small Moms Pod_1311863 : Default Types|EF-U_Balanced Power Connector_CED : 120V/1P|2
+LABEL|HEB_Small Moms Pod_1311863 : Default|HEB_Small Moms Pod_1311863 : Default Types|EF-U_Balanced Power Connector_CED : 208V/2P|2
+LABEL|HEB_Small Moms Pod_1311863 : Default|HEB_Small Moms Pod_1311863 : Default Types|EF-U_General Electrical Box_CED : Refrig Case - Anti-Sweat|2
+LABEL|HEB_Small Moms Pod_1311863 : Default|HEB_Small Moms Pod_1311863 : Default Types|EF-U_Receptacle_CED : Duplex Wall - GFCI|2
+LABEL|HEB_Small Moms Pod_1311864|HEB_Small Moms Pod_1311864 Types|EF-U_Balanced Power Connector_CED : 120V/1P|2
+LABEL|HEB_Small Moms Pod_1311864|HEB_Small Moms Pod_1311864 Types|EF-U_Balanced Power Connector_CED : 208V/2P|2
+LABEL|HEB_Small Moms Pod_1311864|HEB_Small Moms Pod_1311864 Types|EF-U_General Electrical Box_CED : Refrig Case - Anti-Sweat|2
+LABEL|HEB_Small Moms Pod_1311864|HEB_Small Moms Pod_1311864 Types|EF-U_Receptacle_CED : Duplex Wall - GFCI|2
+LABEL|Horizontal Gondola (Recept-JBox-Recept)|Horizontal Gondola (Recept-JBox-Recept) Types|EF-U_Receptacle_CED : Duplex Wall|2
+LABEL|Long Gondola Vertical (JBox-Recept-JBox-Recept)|Long Gondola Vertical (JBox-Recept-JBox-Recept) Types|EF-U_Junction Box_CED : Wall - No Stem|2
+LABEL|Long Gondola Vertical (JBox-Recept-JBox-Recept)|Long Gondola Vertical (JBox-Recept-JBox-Recept) Types|EF-U_Receptacle_CED : Duplex Wall|2
+LABEL|Pharmacy Convenience Recepts (5)|Pharmacy Convenience Recepts (5) Types|EF-U_Receptacle_CED : Duplex Wall|5
+LABEL|Vertical Gondola (Recept-JBox-Recept)|Vertical Gondola (Recept-JBox-Recept) Types|EF-U_Receptacle_CED : Duplex Wall|2
+LABEL|Workstation Verification 4 Recepts PH|Workstation Verification 4 Recepts PH Types|EF-U_Receptacle_CED : Quad Wall - Isolated Ground|4
+
+Duplicate full definition signatures (exact match)
+Count: 0
+
+
+Duplicate Element_Linker payloads
+Count: 31
+
+LINK|000_HP ENGAGE_TTBBQ_1305053 : Default|000_HP ENGAGE_TTBBQ_1305053 : Default Types|2|EF-U_Receptacle_CED : Duplex Wall - Isolated Ground, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet
+LINK|000_POS_CPU_wMonitor_1037848 : Default|000_POS_CPU_wMonitor_1037848 : Default Types|4|DD-U_General Low Voltage Device_CED-HEB : CP_Catalina Printer Outlet, DD-U_General Low Voltage Device_CED-HEB : CR_Cash Register, DD-U_General Low Voltage Device_CED-HEB : T_Wall Telephone Outlet, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet
+LINK|000_RefgCase_DualTemp_8'_1031653 : Default|000_RefgCase_DualTemp_8'_1031653 : Default Types|5|CED-R-Hussmann FW8 : FW 8', DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet, RCD-U_General Refrigeration Device_CED : Case Controller, RCD-U_General Refrigeration Device_CED : Case Controller
+LINK|000_RefgCase_RL_3DR_Black_1212095 : Default|000_RefgCase_RL_3DR_Black_1212095 : Default Types|3|CED-R-Hussmann_Multi-Door Case_RL - Righthand Door : 3 DR, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet, RCD-U_General Refrigeration Device_CED : Case Controller
+LINK|000_Scanner_Gryphon_with_Cable_1027555 : Default|000_Scanner_Gryphon_with_Cable_1027555 : Default Types|2|EF-U_Receptacle_CED : Duplex Wall, EF-U_Receptacle_CED : Quad Wall - Isolated Ground
+LINK|000_Sink_3Comp_1 : Default|000_Sink_3Comp_1 : Default Types|2|P_3\"(80) Floor Drain, Vertical DWV : P_3\"(80) Floor Drain, Vertical DWV, P_3\"(80) Floor Sink, Vertical DWV : P_3\"(80) Floor Sink, Vertical DWV
+LINK|000_Sink_3Comp_1025872 : Default|000_Sink_3Comp_1025872 : Default Types|2|P_3\"(80) Floor Drain, Vertical DWV : P_3\"(80) Floor Drain, Vertical DWV, P_3\"(80) Floor Sink, Vertical DWV : P_3\"(80) Floor Sink, Vertical DWV
+LINK|002_RefgCase_ID5SL_8_MD_Pearl_1211921 : Default|002_RefgCase_ID5SL_8_MD_Pearl_1211921 : Default Types|3|CED-R-Hussmann ID5SL : 8', DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet, RCD-U_General Refrigeration Device_CED : Case Controller
+LINK|003_RefgCase_ID5SL_8_Black_1212106 : Default|003_RefgCase_ID5SL_8_Black_1212106 : Default Types|3|CED-R-Hussmann ID5SL : 8', RCD-U_General Refrigeration Device_CED : Case Controller, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet
+LINK|003_RefgCase_Service_Huss_8ft_1201137 : 003_RefgCase_Service_Huss_8ft_1201137|003_RefgCase_Service_Huss_8ft_1201137 : 003_RefgCase_Service_Huss_8ft_1201137 Types|3|CED-R-Hussmann Q3SS : 8 FT, RCD-U_General Refrigeration Device_CED : Case Controller, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet
+LINK|008_Checkstand_Metal_LH_1317548 : Default|008_Checkstand_Metal_LH_1317548 : Default Types|3|DD-U_General Low Voltage Device_CED-HEB : CR_Cash Register, DD-U_General Low Voltage Device_CED-HEB : CP_Catalina Printer Outlet, DD-U_General Low Voltage Device_CED-HEB : T_Wall Telephone Outlet
+LINK|008_Soda_Merch_1|008_Soda_Merch_1 Types|3|EF-U_Receptacle_CED : Duplex Wall - Isolated Ground, EF-U_Receptacle_CED : Duplex Wall, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet
+LINK|008_Soda_Merch_1207004 : Default|008_Soda_Merch_1207004 : Default Types|3|EF-U_Receptacle_CED : Duplex Wall - Isolated Ground, EF-U_Receptacle_CED : Duplex Wall, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet
+LINK|012_RefgCase_Service_6ft_Hussmann_DSFM_wCanopy_1303039 : Default|012_RefgCase_Service_6ft_Hussmann_DSFM_wCanopy_1303039 : Default Types|3|CED-R-Hussmann 6ft DSFM w Canopy : Default, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet, RCD-U_General Refrigeration Device_CED : Case Controller
+LINK|012_RefgCase_Service_8ft_Hussmann_DSFM_wCanopy_1303040 : Default|012_RefgCase_Service_8ft_Hussmann_DSFM_wCanopy_1303040 : Default Types|3|CED-R-Hussmann DSFM WCANOPY 8FTt : Default, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet, RCD-U_General Refrigeration Device_CED : Case Controller
+LINK|012_RefgCase_Service_Wedge_45degree_Hussmann_DSFM-EP_1303042 : Default|012_RefgCase_Service_Wedge_45degree_Hussmann_DSFM-EP_1303042 : Default Types|3|CED-R-Hussmann DSFM-EP 45 degree : Default, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet, RCD-U_General Refrigeration Device_CED : Case Controller
+LINK|012_RefgCase_Sushi_Q3SP_12ft_Black_1306839 : Default|012_RefgCase_Sushi_Q3SP_12ft_Black_1306839 : Default Types|5|CED-R-Hussmann Q3SP 12ft Sushi Case : Default, RCD-U_General Refrigeration Device_CED : Case Controller, RCD-U_General Refrigeration Device_CED : Case Controller, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet
+LINK|030_Disp_Beverage_Sensation_Lancer_1206210|030_Disp_Beverage_Sensation_Lancer_1206210 Types|2|EF-U_Receptacle_CED : Duplex Wall - GFCI, EF-U_Receptacle_CED : Specialty Wall - 208V/1Ph
+LINK|030_Disp_Beverage_Sensation_Lancer_1206210 : Default 3|030_Disp_Beverage_Sensation_Lancer_1206210 : Default 3 Types|2|EF-U_Receptacle_CED : Duplex Wall - GFCI, EF-U_Receptacle_CED : Specialty Wall - 208V/1Ph
+LINK|030_True_UC_Refrigerator_True_1 : 030_True_UC_Refrigerator_True_1000749 2|030_True_UC_Refrigerator_True_1 : 030_True_UC_Refrigerator_True_1000749 2 Types|2|EF-U_Receptacle_CED : Quad Wall - Isolated Ground, EF-U_Receptacle_CED : Duplex Wall
+LINK|067_Case_Q3-SS_12ft_Hussmann_Deli_1207952|067_Case_Q3-SS_12ft_Hussmann_Deli_1207952 Types|3|CED-R-Hussmann Q3SS : 12 FT, RCD-U_General Refrigeration Device_CED : Case Controller, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet
+LINK|067_Case_Q3-SS_12ft_Hussmann_Market_1207952|067_Case_Q3-SS_12ft_Hussmann_Market_1207952 Types|3|CED-R-Hussmann Q3SS : 12 FT, RCD-U_General Refrigeration Device_CED : Case Controller, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet
+LINK|067_Case_Q3-SS_12ft_Hussmann_Seafood_1207952 : Default|067_Case_Q3-SS_12ft_Hussmann_Seafood_1207952 : Default Types|3|CED-R-Hussmann Q3SS : 12 FT, RCD-U_General Refrigeration Device_CED : Case Controller, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet
+LINK|FPO_ ttbbq a-ok Kiosk|FPO_ ttbbq a-ok Kiosk Types|2|EF-U_Receptacle_CED : Duplex Floor, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet
+LINK|FPO_ ttbbq a-ok Kiosk : FPO_ ttbbq a-ok Kiosk|FPO_ ttbbq a-ok Kiosk : FPO_ ttbbq a-ok Kiosk Types|2|EF-U_Receptacle_CED : Duplex Floor, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet
+LINK|HEB_4 DR REF TRM LEFT INLINE NY BLK BLK_1317603 : Default|HEB_4 DR REF TRM RIGHT INLINE YN BLK BLK_1317604 : Default Types|3|CED-R-BORGEN 4 DOOR FLORAL CASE : CED-R-BORGEN 4 DOOR FLORAL CASE, RCD-U_General Refrigeration Device_CED : Case Controller, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet
+LINK|HEB_4 DR REF TRM RIGHT INLINE YN BLK BLK_1317604 : Default|HEB_4 DR REF TRM RIGHT INLINE YN BLK BLK_1317604 : Default Types|3|CED-R-BORGEN 4 DOOR FLORAL CASE : CED-R-BORGEN 4 DOOR FLORAL CASE, RCD-U_General Refrigeration Device_CED : Case Controller, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet
+LINK|HEB_Borgen Case 5Dr Floral Self Contained_1312072 : Default|HEB_Borgen Case 5Dr Floral Self Contained_1312072 : Default Types|3|CED-R-BORGEN 5 DOOR FLORAL CASE : Default, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet, RCD-U_General Refrigeration Device_CED : Case Controller
+LINK|HEB_CASE 12' ID5SL CHEESE_BLACK_1312521 : Default 2|HEB_CASE 12' ID5SL CHEESE_BLACK_1312521 : Default 2 Types|3|CED-R-Hussmann ID5SL : 12', RCD-U_General Refrigeration Device_CED : Case Controller, DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet
+LINK|HEB_RefgCase_ID5SL_6_Pearl&Black_1213522 : Default|HEB_RefgCase_ID5SL_6_Pearl&Black_1213522 : Default Types|3|CED-R-Hussmann ID5SL : 6', DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet, RCD-U_General Refrigeration Device_CED : Case Controller
+LINK|HEB_SINK_1-COMP SINK WITH 2 DRAINBOARDS_1321179 : Default|HEB_SINK_1-COMP SINK WITH 2 DRAINBOARDS_1321179 : Default Types|2|P_3\"(80) Floor Drain, Vertical DWV : P_3\"(80) Floor Drain, Vertical DWV, P_3\"(80) Floor Sink, Vertical DWV : P_3\"(80) Floor Sink, Vertical DWV

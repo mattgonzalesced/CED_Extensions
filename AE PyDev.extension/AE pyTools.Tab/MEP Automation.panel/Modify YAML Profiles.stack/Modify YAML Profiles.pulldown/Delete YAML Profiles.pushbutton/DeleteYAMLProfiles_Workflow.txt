@@ -1,9 +1,0 @@
-Before deleting, confirm the Extensible Storage snapshot is the one you want to
-trim. Pick an equipment definition, review the LED list (anchors are flagged as
-LED-000), and choose which linked types to remove. If the last non-anchor entry
-is deleted, the workflow now auto-prunes the remaining anchor and any child
-relationships that referenced it, preventing orphan data.
-
-Accepting the prompt writes the cleaned dataset back into Extensible Storage
-and logs a history entry, so QA/QC and placement tools immediately see the
-updated definition set.

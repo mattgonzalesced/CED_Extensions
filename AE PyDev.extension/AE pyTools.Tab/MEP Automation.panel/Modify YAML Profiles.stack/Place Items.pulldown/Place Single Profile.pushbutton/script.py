@@ -128,13 +128,35 @@ def _is_independent_name(cad_name):
     trimmed = cad_name.strip()
     if re.match(r"^\d{3}", trimmed):
         return False
+    if ":" in trimmed:
+        return False
     return not trimmed.lower().startswith("heb")
+
+def _has_parent_relation(raw_data, cad_name):
+    target = (cad_name or "").strip().lower()
+    if not target:
+        return False
+    for eq_def in raw_data.get("equipment_definitions") or []:
+        eq_name = (eq_def.get("name") or eq_def.get("id") or "").strip().lower()
+        eq_id = (eq_def.get("id") or "").strip().lower()
+        if target != eq_name and target != eq_id:
+            continue
+        rel = eq_def.get("linked_relations") or {}
+        parent = rel.get("parent") or {}
+        parent_id = (parent.get("equipment_id") or "").strip()
+        return bool(parent_id)
+    return False
+
+def _is_independent_profile(raw_data, cad_name):
+    if not _is_independent_name(cad_name):
+        return False
+    return not _has_parent_relation(raw_data, cad_name)
 
 
 def _group_truth_profile_choices(raw_data, available_cads, independent_only=False):
     """Collapse equipment definitions by truth-source metadata so only canonical profiles appear."""
     if independent_only:
-        available = {(name or "").strip(): True for name in available_cads if _is_independent_name(name)}
+        available = {(name or "").strip(): True for name in available_cads if _is_independent_profile(raw_data, name)}
     else:
         available = {(name or "").strip(): True for name in available_cads}
     groups = {}
@@ -308,6 +330,7 @@ def main():
     if independent_only is None:
         return
     grouped_choices = _group_truth_profile_choices(raw_data, cad_names, independent_only=independent_only)
+    grouped_choices = sorted(grouped_choices, key=lambda entry: (entry.get("label") or "").lower())
     option_labels = [entry["label"] for entry in grouped_choices]
     choice_map = {entry["label"]: entry["cad"] for entry in grouped_choices}
 

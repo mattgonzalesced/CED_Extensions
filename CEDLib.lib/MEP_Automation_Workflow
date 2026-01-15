@@ -1,0 +1,355 @@
+MEP Automation Panel Workflow (Designer Guide)
+==============================================
+
+Who this is for
+---------------
+This guide is written for MEP designers using the tools, not for developers.
+Use it as a step-by-step reference in production models.
+
+Core ideas (plain language)
+---------------------------
+- The active YAML is stored inside the Revit model. All tools read that same data.
+- Element_Linker metadata is how the tools remember what was placed and where it belongs.
+- A profile = a parent element plus its linked items (children, tags, notes, parameters).
+- Truth-source means multiple profiles share one master definition.
+
+Quick start (typical workflow)
+------------------------------
+1) Import YAML File
+   Load the profile library into the model once at project start.
+2) Edit-Create YAML Profiles or Add Equipment to Profiles
+   Capture or refine profiles as you model.
+3) Place Linked Elements
+   Auto-place linked items from the YAML across the model (including links).
+4) QAQC
+   Verify that placed items match hosts and spot missing placements.
+5) Export YAML File
+   Save your updated profiles back to disk for reuse.
+
+If you only do one thing regularly: run Place Linked Elements, then QAQC.
+
+Import-Export Profiles
+----------------------
+
+Import YAML File (Select YAML)
+Purpose:
+- Load a YAML file into the model so every tool uses the same profile data.
+
+When to use:
+- At project setup, or when the profile library changes.
+
+Steps:
+1) Click Import YAML File.
+2) Pick the YAML file for this project.
+
+Result:
+- The YAML is stored inside the model (the file on disk is not changed).
+
+Notes:
+- If you edit profiles later, you must Export to save them back to disk.
+
+Export YAML File
+Purpose:
+- Write the active in-model YAML back to a file on disk.
+
+When to use:
+- End of day, milestones, or after major profile updates.
+
+Steps:
+1) Click Export YAML File.
+2) Choose the save location.
+
+Result:
+- A snapshot of the current active YAML is saved.
+
+Notes:
+- This overwrites nothing unless you choose the same filename.
+
+Modify YAML Profiles
+--------------------
+
+Edit-Create YAML Profiles
+Purpose:
+- Create a profile from real model elements, or update an existing one.
+
+When to use:
+- First time you build a profile.
+- When you change offsets, tags, or parameters for a profile.
+
+Steps:
+1) Click Edit-Create YAML Profiles.
+2) When prompted, select the parent element (host).
+3) If the parent is inside a linked model, click the link, then click the parent inside the link.
+4) If an existing profile is found, the tool may auto-place the current linked items so you can adjust them.
+5) Adjust/position any child elements in Revit (devices, tags, keynotes, text notes).
+6) When asked, choose Yes to capture now, or No to pause and continue later.
+7) If capturing now, select all child elements to include (do not reselect the parent).
+8) Finish the selection to save the profile.
+
+Result:
+- The profile is stored in the active YAML.
+- Selected elements receive Element_Linker metadata.
+
+Notes:
+- Select only the intended children; avoid unrelated items nearby.
+- Make sure the parent is correct before capturing.
+- If you choose No, the session is saved and Edit-Create must be run again to finish.
+
+Add Equipment to Profiles
+Purpose:
+- Add more linked items to an existing profile without recapturing everything.
+
+When to use:
+- You added a new device or tag to an existing equipment group.
+
+Steps:
+1) Click Add Equipment to Profiles.
+2) Select the parent element that already has a profile.
+3) If the parent is inside a linked model, click the link, then click the parent inside the link.
+4) Select only the new child elements you want to add (devices, tags, keynotes, text notes).
+5) Finish the selection.
+
+Result:
+- New linked items are appended to the profile.
+
+Notes:
+- Only the newly selected items are added; existing items are not changed.
+
+Manage YAML Profiles
+Purpose:
+- Full editor to adjust offsets, parameters, tags, and metadata.
+
+When to use:
+- Bulk edits, cleanup, or fine-tuning profiles.
+
+Steps:
+1) Open Manage YAML Profiles.
+2) Edit the profile data in the UI.
+3) Click OK to save (closing the window without OK will discard changes).
+
+Notes:
+- If you close the window without clicking OK, edits are not saved.
+
+Merge YAML Profiles
+Purpose:
+- Make several profiles share one master (truth-source).
+
+When to use:
+- Multiple similar families should use identical linked items and offsets.
+
+Steps:
+1) Click Merge YAML Profiles.
+2) Select the source definition (truth) from the list.
+3) Select one or more target definitions to merge into the source.
+4) Confirm the merge.
+
+Result:
+- Targets inherit the master definition.
+
+Notes:
+- After merge, edits to the master affect all merged profiles.
+
+Unmerge YAML Profiles
+Purpose:
+- Make one profile independent again.
+
+When to use:
+- A previously merged profile now needs its own offsets or elements.
+
+Steps:
+1) Click Unmerge YAML Profiles.
+2) Select the merged group to unmerge from.
+3) Select the profile you want to make independent.
+4) Confirm the unmerge.
+
+Result:
+- The selected profile becomes independent.
+
+Notes:
+- Unmerge does not delete any linked items; it just breaks the link to the master.
+
+Place Items
+-----------
+
+Load Profiles (Load Equipment Definition)
+Purpose:
+- Manually place one profile at a point.
+
+When to use:
+- You want to place a single instance by hand.
+
+Steps:
+1) Click Load Profiles.
+2) Select the equipment definition to place.
+3) Click a base point in the model.
+4) If prompted, choose whether to also place linked child items.
+
+Result:
+- The profile and linked items are placed at that location.
+
+Notes:
+- Use this when you need one-off placement and do not want full automation.
+
+Place Linked Elements
+Purpose:
+- Auto-place linked items everywhere matching parents exist (including linked models).
+
+When to use:
+- This is the primary automation tool for most projects.
+
+Steps:
+1) Click Place Linked Elements.
+2) Wait for placements to finish.
+
+Result:
+- Linked items are placed in the host model.
+- Element_Linker metadata is written for tracking and QAQC.
+
+Notes:
+- Duplicate placements are skipped if location, rotation, parent id, and level match.
+- If levels cannot be matched, placement may fall back to Level 1.
+
+PlaceByRoom
+Purpose:
+- Place profiles at room centers in a linked model.
+
+When to use:
+- Typical for devices that go to room centers (e.g., sensors).
+
+Steps:
+1) Click PlaceByRoom.
+2) Select one or more profiles to place.
+3) Select the linked model that contains rooms.
+4) Select the rooms to use.
+5) Confirm placement.
+
+Result:
+- Items are placed at room centers with level matching when possible.
+
+Notes:
+- Rooms with no area are ignored.
+- Level name mismatches can cause fallback to Level 1.
+
+PlaceCADElements (Place Elements YAML)
+Purpose:
+- Place profiles based on XYZ coordinates from a CSV.
+
+When to use:
+- You have CAD extraction points or external coordinate lists.
+
+Steps:
+1) Select the CSV.
+2) Map CAD names to profiles.
+3) Place.
+
+Result:
+- Profiles are placed at the CSV coordinates.
+
+Notes:
+- Ensure the CSV coordinates align with the model origin and units.
+
+Audit Tools
+-----------
+
+QAQC
+Purpose:
+- Verify coverage: which hosts are found vs. which linked items are placed.
+
+When to use:
+- After Place Linked Elements or any major model updates.
+
+Result:
+- A report in the pyRevit output panel showing coverage and gaps.
+
+Notes:
+- This does not change the model; it only reports status.
+
+Where da stuff
+Purpose:
+- Find the linked parent of a placed element.
+
+When to use:
+- Troubleshooting a placed device or tag.
+
+Steps:
+1) Select the placed element.
+2) Run the tool.
+
+Result:
+- The linked parent is selected and zoomed.
+
+Notes:
+- If the link is unloaded, the parent cannot be found.
+
+Post Audit Compare
+Purpose:
+- Compare saved parent locations against the current model.
+
+When to use:
+- After major link updates or coordination shifts.
+
+Steps:
+1) Save a snapshot or compare to an existing snapshot file.
+2) Review the report; optionally move children by the delta.
+
+Result:
+- A report of moved/added/removed parents; optional child moves.
+
+Notes:
+- Moving children is optional; review the report first.
+
+Misc Operations
+---------------
+
+Audit Linked Model
+Purpose:
+- Find linked items that do not have profiles yet and suggest matches.
+
+When to use:
+- Early in projects or after large updates to linked models.
+
+Result:
+- New profiles can be created quickly from suggested matches.
+
+Notes:
+- Always export the YAML after creating new profiles.
+
+SchemaViewer
+Purpose:
+- Internal debug tool (usually not needed for designers).
+
+Notes:
+- Safe to ignore unless support asks you to run it.
+
+Tag Equipment
+-------------
+Purpose:
+- Place tags from YAML-defined tag rules without duplicating tags.
+
+When to use:
+- After placing equipment or when a view needs retagging.
+
+Steps:
+1) Choose tag groups.
+2) Run in the target view.
+
+Result:
+- Tags are placed in the active view.
+
+Notes:
+- Runs in the active view only; switch views before running.
+
+Place Spaces CSV
+----------------
+Purpose:
+- Create spaces from a CSV and tag them.
+
+When to use:
+- Space planning or importing room data from outside sources.
+
+Notes:
+- You must pick a level; spaces are created on that level.
+
+Note
+----
+- The top-level bundle lists a Post Audit entry, but no matching pushbutton folder exists.
