@@ -1333,6 +1333,22 @@ def _collect_params(elem):
                 found[target_key] = _convert_collected_double(target_key, param, param.AsDouble())
             elif storage == "Integer":
                 found[target_key] = param.AsInteger()
+            elif storage == "ElementId" and target_key == "Load Classification_CED":
+                classification_name = None
+                try:
+                    elem_id = param.AsElementId()
+                except Exception:
+                    elem_id = None
+                if elem_id:
+                    doc = getattr(elem, "Document", None)
+                    if doc:
+                        try:
+                            class_elem = doc.GetElement(elem_id)
+                        except Exception:
+                            class_elem = None
+                        if class_elem is not None:
+                            classification_name = getattr(class_elem, "Name", None)
+                found[target_key] = classification_name or (param.AsValueString() or "")
             else:
                 found[target_key] = param.AsValueString() or ""
         except Exception:
