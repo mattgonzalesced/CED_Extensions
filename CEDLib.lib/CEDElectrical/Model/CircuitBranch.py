@@ -13,6 +13,7 @@ from CEDElectrical.Model.circuit_settings import (
     NeutralBehavior,
     IsolatedGroundBehavior,
 )
+from CEDElectrical.refdata.alert_definitions import ALERT_DEFINITIONS
 from CEDElectrical.refdata.ampacity_table import WIRE_AMPACITY_TABLE
 from CEDElectrical.refdata.conductor_area_table import CONDUCTOR_AREA_TABLE
 from CEDElectrical.refdata.conduit_area_table import CONDUIT_AREA_TABLE, CONDUIT_SIZE_INDEX
@@ -20,7 +21,6 @@ from CEDElectrical.refdata.egc_table import EGC_TABLE
 from CEDElectrical.refdata.impedance_table import WIRE_IMPEDANCE_TABLE
 from CEDElectrical.refdata.ocp_cable_defaults import OCP_CABLE_DEFAULTS
 from CEDElectrical.refdata.service_ground_table import SERVICE_GROUND_TABLE
-from CEDElectrical.refdata.alert_definitions import ALERT_DEFINITIONS
 from CEDElectrical.refdata.shared_params_table import SHARED_PARAMS
 from CEDElectrical.refdata.standard_ocp_table import BREAKER_FRAME_SWITCH_TABLE
 
@@ -40,7 +40,7 @@ ALLOWED_WIRE_SIZES = [
     "12", "10", "8", "6", "4", "3", "2", "1",
     "1/0", "2/0", "3/0", "4/0",
     "250", "300", "350", "400",
-    "500", "600", "700", "750", "800", "1000"
+    "500", "600", "700", "750", "800", "1000","1250"
 ]
 
 
@@ -539,6 +539,10 @@ class CircuitBranch(object):
             self.log_debug("No Revit rating; wire_info empty.")
             return {}
 
+        if rating == 0:
+            self._fail_cable_sizing("Breaker Rating set to 0 A. cannot calculate")
+            return {}
+
         rating_key = int(rating)
         table = OCP_CABLE_DEFAULTS
 
@@ -870,7 +874,7 @@ class CircuitBranch(object):
             hot_norm = self._normalize_wire_size(self._wire_hot_size_override) or ""
             if hot_norm and self._is_wire_below_one_aught(hot_norm):
                 self.log_warning(
-                    "Feeders smaller than 1/0 are typically not paralleled; keeping {} set(s) as requested.".format(
+                    "Feeders smaller than 1/0 are typically not paralleled.".format(
                         self._wire_sets_override
                     ),
                     category="Design",
@@ -954,7 +958,7 @@ class CircuitBranch(object):
             logger.debug("Feeder neutral check failed on {}: {}".format(self.name, e))
         return 0
 
-    def _apply_set_constraints(self, sets_value, source="override", enforce_design=True):
+    def _apply_set_constraints(self, sets_value, source="override", enforce_design=False):
         """Clamp number of sets to breaker/pole/lug limits when requested."""
         if sets_value is None:
             return None

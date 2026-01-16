@@ -96,10 +96,13 @@ class NoticeCollector(object):
             sev_key = severity.upper() if severity else "NONE"
             color = severity_colors.get(sev_key)
             rendered = message
+            if color and sev_key == "CRITICAL":
+                rendered = "<span style=\"color:{}\"><strong>{}</strong></span>".format(color, message)
+                lines.append("  - (**{}**) **{}**".format(label, rendered))
+                continue
             if color:
                 rendered = "<span style=\"color:{}\">{}</span>".format(color, message)
             lines.append("  - (**{}**) {}".format(label, rendered))
-
         return lines
 
 

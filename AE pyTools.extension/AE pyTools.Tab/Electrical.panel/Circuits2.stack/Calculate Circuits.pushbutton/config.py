@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from pyrevit import DB, forms, revit, script
 from System.Windows import FontStyles, Visibility
 from System.Windows.Media import Brushes
+from pyrevit import forms, revit, script
 
+from CEDElectrical.Domain import settings_manager
 from CEDElectrical.Model.circuit_settings import (
     CircuitSettings,
     FeederVDMethod,
@@ -12,7 +13,6 @@ from CEDElectrical.Model.circuit_settings import (
     WireMaterialDisplay,
     WireStringSeparator,
 )
-from CEDElectrical.Domain import settings_manager
 
 XAML_PATH = script.get_bundle_file('settings.xaml')
 logger = script.get_logger()
@@ -43,6 +43,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.save_btn.Click += self._on_save
         self.cancel_btn.Click += self._on_cancel
         self.reset_btn.Click += self._on_reset
+        self.help_btn.Click += self._on_help
         self.clear_writeback_btn.Click += self._on_clear_persistent
         self.min_conduit_size_cb.SelectionChanged += self._on_value_changed
         self.min_conduit_size_cb.GotFocus += lambda s, e: self._set_help_context('min_conduit_size')
@@ -387,6 +388,14 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.settings = CircuitSettings()
         self._load_values()
         self._refresh_styles()
+
+
+    def _on_help(self,sender, args):
+        output = script.get_output()
+        md_path = script.get_bundle_file("CalculateCircuits_UserManual.md")
+        with open(md_path, "r") as f:
+            text = f.read().decode("utf-8")
+            output.print_md(text)
 
     def _on_clear_persistent(self, sender, args):
         clear_equipment = not bool(self.write_equipment_cb.IsChecked)

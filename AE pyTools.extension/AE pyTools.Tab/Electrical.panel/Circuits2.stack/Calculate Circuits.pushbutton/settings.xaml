@@ -125,10 +125,31 @@
             <TextBlock x:Name="help_preview" TextWrapping="Wrap" Foreground="#333"/>
         </Border>
 
-        <StackPanel Grid.Row="12" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0" VerticalAlignment="Center">
-            <Button x:Name="reset_btn" Content="Reset to Defaults" Margin="0,0,8,0" Padding="14,6" MinWidth="130"/>
-            <Button x:Name="cancel_btn" Content="Cancel" Margin="0,0,8,0" Padding="14,6" MinWidth="90"/>
-            <Button x:Name="save_btn" Content="Save Settings" Padding="16,6" MinWidth="120"/>
-        </StackPanel>
+        <Grid Grid.Row="12" Grid.ColumnSpan="3" Margin="0,6,0,0" VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT -->
+            <Button x:Name="help_btn"
+                    Grid.Column="0"
+                    Content="Help"
+                    Padding="14,6"
+                    MinWidth="130"
+                    HorizontalAlignment="Left"/>
+
+            <!-- RIGHT -->
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+                <Button x:Name="reset_btn" Content="Reset to Defaults"
+                        Margin="0,0,8,0" Padding="14,6" MinWidth="130"/>
+                <Button x:Name="cancel_btn" Content="Cancel"
+                        Margin="0,0,8,0" Padding="14,6" MinWidth="90"/>
+                <Button x:Name="save_btn" Content="Save Settings"
+                        Padding="16,6" MinWidth="120"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>
