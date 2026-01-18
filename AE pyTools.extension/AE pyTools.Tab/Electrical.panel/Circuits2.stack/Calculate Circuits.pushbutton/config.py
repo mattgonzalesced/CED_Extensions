@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from System.Windows import FontStyles, Visibility
+import clr
+clr.AddReference("WindowsBase")
+clr.AddReference("PresentationCore")
+clr.AddReference("PresentationFramework")
+
+from System.Windows import Visibility
+from System.Windows import FontStyles
 from System.Windows.Media import Brushes
+
 from pyrevit import forms, revit, script
 
 from CEDElectrical.Domain import settings_manager
