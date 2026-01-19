@@ -16,6 +16,7 @@ if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
 from LogicClasses.yaml_path_cache import get_cached_yaml_path, set_cached_yaml_path  # noqa: E402
+from LogicClasses.profile_schema import load_data_from_text, dump_data_to_string  # noqa: E402
 from ExtensibleStorage.yaml_store import seed_active_yaml  # noqa: E402
 
 DEFAULT_DATA_PATH = os.path.join(LIB_ROOT, "profileData.yaml")
@@ -49,11 +50,17 @@ def main():
     with io.open(picked, "r", encoding="utf-8") as handle:
         raw_text = handle.read()
     sanitized_text = _sanitize_hash_keys(raw_text)
+    try:
+        data = load_data_from_text(sanitized_text, picked)
+    except Exception as exc:
+        forms.alert("Failed to parse YAML:\n\n{}".format(exc), title="Select YAML")
+        return
+    normalized_text = dump_data_to_string(data)
     doc = getattr(revit, "doc", None)
     if doc is None:
         forms.alert("No active document detected; cannot store YAML in Extensible Storage.", title="Select YAML")
         return
-    seed_active_yaml(doc, picked, sanitized_text)
+    seed_active_yaml(doc, picked, normalized_text)
     forms.alert(
         "Loaded '{}' into the project. All YAML operations now run from Extensible Storage.\n"
         "The original file will remain untouched until you export it again.".format(picked),

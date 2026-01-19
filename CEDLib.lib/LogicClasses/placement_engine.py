@@ -1772,6 +1772,44 @@ class PlaceElementsEngine(object):
         except Exception:
             return False
 
+    def _is_load_classification_param(self, name):
+        if not name:
+            return False
+        return "load classification" in str(name).lower()
+
+    def _load_classification_map(self):
+        cache = getattr(self, "_load_classification_cache", None)
+        if cache is not None:
+            return cache
+        mapping = {}
+        try:
+            from Autodesk.Revit.DB.Electrical import ElectricalLoadClassification
+        except Exception:
+            ElectricalLoadClassification = None
+        if ElectricalLoadClassification is not None:
+            try:
+                classifications = FilteredElementCollector(self.doc).OfClass(ElectricalLoadClassification)
+            except Exception:
+                classifications = []
+            for classification in classifications:
+                name = getattr(classification, "Name", None)
+                if not name:
+                    continue
+                key = " ".join(str(name).strip().lower().split())
+                mapping[key] = classification.Id
+        self._load_classification_cache = mapping
+        return mapping
+
+    def _resolve_load_classification_id(self, value):
+        if value is None:
+            return None
+        if isinstance(value, ElementId):
+            return value
+        key = " ".join(str(value).strip().lower().split())
+        if not key:
+            return None
+        return self._load_classification_map().get(key)
+
     def _apply_parameters(self, element, params_dict, parent_element=None):
         from Autodesk.Revit.DB import StorageType, UnitUtils
 
@@ -1791,6 +1829,23 @@ class PlaceElementsEngine(object):
                 continue
             try:
                 storage_type = param.StorageType
+                if storage_type == StorageType.ElementId:
+                    param_name = None
+                    try:
+                        definition = getattr(param, "Definition", None)
+                        param_name = getattr(definition, "Name", None) if definition else None
+                    except Exception:
+                        param_name = None
+                    name_hint = param_name or name
+                    if self._is_load_classification_param(name_hint):
+                        classification_id = self._resolve_load_classification_id(value)
+                        if classification_id is not None:
+                            param.Set(classification_id)
+                            continue
+                    try:
+                        param.Set(ElementId(int(value)))
+                    except Exception:
+                        continue
                 if storage_type == StorageType.Integer:
                     param.Set(int(value))
                 elif storage_type == StorageType.Double:

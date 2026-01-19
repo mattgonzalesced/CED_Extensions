@@ -46,16 +46,17 @@ def _wrap_element_linker_strings(value):
     if isinstance(value, Mapping):
         wrapped = {}
         for key, item in value.items():
-            if key in ELEMENT_LINKER_PARAM_NAMES and isinstance(item, basestring):
-                text = str(item)
-                if "\r" in text:
-                    text = text.replace("\r\n", "\n").replace("\r", "\n")
-                wrapped[key] = _ElementLinkerString(text)
-            else:
-                wrapped[key] = _wrap_element_linker_strings(item)
+            wrapped[key] = _wrap_element_linker_strings(item)
         return wrapped
     if isinstance(value, list):
         return [_wrap_element_linker_strings(item) for item in value]
+    if isinstance(value, basestring):
+        text = str(value)
+        if "\r" in text:
+            text = text.replace("\r\n", "\n").replace("\r", "\n")
+        if "\n" in text:
+            return _ElementLinkerString(text)
+        return text
     return value
 
 
@@ -123,11 +124,11 @@ def _build_element_linker_dumper():
     class ElementLinkerDumper(dumper_base):
         pass
 
-    def _represent_element_linker_string(dumper, data):
+    def _represent_quoted_string(dumper, data):
         return dumper.represent_scalar("tag:yaml.org,2002:str", data, style='"')
 
     try:
-        ElementLinkerDumper.add_representer(_ElementLinkerString, _represent_element_linker_string)
+        ElementLinkerDumper.add_representer(_ElementLinkerString, _represent_quoted_string)
     except Exception:
         return None
     return ElementLinkerDumper
