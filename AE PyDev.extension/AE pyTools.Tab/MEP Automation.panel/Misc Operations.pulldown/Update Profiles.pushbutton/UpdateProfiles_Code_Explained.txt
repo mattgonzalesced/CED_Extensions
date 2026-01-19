@@ -1,0 +1,21 @@
+Update Profiles - Code Explained
+================================
+
+Purpose
+-------
+Sync model changes back into the active YAML profile by scanning all elements
+with Element_Linker metadata and merging hosted annotations plus parameter
+values into each linked element definition (LED).
+
+Execution Flow
+--------------
+1. **Load YAML** - Pull the active YAML from Extensible Storage and index LED
+   entries by ID.
+2. **Scan Elements** - Collect FamilyInstances/Groups that contain Element_Linker
+   data, then parse the LED ID from the payload.
+3. **Capture Changes** - Reuse Manage Profiles helpers to collect hosted tags,
+   keynotes, and text notes plus key parameters from each element.
+4. **Merge** - Add missing annotations, update offsets/parameters when values
+   change, and record conflicts when multiple instances disagree.
+5. **Save** - Write the updated YAML back to Extensible Storage so downstream
+   placement tools use the newest profile data.

@@ -1,36 +1,35 @@
-﻿Tag Equipment – Code Explained
-=============================
+Place Annotations - Code Explained
+==================================
 
 Purpose
 -------
-Place or refresh hosted tags for every family instance that carries Element_Linker
-metadata. Tags are defined in the YAML under each linked element definition, so
-this script replays the exact tag families, offsets, and rotations captured by
+Place or refresh hosted tags, keynotes, and text notes for every family instance
+that carries Element_Linker metadata. Tags/keynotes are defined in the YAML under
+each linked element definition, and text notes live under `text_notes`, so this
+script replays the exact families, offsets, rotations, and text captured by
 Select Parent Element or Add YAML Profiles.
 
 Execution Flow
 --------------
-1. **Repository Build** – We load the active YAML, convert it into a
-   `ProfileRepository`, and group tag definitions by tag family/type via
-   `_collect_tag_entries`. Each context entry includes the LED ID and optional
-   `dev-Group ID` so we can filter hosts.
-2. **Host Scan** – `_collect_tag_candidates` (inside the script) walks the active
-   view’s FamilyInstances, reading their Element_Linker payload to identify the
-   LED ID. Instances are grouped by dev-Group so a designer can target just one
-   configuration at a time.
-3. **Tag Placement** – For each candidate/LED pair we load the tag family if
-   needed, compute the tag head point by rotating the stored inch offsets by the
-   host’s facing orientation, then call `IndependentTag.Create` (or create a new
-   family instance for model tags). Parameter overrides from the YAML are
-   written onto the new tag instance so annotations show the same metadata as
-   the original capture.
-4. **Feedback** – The script reports missing families or LEDs with no tag
+1. **Repository Build** - We load the active YAML, convert it into a
+   `ProfileRepository`, and group tag/keynote definitions by tag family/type via
+   `_collect_tag_entries` while collecting text note definitions from
+   `text_notes`. Each context entry includes the LED ID and optional `dev-Group ID`
+   so we can filter hosts.
+2. **Host Scan** - `_collect_instance_lookup` walks the active view's
+   FamilyInstances, reading their labels so we can target matching equipment
+   types in the current view.
+3. **Placement** - For each selected context we place tags/keynotes with
+   `IndependentTag.Create` (or view-based annotation families) and create text
+   notes through `TextNote.Create`, applying stored offsets, rotations, and
+   parameter overrides from the YAML.
+4. **Feedback** - The script reports missing families or LEDs with no annotation
    definition so users know which profiles need maintenance.
 
 Key Points
 ----------
 * Works across linked definitions created via Select Parent Element or Add YAML
-  Profiles because both tools populate the `tags` array in the same format.
+  Profiles because both tools populate `tags` and `text_notes` in the same format.
 * The command is view-aware: run it per sheet/plan where annotations are needed.
 * Everything runs inside a Revit transaction, so misplacements can be undone in
   one step.
