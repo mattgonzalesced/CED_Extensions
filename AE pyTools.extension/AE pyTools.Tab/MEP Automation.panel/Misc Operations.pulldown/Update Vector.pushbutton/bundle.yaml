@@ -15,4 +15,4 @@ tooltip: |
   After confirming, the updated vectors are written to Extensible Storage; rerun
   Place Linked Elements or Tag Equipment to see the new arrangement take effect
   in production views.
-is_beta: true
+is_beta: false

@@ -7,4 +7,4 @@ tooltip: |
   Use it after adding annotations or adjusting parameter values. The tool
   updates the YAML stored in Extensible Storage; rerun Place Linked Elements or
   Place Annotations to apply the updated definitions in other views.
-is_beta: true
+is_beta: false

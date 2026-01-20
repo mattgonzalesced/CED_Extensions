@@ -15,4 +15,4 @@ tooltip: |
   Close the viewer when finished; it is read only, so there is zero risk of
   damaging the data, and you can safely relaunch it as often as necessary during
   investigations.
-is_beta: true
+is_beta: false

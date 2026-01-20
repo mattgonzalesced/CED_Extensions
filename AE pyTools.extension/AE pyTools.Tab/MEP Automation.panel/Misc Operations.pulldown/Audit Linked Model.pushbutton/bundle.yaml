@@ -1,4 +1,4 @@
 title: Audit Linked Model
 tooltip: Count placed linked elements (Element_Linker instances) and keep a searchable list open.
 author: CED Automation
-is_beta: true
+is_beta: false

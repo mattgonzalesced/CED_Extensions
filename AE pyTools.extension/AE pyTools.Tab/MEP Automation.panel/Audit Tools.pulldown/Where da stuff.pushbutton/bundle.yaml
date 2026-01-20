@@ -15,4 +15,4 @@ tooltip: |
   Use the report to prioritize fixes, drive Merge Linked Elements decisions, or
   capture screenshots for issue tracking, then rerun the analysis after changes
   to ensure the automation remains in sync with the design intent.
-is_beta: true
+is_beta: false

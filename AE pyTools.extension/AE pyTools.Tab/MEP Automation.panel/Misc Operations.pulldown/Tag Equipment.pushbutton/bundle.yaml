@@ -16,4 +16,4 @@ tooltip: |
   If any annotations fail to place, review the output for missing family
   warnings, then update the definition or load the required families before
   rerunning the command to finish annotation.
-is_beta: true
+is_beta: false
