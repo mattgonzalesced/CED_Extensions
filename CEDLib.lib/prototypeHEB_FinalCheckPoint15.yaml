@@ -21,7 +21,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-371-LED-001
@@ -104,7 +104,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-010-LED-001
@@ -151,7 +151,7 @@ equipment_definitions:
               CKT_Circuit Number_CEDT: ""
               Parent ElementId: 1398744
               ElementId: 9220538
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-010-LED-002
             tags:
               -
@@ -193,7 +193,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-010-LED-003
@@ -240,7 +240,7 @@ equipment_definitions:
               CKT_Circuit Number_CEDT: ""
               Parent ElementId: 1398744
               ElementId: 9220541
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-010-LED-004
             tags:
               -
@@ -279,7 +279,7 @@ equipment_definitions:
               CKT_Circuit Number_CEDT: ""
               Parent ElementId: 1398744
               ElementId: 9220542
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-010-LED-005
             tags:
               -
@@ -321,7 +321,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-010-LED-006
@@ -396,7 +396,7 @@ equipment_definitions:
               CKT_Circuit Number_CEDT: ""
               Parent ElementId: 1398744
               ElementId: 9227618
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-010-LED-007
             tags:
               -
@@ -435,7 +435,7 @@ equipment_definitions:
               CKT_Circuit Number_CEDT: ""
               Parent ElementId: 1398744
               ElementId: 9227623
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-010-LED-008
             tags:
               -
@@ -474,7 +474,7 @@ equipment_definitions:
               CKT_Circuit Number_CEDT: ""
               Parent ElementId: 1398744
               ElementId: 9227625
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-010-LED-009
             tags:
               -
@@ -516,7 +516,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-010-LED-010
@@ -794,7 +794,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-439-LED-001
@@ -844,7 +844,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-439-LED-002
@@ -894,7 +894,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-439-LED-003
@@ -1064,7 +1064,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-392-LED-003
@@ -1342,7 +1342,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-011-LED-002
@@ -1498,7 +1498,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-434-LED-001
@@ -2090,7 +2090,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-429-LED-001
@@ -2140,7 +2140,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-429-LED-002
@@ -2190,7 +2190,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-429-LED-003
@@ -2240,7 +2240,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-429-LED-004
@@ -2290,7 +2290,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-429-LED-005
@@ -2358,7 +2358,7 @@ equipment_definitions:
               Rotation (deg): 0.0
               Parent ElementId: 2101362
               ElementId: 9208566
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-415-LED-001
             tags:
               -
@@ -2498,7 +2498,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-018-LED-003
@@ -2542,7 +2542,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CR_Cash Register"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-018-LED-004
@@ -2586,7 +2586,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : T_Wall Telephone Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-018-LED-005
@@ -3070,7 +3070,7 @@ equipment_definitions:
               Parent ElementId: 989961
               Voltage_CED: 24.0
               ElementId: 8601024
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-207-LED-004
             tags:
               -
@@ -3114,7 +3114,7 @@ equipment_definitions:
               Parent ElementId: 989961
               Voltage_CED: 24.0
               ElementId: 8728299
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-207-LED-005
             tags:
               -
@@ -3356,7 +3356,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-161-LED-001
@@ -3406,7 +3406,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-161-LED-002
@@ -3460,7 +3460,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-161-LED-004
@@ -3510,7 +3510,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-161-LED-005
@@ -3687,7 +3687,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-336-LED-001
@@ -3927,7 +3927,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-021-LED-003
@@ -4197,7 +4197,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,-1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-193-LED-003
@@ -4450,7 +4450,7 @@ equipment_definitions:
               Parent ElementId: 990198
               Voltage_CED: 24.0
               ElementId: 8601005
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-196-LED-003
             tags:
               -
@@ -4477,7 +4477,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,-1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-196-LED-004
@@ -4735,7 +4735,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-135-LED-002
@@ -4866,7 +4866,7 @@ equipment_definitions:
               Parent ElementId: 6540660
               Voltage_CED: 24.0
               ElementId: 8660100
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-177-LED-002
             tags:
               -
@@ -5163,7 +5163,7 @@ equipment_definitions:
               Parent ElementId: 988186
               Voltage_CED: 24.0
               ElementId: 8601075
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-236-LED-003
             tags:
               -
@@ -5374,7 +5374,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 9946
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-417-LED-001
@@ -5421,7 +5421,7 @@ equipment_definitions:
               CKT_Circuit Number_CEDT: ""
               Parent ElementId: 5817144
               ElementId: 9226147
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-417-LED-002
             tags:
               -
@@ -5588,7 +5588,7 @@ equipment_definitions:
               Parent ElementId: 988862
               Voltage_CED: 24.0
               ElementId: 8612173
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-189-LED-003
             tags:
               -
@@ -5900,7 +5900,7 @@ equipment_definitions:
               Rotation (deg): 0.0
               Parent ElementId: 2558992
               ElementId: 9203054
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-414-LED-001
             tags:
               -
@@ -6116,7 +6116,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-428-LED-001
@@ -6166,7 +6166,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-428-LED-002
@@ -6213,7 +6213,7 @@ equipment_definitions:
               CKT_Circuit Number_CEDT: ""
               Parent ElementId: 5530079
               ElementId: 9229095
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-428-LED-003
             tags:
               -
@@ -6252,7 +6252,7 @@ equipment_definitions:
               CKT_Circuit Number_CEDT: ""
               Parent ElementId: 5530079
               ElementId: 9229096
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-428-LED-004
             tags:
               -
@@ -6291,7 +6291,7 @@ equipment_definitions:
               CKT_Circuit Number_CEDT: ""
               Parent ElementId: 5530079
               ElementId: 9229097
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-428-LED-005
             tags:
               -
@@ -6533,7 +6533,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet qty 2"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,0.000000"
               CKT_Rating_CED: ""
               Linked Element Definition ID: SET-009-LED-001
@@ -6589,7 +6589,7 @@ equipment_definitions:
               Parent Rotation (deg): -0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-009-LED-002
@@ -6632,7 +6632,7 @@ equipment_definitions:
               Parent Rotation (deg): -0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-009-LED-003
@@ -7260,7 +7260,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-367-LED-001
@@ -7609,7 +7609,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-421-LED-001
@@ -7667,7 +7667,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-368-LED-001
@@ -8055,7 +8055,7 @@ equipment_definitions:
               Parent ElementId: 5532325
               Voltage_CED: 24.0
               ElementId: 8612134
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-223-LED-003
             tags:
               -
@@ -8243,7 +8243,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,-1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-239-LED-003
@@ -8489,7 +8489,7 @@ equipment_definitions:
               Parent ElementId: 7244222
               Voltage_CED: 24.0
               ElementId: 8600868
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-123-LED-002
             tags:
               -
@@ -8788,7 +8788,7 @@ equipment_definitions:
               Parent ElementId: 989315
               Voltage_CED: 24.0
               ElementId: 8601041
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-212-LED-003
             tags:
               -
@@ -9621,7 +9621,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-120-LED-005
@@ -9665,7 +9665,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-120-LED-006
@@ -10361,7 +10361,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-206-LED-007
@@ -10405,7 +10405,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-206-LED-008
@@ -10449,7 +10449,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-206-LED-009
@@ -10493,7 +10493,7 @@ equipment_definitions:
             label: "EF-U_Receptacle_CED : Duplex Wall"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,0.000000"
               CKT_Rating_CED: 20.0
               Linked Element Definition ID: SET-206-LED-010
@@ -10929,7 +10929,7 @@ equipment_definitions:
               Parent ElementId: 5950458
               Voltage_CED: 24.0
               ElementId: 8612171
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-222-LED-004
             tags:
               -
@@ -11211,7 +11211,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-211-LED-003
@@ -11501,7 +11501,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-190-LED-003
@@ -11940,7 +11940,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-227-LED-004
@@ -12026,7 +12026,7 @@ equipment_definitions:
               Parent Rotation (deg): -0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-443-LED-001
@@ -12206,7 +12206,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CP_Catalina Printer Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-168-LED-002
@@ -12250,7 +12250,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CR_Cash Register"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-168-LED-003
@@ -12472,7 +12472,7 @@ equipment_definitions:
               Parent ElementId: 989299
               Voltage_CED: 24.0
               ElementId: 8601076
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-234-LED-003
             tags:
               -
@@ -12653,7 +12653,7 @@ equipment_definitions:
               Parent ElementId: 4558786
               Voltage_CED: 24.0
               ElementId: 8600989
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-238-LED-003
             tags:
               -
@@ -12860,7 +12860,7 @@ equipment_definitions:
               Parent Rotation (deg): -0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-420-LED-001
@@ -12893,7 +12893,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-0.000000,-1.000000,0.000000"
               CKT_Rating_CED: ""
               Linked Element Definition ID: SET-420-LED-002
@@ -13093,7 +13093,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-234-LED-003
@@ -13295,7 +13295,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,-1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-237-LED-004
@@ -13339,7 +13339,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,-1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-237-LED-005
@@ -13542,7 +13542,7 @@ equipment_definitions:
               Parent ElementId: 5142284
               Voltage_CED: 24.0
               ElementId: 8724458
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-076-LED-002
             tags:
               -
@@ -13754,7 +13754,7 @@ equipment_definitions:
               Parent ElementId: 7246517
               Voltage_CED: 24.0
               ElementId: 8435719
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-023-LED-002
             tags:
               -
@@ -14051,7 +14051,7 @@ equipment_definitions:
               Parent ElementId: 6149360
               Voltage_CED: 24.0
               ElementId: 8612243
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-167-LED-002
             tags:
               -
@@ -14095,7 +14095,7 @@ equipment_definitions:
               Parent ElementId: 6149360
               Voltage_CED: 24.0
               ElementId: 8612246
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-167-LED-003
             tags:
               -
@@ -14354,7 +14354,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-122-LED-003
@@ -14571,7 +14571,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-214-LED-003
@@ -15198,7 +15198,7 @@ equipment_definitions:
               Parent ElementId: 5531772
               Voltage_CED: 24.0
               ElementId: 8619469
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-143-LED-007
             tags:
               -
@@ -15242,7 +15242,7 @@ equipment_definitions:
               Parent ElementId: 5531772
               Voltage_CED: 24.0
               ElementId: 8619471
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-143-LED-008
             tags:
               -
@@ -15286,7 +15286,7 @@ equipment_definitions:
               Parent ElementId: 5531772
               Voltage_CED: 24.0
               ElementId: 8619472
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-143-LED-009
             tags:
               -
@@ -15330,7 +15330,7 @@ equipment_definitions:
               Parent ElementId: 5531772
               Voltage_CED: 24.0
               ElementId: 8619473
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-143-LED-010
             tags:
               -
@@ -15374,7 +15374,7 @@ equipment_definitions:
               Parent ElementId: 5531772
               Voltage_CED: 24.0
               ElementId: 8619477
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-143-LED-011
             tags:
               -
@@ -15502,7 +15502,7 @@ equipment_definitions:
               Parent ElementId: 7245240
               Voltage_CED: 24.0
               ElementId: 8435084
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-012-LED-002
             tags:
               -
@@ -15654,7 +15654,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-0.000000,-1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-230-LED-003
@@ -16219,7 +16219,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : AP_RF Scanning Equipment Access"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,0.000000"
               CKT_Rating_CED: ""
               Linked Element Definition ID: SET-413-LED-001
@@ -16502,7 +16502,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-451-LED-001
@@ -16552,7 +16552,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-451-LED-002
@@ -16762,7 +16762,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : TV_Pinpoint Time Clock"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-377-LED-001
@@ -17104,7 +17104,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-157-LED-001
@@ -17154,7 +17154,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-157-LED-002
@@ -17187,7 +17187,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet qty 2"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,0.000000"
               CKT_Rating_CED: ""
               Linked Element Definition ID: SET-157-LED-003
@@ -17226,7 +17226,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet qty 2"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,0.000000"
               CKT_Rating_CED: ""
               Linked Element Definition ID: SET-157-LED-004
@@ -17529,7 +17529,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-437-LED-001
@@ -17675,7 +17675,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-243-LED-003
@@ -18418,7 +18418,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-189-LED-003
@@ -18575,7 +18575,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,-1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-194-LED-003
@@ -19117,7 +19117,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-068-LED-001
@@ -19167,7 +19167,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-068-LED-002
@@ -19385,7 +19385,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-241-LED-003
@@ -19471,7 +19471,7 @@ equipment_definitions:
               Parent Rotation (deg): -0.0
               Product Datasheet URL: ""
               LevelId: 9946
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-419-LED-001
@@ -19518,7 +19518,7 @@ equipment_definitions:
               CKT_Circuit Number_CEDT: ""
               Parent ElementId: 3826982
               ElementId: 9226166
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-419-LED-002
             tags:
               -
@@ -19981,7 +19981,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-433-LED-001
@@ -20256,7 +20256,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-222-LED-004
@@ -20317,7 +20317,7 @@ equipment_definitions:
               Parent ElementId: 3450605
               Voltage_CED: 120.0
               ElementId: 9308534
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-222-LED-005
             tags:
               -
@@ -21130,7 +21130,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-177-LED-002
@@ -21454,7 +21454,7 @@ equipment_definitions:
               Parent ElementId: 988858
               Voltage_CED: 24.0
               ElementId: 8612175
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-188-LED-003
             tags:
               -
@@ -21753,7 +21753,7 @@ equipment_definitions:
               Parent ElementId: 4780400
               Voltage_CED: 24.0
               ElementId: 8601080
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-229-LED-003
             tags:
               -
@@ -22029,7 +22029,7 @@ equipment_definitions:
               CKT_Circuit Number_CEDT: ""
               Parent ElementId: 6459255
               ElementId: 9179813
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-337-LED-001
             tags:
               -
@@ -22392,7 +22392,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,-1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-248-LED-003
@@ -22531,7 +22531,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-369-LED-001
@@ -23031,7 +23031,7 @@ equipment_definitions:
               CKT_Circuit Number_CEDT: ""
               Parent ElementId: 6339835
               ElementId: 9529958
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-339-LED-001
             tags:
               -
@@ -23100,7 +23100,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-445-LED-001
@@ -23356,7 +23356,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-438-LED-001
@@ -23481,7 +23481,7 @@ equipment_definitions:
               Parent ElementId: 7245167
               Voltage_CED: 24.0
               ElementId: 8600645
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-007-LED-003
             tags:
               -
@@ -23848,7 +23848,7 @@ equipment_definitions:
               Parent ElementId: 4558935
               Voltage_CED: 24.0
               ElementId: 8965542
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-248-LED-003
             tags:
               -
@@ -24160,7 +24160,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 9946
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-416-LED-001
@@ -24210,7 +24210,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 9946
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-416-LED-002
@@ -24257,7 +24257,7 @@ equipment_definitions:
               CKT_Circuit Number_CEDT: ""
               Parent ElementId: 5817108
               ElementId: 9225104
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-416-LED-003
             tags:
               -
@@ -25058,7 +25058,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-161-LED-001
@@ -25108,7 +25108,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-161-LED-002
@@ -25162,7 +25162,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-161-LED-004
@@ -25212,7 +25212,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-161-LED-005
@@ -25910,7 +25910,7 @@ equipment_definitions:
               Parent ElementId: 4109641
               Voltage_CED: 24.0
               ElementId: 8600992
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-209-LED-010
             tags:
               -
@@ -25954,7 +25954,7 @@ equipment_definitions:
               Parent ElementId: 4109641
               Voltage_CED: 24.0
               ElementId: 8601048
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-209-LED-011
             tags:
               -
@@ -25998,7 +25998,7 @@ equipment_definitions:
               Parent ElementId: 4109641
               Voltage_CED: 24.0
               ElementId: 8601053
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-209-LED-012
             tags:
               -
@@ -26042,7 +26042,7 @@ equipment_definitions:
               Parent ElementId: 4109641
               Voltage_CED: 24.0
               ElementId: 8724449
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-209-LED-013
             tags:
               -
@@ -26226,7 +26226,7 @@ equipment_definitions:
               Parent ElementId: 5427491
               Voltage_CED: 24.0
               ElementId: 9226916
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-264-LED-002
             tags:
               -
@@ -26506,7 +26506,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CP_Catalina Printer Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-166-LED-002
@@ -26550,7 +26550,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CR_Cash Register"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-166-LED-003
@@ -27265,7 +27265,7 @@ equipment_definitions:
               Parent ElementId: 989312
               Voltage_CED: 24.0
               ElementId: 8601043
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-215-LED-003
             tags:
               -
@@ -27317,7 +27317,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-370-LED-001
@@ -28009,7 +28009,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-224-LED-003
@@ -28092,7 +28092,7 @@ equipment_definitions:
               CKT_Circuit Number_CEDT: ""
               Parent ElementId: 5008268
               ElementId: 9216835
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-005-LED-001
             tags:
               -
@@ -28134,7 +28134,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-005-LED-002
@@ -28184,7 +28184,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-005-LED-003
@@ -28306,7 +28306,7 @@ equipment_definitions:
               Parent ElementId: 5142284
               Voltage_CED: 24.0
               ElementId: 8724458
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-076-LED-002
             tags:
               -
@@ -28512,7 +28512,7 @@ equipment_definitions:
               Parent ElementId: 7245182
               Voltage_CED: 24.0
               ElementId: 8600853
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-280-LED-004
             tags:
               -
@@ -28556,7 +28556,7 @@ equipment_definitions:
               Parent ElementId: 7245182
               Voltage_CED: 24.0
               ElementId: 8600854
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-280-LED-005
             tags:
               -
@@ -28600,7 +28600,7 @@ equipment_definitions:
               Parent ElementId: 7245182
               Voltage_CED: 24.0
               ElementId: 8724431
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-280-LED-006
             tags:
               -
@@ -28769,7 +28769,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet qty 2"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-115-LED-002
@@ -28978,7 +28978,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-450-LED-001
@@ -29393,7 +29393,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-454-LED-001
@@ -29513,7 +29513,7 @@ equipment_definitions:
               Parent ElementId: 3782758
               Voltage_CED: 24.0
               ElementId: 8660095
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-115-LED-002
             tags:
               -
@@ -30120,7 +30120,7 @@ equipment_definitions:
               CKT_Circuit Number_CEDT: ""
               Parent ElementId: 7491781
               ElementId: 9650547
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-338-LED-001
             tags:
               -
@@ -30272,7 +30272,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-232-LED-003
@@ -30748,7 +30748,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-208-LED-003
@@ -30906,7 +30906,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-453-LED-001
@@ -30981,7 +30981,7 @@ equipment_definitions:
               Parent Rotation (deg): -0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-435-LED-001
@@ -32041,7 +32041,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CP_Catalina Printer Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-167-LED-002
@@ -32085,7 +32085,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CR_Cash Register"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-167-LED-003
@@ -32621,7 +32621,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-095-LED-003
@@ -33117,7 +33117,7 @@ equipment_definitions:
               Parent ElementId: 7486394
               Voltage_CED: 24.0
               ElementId: 8601071
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-220-LED-005
             tags:
               -
@@ -33144,7 +33144,7 @@ equipment_definitions:
             label: "EF-U_Receptacle_CED : Duplex Wall - GFCI"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-220-LED-006
@@ -33186,7 +33186,7 @@ equipment_definitions:
             label: "EF-U_Receptacle_CED : Duplex Wall - GFCI"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-220-LED-007
@@ -33342,7 +33342,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-161-LED-001
@@ -33392,7 +33392,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-161-LED-002
@@ -33446,7 +33446,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-161-LED-004
@@ -33496,7 +33496,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-161-LED-005
@@ -33723,7 +33723,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-221-LED-004
@@ -33897,7 +33897,7 @@ equipment_definitions:
               Parent ElementId: 4558791
               Voltage_CED: 24.0
               ElementId: 8601052
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-205-LED-003
             tags:
               -
@@ -34533,7 +34533,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet qty 3"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,0.000000,-0.000000"
               CKT_Rating_CED: ""
               Linked Element Definition ID: SET-016-LED-001
@@ -34589,7 +34589,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-016-LED-002
@@ -34639,7 +34639,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-016-LED-003
@@ -35179,7 +35179,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-235-LED-004
@@ -35223,7 +35223,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-235-LED-005
@@ -35460,7 +35460,7 @@ equipment_definitions:
               Parent ElementId: 4558928
               Voltage_CED: 24.0
               ElementId: 8965546
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-034-LED-004
             tags:
               -
@@ -35504,7 +35504,7 @@ equipment_definitions:
               Parent ElementId: 4558928
               Voltage_CED: 24.0
               ElementId: 8965547
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-034-LED-005
             tags:
               -
@@ -36033,7 +36033,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-317-LED-001
@@ -36472,7 +36472,7 @@ equipment_definitions:
               Parent ElementId: 990208
               Voltage_CED: 24.0
               ElementId: 8601000
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-195-LED-003
             tags:
               -
@@ -36746,7 +36746,7 @@ equipment_definitions:
               Parent Rotation (deg): -0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-447-LED-001
@@ -37476,7 +37476,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-023-LED-002
@@ -38072,7 +38072,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-175-LED-002
@@ -39104,7 +39104,7 @@ equipment_definitions:
               Parent ElementId: 3778868
               Voltage_CED: 24.0
               ElementId: 8993950
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-226-LED-004
             tags:
               -
@@ -39611,7 +39611,7 @@ equipment_definitions:
               Parent ElementId: 4558936
               Voltage_CED: 24.0
               ElementId: 8965544
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-247-LED-003
             tags:
               -
@@ -39680,7 +39680,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-427-LED-001
@@ -39730,7 +39730,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-427-LED-002
@@ -39763,7 +39763,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet qty 2"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-0.000000,-1.000000,0.000000"
               CKT_Rating_CED: ""
               Linked Element Definition ID: SET-427-LED-003
@@ -39802,7 +39802,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CR_Cash Register"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-0.000000,-1.000000,0.000000"
               CKT_Rating_CED: ""
               Linked Element Definition ID: SET-427-LED-004
@@ -39841,7 +39841,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : T_Wall Telephone Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-0.000000,-1.000000,0.000000"
               CKT_Rating_CED: ""
               Linked Element Definition ID: SET-427-LED-005
@@ -40206,7 +40206,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-441-LED-001
@@ -40256,7 +40256,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-441-LED-002
@@ -40447,7 +40447,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-202-LED-004
@@ -40491,7 +40491,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-202-LED-005
@@ -40697,7 +40697,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : T_Wall Telephone Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-015-LED-004
@@ -40741,7 +40741,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-015-LED-005
@@ -40785,7 +40785,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CR_Cash Register"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-015-LED-006
@@ -41319,7 +41319,7 @@ equipment_definitions:
               Parent ElementId: 4789827
               Voltage_CED: 24.0
               ElementId: 8992812
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-176-LED-002
             tags:
               -
@@ -41481,7 +41481,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-076-LED-002
@@ -41747,7 +41747,7 @@ equipment_definitions:
               Parent ElementId: 6529649
               Voltage_CED: 24.0
               ElementId: 8728290
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-110-LED-005
             tags:
               -
@@ -41791,7 +41791,7 @@ equipment_definitions:
               Parent ElementId: 6529649
               Voltage_CED: 24.0
               ElementId: 8728291
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-110-LED-006
             tags:
               -
@@ -41835,7 +41835,7 @@ equipment_definitions:
               Parent ElementId: 6529649
               Voltage_CED: 24.0
               ElementId: 8728292
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-110-LED-007
             tags:
               -
@@ -41992,7 +41992,7 @@ equipment_definitions:
               Parent ElementId: 7231706
               Voltage_CED: 24.0
               ElementId: 9164010
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-242-LED-003
             tags:
               -
@@ -42689,7 +42689,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-442-LED-001
@@ -42739,7 +42739,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-442-LED-002
@@ -43252,7 +43252,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 9946
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-418-LED-001
@@ -43285,7 +43285,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,0.000000"
               CKT_Rating_CED: ""
               Linked Element Definition ID: SET-418-LED-002
@@ -43499,7 +43499,7 @@ equipment_definitions:
               Parent ElementId: 3602825
               Voltage_CED: 24.0
               ElementId: 8601030
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-202-LED-004
             tags:
               -
@@ -43543,7 +43543,7 @@ equipment_definitions:
               Parent ElementId: 3602825
               Voltage_CED: 24.0
               ElementId: 9163630
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-202-LED-005
             tags:
               -
@@ -43827,7 +43827,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-013-LED-002
@@ -44003,7 +44003,7 @@ equipment_definitions:
               Parent ElementId: 7246938
               Voltage_CED: 24.0
               ElementId: 8435173
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-021-LED-003
             tags:
               -
@@ -44281,7 +44281,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-440-LED-001
@@ -44331,7 +44331,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-440-LED-002
@@ -45121,7 +45121,7 @@ equipment_definitions:
               Parent ElementId: 6001276
               Voltage_CED: 24.0
               ElementId: 8601060
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-240-LED-003
             tags:
               -
@@ -45328,7 +45328,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-426-LED-001
@@ -45431,7 +45431,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,-0.000000"
               CKT_Rating_CED: ""
               Linked Element Definition ID: SET-173-LED-002
@@ -45893,7 +45893,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-432-LED-001
@@ -45968,7 +45968,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-161-LED-001
@@ -46018,7 +46018,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-161-LED-002
@@ -46072,7 +46072,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-161-LED-004
@@ -46122,7 +46122,7 @@ equipment_definitions:
               Parent Rotation (deg): 0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-161-LED-005
@@ -46440,7 +46440,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-436-LED-001
@@ -46515,7 +46515,7 @@ equipment_definitions:
               Parent Rotation (deg): -180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-425-LED-001
@@ -46565,7 +46565,7 @@ equipment_definitions:
               Parent Rotation (deg): -180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-425-LED-002
@@ -46776,7 +46776,7 @@ equipment_definitions:
               Parent ElementId: 6474905
               Voltage_CED: 24.0
               ElementId: 8612122
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-216-LED-003
             tags:
               -
@@ -46845,7 +46845,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-430-LED-001
@@ -46920,7 +46920,7 @@ equipment_definitions:
               Parent Rotation (deg): -0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-431-LED-001
@@ -47732,7 +47732,7 @@ equipment_definitions:
               Parent Rotation (deg): -0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-452-LED-001
@@ -47919,7 +47919,7 @@ equipment_definitions:
               Parent ElementId: 5300809
               Voltage_CED: 24.0
               ElementId: 8601036
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-208-LED-003
             tags:
               -
@@ -47963,7 +47963,7 @@ equipment_definitions:
               Parent ElementId: 3049620
               Voltage_CED: 120.0
               ElementId: 9307977
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-208-LED-004
             tags:
               -
@@ -48005,7 +48005,7 @@ equipment_definitions:
               Parent ElementId: 3049620
               Voltage_CED: 120.0
               ElementId: 9308080
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-208-LED-005
             tags:
               -
@@ -48145,7 +48145,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-024-LED-003
@@ -48189,7 +48189,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CR_Cash Register"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-024-LED-004
@@ -48233,7 +48233,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : T_Wall Telephone Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-024-LED-005
@@ -49696,7 +49696,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-424-LED-001
@@ -49746,7 +49746,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-424-LED-002
@@ -49796,7 +49796,7 @@ equipment_definitions:
               Parent Rotation (deg): 180.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-424-LED-003
@@ -50305,7 +50305,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-023-LED-002
@@ -50393,7 +50393,7 @@ equipment_definitions:
               Parent Rotation (deg): -0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-444-LED-001
@@ -50706,7 +50706,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet qty 2"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-116-LED-002
@@ -51142,7 +51142,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-213-LED-003
@@ -51228,7 +51228,7 @@ equipment_definitions:
               Parent Rotation (deg): -0.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-423-LED-001
@@ -51403,7 +51403,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "0.000000,1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-385-LED-002
@@ -51723,7 +51723,7 @@ equipment_definitions:
               Parent ElementId: 7434943
               Voltage_CED: 24.0
               ElementId: 8660106
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-121-LED-003
             tags:
               -
@@ -51767,7 +51767,7 @@ equipment_definitions:
               Parent ElementId: 7434943
               Voltage_CED: 24.0
               ElementId: 8660107
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-121-LED-004
             tags:
               -
@@ -52096,7 +52096,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "-0.000000,-1.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-131-LED-002
@@ -52165,7 +52165,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CP_Catalina Printer Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,0.000000"
               CKT_Rating_CED: ""
               Linked Element Definition ID: SET-178-LED-001
@@ -52221,7 +52221,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-178-LED-002
@@ -52271,7 +52271,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-178-LED-003
@@ -52321,7 +52321,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-178-LED-004
@@ -52354,7 +52354,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : T_Wall Telephone Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,0.000000"
               CKT_Rating_CED: ""
               Linked Element Definition ID: SET-178-LED-005
@@ -52393,7 +52393,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : CR_Cash Register"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,0.000000"
               CKT_Rating_CED: ""
               Linked Element Definition ID: SET-178-LED-006
@@ -52449,7 +52449,7 @@ equipment_definitions:
               Parent Rotation (deg): 90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-178-LED-007
@@ -52701,7 +52701,7 @@ equipment_definitions:
               Parent ElementId: 989261
               Voltage_CED: 24.0
               ElementId: 8601084
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-233-LED-003
             tags:
               -
@@ -53022,7 +53022,7 @@ equipment_definitions:
               Parent ElementId: 985586
               Voltage_CED: 24.0
               ElementId: 8612201
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
             id: SET-191-LED-004
             tags:
               -
@@ -53162,7 +53162,7 @@ equipment_definitions:
             label: "DD-U_General Low Voltage Device_CED-HEB : D_Data Outlet"
             parameters:
               dev-Group ID: ""
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               FacingOrientation: "1.000000,-0.000000,-0.000000"
               CKT_Rating_CED: 0.0
               Linked Element Definition ID: SET-228-LED-003
@@ -53311,7 +53311,7 @@ equipment_definitions:
               Parent Rotation (deg): -90.0
               Product Datasheet URL: ""
               LevelId: 30
-              Element_Linker Parameter: |
+              Element_Linker Parameter: ""
               dev-Group ID: ""
               SLD_Symbol ID_CED: ""
               Linked Element Definition ID: SET-446-LED-001

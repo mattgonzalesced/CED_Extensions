@@ -485,18 +485,35 @@ def _name_variants(elem):
 def _parse_payload_pose(payload_text):
     if not payload_text:
         return None
+    text = str(payload_text)
+    entries = {}
+    if "\n" in text:
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            if not line or ":" not in line:
+                continue
+            key, _, remainder = line.partition(":")
+            entries[key.strip().lower()] = remainder.strip()
+    else:
+        pattern = re.compile(
+            r"(Location XYZ \(ft\)|Rotation \(deg\)|Parent Rotation \(deg\)|"
+            r"Parent ElementId|Parent Element ID|LevelId)\s*:\s*",
+            re.IGNORECASE,
+        )
+        matches = list(pattern.finditer(text))
+        for idx, match in enumerate(matches):
+            key = match.group(1).strip().lower()
+            start = match.end()
+            end = matches[idx + 1].start() if idx + 1 < len(matches) else len(text)
+            value = text[start:end].strip().rstrip(",")
+            entries[key] = value.strip(" ,")
+
     location = None
     rotation = None
     parent_rotation = None
     parent_element_id = None
     level_id = None
-    for raw_line in payload_text.splitlines():
-        line = raw_line.strip()
-        if not line or ":" not in line:
-            continue
-        key, _, remainder = line.partition(":")
-        key = key.strip().lower()
-        value = remainder.strip()
+    for key, value in entries.items():
         if key.startswith("location xyz"):
             parts = [p.strip() for p in value.split(",")]
             if len(parts) == 3:
@@ -509,7 +526,7 @@ def _parse_payload_pose(payload_text):
                 parent_rotation = float(value)
             except Exception:
                 parent_rotation = None
-        elif key.startswith("parent elementid"):
+        elif key.startswith("parent elementid") or key.startswith("parent element id"):
             try:
                 parent_element_id = int(value)
             except Exception:

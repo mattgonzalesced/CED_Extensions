@@ -85,6 +85,8 @@ except NameError:
 TRUTH_SOURCE_ID_KEY = "ced_truth_source_id"
 TRUTH_SOURCE_NAME_KEY = "ced_truth_source_name"
 LEVEL_NUMBER_RE = re.compile(r"(?:^|\b)(?:level|lvl|l)\s*0*([0-9]+)\b", re.IGNORECASE)
+PARENT_ID_RE = re.compile(r"parent element(?:id| id)\s*:\s*([0-9]+)", re.IGNORECASE)
+PARENT_ID_KEYS = ("Parent ElementId", "Parent Element ID")
 
 
 def _build_repository(data):
@@ -583,18 +585,35 @@ def _name_variants(elem):
 def _parse_payload_pose(payload_text):
     if not payload_text:
         return None
+    text = str(payload_text)
+    entries = {}
+    if "\n" in text:
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            if not line or ":" not in line:
+                continue
+            key, _, remainder = line.partition(":")
+            entries[key.strip().lower()] = remainder.strip()
+    else:
+        pattern = re.compile(
+            r"(Location XYZ \(ft\)|Rotation \(deg\)|Parent Rotation \(deg\)|"
+            r"Parent ElementId|Parent Element ID|LevelId)\s*:\s*",
+            re.IGNORECASE,
+        )
+        matches = list(pattern.finditer(text))
+        for idx, match in enumerate(matches):
+            key = match.group(1).strip().lower()
+            start = match.end()
+            end = matches[idx + 1].start() if idx + 1 < len(matches) else len(text)
+            value = text[start:end].strip().rstrip(",")
+            entries[key] = value.strip(" ,")
+
     location = None
     rotation = None
     parent_rotation = None
     parent_element_id = None
     level_id = None
-    for raw_line in payload_text.splitlines():
-        line = raw_line.strip()
-        if not line or ":" not in line:
-            continue
-        key, _, remainder = line.partition(":")
-        key = key.strip().lower()
-        value = remainder.strip()
+    for key, value in entries.items():
         if key.startswith("location xyz"):
             parts = [p.strip() for p in value.split(",")]
             if len(parts) == 3:
@@ -607,7 +626,7 @@ def _parse_payload_pose(payload_text):
                 parent_rotation = float(value)
             except Exception:
                 parent_rotation = None
-        elif key.startswith("parent elementid"):
+        elif key.startswith("parent elementid") or key.startswith("parent element id"):
             try:
                 parent_element_id = int(value)
             except Exception:
@@ -635,6 +654,43 @@ def _parse_payload_pose(payload_text):
         "parent_element_id": parent_element_id,
         "level_id": level_id,
     }
+
+
+def _parent_id_from_params(params):
+    if not params:
+        return None
+    for key in PARENT_ID_KEYS:
+        if key in params:
+            try:
+                return int(params.get(key))
+            except Exception:
+                try:
+                    return int(float(params.get(key)))
+                except Exception:
+                    return None
+    for key in ("Element_Linker Parameter", "Element_Linker"):
+        payload = params.get(key)
+        if not payload:
+            continue
+        match = PARENT_ID_RE.search(str(payload))
+        if match:
+            try:
+                return int(match.group(1))
+            except Exception:
+                return None
+    return None
+
+
+def _parent_id_from_defs(repo, cad_name, labels):
+    for label in labels or []:
+        linked_def = repo.definition_for_label(cad_name, label)
+        if not linked_def:
+            continue
+        params = linked_def.get_static_params() or {}
+        parent_id = _parent_id_from_params(params)
+        if parent_id is not None:
+            return parent_id
+    return None
 
 
 def _get_element_point(elem):
@@ -1037,6 +1093,7 @@ def main():
             continue  # All labels filtered out
 
         selection_map[cad_name] = labels
+        parent_id_from_yaml = _parent_id_from_defs(repo, cad_name, labels)
         group_key = child_to_group.get(cad_name) or cad_name
         any_row = False
         for match in matches:
