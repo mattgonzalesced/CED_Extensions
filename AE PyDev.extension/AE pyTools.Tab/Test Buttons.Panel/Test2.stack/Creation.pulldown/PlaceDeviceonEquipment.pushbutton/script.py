@@ -9,6 +9,39 @@ doc = revit.doc
 
 console = script.get_output()
 logger = script.get_logger()
+class ElementLogger(object):
+    def __init__(self, base_logger, element=None, label=None):
+        """
+        Args:
+            base_logger: The pyRevit logger to wrap.
+            element: Revit element or ElementId to associate with logs.
+            label: Optional label like "Parent" or "Child"
+        """
+        self.logger = base_logger
+        self.element = element
+        self.label = label or "Element"
+
+    def _prefix(self):
+        if isinstance(self.element, DB.ElementId):
+            el_id = self.element.IntegerValue
+        elif hasattr(self.element, "Id"):
+            el_id = self.element.Id.IntegerValue
+        else:
+            el_id = "?"
+
+        return "[{} ID={}]".format(self.label, el_id)
+
+    def info(self, message):
+        self.logger.info("{} {}".format(self._prefix(), message))
+
+    def warning(self, message):
+        self.logger.warning("{} {}".format(self._prefix(), message))
+
+    def debug(self, message):
+        self.logger.debug("{} {}".format(self._prefix(), message))
+
+    def error(self, message):
+        self.logger.error("{} {}".format(self._prefix(), message))
 
 
 # 129689 2D
@@ -21,6 +54,10 @@ class ParentElement:
         self.location_point = location_point
         self.facing_orientation = facing_orientation
         self.is_view_specific = is_view_specific
+
+    @property
+    def log(self):
+        return ElementLogger(logger, self.element_id, label="Parent")
 
     @property
     def owner_view_id(self):
@@ -44,6 +81,45 @@ class ParentElement:
             if hasattr(element, 'LevelId') and element.LevelId != DB.ElementId.InvalidElementId:
                 return element.LevelId
         return None
+
+    @property
+    def element(self):
+        """Returns the Revit element object from the stored ID."""
+        return doc.GetElement(self.element_id)
+
+    @property
+    def symbol(self):
+        """Returns the FamilySymbol (type) of the element, if it's a FamilyInstance."""
+        if isinstance(self.element, DB.FamilyInstance):
+            return self.element.Symbol
+        return None
+
+    @property
+    def instance_parameters(self):
+        """
+        Returns a dictionary of parameter name -> DB.Parameter for instance parameters.
+        """
+        if self.element:
+            return {
+                param.Definition.Name: param
+                for param in self.element.Parameters
+            }
+        else:
+            return {}
+
+    @property
+    def type_parameters(self):
+        """
+        Returns a dictionary of parameter name -> DB.Parameter for type (symbol) parameters.
+        """
+        if self.symbol:
+            return {
+                param.Definition.Name: param
+                for param in self.symbol.Parameters
+
+            }
+        else:
+            return {}
 
     @classmethod
     def from_element_id(cls, element_id):
@@ -96,7 +172,7 @@ class ParentElement:
 
     def get_parameter_value(self, parameter_name):
         """
-        Retrieve the value of a parameter from the parent element.
+        Retrieve a value from either an instance parameter or type parameter.
 
         Args:
             parameter_name (str): The name of the parameter to retrieve.
@@ -104,15 +180,36 @@ class ParentElement:
         Returns:
             The value of the parameter, or None if not found.
         """
-        # Use the Revit API to fetch the parameter value
-        param = doc.GetElement(self.element_id).LookupParameter(parameter_name)
-        if param and param.HasValue:
-            if param.StorageType == DB.StorageType.String:
-                return param.AsString()
-            elif param.StorageType == DB.StorageType.Double:
-                return param.AsDouble()
-            elif param.StorageType == DB.StorageType.Integer:
-                return param.AsInteger()
+
+        elem = doc.GetElement(self.element_id)
+
+        if elem is None:
+            logger.info("[Parent get param]: no element found")
+            return None
+
+        # Try instance parameter first
+        param = elem.LookupParameter(parameter_name)
+
+        # If not found, check type parameters
+        if not param and hasattr(elem, "Symbol"):
+            logger.info("[Parent get param]:instance param <{}> not found. trying type".format(parameter_name))
+            symbol = elem.Symbol
+            if symbol:
+                param = symbol.LookupParameter(parameter_name)
+
+        if not param:
+            logger.info("[Parent get param]: type param <{}>not found. returning none".format(parameter_name))
+            return None
+
+        if param.StorageType == DB.StorageType.String:
+            return param.AsString()
+        elif param.StorageType == DB.StorageType.Double:
+            return param.AsDouble()
+        elif param.StorageType == DB.StorageType.Integer:
+            return param.AsInteger()
+        elif param.StorageType == DB.StorageType.ElementId:
+            return param.AsElementId()
+
         return None
 
     def __repr__(self):
@@ -147,6 +244,10 @@ class ChildElement:
         self.view_specific = view_specific
         self.structural_type = structural_type
         self.child_id = None
+
+    @property
+    def log(self):
+        return ElementLogger(logger, self.child_id, label="Parent")
 
     @classmethod
     def from_parent_and_symbol(cls, parent, symbol, family_name, symbol_name, element_type="FamilyInstance"):
@@ -288,29 +389,51 @@ class ChildElement:
                 logger.warning("Failed to set child parameter '{}'.".format(child_param))
 
     def set_parameter_value(self, parameter_name, value):
-        """Set a parameter value on the placed child element."""
+        """
+        Set a parameter value on the placed child element.
+        """
         element = doc.GetElement(self.child_id)
         if not element:
             logger.warning("Child element with ID {} not found.".format(self.child_id))
             return False
 
         param = element.LookupParameter(parameter_name)
-        if param and not param.IsReadOnly:
-            try:
-                if param.StorageType == DB.StorageType.String:
-                    param.Set(str(value))
-                elif param.StorageType == DB.StorageType.Double:
-                    param.Set(float(value))
-                elif param.StorageType == DB.StorageType.Integer:
-                    param.Set(int(value))
-                elif param.StorageType == DB.StorageType.ElementId:
+        if not param:
+            logger.warning("Child element missing parameter '{}'.".format(parameter_name))
+            return False
+
+        if param.IsReadOnly:
+            logger.warning("Parameter '{}' is read-only on child.".format(parameter_name))
+            return False
+
+        try:
+            storage = param.StorageType
+            logger.debug("Setting parameter '{}' on child. StorageType: {}, Value: {}".format(
+                parameter_name, storage, value
+            ))
+
+            if storage == DB.StorageType.String:
+                param.Set(str(value))
+            elif storage == DB.StorageType.Double:
+                param.Set(float(value))
+            elif storage == DB.StorageType.Integer:
+                param.Set(int(value))
+            elif storage == DB.StorageType.ElementId:
+                if isinstance(value, DB.ElementId):
                     param.Set(value)
-                return True
-            except Exception as e:
-                logger.error("Failed to set parameter '{}': {}".format(parameter_name, e))
-        else:
-            logger.warning("Parameter '{}' is read-only or not found.".format(parameter_name))
-        return False
+                else:
+                    logger.warning(
+                        "Value for ElementId parameter '{}' is not a valid ElementId.".format(parameter_name))
+                    return False
+            else:
+                logger.warning("Unhandled StorageType '{}' for parameter '{}'.".format(storage, parameter_name))
+                return False
+
+            return True
+
+        except Exception as e:
+            logger.error("Failed to set parameter '{}': {}".format(parameter_name, e))
+            return False
 
     def __repr__(self):
         return "ChildElement(Type={}, Family={}, Symbol={}, PlacedID={}, Placement={})".format(
@@ -333,6 +456,366 @@ class PlacementInfo(object):
         return "PlacementInfo(Point={}, LevelID={}, ViewID={}, Orientation={})".format(
             self.location_point, self.level_id, self.owner_view_id, self.facing_orientation
         )
+
+class LeaderData(object):
+    def __init__(self, elbow, end):
+        self.elbow = elbow
+        self.end = end
+
+
+
+# ___________________________________________________________________________
+# HELPER FUNCTIONS
+# ___________________________________________________________________________
+def get_selected_generic_annotation_instance():
+    """Return the single selected Generic Annotation FamilyInstance, or None."""
+    sel = revit.get_selection()
+    if not sel or len(sel) != 1:
+        return None
+
+    try:
+        elem = doc.GetElement(sel[0].Id)
+    except Exception:
+        return None
+
+    if not isinstance(elem, DB.FamilyInstance):
+        return None
+
+    # Must be Generic Annotation + view specific
+    try:
+        if elem.Category and elem.Category.Id.IntegerValue != int(DB.BuiltInCategory.OST_GenericAnnotation):
+            return None
+    except Exception:
+        return None
+
+    if not elem.ViewSpecific:
+        return None
+
+    if not elem.Symbol:
+        return None
+
+    return elem
+
+
+def pick_generic_annotation_type(title_text):
+    """Pick a Generic Annotation FamilySymbol (type) from the project."""
+    symbols = (DB.FilteredElementCollector(doc)
+               .OfCategory(DB.BuiltInCategory.OST_GenericAnnotation)
+               .OfClass(DB.FamilySymbol)
+               .ToElements())
+
+    if not symbols or len(symbols) == 0:
+        forms.alert("No Generic Annotation types found in the project.", exitscript=True)
+
+    labels = []
+    by_label = {}
+    for sym in symbols:
+        fam_name = query.get_name(sym.Family)
+        sym_name = query.get_name(sym)
+        label = "{} | {}".format(fam_name, sym_name)
+        labels.append(label)
+        by_label[label] = sym
+
+    labels.sort()
+
+    picked = forms.SelectFromList.show(
+        labels,
+        title=title_text,
+        multiselect=False
+    )
+    if not picked:
+        script.exit()
+
+    return by_label[picked]
+
+
+def collect_generic_annotation_instances_across_all_views(source_symbol_id):
+    """
+    Collect ALL view-specific Generic Annotation instances (FamilyInstance)
+    whose Symbol.Id matches source_symbol_id, across ALL views.
+    """
+    instances = (DB.FilteredElementCollector(doc)
+                 .OfCategory(DB.BuiltInCategory.OST_GenericAnnotation)
+                 .WhereElementIsNotElementType()
+                 .ToElements())
+
+    results = []
+    for inst in instances:
+        try:
+            if not isinstance(inst, DB.FamilyInstance):
+                continue
+            if not inst.ViewSpecific:
+                continue
+            if not inst.Symbol:
+                continue
+            if inst.Symbol.Id != source_symbol_id:
+                continue
+            if inst.OwnerViewId == DB.ElementId.InvalidElementId:
+                continue
+            results.append(inst)
+        except Exception:
+            continue
+
+    return results
+
+
+def pick_source_and_target_symbols_with_selection_behavior():
+    """
+    Behavior:
+    - If exactly 1 Generic Annotation instance is selected:
+        Use its Symbol as SOURCE; prompt for TARGET only.
+    - Otherwise:
+        Prompt for SOURCE and TARGET.
+    Returns:
+        (source_symbol, target_symbol)
+    """
+    selected_inst = get_selected_generic_annotation_instance()
+
+    if selected_inst:
+        source_symbol = selected_inst.Symbol
+        logger.info("Using selected element as SOURCE: {} | {}".format(
+            query.get_name(source_symbol.Family), query.get_name(source_symbol)
+        ))
+
+        target_symbol = pick_generic_annotation_type("Pick TARGET Generic Annotation Type (place these)")
+        if target_symbol.Id == source_symbol.Id:
+            forms.alert("Target type matches the selected source type. Nothing to do.", exitscript=True)
+
+        return source_symbol, target_symbol
+
+    # No valid single selection => pick both
+    source_symbol = pick_generic_annotation_type("Pick SOURCE Generic Annotation Type (replace these)")
+    target_symbol = pick_generic_annotation_type("Pick TARGET Generic Annotation Type (place these)")
+
+    if target_symbol.Id == source_symbol.Id:
+        forms.alert("Source and Target are the same type. Nothing to do.", exitscript=True)
+
+    return source_symbol, target_symbol
+
+
+def get_annotation_leaders(annotation_instance):
+    """
+    Extract leader geometry from a Generic Annotation instance.
+
+    Returns:
+        list[LeaderData]
+    """
+    leader_data = []
+
+    try:
+        leaders = annotation_instance.GetLeaders()
+        if not leaders:
+            return leader_data
+
+        for leader in leaders:
+            try:
+                end = leader.End
+                elbow = leader.Elbow
+                leader_data.append(LeaderData(elbow,end))
+            except Exception:
+                continue
+
+    except Exception as ex:
+        logger.debug(
+            "Failed reading leaders from {}: {}".format(
+                annotation_instance.Id.IntegerValue, ex
+            )
+        )
+
+    return leader_data
+
+
+def apply_annotation_leaders(target_instance, leader_data_list):
+    """
+    Apply leaders to a Generic Annotation instance.
+    Leaders must be added, regenerated, then modified.
+    """
+    if not leader_data_list:
+        return
+
+    try:
+        # Step 1: add leaders (do NOT touch geometry yet)
+        for _ in leader_data_list:
+            target_instance.addLeader()
+
+        # Step 2: force Revit to actually create them
+        doc.Regenerate()
+
+        # Step 3: fetch the newly created leaders
+        new_leaders = target_instance.GetLeaders()
+        if not new_leaders:
+            return
+
+        # Step 4: apply geometry (safe now)
+        for leader, ld in zip(new_leaders, leader_data_list):
+            try:
+                leader.End = ld.end
+                if ld.elbow:
+                    leader.Elbow = ld.elbow
+            except Exception:
+                continue
+
+    except Exception as ex:
+        logger.warning(
+            "Failed applying leaders to {}: {}".format(
+                target_instance.Id.IntegerValue, ex
+            )
+        )
+
+def apply_annotation_leaders_batch(target_to_leaderdata):
+    """
+    Batch-add and apply leaders to Generic Annotation instances.
+    Exactly one regenerate. Correct point ordering.
+    """
+    if not target_to_leaderdata:
+        return
+
+    # 1) Add leaders only
+    for target_id, leader_data_list in target_to_leaderdata.items():
+        if not leader_data_list:
+            continue
+
+        target = doc.GetElement(target_id)
+        if not target:
+            continue
+
+        for _ in leader_data_list:
+            target.addLeader()
+
+    # 2) Single regenerate
+    doc.Regenerate()
+
+    # 3) Apply geometry (ORDER MATTERS)
+    for target_id, leader_data_list in target_to_leaderdata.items():
+        if not leader_data_list:
+            continue
+
+        target = doc.GetElement(target_id)
+        if not target:
+            continue
+
+        leaders = target.GetLeaders()
+        if not leaders:
+            continue
+
+        for leader, ld in zip(leaders, leader_data_list):
+            try:
+                if ld.elbow:
+                    # Bent leader: elbow FIRST, then end
+                    leader.End = ld.end
+                    leader.Elbow = ld.elbow
+                else:
+                    # Straight leader
+                    leader.End = ld.end
+            except Exception:
+                continue
+
+
+
+def replace_generic_annotations_across_all_views(parameter_mapping, delete_source=True):
+    """
+    Replaces ALL instances of a source Generic Annotation TYPE across ALL views
+    with a target Generic Annotation TYPE, in their corresponding views,
+    copying parameters using existing ChildElement.copy_parameters().
+
+    Source/target picking behavior:
+    - If exactly 1 Generic Annotation instance is selected: SOURCE = that instance's type, pick TARGET
+    - Else: pick SOURCE and TARGET
+    """
+    source_symbol, target_symbol = pick_source_and_target_symbols_with_selection_behavior()
+
+    source_instances = collect_generic_annotation_instances_across_all_views(source_symbol.Id)
+
+    if not source_instances:
+        forms.alert("No instances of the selected SOURCE type were found in any view.", exitscript=True)
+
+    logger.info("Found {} source annotation(s) across all views.".format(len(source_instances)))
+
+    placed_count = 0
+    deleted_count = 0
+    failed = []
+
+    family_name = query.get_name(target_symbol.Family)
+    symbol_name = query.get_name(target_symbol)
+
+    target_leader_map = {}  # ElementId -> [LeaderData]
+
+
+    tg = DB.TransactionGroup(doc, "Replace Generic Annotations Across All Views")
+    tg.Start()
+
+    # ----------------------------------------------------------------------
+    # Transaction 1: Place + copy parameters + delete source
+    # ----------------------------------------------------------------------
+    t1 = DB.Transaction(doc, "Place Replacement Annotations")
+    t1.Start()
+
+    for src in source_instances:
+        try:
+            parent = ParentElement.from_family_instance(src)
+            leader_data = get_annotation_leaders(src)
+
+            if not parent:
+                failed.append(src.Id)
+                continue
+
+            child = ChildElement.from_parent_and_symbol(
+                parent,
+                symbol=target_symbol,
+                family_name=family_name,
+                symbol_name=symbol_name,
+                element_type="FamilyInstance"
+            )
+
+            child.place()
+            child.copy_parameters(parameter_mapping)
+
+            if leader_data:
+                target_leader_map[child.child_id] = leader_data
+            placed_count += 1
+
+            if delete_source:
+                doc.Delete(src.Id)
+                deleted_count += 1
+
+        except Exception as ex:
+            logger.error(
+                "Failed replacing annotation {}: {}".format(
+                    src.Id.IntegerValue, ex
+                )
+            )
+            failed.append(src.Id)
+
+    t1.Commit()
+
+    # ----------------------------------------------------------------------
+    # Transaction 2: Reapply leaders
+    # ----------------------------------------------------------------------
+    if target_leader_map:
+        t2 = DB.Transaction(doc, "Reapply Annotation Leaders")
+        t2.Start()
+
+        apply_annotation_leaders_batch(target_leader_map)
+
+        t2.Commit()
+
+    tg.Assimilate()
+
+    # ----------------------------------------------------------------------
+    # Logging
+    # ----------------------------------------------------------------------
+    logger.info("Replacement complete.")
+    logger.info(
+        "Placed: {} | Deleted: {} | Failed: {}".format(
+            placed_count, deleted_count, len(failed)
+        )
+    )
+
+    if failed:
+        logger.warning("Failed ElementIds:")
+        for fid in failed:
+            logger.warning(" - {}".format(fid.IntegerValue))
+
 
 def pick_reference_elements():
     """Prompt user to select reference elements if none are selected."""
@@ -460,15 +943,57 @@ def pick_family_type(family):
     return selected_type, selected_type_name
 
 
+def inspect_parent_parameters():
+    """Prompt user to select a parent and print its instance and type parameters with values."""
+    selected_elements = pick_reference_elements()
+    if not selected_elements:
+        logger.warning("No element selected.")
+        return
+    for el in selected_elements:
+        parent = ParentElement.from_element_id(el.Id)
+        if not parent:
+            logger.error("Could not create ParentElement.")
+            return
+
+        logger.info("Inspecting ParentElement: {}".format(repr(parent)))
+
+        logger.info("---- Instance Parameters ----")
+        for name, param in parent.instance_parameters.items():
+            value = parent.get_parameter_value(name)
+            logger.info("[Instance] {} = {}".format(name, value))
+
+        logger.info("---- Type Parameters ----")
+        for name, param in parent.type_parameters.items():
+            if name in parent.instance_parameters:
+                continue  # already logged
+            value = parent.get_parameter_value(name)
+            logger.info("[Type] {} = {}".format(name, value))
+
+def main_replace_across_all_views():
+    parameter_mapping = {
+        "CED-G-NOTE #": "Keynote Value",
+        "CED-G-NOTE TEXT": "Keynote Description",
+        "CED-G-SHEET #/DISCIPLINE": "Keynote Category",
+
+    }
+
+    replace_generic_annotations_across_all_views(parameter_mapping, delete_source=True)
+
+
 def main():
     parameter_mapping = {
-        "Mark": "Equipment ID_CEDT",
+        "Note Number": "Symbol Label_CEDT",
         "Family and Type": "Equipment Remarks_CEDT",
+        "Voltage_CED":"Voltage_CED",
+        "Number of Poles_CED":"Number of Poles_CED",
+        "FLA_CED":"FLA Input_CED",
     }
 
     # Select parents
     selected_elements = pick_reference_elements()
     parent_instances = [ParentElement.from_element_id(el.Id) for el in selected_elements]
+
+
 
     # Prompt user to select Family or Group
     selected_child = pick_family_or_group()
@@ -516,7 +1041,7 @@ def main():
             child.place()
             if child.element_type == "FamilyInstance":
                 child.rotate_to_match_parent()
-                # child.copy_parameters(parameter_mapping)
+                child.copy_parameters(parameter_mapping)
         trans.Commit()
 
     # Log results
@@ -529,5 +1054,7 @@ def main():
         logger.info("{}".format(repr(child)))
 
 
+
+
 if __name__ == "__main__":
-    main()
+    main_replace_across_all_views()

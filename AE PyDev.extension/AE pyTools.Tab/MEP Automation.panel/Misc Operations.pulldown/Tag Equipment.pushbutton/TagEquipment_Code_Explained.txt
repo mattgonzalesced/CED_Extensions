@@ -1,0 +1,35 @@
+Place Annotations - Code Explained
+==================================
+
+Purpose
+-------
+Place or refresh hosted tags, keynotes, and text notes for every family instance
+that carries Element_Linker metadata. Tags/keynotes are defined in the YAML under
+each linked element definition, and text notes live under `text_notes`, so this
+script replays the exact families, offsets, rotations, and text captured by
+Select Parent Element or Add YAML Profiles.
+
+Execution Flow
+--------------
+1. **Repository Build** - We load the active YAML, convert it into a
+   `ProfileRepository`, and group tag/keynote definitions by tag family/type via
+   `_collect_tag_entries` while collecting text note definitions from
+   `text_notes`. Each context entry includes the LED ID and optional `dev-Group ID`
+   so we can filter hosts.
+2. **Host Scan** - `_collect_instance_lookup` walks the active view's
+   FamilyInstances, reading their labels so we can target matching equipment
+   types in the current view.
+3. **Placement** - For each selected context we place tags/keynotes with
+   `IndependentTag.Create` (or view-based annotation families) and create text
+   notes through `TextNote.Create`, applying stored offsets, rotations, and
+   parameter overrides from the YAML.
+4. **Feedback** - The script reports missing families or LEDs with no annotation
+   definition so users know which profiles need maintenance.
+
+Key Points
+----------
+* Works across linked definitions created via Select Parent Element or Add YAML
+  Profiles because both tools populate `tags` and `text_notes` in the same format.
+* The command is view-aware: run it per sheet/plan where annotations are needed.
+* Everything runs inside a Revit transaction, so misplacements can be undone in
+  one step.

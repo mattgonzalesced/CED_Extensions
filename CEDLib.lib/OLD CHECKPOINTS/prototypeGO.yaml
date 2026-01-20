@@ -1,0 +1,49 @@
+equipment_definitions:
+- prompt_on_parent_mismatch: false
+  parent_filter:
+    family_name_pattern: EF-U_Receptacle_CED
+    category: Electrical Fixtures
+    parameter_filters: {}
+    type_name_pattern: Duplex Ceiling
+  name: GO Check Stand
+  schema_version: 1
+  id: EQ-002
+  linked_sets:
+  - linked_element_definitions:
+    - is_group: true
+      label: 'EF-U_Receptacle_CED : Duplex Ceiling'
+      parameters:
+        dev-Group ID: ''
+        Element_Linker Parameter: >-
+          Linked Element Definition ID: SET-002-LED-001
+
+          Set Definition ID: SET-002
+
+          Location XYZ (ft): 454.674476,-607.815682,9.000000
+
+          Rotation (deg): 0.000000
+
+          LevelId: 30
+
+          ElementId: 7169409
+
+          FacingOrientation: 0.000000,1.000000,0.000000
+        CKT_Rating_CED: 30
+        CKT_Panel_CEDT: LP1
+        CKT_Schedule Notes_CEDT: ''
+        CKT_Circuit Number_CEDT: 1
+        CKT_Load Name_CEDT: Ceiling Recepts
+      id: SET-002-LED-001
+      tags: []
+      category: Electrical Fixtures
+      offsets:
+      - rotation_deg: 0
+        x_inches: -34
+        y_inches: 0
+        z_inches: 108
+    id: SET-002
+    name: GO Check Stand Types
+  allow_parentless: true
+  allow_unmatched_parents: true
+  version: 1
+  equipment_properties: {}

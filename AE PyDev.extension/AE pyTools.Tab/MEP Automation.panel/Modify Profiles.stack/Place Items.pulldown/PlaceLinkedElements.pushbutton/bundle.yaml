@@ -1,0 +1,17 @@
+title: Place Linked Elements
+tooltip: |
+  Place Linked Elements is the primary automation button; it reads the active
+  YAML, matches linked elements or Revit links by name, and places every recorded
+  configuration on the correct centroid with preserved spacing.
+
+  Before running, ensure Select YAML has loaded the desired file and that the
+  project contains host families or linked groups whose names align with the
+  equipment definitions you want to place.
+
+  The engine assigns each placement to the linked element's level, reviews the
+  summary of matched hosts, and sets Element_Linker metadata so QA/QC and Undo
+  integration work seamlessly.
+
+  After placement, inspect the resulting families, run QAQC if needed, and commit
+  any required tweaks through Add, Edit, or Merge before exporting the updated
+  YAML back to disk for coordination.

@@ -1,0 +1,105 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Audit Linked Model"
+        Height="520"
+        Width="540"
+        ResizeMode="CanResizeWithGrip"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Document:" VerticalAlignment="Center" Margin="0,0,8,0" />
+            <ComboBox x:Name="DocCombo"
+                      Grid.Column="1"
+                      Margin="0,0,12,0"
+                      MinWidth="220"
+                      IsTextSearchEnabled="True" />
+            <Button x:Name="RefreshButton"
+                    Grid.Column="2"
+                    Padding="14,4"
+                    Content="Refresh"
+                    VerticalAlignment="Center" />
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,8,0" />
+            <TextBox x:Name="SearchBox"
+                     Grid.Column="1"
+                     Margin="0,0,8,0"
+                     Foreground="Black"
+                     Background="White"
+                     CaretBrush="Black" />
+            <TextBlock Text="Min Count:"
+                       Grid.Column="2"
+                       Margin="8,0,8,0"
+                       VerticalAlignment="Center" />
+            <TextBox x:Name="CountBox"
+                     Grid.Column="3"
+                     Width="80"
+                     Margin="0,0,8,0"
+                     Text="0"
+                     Foreground="Black"
+                     Background="White"
+                     CaretBrush="Black" />
+            <Button x:Name="SearchButton"
+                    Grid.Column="4"
+                    Padding="16,4"
+                    Content="Search"
+                    VerticalAlignment="Center" />
+        </Grid>
+
+        <ListView x:Name="ResultsList"
+                  Grid.Row="2"
+                  Margin="0,8,0,8"
+                  HorizontalContentAlignment="Stretch"
+                  Foreground="Black">
+            <ListView.View>
+                <GridView AllowsColumnReorder="False">
+                    <GridViewColumn Header="Linked Element" Width="360">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding [display]}"
+                                           Foreground="Black"
+                                           TextTrimming="CharacterEllipsis" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Count" Width="80">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding [count]}"
+                                           HorizontalAlignment="Right"
+                                           FontWeight="Bold"
+                                           Foreground="Black" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                </GridView>
+            </ListView.View>
+        </ListView>
+
+        <TextBlock x:Name="SummaryLabel"
+                   Grid.Row="3"
+                   Text="Ready"
+                   HorizontalAlignment="Left" />
+    </Grid>
+</Window>

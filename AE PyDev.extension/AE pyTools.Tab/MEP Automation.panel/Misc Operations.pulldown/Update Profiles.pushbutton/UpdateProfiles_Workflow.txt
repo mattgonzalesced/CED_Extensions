@@ -1,0 +1,7 @@
+Run Update Profiles after adding tags, keynotes, or text notes to equipment that
+already carries Element_Linker metadata, or after changing parameter values on
+those elements. The tool scans all linked elements, finds their LED definitions,
+and merges the new annotations and parameter values into the active YAML.
+
+Once saved, rerun Place Linked Elements or Place Annotations so new views pick
+up the updated definitions.

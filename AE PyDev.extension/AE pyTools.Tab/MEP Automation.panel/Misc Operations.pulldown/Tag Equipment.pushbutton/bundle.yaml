@@ -1,0 +1,18 @@
+title: Place Annotations
+tooltip: |
+  If your equipment definitions capture hosted tags, keynotes, or text notes,
+  run Place Annotations after a placement pass to ensure every instance
+  receives the recorded annotation offsets and orientations described in the
+  YAML.
+
+  The tool scans for Element_Linker metadata, queries the definition to retrieve
+  tag/keynote families plus text note entries, and instantiates them on the
+  specified view with the stored offsets, rotation, and parameter overrides.
+
+  Because tags depend on view context, launch the workflow from the sheet or plan
+  where you want them to appear, and rerun for additional views if needed; the
+  automation reuses the same metadata, so you never have to reselect hosts.
+
+  If any annotations fail to place, review the output for missing family
+  warnings, then update the definition or load the required families before
+  rerunning the command to finish annotation.

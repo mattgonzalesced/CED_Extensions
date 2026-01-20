@@ -1,0 +1,68 @@
+1. matchings_dict - Simple list of fixture labels
+{
+    "Stepmill (C5X-5PL-PF)": [
+        "Duplex Wall : EF-U_Receptacle_CED",
+        "Square : Manual Key Note- All Shapes"
+    ]
+}
+2. groups_dict - Model group labels (if any)
+{
+    "Some_CAD_Block": [
+        "P_Default : Model_Group_Name",
+        "None : Another_Model_Group"
+    ]
+}
+3. parameters_dict - Parameters for each fixture instance
+{
+    "Stepmill (C5X-5PL-PF)": {
+        "Duplex Wall : EF-U_Receptacle_CED": [
+            {
+                "dev-Group ID": "Stepmill (C5X-5PL-PF)",
+                "FLA Input_CED": "0",
+                "Apparent Load Input_CED": "1920",
+                "Voltage_CED": "120"
+            }
+        ],
+        "Square : Manual Key Note- All Shapes": [
+            {
+                "CED-G-NOTE #": "13",
+                "dev-Group ID": "Stepmill"
+            }
+        ]
+    }
+}
+4. offsets_dict - Position offsets for each fixture instance
+{
+    "Stepmill (C5X-5PL-PF)": {
+        "Square : Manual Key Note- All Shapes": [
+            {"x": 6, "y": 8, "z": 0, "r": 0}
+        ],
+        "Duplex Wall : EF-U_Receptacle_CED": [
+            {"x": 5, "y": 2, "z": 0, "r": 45}
+        ]
+    },
+    "PF_Plan TMAX": {
+        "Duplex Wall : EF-U_Receptacle_CED": [
+            {"x": 8, "y": 8, "z": 0, "r": 0},    # First instance
+            {"x": 5, "y": 0, "z": 0, "r": 0},    # Second instance
+            {"x": -4, "y": -26, "z": 0, "r": 0}  # Third instance
+        ]
+    }
+}
+5. tags_dict - Tag information for fixtures 
+{
+    "Stepmill (C5X-5PL-PF)": {
+        "Duplex Wall : EF-U_Receptacle_CED": [
+            {
+                "tag_label": "Panel & Circuit Number : EF-Tag_Electrical Fixtures_CED",
+                "offset": {"x": 0, "y": 0, "z": 0, "r": 0}
+            },
+            {
+                "tag_label": "Panel & Circuit Number : EF-Tag_Electrical Fixtures_CED",
+                "offset": {"x": 10, "y": 10, "z": 0, "r": 0}
+            }
+            # Now supports multiple tags with same type but different offsets (array format)
+            # OR multiple different tag types/families (object format)
+        ]
+    }
+}

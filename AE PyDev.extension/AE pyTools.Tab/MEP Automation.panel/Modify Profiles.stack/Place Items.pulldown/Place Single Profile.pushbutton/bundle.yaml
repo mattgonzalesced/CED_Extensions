@@ -1,0 +1,16 @@
+title: Place Single Profile
+tooltip: |
+  Use Place Single Profile to inspect how a profile will drive placements
+  without committing to creation; it is essentially a dry run that surfaces every
+  linked element definition and its captured offsets or parameters.
+
+  Select the target definition from the list populated by the active YAML, then
+  review the dialog listing its LEDs, tags, and parent filter behavior; this helps
+  confirm the structure before running an actual placement workflow.
+
+  From here you can copy IDs, take screenshots, or communicate details to other
+  team members so everyone understands what the automation will produce on the
+  floor plan when the placer runs.
+
+  Close the viewer when finished; no data is modified, and you can immediately
+  switch to other tools such as Add, Delete, or Merge without reloading the YAML.

@@ -1,0 +1,1811 @@
+﻿﻿
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG JSON: Found Model_Group: 'P_Commercial Urinal' (type: 'P_default')
+
+
+
+Full label for UI: 'None : P_Commercial Urinal'
+
+
+
+DEBUG JSON: CAD block 'NEW URINAL' has 2 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
+
+
+
+DEBUG JSON: CAD block 'NEW URINAL' has 1 model groups: ['None : P_Commercial Urinal']
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG JSON: Found Model_Group: 'P_Shower Rough-In 2' (type: 'P_default')
+
+
+
+Full label for UI: 'None : P_Shower Rough-In 2'
+
+
+
+DEBUG JSON: Found Model_Group: 'P_2 inch (50) Floor Drain, Horizontal with Trap Primer' (type: 'P_default')
+
+
+
+Full label for UI: 'None : P_2 inch (50) Floor Drain, Horizontal with Trap Primer'
+
+
+
+DEBUG JSON: Found Model_Group: 'P_Shower Rough-In' (type: 'Type1')
+
+
+
+Full label for UI: 'None : P_Shower Rough-In'
+
+
+
+DEBUG JSON: Found Model_Group: 'P_Shower Rough-In' (type: 'P_default')
+
+
+
+Full label for UI: 'None : P_Shower Rough-In'
+
+
+
+DEBUG JSON: CAD block 'Room Name 104B SHOWER' has 4 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
+
+
+
+DEBUG JSON: CAD block 'Room Name 104B SHOWER' has 4 model groups: ['None : P_Shower Rough-In 2', 'None : P_2 inch (50) Floor Drain, Horizontal with Trap Primer', 'None : P_Shower Rough-In', 'None : P_Shower Rough-In']
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG JSON: Found Model_Group: 'P_Commercial Water Closet' (type: 'P_default')
+
+
+
+Full label for UI: 'None : P_Commercial Water Closet'
+
+
+
+DEBUG JSON: CAD block 'EX'G WALL TOILET' has 2 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
+
+
+
+DEBUG JSON: CAD block 'EX'G WALL TOILET' has 1 model groups: ['None : P_Commercial Water Closet']
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG JSON: Found Model_Group: 'P_Electric Water Heater on Floor' (type: 'P_default')
+
+
+
+Full label for UI: 'None : P_Electric Water Heater on Floor'
+
+
+
+DEBUG JSON: CAD block 'Room Name 105C JAN.' has 3 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
+
+
+
+DEBUG JSON: CAD block 'Room Name 105C JAN.' has 1 model groups: ['None : P_Electric Water Heater on Floor']
+
+
+
+DEBUG JSON: CAD block 'Room Name 104A TOILET' has 1 families: ['P_default : P_2 inch (50) Floor Drain, Horizontal with Trap Primer']
+
+
+
+DEBUG JSON: Found Model_Group: 'P_Electric Water Heater on Floor' (type: 'P_default')
+
+
+
+Full label for UI: 'None : P_Electric Water Heater on Floor'
+
+
+
+DEBUG JSON: CAD block 'Room Name 104C JAN.' has 3 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
+
+
+
+DEBUG JSON: CAD block 'Room Name 104C JAN.' has 1 model groups: ['None : P_Electric Water Heater on Floor']
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG JSON: Found Model_Group: 'P_Electric Water Cooler - Dual Height' (type: 'P_default')
+
+
+
+Full label for UI: 'None : P_Electric Water Cooler - Dual Height'
+
+
+
+DEBUG JSON: CAD block 'EX'G ADA DF' has 2 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
+
+
+
+DEBUG JSON: CAD block 'EX'G ADA DF' has 1 model groups: ['None : P_Electric Water Cooler - Dual Height']
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG JSON: Found Model_Group: 'P_2 inch (50) Floor Drain, Horizontal with Trap Primer' (type: 'P_default')
+
+
+
+Full label for UI: 'None : P_2 inch (50) Floor Drain, Horizontal with Trap Primer'
+
+
+
+DEBUG JSON: CAD block 'Floor Drain 1' has 1 model groups: ['None : P_2 inch (50) Floor Drain, Horizontal with Trap Primer']
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG JSON: CAD block 'Floor Drain 2' has 1 families: ['P_default : P_2 inch (50) Floor Drain, Horizontal with Trap Primer']
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG JSON: Found Model_Group: 'P_Shower Rough-In 2' (type: 'P_default')
+
+
+
+Full label for UI: 'None : P_Shower Rough-In 2'
+
+
+
+DEBUG JSON: Found Model_Group: 'P_2 inch (50) Floor Drain, Horizontal with Trap Primer' (type: 'P_default')
+
+
+
+Full label for UI: 'None : P_2 inch (50) Floor Drain, Horizontal with Trap Primer'
+
+
+
+DEBUG JSON: Found Model_Group: 'P_Shower Rough-In' (type: 'P_default')
+
+
+
+Full label for UI: 'None : P_Shower Rough-In'
+
+
+
+DEBUG JSON: CAD block 'Room Name 105B SHOWER' has 4 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
+
+
+
+DEBUG JSON: CAD block 'Room Name 105B SHOWER' has 3 model groups: ['None : P_Shower Rough-In 2', 'None : P_2 inch (50) Floor Drain, Horizontal with Trap Primer', 'None : P_Shower Rough-In']
+
+
+
+DEBUG JSON: Found Model_Group: 'P_Sink Fixture - Janitorial, Vertical' (type: 'P_default')
+
+
+
+Full label for UI: 'None : P_Sink Fixture - Janitorial, Vertical'
+
+
+
+DEBUG JSON: CAD block 'EX'G MOPSINK' has 2 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
+
+
+
+DEBUG JSON: CAD block 'EX'G MOPSINK' has 1 model groups: ['None : P_Sink Fixture - Janitorial, Vertical']
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip Manual Key Note- All Shapes'
+
+
+
+DEBUG: Skipping entry with '_skip' prefix: '_skip P_Commercial Water Closet'
+
+
+
+DEBUG JSON: CAD block 'Room Name 105A TOILET' has 1 families: ['P_default : P_2 inch (50) Floor Drain, Horizontal with Trap Primer']
+
+
+
+DEBUG JSON: Found Model_Group: 'P_Commercial Lavatory ADA' (type: 'none')
+
+
+
+Full label for UI: 'None : P_Commercial Lavatory ADA'
+
+
+
+DEBUG JSON: CAD block 'Locker-Sink-Sloan-Trough-Enclosure' has 2 families: ['Square : Manual Key Note- All Shapes', 'Square : Manual Key Note- All Shapes']
+
+
+
+DEBUG JSON: CAD block 'Locker-Sink-Sloan-Trough-Enclosure' has 1 model groups: ['None : P_Commercial Lavatory ADA']
+
+
+
+
+=== FINDING ATTACHED DETAIL GROUPS ===
+
+
+
+Model group 'P_Gas-fired Water Heater Plant' has NO attached detail groups
+
+
+
+Model group 'P_Kitchen Filtration System' has NO attached detail groups
+
+
+
+Model group 'P_Kitchen Ice Maker' has NO attached detail groups
+
+
+
+Model group 'P_Kitchen Sink - Direct Connection' has NO attached detail groups
+
+
+
+Model group 'P_Kitchen Sink - Indirect Waste' has NO attached detail groups
+
+
+
+Model group 'P_Kitchen Sink - Island Vent' has NO attached detail groups
+
+
+
+Model group 'P_Kids Sink Fixture - 2 Faucets' has NO attached detail groups
+
+
+
+Model group 'P_Kids Floor Mount Toilet' has NO attached detail groups
+
+
+
+Model group 'P_2 inch (50) Floor Drain, Horizontal DWV' has NO attached detail groups
+
+
+
+Model group 'P_2 inch (50) Floor Drain, Vertical DWV' has NO attached detail groups
+
+
+
+Model group 'P_2 inch (50) Floor Drain, Horizontal with Trap Primer' has NO attached detail groups
+
+
+
+Model group 'P_2 inch (50) Recessed Outlet Box' has NO attached detail groups
+
+
+
+Model group 'P_2 inch (50) Floor Drain, Vertical with Trap Primer' has NO attached detail groups
+
+
+
+Model group 'P_2 inch (50) Standpipe Drain' has NO attached detail groups
+
+
+
+Model group 'P_2 inch (50) Trap, 3 inch (80) Standpipe' has NO attached detail groups
+
+
+
+Model group 'P_3 inch (80) Floor Drain, Horizontal DWV' has NO attached detail groups
+
+
+
+Model group 'P_3 inch (80) Floor Drain, Vertical DWV' has NO attached detail groups
+
+
+
+Model group 'P_3 inch (80) Floor Sink, Horizontal DWV' has NO attached detail groups
+
+
+
+Model group 'P_3 inch (80) Floor Sink, Vertical DWV' has NO attached detail groups
+
+
+
+Model group 'P_3 inch (80) Trap, 4 inch (100) Standpipe' has NO attached detail groups
+
+
+
+Model group 'P_4 inch (100) Floor Drain, Horizontal DWV' has NO attached detail groups
+
+
+
+Model group 'P_4 inch (100) Floor Drain, Vertical DWV' has NO attached detail groups
+
+
+
+Model group 'P_4 inch (100) Floor Sink, Vertical DWV' has NO attached detail groups
+
+
+
+Model group 'P_Wall Hydrant' has NO attached detail groups
+
+
+
+Model group 'P_Interior Hose Bibb' has NO attached detail groups
+
+
+
+Model group 'P_Roof Hydrant' has NO attached detail groups
+
+
+
+Model group 'P_Domestic Supply Box' has NO attached detail groups
+
+
+
+Model group 'P_Electric Water Cooler - ADA' has NO attached detail groups
+
+
+
+Model group 'P_Electric Water Cooler - Dual Height' has NO attached detail groups
+
+
+
+Model group 'P_Hank Sink by Plumbing Contractor' has NO attached detail groups
+
+
+
+Model group 'P_Lavatory Sink with Electric WH' has NO attached detail groups
+
+
+
+Model group 'P_Sink Fixture - Single Bowl' has NO attached detail groups
+
+
+
+Model group 'P_Sink Fixture - Janitorial, Vertical' has NO attached detail groups
+
+
+
+Model group 'P_Sink Fixture - Janitorial, Horizontal' has NO attached detail groups
+
+
+
+Model group 'P_Sink Fixture - Dual Bowl' has NO attached detail groups
+
+
+
+Model group 'P_Sink Fixture with Electric WH' has NO attached detail groups
+
+
+
+Model group 'P_Kitchen Sink, DW, Ice Maker' has NO attached detail groups
+
+
+
+Model group 'P_Residential Washing Machine' has NO attached detail groups
+
+
+
+Model group 'P_Residential Laundry/Sink Wet Vent' has NO attached detail groups
+
+
+
+Model group 'P_Public Unisex Restroom Tank-Type' has NO attached detail groups
+
+
+
+Model group 'P_Public Unisex Restroom with T.P.' has NO attached detail groups
+
+
+
+Model group 'P_Residential Half Bathroom' has NO attached detail groups
+
+
+
+Model group 'P_Residential Private Bathroom 1' has NO attached detail groups
+
+
+
+Model group 'P_Residential Private Bathroom 2' has NO attached detail groups
+
+
+
+Model group 'P_Water Service Assembly with DCV' has NO attached detail groups
+
+
+
+Model group 'P_Water Service Assembly with PRV' has NO attached detail groups
+
+
+
+Model group 'P_Shower Rough-In' has NO attached detail groups
+
+
+
+Model group 'P_Commercial Lavatory - Back to Back' has NO attached detail groups
+
+
+
+Model group 'P_Commercial Lavatory ADA - Back to Back' has NO attached detail groups
+
+
+
+Model group 'P_Commercial Lavatory ADA' has NO attached detail groups
+
+
+
+Model group 'P_Commercial Urinal' has NO attached detail groups
+
+
+
+Model group 'P_Commercial Water Closet - Back to Back' has NO attached detail groups
+
+
+
+Model group 'P_Commercial Water Closet' has NO attached detail groups
+
+
+
+Model group 'P_Commercial Water Closet ADA - Back to Back' has NO attached detail groups
+
+
+
+Model group 'P_Commercial Water Closet ADA' has NO attached detail groups
+
+
+
+Model group 'P_Commercial Water Closet/ Urinal' has NO attached detail groups
+
+
+
+Model group 'P_Commercial Unisex Restroom 1R' has NO attached detail groups
+
+
+
+Model group 'P_Commercial Unisex Restroom 1L' has NO attached detail groups
+
+
+
+Model group 'P_Commercial Unisex Restrooms' has NO attached detail groups
+
+
+
+Model group 'P_Commercial Public Restrooms' has NO attached detail groups
+
+
+
+Model group 'P_Electric Water Heater on Floor' has NO attached detail groups
+
+
+
+Model group 'P_Electric Water Heater above Mopsink' has NO attached detail groups
+
+
+
+Model group 'P_Gas-fired Water Heater Plant 2' has NO attached detail groups
+
+
+
+Model group 'P_Kitchen 1-Comp Sink - Indirect Waste' has NO attached detail groups
+
+
+
+Model group 'P_Kitchen 2-Comp Sink - Indirect Waste' has NO attached detail groups
+
+
+
+Model group 'P_Kitchen 3-Comp Sink - Indirect Waste' has NO attached detail groups
+
+
+
+Model group 'P_Kitchen Combo Pre-Rinse Faucet' has NO attached detail groups
+
+
+
+Model group 'P_Kitchen 1-Comp Sink - Tell-tale Drain' has NO attached detail groups
+
+
+
+Model group 'P_Kitchen 1-Comp Sink with Hand Sink' has NO attached detail groups
+
+
+
+Model group 'P_Kitchen 2-Comp Sink - Tell-tale Drain' has NO attached detail groups
+
+
+
+Model group 'P_Kitchen 3-Comp Sink - Tell-tale Drain' has NO attached detail groups
+
+
+
+Model group 'P_Kitchen Beverage Dispenser' has NO attached detail groups
+
+
+
+Model group 'P_Kitchen Dishwasher Machine' has NO attached detail groups
+
+
+
+Model group 'P_Shower Rough-In 2' has NO attached detail groups
+
+
+
+
+=== MODEL GROUPS AND THEIR ATTACHED DETAIL GROUPS ===
+
+
+
+Found 74 model groups total
+
+
+
+Groups with attached detail groups: 0
+
+
+
+Groups without attached detail groups: 74
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'Locker-Sink-Sloan-Trough-Enclosure'
+
+
+
+Label from UI: 'None : P_Commercial Lavatory ADA'
+
+
+
+Model group type ID: 6836263
+
+
+
+Detail group type ID: None
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'EX'G WALL TOILET'
+
+
+
+Label from UI: 'None : P_Commercial Water Closet'
+
+
+
+Model group type ID: 6836328
+
+
+
+Detail group type ID: None
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'EX'G ADA DF'
+
+
+
+Label from UI: 'None : P_Electric Water Cooler - Dual Height'
+
+
+
+Model group type ID: 6835354
+
+
+
+Detail group type ID: None
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'EX'G WALL TOILET'
+
+
+
+Label from UI: 'None : P_Commercial Water Closet'
+
+
+
+Model group type ID: 6836328
+
+
+
+Detail group type ID: None
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'EX'G WALL TOILET'
+
+
+
+Label from UI: 'None : P_Commercial Water Closet'
+
+
+
+Model group type ID: 6836328
+
+
+
+Detail group type ID: None
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'EX'G MOPSINK'
+
+
+
+Label from UI: 'None : P_Sink Fixture - Janitorial, Vertical'
+
+
+
+Model group type ID: 6835454
+
+
+
+Detail group type ID: None
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'EX'G WALL TOILET'
+
+
+
+Label from UI: 'None : P_Commercial Water Closet'
+
+
+
+Model group type ID: 6836328
+
+
+
+Detail group type ID: None
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'NEW URINAL'
+
+
+
+Label from UI: 'None : P_Commercial Urinal'
+
+
+
+Model group type ID: 6836288
+
+
+
+Detail group type ID: None
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'NEW URINAL'
+
+
+
+Label from UI: 'None : P_Commercial Urinal'
+
+
+
+Model group type ID: 6836288
+
+
+
+Detail group type ID: None
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'Locker-Sink-Sloan-Trough-Enclosure'
+
+
+
+Label from UI: 'None : P_Commercial Lavatory ADA'
+
+
+
+Model group type ID: 6836263
+
+
+
+Detail group type ID: None
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'EX'G WALL TOILET'
+
+
+
+Label from UI: 'None : P_Commercial Water Closet'
+
+
+
+Model group type ID: 6836328
+
+
+
+Detail group type ID: None
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'EX'G MOPSINK'
+
+
+
+Label from UI: 'None : P_Sink Fixture - Janitorial, Vertical'
+
+
+
+Model group type ID: 6835454
+
+
+
+Detail group type ID: None
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'EX'G WALL TOILET'
+
+
+
+Label from UI: 'None : P_Commercial Water Closet'
+
+
+
+Model group type ID: 6836328
+
+
+
+Detail group type ID: None
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'Room Name 105C JAN.'
+
+
+
+Label from UI: 'None : P_Electric Water Heater on Floor'
+
+
+
+Model group type ID: 6836855
+
+
+
+Detail group type ID: None
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'Room Name 104C JAN.'
+
+
+
+Label from UI: 'None : P_Electric Water Heater on Floor'
+
+
+
+Model group type ID: 6836855
+
+
+
+Detail group type ID: None
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'Room Name 105B SHOWER'
+
+
+
+Label from UI: 'None : P_Shower Rough-In 2'
+
+
+
+Model group type ID: 6930089
+
+
+
+Detail group type ID: None
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'Room Name 105B SHOWER'
+
+
+
+Label from UI: 'None : P_2 inch (50) Floor Drain, Horizontal with Trap Primer'
+
+
+
+Model group type ID: 6835072
+
+
+
+Detail group type ID: None
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'Room Name 105B SHOWER'
+
+
+
+Label from UI: 'None : P_Shower Rough-In'
+
+
+
+Model group type ID: 6836132
+
+
+
+Detail group type ID: None
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+DEBUG: Found 1 parameters to set for symbol 'Square : Manual Key Note- All Shapes'
+
+
+
+DEBUG: Attempting to set parameter 'CED-G-NOTE #' = ''
+
+
+
+DEBUG: Parameter 'CED-G-NOTE #' storage type: String
+
+
+
+DEBUG: Set 'CED-G-NOTE #' as STRING: ''
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'Room Name 104B SHOWER'
+
+
+
+Label from UI: 'None : P_Shower Rough-In 2'
+
+
+
+Model group type ID: 6930089
+
+
+
+Detail group type ID: None
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'Room Name 104B SHOWER'
+
+
+
+Label from UI: 'None : P_2 inch (50) Floor Drain, Horizontal with Trap Primer'
+
+
+
+Model group type ID: 6835072
+
+
+
+Detail group type ID: None
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'Room Name 104B SHOWER'
+
+
+
+Label from UI: 'None : P_Shower Rough-In'
+
+
+
+Model group type ID: 6836132
+
+
+
+Detail group type ID: None
+
+
+
+
+=== PROCESSING MODEL GROUP PLACEMENT ===
+
+
+
+CAD block: 'Room Name 104B SHOWER'
+
+
+
+Label from UI: 'None : P_Shower Rough-In'
+
+
+
+Model group type ID: 6836132
+
+
+
+Detail group type ID: None

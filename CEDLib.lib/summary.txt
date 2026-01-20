@@ -1,0 +1,38 @@
+Summary of Let There Be YAML updates
+====================================
+1. Shared YAML selection and caching
+   - Added LogicClasses/yaml_path_cache.py and a Select YAML pushbutton so the user sets the active
+     profileData file once per session. Every Let There Be YAML tool now imports the cache helper,
+     reuses the stored path, and updates the cache whenever the file picker returns a new location.
+
+2. Unified logging
+   - All tools now log to a single profileData.log alongside the selected YAML. Log entries include
+     the action name (add, delete, edit, set_xyz_offset, set_rotation_offset, etc.) so auditing is
+     centralized and easier to track.
+
+3. Script updates
+   - Add/Delete/Edit YAML Profiles, Load Equipment Definition, PlaceElements, Set New XYZ Offset,
+     Set New Rotation Offset, and Tag Equipment were refactored to use the cached path and shared
+     log. Each script now honors the cached selection by default, only prompting the user when no
+     path is stored or the file is missing.
+
+4. Tag placement behavior
+   - Load Equipment Definition no longer prompts for target views; tag definitions always map to the
+     active view for faster, predictable tests. PlaceElementsEngine now calls IndependentTag.Create
+     with leader lines enabled, enforcing a consistent tag style across tools.
+
+5. Tag Equipment refinements
+   - Tag Equipment groups tags by family/type, filters hosts strictly by dev-Group ID, and maintains
+     a (host id, tag key) set so each element only receives one instance of a tag. The streamlined
+     placement relies on the updated engine, so leader behavior matches the rest of the suite.
+
+6. Rotation tool improvements
+   - Set New Rotation Offset auto-resolves the linked definition based on the selected element’s
+     label. If multiple matches exist, it picks the exact label match without prompting, eliminating
+     the extra dialog when a CAD profile contains multiple types.
+
+7. Documentation
+   - Added detailed internal (`LetThereBeYamlExplainedDEV.txt`) and user-facing
+     (`LetTheeBeYamlExplainedDesign.txt`) descriptions covering how each button works. The
+     potential-issues list (`LetThereBeYAMLPotentialIssues.txt`) was regenerated to reflect the
+     current toolset.

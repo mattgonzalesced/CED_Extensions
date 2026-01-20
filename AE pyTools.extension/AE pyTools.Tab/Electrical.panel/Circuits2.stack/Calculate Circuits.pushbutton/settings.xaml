@@ -1,0 +1,155 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Calculate Circuits Settings"
+        Height="640"
+        Width="760"
+        MinHeight="460"
+        MinWidth="660"
+        Background="#FFF6F6F6"
+        Foreground="#222"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize"
+        SizeToContent="Manual">
+    <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="3*"/>
+            <ColumnDefinition Width="2.6*"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Minimum Conduit Size" Margin="0,0,8,10" VerticalAlignment="Center"/>
+        <ComboBox x:Name="min_conduit_size_cb" Grid.Row="0" Grid.Column="1" Margin="0,0,8,10" Padding="6" SelectedIndex="0">
+            <ComboBoxItem Content="1/2&#34;" Tag="1/2&#34;"/>
+            <ComboBoxItem Content="3/4&#34;" Tag="3/4&#34;"/>
+        </ComboBox>
+        <TextBlock x:Name="min_conduit_default" Grid.Row="0" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Max Conduit Fill" Margin="0,0,8,10" VerticalAlignment="Center"/>
+        <Grid Grid.Row="1" Grid.Column="1" Margin="0,0,8,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="max_conduit_fill_tb" Grid.Column="0" Padding="6" Tag="Max Conduit Fill"/>
+            <TextBlock x:Name="max_conduit_fill_warn" Grid.Column="1" Text="⚠" Foreground="#D9822B" VerticalAlignment="Center" Visibility="Collapsed" Margin="8,0,0,0" FontSize="14"/>
+        </Grid>
+        <TextBlock x:Name="max_conduit_fill_default" Grid.Row="1" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
+
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Neutral Behavior" Margin="0,0,8,10" VerticalAlignment="Center"/>
+        <ComboBox x:Name="neutral_behavior_cb" Grid.Row="2" Grid.Column="1" Margin="0,0,8,10" Padding="6">
+            <ComboBoxItem Content="Match hot conductors" Tag="match_hot"/>
+            <ComboBoxItem Content="Manual neutral" Tag="manual"/>
+        </ComboBox>
+        <TextBlock x:Name="neutral_behavior_default" Grid.Row="2" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
+
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="Isolated Ground Behavior" Margin="0,0,8,10" VerticalAlignment="Center"/>
+        <ComboBox x:Name="isolated_ground_behavior_cb" Grid.Row="3" Grid.Column="1" Margin="0,0,8,10" Padding="6">
+            <ComboBoxItem Content="Match ground conductors" Tag="match_ground"/>
+            <ComboBoxItem Content="Manual isolated ground" Tag="manual"/>
+        </ComboBox>
+        <TextBlock x:Name="isolated_ground_behavior_default" Grid.Row="3" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
+
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="Wire Material Display" Margin="0,0,8,10" VerticalAlignment="Center"/>
+        <ComboBox x:Name="wire_material_display_cb" Grid.Row="4" Grid.Column="1" Margin="0,0,8,10" Padding="6">
+            <ComboBoxItem Content="Show material for Aluminum only" Tag="al_only"/>
+            <ComboBoxItem Content="Show material for Copper and Aluminum" Tag="all"/>
+        </ComboBox>
+        <TextBlock x:Name="wire_material_display_default" Grid.Row="4" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
+
+        <TextBlock Grid.Row="5" Grid.Column="0" Text="Wire String Separator" Margin="0,0,8,10" VerticalAlignment="Center"/>
+        <ComboBox x:Name="wire_string_separator_cb" Grid.Row="5" Grid.Column="1" Margin="0,0,8,10" Padding="6">
+            <ComboBoxItem Content="Use &quot;+&quot; separators" Tag="plus"/>
+            <ComboBoxItem Content="Use &quot;,&quot; separators" Tag="comma"/>
+        </ComboBox>
+        <TextBlock x:Name="wire_string_separator_default" Grid.Row="5" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
+
+        <TextBlock Grid.Row="6" Grid.Column="0" Text="Max Branch Voltage Drop" Margin="0,0,8,10" VerticalAlignment="Center"/>
+        <Grid Grid.Row="6" Grid.Column="1" Margin="0,0,8,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="max_branch_vd_tb" Grid.Column="0" Padding="6" Tag="Max Branch Voltage Drop"/>
+            <TextBlock x:Name="max_branch_vd_warn" Grid.Column="1" Text="⚠" Foreground="#D9822B" VerticalAlignment="Center" Visibility="Collapsed" Margin="8,0,0,0" FontSize="14"/>
+        </Grid>
+        <TextBlock x:Name="max_branch_vd_default" Grid.Row="6" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
+
+        <TextBlock Grid.Row="7" Grid.Column="0" Text="Max Feeder Voltage Drop" Margin="0,0,8,10" VerticalAlignment="Center"/>
+        <Grid Grid.Row="7" Grid.Column="1" Margin="0,0,8,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="max_feeder_vd_tb" Grid.Column="0" Padding="6" Tag="Max Feeder Voltage Drop"/>
+            <TextBlock x:Name="max_feeder_vd_warn" Grid.Column="1" Text="⚠" Foreground="#D9822B" VerticalAlignment="Center" Visibility="Collapsed" Margin="8,0,0,0" FontSize="14"/>
+        </Grid>
+        <TextBlock x:Name="max_feeder_vd_default" Grid.Row="7" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
+
+        <TextBlock Grid.Row="8" Grid.Column="0" Text="Feeder VD Method" Margin="0,0,8,10" VerticalAlignment="Center"/>
+        <ComboBox x:Name="feeder_vd_method_cb" Grid.Row="8" Grid.Column="1" Margin="0,0,8,10" Padding="6">
+            <ComboBoxItem Content="Demand Load" Tag="demand"/>
+            <ComboBoxItem Content="Connected Load" Tag="connected"/>
+            <ComboBoxItem Content="80% of Breaker" Tag="80_percent"/>
+            <ComboBoxItem Content="100% of Breaker" Tag="100_percent"/>
+        </ComboBox>
+        <TextBlock x:Name="feeder_vd_method_default" Grid.Row="8" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
+
+        <TextBlock Grid.Row="9" Grid.Column="0" Text="Write results to:" Margin="0,0,8,10" VerticalAlignment="Center"/>
+        <StackPanel Grid.Row="9" Grid.Column="1" Margin="0,0,8,10" Orientation="Vertical">
+            <CheckBox x:Name="write_equipment_cb" Content="Electrical Equipment" IsChecked="True" Margin="0,0,0,4"/>
+            <CheckBox x:Name="write_fixtures_cb" Content="Fixtures and Devices" IsChecked="False"/>
+        </StackPanel>
+        <TextBlock x:Name="write_results_default" Grid.Row="9" Grid.Column="2" Margin="0,0,0,10" FontStyle="Italic" Foreground="#5C5C5C"/>
+
+        <StackPanel Grid.Row="10" Grid.ColumnSpan="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,10">
+            <TextBlock x:Name="clear_writeback_alert" Text="⚠" Foreground="#D9822B" Visibility="Collapsed" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="14"/>
+            <Button x:Name="clear_writeback_btn" Content="Clear persistent write-back data" Padding="10,6" HorizontalAlignment="Left"/>
+        </StackPanel>
+
+        <Border Grid.Row="11" Grid.ColumnSpan="3" Margin="0,0,0,10" Padding="8" Background="#FFF0F0F0" BorderBrush="#DDD" BorderThickness="1">
+            <TextBlock x:Name="help_preview" TextWrapping="Wrap" Foreground="#333"/>
+        </Border>
+
+        <Grid Grid.Row="12" Grid.ColumnSpan="3" Margin="0,6,0,0" VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT -->
+            <Button x:Name="help_btn"
+                    Grid.Column="0"
+                    Content="Help"
+                    Padding="14,6"
+                    MinWidth="130"
+                    HorizontalAlignment="Left"/>
+
+            <!-- RIGHT -->
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+                <Button x:Name="reset_btn" Content="Reset to Defaults"
+                        Margin="0,0,8,0" Padding="14,6" MinWidth="130"/>
+                <Button x:Name="cancel_btn" Content="Cancel"
+                        Margin="0,0,8,0" Padding="14,6" MinWidth="90"/>
+                <Button x:Name="save_btn" Content="Save Settings"
+                        Padding="16,6" MinWidth="120"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

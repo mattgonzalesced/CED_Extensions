@@ -1,0 +1,42 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Add Two Integers" Height="240" Width="360">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Row 0: Inputs -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <TextBlock Text="A:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <TextBox x:Name="AInput" Width="100" Margin="0,0,12,0"/>
+            <TextBlock Text="B:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <TextBox x:Name="BInput" Width="100"/>
+        </StackPanel>
+
+        <!-- Row 1: Button -->
+        <Button x:Name="AddButton" Grid.Row="1" Content="Click Me (Add)"
+                Width="140" Height="28"/>
+
+        <!-- Row 2: Status / validation message -->
+        <TextBlock x:Name="StatusText" Grid.Row="2" Margin="0,8,0,8" Foreground="DarkRed"/>
+
+        <!-- Row 3: Results -->
+        <GroupBox Grid.Row="3" Header="Result" Padding="8">
+            <StackPanel>
+                <TextBlock>
+                    <Run Text="A: "/><Run x:Name="AValueText" Text="—"/>
+                </TextBlock>
+                <TextBlock>
+                    <Run Text="B: "/><Run x:Name="BValueText" Text="—"/>
+                </TextBlock>
+                <TextBlock FontWeight="Bold" Margin="0,6,0,0">
+                    <Run Text="A + B = "/><Run x:Name="SumValueText" Text="—"/>
+                </TextBlock>
+            </StackPanel>
+        </GroupBox>
+    </Grid>
+</Window>

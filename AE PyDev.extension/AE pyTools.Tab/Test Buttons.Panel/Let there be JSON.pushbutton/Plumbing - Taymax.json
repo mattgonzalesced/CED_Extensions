@@ -1,0 +1,458 @@
+{
+    "PF_Plan WC": {
+       "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model": [
+            {
+                "P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {},
+                        "OFFSET" : {
+                            "r" : 270
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "PF_Plan ADA Toilet" : {
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model": [
+            {
+                "P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {},
+                        "OFFSET" : {
+                            "r" : 270
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "ADA TOILET"
+    },
+    "PF_Plan Sloan Trough Sink": {
+       "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model": [
+            {
+                "P_Commercial Lavatory ADA": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Locker-Sink-Sloan-Trough-Enclosure"
+    },
+    "PF_Plan Urinal": {
+       "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model": [
+            {
+                "P_Commercial Urinal": {
+                    "P_Default": {
+                        "PARAMETERS": {},
+                        "OFFSET" : {
+                            "r" : 270
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "NEW URINAL"
+    },
+    "PF_Plan Mop Sink": {
+       "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model": [
+            {
+                "P_Sink Fixture - Janitorial, Vertical": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G MOPSINK"
+    },
+    "PF_Plan DF": {
+       "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model": [
+            {
+                "P_Electric Water Cooler - Dual Height": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G ADA DF"
+    },
+    "Floor Drain 1": {
+        "Model": [
+            {
+                "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Floor Drain 1"
+    },
+    "Floor Drain 2": {
+        "Model group": [
+            {
+                "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Floor Drain 2"
+    },
+    "PF_Plan Rinnai HWH": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model": [
+            {
+                "P_Electric Water Heater on Floor": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Water Heater Assembly"
+    },
+    "Inpro 42x36 Shower": {
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model": [
+            {
+                "P_Shower Rough-In": {
+                    "P_Default": {
+                        "PARAMETERS": {},
+                        "OFFSET" :{
+                            "x" : -14,
+                            "y" : 20
+                        }
+                    }
+                }
+            } 
+        ],
+        "Notes": "Showers"
+    },
+    "Inpro 36x36 ADA Shower": {
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model": [
+            {
+                    "P_Shower Rough-In 2": {
+                        "P_Default": {
+                            "PARAMETERS": {},
+                            "OFFSET" :{
+                                "x" : 0,
+                                "y" : 0,
+                                "r" : 270
+                            }
+                        }
+                    }
+                } 
+        ],
+        "Notes": "ADA Showers"
+    },
+    "PF_Plan Floor Drain": {
+        "Model": [
+            {
+                "P_2 inch (50) Floor Drain, Horizontal with Trap Primer": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "Floor Drain"
+    },
+    "Room Name 108 CARDIO": {
+       
+    },
+    "Room Name 109 CIRCUIT": {
+       
+    },
+    "Room Name 105C JAN.": {
+       
+    },
+    "Room Name 105D STORAGE": {
+       
+    },
+    "Room Name 107 MOBILITY ROOM FUNCTIONAL TRAINING/": {
+       
+    },
+    "Room Name 106 UTILITY/STORAGE": {
+       
+    },
+    "Room Name 111 FREE WEIGHTS": {
+       
+    },
+    "Room Name 105 LOCKER ROOM MEN'S": {
+       
+    },
+    "Room Name 105A TOILET": {
+       
+    },
+    "Room Name 110 STRENGTH": {
+       
+    },
+    "Room Name 100 VESTIBULE": {
+       
+    },
+    "Room Name 101A BREAK ROOM EMPLOYEE": {
+       
+    },
+    "Room Name 101B ROOM IT": {
+       
+    },
+    "Room Name 101 RECEPTION": {
+       
+    },
+    "Room Name 102 CHECK-IN": {
+      
+    },
+    "Room Name 103 CARD SPA BLACK": {
+       
+    },
+    "Room Name 103B ANGEL BEAUTY": {
+       
+    },
+    "Room Name 105B SHOWER": {
+       
+    },
+    "Room Name 103C TANNING": {
+       
+    },
+    "Room Name 103E TANNING": {
+       
+    },
+    "Room Name 103F TANNING": {
+       
+    },
+    "Room Name 103G TANNING": {
+       
+    },
+    "Room Name 103A HYDROMASSAGE": {
+       
+    },
+    "Room Name 104 LOCKER ROOM WOMEN'S": {
+       
+    },
+    "Room Name 104B SHOWER": {
+       
+    },
+    "Room Name 104C JAN.": {
+       
+    },
+    "Room Name 104A TOILET": {
+       
+    },
+    "Room Name 104D STORAGE": {
+       
+    },
+    "Room Name 103D HYBRID": {
+       
+    }
+}

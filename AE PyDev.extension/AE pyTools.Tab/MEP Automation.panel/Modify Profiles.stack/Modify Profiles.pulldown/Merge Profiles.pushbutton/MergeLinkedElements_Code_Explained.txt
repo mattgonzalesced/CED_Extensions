@@ -1,0 +1,27 @@
+Merge Linked Elements – Code Explained
+======================================
+
+Purpose
+-------
+Normalize multiple equipment definitions that represent the same physical
+assembly.  Instead of duplicating configurations (GO Checkstand 1 vs 2), this
+tool lets you designate a “truth” definition and clone its structure into other
+definitions without rewriting the placer.
+
+Execution Flow
+--------------
+1. **Load YAML** – Retrieve the active dataset via `load_active_yaml_data`.
+2. **Select Source** – Use `SelectFromList` to pick the authoritative definition.
+3. **Choose Targets** – Present remaining definitions as merge targets; the user
+   can pick any number.
+4. **Copy Fields** – `_copy_fields` clones all keys except `name` and `id` from
+   the source into each target, preserving linked sets, parameters, relations,
+   etc.
+5. **Save** – `save_active_yaml_data` writes the new data with action metadata
+   “Merge Linked Elements,” ensuring undo history captures the change.
+
+Considerations
+--------------
+* IDs remain unique so documentation can still reference individual definitions.
+* Because the placer reads definitions independently, no code change is needed;
+  multiple names now resolve to identical LED lists.

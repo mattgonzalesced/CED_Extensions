@@ -1,0 +1,1890 @@
+{
+    "PF_Plan TV Video Wall": {
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TV Video Wall",
+                            "Symbol Label_CEDT": "TV"
+                        },
+                        "OFFSET" : {
+                            "x" : 0,
+                            "y" : 0
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TV Video Wall",
+                            "Symbol Label_CEDT": "TV"
+                        },
+                        "OFFSET" : {
+                            "x" : 12,
+                            "y" : 0
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TV Video Wall",
+                            "Symbol Label_CEDT": "TV"
+                        },
+                        "OFFSET" : {
+                            "x" : -12,
+                            "y" : 0
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TV Video Wall",
+                            "Symbol Label_CEDT": "TV"
+                        },
+                        "OFFSET" : {
+                            "x" : 24,
+                            "y" : 0
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TV Video Wall",
+                            "Symbol Label_CEDT": "TV"
+                        },
+                        "OFFSET" : {
+                            "x" : -24,
+                            "y" : 0
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TV Video Wall",
+                            "Symbol Label_CEDT": "TV"
+                        },
+                        "OFFSET" : {
+                            "x" : 36,
+                            "y" : 0
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TV Video Wall",
+                            "Symbol Label_CEDT": "TV"
+                        },
+                        "OFFSET" : {
+                            "x" : -36,
+                            "y" : 0
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TV Video Wall",
+                            "Symbol Label_CEDT": "TV"
+                        },
+                        "OFFSET" : {
+                            "x" : 48,
+                            "y" : 0
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF_Plan TV Video Wall",
+                            "Symbol Label_CEDT": "TV"
+                        },
+                        "OFFSET" : {
+                            "x" : -48,
+                            "y" : 0
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" : 20,
+                            "y" : -40
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 40,
+                            "y" : -40
+                        }
+                    }
+                }
+            }
+        ]
+        
+    },
+    "PF_Plan TV": {
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "27TV",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 36,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "27TV": {
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "27TV",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 36,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "27 tv": {
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "27TV",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 36,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "55 tv": {
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "27TV",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 36,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "60 tv": {
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "27TV",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 36,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "43 tv": {
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "43 tv",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 26,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "65tv": {
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "65tv",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "2"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 26,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "70tv": {
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "70tv",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "75TV": {
+        "Data_Devices": [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "75TV",
+                            "Symbol Label_CEDT": "TV"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "6"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "BCS Speaker": {
+        "Data_Devices": [
+            {
+                "DD-U_General Low Voltage Device_CED" : {
+                    "Speaker": {
+                        "PARAMETERS" : {
+                            "dev-Group ID" : "BEAUTYANGEL - Speaker"
+                        }
+                    }
+                }
+            }
+        ],
+        "Notes": "Speaker with electrical"
+    },
+    "BCS_Beauty Angel": {
+        "Data_Devices": [
+            {
+                "DD-U_General Low Voltage Device_CED": {
+                    "Junction Box - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "BEAUTYANGEL - PULLBOX"
+
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "BEAUTYANGEL"
+
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_General Low Voltage Device_CED" : {
+                    "Speaker": {
+                        "PARAMETERS" : {
+                            "dev-Group ID" : "BEAUTYANGEL - Speaker"
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "5"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "BCS_Cryolounge": {
+        "Data_Devices" : [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "CRYO"
+                        },
+                        "OFFSET" :{
+                            "x" : 6,
+                            "y" : 0
+                        }
+                    }
+                }                
+            }
+        ]
+    },
+    "PF_FAN 1": {
+        "Data_Devices" : [
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Ceiling": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Fan 1"
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes" : {
+                    "Square":{
+                        "PARAMETERS" :{
+                            "CED-G-NOTE #": "10"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "BCS_Tanning Bed 42.4": {
+        "Data_Devices": [
+            {
+                "DD-U_General Low Voltage Device_CED": {
+                    "Junction Box - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62A"
+
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62A"
+
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_General Low Voltage Device_CED" : {
+                    "Speaker": {
+                        "PARAMETERS" : {
+                            "dev-Group ID" : "HM62A"
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "5"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "PF Tanning 42-3 TLT PLT": {
+        "Data_Devices": [
+            {
+                "DD-U_General Low Voltage Device_CED": {
+                    "Junction Box - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF Tanning 42-3 TLT PLT"
+
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "PF Tanning 42-3 TLT PLT"
+
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_General Low Voltage Device_CED" : {
+                    "Speaker": {
+                        "PARAMETERS" : {
+                            "dev-Group ID" : "PF Tanning 42-3 TLT PLT"
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "5"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "BCS_Upright Tanning": {
+        "Data_Devices": [
+            {
+                "DD-U_General Low Voltage Device_CED": {
+                    "Junction Box - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62B_Up tanning"
+
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62B_Up tanning"
+
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_General Low Voltage Device_CED" : {
+                    "Speaker": {
+                        "PARAMETERS" : {
+                            "dev-Group ID" : "HM62B_Up tanning"
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "5"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "BCS_Hydro Lounge": {
+        "Data_Devices": [
+            {
+                "DD-U_General Low Voltage Device_CED": {
+                    "Junction Box - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM63C (Hydromassage)"
+                        },
+                        "OFFSET" :{
+                            "x" : 12,
+                            "y" : 0
+                        }
+                    }
+                }                
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "_Skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "4"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "BCS_Hybrid Tanning Booth": {
+        "Data_Devices": [
+            {
+                "DD-U_General Low Voltage Device_CED": {
+                    "Junction Box - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62E Hybrid Tanning Booth"
+
+                        },
+                        "OFFSET" :{
+                            "x" : 18,
+                            "y" : 0
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "HM62E Hybrid Tanning Booth"
+                        },
+                        "OFFSET" :{
+                            "x" : 24,
+                            "y" : 0
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_General Low Voltage Device_CED" : {
+                    "Speaker": {
+                        "PARAMETERS" : {
+                            "dev-Group ID" : "HM62E Hybrid Tanning Booth"
+                        },
+                        "OFFSET" :{
+                            "x" : 30,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "5"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }                        
+                    }
+                }
+            }
+        ]
+    },
+    "Hybrid Light Bed HM62D": {
+        "Data_Devices": [
+            {
+                "DD-U_General Low Voltage Device_CED": {
+                    "Junction Box - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Hybrid Light Bed HM62D"
+                        },
+                        "OFFSET" :{
+                            "x" : 20,
+                            "y" : 0
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Hybrid Light Bed HM62D"
+                        },
+                        "OFFSET" :{
+                            "x" : 30,
+                            "y" : 0
+                        }
+                    }
+                }                
+            },
+            {
+                "DD-U_General Low Voltage Device_CED" : {
+                    "Speaker": {
+                        "PARAMETERS" : {
+                            "dev-Group ID" : "Hybrid Light Bed HM62D"
+                        },
+                        "OFFSET" :{
+                            "x" : 40,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "5"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "PF_Plan Computer": {
+        "Data_Devices": [
+                {
+                    "DD-U_Tele & Data Outlet_CED" : {
+                        "Data - Wall" : {
+                            "PARAMETERS": {
+                                "dev-Group ID": "PF_Plan Computer"
+                            },
+                        "OFFSET" :{
+                            "x" : 10,
+                            "y" : 0
+                        }
+                        }
+                    }
+                }
+        ],
+        "Generic_Annotations": [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "3"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "PF_Plan Phone": {
+        "Data_Devices": [
+                {
+                    "DD-U_Tele & Data Outlet_CED" : {
+                        "Data - Wall" : {
+                            "PARAMETERS": {
+                                "dev-Group ID": "PF_Plan Phone"
+                            }
+                        }
+                    }
+                }
+            ],
+        "Notes": "PF_Plan Phone"
+    },
+    "PF_Plan TMAX": {
+        "Data_Devices": [
+                {
+                    "DD-U_Tele & Data Outlet_CED" : {
+                        "Data - Wall" : {
+                            "PARAMETERS": {
+                                "dev-Group ID": "PF_Plan TMAX"
+                            },
+                        "OFFSET" :{
+                            "x" : 0,
+                            "y" : -70
+                        }
+                        }
+                    }
+                }
+        ],
+        "Generic_Annotations": [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "4"
+                        },
+                        "OFFSET" :{
+                            "x" : 16,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "BCS_SmarteCarte Massage Chair": {
+        "Data_Devices" : [
+            {
+                "DD-U_Tele & Data Outlet_CED" : {
+                    "Data - Floor" : {
+                        "PARAMETERS" : {
+                        "dev-group ID": "SmarteCarte Massage Chair"
+                        },
+                        "OFFSET" :{
+                            "x" : 10,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+        ],
+        "Generic_Annotations": [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "13"
+                        },
+                        "OFFSET":{
+                            "x" : 5,
+                            "y" : 8
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "PF_Plan TV Truss": {
+        "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square" : {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #": "6"
+                        },
+                        "OFFSET" :{
+                            "x" :16,
+                            "y" : 8
+                        }
+                    }
+                }
+            },
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square" : {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #": "15"
+                        },
+                        "OFFSET" :{
+                            "x" : 26,
+                            "y" : 8
+                        }
+                    }
+                }
+            }            
+        ],
+        "Notes": "TV mounting power"
+    },
+    "Room Name 108 CARDIO": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 107A /STORAGE ROOM ELECTRICAL/UTILITY": {
+       "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "13"
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "14"
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "15"
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 109 CIRCUIT": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 105C JAN.": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 101A IT ROOM": {
+        "Data_Devices": [
+            {
+                "DD-U_General Low Voltage Device_CED": {
+                    "VC": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Room Name 101A IT ROOM"
+
+                        },
+                        "OFFSET" : {
+                            "x" : 0,
+                            "y" : 0
+                        }
+                    }
+                }
+            },
+            {
+                "DD-U_General Low Voltage Device_CED": {
+                    "VC": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Room Name 101A IT ROOM"
+                        },
+                        "OFFSET" : {
+                            "x" : 12,
+                            "y" : 0
+                        }
+                    }
+                }
+            },
+            {
+                "DD-U_General Low Voltage Device_CED": {
+                    "AMP": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Room Name 101A IT ROOM"
+                        },
+                        "OFFSET" : {
+                            "x" : -12,
+                            "y" : 0
+                        }
+                    }
+                }
+            },
+            {
+                "DD-U_Tele & Data Outlet_CED": {
+                    "Tele & Data - Wall": {
+                        "PARAMETERS": {
+                            "dev-Group ID": "Room Name 101A IT ROOM"
+                        },
+                        "OFFSET" : {
+                            "x" : -24,
+                            "y" : 0
+                        }
+                    }
+                }
+            }
+
+        ],
+       "Generic_Annotations" : [
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "7"
+                        },
+                        "OFFSET" : {
+                            "x" : 0,
+                            "y" : 24
+                        }
+                    }
+                }
+            },
+
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "12"
+                        },
+                        "OFFSET" : {
+                            "x" : 20,
+                            "y" : 24
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "8"
+                        },
+                        "OFFSET" : {
+                            "x" : 0,
+                            "y" : 48
+                        }
+                    }
+                }
+            },
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "9"
+                        },
+                        "OFFSET" : {
+                            "x" : 20,
+                            "y" : 48
+                        }
+                    }
+                }
+            },
+
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "11"
+                        },
+                        "OFFSET" : {
+                            "x" : 0,
+                            "y" : 72
+                        }
+                    }
+                }
+            },
+
+            {
+                "Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : "10"
+                        },
+                        "OFFSET" : {
+                            "x" : 20,
+                            "y" : 72
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 105D STORAGE": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 107 MOBILITY ROOM FUNCTIONAL TRAINING/": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 106 UTILITY/STORAGE": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 111 FREE WEIGHTS": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 105 LOCKER ROOM MEN'S": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 105A TOILET": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 110 STRENGTH": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 100 VESTIBULE": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 101A BREAK ROOM EMPLOYEE": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 101B ROOM IT": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 101 RECEPTION": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 102 CHECK-IN": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 103 CARD SPA BLACK": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 103B ANGEL BEAUTY": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 105B SHOWER": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 103C TANNING": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 103E TANNING": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 103F TANNING": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 103G TANNING": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 103A HYDROMASSAGE": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 104 LOCKER ROOM WOMEN'S": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 104B SHOWER": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 104A TOILET": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 104D STORAGE": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    },
+    "Room Name 103D HYBRID": {
+       "Generic_Annotations" : [
+            {
+                "_skip Manual Key Note- All Shapes": {
+                    "Square": {
+                        "PARAMETERS": {
+                            "CED-G-NOTE #" : ""
+                        }
+                    }
+                }
+            }
+        ],
+        "Model_Groups": [
+            {
+                "_skip P_Commercial Water Closet": {
+                    "P_Default": {
+                        "PARAMETERS": {}
+                    }
+                }
+            }
+        ],
+        "Notes": "EX'G WALL TOILET"
+    }
+}
