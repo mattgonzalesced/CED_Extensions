@@ -29,6 +29,8 @@ except NameError:
 TRUTH_SOURCE_ID_KEY = "ced_truth_source_id"
 TRUTH_SOURCE_NAME_KEY = "ced_truth_source_name"
 LEVEL_NUMBER_RE = re.compile(r"(?:^|\b)(?:level|lvl|l)\s*0*([0-9]+)\b", re.IGNORECASE)
+PARENT_ID_RE = re.compile(r"parent element(?:id| id)\s*:\s*([0-9]+)", re.IGNORECASE)
+PARENT_ID_KEYS = ("Parent ElementId", "Parent Element ID")
 
 
 def _build_repository(data):
@@ -556,6 +558,43 @@ def _parse_payload_pose(payload_text):
     }
 
 
+def _parent_id_from_params(params):
+    if not params:
+        return None
+    for key in PARENT_ID_KEYS:
+        if key in params:
+            try:
+                return int(params.get(key))
+            except Exception:
+                try:
+                    return int(float(params.get(key)))
+                except Exception:
+                    return None
+    for key in ("Element_Linker Parameter", "Element_Linker"):
+        payload = params.get(key)
+        if not payload:
+            continue
+        match = PARENT_ID_RE.search(str(payload))
+        if match:
+            try:
+                return int(match.group(1))
+            except Exception:
+                return None
+    return None
+
+
+def _parent_id_from_defs(repo, cad_name, labels):
+    for label in labels or []:
+        linked_def = repo.definition_for_label(cad_name, label)
+        if not linked_def:
+            continue
+        params = linked_def.get_static_params() or {}
+        parent_id = _parent_id_from_params(params)
+        if parent_id is not None:
+            return parent_id
+    return None
+
+
 def _get_element_point(elem):
     location = getattr(elem, "Location", None)
     if not location:
@@ -882,6 +921,7 @@ def main():
             missing_labels.append(cad_name)
             continue
         selection_map[cad_name] = labels
+        parent_id_from_yaml = _parent_id_from_defs(repo, cad_name, labels)
         group_key = child_to_group.get(cad_name) or cad_name
         any_row = False
         for match in matches:
@@ -918,13 +958,14 @@ def main():
                         else:
                             missing_levels.append((cad_name, "(no level info)"))
                         continue
-            row_key = _placement_key(point, rotation, level_id_val, match.get("parent_element_id"))
+            parent_id = parent_id_from_yaml if parent_id_from_yaml is not None else match.get("parent_element_id")
+            row_key = _placement_key(point, rotation, level_id_val, parent_id)
             if row_key in seen_rows:
                 deduped_rows += 1
                 continue
             if row_key is not None:
                 seen_rows.add(row_key)
-            rows.append(_build_row(cad_name, point, rotation, match.get("parent_element_id"), level_id_val))
+            rows.append(_build_row(cad_name, point, rotation, parent_id, level_id_val))
             any_row = True
         if any_row:
             placed_defs.add(cad_name)

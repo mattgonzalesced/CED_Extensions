@@ -1130,13 +1130,14 @@ def main():
                         else:
                             missing_levels.append((cad_name, "(no level info)"))
                         continue
-            row_key = _placement_key(point, rotation, level_id_val, match.get("parent_element_id"))
+            parent_id = parent_id_from_yaml if parent_id_from_yaml is not None else match.get("parent_element_id")
+            row_key = _placement_key(point, rotation, level_id_val, parent_id)
             if row_key in seen_rows:
                 deduped_rows += 1
                 continue
             if row_key is not None:
                 seen_rows.add(row_key)
-            rows.append(_build_row(cad_name, point, rotation, match.get("parent_element_id"), level_id_val))
+            rows.append(_build_row(cad_name, point, rotation, parent_id, level_id_val))
             any_row = True
         if any_row:
             placed_defs.add(cad_name)
