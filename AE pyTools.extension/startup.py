@@ -116,7 +116,7 @@ def _get_doc_key(doc):
     try:
         return doc.PathName or doc.Title
     except Exception:
-    return None
+        return None
 
 
 def _get_env(name, default=None):
