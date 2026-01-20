@@ -1020,7 +1020,9 @@ def main():
         if selected_categories:
             filtered_labels = []
             for label in labels:
-                cat_name = _get_category_name_from_label(doc, label)
+                linked_def = repo.definition_for_label(cad_name, label)
+                yaml_cat = linked_def.get_category() if linked_def else None
+                cat_name = yaml_cat or _get_category_name_from_label(doc, label)
                 if cat_name and cat_name in selected_categories:
                     filtered_labels.append(label)
                     LOG.debug("Including label '{}' - category '{}' in selected".format(label, cat_name))

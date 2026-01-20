@@ -31,26 +31,19 @@ def _format_scalar(value):
     if isinstance(value, (int, float)):
         return str(value)
     text = value if isinstance(value, basestring) else str(value)
-    text = text.replace(SAFE_HASH, "#")
     if text == "":
         return '""'
     needs_quotes = any(ch in text for ch in (":", "#", "{", "}", "[", "]", ",", "\n", "\r"))
     if text.lower() in ("true", "false", "null"):
         needs_quotes = True
     if needs_quotes:
-        return '"' + text.replace('"', '\\"') + '"'
-    return text
-
-
-def _emit_multiline_block(text, indent):
-    pad = " " * indent
-    lines = ["{}|".format(pad)]
-    if text:
-        for line in text.replace(SAFE_HASH, "#").splitlines():
-            lines.append("{}  {}".format(pad, line))
-    else:
-        lines.append("{}  ".format(pad))
-    return lines
+        text = text.replace(SAFE_HASH, "#")
+        text = text.replace("\\", "\\\\")
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+        text = text.replace("\n", "\\n")
+        text = text.replace('"', '\\"')
+        return '"' + text + '"'
+    return text.replace(SAFE_HASH, "#")
 
 
 def _dump_yaml_lines(value, indent=0):
@@ -62,14 +55,6 @@ def _dump_yaml_lines(value, indent=0):
             if isinstance(val, (dict, list)):
                 lines.append("{}{}:".format(pad, clean_key))
                 lines.extend(_dump_yaml_lines(val, indent + 2))
-            elif isinstance(val, basestring) and ("\n" in val or "\r" in val):
-                lines.append("{}{}: |".format(pad, clean_key))
-                body = val.replace(SAFE_HASH, "#").splitlines()
-                if not body:
-                    lines.append("{}  ".format(pad))
-                else:
-                    for line in body:
-                        lines.append("{}  {}".format(pad, line))
             else:
                 lines.append("{}{}: {}".format(pad, clean_key, _format_scalar(val)))
         if not lines:
@@ -84,14 +69,6 @@ def _dump_yaml_lines(value, indent=0):
             if isinstance(item, (dict, list)):
                 lines.append("{}-".format(pad))
                 lines.extend(_dump_yaml_lines(item, indent + 2))
-            elif isinstance(item, basestring) and ("\n" in item or "\r" in item):
-                lines.append("{}- |".format(pad))
-                body = item.replace(SAFE_HASH, "#").splitlines()
-                if not body:
-                    lines.append("{}  ".format(pad))
-                else:
-                    for line in body:
-                        lines.append("{}  {}".format(pad, line))
             else:
                 lines.append("{}- {}".format(pad, _format_scalar(item)))
         return lines
