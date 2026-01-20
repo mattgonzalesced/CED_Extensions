@@ -1052,6 +1052,8 @@ class PlaceElementsEngine(object):
                 parent_element = self.doc.GetElement(ElementId(int(parent_element_id)))
             except Exception:
                 parent_element = None
+        if parent_element_id not in (None, "") and parent_element is None:
+            return False
 
         label = linked_def.get_element_def_id()
         family = linked_def.get_family()
