@@ -40,6 +40,9 @@ Access via **Calculate Circuits Settings**. Defaults are italic/gray; user selec
 - **Neutral Behavior**
   - Determines how neutrals are sized when in manual override mode (in automatic mode, neutral size always matches the hot size).
   - Options: `[Match hot conductors]` neutral matches hots; `[Manual Neutral]` user specifies neutral independently in manual mode.
+- **Isolated Ground Behavior**
+  - Controls how isolated grounds size when in manual override mode (automatic mode always matches the equipment ground).
+  - Options: `[Match ground conductors]` isolated ground size mirrors equipment ground; `[Manual Isolated Ground]` user specifies isolated ground size independently in manual mode.
 - **Max Branch Voltage Drop**
   - Target maximum voltage drop for branch circuits. In automatic mode, calculated sizes will grow until this threshold is met. In manual override mode, the tool will alert the user if this threshold is exceeded.
 - **Max Feeder Voltage Drop**
@@ -49,6 +52,12 @@ Access via **Calculate Circuits Settings**. Defaults are italic/gray; user selec
   - Options: `[80% of Breaker]`, `[100% of Breaker]`, `[Demand Load]`, `[Connected Load]`. If demand exceeds the breaker percentage options, the higher demand governs.
 - **Write Results (Equipment / Fixtures & Devices)**
   - When enabled, calculated values write back to downstream elements. Disabling either option prompts to clear stored circuit data from that category.
+- **Wire Material Display**
+  - Controls when the wire material suffix is shown in wire size strings.
+  - Options: `[Show material for Aluminum only]` and `[Show material for Copper and Aluminum]`.
+- **Wire String Separator**
+  - Controls the separator used in wire size strings.
+  - Options: `[Use "+" separators]` or `[Use "," separators]`.
 
 ## Voltage Drop Behavior
 - Branch circuits always use connected load for VD calculations.
@@ -100,6 +109,32 @@ Access via **Calculate Circuits Settings**. Defaults are italic/gray; user selec
     - (Design) message
 - Developer logging can be toggled separately from user-facing alerts.
 
+### Standard Alerts Reference
+The following alerts are available during Calculate Circuits runs:
+
+| Alert ID | Severity | Meaning | Tool action |
+| --- | --- | --- | --- |
+| Overrides.InvalidCircuitProperty | None | A user-specified property (wire material, temperature, insulation, conduit type) was invalid. | Resets the property to the configured default and continues. |
+| Overrides.InvalidEquipmentGround | None | A user-specified equipment ground size was invalid. | Replaces the override with NEC 250.122 sizing. |
+| Overrides.InvalidServiceGround | None | A user-specified service ground size was invalid. | Replaces the override with NEC 250.102(c) sizing. |
+| Overrides.InvalidHotWire | None | A user-specified hot conductor size was invalid. | Reverts to the calculated hot size. |
+| Overrides.InvalidConduit | None | A user-specified conduit size was invalid. | Reverts to the calculated conduit size. |
+| Overrides.InvalidIsolatedGround | None | A user-specified isolated ground size was invalid. | Uses the equipment ground size instead. |
+| Design.NonStandardOCPRating | Medium | The breaker rating is non-standard. | Uses the next standard breaker size for calculations. |
+| Design.BreakerLugSizeLimitOverride | Medium | User override exceeds recommended lug size for the breaker. | Keeps the override but flags a design warning. |
+| Design.BreakerLugQuantityLimitOverride | Medium | User override exceeds recommended parallel set limit for the breaker. | Keeps the override but flags a design warning. |
+| Calculations.BreakerLugSizeLimit | Medium | Calculated hot size exceeds recommended lug size for the breaker. | Keeps the calculated value and flags a design warning. |
+| Calculations.BreakerLugQuantityLimit | Medium | Calculated parallel set count exceeds recommended lug limit for the breaker. | Limits set count to the recommended maximum. |
+| Design.ExcessiveConduitFill | Medium | User-specified conduit size exceeds the max fill target. | Keeps the override but flags a design warning. |
+| Design.UndersizedWireEGC | High | User-specified equipment ground size is undersized per NEC 250.122. | Keeps the override but flags a high-severity warning. |
+| Design.UndersizedWireServiceGround | High | User-specified service ground size is undersized per NEC 250.102. | Keeps the override but flags a high-severity warning. |
+| Design.ExcessiveVoltDrop | Medium | User-specified wire fails the voltage drop check. | Keeps the override but flags a design warning. |
+| Design.InsufficientAmpacity | High | User-specified wire fails ampacity check versus circuit load. | Keeps the override but flags a high-severity warning. |
+| Design.InsufficientAmpacityBreaker | High | User-specified wire fails ampacity check versus breaker rating. | Keeps the override but flags a high-severity warning. |
+| Design.UndersizedOCP | High | User-specified breaker rating is undersized relative to circuit load. | Keeps the override but flags a high-severity warning. |
+| Calculations.WireSizingFailed | Critical | Automatic wire sizing failed. | Marks calculation failed and outputs a critical alert. |
+| Calculations.ConduitSizingFailed | Critical | Automatic conduit sizing failed. | Marks calculation failed and outputs a critical alert. |
+
 ## Manual Mode Tips
 - Keep materials/insulation/temperature valid so ampacity/VD use the intended tables.
 - Use clearing tokens intentionally; they stay stored for future runs and drive circuit type/conduit-only behavior.
@@ -146,4 +181,3 @@ Access via **Calculate Circuits Settings**. Defaults are italic/gray; user selec
 - Review grouped alerts at the end of a run for any circuit. Critical alerts indicate sizing could not complete.
 - If values look wrong, confirm materials/insulation are valid and that clearing tokens were not left unintentionally.
 - Ensure downstream write-back is enabled if you expect parameters on equipment/fixtures to update.
-
