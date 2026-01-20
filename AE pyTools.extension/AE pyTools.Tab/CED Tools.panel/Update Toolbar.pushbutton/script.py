@@ -114,27 +114,9 @@ def main():
                    exitscript=True
                )
 
-   # 7) Run the updater from %TEMP% and capture output
+   # 7) Run the updater from %TEMP% (fire-and-forget)
    try:
-       psi = ProcessStartInfo()
-       psi.FileName = tmp_exe
-       psi.UseShellExecute = False
-       psi.CreateNoWindow = True
-       psi.RedirectStandardOutput = True
-       psi.RedirectStandardError = True
-
-       proc = Process.Start(psi)
-       stdout = proc.StandardOutput.ReadToEnd()
-       stderr = proc.StandardError.ReadToEnd()
-       proc.WaitForExit()
-
-       if proc.ExitCode != 0:
-           forms.alert(
-               "Updater failed (exit {}).\n\nSTDOUT:\n{}\n\nSTDERR:\n{}".format(
-                   proc.ExitCode, stdout, stderr
-               ),
-               exitscript=True
-           )
+       Process.Start(tmp_exe)
    except Exception as run_err:
        forms.alert(
            "Failed to start updater:\n{}\n\n{}".format(tmp_exe, run_err),
