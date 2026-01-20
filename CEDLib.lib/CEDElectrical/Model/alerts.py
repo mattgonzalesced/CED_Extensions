@@ -96,10 +96,13 @@ class NoticeCollector(object):
             sev_key = severity.upper() if severity else "NONE"
             color = severity_colors.get(sev_key)
             rendered = message
+            if color and sev_key == "CRITICAL":
+                rendered = "<span style=\"color:{}\"><strong>{}</strong></span>".format(color, message)
+                lines.append("  - (**{}**) **{}**".format(label, rendered))
+                continue
             if color:
                 rendered = "<span style=\"color:{}\">{}</span>".format(color, message)
             lines.append("  - (**{}**) {}".format(label, rendered))
-
         return lines
 
 
@@ -142,6 +145,13 @@ class Alerts(object):
     def InvalidConduit(override_value):
         return {
             "definition": get_alert_definition("overrides_invalid_conduit"),
+            "data": {"override_value": override_value},
+        }
+
+    @staticmethod
+    def InvalidIsolatedGround(override_value):
+        return {
+            "definition": get_alert_definition("overrides_invalid_isolated_ground"),
             "data": {"override_value": override_value},
         }
 
@@ -233,6 +243,18 @@ class Alerts(object):
                 "wire_size": wire_size,
                 "circuit_ampacity": circuit_ampacity,
                 "circuit_load_current": circuit_load_current,
+            },
+        }
+
+    @staticmethod
+    def InsufficientAmpacityBreaker(wire_sets, wire_size, circuit_ampacity, breaker_rating):
+        return {
+            "definition": get_alert_definition("design_insufficient_ampacity_breaker"),
+            "data": {
+                "wire_sets": wire_sets,
+                "wire_size": wire_size,
+                "circuit_ampacity": circuit_ampacity,
+                "breaker_rating": int(round(breaker_rating)),
             },
         }
 

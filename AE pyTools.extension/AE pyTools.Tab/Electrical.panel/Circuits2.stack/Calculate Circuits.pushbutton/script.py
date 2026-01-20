@@ -337,6 +337,7 @@ def main():
         branch.calculate_hot_wire_size()
         branch.calculate_neutral_wire_size()
         branch.calculate_ground_wire_size()
+        branch.calculate_isolated_ground_wire_size()
         branch.calculate_conduit_size()
         branches.append(branch)
 
