@@ -4,7 +4,8 @@
       "Bash(python:*)",
       "Bash(grep:*)",
       "Bash(sed:*)",
-      "Read(//c/Users/m.gonzales/OneDrive - CoolSys Inc/Desktop/python/Cutsheet Scraping - H-E-B/Project Mates.pushbutton/**)"
+      "Read(//c/Users/m.gonzales/OneDrive - CoolSys Inc/Desktop/python/Cutsheet Scraping - H-E-B/Project Mates.pushbutton/**)",
+      "Read(//c/Users/m.gonzales/OneDrive - CoolSys Inc/Desktop/REVIT/MG_tools/MG pyTools.extension/MG_Tools.tab/MG_Panel.panel/MG_pulldown.pulldown/ExtractLightingFixtures.pushbutton/**)"
     ],
     "deny": [],
     "ask": []
