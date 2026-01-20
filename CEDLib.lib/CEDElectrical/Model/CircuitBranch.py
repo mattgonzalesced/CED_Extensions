@@ -11,7 +11,6 @@ from CEDElectrical.Model.circuit_settings import (
     CircuitSettings,
     FeederVDMethod,
     NeutralBehavior,
-    IsolatedGroundBehavior,
 )
 from CEDElectrical.refdata.ampacity_table import WIRE_AMPACITY_TABLE
 from CEDElectrical.refdata.conductor_area_table import CONDUCTOR_AREA_TABLE
@@ -275,11 +274,9 @@ class CircuitBranch(object):
         self._wire_hot_size_override = None
         self._wire_neutral_size_override = None
         self._wire_ground_size_override = None
-        self._wire_ig_size_override = None
         self._conduit_type_override = None
         self._conduit_size_override = None
         self._user_clear_hot = False
-        self._user_clear_ground = False
         self._user_clear_conduit = False
 
         neutral_expected = self._expected_neutral_qty() > 0
@@ -300,9 +297,6 @@ class CircuitBranch(object):
         # prep pipeline
         self._load_core_inputs()
         self._load_overrides()
-        self._wire_info = self._get_wire_info_for_rating()
-        self._base_cable_defaults = CableSet.from_defaults(self._wire_info)
-        self._base_conduit_defaults = ConduitRun.from_defaults(self._wire_info)
         self._validate_overrides()
         self._setup_structural_quantities()
 
@@ -526,9 +520,9 @@ class CircuitBranch(object):
             logger.debug("_load_core_inputs flags failed for {}: {}".format(self.name, e))
 
         # wire info defaults
-        self._wire_info = None
-        self._base_cable_defaults = None
-        self._base_conduit_defaults = None
+        self._wire_info = self._get_wire_info_for_rating()
+        self._base_cable_defaults = CableSet.from_defaults(self._wire_info)
+        self._base_conduit_defaults = ConduitRun.from_defaults(self._wire_info)
 
     def _get_wire_info_for_rating(self):
         if not self.is_power_circuit:
@@ -570,13 +564,10 @@ class CircuitBranch(object):
             except Exception:
                 material_preference = None
 
-        if material_preference not in ("CU", "AL"):
-            material_preference = None
-
         chosen = self._select_material_defaults(material_preference, self._wire_info_by_material)
-        if chosen is None and material_preference == "AL":
+        if chosen is None and material_preference and material_preference != "CU":
             self.log_warning(
-                "Breaker {} has no defaults for {}; using copper defaults instead.".format(
+                "Breaker {} has no defaults for {}; using copper baseline instead.".format(
                     rating_key, material_preference
                 )
             )
@@ -587,9 +578,19 @@ class CircuitBranch(object):
     def _select_material_defaults(self, preferred_material, material_map):
         if not isinstance(material_map, dict):
             return material_map
-        if preferred_material:
-            return material_map.get(preferred_material)
-        return material_map.get("CU")
+        preferred_key = (preferred_material or "").upper() if preferred_material else None
+
+        for key in (preferred_key, "CU", "AL"):
+            if not key:
+                continue
+            selected = material_map.get(key)
+            if selected:
+                return selected
+        # return first non-None entry
+        for val in material_map.values():
+            if val:
+                return val
+        return None
 
     def _load_overrides(self):
         try:
@@ -625,9 +626,6 @@ class CircuitBranch(object):
                 )
                 self._wire_ground_size_override = self._get_param_value(
                     SHARED_PARAMS['CKT_Wire Ground Size_CEDT']['GUID']
-                )
-                self._wire_ig_size_override = self._get_param_value(
-                    SHARED_PARAMS['CKT_Wire Isolated Ground Size_CEDT']['GUID']
                 )
         except Exception as e:
             logger.debug("_load_overrides failed for {}: {}".format(self.name, e))
@@ -741,23 +739,15 @@ class CircuitBranch(object):
                 self._conduit_size_override = norm
 
         self._user_clear_hot = False
-        self._user_clear_ground = False
         self._user_clear_conduit = False
 
         def _check_size(name, attr, warn_user=True, neutral_expected_flag=False):
             raw = getattr(self, attr)
-            if raw is None or raw == "":
-                setattr(self, attr, None)
+            if raw is None:
                 return
             if self._is_clear_token(raw):
-                if name == "hot":
-                    self._user_clear_hot = True
-                    setattr(self, attr, "-")
-                elif name == "ground":
-                    self._user_clear_ground = True
-                    setattr(self, attr, "-")
-                else:
-                    setattr(self, attr, None)
+                setattr(self, "_user_clear_{}".format(name), True)
+                setattr(self, attr, "-")
                 return
             if name == "neutral" and not neutral_expected_flag:
                 setattr(self, attr, None)
@@ -785,11 +775,6 @@ class CircuitBranch(object):
             setattr(self, attr, norm)
 
         _check_size("hot", "_wire_hot_size_override", warn_user=self._auto_calculate_override)
-        if self._user_clear_hot:
-            self._wire_neutral_size_override = None
-            self._wire_ground_size_override = "-"
-            self._wire_ig_size_override = "-"
-            return
         neutral_expected = neutral_expected and not self._user_clear_hot
         _check_size(
             "neutral",
@@ -798,28 +783,6 @@ class CircuitBranch(object):
             neutral_expected_flag=neutral_expected,
         )
         _check_size("ground", "_wire_ground_size_override", warn_user=self._auto_calculate_override)
-        if self._user_clear_ground:
-            self._wire_ig_size_override = "-"
-        ig_expected = self._include_isolated_ground and not self._user_clear_hot and not self._user_clear_ground
-        if not ig_expected:
-            self._wire_ig_size_override = "-" if self._user_clear_ground else None
-        elif self._wire_ig_size_override is not None:
-            raw = self._wire_ig_size_override
-            if raw == "":
-                self._wire_ig_size_override = None
-            elif self._is_clear_token(raw):
-                self._wire_ig_size_override = "-" if self._user_clear_ground else None
-            else:
-                norm = self._normalize_wire_size(raw)
-                if norm not in CONDUCTOR_AREA_TABLE:
-                    if self._auto_calculate_override:
-                        self.log_warning(
-                            Alerts.InvalidIsolatedGround(raw),
-                            category="Overrides",
-                        )
-                    self._wire_ig_size_override = None
-                else:
-                    self._wire_ig_size_override = norm
 
         # Manual-only validations below
         if not self._auto_calculate_override:
@@ -917,10 +880,6 @@ class CircuitBranch(object):
             self.cable.temp_c = None
             self.cable.insulation = None
             return
-
-        if self._user_clear_ground:
-            self.cable.ground_qty = 0
-            self.cable.ig_qty = 0
 
         material_value, temp_c, insulation_value = self._resolve_wire_specs()
         self.cable.material = material_value
@@ -1253,14 +1212,10 @@ class CircuitBranch(object):
 
     @property
     def ground_wire_size(self):
-        if self._user_clear_hot or self._user_clear_ground:
-            return "-"
         return self._format_wire_size(self.cable.ground_size)
 
     @property
     def isolated_ground_wire_size(self):
-        if self._user_clear_hot or self._user_clear_ground:
-            return "-"
         if self.isolated_ground_wire_quantity == 0:
             return ""
         return self._format_wire_size(self.cable.ig_size)
@@ -1399,10 +1354,6 @@ class CircuitBranch(object):
             self.cable.ground_size = None
             return
 
-        if self._user_clear_ground:
-            self.cable.ground_size = None
-            return
-
         # USER OVERRIDE
         if self._auto_calculate_override and self._wire_ground_size_override:
             if self._try_override_ground_size():
@@ -1432,40 +1383,10 @@ class CircuitBranch(object):
         # Track upsizing if the hots grew for voltage-drop/ampacity reasons
         self._upsize_ground_for_voltage_drop()
 
+        if self.cable.ig_qty:
+            self.cable.ig_size = self.cable.ground_size
+
         self._check_ground_design_limits()
-
-    def calculate_isolated_ground_wire_size(self):
-        if self.cable.cleared or self.calc_failed:
-            self.cable.ig_size = None
-            return
-
-        if self.cable.ig_qty == 0:
-            self.cable.ig_size = None
-            return
-
-        behavior = getattr(
-            self.settings,
-            "isolated_ground_behavior",
-            IsolatedGroundBehavior.MATCH_GROUND,
-        )
-
-        if not self._auto_calculate_override:
-            self.cable.ig_size = self.cable.ground_size
-            return
-
-        if behavior == IsolatedGroundBehavior.MATCH_GROUND:
-            self.cable.ig_size = self.cable.ground_size
-            return
-
-        if behavior == IsolatedGroundBehavior.MANUAL:
-            if self._try_override_isolated_ground_size():
-                return
-
-        if self._auto_calculate_override and self._wire_ig_size_override:
-            if self._try_override_isolated_ground_size():
-                return
-
-        self.cable.ig_size = self.cable.ig_size or self.cable.ground_size
 
     def _calculate_service_ground_size(self):
         hot_size = self.cable.hot_size
@@ -1482,6 +1403,8 @@ class CircuitBranch(object):
 
         service_ground = self._lookup_service_ground_size(hot_size, material)
         self.cable.ground_size = service_ground
+        if self.cable.ig_qty:
+            self.cable.ig_size = self.cable.ground_size
 
     def calculate_conduit_size(self):
         """Size conduit (or apply override) using CableSet + ConduitRun."""
@@ -1572,14 +1495,9 @@ class CircuitBranch(object):
             total_amp = ampacity * sets
 
             # Accept override even if it fails VD or breaker, but warn
-            circuit_load_current = self.circuit_load_current
-            if circuit_load_current is not None and circuit_load_current > 0 and total_amp < circuit_load_current:
+            if not self._is_ampacity_acceptable(rating, total_amp, self.circuit_load_current):
                 self.log_warning(
-                    Alerts.InsufficientAmpacity(sets, "#{}".format(w), total_amp, circuit_load_current),
-                )
-            elif not self._is_ampacity_acceptable(rating, total_amp, circuit_load_current):
-                self.log_warning(
-                    Alerts.InsufficientAmpacityBreaker(sets, "#{}".format(w), total_amp, rating),
+                    Alerts.InsufficientAmpacity(sets, "#{}".format(w), total_amp, self.circuit_load_current),
                 )
 
             vd = self._safe_voltage_drop_calc(w, sets)
@@ -1627,6 +1545,8 @@ class CircuitBranch(object):
 
         if override in ALLOWED_WIRE_SIZES:
             self.cable.ground_size = override
+            if self.cable.ig_qty:
+                self.cable.ig_size = override
             return True
 
         alert = (
@@ -1635,25 +1555,6 @@ class CircuitBranch(object):
             else Alerts.InvalidEquipmentGround(self._wire_ground_size_override)
         )
         self.log_warning(alert)
-        return False
-
-    def _try_override_isolated_ground_size(self):
-        override = self._normalize_wire_size(self._wire_ig_size_override)
-        if not override:
-            return False
-        if self._is_clear_token(override):
-            return False
-
-        if override in ALLOWED_WIRE_SIZES:
-            self.cable.ig_size = override
-            return True
-
-        self.log_warning(
-            "Isolated ground size override '{}' invalid; using calculated isolated ground size.".format(
-                self._wire_ig_size_override
-            ),
-            category="Overrides",
-        )
         return False
 
     def _auto_hot_sizing(self, rating):
@@ -1694,15 +1595,7 @@ class CircuitBranch(object):
 
         while sets <= max_sets and not solution_found:
             start_index = 0
-            min_index = None
-            if sets > base_sets:
-                min_index = self._wire_index("1/0")
-                for i, (w, _) in enumerate(wire_set):
-                    if w == "1/0":
-                        start_index = i
-                        break
-            elif base_wire:
-                min_index = self._wire_index(base_wire)
+            if base_wire:
                 for i, (w, _) in enumerate(wire_set):
                     if w == base_wire:
                         start_index = i
@@ -1714,9 +1607,6 @@ class CircuitBranch(object):
             for wire, ampacity in wire_set[start_index:]:
                 if wire not in ALLOWED_WIRE_SIZES:
                     continue
-                if min_index is not None and min_index != -1:
-                    if self._wire_index(wire) < min_index:
-                        continue
 
                 over_soft_limit = False
                 if max_feeder_size and self._is_wire_larger_than_limit(wire, max_feeder_size):
@@ -1914,19 +1804,6 @@ class CircuitBranch(object):
     # -----------------------------------------------------------------
     # Wire / conduit callout strings
     # -----------------------------------------------------------------
-    def _get_wire_material_suffix(self, include_parens=False):
-        material = (self.wire_material or "").strip().upper()
-        if not material:
-            return ""
-        display_mode = getattr(self.settings, "wire_material_display", "al_only")
-        if display_mode == "all":
-            suffix = material
-        else:
-            suffix = material if material != "CU" else ""
-        if not suffix:
-            return ""
-        return " ({})".format(suffix) if include_parens else suffix
-
     def get_wire_set_string(self):
         if self.cable.cleared or self.calc_failed:
             return "-"
@@ -1965,12 +1842,13 @@ class CircuitBranch(object):
         if ig_qty and ig_size:
             parts.append("{}{}{}IG".format(ig_qty, wp, ig_size))
 
-        separator_setting = getattr(self.settings, "wire_string_separator", "comma")
-        separator = " + " if separator_setting == "plus" else ", "
-        final = separator.join(parts)
+        material = self.wire_material or ""
+        suffix = material if material.upper() != "CU" else ""
+
+        final = " + ".join(parts)
         if not final:
             return "-"
-        return final
+        return "{} {}".format(final, suffix) if suffix else final
 
     def get_wire_size_callout(self):
         if self.cable.cleared or self.calc_failed:
@@ -1980,10 +1858,9 @@ class CircuitBranch(object):
         wire_str = self.get_wire_set_string()
         if wire_str == "-":
             return "-"
-        suffix = self._get_wire_material_suffix(include_parens=True)
         if sets > 1:
-            return "({}) {}{}".format(sets, wire_str, suffix)
-        return "{}{}".format(wire_str, suffix)
+            return "({}) {}".format(sets, wire_str)
+        return wire_str
 
     def get_conduit_and_wire_size(self):
         if (self.conduit.cleared or self.calc_failed) and (self.cable.cleared or self.calc_failed):
@@ -2004,9 +1881,7 @@ class CircuitBranch(object):
         if wire_callout == "-":
             return "{}{}".format(prefix, conduit_str)
 
-        suffix = self._get_wire_material_suffix(include_parens=False)
-        material_suffix = " {}".format(suffix) if suffix else ""
-        return "{}{}-({}){}".format(prefix, conduit_str, wire_callout, material_suffix)
+        return "{}{}-({})".format(prefix, conduit_str, wire_callout)
 
     # -----------------------------------------------------------------
     # Utility helpers
@@ -2275,11 +2150,6 @@ class CircuitBranch(object):
 
         if not actual_hot_cmil or not base_hot_cmil:
             return
-
-        if base_hot_size:
-            base_vd = self._safe_voltage_drop_calc(base_hot_size, base_sets)
-            if base_vd is not None and base_vd <= self.max_voltage_drop:
-                return
 
         actual_total_hot = actual_hot_cmil * hot_qty * (self.cable.sets or 1)
         base_total_hot = base_hot_cmil * hot_qty * base_sets

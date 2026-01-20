@@ -146,13 +146,6 @@ class Alerts(object):
         }
 
     @staticmethod
-    def InvalidIsolatedGround(override_value):
-        return {
-            "definition": get_alert_definition("overrides_invalid_isolated_ground"),
-            "data": {"override_value": override_value},
-        }
-
-    @staticmethod
     def NonStandardOCPRating(breaker_size, next_size):
         return {
             "definition": get_alert_definition("design_non_standard_ocp_rating"),
@@ -240,18 +233,6 @@ class Alerts(object):
                 "wire_size": wire_size,
                 "circuit_ampacity": circuit_ampacity,
                 "circuit_load_current": circuit_load_current,
-            },
-        }
-
-    @staticmethod
-    def InsufficientAmpacityBreaker(wire_sets, wire_size, circuit_ampacity, breaker_rating):
-        return {
-            "definition": get_alert_definition("design_insufficient_ampacity_breaker"),
-            "data": {
-                "wire_sets": wire_sets,
-                "wire_size": wire_size,
-                "circuit_ampacity": circuit_ampacity,
-                "breaker_rating": int(round(breaker_rating)),
             },
         }
 
