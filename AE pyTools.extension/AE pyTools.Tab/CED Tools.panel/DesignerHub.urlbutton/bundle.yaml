@@ -1,0 +1,26 @@
+title: 
+  en_us: Designer Hub
+tooltip: 
+  en_us: >-
+    Version = 1.0
+
+    Date    = 01.01.2025
+    ________________________________________________________________
+    Description:
+
+    Opens the CED Designer Hub page. Here you can:
+    
+       -> Report bugs and issues
+    
+       -> submit ideas or requests
+    
+       -> Access training material, tutorials and documentation
+    
+    
+    ________________________________________________________________
+
+hyperlink: "https://coolsysinc.sharepoint.com/sites/ToolDevelopment-Public"
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: false
+  full_frame: false

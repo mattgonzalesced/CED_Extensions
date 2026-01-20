@@ -131,7 +131,7 @@ class FamilyTypePlacer(object):
                         else:
                             self._place_in_model_view(family_symbol, placement_point)
                     except Exception as place_exception:
-                        logger.debug("Failed to place {}: {}".format(family_symbol, str(place_exception)))
+                         logger.debug("Failed to place {}: {}".format(family_symbol, str(place_exception)))
                 y_offset_feet -= 5.0
             self.document.Regenerate()
 
@@ -147,7 +147,7 @@ class FamilyTypePlacer(object):
             self.view_information.get_level(),
             DB.Structure.StructuralType.NonStructural
         )
-        logger.debug("Placed model family: {} at {}".format(symbol.Name, point))
+        logger.debug("Placed model family: {} at {}".format(DB.Element.Name.__get__(symbol), point))
 
     def _place_in_drafting_view(self, symbol, point):
         self.document.Create.NewFamilyInstance(
@@ -155,7 +155,7 @@ class FamilyTypePlacer(object):
             symbol,
             self.view_information.get_view()
         )
-        logger.debug("Placed detail family: {} at {}".format(symbol.Name, point))
+        logger.debug("Placed detail family: {} at {}".format(DB.Element.Name.__get__(symbol), point))
 
 
 
