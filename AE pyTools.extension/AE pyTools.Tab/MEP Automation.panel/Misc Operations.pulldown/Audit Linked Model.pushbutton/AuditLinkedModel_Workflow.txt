@@ -1,0 +1,8 @@
+Run Audit Linked Model to scan linked documents for equipment names that do
+not exist in the active YAML but appear to match existing profiles. The tool
+normalizes names, removes common direction/number tokens, and uses token overlap
+and fuzzy matching to find likely candidates.
+
+You can select which missing names to create. For each selection, the tool
+clones the closest matching profile, assigns a new EQ/SET ID, and writes the
+new definitions back into Extensible Storage.

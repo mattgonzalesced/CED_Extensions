@@ -10,6 +10,7 @@ import json
 import os
 import re
 import sys
+import time
 
 from pyrevit import forms, script
 from Autodesk.Revit.DB import (
@@ -50,11 +51,18 @@ PARENT_PARAMETER_PATTERN = re.compile(
     r'^\s*parent_parameter\s*:\s*(?:"([^"]+)"|\'([^\']+)\'|(.+))\s*$',
     re.IGNORECASE,
 )
-FLOAT_PATTERN = re.compile(r"[-+]?[0-9]*\.?[0-9]+")
+NUMERIC_TOKEN_PATTERN = re.compile(r"[-+]?\d+(?:[.,]\d+)?")
 
 ACTION_UPDATE_CHILD = "update_child"
 ACTION_UPDATE_PARENT = "update_parent"
 ACTION_SKIP = "skip"
+
+ENV_RUNNING_KEY = "ced_parent_param_conflict_running"
+ENV_LAST_RUN_KEY = "ced_parent_param_conflict_last_run"
+LOCK_WINDOW_SECONDS = 60.0
+LOCK_FILE = os.path.abspath(
+    os.path.join(os.path.dirname(CONFIG_FILE), "parent_param_conflicts.lock.json")
+)
 
 
 def _read_config():
@@ -77,6 +85,104 @@ def _write_config(data):
         os.makedirs(directory)
     with open(CONFIG_FILE, "w") as handle:
         json.dump(data, handle, indent=2)
+
+
+def _get_env(name, default=None):
+    try:
+        value = script.get_envvar(name)
+    except Exception:
+        return default
+    if value in (None, ""):
+        return default
+    return value
+
+
+def _set_env(name, value):
+    try:
+        script.set_envvar(name, value)
+    except Exception:
+        return False
+    return True
+
+
+def _read_lock_file():
+    if not os.path.exists(LOCK_FILE):
+        return {}
+    try:
+        with io.open(LOCK_FILE, "r", encoding="utf-8") as handle:  # type: ignore
+            return json.load(handle)
+    except Exception:
+        try:
+            with open(LOCK_FILE, "r") as handle:
+                return json.load(handle)
+        except Exception:
+            return {}
+
+
+def _write_lock_file(payload):
+    directory = os.path.dirname(LOCK_FILE)
+    if directory and not os.path.exists(directory):
+        os.makedirs(directory)
+    try:
+        with io.open(LOCK_FILE, "w", encoding="utf-8") as handle:  # type: ignore
+            json.dump(payload, handle, indent=2)
+    except Exception:
+        try:
+            with open(LOCK_FILE, "w") as handle:
+                json.dump(payload, handle, indent=2)
+        except Exception:
+            pass
+
+
+def _doc_key(doc):
+    if doc is None:
+        return None
+    try:
+        return doc.PathName or doc.Title
+    except Exception:
+        return None
+
+
+def _should_open_ui(doc):
+    doc_key = _doc_key(doc)
+    now = time.time()
+    lock_payload = _read_lock_file()
+    last_key = lock_payload.get("doc_key")
+    last_ts = lock_payload.get("timestamp") or 0.0
+    is_running = bool(lock_payload.get("running"))
+    if is_running and last_key == doc_key and now - last_ts < LOCK_WINDOW_SECONDS:
+        return False
+    if last_key == doc_key and now - last_ts < LOCK_WINDOW_SECONDS:
+        return False
+    if str(_get_env(ENV_RUNNING_KEY, "0")).strip() == "1":
+        return False
+    if not doc_key:
+        _set_env(ENV_RUNNING_KEY, "1")
+        _write_lock_file({"doc_key": None, "timestamp": now, "running": True})
+        return True
+    raw = _get_env(ENV_LAST_RUN_KEY, "{}")
+    try:
+        payload = json.loads(raw)
+    except Exception:
+        payload = {}
+    last_key = payload.get("doc_key")
+    last_ts = payload.get("timestamp") or 0.0
+    if last_key == doc_key and now - last_ts < 20.0:
+        return False
+    payload = {"doc_key": doc_key, "timestamp": now}
+    _set_env(ENV_LAST_RUN_KEY, json.dumps(payload))
+    _set_env(ENV_RUNNING_KEY, "1")
+    _write_lock_file({"doc_key": doc_key, "timestamp": now, "running": True})
+    return True
+
+
+def _release_ui_lock():
+    _set_env(ENV_RUNNING_KEY, "0")
+    now = time.time()
+    payload = _read_lock_file()
+    payload["timestamp"] = now
+    payload["running"] = False
+    _write_lock_file(payload)
 
 
 def get_setting(default=True):
@@ -353,14 +459,21 @@ def _element_label(elem):
     return label
 
 
-def _try_float(text):
+def _numeric_token(text):
     if text in (None, ""):
         return None
-    match = FLOAT_PATTERN.search(str(text))
+    match = NUMERIC_TOKEN_PATTERN.search(str(text))
     if not match:
         return None
+    return match.group(0).replace(",", ".")
+
+
+def _try_float(text):
+    token = _numeric_token(text)
+    if not token:
+        return None
     try:
-        return float(match.group(0))
+        return float(token)
     except Exception:
         return None
 
@@ -426,7 +539,6 @@ def _param_info(param):
             info["display"] = "<unset>"
             info["has_value"] = False
         else:
-            info["numeric"] = float(raw)
             display = None
             try:
                 display = param.AsValueString()
@@ -435,6 +547,7 @@ def _param_info(param):
             if display in (None, ""):
                 display = raw
             info["display"] = str(display)
+            info["numeric"] = _try_float(info["display"])
             info["has_value"] = True
         return info
     if storage == StorageType.ElementId:
@@ -517,19 +630,25 @@ def _copy_param_value(source_param, target_param):
         return False
     source_storage = getattr(source_param, "StorageType", None)
     target_storage = getattr(target_param, "StorageType", None)
-    if target_storage == StorageType.String:
-        value = None
+    source_text = None
+    try:
+        source_text = source_param.AsString()
+    except Exception:
+        source_text = None
+    if source_text in (None, ""):
         try:
-            value = source_param.AsString()
+            source_text = source_param.AsValueString()
         except Exception:
-            value = None
-        if value in (None, ""):
-            try:
-                value = source_param.AsValueString()
-            except Exception:
-                value = None
-        if value is None:
-            value = ""
+            source_text = None
+    source_token = _numeric_token(source_text)
+    source_numeric = _try_float(source_text)
+    if target_storage == StorageType.String:
+        if source_numeric is not None:
+            value = str(int(round(source_numeric))) if abs(source_numeric - round(source_numeric)) < 1e-6 else str(source_numeric)
+        elif source_token is not None:
+            value = source_token
+        else:
+            value = source_text if source_text is not None else ""
         try:
             target_param.Set(str(value))
             return True
@@ -548,7 +667,7 @@ def _copy_param_value(source_param, target_param):
             except Exception:
                 value = None
         else:
-            value = _try_float(source_param.AsString() or source_param.AsValueString())
+            value = source_numeric
             if value is not None:
                 value = int(round(value))
         if value is None:
@@ -571,7 +690,7 @@ def _copy_param_value(source_param, target_param):
             except Exception:
                 value = None
         else:
-            value = _try_float(source_param.AsString() or source_param.AsValueString())
+            value = source_numeric
         if value is None:
             return False
         try:
@@ -586,7 +705,7 @@ def _copy_param_value(source_param, target_param):
                 return True
             except Exception:
                 return False
-        value = _try_float(source_param.AsString() or source_param.AsValueString())
+        value = source_numeric
         if value is None:
             return False
         try:
@@ -772,28 +891,33 @@ def run_sync_check(doc):
     conflicts = collect_conflicts(doc, data)
     if not conflicts:
         return
-    param_keys = sorted({item.get("param_key") for item in conflicts if item.get("param_key")})
-    ui_module = _load_ui_module()
-    if ui_module is None:
-        forms.alert("Parent parameter conflicts found, but UI failed to load.", title="Parent Parameter Conflicts")
+    if not _should_open_ui(doc):
         return
-    xaml_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "ParentParamConflictsWindow.xaml"))
-    window = ui_module.ParentParamConflictsWindow(xaml_path, conflicts, param_keys)
-    result = window.show_dialog()
-    if not result:
-        return
-    decisions = getattr(window, "decisions", {}) or {}
-    if not decisions:
-        return
-    counts = resolve_conflicts(doc, conflicts, decisions)
-    summary = [
-        "Updated child parameters: {}".format(counts.get("updated_child", 0)),
-        "Updated parent parameters: {}".format(counts.get("updated_parent", 0)),
-        "Skipped: {}".format(counts.get("skipped", 0)),
-        "",
-        "Note: changes were applied after sync; sync again to publish updates.",
-    ]
-    forms.alert("\n".join(summary), title="Parent Parameter Conflicts")
+    try:
+        param_keys = sorted({item.get("param_key") for item in conflicts if item.get("param_key")})
+        ui_module = _load_ui_module()
+        if ui_module is None:
+            forms.alert("Parent parameter conflicts found, but UI failed to load.", title="Parent Parameter Conflicts")
+            return
+        xaml_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "ParentParamConflictsWindow.xaml"))
+        window = ui_module.ParentParamConflictsWindow(xaml_path, conflicts, param_keys)
+        result = window.show_dialog()
+        if not result:
+            return
+        decisions = getattr(window, "decisions", {}) or {}
+        if not decisions:
+            return
+        counts = resolve_conflicts(doc, conflicts, decisions)
+        summary = [
+            "Updated child parameters: {}".format(counts.get("updated_child", 0)),
+            "Updated parent parameters: {}".format(counts.get("updated_parent", 0)),
+            "Skipped: {}".format(counts.get("skipped", 0)),
+            "",
+            "Note: changes were applied after sync; sync again to publish updates.",
+        ]
+        forms.alert("\n".join(summary), title="Parent Parameter Conflicts")
+    finally:
+        _release_ui_lock()
 
 
 __all__ = [

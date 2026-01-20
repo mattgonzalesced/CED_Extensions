@@ -1,10 +1,10 @@
-﻿# -*- coding: utf-8 -*-
-"""Place selected profiles at selected linked-room centers using the active YAML store."""
+# -*- coding: utf-8 -*-
+"""Place selected profiles in linked rooms using the active YAML store."""
 
 import os
 import sys
 
-from pyrevit import revit, forms, script
+from pyrevit import revit, forms
 from Autodesk.Revit.DB import (
     BuiltInCategory,
     BuiltInParameter,
@@ -21,11 +21,9 @@ if LIB_ROOT not in sys.path:
 
 from LogicClasses.PlaceElementsLogic import PlaceElementsEngine, ProfileRepository  # noqa: E402
 from LogicClasses.profile_schema import equipment_defs_to_legacy  # noqa: E402
-from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
 
 TITLE = "Place by Room"
-LOG = script.get_logger()
 
 try:
     basestring
@@ -129,6 +127,13 @@ def _room_number(room):
     return ""
 
 
+def _room_label(room):
+    number = _room_number(room)
+    name = _room_name(room)
+    label = "{} - {}".format(number, name).strip(" -")
+    return label or "<Room>"
+
+
 def _build_row(name, point, rotation_deg, level_id=None):
     row = {
         "Name": name,
@@ -229,7 +234,7 @@ def _select_rooms(link_doc):
         number = _room_number(room)
         if not name and not number:
             continue
-        label = "{} - {}".format(number, name).strip(" -")
+        label = _room_label(room)
         if label in display_map:
             continue
         display_map[label] = room
@@ -250,6 +255,29 @@ def _select_rooms(link_doc):
     return [display_map[label] for label in selection if label in display_map]
 
 
+def _rotation_for_label(repo, profile_name, label):
+    try:
+        linked_def = repo.definition_for_label(profile_name, label)
+    except Exception:
+        linked_def = None
+    if linked_def is None:
+        return 0.0
+    try:
+        placement = linked_def.get_placement()
+    except Exception:
+        placement = None
+    if placement is None:
+        return 0.0
+    try:
+        rotation = placement.get_rotation_degrees()
+    except Exception:
+        rotation = None
+    try:
+        return float(rotation or 0.0)
+    except Exception:
+        return 0.0
+
+
 def main():
     doc = revit.doc
     if doc is None:
@@ -261,11 +289,43 @@ def main():
     except RuntimeError as exc:
         forms.alert(str(exc), title=TITLE)
         return
-    yaml_label = get_yaml_display_name(data_path)
+
     repo = _build_repository(data)
 
     profiles = _select_profiles(repo)
     if not profiles:
+        return
+
+    repo_names = set(repo.cad_names() or [])
+    profile_labels = {}
+    missing_profiles = set()
+    missing_labels = set()
+    for profile_name in profiles:
+        if profile_name not in repo_names:
+            missing_profiles.add(profile_name)
+            continue
+        labels = repo.labels_for_cad(profile_name)
+        if not labels:
+            missing_labels.add(profile_name)
+            continue
+        profile_labels[profile_name] = labels
+
+    profiles = [name for name in profiles if name in profile_labels]
+    if not profiles:
+        summary = [
+            "No valid profiles were selected.",
+        ]
+        if missing_profiles:
+            summary.append("")
+            summary.append("Missing profiles:")
+            for name in sorted(missing_profiles):
+                summary.append(" - {}".format(name))
+        if missing_labels:
+            summary.append("")
+            summary.append("Profiles missing linked types:")
+            for name in sorted(missing_labels):
+                summary.append(" - {}".format(name))
+        forms.alert("\n".join(summary), title=TITLE)
         return
 
     link = _select_link_instance(doc)
@@ -295,56 +355,56 @@ def main():
         except Exception:
             default_level_id = None
 
-    rows = []
-    selection_map = {}
-    missing_profiles = set()
-    missing_labels = set()
-    deduped = 0
-    seen = set()
-
     try:
         transform = link.GetTransform()
     except Exception:
         transform = None
 
-    for profile_name in profiles:
-        if profile_name not in set(repo.cad_names() or []):
-            missing_profiles.add(profile_name)
+    room_centers = {}
+    room_level_map = {}
+    skipped_rooms = []
+    for room in rooms:
+        room_id = getattr(room.Id, "IntegerValue", None)
+        center = _room_center(room)
+        if center is None:
+            skipped_rooms.append(_room_label(room))
             continue
-        labels = repo.labels_for_cad(profile_name)
-        if not labels:
-            missing_labels.add(profile_name)
-            continue
-        selection_map.setdefault(profile_name, labels)
-
-        for room in rooms:
-            point = _room_center(room)
-            if point is None:
-                continue
-            if transform:
-                try:
-                    point = transform.OfPoint(point)
-                except Exception:
-                    pass
-            level_id = default_level_id
+        if transform:
             try:
-                link_level_id = getattr(room, "LevelId", None)
-                if link_level_id and link_doc:
-                    link_level = link_doc.GetElement(link_level_id)
-                    level_name = getattr(link_level, "Name", None)
-                    level_key = _normalize_name(level_name)
-                    host_level = level_lookup.get(level_key)
-                    if host_level is not None:
-                        level_id = host_level.Id.IntegerValue
+                center = transform.OfPoint(center)
             except Exception:
                 pass
+        room_centers[room_id] = center
 
-            key = (getattr(room.Id, "IntegerValue", None), profile_name)
-            if key in seen:
-                deduped += 1
-                continue
-            seen.add(key)
-            rows.append(_build_row(profile_name, point, 0.0, level_id))
+        level_id = default_level_id
+        try:
+            link_level_id = getattr(room, "LevelId", None)
+            if link_level_id and link_doc:
+                link_level = link_doc.GetElement(link_level_id)
+                level_name = getattr(link_level, "Name", None)
+                level_key = _normalize_name(level_name)
+                host_level = level_lookup.get(level_key)
+                if host_level is not None:
+                    level_id = host_level.Id.IntegerValue
+        except Exception:
+            pass
+        room_level_map[room_id] = level_id
+
+    rows = []
+    selection_map = {}
+    for profile_name in profiles:
+        labels = profile_labels.get(profile_name) or []
+        for label in labels:
+            row_name = "{}:{}".format(profile_name, label)
+            selection_map[row_name] = [label]
+            rotation = _rotation_for_label(repo, profile_name, label)
+            for room in rooms:
+                room_id = getattr(room.Id, "IntegerValue", None)
+                point = room_centers.get(room_id)
+                if point is None:
+                    continue
+                level_id = room_level_map.get(room_id)
+                rows.append(_build_row(row_name, point, rotation, level_id))
 
     if not rows:
         summary = [
@@ -371,8 +431,8 @@ def main():
         "Processed {} placement(s).".format(len(rows)),
         "Placed {} element(s).".format(placed),
     ]
-    if deduped:
-        summary.append("Skipped {} duplicate room/profile pair(s).".format(deduped))
+    if skipped_rooms:
+        summary.append("Skipped {} room(s) with no center point.".format(len(skipped_rooms)))
     if missing_profiles:
         summary.append("")
         summary.append("Missing profiles:")

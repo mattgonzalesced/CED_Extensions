@@ -15,4 +15,4 @@ tooltip: |
   Run Select YAML again anytime you need to switch datasets or refresh from a new
   export; the extension will alert you that the change succeeded so there is no
   ambiguity about which profile set is currently active.
-is_beta: true
+is_beta: false

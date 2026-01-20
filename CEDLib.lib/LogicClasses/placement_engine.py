@@ -47,6 +47,10 @@ PARENT_PARAMETER_PATTERN = re.compile(
     r'^\s*parent_parameter\s*:\s*(?:"([^"]+)"|\'([^\']+)\')\s*$',
     re.IGNORECASE,
 )
+SIBLING_PARAMETER_PATTERN = re.compile(
+    r'^\s*sibling_parameter\s*:\s*([^:]+?)\s*:\s*(?:"([^"]+)"|\'([^\']+)\')\s*$',
+    re.IGNORECASE,
+)
 
 
 def _parse_linker_payload(payload_text):
@@ -142,6 +146,8 @@ def _build_linker_payload(
     host_name=None,
     parent_element_id=None,
     parent_location=None,
+    ckt_circuit_number=None,
+    ckt_panel=None,
 ):
     rotation = float(rotation_deg or 0.0)
     parent_rotation = float(parent_rotation_deg or 0.0)
@@ -160,6 +166,8 @@ def _build_linker_payload(
         "LevelId: {}".format(level_id if level_id is not None else ""),
         "ElementId: {}".format(element_id if element_id is not None else ""),
         "FacingOrientation: {}".format(_format_xyz(facing)),
+        "CKT_Circuit Number_CEDT: {}".format(ckt_circuit_number or ""),
+        "CKT_Panel_CEDT: {}".format(ckt_panel or ""),
     ]
     return ", ".join(parts).strip()
 
@@ -172,6 +180,8 @@ class PlaceElementsEngine(object):
         default_level=None,
         tag_view_map=None,
         allow_tags=True,
+        allow_text_notes=False,
+        max_tag_distance_feet=None,
         transaction_name="Place Elements (YAML)",
         apply_recorded_level=True,
     ):
@@ -180,6 +190,8 @@ class PlaceElementsEngine(object):
         self.default_level = default_level
         self.tag_view_map = tag_view_map or {}
         self.allow_tags = bool(allow_tags)
+        self.allow_text_notes = bool(allow_text_notes)
+        self.max_tag_distance_feet = max_tag_distance_feet
         self.transaction_name = transaction_name or "Place Elements (YAML)"
         self.apply_recorded_level = bool(apply_recorded_level)
         self._init_symbol_map()
@@ -190,6 +202,7 @@ class PlaceElementsEngine(object):
     def _init_symbol_map(self):
         """Map 'Family : Type' to FamilySymbol."""
         self.symbol_label_map = {}
+        self.symbol_label_map_by_category = {}
         self._activated_symbols = set()
         symbols = list(FilteredElementCollector(self.doc).OfClass(FamilySymbol).ToElements())
         for sym in symbols:
@@ -206,6 +219,12 @@ class PlaceElementsEngine(object):
                     continue
                 label = u"{} : {}".format(fam_name, type_name)
                 self.symbol_label_map[label] = sym
+                cat = getattr(sym, "Category", None)
+                cat_name = getattr(cat, "Name", None) if cat else None
+                if cat_name:
+                    key = (label.strip().lower(), cat_name.strip().lower())
+                    if key not in self.symbol_label_map_by_category:
+                        self.symbol_label_map_by_category[key] = sym
             except Exception:
                 continue
 
@@ -1048,12 +1067,7 @@ class PlaceElementsEngine(object):
 
         parent_element = None
         if parent_element_id not in (None, ""):
-            try:
-                parent_element = self.doc.GetElement(ElementId(int(parent_element_id)))
-            except Exception:
-                parent_element = None
-        if parent_element_id not in (None, "") and parent_element is None:
-            return False
+            parent_element = self._resolve_parent_element(parent_element_id)
 
         label = linked_def.get_element_def_id()
         family = linked_def.get_family()
@@ -1073,7 +1087,16 @@ class PlaceElementsEngine(object):
         if is_group:
             instance = self._place_group(label, family, type_name, linked_def, loc, gtype, detail_type)
         if not instance:
-            instance = self._place_symbol(label, family, type_name, linked_def, loc, offset[2], parent_element)
+            instance = self._place_symbol(
+                label,
+                family,
+                type_name,
+                linked_def,
+                loc,
+                offset[2],
+                parent_element,
+                parent_element_id,
+            )
         if instance:
             if self.apply_recorded_level:
                 self._apply_recorded_level(instance, linked_def)
@@ -1091,7 +1114,8 @@ class PlaceElementsEngine(object):
             )
             if self.allow_tags:
                 self._place_tags(tags, instance, loc, final_rot_deg)
-            self._place_text_notes(text_notes, loc, final_rot_deg, host_instance=instance, host_location=loc)
+            if self.allow_text_notes and text_notes:
+                self._place_text_notes(text_notes, loc, final_rot_deg, host_instance=instance, host_location=loc)
             return True
         return False
 
@@ -1218,7 +1242,17 @@ class PlaceElementsEngine(object):
         except Exception:
             return False
 
-    def _place_symbol(self, label, family_name, type_name, linked_def, location, z_offset_feet, parent_element=None):
+    def _place_symbol(
+        self,
+        label,
+        family_name,
+        type_name,
+        linked_def,
+        location,
+        z_offset_feet,
+        parent_element=None,
+        parent_element_id=None,
+    ):
         symbol = self.symbol_label_map.get(label)
         if not symbol and family_name and type_name:
             key = u"{} : {}".format(family_name, type_name)
@@ -1253,7 +1287,13 @@ class PlaceElementsEngine(object):
                     if elev_param and not elev_param.IsReadOnly:
                         elev_param.Set(z_offset_feet)
 
-            self._apply_parameters(instance, linked_def.get_static_params(), parent_element)
+            self._apply_parameters(
+                instance,
+                linked_def.get_static_params(),
+                parent_element,
+                linked_def,
+                parent_element_id,
+            )
             return instance
         except Exception:
             return None
@@ -1266,13 +1306,82 @@ class PlaceElementsEngine(object):
         except Exception:
             pass
 
+    def _tagged_element_ids(self, tag):
+        if tag is None:
+            return []
+        try:
+            getter = getattr(tag, "GetTaggedLocalElementIds", None)
+            if callable(getter):
+                return list(getter() or [])
+        except Exception:
+            pass
+        ids = []
+        for attr in ("TaggedLocalElementId", "TaggedElementId"):
+            try:
+                value = getattr(tag, attr, None)
+            except Exception:
+                value = None
+            if value:
+                ids.append(value)
+        return ids
+
+    def _existing_tag_for_host(self, host_instance, symbol_id, view_obj):
+        if not host_instance or not symbol_id or not view_obj:
+            return False
+        try:
+            tags = FilteredElementCollector(self.doc, view_obj.Id).OfClass(IndependentTag)
+        except Exception:
+            tags = []
+        if not tags:
+            return False
+        try:
+            host_id_val = host_instance.Id.IntegerValue
+        except Exception:
+            host_id_val = None
+        for tag in tags:
+            try:
+                if tag.GetTypeId() != symbol_id:
+                    continue
+            except Exception:
+                continue
+            if host_id_val is None:
+                continue
+            for tagged_id in self._tagged_element_ids(tag):
+                try:
+                    tagged_val = tagged_id.IntegerValue
+                except Exception:
+                    try:
+                        tagged_val = int(tagged_id)
+                    except Exception:
+                        tagged_val = None
+                if tagged_val is not None and tagged_val == host_id_val:
+                    return True
+        return False
+
     def _place_tags(self, tag_defs, host_instance, base_loc, final_rot_deg):
         if not tag_defs:
             return
+        logger = self._get_logger()
         active_view = getattr(self.doc, "ActiveView", None)
         for tag in tag_defs:
             family = tag.get("family")
             type_name = tag.get("type")
+            category_name = tag.get("category") or ""
+            def _normalize_keynote_family(value):
+                if not value:
+                    return ""
+                text = str(value)
+                if ":" in text:
+                    text = text.split(":", 1)[0]
+                return "".join([ch for ch in text.lower() if ch.isalnum()])
+            def _is_ga_keynote_symbol(name):
+                return _normalize_keynote_family(name) == "gakeynotesymbolced"
+            family_text = (family or "").lower()
+            type_text = (type_name or "").lower()
+            is_ga_keynote = _is_ga_keynote_symbol(family)
+            is_keynote_def = "keynote" in (category_name or "").lower() or "keynote" in family_text or "keynote" in type_text
+            if is_ga_keynote:
+                is_keynote_def = False
             label = None
             if family and type_name:
                 label = u"{} : {}".format(family, type_name)
@@ -1282,18 +1391,86 @@ class PlaceElementsEngine(object):
                 label = family
             else:
                 continue
-            symbol = self.symbol_label_map.get(label)
+            symbol = None
+            if category_name:
+                key = (label.strip().lower(), category_name.strip().lower())
+                symbol = self.symbol_label_map_by_category.get(key)
+            if not symbol:
+                symbol = self.symbol_label_map.get(label)
             if not symbol and family and type_name:
                 key = u"{} : {}".format(family, type_name)
                 symbol = self.symbol_label_map.get(key)
             if not symbol:
+                if logger and is_keynote_def:
+                    logger.info(
+                        "[Place Elements] Keynote symbol not found: label='%s' family='%s' type='%s' category='%s'.",
+                        label,
+                        family or "",
+                        type_name or "",
+                        category_name or "",
+                    )
                 continue
             if not self._activate_symbol(symbol):
+                if logger and is_keynote_def:
+                    logger.info(
+                        "[Place Elements] Keynote symbol activation failed: label='%s'.",
+                        label,
+                    )
                 continue
 
             offsets = tag.get("offset") or (0.0, 0.0, 0.0)
-            category_name = (tag.get("category") or "").lower()
-            parameters = tag.get("parameters") or {}
+            if is_ga_keynote:
+                try:
+                    ang = math.radians(final_rot_deg or 0.0)
+                    cos_a = math.cos(ang)
+                    sin_a = math.sin(ang)
+                    ox, oy, oz = offsets[0] or 0.0, offsets[1] or 0.0, offsets[2] or 0.0
+                    offsets = (ox * cos_a - oy * sin_a, ox * sin_a + oy * cos_a, oz)
+                except Exception:
+                    pass
+            if self.max_tag_distance_feet not in (None, "") and not is_ga_keynote:
+                try:
+                    limit = float(self.max_tag_distance_feet)
+                except Exception:
+                    limit = None
+                if limit:
+                    try:
+                        dist = math.sqrt(
+                            float(offsets[0] or 0.0) ** 2
+                            + float(offsets[1] or 0.0) ** 2
+                            + float(offsets[2] or 0.0) ** 2
+                        )
+                    except Exception:
+                        dist = None
+                    if dist is not None and dist > limit:
+                        if logger:
+                            logger.info(
+                                "[Place Elements] Skipping tag '%s' offset distance %.2f ft > %.2f ft.",
+                                label,
+                                dist,
+                                limit,
+                            )
+                        continue
+            leader_elbow = self._convert_offset_to_tuple(tag.get("leader_elbow"))
+            leader_end = self._convert_offset_to_tuple(tag.get("leader_end"))
+            category_name = (category_name or "").lower()
+            parameters = dict(tag.get("parameters") or {})
+            keynote_value = None
+            keynote_source = ""
+            keynote_text = ""
+            if is_keynote_def:
+                key_value = tag.get("key_value")
+                if key_value not in (None, ""):
+                    has_key = False
+                    for key in parameters.keys():
+                        if (key or "").strip().lower() in ("keynote value", "key value", "keynote"):
+                            has_key = True
+                            break
+                    if not has_key:
+                        parameters["Keynote Value"] = key_value
+                keynote_value = self._extract_keynote_value(parameters)
+                keynote_source = self._extract_keynote_source(parameters)
+                keynote_text = self._extract_keynote_text(parameters)
 
             sym_cat = getattr(symbol, "Category", None)
             fam_cat = None
@@ -1307,6 +1484,18 @@ class PlaceElementsEngine(object):
             combined_cat = " ".join([category_name, sym_cat_name, fam_cat_name])
             is_tag_family = "tag" in combined_cat
             is_annotation_family = ("annotation" in combined_cat) and not is_tag_family
+            if is_ga_keynote:
+                is_tag_family = False
+                is_annotation_family = True
+            keynote_by_element = bool(keynote_source and "element" in keynote_source)
+            keynote_host_applied = False
+            if is_keynote_def and is_tag_family and host_instance and keynote_value not in (None, "") and keynote_by_element:
+                keynote_host_applied = self._apply_keynote_value_to_host(host_instance, keynote_value, logger)
+                if not keynote_host_applied and logger:
+                    logger.info(
+                        "[Place Elements] Host has no writable keynote param; placing keynote as by-keynote tag for '%s'.",
+                        label,
+                    )
 
             key = tag_key_from_dict(tag)
             target_views = []
@@ -1340,22 +1529,103 @@ class PlaceElementsEngine(object):
                     if is_tag_family:
                         if not view_obj or not host_instance:
                             continue
+                        if self._existing_tag_for_host(host_instance, symbol.Id, view_obj):
+                            if logger and is_keynote_def:
+                                logger.info(
+                                    "[Place Elements] Keynote skipped: tag already exists for host (%s).",
+                                    label,
+                                )
+                            continue
                         try:
                             reference = Reference(host_instance)
                         except Exception:
                             continue
-                        independent = IndependentTag.Create(
-                            self.doc,
-                            view_obj.Id,
-                            reference,
-                            True,
-                            TagMode.TM_ADDBY_CATEGORY,
-                            TagOrientation.Horizontal,
-                            tag_loc,
-                        )
+                        tag_mode = TagMode.TM_ADDBY_CATEGORY
+                        if is_keynote_def:
+                            tag_mode = getattr(TagMode, "TM_ADDBY_KEYNOTE", TagMode.TM_ADDBY_CATEGORY)
+                        created_with_type_id = False
+                        create_with_default = False
+                        if symbol is not None:
+                            try:
+                                overload = IndependentTag.Create.Overloads[
+                                    Document, ElementId, Reference, bool, TagMode, TagOrientation, XYZ, ElementId
+                                ]
+                                independent = overload(
+                                    self.doc,
+                                    view_obj.Id,
+                                    reference,
+                                    True,
+                                    tag_mode,
+                                    TagOrientation.Horizontal,
+                                    tag_loc,
+                                    symbol.Id,
+                                )
+                                created_with_type_id = True
+                            except Exception:
+                                independent = None
+                        if independent is None and is_keynote_def and symbol is not None:
+                            try:
+                                keynote_cat_id = ElementId(BuiltInCategory.OST_KeynoteTags)
+                                get_default = getattr(self.doc, "GetDefaultFamilyTypeId", None)
+                                set_default = getattr(self.doc, "SetDefaultFamilyTypeId", None)
+                                default_type_id = get_default(keynote_cat_id) if callable(get_default) else None
+                                if callable(set_default):
+                                    set_default(keynote_cat_id, symbol.Id)
+                                    create_with_default = True
+                                independent = IndependentTag.Create(
+                                    self.doc,
+                                    view_obj.Id,
+                                    reference,
+                                    True,
+                                    tag_mode,
+                                    TagOrientation.Horizontal,
+                                    tag_loc,
+                                )
+                            except Exception as exc:
+                                if logger and is_keynote_def:
+                                    logger.info(
+                                        "[Place Elements] Keynote default-type create failed for '%s': %s",
+                                        label,
+                                        exc,
+                                    )
+                                independent = None
+                            finally:
+                                if create_with_default and callable(set_default):
+                                    try:
+                                        if default_type_id:
+                                            set_default(keynote_cat_id, default_type_id)
+                                    except Exception:
+                                        pass
+                        if independent is None:
+                            independent = IndependentTag.Create(
+                                self.doc,
+                                view_obj.Id,
+                                reference,
+                                True,
+                                tag_mode,
+                                TagOrientation.Horizontal,
+                                tag_loc,
+                            )
                         if not independent:
                             continue
-                        independent.ChangeTypeId(symbol.Id)
+                        if not created_with_type_id and not create_with_default:
+                            try:
+                                independent.ChangeTypeId(symbol.Id)
+                            except Exception as exc:
+                                if logger and is_keynote_def:
+                                    sym_cat = getattr(symbol, "Category", None)
+                                    sym_cat_name = getattr(sym_cat, "Name", None) if sym_cat else ""
+                                    logger.info(
+                                        "[Place Elements] Keynote ChangeTypeId failed for '%s': %s (symbol category=%s)",
+                                        label,
+                                        exc,
+                                        sym_cat_name or "",
+                                    )
+                                    try:
+                                        self.doc.Delete(independent.Id)
+                                        continue
+                                    except Exception:
+                                        pass
                         instance = independent
                     elif is_annotation_family:
                         if not view_obj or (hasattr(view_obj, "ViewType") and view_obj.ViewType == ViewType.ThreeD):
@@ -1374,7 +1644,13 @@ class PlaceElementsEngine(object):
                             level,
                             Structure.StructuralType.NonStructural,
                         )
-                except Exception:
+                except Exception as exc:
+                    if logger and is_keynote_def:
+                        logger.info(
+                            "[Place Elements] Keynote placement failed for '%s': %s",
+                            label,
+                            exc,
+                        )
                     instance = None
                 if not instance:
                     continue
@@ -1383,6 +1659,26 @@ class PlaceElementsEngine(object):
                         instance.TagHeadPosition = tag_loc
                     except Exception:
                         pass
+                    if leader_end:
+                        try:
+                            instance.LeaderEnd = XYZ(
+                                base_loc.X + (leader_end[0] or 0.0),
+                                base_loc.Y + (leader_end[1] or 0.0),
+                                base_loc.Z + (leader_end[2] or 0.0),
+                            )
+                        except Exception:
+                            pass
+                    if leader_elbow:
+                        try:
+                            instance.LeaderElbow = XYZ(
+                                base_loc.X + (leader_elbow[0] or 0.0),
+                                base_loc.Y + (leader_elbow[1] or 0.0),
+                                base_loc.Z + (leader_elbow[2] or 0.0),
+                            )
+                        except Exception:
+                            pass
+                    if is_keynote_def and keynote_value not in (None, ""):
+                        self._apply_keynote_value_to_tag(instance, keynote_value, keynote_text, logger)
                 else:
                     if abs(tag_rotation) > 1e-6:
                         try:
@@ -1625,6 +1921,51 @@ class PlaceElementsEngine(object):
         except Exception:
             return None
 
+    def _resolve_parent_element(self, parent_element_id):
+        if parent_element_id in (None, ""):
+            return None
+        try:
+            parent_id = int(parent_element_id)
+        except Exception:
+            return None
+        try:
+            parent_element = self.doc.GetElement(ElementId(parent_id))
+        except Exception:
+            parent_element = None
+        if parent_element is not None:
+            return parent_element
+        cache = getattr(self, "_linked_parent_cache", None)
+        if cache is None:
+            cache = {}
+            self._linked_parent_cache = cache
+        if parent_id in cache:
+            return cache[parent_id]
+        try:
+            from Autodesk.Revit.DB import RevitLinkInstance
+        except Exception:
+            cache[parent_id] = None
+            return None
+        try:
+            link_instances = FilteredElementCollector(self.doc).OfClass(RevitLinkInstance)
+        except Exception:
+            link_instances = []
+        parent_element = None
+        for link_inst in link_instances:
+            try:
+                link_doc = link_inst.GetLinkDocument()
+            except Exception:
+                link_doc = None
+            if not link_doc:
+                continue
+            try:
+                parent_element = link_doc.GetElement(ElementId(parent_id))
+            except Exception:
+                parent_element = None
+            if parent_element is not None:
+                break
+        cache[parent_id] = parent_element
+        return parent_element
+
     def _extract_parent_parameter_name(self, value):
         if not isinstance(value, basestring):
             return None
@@ -1636,6 +1977,18 @@ class PlaceElementsEngine(object):
             return None
         return name.replace(SAFE_HASH, "#")
 
+    def _extract_sibling_parameter_spec(self, value):
+        if not isinstance(value, basestring):
+            return (None, None)
+        match = SIBLING_PARAMETER_PATTERN.match(value)
+        if not match:
+            return (None, None)
+        led_id = (match.group(1) or "").strip()
+        param_name = (match.group(2) or match.group(3) or "").strip()
+        if not led_id or not param_name:
+            return (None, None)
+        return (led_id, param_name.replace(SAFE_HASH, "#"))
+
     def _get_param_unit_type_id(self, param):
         get_unit = getattr(param, "GetUnitTypeId", None)
         if callable(get_unit):
@@ -1644,6 +1997,211 @@ class PlaceElementsEngine(object):
             except Exception:
                 return None
         return None
+
+    def _get_linker_param_value(self, element, param_name):
+        if not element or not param_name:
+            return ""
+        try:
+            param = element.LookupParameter(param_name)
+        except Exception:
+            param = None
+        if not param:
+            return ""
+        try:
+            if hasattr(param, "HasValue") and not param.HasValue:
+                return ""
+        except Exception:
+            pass
+
+        from Autodesk.Revit.DB import StorageType
+
+        try:
+            storage = param.StorageType
+        except Exception:
+            storage = None
+
+        if storage == StorageType.String:
+            try:
+                value = param.AsString()
+            except Exception:
+                value = None
+            if value not in (None, ""):
+                return str(value)
+            try:
+                value = param.AsValueString()
+            except Exception:
+                value = None
+            return str(value) if value not in (None, "") else ""
+
+        if storage == StorageType.Integer:
+            try:
+                return str(param.AsInteger())
+            except Exception:
+                return ""
+
+        if storage == StorageType.Double:
+            try:
+                value = param.AsValueString()
+            except Exception:
+                value = None
+            if value not in (None, ""):
+                return str(value)
+            try:
+                return str(param.AsDouble())
+            except Exception:
+                return ""
+
+        if storage == StorageType.ElementId:
+            try:
+                value = param.AsValueString()
+            except Exception:
+                value = None
+            if value not in (None, ""):
+                return str(value)
+            try:
+                elem_id = param.AsElementId()
+            except Exception:
+                elem_id = None
+            if elem_id is not None:
+                try:
+                    return str(elem_id.IntegerValue)
+                except Exception:
+                    return ""
+            return ""
+
+        try:
+            value = param.AsValueString()
+        except Exception:
+            value = None
+        return str(value) if value not in (None, "") else ""
+
+    def _get_linker_payload_from_element(self, element):
+        if not element:
+            return {}
+        payload_text = ""
+        for name in ELEMENT_LINKER_PARAM_NAMES:
+            try:
+                param = element.LookupParameter(name)
+            except Exception:
+                param = None
+            if not param:
+                continue
+            try:
+                payload_text = param.AsString()
+            except Exception:
+                payload_text = None
+            if not payload_text:
+                try:
+                    payload_text = param.AsValueString()
+                except Exception:
+                    payload_text = None
+            if payload_text:
+                break
+        if not payload_text:
+            return {}
+        return _parse_linker_payload(payload_text)
+
+    def _build_sibling_index(self):
+        index = {}
+        try:
+            collector = FilteredElementCollector(self.doc).WhereElementIsNotElementType()
+        except Exception:
+            collector = []
+        for elem in collector:
+            payload = self._get_linker_payload_from_element(elem)
+            led_id = payload.get("led_id") if payload else None
+            if not led_id:
+                continue
+            try:
+                elem_id = elem.Id.IntegerValue
+            except Exception:
+                elem_id = None
+            record = {"id": elem_id, "element": elem, "payload": payload}
+            index.setdefault(led_id, []).append(record)
+        self._sibling_linker_index = index
+        return index
+
+    def _register_sibling_payload(self, element, payload):
+        if not element or not payload:
+            return
+        led_id = payload.get("led_id")
+        if not led_id:
+            return
+        index = getattr(self, "_sibling_linker_index", None)
+        if index is None:
+            return
+        try:
+            elem_id = element.Id.IntegerValue
+        except Exception:
+            elem_id = None
+        records = index.setdefault(led_id, [])
+        if elem_id is not None:
+            for record in records:
+                if record.get("id") == elem_id:
+                    return
+        records.append({"id": elem_id, "element": element, "payload": payload})
+
+    def _resolve_sibling_element(self, sibling_led_id, parent_element_id=None, set_id=None, exclude_element=None):
+        if not sibling_led_id:
+            return None
+        index = getattr(self, "_sibling_linker_index", None)
+        if index is None:
+            index = self._build_sibling_index()
+        records = list(index.get(sibling_led_id, []) or [])
+        if not records:
+            return None
+        exclude_id = None
+        if exclude_element is not None:
+            try:
+                exclude_id = exclude_element.Id.IntegerValue
+            except Exception:
+                exclude_id = None
+
+        def _filter(match_parent):
+            filtered = []
+            for record in records:
+                if exclude_id is not None and record.get("id") == exclude_id:
+                    continue
+                payload = record.get("payload") or {}
+                if set_id and payload.get("set_id") and payload.get("set_id") != set_id:
+                    continue
+                if match_parent and parent_element_id not in (None, ""):
+                    if payload.get("parent_element_id") not in (None, parent_element_id):
+                        continue
+                filtered.append(record)
+            return filtered
+
+        filtered = _filter(match_parent=True)
+        if not filtered:
+            filtered = _filter(match_parent=False)
+        if not filtered:
+            return None
+        return filtered[0].get("element")
+
+    def _get_parent_type_parameter(self, parent_element, parent_param_name):
+        if not parent_element or not parent_param_name:
+            return None
+        type_elem = None
+        try:
+            type_id = parent_element.GetTypeId()
+        except Exception:
+            type_id = None
+        if type_id:
+            try:
+                type_elem = self.doc.GetElement(type_id)
+            except Exception:
+                type_elem = None
+        if type_elem is None:
+            try:
+                type_elem = getattr(parent_element, "Symbol", None)
+            except Exception:
+                type_elem = None
+        if not type_elem:
+            return None
+        try:
+            return type_elem.LookupParameter(parent_param_name)
+        except Exception:
+            return None
 
     def _apply_parent_parameter(self, child_param, parent_element, parent_param_name):
         if not child_param or child_param.IsReadOnly or not parent_param_name:
@@ -1654,6 +2212,8 @@ class PlaceElementsEngine(object):
             parent_param = parent_element.LookupParameter(parent_param_name)
         except Exception:
             parent_param = None
+        if not parent_param:
+            parent_param = self._get_parent_type_parameter(parent_element, parent_param_name)
         if not parent_param:
             return False
 
@@ -1812,22 +2372,423 @@ class PlaceElementsEngine(object):
             return None
         return self._load_classification_map().get(key)
 
-    def _apply_parameters(self, element, params_dict, parent_element=None):
+    def _keynote_entry_map(self):
+        cache = getattr(self, "_keynote_entry_cache", None)
+        if cache is not None:
+            return cache
+        mapping = {}
+        normalized = {}
+        text_map = {}
+        entries_list = []
+        try:
+            from Autodesk.Revit.DB import KeynoteTable
+        except Exception:
+            KeynoteTable = None
+        if KeynoteTable is not None:
+            try:
+                table = KeynoteTable.GetKeynoteTable(self.doc)
+            except Exception:
+                table = None
+            if table:
+                entries = None
+                for method_name in ("GetKeynoteEntries", "GetKeynoteEntriesByCategory", "GetKeynoteEntriesByGroup"):
+                    if hasattr(table, method_name):
+                        try:
+                            entries = getattr(table, method_name)()
+                        except Exception:
+                            entries = None
+                        if entries:
+                            break
+                if entries is None:
+                    try:
+                        entries = table.KeynoteEntries
+                    except Exception:
+                        entries = None
+                if entries:
+                    try:
+                        entries_list = list(entries)
+                    except Exception:
+                        entries_list = []
+                    for entry in entries_list:
+                        try:
+                            key = getattr(entry, "Key", None)
+                        except Exception:
+                            key = None
+                        if not key:
+                            continue
+                        key_text = str(key).strip()
+                        mapping[key_text] = entry.Id
+                        norm_key = self._normalize_keynote_key(key_text)
+                        if norm_key and norm_key not in normalized:
+                            normalized[norm_key] = entry.Id
+                        text_value = None
+                        for attr in ("Text", "KeynoteText"):
+                            try:
+                                text_value = getattr(entry, attr, None)
+                            except Exception:
+                                text_value = None
+                            if text_value:
+                                break
+                        if text_value:
+                            norm_text = self._normalize_keynote_text(text_value)
+                            if norm_text and norm_text not in text_map:
+                                text_map[norm_text] = entry.Id
+        self._keynote_entry_cache = mapping
+        self._keynote_entry_norm_cache = normalized
+        self._keynote_entry_text_cache = text_map
+        self._keynote_entry_list = entries_list
+        return mapping
+
+    def _normalize_keynote_key(self, value):
+        if value is None:
+            return ""
+        text = re.sub(r"[^0-9A-Za-z]+", "", str(value))
+        return text.upper().strip()
+
+    def _normalize_keynote_text(self, value):
+        if value is None:
+            return ""
+        return " ".join(str(value).strip().lower().split())
+
+    def _resolve_keynote_entry_id(self, value, fallback_text=None):
+        if value is None:
+            return None
+        if isinstance(value, ElementId):
+            return value
+        key = str(value).strip()
+        if not key:
+            return None
+        mapping = self._keynote_entry_map()
+        entry_id = mapping.get(key)
+        if entry_id:
+            return entry_id
+        normalized = getattr(self, "_keynote_entry_norm_cache", {}) or {}
+        norm_key = self._normalize_keynote_key(key)
+        entry_id = normalized.get(norm_key)
+        if entry_id:
+            return entry_id
+        if fallback_text:
+            text_map = getattr(self, "_keynote_entry_text_cache", {}) or {}
+            norm_text = self._normalize_keynote_text(fallback_text)
+            entry_id = text_map.get(norm_text)
+            if entry_id:
+                return entry_id
+        return None
+
+    def _extract_keynote_source(self, params_dict):
+        if not params_dict:
+            return ""
+        for key, value in params_dict.items():
+            key_name = (key or "").strip().lower()
+            if "key source" in key_name or "keynote source" in key_name:
+                return (str(value).strip().lower() if value is not None else "")
+        return ""
+
+    def _extract_keynote_text(self, params_dict):
+        if not params_dict:
+            return ""
+        for key in ("Keynote Text", "Keynote Description"):
+            value = params_dict.get(key)
+            if value not in (None, ""):
+                return str(value)
+        for key, value in params_dict.items():
+            key_name = (key or "").strip().lower()
+            if "keynote text" in key_name or "keynote description" in key_name:
+                if value not in (None, ""):
+                    return str(value)
+        return ""
+
+    def _is_keynote_param_name(self, name):
+        if not name:
+            return False
+        lowered = str(name).strip().lower()
+        return "keynote" in lowered or lowered == "key value"
+
+    def _extract_keynote_value(self, params_dict):
+        if not params_dict:
+            return None
+        for key in ("Key Value", "Keynote Value", "Keynote"):
+            value = params_dict.get(key)
+            if value not in (None, ""):
+                return value
+        for key, value in params_dict.items():
+            if (key or "").strip().lower() in ("key value", "keynote value", "keynote"):
+                if value not in (None, ""):
+                    return value
+        return None
+
+    def _apply_keynote_value_to_host(self, host_element, key_value, logger=None):
+        if host_element is None or key_value in (None, ""):
+            return False
+        def _resolve_param(target):
+            try:
+                param = target.get_Parameter(BuiltInParameter.KEYNOTE_PARAM)
+            except Exception:
+                param = None
+            if not param:
+                for name in ("Keynote", "Keynote Value"):
+                    try:
+                        param = target.LookupParameter(name)
+                    except Exception:
+                        param = None
+                    if param:
+                        break
+            return param
+
+        param = _resolve_param(host_element)
+        if not param or param.IsReadOnly:
+            type_elem = None
+            try:
+                type_id = host_element.GetTypeId()
+                type_elem = host_element.Document.GetElement(type_id)
+            except Exception:
+                type_elem = None
+            if type_elem:
+                param = _resolve_param(type_elem)
+        if not param or param.IsReadOnly:
+            return False
+        try:
+            from Autodesk.Revit.DB import StorageType
+        except Exception:
+            StorageType = None
+        try:
+            storage_type = param.StorageType if StorageType else None
+        except Exception:
+            storage_type = None
+        try:
+            if storage_type and storage_type == StorageType.ElementId:
+                resolved = None
+                try:
+                    resolved = ElementId(int(key_value))
+                except Exception:
+                    resolved = self._resolve_keynote_entry_id(key_value)
+                if resolved:
+                    param.Set(resolved)
+                else:
+                    param.SetValueString(str(key_value))
+            elif storage_type and storage_type == StorageType.Integer:
+                param.Set(int(key_value))
+            elif storage_type and storage_type == StorageType.Double:
+                param.Set(float(key_value))
+            else:
+                param.Set(str(key_value))
+            if logger:
+                try:
+                    pname = getattr(getattr(param, "Definition", None), "Name", None) or ""
+                except Exception:
+                    pname = ""
+                logger.info(
+                    "[Place Elements] Applied keynote value '%s' to host (%s).",
+                    key_value,
+                    pname or "Keynote",
+                )
+            return True
+        except Exception:
+            try:
+                param.SetValueString(str(key_value))
+                if logger:
+                    logger.info(
+                        "[Place Elements] Applied keynote value '%s' to host (value string).",
+                        key_value,
+                    )
+                return True
+            except Exception:
+                return False
+
+    def _apply_keynote_value_to_tag(self, tag_element, key_value, keynote_text=None, logger=None):
+        if tag_element is None or key_value in (None, ""):
+            return False
+        diagnostics = []
+        resolved_entry = self._resolve_keynote_entry_id(key_value, fallback_text=keynote_text)
+        if resolved_entry is None and logger:
+            if keynote_text:
+                diagnostics.append(
+                    "no keynote entry for '{}' (text='{}')".format(key_value, keynote_text)
+                )
+            else:
+                diagnostics.append("no keynote entry for '{}'".format(key_value))
+        param = None
+        try:
+            param = tag_element.get_Parameter(BuiltInParameter.KEYNOTE_PARAM)
+        except Exception:
+            param = None
+        if param:
+            try:
+                storage = param.StorageType
+                storage_name = storage.ToString() if storage else ""
+            except Exception:
+                storage_name = ""
+            diagnostics.append("KEYNOTE_PARAM storage={}".format(storage_name or "?"))
+            if param.IsReadOnly:
+                diagnostics.append("KEYNOTE_PARAM readonly")
+            else:
+                if resolved_entry is not None:
+                    try:
+                        param.Set(resolved_entry)
+                        if logger:
+                            logger.info(
+                                "[Place Elements] Applied keynote value '%s' to tag (entry id).",
+                                key_value,
+                            )
+                        return True
+                    except Exception as exc:
+                        diagnostics.append("KEYNOTE_PARAM set id failed: {}".format(exc))
+                try:
+                    param.SetValueString(str(key_value))
+                    if logger:
+                        logger.info(
+                            "[Place Elements] Applied keynote value '%s' to tag (value string).",
+                            key_value,
+                        )
+                    return True
+                except Exception as exc:
+                    diagnostics.append("KEYNOTE_PARAM set value string failed: {}".format(exc))
+        for name in ("Key Value", "Keynote Value", "Keynote"):
+            try:
+                param = tag_element.LookupParameter(name)
+            except Exception:
+                param = None
+            if not param:
+                continue
+            if param.IsReadOnly:
+                diagnostics.append("{} readonly".format(name))
+                continue
+            try:
+                param.Set(str(key_value))
+                if logger:
+                    logger.info(
+                        "[Place Elements] Applied keynote value '%s' to tag (%s).",
+                        key_value,
+                        name,
+                    )
+                return True
+            except Exception as exc:
+                diagnostics.append("{} set failed: {}".format(name, exc))
+                continue
+
+        type_elem = None
+        try:
+            type_id = tag_element.GetTypeId()
+            type_elem = tag_element.Document.GetElement(type_id)
+        except Exception:
+            type_elem = None
+        if type_elem:
+            try:
+                param = type_elem.get_Parameter(BuiltInParameter.KEYNOTE_PARAM)
+            except Exception:
+                param = None
+            if param:
+                try:
+                    if param.IsReadOnly:
+                        diagnostics.append("type KEYNOTE_PARAM readonly")
+                    else:
+                        if resolved_entry is not None:
+                            param.Set(resolved_entry)
+                        else:
+                            param.SetValueString(str(key_value))
+                        if logger:
+                            logger.info(
+                                "[Place Elements] Applied keynote value '%s' to tag type.",
+                                key_value,
+                            )
+                        return True
+                except Exception as exc:
+                    diagnostics.append("type KEYNOTE_PARAM set failed: {}".format(exc))
+            for name in ("Key Value", "Keynote Value", "Keynote"):
+                try:
+                    param = type_elem.LookupParameter(name)
+                except Exception:
+                    param = None
+                if not param:
+                    continue
+                if param.IsReadOnly:
+                    diagnostics.append("type {} readonly".format(name))
+                    continue
+                try:
+                    param.Set(str(key_value))
+                    if logger:
+                        logger.info(
+                            "[Place Elements] Applied keynote value '%s' to tag type (%s).",
+                            key_value,
+                            name,
+                        )
+                    return True
+                except Exception as exc:
+                    diagnostics.append("type {} set failed: {}".format(name, exc))
+
+        if logger:
+            logger.info(
+                "[Place Elements] Failed to apply keynote value '%s' to tag.",
+                key_value,
+            )
+            if diagnostics:
+                logger.info(
+                    "[Place Elements] Keynote tag parameter diagnostics: %s",
+                    "; ".join(diagnostics),
+                )
+        return False
+
+    def _apply_parameters(self, element, params_dict, parent_element=None, linked_def=None, parent_element_id=None):
         from Autodesk.Revit.DB import StorageType, UnitUtils
 
         if not params_dict:
             return
+        current_parent_id = parent_element_id
+        if current_parent_id in (None, "") and parent_element is not None:
+            try:
+                current_parent_id = parent_element.Id.IntegerValue
+            except Exception:
+                current_parent_id = None
+        current_set_id = None
+        if linked_def is not None:
+            template = self._get_linker_template(linked_def) or {}
+            current_set_id = template.get("set_id")
+        if current_set_id is None or current_parent_id in (None, ""):
+            payload = self._get_linker_payload_from_element(element)
+            if current_set_id is None:
+                current_set_id = payload.get("set_id")
+            if current_parent_id in (None, ""):
+                current_parent_id = payload.get("parent_element_id")
         for raw_name, value in params_dict.items():
             name = (raw_name or "").replace(SAFE_HASH, "#")
             try:
                 param = element.LookupParameter(name)
             except Exception:
                 param = None
+            if (not param or param.IsReadOnly) and isinstance(element, IndependentTag):
+                lowered = name.strip().lower()
+                if lowered in ("key value", "keynote value", "keynote"):
+                    if not param or param.IsReadOnly:
+                        for alias in ("Key Value", "Keynote Value", "Keynote"):
+                            try:
+                                param = element.LookupParameter(alias)
+                            except Exception:
+                                param = None
+                            if param and not param.IsReadOnly:
+                                break
+                            if param and param.IsReadOnly:
+                                param = None
+                    if not param:
+                        try:
+                            param = element.get_Parameter(BuiltInParameter.KEYNOTE_PARAM)
+                        except Exception:
+                            param = None
             if not param or param.IsReadOnly:
                 continue
             parent_param_name = self._extract_parent_parameter_name(value)
             if parent_param_name:
                 self._apply_parent_parameter(param, parent_element, parent_param_name)
+                continue
+            sibling_led_id, sibling_param_name = self._extract_sibling_parameter_spec(value)
+            if sibling_led_id and sibling_param_name:
+                sibling_element = self._resolve_sibling_element(
+                    sibling_led_id,
+                    parent_element_id=current_parent_id,
+                    set_id=current_set_id,
+                    exclude_element=element,
+                )
+                if sibling_element:
+                    self._apply_parent_parameter(param, sibling_element, sibling_param_name)
                 continue
             try:
                 storage_type = param.StorageType
@@ -1847,6 +2808,19 @@ class PlaceElementsEngine(object):
                     try:
                         param.Set(ElementId(int(value)))
                     except Exception:
+                        if self._is_keynote_param_name(name_hint):
+                            resolved = self._resolve_keynote_entry_id(value)
+                            if resolved is not None:
+                                try:
+                                    param.Set(resolved)
+                                    continue
+                                except Exception:
+                                    pass
+                            try:
+                                param.SetValueString(str(value))
+                                continue
+                            except Exception:
+                                pass
                         continue
                 if storage_type == StorageType.Integer:
                     param.Set(int(value))
@@ -1978,6 +2952,8 @@ class PlaceElementsEngine(object):
         except Exception:
             element_id = None
         facing = getattr(instance, "FacingOrientation", None)
+        ckt_circuit_number = self._get_linker_param_value(instance, "CKT_Circuit Number_CEDT")
+        ckt_panel = self._get_linker_param_value(instance, "CKT_Panel_CEDT")
         payload = _build_linker_payload(
             led_id=led_id,
             set_id=set_id,
@@ -1990,8 +2966,14 @@ class PlaceElementsEngine(object):
             host_name=host_name,
             parent_element_id=parent_element_id,
             parent_location=parent_location,
+            ckt_circuit_number=ckt_circuit_number,
+            ckt_panel=ckt_panel,
         )
-        self._set_element_linker_param(instance, payload)
+        if self._set_element_linker_param(instance, payload):
+            try:
+                self._register_sibling_payload(instance, _parse_linker_payload(payload))
+            except Exception:
+                pass
 
     def _apply_recorded_level(self, instance, linked_def):
         if not instance or not linked_def:

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 UpdateProfilesUI
 ----------------
@@ -6,7 +6,7 @@ WPF window to resolve Update Profiles discrepancies in a single grid.
 """
 
 from pyrevit import forms
-from System.Windows import Thickness, HorizontalAlignment, GridLength, GridUnitType
+from System.Windows import Thickness, GridLength, GridUnitType, Visibility
 from System.Windows.Controls import (
     Grid,
     RowDefinition,
@@ -26,11 +26,16 @@ class UpdateProfilesWindow(forms.WPFWindow):
         self._include_notes = bool(include_notes)
         self._combo_meta = {}
         self.decisions = {}
+        self._replace_checkbox = None
+        self._tag_set_combo = None
+        self._keynote_set_combo = None
+        self._note_set_combo = None
 
         header = self.FindName("HeaderText")
         if header is not None:
             header.Text = "Choose how each discrepancy should update the profile."
 
+        self._init_global_controls()
         self._build_grid()
         apply_btn = self.FindName("ApplyButton")
         cancel_btn = self.FindName("CancelButton")
@@ -46,16 +51,73 @@ class UpdateProfilesWindow(forms.WPFWindow):
             return "{:.4f}".format(value)
         return str(value)
 
+    def _init_global_controls(self):
+        self._replace_checkbox = self.FindName("ReplaceModeCheckBox")
+        self._tag_set_combo = self.FindName("TagSetCombo")
+        self._keynote_set_combo = self.FindName("KeynoteSetCombo")
+        self._note_set_combo = self.FindName("TextNoteSetCombo")
+        tag_row = self.FindName("TagSetRow")
+        keynote_row = self.FindName("KeynoteSetRow")
+        note_row = self.FindName("TextNoteSetRow")
+        options_panel = self.FindName("ReplaceOptionsPanel")
+
+        if not self._include_tags:
+            if tag_row is not None:
+                tag_row.Visibility = Visibility.Collapsed
+            if keynote_row is not None:
+                keynote_row.Visibility = Visibility.Collapsed
+        if not self._include_notes:
+            if note_row is not None:
+                note_row.Visibility = Visibility.Collapsed
+        if not self._include_tags and not self._include_notes:
+            if self._replace_checkbox is not None:
+                self._replace_checkbox.Visibility = Visibility.Collapsed
+            if options_panel is not None:
+                options_panel.Visibility = Visibility.Collapsed
+
+        option_labels = [
+            "Use items found on any instance (union)",
+            "Use only items found on every instance (common)",
+        ]
+        for combo in (self._tag_set_combo, self._keynote_set_combo, self._note_set_combo):
+            if combo is None:
+                continue
+            combo.Items.Clear()
+            for label in option_labels:
+                combo.Items.Add(label)
+            combo.SelectedIndex = 0
+
+        if self._replace_checkbox is not None:
+            self._replace_checkbox.Checked += self._on_replace_toggle
+            self._replace_checkbox.Unchecked += self._on_replace_toggle
+        self._update_replace_controls()
+
+    def _update_replace_controls(self):
+        enabled = False
+        if self._replace_checkbox is not None:
+            enabled = bool(self._replace_checkbox.IsChecked)
+        for combo in (self._tag_set_combo, self._keynote_set_combo, self._note_set_combo):
+            if combo is None:
+                continue
+            combo.IsEnabled = enabled
+
+    def _on_replace_toggle(self, sender, args):
+        self._update_replace_controls()
+
+    def _selected_set(self, combo):
+        selection = combo.SelectedItem if combo is not None else None
+        if isinstance(selection, list):
+            selection = selection[0] if selection else None
+        if selection and str(selection).startswith("Use only"):
+            return "common"
+        return "union"
+
     def _build_grid(self):
         grid = self.FindName("DiscrepancyGrid")
         if grid is None:
             raise Exception("DiscrepancyGrid not found in XAML.")
 
         columns = ["Profile", "Type"]
-        if self._include_tags:
-            columns.append("Tags/Keynotes")
-        if self._include_notes:
-            columns.append("Text Notes")
         for name in self._param_names:
             columns.append(name)
 
@@ -99,65 +161,12 @@ class UpdateProfilesWindow(forms.WPFWindow):
             Grid.SetRow(type_cell, row_idx)
             Grid.SetColumn(type_cell, 1)
             grid.Children.Add(type_cell)
-
             col_offset = 2
-            if self._include_tags:
-                missing = item.get("missing_tags") or []
-                if missing:
-                    combo = ComboBox()
-                    options = [
-                        "Add items found on any instance (union)",
-                        "Only update items found on every instance",
-                        "Skip tag updates for this definition",
-                    ]
-                    for opt in options:
-                        combo.Items.Add(opt)
-                    combo.SelectedIndex = 0
-                    combo.ToolTip = "Missing on some instances:\n" + "\n".join(missing[:8])
-                    Grid.SetRow(combo, row_idx)
-                    Grid.SetColumn(combo, col_offset)
-                    grid.Children.Add(combo)
-                    self._combo_meta[combo] = {"led_id": item["led_id"], "kind": "tags"}
-                else:
-                    cell = TextBlock()
-                    cell.Text = "—"
-                    cell.Margin = Thickness(0, 0, 6, 2)
-                    Grid.SetRow(cell, row_idx)
-                    Grid.SetColumn(cell, col_offset)
-                    grid.Children.Add(cell)
-                col_offset += 1
-
-            if self._include_notes:
-                missing = item.get("missing_notes") or []
-                if missing:
-                    combo = ComboBox()
-                    options = [
-                        "Add items found on any instance (union)",
-                        "Only update items found on every instance",
-                        "Skip text note updates for this definition",
-                    ]
-                    for opt in options:
-                        combo.Items.Add(opt)
-                    combo.SelectedIndex = 0
-                    combo.ToolTip = "Missing on some instances:\n" + "\n".join(missing[:8])
-                    Grid.SetRow(combo, row_idx)
-                    Grid.SetColumn(combo, col_offset)
-                    grid.Children.Add(combo)
-                    self._combo_meta[combo] = {"led_id": item["led_id"], "kind": "notes"}
-                else:
-                    cell = TextBlock()
-                    cell.Text = "—"
-                    cell.Margin = Thickness(0, 0, 6, 2)
-                    Grid.SetRow(cell, row_idx)
-                    Grid.SetColumn(cell, col_offset)
-                    grid.Children.Add(cell)
-                col_offset += 1
-
             for name in self._param_names:
                 param_info = item.get("param_conflicts", {}).get(name)
                 if not param_info:
                     cell = TextBlock()
-                    cell.Text = "—"
+                    cell.Text = "â€”"
                     cell.Margin = Thickness(0, 0, 6, 2)
                     Grid.SetRow(cell, row_idx)
                     Grid.SetColumn(cell, col_offset)
@@ -197,6 +206,13 @@ class UpdateProfilesWindow(forms.WPFWindow):
             row_idx += 1
 
     def _on_apply(self, sender, args):
+        global_settings = {
+            "replace_mode": bool(self._replace_checkbox and self._replace_checkbox.IsChecked),
+            "tag_set": self._selected_set(self._tag_set_combo),
+            "keynote_set": self._selected_set(self._keynote_set_combo),
+            "note_set": self._selected_set(self._note_set_combo),
+        }
+        self.decisions["_global"] = global_settings
         for combo, meta in self._combo_meta.items():
             selection = combo.SelectedItem
             if isinstance(selection, list):
@@ -205,27 +221,14 @@ class UpdateProfilesWindow(forms.WPFWindow):
                 continue
             led_id = meta["led_id"]
             entry = self.decisions.setdefault(led_id, {"params": {}})
-            kind = meta["kind"]
-            if kind == "tags":
-                if selection.startswith("Only update"):
-                    entry["tags"] = "common"
-                elif selection.startswith("Skip"):
-                    entry["tags"] = "skip"
-                else:
-                    entry["tags"] = "union"
-            elif kind == "notes":
-                if selection.startswith("Only update"):
-                    entry["notes"] = "common"
-                elif selection.startswith("Skip"):
-                    entry["notes"] = "skip"
-                else:
-                    entry["notes"] = "union"
-            else:
-                action, value = meta["options"].get(selection, ("skip", None))
-                entry["params"][meta["param_name"]] = (action, value)
+            if meta.get("kind") != "param":
+                continue
+            action, value = meta["options"].get(selection, ("skip", None))
+            entry["params"][meta["param_name"]] = (action, value)
         self.DialogResult = True
         self.Close()
 
     def _on_cancel(self, sender, args):
         self.DialogResult = False
         self.Close()
+

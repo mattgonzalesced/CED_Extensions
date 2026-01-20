@@ -11,10 +11,44 @@
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
 
-    <TextBlock x:Name="HeaderText"
-               Grid.Row="0"
-               Margin="0,0,0,8"
-               TextWrapping="Wrap"/>
+    <StackPanel Grid.Row="0" Margin="0,0,0,8">
+      <TextBlock x:Name="HeaderText"
+                 TextWrapping="Wrap"/>
+      <CheckBox x:Name="ReplaceModeCheckBox"
+                Content="Replace existing tags/keynotes/text notes (otherwise add-only)"
+                Margin="0,6,0,0"
+                IsChecked="False"/>
+      <StackPanel x:Name="ReplaceOptionsPanel"
+                  Orientation="Vertical"
+                  Margin="0,6,0,0">
+        <StackPanel x:Name="TagSetRow"
+                    Orientation="Horizontal"
+                    Margin="0,0,0,4">
+          <TextBlock Text="Tags set:"
+                     Width="120"
+                     VerticalAlignment="Center"/>
+          <ComboBox x:Name="TagSetCombo"
+                    Width="320"/>
+        </StackPanel>
+        <StackPanel x:Name="KeynoteSetRow"
+                    Orientation="Horizontal"
+                    Margin="0,0,0,4">
+          <TextBlock Text="Keynotes set:"
+                     Width="120"
+                     VerticalAlignment="Center"/>
+          <ComboBox x:Name="KeynoteSetCombo"
+                    Width="320"/>
+        </StackPanel>
+        <StackPanel x:Name="TextNoteSetRow"
+                    Orientation="Horizontal">
+          <TextBlock Text="Text notes set:"
+                     Width="120"
+                     VerticalAlignment="Center"/>
+          <ComboBox x:Name="TextNoteSetCombo"
+                    Width="320"/>
+        </StackPanel>
+      </StackPanel>
+    </StackPanel>
 
     <ScrollViewer Grid.Row="1"
                   HorizontalScrollBarVisibility="Auto"

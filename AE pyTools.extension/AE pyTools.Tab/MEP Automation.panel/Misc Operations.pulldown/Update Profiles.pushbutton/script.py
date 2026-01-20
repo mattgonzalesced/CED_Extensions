@@ -4,15 +4,17 @@ Update Profiles
 ---------------
 Scans elements with Element_Linker metadata and merges hosted annotations
 (tags/keynotes/text notes) plus parameter changes back into the active YAML.
+Also captures nearby keynotes and text notes within a 5 ft radius.
 """
 
 import imp
+import math
 import os
 import re
 import sys
 
 from pyrevit import revit, forms
-from Autodesk.Revit.DB import FamilyInstance, FilteredElementCollector, Group
+from Autodesk.Revit.DB import FamilyInstance, FilteredElementCollector, Group, TextNote
 
 LIB_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib")
@@ -28,6 +30,10 @@ from ExtensibleStorage.yaml_store import (  # noqa: E402
 
 LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
 TITLE = "Update Profiles"
+PROXIMITY_RADIUS_FT = 5.0
+PROXIMITY_CELL_SIZE_FT = 5.0
+NOTE_KEY_PRECISION = 3
+TIE_DISTANCE_TOLERANCE_FT = 1e-4
 
 _MANAGE_MODULE = None
 _UI_MODULE = None
@@ -118,7 +124,7 @@ def _parse_linker_payload(payload_text):
         pattern = re.compile(
             r"(Linked Element Definition ID|Set Definition ID|Location XYZ \(ft\)|"
             r"Rotation \(deg\)|Parent Rotation \(deg\)|Parent ElementId|LevelId|"
-            r"ElementId|FacingOrientation)\s*:\s*"
+            r"ElementId|FacingOrientation|CKT_Circuit Number_CEDT|CKT_Panel_CEDT)\s*:\s*"
         )
         matches = list(pattern.finditer(text))
         for idx, match in enumerate(matches):
@@ -130,7 +136,21 @@ def _parse_linker_payload(payload_text):
     return {
         "led_id": entries.get("Linked Element Definition ID", "").strip(),
         "set_id": entries.get("Set Definition ID", "").strip(),
+        "CKT_Circuit Number_CEDT": entries.get("CKT_Circuit Number_CEDT", "").strip(),
+        "CKT_Panel_CEDT": entries.get("CKT_Panel_CEDT", "").strip(),
     }
+
+
+def _apply_linker_params(params, payload):
+    if not isinstance(params, dict):
+        params = {}
+    updated = dict(params)
+    for key in ("CKT_Circuit Number_CEDT", "CKT_Panel_CEDT"):
+        updated.pop(key, None)
+        value = payload.get(key) if isinstance(payload, dict) else None
+        if value not in (None, ""):
+            updated[key] = value
+    return updated
 
 
 def _normalize_key(value):
@@ -230,12 +250,126 @@ def _replace_entries(current, incoming):
     return True, added, updated, new_entries
 
 
-def _merge_tag_entries(led, tags):
+def _normalize_keynote_family(value):
+    if not value:
+        return ""
+    text = str(value)
+    if ":" in text:
+        text = text.split(":", 1)[0]
+    return "".join([ch for ch in text.lower() if ch.isalnum()])
+
+
+def _is_ga_keynote_symbol(family_name):
+    return _normalize_keynote_family(family_name) == "gakeynotesymbolced"
+
+
+def _is_builtin_keynote_tag(tag_entry):
+    if isinstance(tag_entry, dict):
+        family = tag_entry.get("family_name") or tag_entry.get("family") or ""
+        category = tag_entry.get("category_name") or tag_entry.get("category") or ""
+    else:
+        family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
+        category = getattr(tag_entry, "category_name", None) or getattr(tag_entry, "category", None) or ""
+    if _is_ga_keynote_symbol(family):
+        return False
+    fam_text = (family or "").lower()
+    cat_text = (category or "").lower()
+    if "keynote tags" in cat_text:
+        return True
+    if "keynote tag" in fam_text:
+        return True
+    return False
+
+
+def _is_keynote_entry(tag_entry):
+    if not tag_entry:
+        return False
+    if isinstance(tag_entry, dict):
+        family = tag_entry.get("family_name") or tag_entry.get("family") or ""
+    else:
+        family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
+    return _is_ga_keynote_symbol(family)
+
+
+def _split_keynote_entries(entries):
+    normal = []
+    keynotes = []
+    for entry in entries or []:
+        if _is_builtin_keynote_tag(entry):
+            continue
+        if _is_keynote_entry(entry):
+            keynotes.append(entry)
+        else:
+            normal.append(entry)
+    return normal, keynotes
+
+
+def _partition_tag_records(records):
+    tag_records = []
+    keynote_records = []
+    for record in records or []:
+        if not isinstance(record, dict):
+            continue
+        entry = record.get("entry")
+        if not entry:
+            continue
+        if _is_builtin_keynote_tag(entry):
+            continue
+        if _is_keynote_entry(entry):
+            keynote_records.append(record)
+        else:
+            tag_records.append(record)
+    return tag_records, keynote_records
+
+
+def _entries_from_records(records, instances, mode):
+    entries = []
+    for record in records or []:
+        if not isinstance(record, dict):
+            continue
+        if mode == "common" and record.get("count", 0) != instances:
+            continue
+        entry = record.get("entry")
+        if entry:
+            entries.append(entry)
+    return entries
+
+
+def _merge_tag_and_keynote_entries(led, tags, keynotes):
     existing = led.get("tags")
     if not isinstance(existing, list):
         existing = []
         led["tags"] = existing
-    return _merge_entries(existing, tags, _tag_key, _update_tag_entry)
+    changed, added, updated = _merge_entries(existing, tags, _tag_key, _update_tag_entry)
+    existing_keynotes = led.get("keynotes")
+    if not isinstance(existing_keynotes, list):
+        existing_keynotes = []
+        led["keynotes"] = existing_keynotes
+    changed_kn, added_kn, updated_kn = _merge_entries(existing_keynotes, keynotes, _tag_key, _update_tag_entry)
+    return (changed or changed_kn), (added + added_kn), (updated + updated_kn)
+
+
+def _set_tag_and_keynote_entries(led, tags, keynotes):
+    changed, added, updated, new_entries = _replace_entries(led.get("tags"), tags)
+    led["tags"] = new_entries
+    changed_kn, added_kn, updated_kn, new_keynotes = _replace_entries(led.get("keynotes"), keynotes)
+    led["keynotes"] = new_keynotes
+    return (changed or changed_kn), (added + added_kn), (updated + updated_kn)
+
+
+def _merge_tag_entries(led, tags):
+    normal_tags, keynotes = _split_keynote_entries(tags)
+    existing = led.get("tags")
+    if not isinstance(existing, list):
+        existing = []
+        led["tags"] = existing
+    changed, added, updated = _merge_entries(existing, normal_tags, _tag_key, _update_tag_entry)
+    existing_keynotes = led.get("keynotes")
+    if not isinstance(existing_keynotes, list):
+        existing_keynotes = []
+        led["keynotes"] = existing_keynotes
+    changed_kn, added_kn, updated_kn = _merge_entries(existing_keynotes, keynotes, _tag_key, _update_tag_entry)
+    return (changed or changed_kn), (added + added_kn), (updated + updated_kn)
 
 
 def _merge_text_note_entries(led, notes):
@@ -247,9 +381,12 @@ def _merge_text_note_entries(led, notes):
 
 
 def _set_tag_entries(led, tags):
-    changed, added, updated, new_entries = _replace_entries(led.get("tags"), tags)
+    normal_tags, keynotes = _split_keynote_entries(tags)
+    changed, added, updated, new_entries = _replace_entries(led.get("tags"), normal_tags)
     led["tags"] = new_entries
-    return changed, added, updated
+    changed_kn, added_kn, updated_kn, new_keynotes = _replace_entries(led.get("keynotes"), keynotes)
+    led["keynotes"] = new_keynotes
+    return (changed or changed_kn), (added + added_kn), (updated + updated_kn)
 
 
 def _set_text_note_entries(led, notes):
@@ -352,7 +489,23 @@ def _index_leds(data):
     return index, meta
 
 
-def _collect_candidate_elements(doc):
+def _collect_candidate_elements(doc, elements=None):
+    if elements is not None:
+        filtered = []
+        seen = set()
+        for elem in elements:
+            if not isinstance(elem, (FamilyInstance, Group)):
+                continue
+            try:
+                elem_id = elem.Id.IntegerValue
+            except Exception:
+                elem_id = None
+            if elem_id is None or elem_id in seen:
+                continue
+            seen.add(elem_id)
+            filtered.append(elem)
+        return filtered
+
     elements = []
     seen = set()
     for cls in (FamilyInstance, Group):
@@ -370,6 +523,243 @@ def _collect_candidate_elements(doc):
         except Exception:
             continue
     return elements
+
+
+def _note_location_key(point, kind):
+    if point is None:
+        return None
+    try:
+        return (
+            kind,
+            round(float(point.X), NOTE_KEY_PRECISION),
+            round(float(point.Y), NOTE_KEY_PRECISION),
+            round(float(point.Z), NOTE_KEY_PRECISION),
+        )
+    except Exception:
+        return None
+
+
+def _entry_world_point(host_point, entry):
+    if host_point is None or not isinstance(entry, dict):
+        return None
+    offsets = entry.get("offsets") or {}
+    try:
+        x = float(offsets.get("x_inches", 0.0) or 0.0) / 12.0
+        y = float(offsets.get("y_inches", 0.0) or 0.0) / 12.0
+        z = float(offsets.get("z_inches", 0.0) or 0.0) / 12.0
+        return host_point.__class__(host_point.X + x, host_point.Y + y, host_point.Z + z)
+    except Exception:
+        return None
+
+
+def _host_cell_key(point, cell_size):
+    if point is None or not cell_size:
+        return None
+    try:
+        return (
+            int(math.floor(point.X / cell_size)),
+            int(math.floor(point.Y / cell_size)),
+        )
+    except Exception:
+        return None
+
+
+def _build_host_spatial_index(host_records, cell_size):
+    index = {}
+    for record in host_records or []:
+        host_point = record.get("host_point")
+        cell = _host_cell_key(host_point, cell_size)
+        if cell is None:
+            continue
+        index.setdefault(cell, []).append(record)
+    return index
+
+
+def _distance_sq(a, b):
+    if a is None or b is None:
+        return None
+    try:
+        dx = a.X - b.X
+        dy = a.Y - b.Y
+        return (dx * dx) + (dy * dy)
+    except Exception:
+        return None
+
+
+def _candidate_hosts(note_point, index, cell_size):
+    cell = _host_cell_key(note_point, cell_size)
+    if cell is None:
+        return []
+    cx, cy = cell
+    hosts = []
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            hosts.extend(index.get((cx + dx, cy + dy), []))
+    return hosts
+
+
+def _select_host_for_note(note_elem, candidates, manage, kind):
+    if not candidates:
+        return None
+    preview = ""
+    if kind == "text_note":
+        try:
+            preview = manage._text_note_preview(note_elem)
+        except Exception:
+            preview = ""
+    else:
+        try:
+            params = manage._collect_keynote_parameters(note_elem)
+            preview = params.get("Keynote Value") or params.get("Key Value") or ""
+        except Exception:
+            preview = ""
+        if not preview:
+            try:
+                fam, typ = manage._annotation_family_type(note_elem)
+                if fam and typ:
+                    preview = u"{} : {}".format(fam, typ)
+                else:
+                    preview = fam or typ or ""
+            except Exception:
+                preview = ""
+    title = "Select host for note"
+    if preview:
+        title = "Select host for note: {}".format(preview)
+
+    option_map = {}
+    options = []
+    for idx, record in enumerate(candidates):
+        profile_name = record.get("profile_name") or record.get("led_id") or "Profile"
+        type_label = record.get("type_label") or record.get("led_id") or "Type"
+        elem = record.get("element")
+        elem_id = getattr(elem, "Id", None)
+        elem_id_val = getattr(elem_id, "IntegerValue", None) if elem_id else None
+        label = u"{} / {}".format(profile_name, type_label)
+        if elem_id_val is not None:
+            label = u"{} (Id: {})".format(label, elem_id_val)
+        option = u"{:02d}. {}".format(idx + 1, label)
+        option_map[option] = record
+        options.append(option)
+    try:
+        selection = forms.SelectFromList.show(
+            options,
+            title=title,
+            button_name="Assign",
+            multiselect=False,
+        )
+    except Exception:
+        selection = None
+    if selection:
+        chosen = selection[0] if isinstance(selection, list) else selection
+        return option_map.get(chosen)
+    return None
+
+
+def _assign_proximity_notes(doc, host_records, assigned_keys, observations, led_index, led_meta, manage):
+    if doc is None or not host_records:
+        return
+    index = _build_host_spatial_index(host_records, PROXIMITY_CELL_SIZE_FT)
+    radius_sq = PROXIMITY_RADIUS_FT * PROXIMITY_RADIUS_FT
+
+    try:
+        keynote_candidates = list(
+            FilteredElementCollector(doc).OfClass(FamilyInstance).WhereElementIsNotElementType()
+        )
+    except Exception:
+        keynote_candidates = []
+    keynotes = [elem for elem in keynote_candidates if manage._is_ga_keynote_symbol_element(elem)]
+
+    try:
+        text_notes = list(FilteredElementCollector(doc).OfClass(TextNote))
+    except Exception:
+        text_notes = []
+
+    def _ensure_obs(led_id):
+        obs = observations.get(led_id)
+        if obs:
+            return obs
+        led = led_index.get(led_id)
+        meta = led_meta.get(led_id, {})
+        type_label = meta.get("type_label") or (led.get("label") if led else None) or led_id
+        obs = {
+            "label": type_label,
+            "profile_name": meta.get("profile_name"),
+            "type_label": type_label,
+            "instances": 0,
+            "params": {},
+            "tags": {},
+            "notes": {},
+        }
+        observations[led_id] = obs
+        return obs
+
+    def _assign_note(note_elem, kind):
+        if note_elem is None:
+            return
+        try:
+            note_point = getattr(note_elem, "Coord", None)
+        except Exception:
+            note_point = None
+        if note_point is None:
+            try:
+                note_point = manage._get_point(note_elem)
+            except Exception:
+                note_point = None
+        key = _note_location_key(note_point, kind)
+        if key is None or key in assigned_keys:
+            return
+        candidates = []
+        for record in _candidate_hosts(note_point, index, PROXIMITY_CELL_SIZE_FT):
+            host_point = record.get("host_point")
+            dist_sq = _distance_sq(note_point, host_point)
+            if dist_sq is None or dist_sq > radius_sq:
+                continue
+            try:
+                dist = math.sqrt(dist_sq)
+            except Exception:
+                dist = None
+            if dist is None:
+                continue
+            candidates.append((record, dist))
+        if not candidates:
+            return
+        candidates.sort(key=lambda item: item[1])
+        min_dist = candidates[0][1]
+        tie_candidates = [
+            rec for rec, dist in candidates
+            if abs(dist - min_dist) <= TIE_DISTANCE_TOLERANCE_FT
+        ]
+        if len(tie_candidates) > 1:
+            chosen = _select_host_for_note(note_elem, tie_candidates, manage, kind)
+        else:
+            chosen = candidates[0][0]
+        if not chosen:
+            return
+        host_point = chosen.get("host_point")
+        led_id = chosen.get("led_id")
+        if host_point is None or not led_id:
+            return
+        if kind == "text_note":
+            note_entry = manage._build_text_note_entry(note_elem, host_point)
+            if not note_entry:
+                return
+            obs = _ensure_obs(led_id)
+            _track_annotation(obs, "notes", note_entry, _text_note_key)
+        else:
+            note_entry = manage._build_annotation_tag_entry(note_elem, host_point)
+            if not note_entry or not _is_keynote_entry(note_entry):
+                return
+            offsets = note_entry.get("offsets") or {}
+            offsets["rotation_deg"] = 0.0
+            note_entry["offsets"] = offsets
+            obs = _ensure_obs(led_id)
+            _track_annotation(obs, "tags", note_entry, _tag_key)
+        assigned_keys.add(key)
+
+    for note_elem in keynotes:
+        _assign_note(note_elem, "keynote")
+    for note_elem in text_notes:
+        _assign_note(note_elem, "text_note")
 
 
 def main():
@@ -394,10 +784,18 @@ def main():
         forms.alert("No linked element definitions found in {}.".format(yaml_label), title=TITLE)
         return
 
-    elements = _collect_candidate_elements(doc)
-    if not elements:
-        forms.alert("No candidate elements found in the current model.", title=TITLE)
-        return
+    selection = revit.get_selection()
+    selected_elements = list(getattr(selection, "elements", []) or []) if selection else []
+    if selected_elements:
+        elements = _collect_candidate_elements(doc, selected_elements)
+        if not elements:
+            forms.alert("No candidate elements found in the current selection.", title=TITLE)
+            return
+    else:
+        elements = _collect_candidate_elements(doc)
+        if not elements:
+            forms.alert("No candidate elements found in the current model.", title=TITLE)
+            return
 
     stats = {
         "elements_scanned": 0,
@@ -412,9 +810,12 @@ def main():
         "notes_updated": 0,
         "missing_defs": set(),
         "missing_led": 0,
+        "missing_linker_ckts": 0,
     }
 
     observations = {}
+    host_records = []
+    assigned_note_keys = set()
 
     for elem in elements:
         stats["elements_scanned"] += 1
@@ -451,15 +852,39 @@ def main():
         obs["instances"] += 1
 
         host_point = manage._get_point(elem)
+        if host_point is not None:
+            host_records.append({
+                "led_id": led_id,
+                "element": elem,
+                "host_point": host_point,
+                "profile_name": profile_name,
+                "type_label": type_label,
+            })
         params = manage._collect_params(elem)
+        if isinstance(payload, dict):
+            if not payload.get("CKT_Circuit Number_CEDT") or not payload.get("CKT_Panel_CEDT"):
+                stats["missing_linker_ckts"] += 1
+        params = _apply_linker_params(params, payload)
         for key, value in (params or {}).items():
             _track_param_value(obs, key, value)
 
-        tags, text_notes = manage._collect_hosted_tags(elem, host_point)
-        for tag in tags or []:
+        tags, keynotes, text_notes = manage._collect_hosted_tags(elem, host_point)
+        for tag in (tags or []) + (keynotes or []):
             _track_annotation(obs, "tags", tag, _tag_key)
         for note in text_notes or []:
             _track_annotation(obs, "notes", note, _text_note_key)
+        for note in keynotes or []:
+            note_point = _entry_world_point(host_point, note)
+            note_key = _note_location_key(note_point, "keynote")
+            if note_key is not None:
+                assigned_note_keys.add(note_key)
+        for note in text_notes or []:
+            note_point = _entry_world_point(host_point, note)
+            note_key = _note_location_key(note_point, "text_note")
+            if note_key is not None:
+                assigned_note_keys.add(note_key)
+
+    _assign_proximity_notes(doc, host_records, assigned_note_keys, observations, led_index, led_meta, manage)
 
     discrepancies = []
     any_tag_conflicts = False
@@ -529,6 +954,16 @@ def main():
             return
         decisions = getattr(window, "decisions", {}) or {}
 
+    global_settings = decisions.get("_global", {})
+    replace_mode = bool(global_settings.get("replace_mode"))
+    tag_set_mode = global_settings.get("tag_set") or "union"
+    keynote_set_mode = global_settings.get("keynote_set") or "union"
+    note_set_mode = global_settings.get("note_set") or "union"
+    if not replace_mode:
+        tag_set_mode = "union"
+        keynote_set_mode = "union"
+        note_set_mode = "union"
+
     for led_id, obs in observations.items():
         led = led_index.get(led_id)
         if led is None:
@@ -561,47 +996,40 @@ def main():
                 led["parameters"] = existing_params
             for key, value in chosen_params.items():
                 existing_params[key] = value
-                stats["params_updated"] += 1
+            stats["params_updated"] += 1
             stats["definitions_updated"].add(led_id)
 
         tags_map = obs.get("tags", {})
         notes_map = obs.get("notes", {})
         instances = max(obs.get("instances", 1), 1)
-        tag_entries = [record["entry"] for record in tags_map.values()]
-        note_entries = [record["entry"] for record in notes_map.values()]
-
         decision_tags = decisions.get(led_id, {}).get("tags")
         decision_notes = decisions.get(led_id, {}).get("notes")
 
-        if decision_tags == "common":
-            tag_entries = [
-                record["entry"]
-                for record in tags_map.values()
-                if record["count"] == instances
-            ]
-            changed, added, updated = _set_tag_entries(led, tag_entries)
-        elif decision_tags == "skip":
+        if decision_tags == "skip":
             changed = False
             added = updated = 0
         else:
-            changed, added, updated = _merge_tag_entries(led, tag_entries)
+            tag_records, keynote_records = _partition_tag_records(tags_map.values())
+            tag_entries = _entries_from_records(tag_records, instances, tag_set_mode)
+            keynote_entries = _entries_from_records(keynote_records, instances, keynote_set_mode)
+            if replace_mode:
+                changed, added, updated = _set_tag_and_keynote_entries(led, tag_entries, keynote_entries)
+            else:
+                changed, added, updated = _merge_tag_and_keynote_entries(led, tag_entries, keynote_entries)
         if changed:
             stats["tags_added"] += added
             stats["tags_updated"] += updated
             stats["definitions_updated"].add(led_id)
 
-        if decision_notes == "common":
-            note_entries = [
-                record["entry"]
-                for record in notes_map.values()
-                if record["count"] == instances
-            ]
-            changed, added, updated = _set_text_note_entries(led, note_entries)
-        elif decision_notes == "skip":
+        if decision_notes == "skip":
             changed = False
             added = updated = 0
         else:
-            changed, added, updated = _merge_text_note_entries(led, note_entries)
+            note_entries = _entries_from_records(notes_map.values(), instances, note_set_mode)
+            if replace_mode:
+                changed, added, updated = _set_text_note_entries(led, note_entries)
+            else:
+                changed, added, updated = _merge_text_note_entries(led, note_entries)
         if changed:
             stats["notes_added"] += added
             stats["notes_updated"] += updated
@@ -633,6 +1061,15 @@ def main():
     summary = [
         "Updated profiles in {}.".format(yaml_label),
         "",
+        "Annotation update mode: {}".format("Replace" if replace_mode else "Add-only"),
+    ]
+    if replace_mode:
+        summary.append(
+            "Replacement sets: tags={}, keynotes={}, text notes={}".format(
+                tag_set_mode, keynote_set_mode, note_set_mode
+            )
+        )
+    summary.extend([
         "Elements scanned: {} (with Element_Linker: {})".format(
             stats["elements_scanned"],
             stats["elements_with_linker"],
@@ -641,7 +1078,13 @@ def main():
         "Parameter values updated: {}".format(stats["params_updated"]),
         "Tags added/updated: {} / {}".format(stats["tags_added"], stats["tags_updated"]),
         "Text notes added/updated: {} / {}".format(stats["notes_added"], stats["notes_updated"]),
-    ]
+    ])
+    if stats["missing_linker_ckts"]:
+        summary.append(
+            "Note: {} element(s) missing CKT values in Element_Linker payload.".format(
+                stats["missing_linker_ckts"]
+            )
+        )
     if stats["param_conflicts"]:
         summary.append("Parameter conflicts detected: {}".format(stats["param_conflicts"]))
     if stats["missing_defs"]:

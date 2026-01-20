@@ -1,6 +1,7 @@
 ﻿layout:
-  - Load Profiles
   - PlaceLinkedElements
+  - PlaceLinkedElements_profile_filter
   - PlaceLinkedElements_category
   - PlaceByRoom
   - PlaceCADElements
+

@@ -15,4 +15,4 @@ tooltip: |
   When you close the dialog, the cached YAML on disk remains unchanged until you
   explicitly export, ensuring collaborative teams always reference the in-model
   truth until they decide to publish an updated file.
-is_beta: true
+is_beta: false

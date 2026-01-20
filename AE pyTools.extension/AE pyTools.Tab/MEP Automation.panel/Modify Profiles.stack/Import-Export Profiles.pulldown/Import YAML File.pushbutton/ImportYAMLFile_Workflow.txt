@@ -1,0 +1,8 @@
+Run Import YAML File to load a dataset into Extensible Storage for the active
+project. The tool prompts for a YAML file, caches the selected path, sanitizes
+hash characters, and parses the equipment_definitions schema before writing the
+normalized text into Project Information.
+
+After import, every MEP Automation tool reads the in-model copy, not the disk
+file. To switch datasets or refresh from a new export, run Import YAML File
+again and the cached path updates for the next session.

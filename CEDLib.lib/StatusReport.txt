@@ -1,0 +1,237 @@
+STATUS REPORT FEBRUARY 2nd 2026
+
+Quick Summary
+- Implemented: YAML import/export/merge workflow, profile creation and editing tools, linked placement tools,
+  annotation placement, profile update pipeline, and audit tooling for naming drift, i.e. Cake Imager_1 vs Cake Imager_1200201. 
+  These are stable enough for daily internal use and provide end-to-end coverage from data ingestion to placement
+  and profile maintenance.
+- Work in Progress: Place by Room (UI complete; spacing/orientation logic still being refined), parent/sibling
+  parameter workflows, and parameter flagging for mismatch handling. These features are functional but
+  still being tuned for edge cases and need further validation before broader rollout.
+- Future: Multi-parent profiles, advanced matching/validation rules, and richer QA/QC reporting. These
+  ideas are intended to reduce manual cleanup, improve reliability across projects, and speed up
+  troubleshooting of profile data.
+
+Overview
+- Extensible Storage: The active YAML is copied into Revit Project Information so all tools read/write a shared in-model dataset.
+- Profiles vs Equipment Definitions: A profile is the stored recipe tied to a parent type; equipment definitions are the YAML entries that store those recipes.
+- Parent/Child: Parent refers to the host element; child refers to equipment placed relative to the parent.
+- Equipment Definition ID (EQ-###): Identifies the profile itself (the parent definition).
+- LED ID: Linked Element Definition ID; a unique identifier for each child element entry stored in a profile.
+- Set ID: Identifier for the linked set that groups multiple LED entries under a single profile definition.
+  (EQ = profile, SET = grouping of child elements, LED = individual child element.)
+- Element_Linker Parameter: A text payload stored on placed elements that records the LED ID, set ID,
+  parent element id, placement location/rotation, and related metadata. This allows tools to
+  reliably map model instances back to their YAML definitions for updates, annotation placement,
+  QA/QC, and audit workflows.
+
+Implemented Functionality
+- The MEP Automation panel has the capability to do the following through the use of Extensible storage via YAML files.
+
+  Storing and Recalling Data
+  1) Import YAML File
+     - These are data files we have in our repository that we can load into Extensible Storage.
+     - The loaded data can be used to place electrical, plumbing, refrigeration fixtures, and data devices.
+     - Import seeds the in-model copy so all edits happen in Extensible Storage until Export.
+     - The selected file path is stored for quick reloading in future sessions.
+     - Import does not modify the disk file; it only updates the in-model dataset.
+     - YAML is parsed/normalized into the equipment_definitions schema before storage.
+     - The in-model copy becomes the authoritative dataset for all subsequent tools.
+     - Workflow: 
+         - select a YAML file, then the tool normalizes and stores it on Project Information.
+         - rerun Import YAML File to switch datasets or refresh from a new export.
+
+  2) Export YAML File
+     - Export writes the current in-model data (not the original file) to disk.
+     - This creates a versioned YAML for use in the next project.
+     - The output can be re-imported without manual cleanup, keeping the same schema and formatting.
+     - Serialization preserves element linker payloads and parameter data for round-trip stability.
+     - Workflow: 
+         - select an export path/name; the tool writes a snapshot for version control or sharing.
+         - confirm overwrite if reusing a filename to avoid confusing older snapshots.
+         - future edits continue to target the in-model copy until Import YAML is run again.
+         - export output is the versioned artifact for source control or team delivery.
+
+  3) Combine YAML Files
+     - Designed for the automation team workflow.
+     - Combines data from two YAML files into a new file.
+     - IDs from the first file are preserved.
+     - IDs from the second file are renumbered to continue after the highest ID in the first file
+       (e.g., if file 1 has 1,2,3 then file 2 starts at 4).
+     - The result is a standalone YAML that can be loaded like any other dataset.
+     - Renumbering targets numeric suffixes on IDs while preserving the original prefix/padding.
+     - Workflow: 
+         - pick the primary YAML, then the secondary YAML to append.
+         - the tool writes a new combined file and leaves the originals untouched.
+
+Modifying Profiles
+  1) Edit-Create Profiles
+     - Links one piece of equipment to another via a parent-child relationship.
+     - Creates a profile that contains all data placed on a parent piece of equipment.
+     - A profile must contain at least one equipment "family : type" and can optionally include
+       tags, text notes, and keynotes (GA_Keynote Symbol_CED is used for keynotes).
+     - Relative locations of equipment, tags, text notes, and keynotes are stored and preserved.
+     - Captures element rotation and offset so placement reproduces the original layout.
+     - Stores placement offsets as XYZ deltas relative to the selected parent element.
+     - Captures host/linked context so future placement can resolve the correct parent source.
+
+     a) When creating a profile from scratch:
+        - The user selects either a link (from a linked model) or a host element.
+        - If a link is chosen, the user selects the linked parent element first.
+     b) The user then selects the equipment, tags, text notes, and keynotes to store in the profile.
+        - The tool saves those selections as a reusable recipe under the parent type name.
+        - if a profile already exists, it is placed for preview before appending items.
+          Note: There is a small bug in this functionality specifically where keynotes are not getting placed.
+
+
+  2) Add Equipment to Profiles
+     - Shortcut for adding equipment without running full Edit-Create.
+     - User selects equipment to add; tool stores location and orientation relative to the parent.
+     - Used to grow an existing profile without re-creating all its items.
+     - Writes new linked element definitions into the existing profile entry.
+     - Workflow: 
+         - select the parent first, then pick the equipment to append.
+
+  3) Manage Profiles
+     - Window displays YAML data in a user-friendly way.
+     - Create independent profiles (no parent).
+     - Edit parameters of existing profiles.
+     - Add or remove equipment/annotations.
+         - Note: unless offsets are set, placed equipment/annotations default to the parent center.
+     - Provides a centralized place to audit and adjust profile contents without model selection.
+     - Independent profiles store absolute placements and rotation for each element.
+         - Workflow: 
+            - open the manager, pick a profile, edit parameters or linked items, then save to Extensible Storage.
+
+  4) Merge Profiles and 5) Unmerge Profiles
+     - Merge profiles when multiple similar names should map to the same equipment set
+       (i.e., Cake Imager_1 vs Cake Imager_2).
+     - Unmerge profiles to break the connection when they should diverge.
+     - Goal: keep a single source of truth for similar equipment across projects.
+     - Helps avoid duplicate maintenance when families/types vary slightly between projects.
+     - Merging consolidates equipment definitions so future placements use one shared profile.
+     - Workflow (Merge): 
+         - select the authoritative definition, then pick secondary profiles to inherit its linked sets.
+         - merge copies everything except the name/id fields and writes to Extensible Storage.
+     - Workflow (Unmerge): 
+         - select the merged group and member, then reset truth-source metadata so it is independent.
+         - merge results are summarized and can be undone via Revit history if needed.
+
+Placing Elements
+  Presently we have five tools for placing elements:
+  1) Place CAD Elements
+     - Used only in the Planet Fitness process flow.
+     - Uses CAD XYZ locations stored via CSV to place elements on CAD blocks in the host model.
+     - Best for workflows where CAD geometry is the authoritative layout source.
+     - Reads per-row coordinates and rotation to drive placement without linked model dependencies.
+     - Workflow: 
+         - select the CAD CSV, review column mappings, and specify the level before placement.
+         - converts imperial offsets and instantiates the referenced family types from each row.
+
+  2) Place Linked Elements
+     - Uses XYZ locations of parent elements in a linked model.
+     - Places profiles on top of those parents when the profile name matches the linked family : type label.
+     - Example: profile name "Cake Imager_1" matches linked type label "Cake Imager_1".
+     - Automates bulk placement when the linked model is the layout reference.
+     - Matching is performed against linked type labels to resolve which profile to apply.
+     - Workflow: 
+         - consumes stored offsets, parent rotation, tags, and parameter data from Extensible Storage.
+         - scans host and linked documents for matching parent names, then places each LED at its stored offset.
+         - writes Element_Linker payloads so Place Annotations can track instances.
+         - summaries report missing hosts so naming can be fixed before rerunning.
+         - after placement, Place Annotations can be run without additional setup.
+
+  3) Place Linked Elements (Category Filter)
+     - Allows placing only one category (e.g., electrical fixtures) to reduce scope and risk.
+     - Useful for staged rollouts (place electrical first, then plumbing/refrigeration).
+     - Filters the placement queue to a single Revit category before instancing elements.
+     - Workflow: same as Place Linked Elements, but filtered to a selected category.
+
+  4) Place Linked Elements (Profile Filter)
+     - Allows selecting which specific profiles/hosts to place (i.e. only cake imagers).
+     - Reduces rework by targeting only the profiles that need updates.
+     - Limits placement to a user-selected subset of profile names.
+     - Workflow: same as Place Linked Elements, but filtered to selected profile names.
+
+  5) Place Single Profile
+     - Places one equipment definition from the active YAML at a user-picked point.
+     - Supports optional filtering to show only independent profiles.
+     - Groups choices by truth-source metadata so only canonical profiles are listed.
+     - Can optionally place linked child definitions at their stored offsets and rotations.
+     - Workflow: dockable pane stays open for rapid placement and shows a 2D preview of stored offsets.
+     - Workflow: select the profile, pick a base point, then confirm whether to place child elements.
+
+  Miscellaneous Operations
+  1) Audit Linked Model
+     - Helps the automation team detect naming drift across projects.
+     - Example: Project 1 uses "Cake Imager_1200201" but Project 2 uses "Cake Imager_1".
+     - Tool suggests merging the new name into the existing profile so equipment placement stays consistent.
+     - Designed to catch these differences early before any placements are committed.
+     - Compares linked type names to existing profile names and flags likely matches.
+     - Workflow: 
+         - scans linked documents, normalizes names, and uses token overlap/fuzzy matching to rank candidates.
+         - selected matches are cloned with new EQ/SET IDs and saved into Extensible Storage.
+
+  2) Place Annotations
+     - Places tags, keynotes, and text notes saved to the profile.
+     - Works per view and preserves stored XYZ offsets relative to the host element.
+     - Intended for annotation-only updates without re-placing equipment.
+     - Rebuilds annotation geometry using stored offsets and recorded view context.
+     - Workflow: 
+         - choose annotation types, optionally filter by specific tag/keynote/text-note definitions.
+         - if elements are selected, placement is limited to that selection; otherwise the full view is scanned.
+         - resolves instances by Element_Linker and filters by dev-Group (if this parameter is not empty) to target the intended equipment.
+            - This dev-group filtering will likely be removed in the near future. It was a legacy feature from when this tool was initially constructed.
+         - run per view; missing annotation families/styles are reported by LED ID for follow-up.
+         - run after placing elements to apply stored annotations.
+
+  3) Update Profiles
+     - Captures changes at the end of a project iteration.
+     - Updates profiles with new tags, keynotes, text notes, and parameter changes.
+     - Writes changes back into the in-model YAML (Extensible Storage).
+     - Keeps the shared dataset aligned with design updates made in the model.
+     - Uses element linker data to match host/child instances back to their profile entries.
+     - Workflow: 
+         - run after modifying tags, text notes, or parameters on elements that already carry Element_Linker data.
+         - scans linked elements with Element_Linker data and merges updates into each LED definition.
+         - rerun Place Linked Elements or Place Annotations to propagate updates into views.
+
+Work in Progress
+- Edit-Create Profiles
+  - If a profile already exists for the equipment, the profile will be placed upon parent selection. 
+      - Keynotes have yet to be placed with this function of the tool.
+  - Handling of multiple annotations per profile needs more robust host selection rules.
+- Place by Room
+  - UI supports per-room, per-profile, and per-type counts.
+  - Spacing logic is being refined to ensure equal gaps between elements and walls.
+  - Handles both horizontal and vertical orientations, but edge-case geometry still needs tuning.
+  - Uses linked room boundaries to derive spacing extents; still refining line-of-sight wall sampling.
+  - Workflow: 
+      - select profiles, linked model, and rooms; then enter per-room counts before placement.
+      - a post-placement nudge pass attempts to equalize edge gaps to internal spacing.
+- Parent/Sibling Parameter + Parameter Flag Settings
+  - Parent and sibling parameter workflows are being refined to reduce manual entry.
+  - Parameter flag settings logic is still being tuned for unit/value handling and conflict resolution.
+  - Parameter resolution rules are being refined for parent/sibling priority and numeric parsing.
+  - Workflow: Parameter Flag Settings toggles the after-sync check or runs it immediately on demand.
+
+Known Issues / Risks
+- Place by Room spacing can still be uneven in some rooms (linked wall boundaries).
+- Parent/child parameter conflicts can surface unit/value inconsistencies during updates, requiring
+  manual review to ensure units are stripped or standardized before writing back to profiles
+  (Parameter Flag Settings and Update Profiles).
+
+Future
+- Multi select for placements of independent profiles, i.e. select all the places you want this independent profile to go and click finish to place the 
+  profile at all of those locations.
+- Multi select for placements of individual families that aren't necessarily profiles.
+- Break the Create Independent profiles button in the Manage profiles UI into its own exterior button.
+- Multi-parent profiles: allow selecting two parents so a profile can follow a primary and secondary host.
+- Advanced matching rules: fuzzy or rule-based matching (synonyms, partial matches, category filters, and
+  whitelist/blacklist rules) to handle naming drift across projects.
+- Profile QA/QC: validate missing parameters, invalid offsets, or missing required elements before placement.
+- Data validation reports: highlight duplicates, missing required tags, and parameter type mismatches.
+- Conflict resolution UI: richer preview and change summaries before applying updates.
+- Batch validation tools: scan for missing parents, missing element linker data, or mismatched categories.
+- Placement analytics: report placement success rates, skipped items, and unmatched profiles.
+- Place Single Profile dockable pane: keep the picker open for rapid repeated placement without reopening the tool.

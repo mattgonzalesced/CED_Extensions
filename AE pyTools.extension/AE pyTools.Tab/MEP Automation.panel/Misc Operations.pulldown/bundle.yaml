@@ -1,6 +1,7 @@
 layout:
   - Audit Linked Model
   - SchemaViewer
-  - Tag Equipment
+  - Place Annotations
   - Update Profiles
+  - Write Element Linker
   - Place Spaces CSV

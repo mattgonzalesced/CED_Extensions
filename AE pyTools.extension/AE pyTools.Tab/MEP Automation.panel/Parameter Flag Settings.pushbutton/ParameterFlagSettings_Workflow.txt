@@ -1,0 +1,7 @@
+Use Parameter Flag Settings to control the parent/child parameter conflict
+checks that run after sync. You can enable or disable the automatic check, or
+run the check immediately on the active document.
+
+The dialog updates the stored setting and launches the conflict checker when
+requested so you can resolve discrepancies before writing updates back to
+profiles.

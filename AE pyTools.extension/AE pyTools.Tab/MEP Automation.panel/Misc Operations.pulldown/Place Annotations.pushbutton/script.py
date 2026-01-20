@@ -247,15 +247,27 @@ def _has_tag_definition(tag_dict):
     return any(tag_dict.get(key) for key in keys)
 
 
+def _normalize_keynote_family(value):
+    if not value:
+        return ""
+    text = str(value)
+    if ":" in text:
+        text = text.split(":", 1)[0]
+    return "".join([ch for ch in text.lower() if ch.isalnum()])
+
+
+def _is_ga_keynote_symbol(family_name):
+    return _normalize_keynote_family(family_name) == "gakeynotesymbolced"
+
+
 def _is_keynote_entry(tag_entry):
+    if not tag_entry:
+        return False
     if isinstance(tag_entry, dict):
         family = tag_entry.get("family_name") or tag_entry.get("family") or ""
-        category = tag_entry.get("category_name") or tag_entry.get("category") or ""
     else:
         family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
-        category = getattr(tag_entry, "category_name", None) or getattr(tag_entry, "category", None) or ""
-    text = "{} {}".format(family, category).lower()
-    return "keynote" in text
+    return _is_ga_keynote_symbol(family)
 
 
 def _has_text_note_definition(note_dict):
@@ -405,24 +417,26 @@ def _get_point(inst):
 
 def _get_rotation_degrees(inst):
     loc = getattr(inst, "Location", None)
-    if loc is None:
-        return 0.0
-    rot = getattr(loc, "Rotation", None)
-    if rot:
+    if loc is not None and hasattr(loc, "Rotation"):
         try:
-            return math.degrees(rot)
+            return math.degrees(loc.Rotation)
         except Exception:
-            return 0.0
-    basis = getattr(inst, "FacingOrientation", None)
-    if basis:
-        try:
-            return math.degrees(math.atan2(basis.Y, basis.X))
-        except Exception:
-            return 0.0
+            pass
+    try:
+        transform = inst.GetTransform()
+    except Exception:
+        transform = None
+    if transform is not None:
+        basis = getattr(transform, "BasisX", None)
+        if basis:
+            try:
+                return math.degrees(math.atan2(basis.Y, basis.X))
+            except Exception:
+                pass
     return 0.0
 
 
-def _collect_instance_lookup(doc, view):
+def _collect_instance_lookup(doc, view, elements=None):
     lookup = {}
     symbol_lookup = {}
 
@@ -442,8 +456,11 @@ def _collect_instance_lookup(doc, view):
         symbol_lookup.setdefault((f_norm, t_norm), []).append(inst)
         lookup.setdefault(f_norm, []).append(inst)
 
-    collector = FilteredElementCollector(doc, view.Id).OfClass(FamilyInstance)
-    for inst in collector:
+    if elements is None:
+        instances = FilteredElementCollector(doc, view.Id).OfClass(FamilyInstance)
+    else:
+        instances = [elem for elem in elements if isinstance(elem, FamilyInstance)]
+    for inst in instances:
         label = _get_label(inst)
         if not label:
             continue
@@ -730,7 +747,15 @@ def main():
     if not selected_tags and not selected_keynotes and not selected_text_notes:
         return
 
-    host_lookup, symbol_lookup = _collect_instance_lookup(doc, active_view)
+    selection = revit.get_selection()
+    selected_elements = list(getattr(selection, "elements", []) or []) if selection else []
+    if selected_elements:
+        host_lookup, symbol_lookup = _collect_instance_lookup(doc, active_view, selected_elements)
+        if not host_lookup and not symbol_lookup:
+            forms.alert("No family instances found in the current selection.", title=TITLE)
+            return
+    else:
+        host_lookup, symbol_lookup = _collect_instance_lookup(doc, active_view)
     if not host_lookup and not symbol_lookup:
         forms.alert("No family instances found in the active view.", title=TITLE)
         return

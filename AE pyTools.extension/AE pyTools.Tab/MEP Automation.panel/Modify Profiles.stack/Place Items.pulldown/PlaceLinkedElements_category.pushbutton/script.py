@@ -87,6 +87,7 @@ TRUTH_SOURCE_NAME_KEY = "ced_truth_source_name"
 LEVEL_NUMBER_RE = re.compile(r"(?:^|\b)(?:level|lvl|l)\s*0*([0-9]+)\b", re.IGNORECASE)
 PARENT_ID_RE = re.compile(r"parent element(?:id| id)\s*:\s*([0-9]+)", re.IGNORECASE)
 PARENT_ID_KEYS = ("Parent ElementId", "Parent Element ID")
+LEGEND_LEVEL_RE = re.compile(r"\blegend\b", re.IGNORECASE)
 
 
 def _build_repository(data):
@@ -201,6 +202,12 @@ def _compact_level_text(value):
     if not value:
         return ""
     return re.sub(r"[^a-z0-9]+", "", str(value).strip().lower())
+
+
+def _is_legend_level_name(value):
+    if not value:
+        return False
+    return bool(LEGEND_LEVEL_RE.search(str(value)))
 
 
 def _extract_level_number(value):
@@ -1058,6 +1065,12 @@ def main():
         host_levels = list(FilteredElementCollector(doc).OfClass(Level))
     except Exception:
         host_levels = []
+    host_level_names_by_id = {}
+    for level in host_levels or []:
+        try:
+            host_level_names_by_id[level.Id.IntegerValue] = getattr(level, "Name", None)
+        except Exception:
+            continue
 
     skipped_by_category = 0
     for cad_name in equipment_names:
@@ -1130,7 +1143,11 @@ def main():
                         else:
                             missing_levels.append((cad_name, "(no level info)"))
                         continue
-            parent_id = parent_id_from_yaml if parent_id_from_yaml is not None else match.get("parent_element_id")
+            level_name = match.get("level_name") or host_level_names_by_id.get(level_id_val)
+            if _is_legend_level_name(level_name):
+                continue
+            match_parent_id = match.get("parent_element_id")
+            parent_id = match_parent_id if match_parent_id not in (None, "") else parent_id_from_yaml
             row_key = _placement_key(point, rotation, level_id_val, parent_id)
             if row_key in seen_rows:
                 deduped_rows += 1

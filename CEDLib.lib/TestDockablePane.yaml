@@ -1,0 +1,2161 @@
+equipment_definitions:
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KR2XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD26A-089
+    name: KRACK KR2 South
+    schema_version: 1
+    id: EQ-022
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KR2XX : KRD26A-089"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-022-LED-001\nSet Definition ID: SET-022\nLocation XYZ (ft): 28.788258,749.303832,0.000000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9144468\nFacingOrientation: 0.000000,1.000000,0.000000"
+            id: SET-022-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-022
+        name: KRACK KR2 South Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KR2 South
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-022
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD6XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD64E-220
+    name: KRACK KRD6 South
+    schema_version: 1
+    id: EQ-042
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD6XX : KRD64E-220"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-042-LED-001\nSet Definition ID: SET-042\nLocation XYZ (ft): 29.285341,746.023082,0.000000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9144633\nFacingOrientation: 0.000000,1.000000,0.000000"
+            id: SET-042-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-042
+        name: KRACK KRD6 South Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD6 South
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-042
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: EF-U_Receptacle_CED
+      category: Electrical Fixtures
+      parameter_filters:
+        {}
+      type_name_pattern: Duplex Wall
+    name: Test 3 Recepts 3D Preview
+    schema_version: 1
+    id: EQ-047
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            text_notes:
+              []
+            label: "EF-U_Receptacle_CED : Duplex Wall"
+            parameters:
+              dev-Group ID: ""
+              SLD_Component ID_CED: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-047-LED-001\nSet Definition ID: SET-047\nLocation XYZ (ft): 78.816808,444.584516,1.500000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9145089\nFacingOrientation: 0.000000,1.000000,0.000000"
+              CKT_Rating_CED: 0.0
+              Product Datasheet URL: ""
+              CKT_Panel_CEDT: ""
+              Load Classification_CED: REC
+              SLD_Symbol ID_CED: ""
+              FLA Input_CED: 0.0
+              Power Factor_CED: 1.0
+              Wattage Input_CED: 0.0
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              Apparent Load Input_CED: 180.0
+              CKT_Circuit Number_CEDT: ""
+              Voltage_CED: 120.0
+              Product Specification: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-047-LED-001
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: -36.8334923321
+                y_inches: 21.1451530055
+                z_inches: 18.0
+            keynotes:
+              []
+          -
+            is_group: false
+            text_notes:
+              []
+            label: "EF-U_Receptacle_CED : Duplex Wall"
+            parameters:
+              dev-Group ID: ""
+              SLD_Component ID_CED: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-047-LED-002\nSet Definition ID: SET-047\nLocation XYZ (ft): 84.955723,444.584516,1.500000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9145096\nFacingOrientation: 0.000000,1.000000,0.000000"
+              CKT_Rating_CED: 0.0
+              Product Datasheet URL: ""
+              CKT_Panel_CEDT: ""
+              Load Classification_CED: REC
+              SLD_Symbol ID_CED: ""
+              FLA Input_CED: 0.0
+              Power Factor_CED: 1.0
+              Wattage Input_CED: 0.0
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              Apparent Load Input_CED: 180.0
+              CKT_Circuit Number_CEDT: ""
+              Voltage_CED: 120.0
+              Product Specification: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-047-LED-002
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 36.8334923321
+                y_inches: 21.1451530055
+                z_inches: 18.0
+            keynotes:
+              []
+          -
+            is_group: false
+            text_notes:
+              []
+            label: "EF-U_Receptacle_CED : Duplex Wall"
+            parameters:
+              dev-Group ID: ""
+              SLD_Component ID_CED: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-047-LED-003\nSet Definition ID: SET-047\nLocation XYZ (ft): 81.886265,439.298228,1.500000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9145103\nFacingOrientation: 0.000000,1.000000,0.000000"
+              CKT_Rating_CED: 0.0
+              Product Datasheet URL: ""
+              CKT_Panel_CEDT: ""
+              Load Classification_CED: REC
+              SLD_Symbol ID_CED: ""
+              FLA Input_CED: 0.0
+              Power Factor_CED: 1.0
+              Wattage Input_CED: 0.0
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              Apparent Load Input_CED: 180.0
+              CKT_Circuit Number_CEDT: ""
+              Voltage_CED: 120.0
+              Product Specification: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-047-LED-003
+            tags:
+              []
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: -42.2903060109
+                z_inches: 18.0
+            keynotes:
+              []
+        id: SET-047
+        name: Test 3 Recepts 3D Preview Types
+    allow_parentless: true
+    ced_truth_source_name: Test 3 Recepts 3D Preview
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-047
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK GHD3XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: GHD36A-198
+    name: KRACK GHD3 Vertical
+    schema_version: 1
+    id: EQ-009
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK GHD3XX : GHD36A-198"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-009-LED-001\nSet Definition ID: SET-009\nLocation XYZ (ft): 35.946259,754.871167,0.000000\nRotation (deg): 90.000000\nLevelId: 30\nElementId: 9144407\nFacingOrientation: -1.000000,0.000000,0.000000"
+            id: SET-009-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-009
+        name: KRACK GHD3 Vertical Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK GHD3 Vertical
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-009
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD4XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD44E-148
+    name: KRACK KRD4 East
+    schema_version: 1
+    id: EQ-035
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD4XX : KRD44E-148"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-035-LED-001\nSet Definition ID: SET-035\nLocation XYZ (ft): 29.583591,746.122499,0.000000\nRotation (deg): 90.000000\nLevelId: 30\nElementId: 9144541\nFacingOrientation: -1.000000,0.000000,0.000000"
+            id: SET-035-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-035
+        name: KRACK KRD4 East Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD4 East
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-035
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD3XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD34E-111
+    name: KRACK KRD3 South
+    schema_version: 1
+    id: EQ-030
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD3XX : KRD34E-111"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-030-LED-001\nSet Definition ID: SET-030\nLocation XYZ (ft): 32.168425,748.309666,0.000000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9144519\nFacingOrientation: 0.000000,1.000000,0.000000"
+            id: SET-030-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-030
+        name: KRACK KRD3 South Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD3 South
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-030
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK GHD3XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: GHD36A-198
+    name: KRACK GHD3 Horizontal
+    schema_version: 1
+    id: EQ-008
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK GHD3XX : GHD36A-198"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-008-LED-001\nSet Definition ID: SET-008\nLocation XYZ (ft): 35.946259,754.871167,0.000000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9144407\nFacingOrientation: 0.000000,1.000000,0.000000"
+            id: SET-008-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-008
+        name: KRACK GHD3 Horizontal Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK GHD3 Horizontal
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-008
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK GHD6XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: GHD66A-410
+    name: KRACK GHD6 Horizontal
+    schema_version: 1
+    id: EQ-014
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK GHD6XX : GHD66A-410"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-014-LED-001\nSet Definition ID: SET-014\nLocation XYZ (ft): 32.864342,750.198583,0.000000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9144428\nFacingOrientation: 0.000000,1.000000,0.000000"
+            id: SET-014-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-014
+        name: KRACK GHD6 Horizontal Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK GHD6 Horizontal
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-014
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD5XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD54E-185
+    name: KRACK KRD5 North
+    schema_version: 1
+    id: EQ-040
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD5XX : KRD54E-185"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-040-LED-001\nSet Definition ID: SET-040\nLocation XYZ (ft): 29.782425,746.917832,0.000000\nRotation (deg): 180.000000\nLevelId: 30\nElementId: 9144591\nFacingOrientation: -0.000000,-1.000000,0.000000"
+            id: SET-040-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-040
+        name: KRACK KRD5 North Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD5 North
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-040
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD5XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD54E-185
+    name: KRACK KRD5 South
+    schema_version: 1
+    id: EQ-038
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD5XX : KRD54E-185"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-038-LED-001\nSet Definition ID: SET-038\nLocation XYZ (ft): 29.782425,746.917832,0.000000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9144591\nFacingOrientation: 0.000000,1.000000,0.000000"
+            id: SET-038-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-038
+        name: KRACK KRD5 South Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD5 South
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-038
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK GHD5XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: GHD56A-340
+    name: KRACK GHD5 Vertical
+    schema_version: 1
+    id: EQ-013
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK GHD5XX : GHD56A-340"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-013-LED-001\nSet Definition ID: SET-013\nLocation XYZ (ft): 32.267842,750.297999,0.000000\nRotation (deg): 90.000000\nLevelId: 30\nElementId: 9144422\nFacingOrientation: -1.000000,0.000000,0.000000"
+            id: SET-013-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-013
+        name: KRACK GHD5 Vertical Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK GHD5 Vertical
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-013
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD6XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD64E-220
+    name: KRACK KRD6 North
+    schema_version: 1
+    id: EQ-044
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD6XX : KRD64E-220"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-044-LED-001\nSet Definition ID: SET-044\nLocation XYZ (ft): 29.285341,746.023082,0.000000\nRotation (deg): 180.000000\nLevelId: 30\nElementId: 9144633\nFacingOrientation: -0.000000,-1.000000,0.000000"
+            id: SET-044-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-044
+        name: KRACK KRD6 North Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD6 North
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-044
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KR1XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KR16A-054
+    name: KRACK KR1 West
+    schema_version: 1
+    id: EQ-021
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KR1XX : KR16A-054"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-021-LED-001\nSet Definition ID: SET-021\nLocation XYZ (ft): 27.595258,750.993916,0.000000\nRotation (deg): 270.000000\nLevelId: 30\nElementId: 9144440\nFacingOrientation: 1.000000,-0.000000,0.000000"
+            id: SET-021-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 270.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-021
+        name: KRACK KR1 West Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KR1 West
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-021
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD5XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD54E-185
+    name: KRACK KRD5 West
+    schema_version: 1
+    id: EQ-041
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD5XX : KRD54E-185"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-041-LED-001\nSet Definition ID: SET-041\nLocation XYZ (ft): 29.782425,746.917832,0.000000\nRotation (deg): 270.000000\nLevelId: 30\nElementId: 9144591\nFacingOrientation: 1.000000,-0.000000,0.000000"
+            id: SET-041-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 270.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-041
+        name: KRACK KRD5 West Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD5 West
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-041
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK GHD2XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: GH26A-130
+    name: KRACK GHD2 Horizontal
+    schema_version: 1
+    id: EQ-006
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK GHD2XX : GH26A-130"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-006-LED-001\nSet Definition ID: SET-006\nLocation XYZ (ft): 36.045675,752.485166,0.000000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9144401\nFacingOrientation: 0.000000,1.000000,0.000000"
+            id: SET-006-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-006
+        name: KRACK GHD2 Horizontal Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK GHD2 Horizontal
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-006
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD2XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD26A-089
+    name: KRACK KRD2 South
+    schema_version: 1
+    id: EQ-026
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD2XX : KRD26A-089"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-026-LED-001\nSet Definition ID: SET-026\nLocation XYZ (ft): 27.297008,752.684000,0.000000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9144494\nFacingOrientation: 0.000000,1.000000,0.000000"
+            id: SET-026-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-026
+        name: KRACK KRD2 South Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD2 South
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-026
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD4XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD44E-148
+    name: KRACK KRD4 North
+    schema_version: 1
+    id: EQ-036
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD4XX : KRD44E-148"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-036-LED-001\nSet Definition ID: SET-036\nLocation XYZ (ft): 29.583591,746.122499,0.000000\nRotation (deg): 180.000000\nLevelId: 30\nElementId: 9144541\nFacingOrientation: -0.000000,-1.000000,0.000000"
+            id: SET-036-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-036
+        name: KRACK KRD4 North Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD4 North
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-036
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD6XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD64E-220
+    name: KRACK KRD6 West
+    schema_version: 1
+    id: EQ-045
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD6XX : KRD64E-220"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-045-LED-001\nSet Definition ID: SET-045\nLocation XYZ (ft): 29.285341,746.023082,0.000000\nRotation (deg): 270.000000\nLevelId: 30\nElementId: 9144633\nFacingOrientation: 1.000000,-0.000000,0.000000"
+            id: SET-045-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 270.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-045
+        name: KRACK KRD6 West Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD6 West
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-045
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KR2XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD26A-089
+    name: KRACK KR2 East
+    schema_version: 1
+    id: EQ-023
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KR2XX : KRD26A-089"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-023-LED-001\nSet Definition ID: SET-023\nLocation XYZ (ft): 28.788258,749.303832,0.000000\nRotation (deg): 90.000000\nLevelId: 30\nElementId: 9144468\nFacingOrientation: -1.000000,0.000000,0.000000"
+            id: SET-023-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-023
+        name: KRACK KR2 East Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KR2 East
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-023
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD3XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD34E-111
+    name: KRACK KRD3 North
+    schema_version: 1
+    id: EQ-032
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD3XX : KRD34E-111"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-032-LED-001\nSet Definition ID: SET-032\nLocation XYZ (ft): 32.168425,748.309666,0.000000\nRotation (deg): 180.000000\nLevelId: 30\nElementId: 9144519\nFacingOrientation: -0.000000,-1.000000,0.000000"
+            id: SET-032-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-032
+        name: KRACK KRD3 North Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD3 North
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-032
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK GH4XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: GH46D-270
+    name: KRACK GH4 Horizontal
+    schema_version: 1
+    id: EQ-002
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK GH4XX : GH46D-270"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-002-LED-001\nSet Definition ID: SET-002\nLocation XYZ (ft): 34.057342,739.362165,0.000000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9144389\nFacingOrientation: 0.000000,1.000000,0.000000"
+            id: SET-002-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-002
+        name: KRACK GH4 Horizontal Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK GH4 Horizontal
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-002
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KR1XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KR16A-054
+    name: KRACK KR1 North
+    schema_version: 1
+    id: EQ-020
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KR1XX : KR16A-054"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-020-LED-001\nSet Definition ID: SET-020\nLocation XYZ (ft): 27.595258,750.993916,0.000000\nRotation (deg): 180.000000\nLevelId: 30\nElementId: 9144440\nFacingOrientation: -0.000000,-1.000000,0.000000"
+            id: SET-020-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-020
+        name: KRACK KR1 North Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KR1 North
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-020
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD3XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD34E-111
+    name: KRACK KRD3 West
+    schema_version: 1
+    id: EQ-033
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD3XX : KRD34E-111"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-033-LED-001\nSet Definition ID: SET-033\nLocation XYZ (ft): 32.168425,748.309666,0.000000\nRotation (deg): 270.000000\nLevelId: 30\nElementId: 9144519\nFacingOrientation: 1.000000,-0.000000,0.000000"
+            id: SET-033-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 270.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-033
+        name: KRACK KRD3 West Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD3 West
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-033
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD4XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD44E-148
+    name: KRACK KRD4 South
+    schema_version: 1
+    id: EQ-034
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD4XX : KRD44E-148"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-034-LED-001\nSet Definition ID: SET-034\nLocation XYZ (ft): 29.583591,746.122499,0.000000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9144541\nFacingOrientation: 0.000000,1.000000,0.000000"
+            id: SET-034-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-034
+        name: KRACK KRD4 South Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD4 South
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-034
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD4XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD44E-148
+    name: KRACK KRD4 West
+    schema_version: 1
+    id: EQ-037
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD4XX : KRD44E-148"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-037-LED-001\nSet Definition ID: SET-037\nLocation XYZ (ft): 29.583591,746.122499,0.000000\nRotation (deg): 270.000000\nLevelId: 30\nElementId: 9144541\nFacingOrientation: 1.000000,-0.000000,0.000000"
+            id: SET-037-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 270.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-037
+        name: KRACK KRD4 West Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD4 West
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-037
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK GH5XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: GH54A-250
+    name: KRACK GH5 Horizontal
+    schema_version: 1
+    id: EQ-004
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK GH5XX : GH54A-250"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-004-LED-001\nSet Definition ID: SET-004\nLocation XYZ (ft): 31.074841,747.315499,0.000000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9144395\nFacingOrientation: 0.000000,1.000000,0.000000"
+            id: SET-004-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-004
+        name: KRACK GH5 Horizontal Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK GH5 Horizontal
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-004
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK GH5XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: GH54A-250
+    name: KRACK GH5 Vertical
+    schema_version: 1
+    id: EQ-005
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK GH5XX : GH54A-250"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-005-LED-001\nSet Definition ID: SET-005\nLocation XYZ (ft): 31.074841,747.315499,0.000000\nRotation (deg): 90.000000\nLevelId: 30\nElementId: 9144395\nFacingOrientation: -1.000000,0.000000,0.000000"
+            id: SET-005-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-005
+        name: KRACK GH5 Vertical Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK GH5 Vertical
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-005
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD2XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD26A-089
+    name: KRACK KRD2 North
+    schema_version: 1
+    id: EQ-028
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD2XX : KRD26A-089"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-028-LED-001\nSet Definition ID: SET-028\nLocation XYZ (ft): 27.297008,752.684000,0.000000\nRotation (deg): 180.000000\nLevelId: 30\nElementId: 9144494\nFacingOrientation: -0.000000,-1.000000,0.000000"
+            id: SET-028-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-028
+        name: KRACK KRD2 North Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD2 North
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-028
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK GH4XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: GH46D-270
+    name: KRACK GH4 Vertical
+    schema_version: 1
+    id: EQ-003
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK GH4XX : GH46D-270"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-003-LED-001\nSet Definition ID: SET-003\nLocation XYZ (ft): 34.057342,739.362165,0.000000\nRotation (deg): 90.000000\nLevelId: 30\nElementId: 9144389\nFacingOrientation: -1.000000,0.000000,0.000000"
+            id: SET-003-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-003
+        name: KRACK GH4 Vertical Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK GH4 Vertical
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-003
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK GHD5XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: GHD56A-340
+    name: KRACK GHD5 Horizontal
+    schema_version: 1
+    id: EQ-012
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK GHD5XX : GHD56A-340"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-012-LED-001\nSet Definition ID: SET-012\nLocation XYZ (ft): 32.267842,750.297999,0.000000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9144422\nFacingOrientation: 0.000000,1.000000,0.000000"
+            id: SET-012-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-012
+        name: KRACK GHD5 Horizontal Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK GHD5 Horizontal
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-012
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD2XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD26A-089
+    name: KRACK KRD2 West
+    schema_version: 1
+    id: EQ-029
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD2XX : KRD26A-089"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-029-LED-001\nSet Definition ID: SET-029\nLocation XYZ (ft): 27.297008,752.684000,0.000000\nRotation (deg): 270.000000\nLevelId: 30\nElementId: 9144494\nFacingOrientation: 1.000000,-0.000000,0.000000"
+            id: SET-029-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 270.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-029
+        name: KRACK KRD2 West Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD2 West
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-029
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KR1XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KR16A-054
+    name: KRACK KR1 South
+    schema_version: 1
+    id: EQ-018
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KR1XX : KR16A-054"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-018-LED-001\nSet Definition ID: SET-018\nLocation XYZ (ft): 27.595258,750.993916,0.000000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9144440\nFacingOrientation: 0.000000,1.000000,0.000000"
+            id: SET-018-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-018
+        name: KRACK KR1 South Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KR1 South
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-018
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KR2XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD26A-089
+    name: KRACK KR2 West
+    schema_version: 1
+    id: EQ-025
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KR2XX : KRD26A-089"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-025-LED-001\nSet Definition ID: SET-025\nLocation XYZ (ft): 28.788258,749.303832,0.000000\nRotation (deg): 270.000000\nLevelId: 30\nElementId: 9144468\nFacingOrientation: 1.000000,-0.000000,0.000000"
+            id: SET-025-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 270.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-025
+        name: KRACK KR2 West Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KR2 West
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-025
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD6XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD64E-220
+    name: KRACK KRD6 East
+    schema_version: 1
+    id: EQ-043
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD6XX : KRD64E-220"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-043-LED-001\nSet Definition ID: SET-043\nLocation XYZ (ft): 29.285341,746.023082,0.000000\nRotation (deg): 90.000000\nLevelId: 30\nElementId: 9144633\nFacingOrientation: -1.000000,0.000000,0.000000"
+            id: SET-043-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-043
+        name: KRACK KRD6 East Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD6 East
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-043
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK GHD4XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: GHD44D-200
+    name: KRACK GHD4 Horizontal
+    schema_version: 1
+    id: EQ-010
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK GHD4XX : GHD44D-200"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-010-LED-001\nSet Definition ID: SET-010\nLocation XYZ (ft): 31.770758,751.093333,10.000000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9144416\nFacingOrientation: 0.000000,1.000000,0.000000"
+            id: SET-010-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 120.0
+            keynotes:
+              []
+        id: SET-010
+        name: KRACK GHD4 Horizontal Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK GHD4 Horizontal
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-010
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: ME_Air Curtain_CED
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Powered Aire CHA-2-E (Electric)
+    name: "ME_Air Curtain_CED : Powered Aire CHA-2-E (Electric)"
+    schema_version: 1
+    id: EQ-046
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            text_notes:
+              -
+                text: Test Note
+                width_inches: 0.577
+                type_name: (Default Project Text) 3/32" Arial Narrow
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -33.8929944981
+                  y_inches: 32.3322168282
+                  z_inches: -36.0
+                leaders:
+                  []
+            label: "EF-U_Disconnect Switch_CED : Fused - 60A"
+            parameters:
+              dev-Group ID: ""
+              SLD_Component ID_CED: ""
+              CKT_Load Name_CEDT: ""
+              CKT_Rating_CED: 0.0
+              Power Factor_CED: 1.0
+              CKT_Panel_CEDT: ""
+              FLA Input_CED: 0.0
+              Load Classification_CED: Receptacle
+              Product Datasheet URL: ""
+              SLD_Symbol ID_CED: ""
+              Wattage Input_CED: 0.0
+              Number of Poles_CED: 3
+              CKT_Schedule Notes_CEDT: ""
+              CKT_Circuit Number_CEDT: ""
+              Apparent Load Input_CED: 280.0
+              Voltage_CED: 500.0
+              Product Specification: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-046-LED-001\nSet Definition ID: SET-046\nLocation XYZ (ft): 53.542761,436.335733,3.000000\nRotation (deg): 0.000000\nParent Rotation (deg): 0.000000\nParent ElementId: 9143077\nLevelId: 30\nElementId: 9143884\nFacingOrientation: 0.000000,1.000000,0.000000"
+            id: SET-046-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: Circuit Number
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 28.2832031250
+                  y_inches: 3.21660691193
+                  z_inches: 7.439453125
+                category_name: Electrical Fixture Tags
+                family_name: EF-Tag_Electrical Fixtures_CED
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.3784
+                y_inches: 30.0541
+                z_inches: 36.0
+            keynotes:
+              -
+                parameters:
+                  Keynote Category: ""
+                  Key Value H Offset: 0.0
+                  Symbol Text Offset Link: 0.0
+                  Symbol Head is Centered: 1
+                  Area: 0.000627723752113
+                  Symbol Head Face Offset: 0.0
+                  Key Value V Offset: 0.0
+                  Keyword(s): General
+                  Symbol Head Height: 0.015625
+                  Keynote Value: 7
+                  Symbol Head Width: 0.015625
+                  Family Name: GA_Keynote Symbol_CED
+                  Host Id: -1
+                  Edited by: ""
+                  Show Symbol Text: 0
+                  Symbol Text: TYP
+                  Type Id: 2348313
+                  Category: -2000150
+                  Show Symbol Head: 1
+                  Design Option: -1
+                  Symbol Head is Aligned Right: 0
+                  Symbol Head Diameter: 0.0
+                  Symbol Selector: 2348257
+                  Workset: 11290
+                  Family and Type: 2348313
+                  Type Name: Standard
+                  Leader Arrowhead: 137584
+                  Family Version: 20.1.2
+                  Keynote Description: ""
+                  Volume: 0.0
+                  Show Description: 0
+                  Family: 2348313
+                  Level: -1
+                  Symbol Head is Face Based: 0
+                  Type: 2348313
+                type_name: Standard
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 8.555
+                  y_inches: 27.4479
+                  z_inches: 84.0
+                category_name: Generic Annotations
+                family_name: GA_Keynote Symbol_CED
+        id: SET-046
+        name: "ME_Air Curtain_CED : Powered Aire CHA-2-E (Electric) Types"
+    allow_parentless: true
+    ced_truth_source_name: "ME_Air Curtain_CED : Powered Aire CHA-2-E (Electric)"
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-046
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK GLD2XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: GL26A-90
+    name: KRACK GLD2 Vertical
+    schema_version: 1
+    id: EQ-017
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK GLD2XX : GL26A-90"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-017-LED-001\nSet Definition ID: SET-017\nLocation XYZ (ft): 27.197591,751.292166,0.000000\nRotation (deg): 90.000000\nLevelId: 30\nElementId: 9144434\nFacingOrientation: -1.000000,0.000000,0.000000"
+            id: SET-017-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-017
+        name: KRACK GLD2 Vertical Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK GLD2 Vertical
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-017
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD3XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD34E-111
+    name: KRACK KRD3 East
+    schema_version: 1
+    id: EQ-031
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD3XX : KRD34E-111"
+            parameters:
+              dev-Group ID: ""
+              SLD_Component ID_CED: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-031-LED-001\nSet Definition ID: SET-031\nLocation XYZ (ft): 32.168425,748.309666,0.000000\nRotation (deg): 90.000000\nLevelId: 30\nElementId: 9144519\nFacingOrientation: -1.000000,0.000000,0.000000"
+              CKT_Rating_CED: 0.0
+              Product Datasheet URL: ""
+              FLA Input_CED: 0.0
+              Load Classification_CED: REC
+              SLD_Symbol ID_CED: ""
+              Power Factor_CED: 1.0
+              Wattage Input_CED: 0.0
+              Number of Poles_CED: 1
+              CKT_Schedule Notes_CEDT: ""
+              Apparent Load Input_CED: 360.0
+              Voltage_CED: 120.0
+              Product Specification: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-031-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-031
+        name: KRACK KRD3 East Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD3 East
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-031
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK GLD2XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: GL26A-90
+    name: KRACK GLD2 Horizontal
+    schema_version: 1
+    id: EQ-016
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK GLD2XX : GL26A-90"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-016-LED-001\nSet Definition ID: SET-016\nLocation XYZ (ft): 27.197591,751.292166,0.000000\nRotation (deg): 0.000000\nLevelId: 30\nElementId: 9144434\nFacingOrientation: 0.000000,1.000000,0.000000"
+            id: SET-016-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-016
+        name: KRACK GLD2 Horizontal Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK GLD2 Horizontal
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-016
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK GHD2XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: GH26A-130
+    name: KRACK GHD2 Vertical
+    schema_version: 1
+    id: EQ-007
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK GHD2XX : GH26A-130"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-007-LED-001\nSet Definition ID: SET-007\nLocation XYZ (ft): 36.045675,752.485166,0.000000\nRotation (deg): 90.000000\nLevelId: 30\nElementId: 9144401\nFacingOrientation: -1.000000,0.000000,0.000000"
+            id: SET-007-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-007
+        name: KRACK GHD2 Vertical Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK GHD2 Vertical
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-007
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK GHD6XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: GHD66A-410
+    name: KRACK GHD6 Vertical
+    schema_version: 1
+    id: EQ-015
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK GHD6XX : GHD66A-410"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-015-LED-001\nSet Definition ID: SET-015\nLocation XYZ (ft): 32.864342,750.198583,0.000000\nRotation (deg): 90.000000\nLevelId: 30\nElementId: 9144428\nFacingOrientation: -1.000000,0.000000,0.000000"
+            id: SET-015-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-015
+        name: KRACK GHD6 Vertical Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK GHD6 Vertical
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-015
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD5XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD54E-185
+    name: KRACK KRD5 East
+    schema_version: 1
+    id: EQ-039
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD5XX : KRD54E-185"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-039-LED-001\nSet Definition ID: SET-039\nLocation XYZ (ft): 29.782425,746.917832,0.000000\nRotation (deg): 90.000000\nLevelId: 30\nElementId: 9144591\nFacingOrientation: -1.000000,0.000000,0.000000"
+            id: SET-039-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-039
+        name: KRACK KRD5 East Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD5 East
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-039
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KRD2XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD26A-089
+    name: KRACK KRD2 East
+    schema_version: 1
+    id: EQ-027
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KRD2XX : KRD26A-089"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-027-LED-001\nSet Definition ID: SET-027\nLocation XYZ (ft): 27.297008,752.684000,0.000000\nRotation (deg): 90.000000\nLevelId: 30\nElementId: 9144494\nFacingOrientation: -1.000000,0.000000,0.000000"
+            id: SET-027-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-027
+        name: KRACK KRD2 East Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KRD2 East
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-027
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KR1XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KR16A-054
+    name: KRACK KR1 East
+    schema_version: 1
+    id: EQ-019
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KR1XX : KR16A-054"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-019-LED-001\nSet Definition ID: SET-019\nLocation XYZ (ft): 27.595258,750.993916,0.000000\nRotation (deg): 90.000000\nLevelId: 30\nElementId: 9144440\nFacingOrientation: -1.000000,0.000000,0.000000"
+            id: SET-019-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-019
+        name: KRACK KR1 East Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KR1 East
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-019
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK KR2XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: KRD26A-089
+    name: KRACK KR2 North
+    schema_version: 1
+    id: EQ-024
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK KR2XX : KRD26A-089"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-024-LED-001\nSet Definition ID: SET-024\nLocation XYZ (ft): 28.788258,749.303832,0.000000\nRotation (deg): 180.000000\nLevelId: 30\nElementId: 9144468\nFacingOrientation: -0.000000,-1.000000,0.000000"
+            id: SET-024-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 180.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-024
+        name: KRACK KR2 North Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK KR2 North
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-024
+  -
+    prompt_on_parent_mismatch: "false"
+    parent_filter:
+      family_name_pattern: CED-R-KRACK GHD4XX
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: GHD44D-200
+    name: KRACK GHD4 Vertical
+    schema_version: 1
+    id: EQ-011
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "CED-R-KRACK GHD4XX : GHD44D-200"
+            parameters:
+              dev-Group ID: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-011-LED-001\nSet Definition ID: SET-011\nLocation XYZ (ft): 31.770758,751.093333,10.000000\nRotation (deg): 90.000000\nLevelId: 30\nElementId: 9144416\nFacingOrientation: -1.000000,0.000000,0.000000"
+            id: SET-011-LED-001
+            tags:
+              []
+            category: Mechanical Equipment
+            offsets:
+              -
+                rotation_deg: 90.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 120.0
+            keynotes:
+              []
+        id: SET-011
+        name: KRACK GHD4 Vertical Types
+    allow_parentless: "true"
+    ced_truth_source_name: KRACK GHD4 Vertical
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-011

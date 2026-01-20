@@ -1,0 +1,14 @@
+Run Place Annotations after Select Parent, Add YAML Profiles, or Place Linked
+Elements whenever a definition includes hosted tags, keynotes, or text notes.
+The tool first lets you choose which annotation types to place, then (optionally)
+filter by specific tag/keynote/text-note definitions before placement.
+
+If elements are selected in the active view, placement is limited to that
+selection; otherwise the entire view is scanned. The command resolves instances
+by Element_Linker payload, filters by dev-Group to target the intended
+equipment, and drops the captured annotations at their recorded offsets.
+
+Launch it from whatever plan or sheet you need annotated; rerun for additional
+views as required. If an annotation family or text style is missing, the summary
+lists the LED ID so you can load the family or edit the definition and run Place
+Annotations again.

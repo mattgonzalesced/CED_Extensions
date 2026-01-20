@@ -1,0 +1,8 @@
+Use Combine YAML Files to merge two datasets into a new file for automation
+team workflows. Select the first YAML as the primary source, then select the
+second YAML to append.
+
+The tool parses both equipment_definitions lists, finds the highest numeric ID
+in the first file, and renumbers IDs from the second file to continue that
+sequence (preserving prefix and padding). The combined output is written to a
+new YAML file without modifying the originals.

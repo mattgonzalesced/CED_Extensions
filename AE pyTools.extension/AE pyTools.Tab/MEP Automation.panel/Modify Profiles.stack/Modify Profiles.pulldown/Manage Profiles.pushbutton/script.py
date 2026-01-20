@@ -802,6 +802,161 @@ def _unique_truth_id(data, equipment_def, cad_label):
 
 
 
+def _normalize_keynote_family(value):
+    if not value:
+        return ""
+    text = str(value)
+    if ":" in text:
+        text = text.split(":", 1)[0]
+    return "".join([ch for ch in text.lower() if ch.isalnum()])
+
+
+def _is_ga_keynote_symbol(family_name):
+    return _normalize_keynote_family(family_name) == "gakeynotesymbolced"
+
+
+def _normalize_keynote_params(params):
+    if not isinstance(params, dict):
+        return {}
+    if "Keynote Value" in params:
+        if "Key Value" in params:
+            params.pop("Key Value", None)
+        return params
+    if "Key Value" in params:
+        params["Keynote Value"] = params.pop("Key Value")
+    return params
+
+
+def _is_ga_keynote_symbol_element(elem):
+    if elem is None:
+        return False
+    try:
+        cat = getattr(elem, "Category", None)
+        cat_name = getattr(cat, "Name", None) if cat else ""
+    except Exception:
+        cat_name = ""
+    if "generic annotation" not in (cat_name or "").lower():
+        return False
+    fam_name, _ = _annotation_family_type(elem)
+    return _is_ga_keynote_symbol(fam_name)
+
+
+def _is_builtin_keynote_tag(tag_entry):
+    if isinstance(tag_entry, dict):
+        family = tag_entry.get("family_name") or tag_entry.get("family") or ""
+        category = tag_entry.get("category_name") or tag_entry.get("category") or ""
+    else:
+        family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
+        category = getattr(tag_entry, "category_name", None) or getattr(tag_entry, "category", None) or ""
+    if _is_ga_keynote_symbol(family):
+        return False
+    fam_text = (family or "").lower()
+    cat_text = (category or "").lower()
+    if "keynote tags" in cat_text:
+        return True
+    if "keynote tag" in fam_text:
+        return True
+    return False
+
+
+def _is_keynote_entry(tag_entry):
+    if not tag_entry:
+        return False
+    if isinstance(tag_entry, dict):
+        family = tag_entry.get("family_name") or tag_entry.get("family") or ""
+    else:
+        family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
+    return _is_ga_keynote_symbol(family)
+
+
+def _split_keynote_entries(entries):
+    normal = []
+    keynotes = []
+    for entry in entries or []:
+        if _is_builtin_keynote_tag(entry):
+            continue
+        if _is_keynote_entry(entry):
+            keynotes.append(entry)
+        else:
+            normal.append(entry)
+    return normal, keynotes
+
+
+def _normalize_tag_entry(tag_entry):
+    if isinstance(tag_entry, dict):
+        return {
+            "category_name": tag_entry.get("category_name"),
+            "family_name": tag_entry.get("family_name"),
+            "type_name": tag_entry.get("type_name"),
+            "parameters": tag_entry.get("parameters") or {},
+            "offsets": tag_entry.get("offsets") or {},
+        }
+    return tag_entry
+
+
+def _is_tag_like(elem):
+    if isinstance(elem, IndependentTag):
+        return True
+    try:
+        _ = elem.TagHeadPosition
+    except Exception:
+        return False
+    return True
+
+
+def _collect_tag_parameters(tag_elem, include_read_only=True):
+    results = {}
+    if tag_elem is None:
+        return results
+    for param in getattr(tag_elem, "Parameters", []) or []:
+        try:
+            definition = getattr(param, "Definition", None)
+            name = getattr(definition, "Name", None)
+        except Exception:
+            name = None
+        if not name:
+            continue
+        if not include_read_only:
+            try:
+                if param.IsReadOnly:
+                    continue
+            except Exception:
+                pass
+        try:
+            storage = param.StorageType.ToString()
+        except Exception:
+            storage = ""
+        try:
+            if storage == "String":
+                value = param.AsString()
+                if value is None:
+                    try:
+                        value = param.AsValueString()
+                    except Exception:
+                        value = None
+            elif storage == "Integer":
+                value = param.AsInteger()
+            elif storage == "Double":
+                value = param.AsDouble()
+            elif storage == "ElementId":
+                elem_id = param.AsElementId()
+                value = elem_id.IntegerValue if elem_id else None
+                if value is None:
+                    try:
+                        value = param.AsValueString()
+                    except Exception:
+                        value = None
+            else:
+                value = param.AsValueString()
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        safe_name = (name or "").replace("#", SAFE_HASH)
+        results[safe_name] = value
+    return results
+
+
 class OffsetShim(object):
 
 
@@ -855,58 +1010,20 @@ class InstanceConfigShim(object):
 
 
         raw_tags = dct.get("tags") or []
+        raw_keynotes = dct.get("keynotes") or []
 
 
 
-        shim_tags = []
-
-
-
-        for tg in raw_tags:
-
-
-
-            if isinstance(tg, dict):
-
-
-
-                shim_tags.append({
-
-
-
-                    "category_name": tg.get("category_name"),
-
-
-
-                    "family_name": tg.get("family_name"),
-
-
-
-                    "type_name": tg.get("type_name"),
-
-
-
-                    "parameters": tg.get("parameters") or {},
-
-
-
-                    "offsets": tg.get("offsets") or {},
-
-
-
-                })
-
-
-
-            else:
-
-
-
-                shim_tags.append(tg)
-
-
-
-        self.tags = shim_tags
+        shim_tags = [_normalize_tag_entry(tg) for tg in raw_tags]
+        shim_keynotes = [_normalize_tag_entry(tg) for tg in raw_keynotes]
+        if shim_keynotes:
+            shim_tags = [tg for tg in shim_tags if not _is_keynote_entry(tg)]
+            self.tags = shim_tags
+            self.keynotes = shim_keynotes
+        else:
+            normal_tags, keynote_tags = _split_keynote_entries(shim_tags)
+            self.tags = normal_tags
+            self.keynotes = keynote_tags
 
         raw_text_notes = dct.get("text_notes") or []
 
@@ -1129,6 +1246,7 @@ def _dict_from_shims(profiles):
 
 
                     "tags": _serialize_tags(getattr(inst, "tags", []) or []),
+                    "keynotes": _serialize_tags(getattr(inst, "keynotes", []) or []),
 
 
 
@@ -1417,6 +1535,34 @@ def _collect_annotation_string_params(annotation_elem):
     return results
 
 
+def _collect_keynote_parameters(tag_elem):
+    if tag_elem is None:
+        return {}
+    params = _collect_tag_parameters(tag_elem, include_read_only=True)
+    type_params = {}
+    type_elem = None
+    try:
+        sym = getattr(tag_elem, "Symbol", None)
+        if sym:
+            type_elem = sym
+    except Exception:
+        type_elem = None
+    if type_elem is None:
+        try:
+            doc = getattr(tag_elem, "Document", None)
+            type_id = tag_elem.GetTypeId()
+            if doc and type_id:
+                type_elem = doc.GetElement(type_id)
+        except Exception:
+            type_elem = None
+    if type_elem is not None:
+        type_params = _collect_tag_parameters(type_elem, include_read_only=True)
+    merged = {}
+    merged.update(type_params)
+    merged.update(params)
+    return merged
+
+
 def _build_annotation_tag_entry(annotation_elem, host_point):
     try:
         cat = getattr(annotation_elem, "Category", None)
@@ -1436,13 +1582,18 @@ def _build_annotation_tag_entry(annotation_elem, host_point):
         "rotation_deg": _get_rotation_degrees(annotation_elem),
     }
     params = _collect_annotation_string_params(annotation_elem)
-    return {
+    entry = {
         "family_name": fam_name,
         "type_name": type_name,
         "category_name": cat_name,
         "parameters": params,
         "offsets": offsets,
     }
+    if _is_keynote_entry(entry):
+        entry["parameters"] = _normalize_keynote_params(
+            _collect_keynote_parameters(annotation_elem)
+        )
+    return entry
 
 
 def _build_text_note_entry(note_elem, host_point):
@@ -1708,9 +1859,7 @@ def _collect_hosted_tags(elem, host_point):
 
 
     tags = []
-
-
-
+    keynotes = []
     text_notes = []
 
 
@@ -1735,7 +1884,7 @@ def _collect_hosted_tags(elem, host_point):
 
 
 
-        if isinstance(dep_elem, IndependentTag):
+        if _is_tag_like(dep_elem):
 
 
 
@@ -1971,31 +2120,22 @@ def _collect_hosted_tags(elem, host_point):
 
 
 
-            tags.append({
-
-
-
+            entry = {
                 "family_name": fam_name or "",
-
-
-
                 "type_name": type_name or "",
-
-
-
                 "category_name": category_name,
-
-
-
                 "parameters": {},
-
-
-
                 "offsets": offsets,
-
-
-
-            })
+            }
+            if _is_builtin_keynote_tag(entry):
+                continue
+            if _is_keynote_entry(entry):
+                entry["parameters"] = _normalize_keynote_params(
+                    _collect_keynote_parameters(dep_elem)
+                )
+                keynotes.append(entry)
+            else:
+                tags.append(entry)
 
 
 
@@ -2016,7 +2156,7 @@ def _collect_hosted_tags(elem, host_point):
 
 
 
-    return tags, text_notes
+    return tags, keynotes, text_notes
 
 
 def _find_closest_record_index(records, note_elem):
@@ -2135,6 +2275,25 @@ def _assign_selected_text_notes(element_records, text_note_elems):
         entries = inst_cfg.setdefault("text_notes", [])
         entries.append(note_entry)
     _rebalance_text_notes(element_records)
+
+
+def _assign_ga_keynotes(element_records, keynote_elems):
+    if not element_records or not keynote_elems:
+        return
+    for note_elem in keynote_elems:
+        target_idx = _find_closest_record_index(element_records, note_elem)
+        if target_idx is None:
+            continue
+        host_point = element_records[target_idx].get("host_point")
+        if host_point is None:
+            continue
+        note_entry = _build_annotation_tag_entry(note_elem, host_point)
+        if not note_entry or not _is_keynote_entry(note_entry):
+            continue
+        type_entry = element_records[target_idx].get("type_entry") or {}
+        inst_cfg = type_entry.setdefault("instance_config", {})
+        entries = inst_cfg.setdefault("keynotes", [])
+        entries.append(note_entry)
 
 
 def _offset_dict_to_world(offsets, origin):
@@ -2855,7 +3014,7 @@ def _build_type_entry(elem, offset_vec, rot_deg, host_point):
 
 
 
-    tags, text_notes = _collect_hosted_tags(elem, host_point)
+    tags, keynotes, text_notes = _collect_hosted_tags(elem, host_point)
 
 
 
@@ -2908,6 +3067,7 @@ def _build_type_entry(elem, offset_vec, rot_deg, host_point):
 
 
             "tags": tags,
+            "keynotes": keynotes,
 
 
 
@@ -3058,6 +3218,7 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
     explicit_text_notes = []
 
     selected_elements = []
+    keynote_elements = []
 
     for elem in elems:
 
@@ -3073,6 +3234,10 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
             continue
 
+        if _is_ga_keynote_symbol_element(elem):
+            keynote_elements.append(elem)
+            continue
+
 
 
         selected_elements.append(elem)
@@ -3083,7 +3248,17 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
 
 
-        forms.alert("Select at least one host element for '{}' (text notes can be selected in addition).".format(cad_label), title=TITLE)
+        if keynote_elements:
+            forms.alert(
+                "Select at least one host element for '{}'. Keynote symbols are stored with the nearest host."
+                .format(cad_label),
+                title=TITLE,
+            )
+        else:
+            forms.alert(
+                "Select at least one host element for '{}' (text notes can be selected in addition).".format(cad_label),
+                title=TITLE,
+            )
 
 
 
@@ -3155,7 +3330,8 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
 
 
-        type_entry = _build_type_entry(elem, rel_vec, 0.0, loc)
+        rot_deg = _get_rotation_degrees(elem)
+        type_entry = _build_type_entry(elem, rel_vec, rot_deg, loc)
 
 
 
@@ -3180,6 +3356,7 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
 
     _assign_selected_text_notes(element_records, explicit_text_notes)
+    _assign_ga_keynotes(element_records, keynote_elements)
     _rebalance_text_notes(element_records)
 
 
@@ -3277,6 +3454,7 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
 
         entry_tags = inst_cfg.get("tags") or []
+        entry_keynotes = inst_cfg.get("keynotes") or []
 
 
 
@@ -3329,6 +3507,7 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
 
             "tags": entry_tags,
+            "keynotes": entry_keynotes,
 
 
 
@@ -3522,18 +3701,29 @@ def _capture_profile_additions(doc, cad_name, state, refresh_callback, yaml_labe
 
     explicit_text_notes = []
     selected_elements = []
+    keynote_elements = []
     for elem in elems:
         if isinstance(elem, TextNote):
             explicit_text_notes.append(elem)
             continue
+        if _is_ga_keynote_symbol_element(elem):
+            keynote_elements.append(elem)
+            continue
         selected_elements.append(elem)
 
     if not selected_elements:
-        forms.alert(
-            "Select at least one host element for '{}' (text notes can be selected in addition)."
-            .format(cad_label),
-            title=TITLE,
-        )
+        if keynote_elements:
+            forms.alert(
+                "Select at least one host element for '{}'. Keynote symbols are stored with the nearest host."
+                .format(cad_label),
+                title=TITLE,
+            )
+        else:
+            forms.alert(
+                "Select at least one host element for '{}' (text notes can be selected in addition)."
+                .format(cad_label),
+                title=TITLE,
+            )
         return False
 
     element_locations = []
@@ -3563,6 +3753,7 @@ def _capture_profile_additions(doc, cad_name, state, refresh_callback, yaml_labe
         })
 
     _assign_selected_text_notes(element_records, explicit_text_notes)
+    _assign_ga_keynotes(element_records, keynote_elements)
     _rebalance_text_notes(element_records)
 
     if not element_records:
@@ -3580,6 +3771,7 @@ def _capture_profile_additions(doc, cad_name, state, refresh_callback, yaml_labe
         entry_offsets = inst_cfg.get("offsets") or [{}]
         entry_params = inst_cfg.setdefault("parameters", {})
         entry_tags = inst_cfg.get("tags") or []
+        entry_keynotes = inst_cfg.get("keynotes") or []
         entry_text_notes = inst_cfg.get("text_notes") or []
 
         led_id = next_led_id(type_set, equipment_def)
@@ -3595,6 +3787,7 @@ def _capture_profile_additions(doc, cad_name, state, refresh_callback, yaml_labe
             "offsets": entry_offsets,
             "parameters": entry_params,
             "tags": entry_tags,
+            "keynotes": entry_keynotes,
             "text_notes": entry_text_notes,
         })
 
@@ -3738,7 +3931,9 @@ def _find_negative_z_offsets(profile_dict):
 
 
 
-            for tag in inst.get("tags") or []:
+            tag_entries = list(inst.get("tags") or [])
+            tag_entries.extend(inst.get("keynotes") or [])
+            for tag in tag_entries:
 
 
 
@@ -3811,6 +4006,45 @@ def _shims_from_dict(data):
 
 
     return profiles
+
+
+def _log_keynote_counts(stage_label, entries):
+    logger = script.get_logger()
+    for cad_name, type_label, tags, keynotes in entries:
+        logger.info(
+            "[Manage Profiles] %s cad=%s type=%s tags=%s keynotes=%s",
+            stage_label,
+            cad_name or "",
+            type_label or "",
+            len(tags or []),
+            len(keynotes or []),
+        )
+
+
+def _iter_equipment_def_entries(equipment_defs):
+    for eq in equipment_defs or []:
+        cad_name = (eq.get("name") or eq.get("id") or "").strip()
+        for linked_set in eq.get("linked_sets") or []:
+            for led in linked_set.get("linked_element_definitions") or []:
+                if not isinstance(led, dict):
+                    continue
+                type_label = led.get("label") or led.get("id") or ""
+                tags = led.get("tags") or []
+                keynotes = led.get("keynotes") or []
+                yield cad_name, type_label, tags, keynotes
+
+
+def _iter_legacy_type_entries(legacy_profiles):
+    for prof in legacy_profiles or []:
+        cad_name = (prof.get("cad_name") or "").strip()
+        for type_entry in prof.get("types") or []:
+            if not isinstance(type_entry, dict):
+                continue
+            inst_cfg = type_entry.get("instance_config") or {}
+            type_label = type_entry.get("label") or ""
+            tags = inst_cfg.get("tags") or []
+            keynotes = inst_cfg.get("keynotes") or []
+            yield cad_name, type_label, tags, keynotes
 
 
 
@@ -4504,7 +4738,10 @@ def main():
 
 
 
-            legacy_dict_local = {"profiles": equipment_defs_to_legacy(equipment_defs)}
+            _log_keynote_counts("equipment_defs", _iter_equipment_def_entries(equipment_defs))
+            legacy_profiles_local = equipment_defs_to_legacy(equipment_defs)
+            _log_keynote_counts("legacy_profiles", _iter_legacy_type_entries(legacy_profiles_local))
+            legacy_dict_local = {"profiles": legacy_profiles_local}
 
 
 

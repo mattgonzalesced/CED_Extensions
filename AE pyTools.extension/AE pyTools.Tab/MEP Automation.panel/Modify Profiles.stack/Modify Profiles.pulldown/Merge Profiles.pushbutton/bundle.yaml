@@ -15,4 +15,4 @@ tooltip: |
   After confirming the summary, the tool writes the updates back into Extensible
   Storage, logging the activity so you can undo through Revit history if
   necessary, and the placer immediately benefits without further customization.
-is_beta: true
+is_beta: false

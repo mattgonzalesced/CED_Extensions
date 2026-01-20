@@ -1,0 +1,3 @@
+Use Place by Room to place selected profiles at the center of rooms from a linked model.
+Pick the profiles, choose the linked model, and select the rooms to target. The tool
+places one instance per linked type at each room center.

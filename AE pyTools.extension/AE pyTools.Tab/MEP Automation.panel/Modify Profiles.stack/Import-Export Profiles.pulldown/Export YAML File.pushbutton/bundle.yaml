@@ -15,4 +15,4 @@ tooltip: |
   After exporting, consider committing the file to source control or delivering
   it to collaborators, and remember that future edits still target the in-model
   copy until you run Select YAML again.
-is_beta: true
+is_beta: false

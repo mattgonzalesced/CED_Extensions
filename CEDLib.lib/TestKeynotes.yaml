@@ -1,0 +1,94 @@
+equipment_definitions:
+  -
+    prompt_on_parent_mismatch: false
+    parent_filter:
+      family_name_pattern: ME_Air Curtain_CED
+      category: Mechanical Equipment
+      parameter_filters:
+        {}
+      type_name_pattern: Powered Aire CHA-2-E (Electric)
+    name: "ME_Air Curtain_CED : Powered Aire CHA-2-E (Electric)"
+    schema_version: 1
+    id: EQ-001
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: false
+            text_notes:
+              -
+                text: Test Note
+                width_inches: 0.57696141989
+                type_name: "Text : (Default Project Text) 3/32\" Arial Narrow"
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: -30.7712757275
+                  y_inches: 41.0283676366
+                  z_inches: 60.0000000000
+                leaders:
+                  []
+            label: "EF-U_Disconnect Switch_CED : Fused - 60A"
+            parameters:
+              dev-Group ID: ""
+              SLD_Component ID_CED: ""
+              Element_Linker Parameter: "Linked Element Definition ID: SET-001-LED-001\nSet Definition ID: SET-001\nLocation XYZ (ft): 53.542763,436.335731,3.000000\nRotation (deg): 0.000000\nParent Rotation (deg): 0.000000\nParent ElementId: 9143077\nLevelId: 30\nElementId: 9143587\nFacingOrientation: 0.000000,1.000000,0.000000"
+              CKT_Rating_CED: 0.0
+              Product Datasheet URL: ""
+              CKT_Panel_CEDT: ""
+              Load Classification_CED: NC
+              SLD_Symbol ID_CED: ""
+              FLA Input_CED: 0.0
+              Power Factor_CED: 1.0
+              Wattage Input_CED: 0.0
+              Number of Poles_CED: 3
+              CKT_Schedule Notes_CEDT: ""
+              Apparent Load Input_CED: 0.0
+              CKT_Circuit Number_CEDT: ""
+              Voltage_CED: 208.0
+              Product Specification: ""
+              CKT_Load Name_CEDT: ""
+            id: SET-001-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                leader_elbow: null
+                leader_end: null
+                type_name: Circuit Number
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 28.2832031250
+                  y_inches: 3.21660691193
+                  z_inches: 7.439453125
+                category_name: Electrical Fixture Tags
+                family_name: EF-Tag_Electrical Fixtures_CED
+            category: Electrical Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.378434
+                y_inches: 30.054074
+                z_inches: 36.0
+            keynotes:
+              -
+                parameters:
+                  {}
+                leader_elbow: null
+                leader_end: null
+                type_name: Keynote - Filled Arrow
+                offsets:
+                  rotation_deg: 0.0
+                  x_inches: 23.8727836570
+                  y_inches: 26.1555838822
+                  z_inches: 7.439453125
+                category_name: Keynote Tags
+                family_name: KN_Keynote Tag_CED
+        id: SET-001
+        name: "ME_Air Curtain_CED : Powered Aire CHA-2-E (Electric) Types"
+    allow_parentless: true
+    ced_truth_source_name: "ME_Air Curtain_CED : Powered Aire CHA-2-E (Electric)"
+    allow_unmatched_parents: true
+    version: 1
+    equipment_properties:
+      {}
+    ced_truth_source_id: EQ-001

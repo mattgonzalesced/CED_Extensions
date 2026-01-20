@@ -7,4 +7,4 @@ tooltip: |
   it appears as its own unindented entry in Manage YAML Profiles.
 
   This only updates YAML metadata; no Revit elements are deleted.
-is_beta: true
+is_beta: false
