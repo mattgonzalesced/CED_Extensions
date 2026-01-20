@@ -15,4 +15,4 @@ tooltip: |
   After placement, inspect the resulting families, run QAQC if needed, and commit
   any required tweaks through Add, Edit, or Merge before exporting the updated
   YAML back to disk for coordination.
-is_beta: true
+is_beta: false

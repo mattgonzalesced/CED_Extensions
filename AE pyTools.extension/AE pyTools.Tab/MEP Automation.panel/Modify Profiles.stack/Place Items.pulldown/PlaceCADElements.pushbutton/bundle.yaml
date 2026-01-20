@@ -15,4 +15,4 @@ tooltip: |
   After placement, consider converting the resulting assemblies into YAML
   definitions so future iterations rely on the modern automation pipeline, then
   archive the original CSV for documentation purposes only.
-is_beta: true
+is_beta: false
