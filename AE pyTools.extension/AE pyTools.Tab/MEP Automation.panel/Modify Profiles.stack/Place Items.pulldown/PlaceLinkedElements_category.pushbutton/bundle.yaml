@@ -1,0 +1,18 @@
+title: Place Linked Elements (Category Filter)
+tooltip: |
+  Place Linked Elements with Category Filter allows you to select specific
+  equipment categories before placement. It reads the active YAML, prompts you
+  to choose which categories to place, then matches linked elements or Revit
+  links by name.
+
+  Before running, ensure Select YAML has loaded the desired file and that the
+  project contains host families or linked groups whose names align with the
+  equipment definitions you want to place.
+
+  The category selection dialog shows all unique categories found in the YAML
+  file. Select one or more categories to place only those equipment types.
+
+  After placement, inspect the resulting families, run QAQC if needed, and commit
+  any required tweaks through Add, Edit, or Merge before exporting the updated
+  YAML back to disk for coordination.
+is_beta: true

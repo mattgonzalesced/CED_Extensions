@@ -1,0 +1,5 @@
+﻿title: Post Audit Compare
+tooltip: |
+  Compare two Post Audit output files and report moved, added, and removed
+  parent locations based on (Parent ElementId, Parent_location) pairs.
+is_beta: true

@@ -1,0 +1,18 @@
+title: Delete YAML Profiles
+tooltip: |
+  Only use Delete YAML Profiles after verifying the active YAML snapshot already
+  reflects the project state you want to prune; the action cannot be undone
+  without reverting through Extensible Storage history.
+
+  Pick the equipment definition from the list to inspect its linked element
+  definitions; the dialog displays each LED label with its identifier so you can
+  confirm you are targeting the proper instances.
+
+  Select every LED you want removed and review the summary prompt; if the
+  definition becomes empty, the workflow also removes associated child links to
+  stop orphaned references from persisting inside other configurations.
+
+  When you accept the deletion, the tool writes the updated dataset back into
+  Extensible Storage, records an audit entry, and reminds you to reload Place
+  Elements before continuing with automated placements.
+is_beta: true

@@ -1,0 +1,18 @@
+title: Add YAML Profiles
+tooltip: |
+  Start by running Select YAML so the profile data you intend to edit is loaded
+  into Extensible Storage; the Add YAML tool always writes changes to that active
+  copy, keeping the original file untouched.
+
+  Choose the equipment definition that should receive new linked element types,
+  or create a new definition if you are capturing an arrangement that has never
+  been described before inside the YAML library.
+
+  Pick every Revit element that belongs to the configuration, including hosted
+  tags or nested groups; the tool captures zeroed offsets and circuit parameters
+  so that placements later match the exact assembly you just recorded.
+
+  After confirming the summary, the tool updates Element_Linker metadata on the
+  selected elements, saves the YAML back into the project, and displays a success
+  message reminding you to reload Place Elements if you are actively placing.
+is_beta: true

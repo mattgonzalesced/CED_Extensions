@@ -1,0 +1,7 @@
+title: Add Equipment to Profiles
+tooltip: |
+  Select the linked element that already has a profile in the active YAML.
+  When prompted, pick the equipment elements to append to that profile.
+  If the selected linked element has no profile, the tool cancels without changes.
+  The tool records offsets and Element_Linker metadata on the selected equipment.
+is_beta: true

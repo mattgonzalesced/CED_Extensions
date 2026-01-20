@@ -1,0 +1,18 @@
+title: Merge Profiles
+tooltip: |
+  Launch Merge YAML Profiles when two equipment definitions describe identical
+  assemblies but differ only by naming convention; it lets you treat one entry as
+  the truth and clone its configuration across the others.
+
+  Pick the authoritative definition first, then select every secondary definition
+  that should inherit the same linked sets, offsets, parent filters, and prompts,
+  ensuring future placements deliver a consistent result regardless of name.
+
+  The merge copies everything except the name and id fields; that means schedules
+  and documentation can still reference the unique labels while the automation
+  reuses the same underlying placement recipe.
+
+  After confirming the summary, the tool writes the updates back into Extensible
+  Storage, logging the activity so you can undo through Revit history if
+  necessary, and the placer immediately benefits without further customization.
+is_beta: true

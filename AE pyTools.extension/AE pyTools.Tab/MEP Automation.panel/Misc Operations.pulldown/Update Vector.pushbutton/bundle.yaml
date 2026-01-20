@@ -1,0 +1,18 @@
+title: Update Vector
+tooltip: |
+  Update Vector recalculates the centroid and offset vector data for an existing
+  equipment definition without forcing you to re-run Add YAML Profiles; use it
+  when the layout changes slightly but the components remain identical.
+
+  Pick the equipment definition, then select the elements inside the model that
+  represent the new footprint; the tool measures their relative spacing and
+  updates the linked element offsets accordingly.
+
+  Parameters and tags remain untouched, so the change is limited to geometric
+  placement, which helps keep QA/QC reports aligned with what you just installed
+  while preserving circuits and metadata.
+
+  After confirming, the updated vectors are written to Extensible Storage; rerun
+  Place Linked Elements or Tag Equipment to see the new arrangement take effect
+  in production views.
+is_beta: true

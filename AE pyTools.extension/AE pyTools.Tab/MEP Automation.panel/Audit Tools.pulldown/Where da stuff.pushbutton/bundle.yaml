@@ -1,0 +1,18 @@
+title: Where da Stuff
+tooltip: |
+  Run QA/QC after any significant edit or placement session to verify which
+  equipment definitions were found, how many placements occurred, and whether
+  multiple linked element names still require merging.
+
+  The tool scans the model and linked documents for Element_Linker metadata, then
+  compares the counts against host elements collected from the active YAML using
+  the same name matching rules as Place Linked Elements.
+
+  Review the Markdown output in the pyRevit console: bold entries indicate
+  successful placements, italics reveal pending hosts, and the summary totals list
+  placed counts by definition as well as per-type breakdowns.
+
+  Use the report to prioritize fixes, drive Merge Linked Elements decisions, or
+  capture screenshots for issue tracking, then rerun the analysis after changes
+  to ensure the automation remains in sync with the design intent.
+is_beta: true

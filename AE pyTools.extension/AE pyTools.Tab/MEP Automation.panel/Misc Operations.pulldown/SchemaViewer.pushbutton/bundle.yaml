@@ -1,0 +1,18 @@
+title: Schema Viewer
+tooltip: |
+  Schema Viewer is a diagnostic helper that surfaces the raw Extensible Storage
+  payload for the active YAML; use it when you need to inspect compressed history
+  entries or metadata without leaving Revit.
+
+  Run the button after Select YAML so the storage schema is populated; the viewer
+  lists every entry, including timestamps, sequence numbers, and base text
+  snapshots, making it easier to debug undo issues or confirm merges.
+
+  You can copy any field directly from the dialog for documentation or support
+  tickets, which helps correlate QA/QC output with the internal history stored in
+  Project Information.
+
+  Close the viewer when finished; it is read only, so there is zero risk of
+  damaging the data, and you can safely relaunch it as often as necessary during
+  investigations.
+is_beta: true
