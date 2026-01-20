@@ -68,16 +68,16 @@ def group_elements_by_circuit(elements, panel_elements):
         # Retrieve parameters using query functions
         panel_param = query.get_param(element, "CKT_Panel_CEDT")
         circuit_param = query.get_param(element, "CKT_Circuit Number_CEDT")
-        # rating_param = query.get_param(element, "CKT_Rating_CED")
-        # load_name_param = query.get_param(element, "CKT_Load Name_CEDT")
-        # ckt_notes_param = query.get_param(element, "CKT_Schedule Notes_CEDT")
+        rating_param = query.get_param(element, "CKT_Rating_CED")
+        load_name_param = query.get_param(element, "CKT_Load Name_CEDT")
+        ckt_notes_param = query.get_param(element, "CKT_Schedule Notes_CEDT")
 
         # Get actual parameter values
         panel_name = query.get_param_value(panel_param)
         circuit_number = query.get_param_value(circuit_param)
-        # rating = query.get_param_value(rating_param)
-        # load_name = query.get_param_value(load_name_param)
-        # ckt_notes = query.get_param_value(ckt_notes_param)
+        rating = query.get_param_value(rating_param)
+        load_name = query.get_param_value(load_name_param)
+        ckt_notes = query.get_param_value(ckt_notes_param)
 
         # Skip elements without valid `ckt-Panel` and `ckt-Circuit Number` entirely
         if not panel_name and not circuit_number:
@@ -91,10 +91,10 @@ def group_elements_by_circuit(elements, panel_elements):
                 "element_ids": [element.Id],
                 "panel_name": panel_name,
                 "panel_element": None,
-                "circuit_number": circuit_number
-                # "rating": rating,
-                # "load_name": load_name,
-                # "ckt_notes": ckt_notes
+                "circuit_number": circuit_number,
+                "rating": rating,
+                "load_name": load_name,
+                "ckt_notes": ckt_notes
             }
             unnamed_counter += 1
             continue
@@ -112,10 +112,10 @@ def group_elements_by_circuit(elements, panel_elements):
                 "element_ids": [],
                 "panel_name": panel_name,
                 "panel_element": panel_element,
-                "circuit_number": circuit_number
-                # "rating": rating,
-                # "load_name": load_name,
-                # "ckt_notes": ckt_notes
+                "circuit_number": circuit_number,
+                "rating": rating,
+                "load_name": load_name,
+                "ckt_notes": ckt_notes
             }
 
         # Ensure ElementId is collected
@@ -157,8 +157,8 @@ def main():
     system_type = DB.Electrical.ElectricalSystemType.PowerCircuit
 
     # Use a Transaction Group to handle multiple transactions together
-    # tg = DB.TransactionGroup(doc, "Create and Update Circuits")
-    # tg.Start()
+    tg = DB.TransactionGroup(doc, "Create and Update Circuits")
+    tg.Start()
 
 
     # First Transaction: Create circuits and assign to panels
@@ -202,37 +202,37 @@ def main():
                     print("Skipped creating system for unnamed group: {}".format(key))
 
     # Collect all electrical systems created in the project
-    # all_systems = DB.FilteredElementCollector(doc).OfClass(DB.Electrical.ElectricalSystem).ToElements()
+    all_systems = DB.FilteredElementCollector(doc).OfClass(DB.Electrical.ElectricalSystem).ToElements()
 
     # Second Transaction: Update circuit parameters based on original group data
-    # with revit.Transaction("Update Circuit Parameters"):
-    #     for system in all_systems:
-    #         if system.Id in created_systems:
-    #             key = created_systems[system.Id]
-    #             # Check if it's a grouped element or unnamed
-    #             if key in dict(grouped_elements):
-    #                 data = dict(grouped_elements)[key]
-    #             else:
-    #                 data = unnamed_elements.get(key)
-    #
-    #             # Update parameters
-    #             if data:
-    #                 # Example of updating circuit parameters: "ckt-Rating" and "ckt-Load Name"
-    #                 rating_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM)
-    #                 load_name_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME)
-    #                 ckt_notes_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NOTES_PARAM)
-    #
-    #                 if rating_param and data["rating"]:
-    #                     rating_param.Set(data["rating"])
-    #
-    #                 if load_name_param and data["load_name"]:
-    #                     load_name_param.Set(data["load_name"])
-    #
-    #                 if ckt_notes_param and data["ckt_notes"]:
-    #                     ckt_notes_param.Set(data["ckt_notes"])
+    with revit.Transaction("Update Circuit Parameters"):
+        for system in all_systems:
+            if system.Id in created_systems:
+                key = created_systems[system.Id]
+                # Check if it's a grouped element or unnamed
+                if key in dict(grouped_elements):
+                    data = dict(grouped_elements)[key]
+                else:
+                    data = unnamed_elements.get(key)
+
+                # Update parameters
+                if data:
+                    # Example of updating circuit parameters: "ckt-Rating" and "ckt-Load Name"
+                    rating_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM)
+                    load_name_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME)
+                    ckt_notes_param = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NOTES_PARAM)
+
+                    if rating_param and data["rating"]:
+                        rating_param.Set(data["rating"])
+
+                    if load_name_param and data["load_name"]:
+                        load_name_param.Set(data["load_name"])
+
+                    if ckt_notes_param and data["ckt_notes"]:
+                        ckt_notes_param.Set(data["ckt_notes"])
 
     # Commit the transaction group to save all changes
-    # tg.Assimilate()
+    tg.Assimilate()
 
 if __name__ == "__main__":
     main()

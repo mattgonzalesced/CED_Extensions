@@ -1,7 +1,7 @@
 # Calculate Circuits – User Manual
 
 ## Purpose and Scope
-Calculate Circuits automates sizing and documentation for Revit electrical circuits. It supports automatic sizing, supervised manual overrides, voltage-drop checks, conduit fill, downstream write-back to equipment/fixtures, and structured alerting. This guide explains how to configure settings, run the tool, and interpret results across all supported circuit types.
+Calculate Circuits automates sizing and documentation for Revit electrical circuits. It supports automatic sizing, supervised manual overrides, voltage-drop checks, conduit fill, downstream write-back to equipment/fixtures, and design warnings/alerts. This guide explains how to configure settings, run the tool, and interpret results across all supported circuit types.
 
 ## Modes of Operation
 - Toggle mode via **CKT_User Override_CED** on the circuit: set to **No/blank** for automatic sizing or **Yes** for manual overrides.
@@ -17,17 +17,21 @@ Calculate Circuits automates sizing and documentation for Revit electrical circu
 
 ## Clearing Tokens (Manual Mode Only)
 - Enter a single hyphen (`-`) to intentionally clear a size. Tokens are preserved in parameters so future runs keep the intent.
-  - **Hot size = `-`**: Treat as “conduit only” (no voltage-drop calc). Circuit type set to `CONDUIT ONLY`; wire size string shows `-`; conduit sizes still calculate unless also cleared.
-  - **Hot size = `-` and Conduit size = `-`**: Treat as empty; branch data for conduit/cable is cleared and circuit type is `N/A`. Wire size string shows `-`; conduit size string shows `-`.
-  - **Conduit size = `-`**: Conduit is cleared; conduit type is cleared for manual mode. Wire calculations continue if hots are provided; conduit size string shows `-`.
+  - **Hot size = `-`**: Treated as “conduit only” (no voltage-drop calc). Circuit type set to `CONDUIT ONLY`; all wire size strings (H,N,G,IG) show `-`; conduit sizes still calculate unless also cleared.
+  - **Hot size = `-` and Conduit size = `-`**: Treated as empty; branch data for conduit/cable is cleared and circuit type is `N/A`. Wire size string shows `-`; conduit size string shows `-`.
+  - **Conduit size = `-`**: Conduit is cleared; Wire calculations continue if hots are provided; conduit size string shows `-`.
+  - **Ground size = `-`**: Grounds (G,IG) are cleared; Wire calculations continue if hots are provided; conduit calculations continue if conduit is provided.
+  - 
 - In **automatic mode**, cleared size tokens are ignored and replaced by calculated values; property overrides (material, insulation, temperature, conduit type) still validate and cleared size tokens are overwritten.
 
+
 ## Circuit Types and Special Cases
-- **BRANCH**: Standard branch circuits sized to branch voltage-drop target.
-- **FEEDER**: Feeders to panels, switchboards, and transformers sized to feeder voltage-drop target and feeder VD method.
-- **XFMR PRI / XFMR SEC**: Transformer primaries/secondaries. Secondary circuits size service grounds from the service ground table using hot size; primaries follow equipment-ground rules.
-- **CONDUIT ONLY / N/A**: Generated via clearing tokens as described above.
-- **Circuit type inference** follows load classification and clearing tokens; strings update automatically based on results.
+- **Circuit Type** is automatically set by the tool. Possible values are:
+  - **`BRANCH`**: Standard branch circuits sized to branch voltage-drop target.
+  - **`FEEDER`**: Feeders to panels, switchboards, and transformers sized to feeder voltage-drop target and feeder VD method.
+  - **`XFMR PRI` / `XFMR SEC`**: Transformer primaries/secondaries (sub-class of `FEEDER`). Secondary circuits size grounds based on hot size **(NEC 250.102)**; primaries follow EGC rules **(NEC 250.102)**.
+  - **`CONDUIT ONLY` / `N/A`**: Generated via clearing tokens as described above.
+
 
 ## Settings (Project-Level)
 Access via **Calculate Circuits Settings**. Defaults are italic/gray; user selections are normal weight. The inline help panel shows the following guidance:
@@ -40,6 +44,9 @@ Access via **Calculate Circuits Settings**. Defaults are italic/gray; user selec
 - **Neutral Behavior**
   - Determines how neutrals are sized when in manual override mode (in automatic mode, neutral size always matches the hot size).
   - Options: `[Match hot conductors]` neutral matches hots; `[Manual Neutral]` user specifies neutral independently in manual mode.
+- **Isolated Ground Behavior**
+  - Controls how isolated grounds size when in manual override mode (automatic mode always matches the equipment ground).
+  - Options: `[Match ground conductors]` isolated ground size mirrors equipment ground; `[Manual Isolated Ground]` user specifies isolated ground size independently in manual mode.
 - **Max Branch Voltage Drop**
   - Target maximum voltage drop for branch circuits. In automatic mode, calculated sizes will grow until this threshold is met. In manual override mode, the tool will alert the user if this threshold is exceeded.
 - **Max Feeder Voltage Drop**
@@ -49,6 +56,12 @@ Access via **Calculate Circuits Settings**. Defaults are italic/gray; user selec
   - Options: `[80% of Breaker]`, `[100% of Breaker]`, `[Demand Load]`, `[Connected Load]`. If demand exceeds the breaker percentage options, the higher demand governs.
 - **Write Results (Equipment / Fixtures & Devices)**
   - When enabled, calculated values write back to downstream elements. Disabling either option prompts to clear stored circuit data from that category.
+- **Wire Material Display**
+  - Controls when the wire material suffix is shown in wire size strings.
+  - Options: `[Show material for Aluminum only]` and `[Show material for Copper and Aluminum]`.
+- **Wire String Separator**
+  - Controls the separator used in wire size strings.
+  - Options: `[Use "+" separators]` or `[Use "," separators]`.
 
 ## Voltage Drop Behavior
 - Branch circuits always use connected load for VD calculations.
@@ -67,7 +80,7 @@ Access via **Calculate Circuits Settings**. Defaults are italic/gray; user selec
 - **Activation**: **CKT_Include Neutral_CED** adds or removes neutrals in both modes.
 - **Quantity logic**:
   - 1P circuits default to one neutral when the distribution system includes a line-to-neutral voltage.
-  - Branch circuits omit neutrals automatically if the base equipment distribution system lacks an LN voltage.
+  - Branch circuits omit neutrals automatically if the base equipment distribution system lacks a LN voltage.
   - Feeder circuits include neutrals automatically when the downstream equipment distribution system has an LN voltage; otherwise they are omitted.
 - **Sizing logic**:
   - Automatic mode: neutrals match hot size by default.
@@ -90,15 +103,41 @@ Access via **Calculate Circuits Settings**. Defaults are italic/gray; user selec
 ## Alerts and Notices
 - Alerts are grouped by category (Override, Calculation, Design, Calculation Failure) with severity coloring:
   - **None/Info**: General notes.
-  - **Medium (orange)**: Lug limits, non-standard breakers, excessive fill/VD.
-  - **High (red)**: Undersized wires/OCP, ground deficiencies.
-  - **Critical (red)**: Calculation failures (e.g., cannot size conduit/wire).
+  - <span style="color:#d9822b"><strong>Medium</strong></span> : Lug limits, non-standard breakers, excessive fill/VD.
+  - <span style="color:#d9534f"><strong>High</strong></span>: Undersized wires/OCP, ground deficiencies.
+  - <span style="color:#b20000"><strong>Critical</strong></span>: Calculation failures (e.g., cannot size conduit/wire).
 - Output per circuit renders as:
   - **Circuit Name**
     - (Override) message
     - (Calculation) message
     - (Design) message
 - Developer logging can be toggled separately from user-facing alerts.
+
+### Standard Alerts Reference
+The following alerts are available during Calculate Circuits runs:
+
+| Alert ID                               | Severity                                                     | Meaning                                                                                       | Tool action                                                  |
+|----------------------------------------|--------------------------------------------------------------|-----------------------------------------------------------------------------------------------|--------------------------------------------------------------|
+| Overrides.InvalidCircuitProperty       | None                                                         | A user-specified property (wire material, temperature, insulation, conduit type) was invalid. | Resets the property to the configured default and continues. |
+| Overrides.InvalidEquipmentGround       | None                                                         | A user-specified equipment ground size was invalid. (Manual mode only)                        | Replaces the override with NEC 250.122 sizing.               |
+| Overrides.InvalidServiceGround         | None                                                         | A user-specified service ground size was invalid. (Manual mode only)                          | Replaces the override with NEC 250.102(c) sizing.            |
+| Overrides.InvalidHotWire               | None                                                         | A user-specified hot conductor size was invalid. (Manual mode only)                           | Reverts to the calculated hot size.                          |
+| Overrides.InvalidConduit               | None                                                         | A user-specified conduit size was invalid. (Manual mode only)                                 | Reverts to the calculated conduit size.                      |
+| Overrides.InvalidIsolatedGround        | None                                                         | A user-specified isolated ground size was invalid.  (Manual mode only)                        | Uses the equipment ground size instead.                      |
+| Design.NonStandardOCPRating            | <span style="color:#d9822b"><strong>Medium</strong></span>   | The breaker rating is non-standard.                                                           | Uses the next standard breaker size for calculations.        |
+| Design.BreakerLugSizeLimitOverride     | <span style="color:#d9822b"><strong>Medium</strong></span>   | User override exceeds recommended lug size for the breaker.                                   | Keeps the override but flags a design warning.               |
+| Design.BreakerLugQuantityLimitOverride | <span style="color:#d9822b"><strong>Medium</strong></span>   | User override exceeds recommended parallel set limit for the breaker.                         | Keeps the override but flags a design warning.               |
+| Calculations.BreakerLugSizeLimit       | <span style="color:#d9822b"><strong>Medium</strong></span>   | Calculated hot size exceeds recommended lug size for the breaker.                             | Keeps the calculated value and flags a design warning.       |
+| Calculations.BreakerLugQuantityLimit   | <span style="color:#d9822b"><strong>Medium</strong></span>   | Calculated parallel set count exceeds recommended lug limit for the breaker.                  | Limits set count to the recommended maximum.                 |
+| Design.ExcessiveConduitFill            | <span style="color:#d9822b"><strong>Medium</strong></span>   | User-specified conduit size exceeds the max fill target.                                      | Keeps the override but flags a design warning.               |
+| Design.UndersizedWireEGC               | <span style="color:#d9534f"><strong>High</strong></span>     | User-specified equipment ground size is undersized per NEC 250.122.                           | Keeps the override but flags a high-severity warning.        |
+| Design.UndersizedWireServiceGround     | <span style="color:#d9534f"><strong>High</strong></span>     | User-specified service ground size is undersized per NEC 250.102.                             | Keeps the override but flags a high-severity warning.        |
+| Design.ExcessiveVoltDrop               | <span style="color:#d9822b"><strong>Medium</strong></span>   | User-specified wire fails the voltage drop check.                                             | Keeps the override but flags a design warning.               |
+| Design.InsufficientAmpacity            | <span style="color:#d9534f"><strong>High</strong></span>     | User-specified wire fails ampacity check versus circuit load.                                 | Keeps the override but flags a high-severity warning.        |
+| Design.InsufficientAmpacityBreaker     | <span style="color:#d9534f"><strong>High</strong></span>     | User-specified wire fails ampacity check versus breaker rating.                               | Keeps the override but flags a high-severity warning.        |
+| Design.UndersizedOCP                   | <span style="color:#d9534f"><strong>High</strong></span>     | User-specified breaker rating is undersized relative to circuit load.                         | Keeps the override but flags a high-severity warning.        |
+| Calculations.WireSizingFailed          | <span style="color:#b20000"><strong>Critical</strong></span> | Automatic wire sizing failed.                                                                 | Marks calculation failed and outputs a critical alert.       |
+| Calculations.ConduitSizingFailed       | <span style="color:#b20000"><strong>Critical</strong></span> | Automatic conduit sizing failed.                                                              | Marks calculation failed and outputs a critical alert.       |
 
 ## Manual Mode Tips
 - Keep materials/insulation/temperature valid so ampacity/VD use the intended tables.
@@ -119,7 +158,7 @@ Access via **Calculate Circuits Settings**. Defaults are italic/gray; user selec
 
 ## Valid Inputs and Parameter Names
 - **Manual override toggle**: `CKT_User Override_CED` (Yes/No).
-- **Length adjustment**: `CKT_Length Makeup_CED` (decimal feet; negative values fall back to Revit length).
+- **Length adjustment**: `CKT_Length Makeup_CED` (decimal feet; negative values are acceptable if smaller than Revit length).
 - **Neutral inclusion**: `CKT_Include Neutral_CED` (Yes/No); **Isolated ground**: `CKT_Include Isolated Ground_CED` (Yes/No).
 - **Wire properties** (editable in auto/manual):
   - Material: `CU`, `AL` (case-insensitive).
@@ -146,4 +185,3 @@ Access via **Calculate Circuits Settings**. Defaults are italic/gray; user selec
 - Review grouped alerts at the end of a run for any circuit. Critical alerts indicate sizing could not complete.
 - If values look wrong, confirm materials/insulation are valid and that clearing tokens were not left unintentionally.
 - Ensure downstream write-back is enabled if you expect parameters on equipment/fixtures to update.
-
