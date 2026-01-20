@@ -95,23 +95,11 @@ ALERT_DEFINITIONS = {
         group="Design",
         severity="HIGH",
     ),
-    "design_insufficient_ampacity_breaker": AlertDefinition(
-        "Design.InsufficientAmpacityBreaker",
-        "User-specified wire ({wire_sets} set(s) x {wire_size}) fails breaker ampacity check (Ampacity: {circuit_ampacity}A, Breaker: {breaker_rating}A)",
-        group="Design",
-        severity="HIGH",
-    ),
     "design_undersized_ocp": AlertDefinition(
         "Design.UndersizedOCP",
         "Circuit load current ({circuit_load_current}A) exceeds User-specified breaker rating ({breaker_rating}A)",
         group="Design",
         severity="HIGH",
-    ),
-    "overrides_invalid_isolated_ground": AlertDefinition(
-        "Overrides.InvalidIsolatedGround",
-        "User-specified isolated ground size '{override_value}' invalid; using equipment ground size instead.",
-        group="Overrides",
-        severity="NONE",
     ),
     "calculation_wire_sizing_failed": AlertDefinition(
         "Calculations.WireSizingFailed",
