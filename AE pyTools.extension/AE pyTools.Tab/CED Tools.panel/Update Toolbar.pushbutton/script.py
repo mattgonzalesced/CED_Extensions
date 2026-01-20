@@ -11,7 +11,7 @@ from pyrevit import forms
 
 # .NET Process API
 clr.AddReference('System')
-from System.Diagnostics import Process
+from System.Diagnostics import Process, ProcessStartInfo
 
 
 def find_extension_root(script_dir):
@@ -59,13 +59,17 @@ def main():
    if not os.path.isfile(src_exe):
        forms.alert("Could not find updater EXE:\n{}".format(src_exe), exitscript=True)
 
-   # 4) Copy it into a writable temp location
-   tmp_exe = os.path.join(tempfile.gettempdir(), "Updater_pyrevit.exe")
+   # 4) Copy the entire onedir bundle to a writable temp location
+   src_dir = os.path.dirname(src_exe)
+   tmp_dir = os.path.join(tempfile.gettempdir(), "Updater_pyrevit")
+   tmp_exe = os.path.join(tmp_dir, "Updater_pyrevit.exe")
    try:
-       shutil.copy2(src_exe, tmp_exe)
+       if os.path.isdir(tmp_dir):
+           shutil.rmtree(tmp_dir)
+       shutil.copytree(src_dir, tmp_dir)
    except Exception as copy_err:
        forms.alert(
-           "Failed to copy updater to temp:\n{}\n\n{}".format(tmp_exe, copy_err),
+           "Failed to copy updater bundle to temp:\n{}\n\n{}".format(tmp_dir, copy_err),
            exitscript=True
        )
 
@@ -110,9 +114,27 @@ def main():
                    exitscript=True
                )
 
-   # 7) Run the updater from %TEMP%
+   # 7) Run the updater from %TEMP% and capture output
    try:
-       Process.Start(tmp_exe)
+       psi = ProcessStartInfo()
+       psi.FileName = tmp_exe
+       psi.UseShellExecute = False
+       psi.CreateNoWindow = True
+       psi.RedirectStandardOutput = True
+       psi.RedirectStandardError = True
+
+       proc = Process.Start(psi)
+       stdout = proc.StandardOutput.ReadToEnd()
+       stderr = proc.StandardError.ReadToEnd()
+       proc.WaitForExit()
+
+       if proc.ExitCode != 0:
+           forms.alert(
+               "Updater failed (exit {}).\n\nSTDOUT:\n{}\n\nSTDERR:\n{}".format(
+                   proc.ExitCode, stdout, stderr
+               ),
+               exitscript=True
+           )
    except Exception as run_err:
        forms.alert(
            "Failed to start updater:\n{}\n\n{}".format(tmp_exe, run_err),
