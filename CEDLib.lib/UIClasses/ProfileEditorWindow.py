@@ -560,7 +560,7 @@ class ProfileEditorWindow(forms.WPFWindow):
                 if box:
                     box.IsReadOnly = read_only
         for row in self._keynote_rows:
-            for key in ("family", "type", "x", "y", "z", "rot"):
+            for key in ("family", "type", "key_value", "x", "y", "z", "rot"):
                 box = row.get(key)
                 if box:
                     box.IsReadOnly = read_only
@@ -779,6 +779,7 @@ class ProfileEditorWindow(forms.WPFWindow):
             y_box = row.get("y")
             z_box = row.get("z")
             rot_box = row.get("rot")
+            key_value_box = row.get("key_value")
             original_tag = row.get("original")
             panel_type = row.get("panel_type")
             family = (family_box.Text or u"").strip()
@@ -797,6 +798,10 @@ class ProfileEditorWindow(forms.WPFWindow):
             elif not category:
                 category = "Annotation Symbols"
             parameters = self._extract_tag_parameters(original_tag)
+            if panel_type == "_keynote_rows" and key_value_box is not None:
+                key_value = (key_value_box.Text or u"").strip()
+                if key_value:
+                    parameters["Key Value"] = key_value
             configs.append(
                 TagConfig(
                     category_name=category,
@@ -1176,6 +1181,9 @@ class ProfileEditorWindow(forms.WPFWindow):
 
         family_box = _make_field("Family", 150.0)
         type_box = _make_field("Type", 140.0)
+        key_value_box = None
+        if storage_attr == "_keynote_rows" or target_list_name == "KeynoteList":
+            key_value_box = _make_field("Key Value", 140.0)
         x_box = _make_field("X (in)", 80.0)
         y_box = _make_field("Y (in)", 80.0)
         z_box = _make_field("Z (in)", 80.0)
@@ -1191,6 +1199,8 @@ class ProfileEditorWindow(forms.WPFWindow):
             y_box.Text = self._fmt_float(offsets[1])
             z_box.Text = self._fmt_float(offsets[2])
             rot_box.Text = self._fmt_float(offsets[3])
+        if key_value_box is not None:
+            key_value_box.Text = self._extract_keynote_value(tag)
 
         list_ctrl.Items.Add(panel)
         storage = getattr(self, storage_attr)
@@ -1198,6 +1208,7 @@ class ProfileEditorWindow(forms.WPFWindow):
             "panel": panel,
             "family": family_box,
             "type": type_box,
+            "key_value": key_value_box,
             "x": x_box,
             "y": y_box,
             "z": z_box,
@@ -1205,6 +1216,16 @@ class ProfileEditorWindow(forms.WPFWindow):
             "original": tag,
             "panel_type": storage_attr,
         })
+
+    def _extract_keynote_value(self, tag):
+        params = self._extract_tag_parameters(tag) or {}
+        direct = params.get("Key Value") or params.get("Keynote")
+        if direct not in (None, ""):
+            return u"{}".format(direct)
+        for key, value in params.items():
+            if (key or "").strip().lower() in ("key value", "keynote"):
+                return u"{}".format(value)
+        return u""
 
     def _resolve_tag_parts(self, tag):
         if not tag:

@@ -194,6 +194,7 @@ class PlaceElementsEngine(object):
     def _init_symbol_map(self):
         """Map 'Family : Type' to FamilySymbol."""
         self.symbol_label_map = {}
+        self.symbol_label_map_by_category = {}
         self._activated_symbols = set()
         symbols = list(FilteredElementCollector(self.doc).OfClass(FamilySymbol).ToElements())
         for sym in symbols:
@@ -210,6 +211,12 @@ class PlaceElementsEngine(object):
                     continue
                 label = u"{} : {}".format(fam_name, type_name)
                 self.symbol_label_map[label] = sym
+                cat = getattr(sym, "Category", None)
+                cat_name = getattr(cat, "Name", None) if cat else None
+                if cat_name:
+                    key = (label.strip().lower(), cat_name.strip().lower())
+                    if key not in self.symbol_label_map_by_category:
+                        self.symbol_label_map_by_category[key] = sym
             except Exception:
                 continue
 
@@ -1344,7 +1351,12 @@ class PlaceElementsEngine(object):
                 label = family
             else:
                 continue
-            symbol = self.symbol_label_map.get(label)
+            symbol = None
+            if category_name:
+                key = (label.strip().lower(), category_name.strip().lower())
+                symbol = self.symbol_label_map_by_category.get(key)
+            if not symbol:
+                symbol = self.symbol_label_map.get(label)
             if not symbol and family and type_name:
                 key = u"{} : {}".format(family, type_name)
                 symbol = self.symbol_label_map.get(key)
@@ -1454,18 +1466,60 @@ class PlaceElementsEngine(object):
                         tag_mode = TagMode.TM_ADDBY_CATEGORY
                         if is_keynote_def:
                             tag_mode = getattr(TagMode, "TM_ADDBY_KEYNOTE", TagMode.TM_ADDBY_CATEGORY)
-                        try:
-                            independent = IndependentTag.Create(
-                                self.doc,
-                                view_obj.Id,
-                                reference,
-                                True,
-                                tag_mode,
-                                TagOrientation.Horizontal,
-                                tag_loc,
-                                symbol.Id,
-                            )
-                        except TypeError:
+                        created_with_type_id = False
+                        create_with_default = False
+                        if symbol is not None:
+                            try:
+                                overload = IndependentTag.Create.Overloads[
+                                    Document, ElementId, Reference, bool, TagMode, TagOrientation, XYZ, ElementId
+                                ]
+                                independent = overload(
+                                    self.doc,
+                                    view_obj.Id,
+                                    reference,
+                                    True,
+                                    tag_mode,
+                                    TagOrientation.Horizontal,
+                                    tag_loc,
+                                    symbol.Id,
+                                )
+                                created_with_type_id = True
+                            except Exception:
+                                independent = None
+                        if independent is None and is_keynote_def and symbol is not None:
+                            try:
+                                keynote_cat_id = ElementId(BuiltInCategory.OST_KeynoteTags)
+                                get_default = getattr(self.doc, "GetDefaultFamilyTypeId", None)
+                                set_default = getattr(self.doc, "SetDefaultFamilyTypeId", None)
+                                default_type_id = get_default(keynote_cat_id) if callable(get_default) else None
+                                if callable(set_default):
+                                    set_default(keynote_cat_id, symbol.Id)
+                                    create_with_default = True
+                                independent = IndependentTag.Create(
+                                    self.doc,
+                                    view_obj.Id,
+                                    reference,
+                                    True,
+                                    tag_mode,
+                                    TagOrientation.Horizontal,
+                                    tag_loc,
+                                )
+                            except Exception as exc:
+                                if logger and is_keynote_def:
+                                    logger.info(
+                                        "[Place Elements] Keynote default-type create failed for '%s': %s",
+                                        label,
+                                        exc,
+                                    )
+                                independent = None
+                            finally:
+                                if create_with_default and callable(set_default):
+                                    try:
+                                        if default_type_id:
+                                            set_default(keynote_cat_id, default_type_id)
+                                    except Exception:
+                                        pass
+                        if independent is None:
                             independent = IndependentTag.Create(
                                 self.doc,
                                 view_obj.Id,
@@ -1477,15 +1531,24 @@ class PlaceElementsEngine(object):
                             )
                         if not independent:
                             continue
-                        try:
-                            independent.ChangeTypeId(symbol.Id)
-                        except Exception as exc:
-                            if logger and is_keynote_def:
-                                logger.info(
-                                    "[Place Elements] Keynote ChangeTypeId failed for '%s': %s",
-                                    label,
-                                    exc,
-                                )
+                        if not created_with_type_id and not create_with_default:
+                            try:
+                                independent.ChangeTypeId(symbol.Id)
+                            except Exception as exc:
+                                if logger and is_keynote_def:
+                                    sym_cat = getattr(symbol, "Category", None)
+                                    sym_cat_name = getattr(sym_cat, "Name", None) if sym_cat else ""
+                                    logger.info(
+                                        "[Place Elements] Keynote ChangeTypeId failed for '%s': %s (symbol category=%s)",
+                                        label,
+                                        exc,
+                                        sym_cat_name or "",
+                                    )
+                                    try:
+                                        self.doc.Delete(independent.Id)
+                                        continue
+                                    except Exception:
+                                        pass
                         instance = independent
                     elif is_annotation_family:
                         if not view_obj or (hasattr(view_obj, "ViewType") and view_obj.ViewType == ViewType.ThreeD):

@@ -610,6 +610,50 @@ def _collect_annotation_string_params(annotation_elem):
     return results
 
 
+def _collect_tag_parameters(tag_elem, include_read_only=True):
+    results = {}
+    if tag_elem is None:
+        return results
+    for param in getattr(tag_elem, "Parameters", []) or []:
+        try:
+            definition = getattr(param, "Definition", None)
+            name = getattr(definition, "Name", None)
+        except Exception:
+            name = None
+        if not name:
+            continue
+        if not include_read_only:
+            try:
+                if param.IsReadOnly:
+                    continue
+            except Exception:
+                pass
+        try:
+            storage = param.StorageType
+            storage_str = storage.ToString() if storage else ""
+        except Exception:
+            storage_str = ""
+        try:
+            if storage_str == "String":
+                value = param.AsString()
+            elif storage_str == "Integer":
+                value = param.AsInteger()
+            elif storage_str == "Double":
+                value = param.AsDouble()
+            elif storage_str == "ElementId":
+                elem_id = param.AsElementId()
+                value = elem_id.IntegerValue if elem_id else None
+            else:
+                value = param.AsValueString()
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        safe_name = (name or "").replace("#", SAFE_HASH)
+        results[safe_name] = value
+    return results
+
+
 def _build_annotation_tag_entry(annotation_elem, host_point):
     try:
         cat = getattr(annotation_elem, "Category", None)
@@ -630,13 +674,16 @@ def _build_annotation_tag_entry(annotation_elem, host_point):
         "rotation_deg": _normalize_angle(_get_rotation_degrees(annotation_elem)),
     }
     params = _collect_annotation_string_params(annotation_elem)
-    return {
+    entry = {
         "family_name": fam_name,
         "type_name": type_name,
         "category_name": cat_name,
         "parameters": params,
         "offsets": offsets,
     }
+    if _is_keynote_entry(entry):
+        entry["parameters"] = _collect_tag_parameters(annotation_elem, include_read_only=True)
+    return entry
 
 
 def _build_independent_tag_entry(tag, host_point):
@@ -744,7 +791,7 @@ def _build_independent_tag_entry(tag, host_point):
         fam_part, type_part = family_field.split(":", 1)
         family_field = fam_part.strip()
         type_field = type_part.strip()
-    return {
+    entry = {
         "family_name": family_field,
         "type_name": type_field,
         "category_name": category_name,
@@ -753,6 +800,9 @@ def _build_independent_tag_entry(tag, host_point):
         "leader_elbow": leader_elbow,
         "leader_end": leader_end,
     }
+    if _is_keynote_entry(entry):
+        entry["parameters"] = _collect_tag_parameters(tag, include_read_only=True)
+    return entry
 
 
 def _point_offsets_dict(point, origin):

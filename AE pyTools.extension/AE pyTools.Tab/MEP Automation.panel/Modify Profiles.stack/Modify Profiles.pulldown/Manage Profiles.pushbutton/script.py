@@ -848,6 +848,49 @@ def _is_tag_like(elem):
     return True
 
 
+def _collect_tag_parameters(tag_elem, include_read_only=True):
+    results = {}
+    if tag_elem is None:
+        return results
+    for param in getattr(tag_elem, "Parameters", []) or []:
+        try:
+            definition = getattr(param, "Definition", None)
+            name = getattr(definition, "Name", None)
+        except Exception:
+            name = None
+        if not name:
+            continue
+        if not include_read_only:
+            try:
+                if param.IsReadOnly:
+                    continue
+            except Exception:
+                pass
+        try:
+            storage = param.StorageType.ToString()
+        except Exception:
+            storage = ""
+        try:
+            if storage == "String":
+                value = param.AsString()
+            elif storage == "Integer":
+                value = param.AsInteger()
+            elif storage == "Double":
+                value = param.AsDouble()
+            elif storage == "ElementId":
+                elem_id = param.AsElementId()
+                value = elem_id.IntegerValue if elem_id else None
+            else:
+                value = param.AsValueString()
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        safe_name = (name or "").replace("#", SAFE_HASH)
+        results[safe_name] = value
+    return results
+
+
 class OffsetShim(object):
 
 
@@ -1986,6 +2029,7 @@ def _collect_hosted_tags(elem, host_point):
                 "offsets": offsets,
             }
             if _is_keynote_entry(entry):
+                entry["parameters"] = _collect_tag_parameters(dep_elem, include_read_only=True)
                 keynotes.append(entry)
             else:
                 tags.append(entry)
