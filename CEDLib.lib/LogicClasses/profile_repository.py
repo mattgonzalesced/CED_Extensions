@@ -115,6 +115,15 @@ class ProfileRepository(object):
                     except Exception:
                         return 0.0
 
+                def _offset_dict_to_tuple(data):
+                    if not isinstance(data, dict):
+                        return None
+                    return (
+                        _inch_to_ft(data.get("x_inches", 0.0) or 0.0),
+                        _inch_to_ft(data.get("y_inches", 0.0) or 0.0),
+                        _inch_to_ft(data.get("z_inches", 0.0) or 0.0),
+                    )
+
                 tag_defs = []
                 for tag_data in inst_cfg.get("tags") or []:
                     if not isinstance(tag_data, dict):
@@ -123,6 +132,8 @@ class ProfileRepository(object):
                     if not isinstance(offsets_dict, dict):
                         offsets_dict = {}
 
+                    leader_elbow = _offset_dict_to_tuple(tag_data.get("leader_elbow"))
+                    leader_end = _offset_dict_to_tuple(tag_data.get("leader_end"))
                     tag_defs.append({
                         "family": tag_data.get("family_name") or tag_data.get("family"),
                         "type": tag_data.get("type_name") or tag_data.get("type"),
@@ -134,6 +145,8 @@ class ProfileRepository(object):
                             _inch_to_ft(offsets_dict.get("z_inches", 0.0) or 0.0),
                         ),
                         "rotation_deg": float(offsets_dict.get("rotation_deg", 0.0) or 0.0),
+                        "leader_elbow": leader_elbow,
+                        "leader_end": leader_end,
                     })
 
                 text_note_defs = []

@@ -685,6 +685,20 @@ def _build_independent_tag_entry(tag, host_point):
         "z_inches": _feet_to_inches((tag_point.Z - host_point.Z)),
         "rotation_deg": 0.0,
     }
+    leader_elbow = None
+    leader_end = None
+    try:
+        elbow_point = getattr(tag, "LeaderElbow", None)
+    except Exception:
+        elbow_point = None
+    if elbow_point:
+        leader_elbow = _point_offsets_dict(elbow_point, host_point)
+    try:
+        end_point = getattr(tag, "LeaderEnd", None)
+    except Exception:
+        end_point = None
+    if end_point:
+        leader_end = _point_offsets_dict(end_point, host_point)
     family_field = fam_name or ""
     type_field = type_name or ""
     if not type_field and tag_symbol:
@@ -711,6 +725,8 @@ def _build_independent_tag_entry(tag, host_point):
         "category_name": category_name,
         "parameters": {},
         "offsets": offsets,
+        "leader_elbow": leader_elbow,
+        "leader_end": leader_end,
     }
 
 
@@ -1268,6 +1284,26 @@ def _extract_set_id(payload_text):
     return remainder.split(",", 1)[0].strip()
 
 
+def _extract_led_id(payload_text):
+    if not payload_text:
+        return ""
+    text = str(payload_text)
+    if "\n" in text:
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            if not line or ":" not in line:
+                continue
+            key, _, remainder = line.partition(":")
+            if key.strip().lower() == "linked element definition id":
+                return remainder.strip()
+    marker = "Linked Element Definition ID:"
+    idx = text.find(marker)
+    if idx < 0:
+        return ""
+    remainder = text[idx + len(marker):]
+    return remainder.split(",", 1)[0].strip()
+
+
 def _get_element_linker_text(elem):
     if elem is None:
         return ""
@@ -1339,6 +1375,17 @@ def _tag_display_label(tag):
     return type_name or fam_name or "<Tag?>"
 
 
+def _ensure_element_id(value):
+    if isinstance(value, ElementId):
+        return value
+    if value in (None, ""):
+        return None
+    try:
+        return ElementId(int(value))
+    except Exception:
+        return None
+
+
 def _tag_label_key(label):
     if not label:
         return ""
@@ -1355,27 +1402,202 @@ def _tag_key_from_def(tag_def):
     return _tag_label_key(type_name or family)
 
 
-def _cleanup_far_tags_by_type(doc, active_view_id, tag_type_keys, max_distance_ft):
-    if not doc or not active_view_id or not tag_type_keys or not max_distance_ft:
+def _cleanup_far_tags_by_type(doc, active_view_id, tag_type_keys, max_distance_ft, expected_points=None, tag_ids=None):
+    if not doc or not active_view_id or not max_distance_ft:
         return 0
     try:
         limit = float(max_distance_ft)
     except Exception:
         return 0
+    view_id = _ensure_element_id(active_view_id)
+    if not view_id:
+        return 0
+    allowed_ids = None
+    if tag_ids:
+        try:
+            allowed_ids = {int(val) for val in tag_ids}
+        except Exception:
+            allowed_ids = None
     try:
-        tags = list(FilteredElementCollector(doc, active_view_id).OfClass(IndependentTag))
+        tags = list(FilteredElementCollector(doc, view_id).OfClass(IndependentTag))
     except Exception:
         tags = []
     if not tags:
         return 0
+    if not expected_points:
+        LOG.info("[Edit-Create Profiles] Autoload tag cleanup skipped: no expected tag points.")
+        return 0
+    def _distance_between_points(a, b):
+        if a is None or b is None:
+            return None
+        try:
+            return a.DistanceTo(b)
+        except Exception:
+            try:
+                dx = a.X - b.X
+                dy = a.Y - b.Y
+                dz = a.Z - b.Z
+                return math.sqrt(dx * dx + dy * dy + dz * dz)
+            except Exception:
+                return None
+
+    def _distance_to_nearest_expected(point):
+        if point is None or not expected_points:
+            return None
+        nearest = None
+        for expected_point in expected_points:
+            dist = _distance_between_points(expected_point, point)
+            if dist is None:
+                continue
+            if nearest is None or dist < nearest:
+                nearest = dist
+        return nearest
+
     removed = 0
+    seen = 0
+    debug = []
     txn = Transaction(doc, "Clean Autoload Tag Types")
+    try:
+        txn.Start()
+        for tag in tags:
+            if allowed_ids is not None:
+                try:
+                    tag_id_val = tag.Id.IntegerValue
+                except Exception:
+                    tag_id_val = None
+                if tag_id_val not in allowed_ids:
+                    continue
+            if tag_type_keys:
+                label = _tag_label_key(_tag_display_label(tag))
+                if label not in tag_type_keys:
+                    continue
+            seen += 1
+            if len(debug) < 5:
+                try:
+                    debug.append(_tag_display_label(tag))
+                except Exception:
+                    debug.append("<tag>")
+            try:
+                tag_point = tag.TagHeadPosition
+            except Exception:
+                tag_point = None
+            if tag_point is None:
+                LOG.info(
+                    "[Edit-Create Profiles] Autoload tag cleanup: '%s' missing tag head position.",
+                    _tag_display_label(tag),
+                )
+                continue
+            dist = _distance_to_nearest_expected(tag_point)
+            source_label = "expected tag"
+            if dist is None or dist <= limit:
+                continue
+            try:
+                doc.Delete(tag.Id)
+                removed += 1
+                LOG.info(
+                    "[Edit-Create Profiles] Removed tag '%s' %.2f ft from %s (limit %.2f ft).",
+                    _tag_display_label(tag),
+                    dist,
+                    source_label,
+                    limit,
+                )
+            except Exception:
+                continue
+        txn.Commit()
+    except Exception:
+        try:
+            txn.RollBack()
+        except Exception:
+            pass
+    LOG.info(
+        "[Edit-Create Profiles] Autoload tag cleanup scanned %s tag(s); removed %s.",
+        seen,
+        removed,
+    )
+    if seen == 0 and allowed_ids is not None:
+        LOG.info(
+            "[Edit-Create Profiles] Autoload tag cleanup debug: allowed_ids=%s sample=%s",
+            len(allowed_ids),
+            ", ".join(debug) if debug else "<none>",
+        )
+    return removed
+
+
+def _cleanup_existing_profile_tags(doc, active_view_id, tag_type_keys, set_ids, led_ids, expected_points, expected_hosts, max_distance_ft):
+    if not doc or not active_view_id or not tag_type_keys or not max_distance_ft:
+        return 0
+    if not expected_points:
+        LOG.info("[Edit-Create Profiles] Existing tag cleanup skipped: no expected tag points.")
+        return 0
+    if not set_ids and not led_ids:
+        LOG.info("[Edit-Create Profiles] Existing tag cleanup skipped: no set/led ids available.")
+        return 0
+    try:
+        limit = float(max_distance_ft)
+    except Exception:
+        return 0
+    view_id = _ensure_element_id(active_view_id)
+    if not view_id:
+        LOG.info("[Edit-Create Profiles] Existing tag cleanup skipped: invalid view id.")
+        return 0
+    try:
+        tags = list(FilteredElementCollector(doc, view_id).OfClass(IndependentTag))
+    except Exception:
+        tags = []
+    if not tags:
+        LOG.info("[Edit-Create Profiles] Existing tag cleanup found 0 tags in active view.")
+        return 0
+
+    def _distance_between_points(a, b):
+        if a is None or b is None:
+            return None
+        try:
+            return a.DistanceTo(b)
+        except Exception:
+            try:
+                dx = a.X - b.X
+                dy = a.Y - b.Y
+                dz = a.Z - b.Z
+                return math.sqrt(dx * dx + dy * dy + dz * dz)
+            except Exception:
+                return None
+
+    def _distance_to_nearest_expected(point):
+        if point is None:
+            return None
+        nearest = None
+        for expected_point in expected_points:
+            dist = _distance_between_points(expected_point, point)
+            if dist is None:
+                continue
+            if nearest is None or dist < nearest:
+                nearest = dist
+        return nearest
+
+    def _host_matches_expected(host_point):
+        if host_point is None or not expected_hosts:
+            return False
+        nearest = None
+        for expected_host in expected_hosts:
+            dist = _distance_between_points(expected_host, host_point)
+            if dist is None:
+                continue
+            if nearest is None or dist < nearest:
+                nearest = dist
+        return nearest is not None and nearest <= limit
+
+    removed = 0
+    scanned = 0
+    matched_type = 0
+    matched_host = 0
+    txn = Transaction(doc, "Clean Existing Autoload Tags")
     try:
         txn.Start()
         for tag in tags:
             label = _tag_label_key(_tag_display_label(tag))
             if label not in tag_type_keys:
                 continue
+            matched_type += 1
             host_elem = None
             for host_id in _tag_host_element_ids(tag):
                 try:
@@ -1386,32 +1608,33 @@ def _cleanup_far_tags_by_type(doc, active_view_id, tag_type_keys, max_distance_f
                     break
             if host_elem is None:
                 continue
-            host_point = _get_point(host_elem)
-            if host_point is None:
-                continue
+            payload = _get_element_linker_text(host_elem)
+            set_id = _extract_set_id(payload)
+            led_id = _extract_led_id(payload)
+            if set_id and set_id in set_ids:
+                pass
+            elif led_id and led_id in led_ids:
+                pass
+            else:
+                host_point = _get_point(host_elem)
+                if not _host_matches_expected(host_point):
+                    continue
+            matched_host += 1
+            scanned += 1
             try:
                 tag_point = tag.TagHeadPosition
             except Exception:
                 tag_point = None
             if tag_point is None:
                 continue
-            try:
-                dist = host_point.DistanceTo(tag_point)
-            except Exception:
-                try:
-                    dx = host_point.X - tag_point.X
-                    dy = host_point.Y - tag_point.Y
-                    dz = host_point.Z - tag_point.Z
-                    dist = math.sqrt(dx * dx + dy * dy + dz * dz)
-                except Exception:
-                    dist = None
+            dist = _distance_to_nearest_expected(tag_point)
             if dist is None or dist <= limit:
                 continue
             try:
                 doc.Delete(tag.Id)
                 removed += 1
                 LOG.info(
-                    "[Edit-Create Profiles] Removed tag '%s' %.2f ft from host (limit %.2f ft).",
+                    "[Edit-Create Profiles] Removed existing tag '%s' %.2f ft from expected tag (limit %.2f ft).",
                     _tag_display_label(tag),
                     dist,
                     limit,
@@ -1424,6 +1647,13 @@ def _cleanup_far_tags_by_type(doc, active_view_id, tag_type_keys, max_distance_f
             txn.RollBack()
         except Exception:
             pass
+    LOG.info(
+        "[Edit-Create Profiles] Existing tag cleanup matched type=%s host=%s scanned=%s removed=%s.",
+        matched_type,
+        matched_host,
+        scanned,
+        removed,
+    )
     return removed
 
 
@@ -1434,9 +1664,12 @@ def _cleanup_far_autoload_tags(doc, active_view_id, set_ids, max_distance_ft):
         limit = float(max_distance_ft)
     except Exception:
         return 0
+    view_id = _ensure_element_id(active_view_id)
+    if not view_id:
+        return 0
     host_lookup = {}
     try:
-        elements = FilteredElementCollector(doc, active_view_id).WhereElementIsNotElementType()
+        elements = FilteredElementCollector(doc, view_id).WhereElementIsNotElementType()
     except Exception:
         elements = []
     for elem in elements:
@@ -1454,7 +1687,7 @@ def _cleanup_far_autoload_tags(doc, active_view_id, set_ids, max_distance_ft):
     if not host_lookup:
         return 0
     try:
-        tags = list(FilteredElementCollector(doc, active_view_id).OfClass(IndependentTag))
+        tags = list(FilteredElementCollector(doc, view_id).OfClass(IndependentTag))
     except Exception:
         tags = []
     if not tags:
@@ -1563,6 +1796,146 @@ def _filter_tags_for_autoload(data, cad_name, max_distance_ft):
     return filtered
 
 
+def _expected_tag_points(repo, cad_name, parent_point, parent_rotation):
+    if not repo or not cad_name or parent_point is None:
+        return []
+    points = []
+    labels = repo.labels_for_cad(cad_name)
+    if not labels:
+        return points
+    for label in labels:
+        linked_def = repo.definition_for_label(cad_name, label)
+        if not linked_def:
+            continue
+        placement = linked_def.get_placement()
+        if not placement:
+            continue
+        offsets = placement.get_offset_xyz() or (0.0, 0.0, 0.0)
+        ox, oy, oz = offsets
+        if parent_rotation:
+            try:
+                ang = math.radians(float(parent_rotation))
+            except Exception:
+                ang = 0.0
+            cos_a = math.cos(ang)
+            sin_a = math.sin(ang)
+            rot_x = ox * cos_a - oy * sin_a
+            rot_y = ox * sin_a + oy * cos_a
+            host_point = XYZ(parent_point.X + rot_x, parent_point.Y + rot_y, parent_point.Z + oz)
+        else:
+            host_point = XYZ(parent_point.X + ox, parent_point.Y + oy, parent_point.Z + oz)
+        if host_point.Z < 0.0:
+            host_point = XYZ(host_point.X, host_point.Y, 1.0)
+        for tag_def in placement.get_tags() or []:
+            offset = tag_def.get("offset") or (0.0, 0.0, 0.0)
+            try:
+                tag_point = XYZ(
+                    host_point.X + (offset[0] or 0.0),
+                    host_point.Y + (offset[1] or 0.0),
+                    host_point.Z + (offset[2] or 0.0),
+                )
+            except Exception:
+                tag_point = None
+            if tag_point is not None:
+                points.append(tag_point)
+    return points
+
+
+def _expected_host_points(repo, cad_name, parent_point, parent_rotation):
+    if not repo or not cad_name or parent_point is None:
+        return []
+    points = []
+    labels = repo.labels_for_cad(cad_name)
+    if not labels:
+        return points
+    for label in labels:
+        linked_def = repo.definition_for_label(cad_name, label)
+        if not linked_def:
+            continue
+        placement = linked_def.get_placement()
+        if not placement:
+            continue
+        offsets = placement.get_offset_xyz() or (0.0, 0.0, 0.0)
+        ox, oy, oz = offsets
+        if parent_rotation:
+            try:
+                ang = math.radians(float(parent_rotation))
+            except Exception:
+                ang = 0.0
+            cos_a = math.cos(ang)
+            sin_a = math.sin(ang)
+            rot_x = ox * cos_a - oy * sin_a
+            rot_y = ox * sin_a + oy * cos_a
+            host_point = XYZ(parent_point.X + rot_x, parent_point.Y + rot_y, parent_point.Z + oz)
+        else:
+            host_point = XYZ(parent_point.X + ox, parent_point.Y + oy, parent_point.Z + oz)
+        if host_point.Z < 0.0:
+            host_point = XYZ(host_point.X, host_point.Y, 1.0)
+        points.append(host_point)
+    return points
+
+
+def _collect_tag_ids_in_view(doc, active_view_id):
+    if not doc or not active_view_id:
+        return set()
+    view_id = _ensure_element_id(active_view_id)
+    if not view_id:
+        return set()
+    try:
+        tags = list(FilteredElementCollector(doc, view_id).OfClass(IndependentTag))
+    except Exception:
+        tags = []
+    ids = set()
+    for tag in tags:
+        try:
+            ids.add(tag.Id.IntegerValue)
+        except Exception:
+            continue
+    return ids
+
+
+def _collect_tag_ids_near_points(doc, active_view_id, points, radius_ft):
+    if not doc or not active_view_id or not points or not radius_ft:
+        return set()
+    view_id = _ensure_element_id(active_view_id)
+    if not view_id:
+        return set()
+    try:
+        limit = float(radius_ft)
+    except Exception:
+        return set()
+    try:
+        tags = list(FilteredElementCollector(doc, view_id).OfClass(IndependentTag))
+    except Exception:
+        tags = []
+    ids = set()
+    for tag in tags:
+        try:
+            tag_point = tag.TagHeadPosition
+        except Exception:
+            tag_point = None
+        if tag_point is None:
+            continue
+        for point in points:
+            try:
+                dist = point.DistanceTo(tag_point)
+            except Exception:
+                try:
+                    dx = point.X - tag_point.X
+                    dy = point.Y - tag_point.Y
+                    dz = point.Z - tag_point.Z
+                    dist = math.sqrt(dx * dx + dy * dy + dz * dz)
+                except Exception:
+                    dist = None
+            if dist is not None and dist <= limit:
+                try:
+                    ids.add(tag.Id.IntegerValue)
+                except Exception:
+                    pass
+                break
+    return ids
+
+
 def _place_existing_configuration(doc, data, cad_name, parent_point, parent_rotation, active_view_id=None):
     if not cad_name or parent_point is None:
         return
@@ -1599,6 +1972,35 @@ def _place_existing_configuration(doc, data, cad_name, parent_point, parent_rota
         "Position Z": str(parent_point.Z * 12.0),
         "Rotation": str(parent_rotation or 0.0),
     }]
+    pre_tag_ids = _collect_tag_ids_in_view(doc, active_view_id)
+    expected_points = _expected_tag_points(repo, cad_name, parent_point, parent_rotation)
+    expected_hosts = _expected_host_points(repo, cad_name, parent_point, parent_rotation)
+    led_ids = set()
+    if eq_def:
+        for linked_set in eq_def.get("linked_sets") or []:
+            for led in linked_set.get("linked_element_definitions") or []:
+                if isinstance(led, dict):
+                    led_id = (led.get("id") or "").strip()
+                    if led_id:
+                        led_ids.add(led_id)
+    if active_view_id and tag_type_keys and (set_ids or led_ids):
+        LOG.info(
+            "[Edit-Create Profiles] Existing tag cleanup scope: set_ids=%s led_ids=%s expected_points=%s expected_hosts=%s",
+            len(set_ids),
+            len(led_ids),
+            len(expected_points),
+            len(expected_hosts),
+        )
+        _cleanup_existing_profile_tags(
+            doc,
+            active_view_id,
+            tag_type_keys,
+            set_ids,
+            led_ids,
+            expected_points,
+            expected_hosts,
+            5.0,
+        )
     engine = PlaceElementsEngine(
         doc,
         repo,
@@ -1608,10 +2010,38 @@ def _place_existing_configuration(doc, data, cad_name, parent_point, parent_rota
     )
     try:
         engine.place_from_csv(rows, selection_map)
-        if active_view_id and set_ids:
-            _cleanup_far_autoload_tags(doc, active_view_id, set_ids, 5.0)
+        try:
+            doc.Regenerate()
+        except Exception:
+            pass
         if active_view_id and tag_type_keys:
-            _cleanup_far_tags_by_type(doc, active_view_id, tag_type_keys, 5.0)
+            post_tag_ids = _collect_tag_ids_in_view(doc, active_view_id)
+            new_tag_ids = post_tag_ids - pre_tag_ids
+            if new_tag_ids:
+                near_expected = _collect_tag_ids_near_points(doc, active_view_id, expected_points, 10.0)
+                filtered_new = set(new_tag_ids) - set(near_expected)
+                if filtered_new != new_tag_ids:
+                    LOG.info(
+                        "[Edit-Create Profiles] Autoload tag cleanup narrowed new_tags=%s -> %s near_expected=%s",
+                        len(new_tag_ids),
+                        len(filtered_new),
+                        len(near_expected),
+                    )
+                new_tag_ids = filtered_new
+            LOG.info(
+                "[Edit-Create Profiles] Autoload tag cleanup setup: new_tags=%s expected_points=%s tag_types=%s",
+                len(new_tag_ids),
+                len(expected_points),
+                len(tag_type_keys),
+            )
+            _cleanup_far_tags_by_type(
+                doc,
+                active_view_id,
+                None,
+                10.0,
+                expected_points=expected_points,
+                tag_ids=new_tag_ids,
+            )
     except Exception as exc:
         LOG.warning("Failed to place existing profile: %s", exc)
 

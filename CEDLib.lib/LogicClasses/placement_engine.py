@@ -1271,6 +1271,58 @@ class PlaceElementsEngine(object):
         except Exception:
             pass
 
+    def _tagged_element_ids(self, tag):
+        if tag is None:
+            return []
+        try:
+            getter = getattr(tag, "GetTaggedLocalElementIds", None)
+            if callable(getter):
+                return list(getter() or [])
+        except Exception:
+            pass
+        ids = []
+        for attr in ("TaggedLocalElementId", "TaggedElementId"):
+            try:
+                value = getattr(tag, attr, None)
+            except Exception:
+                value = None
+            if value:
+                ids.append(value)
+        return ids
+
+    def _existing_tag_for_host(self, host_instance, symbol_id, view_obj):
+        if not host_instance or not symbol_id or not view_obj:
+            return False
+        try:
+            tags = FilteredElementCollector(self.doc, view_obj.Id).OfClass(IndependentTag)
+        except Exception:
+            tags = []
+        if not tags:
+            return False
+        try:
+            host_id_val = host_instance.Id.IntegerValue
+        except Exception:
+            host_id_val = None
+        for tag in tags:
+            try:
+                if tag.GetTypeId() != symbol_id:
+                    continue
+            except Exception:
+                continue
+            if host_id_val is None:
+                continue
+            for tagged_id in self._tagged_element_ids(tag):
+                try:
+                    tagged_val = tagged_id.IntegerValue
+                except Exception:
+                    try:
+                        tagged_val = int(tagged_id)
+                    except Exception:
+                        tagged_val = None
+                if tagged_val is not None and tagged_val == host_id_val:
+                    return True
+        return False
+
     def _place_tags(self, tag_defs, host_instance, base_loc, final_rot_deg):
         if not tag_defs:
             return
@@ -1321,6 +1373,8 @@ class PlaceElementsEngine(object):
                                 limit,
                             )
                         continue
+            leader_elbow = self._convert_offset_to_tuple(tag.get("leader_elbow"))
+            leader_end = self._convert_offset_to_tuple(tag.get("leader_end"))
             category_name = (tag.get("category") or "").lower()
             parameters = tag.get("parameters") or {}
 
@@ -1369,6 +1423,8 @@ class PlaceElementsEngine(object):
                     if is_tag_family:
                         if not view_obj or not host_instance:
                             continue
+                        if self._existing_tag_for_host(host_instance, symbol.Id, view_obj):
+                            continue
                         try:
                             reference = Reference(host_instance)
                         except Exception:
@@ -1412,6 +1468,24 @@ class PlaceElementsEngine(object):
                         instance.TagHeadPosition = tag_loc
                     except Exception:
                         pass
+                    if leader_end:
+                        try:
+                            instance.LeaderEnd = XYZ(
+                                base_loc.X + (leader_end[0] or 0.0),
+                                base_loc.Y + (leader_end[1] or 0.0),
+                                base_loc.Z + (leader_end[2] or 0.0),
+                            )
+                        except Exception:
+                            pass
+                    if leader_elbow:
+                        try:
+                            instance.LeaderElbow = XYZ(
+                                base_loc.X + (leader_elbow[0] or 0.0),
+                                base_loc.Y + (leader_elbow[1] or 0.0),
+                                base_loc.Z + (leader_elbow[2] or 0.0),
+                            )
+                        except Exception:
+                            pass
                 else:
                     if abs(tag_rotation) > 1e-6:
                         try:
