@@ -438,13 +438,177 @@ def equipment_defs_to_legacy(equipment_defs):
     for eq in equipment_defs or []:
         if not isinstance(eq, Mapping):
             continue
+        def _normalize_keynote_family(value):
+            if not value:
+                return ""
+            text = str(value)
+            if ":" in text:
+                text = text.split(":", 1)[0]
+            return "".join([ch for ch in text.lower() if ch.isalnum()])
+
+        def _is_ga_keynote_symbol(family_name):
+            return _normalize_keynote_family(family_name) == "gakeynotesymbolced"
+
+        def _normalize_keynote_params(params):
+            if not isinstance(params, Mapping):
+                return {}
+            params = dict(params)
+            if "Keynote Value" in params:
+                params.pop("Key Value", None)
+                return params
+            if "Key Value" in params:
+                params["Keynote Value"] = params.pop("Key Value")
+            return params
+
+        def _split_label(label):
+            if not label:
+                return ("", "")
+            text = str(label)
+            if ":" in text:
+                left, right = text.split(":", 1)
+                return (left.strip(), right.strip())
+            return (text.strip(), "")
+
+        def _offsets_from_led(led):
+            offsets_list = led.get("offsets") or [{}]
+            if isinstance(offsets_list, list) and offsets_list:
+                base = offsets_list[0] or {}
+            elif isinstance(offsets_list, Mapping):
+                base = offsets_list
+            else:
+                base = {}
+            try:
+                x_val = float(base.get("x_inches", 0.0) or 0.0)
+            except Exception:
+                x_val = 0.0
+            try:
+                y_val = float(base.get("y_inches", 0.0) or 0.0)
+            except Exception:
+                y_val = 0.0
+            try:
+                z_val = float(base.get("z_inches", 0.0) or 0.0)
+            except Exception:
+                z_val = 0.0
+            try:
+                rot_val = float(base.get("rotation_deg", 0.0) or 0.0)
+            except Exception:
+                rot_val = 0.0
+            return (x_val, y_val, z_val, rot_val)
+
+        def _offsets_close(a, b, tol=0.05):
+            return (
+                abs(a[0] - b[0]) <= tol
+                and abs(a[1] - b[1]) <= tol
+                and abs(a[2] - b[2]) <= tol
+                and abs(a[3] - b[3]) <= tol
+            )
+
         cad_name = eq.get("name") or eq.get("id") or "Unknown"
         types = []
+        host_candidates = []
+        ga_keynotes = []
         for linked_set in eq.get("linked_sets") or []:
             set_id = linked_set.get("id")
             for led in linked_set.get("linked_element_definitions") or []:
                 if led.get("is_parent_anchor"):
                     continue
+                label = led.get("label") or ""
+                family_name = led.get("family_name") or led.get("family") or _split_label(label)[0]
+                type_name = led.get("type_name") or led.get("type") or _split_label(label)[1]
+                offsets_tuple = _offsets_from_led(led)
+                if _is_ga_keynote_symbol(family_name):
+                    ga_keynotes.append({
+                        "led": led,
+                        "set_id": set_id,
+                        "family_name": family_name or "",
+                        "type_name": type_name or "",
+                        "category_name": led.get("category") or "Generic Annotations",
+                        "parameters": _normalize_keynote_params(led.get("parameters") or {}),
+                        "offsets_tuple": offsets_tuple,
+                    })
+                    continue
+                inst_cfg = {
+                    "offsets": led.get("offsets") or [{}],
+                    "parameters": led.get("parameters") or {},
+                    "tags": led.get("tags") or [],
+                    "keynotes": led.get("keynotes") or [],
+                    "text_notes": led.get("text_notes") or [],
+                }
+                type_entry = {
+                    "label": led.get("label"),
+                    "category_name": led.get("category"),
+                    "is_group": bool(led.get("is_group")),
+                    "led_id": led.get("id"),
+                    "set_id": set_id,
+                    "instance_config": inst_cfg,
+                }
+                types.append(type_entry)
+                host_candidates.append({
+                    "entry": type_entry,
+                    "offsets": offsets_tuple,
+                })
+        if ga_keynotes and host_candidates:
+            for keynote in ga_keynotes:
+                best_host = None
+                best_dist = None
+                for host in host_candidates:
+                    dx = keynote["offsets_tuple"][0] - host["offsets"][0]
+                    dy = keynote["offsets_tuple"][1] - host["offsets"][1]
+                    dz = keynote["offsets_tuple"][2] - host["offsets"][2]
+                    dist = (dx * dx) + (dy * dy) + (dz * dz)
+                    if best_dist is None or dist < best_dist:
+                        best_dist = dist
+                        best_host = host
+                if not best_host:
+                    continue
+                target = best_host["entry"]
+                host_offsets = target.get("instance_config", {}).get("offsets") or [{}]
+                if isinstance(host_offsets, list) and host_offsets:
+                    host_offset = host_offsets[0] or {}
+                else:
+                    host_offset = host_offsets or {}
+                host_rot = 0.0
+                try:
+                    host_rot = float(host_offset.get("rotation_deg", 0.0) or 0.0)
+                except Exception:
+                    host_rot = 0.0
+                rel_rot = keynote["offsets_tuple"][3] - host_rot
+                entry = {
+                    "family_name": keynote["family_name"],
+                    "type_name": keynote["type_name"],
+                    "category_name": keynote["category_name"],
+                    "parameters": keynote["parameters"],
+                    "offsets": {
+                        "x_inches": keynote["offsets_tuple"][0] - best_host["offsets"][0],
+                        "y_inches": keynote["offsets_tuple"][1] - best_host["offsets"][1],
+                        "z_inches": keynote["offsets_tuple"][2] - best_host["offsets"][2],
+                        "rotation_deg": rel_rot,
+                    },
+                }
+                inst_cfg = target.setdefault("instance_config", {})
+                keynotes = inst_cfg.setdefault("keynotes", [])
+                if not any(
+                    _is_ga_keynote_symbol(kn.get("family_name") or kn.get("family"))
+                    and _offsets_close(
+                        (
+                            float((kn.get("offsets") or {}).get("x_inches", 0.0) or 0.0),
+                            float((kn.get("offsets") or {}).get("y_inches", 0.0) or 0.0),
+                            float((kn.get("offsets") or {}).get("z_inches", 0.0) or 0.0),
+                            float((kn.get("offsets") or {}).get("rotation_deg", 0.0) or 0.0),
+                        ),
+                        (
+                            entry["offsets"]["x_inches"],
+                            entry["offsets"]["y_inches"],
+                            entry["offsets"]["z_inches"],
+                            entry["offsets"]["rotation_deg"],
+                        ),
+                    )
+                    for kn in keynotes
+                ):
+                    keynotes.append(entry)
+        elif ga_keynotes:
+            for keynote in ga_keynotes:
+                led = keynote.get("led") or {}
                 inst_cfg = {
                     "offsets": led.get("offsets") or [{}],
                     "parameters": led.get("parameters") or {},
@@ -457,7 +621,7 @@ def equipment_defs_to_legacy(equipment_defs):
                     "category_name": led.get("category"),
                     "is_group": bool(led.get("is_group")),
                     "led_id": led.get("id"),
-                    "set_id": set_id,
+                    "set_id": keynote.get("set_id"),
                     "instance_config": inst_cfg,
                 })
         legacy.append({

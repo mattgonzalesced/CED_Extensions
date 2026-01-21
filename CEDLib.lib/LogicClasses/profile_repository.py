@@ -128,8 +128,33 @@ class ProfileRepository(object):
                 tag_sources = []
                 tag_sources.extend(inst_cfg.get("tags") or [])
                 tag_sources.extend(inst_cfg.get("keynotes") or [])
+                def _normalize_keynote_family(value):
+                    if not value:
+                        return ""
+                    text = str(value)
+                    if ":" in text:
+                        text = text.split(":", 1)[0]
+                    return "".join([ch for ch in text.lower() if ch.isalnum()])
+
+                def _is_ga_keynote_symbol(family_name):
+                    return _normalize_keynote_family(family_name) == "gakeynotesymbolced"
+
+                def _is_builtin_keynote_tag(tag_data):
+                    family = tag_data.get("family_name") or tag_data.get("family") or ""
+                    category = tag_data.get("category_name") or tag_data.get("category") or ""
+                    if _is_ga_keynote_symbol(family):
+                        return False
+                    fam_text = (family or "").lower()
+                    cat_text = (category or "").lower()
+                    if "keynote tags" in cat_text:
+                        return True
+                    if "keynote tag" in fam_text:
+                        return True
+                    return False
                 for tag_data in tag_sources:
                     if not isinstance(tag_data, dict):
+                        continue
+                    if _is_builtin_keynote_tag(tag_data):
                         continue
                     offsets_dict = tag_data.get("offsets") or {}
                     if not isinstance(offsets_dict, dict):

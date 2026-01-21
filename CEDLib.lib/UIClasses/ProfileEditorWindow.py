@@ -699,16 +699,19 @@ class ProfileEditorWindow(forms.WPFWindow):
             self._add_text_note_row()
 
     def _is_keynote_entry(self, tag_entry):
+        def _normalize(value):
+            if not value:
+                return ""
+            return "".join([ch for ch in str(value).lower() if ch.isalnum()])
+
+        def _is_ga_keynote(name):
+            return _normalize(name) == "gakeynotesymbolced"
+
         if isinstance(tag_entry, dict):
             family = tag_entry.get("family_name") or tag_entry.get("family") or ""
-            category = tag_entry.get("category_name") or tag_entry.get("category") or ""
-            type_name = tag_entry.get("type_name") or tag_entry.get("type") or ""
         else:
             family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
-            category = getattr(tag_entry, "category_name", None) or getattr(tag_entry, "category", None) or ""
-            type_name = getattr(tag_entry, "type_name", None) or getattr(tag_entry, "type", None) or ""
-        text = "{} {} {}".format(family, type_name, category).lower()
-        return "keynote" in text
+        return _is_ga_keynote(family)
 
     def _add_text_note_row(self, note=None):
         if not hasattr(self, "TextNoteList"):
@@ -794,14 +797,16 @@ class ProfileEditorWindow(forms.WPFWindow):
             )
             category = self._extract_tag_category(original_tag)
             if not category and panel_type == "_keynote_rows":
-                category = "Keynote Tags"
+                category = "Generic Annotations"
             elif not category:
                 category = "Annotation Symbols"
             parameters = self._extract_tag_parameters(original_tag)
+            if panel_type == "_keynote_rows":
+                parameters.pop("Key Value", None)
             if panel_type == "_keynote_rows" and key_value_box is not None:
                 key_value = (key_value_box.Text or u"").strip()
                 if key_value:
-                    parameters["Key Value"] = key_value
+                    parameters["Keynote Value"] = key_value
             configs.append(
                 TagConfig(
                     category_name=category,
@@ -1183,7 +1188,7 @@ class ProfileEditorWindow(forms.WPFWindow):
         type_box = _make_field("Type", 140.0)
         key_value_box = None
         if storage_attr == "_keynote_rows" or target_list_name == "KeynoteList":
-            key_value_box = _make_field("Key Value", 140.0)
+            key_value_box = _make_field("Keynote Value", 140.0)
         x_box = _make_field("X (in)", 80.0)
         y_box = _make_field("Y (in)", 80.0)
         z_box = _make_field("Z (in)", 80.0)
@@ -1219,11 +1224,11 @@ class ProfileEditorWindow(forms.WPFWindow):
 
     def _extract_keynote_value(self, tag):
         params = self._extract_tag_parameters(tag) or {}
-        direct = params.get("Key Value") or params.get("Keynote")
+        direct = params.get("Keynote Value") or params.get("Key Value") or params.get("Keynote")
         if direct not in (None, ""):
             return u"{}".format(direct)
         for key, value in params.items():
-            if (key or "").strip().lower() in ("key value", "keynote"):
+            if (key or "").strip().lower() in ("keynote value", "key value", "keynote"):
                 return u"{}".format(value)
         return u""
 

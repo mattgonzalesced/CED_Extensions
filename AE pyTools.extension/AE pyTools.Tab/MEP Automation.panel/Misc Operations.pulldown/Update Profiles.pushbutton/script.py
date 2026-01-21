@@ -230,23 +230,53 @@ def _replace_entries(current, incoming):
     return True, added, updated, new_entries
 
 
-def _is_keynote_entry(tag_entry):
+def _normalize_keynote_family(value):
+    if not value:
+        return ""
+    text = str(value)
+    if ":" in text:
+        text = text.split(":", 1)[0]
+    return "".join([ch for ch in text.lower() if ch.isalnum()])
+
+
+def _is_ga_keynote_symbol(family_name):
+    return _normalize_keynote_family(family_name) == "gakeynotesymbolced"
+
+
+def _is_builtin_keynote_tag(tag_entry):
     if isinstance(tag_entry, dict):
         family = tag_entry.get("family_name") or tag_entry.get("family") or ""
         category = tag_entry.get("category_name") or tag_entry.get("category") or ""
-        type_name = tag_entry.get("type_name") or tag_entry.get("type") or ""
     else:
         family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
         category = getattr(tag_entry, "category_name", None) or getattr(tag_entry, "category", None) or ""
-        type_name = getattr(tag_entry, "type_name", None) or getattr(tag_entry, "type", None) or ""
-    text = "{} {} {}".format(family, type_name, category).lower()
-    return "keynote" in text
+    if _is_ga_keynote_symbol(family):
+        return False
+    fam_text = (family or "").lower()
+    cat_text = (category or "").lower()
+    if "keynote tags" in cat_text:
+        return True
+    if "keynote tag" in fam_text:
+        return True
+    return False
+
+
+def _is_keynote_entry(tag_entry):
+    if not tag_entry:
+        return False
+    if isinstance(tag_entry, dict):
+        family = tag_entry.get("family_name") or tag_entry.get("family") or ""
+    else:
+        family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
+    return _is_ga_keynote_symbol(family)
 
 
 def _split_keynote_entries(entries):
     normal = []
     keynotes = []
     for entry in entries or []:
+        if _is_builtin_keynote_tag(entry):
+            continue
         if _is_keynote_entry(entry):
             keynotes.append(entry)
         else:

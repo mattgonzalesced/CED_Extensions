@@ -247,17 +247,27 @@ def _has_tag_definition(tag_dict):
     return any(tag_dict.get(key) for key in keys)
 
 
+def _normalize_keynote_family(value):
+    if not value:
+        return ""
+    text = str(value)
+    if ":" in text:
+        text = text.split(":", 1)[0]
+    return "".join([ch for ch in text.lower() if ch.isalnum()])
+
+
+def _is_ga_keynote_symbol(family_name):
+    return _normalize_keynote_family(family_name) == "gakeynotesymbolced"
+
+
 def _is_keynote_entry(tag_entry):
+    if not tag_entry:
+        return False
     if isinstance(tag_entry, dict):
         family = tag_entry.get("family_name") or tag_entry.get("family") or ""
-        category = tag_entry.get("category_name") or tag_entry.get("category") or ""
-        type_name = tag_entry.get("type_name") or tag_entry.get("type") or ""
     else:
         family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
-        category = getattr(tag_entry, "category_name", None) or getattr(tag_entry, "category", None) or ""
-        type_name = getattr(tag_entry, "type_name", None) or getattr(tag_entry, "type", None) or ""
-    text = "{} {} {}".format(family, type_name, category).lower()
-    return "keynote" in text
+    return _is_ga_keynote_symbol(family)
 
 
 def _has_text_note_definition(note_dict):

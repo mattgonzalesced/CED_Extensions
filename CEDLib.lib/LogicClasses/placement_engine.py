@@ -1339,9 +1339,20 @@ class PlaceElementsEngine(object):
             family = tag.get("family")
             type_name = tag.get("type")
             category_name = tag.get("category") or ""
+            def _normalize_keynote_family(value):
+                if not value:
+                    return ""
+                text = str(value)
+                if ":" in text:
+                    text = text.split(":", 1)[0]
+                return "".join([ch for ch in text.lower() if ch.isalnum()])
+            def _is_ga_keynote_symbol(name):
+                return _normalize_keynote_family(name) == "gakeynotesymbolced"
             family_text = (family or "").lower()
             type_text = (type_name or "").lower()
             is_keynote_def = "keynote" in (category_name or "").lower() or "keynote" in family_text or "keynote" in type_text
+            if _is_ga_keynote_symbol(family):
+                is_keynote_def = False
             label = None
             if family and type_name:
                 label = u"{} : {}".format(family, type_name)
@@ -1405,7 +1416,23 @@ class PlaceElementsEngine(object):
             leader_elbow = self._convert_offset_to_tuple(tag.get("leader_elbow"))
             leader_end = self._convert_offset_to_tuple(tag.get("leader_end"))
             category_name = (category_name or "").lower()
-            parameters = tag.get("parameters") or {}
+            parameters = dict(tag.get("parameters") or {})
+            keynote_value = None
+            keynote_source = ""
+            keynote_text = ""
+            if is_keynote_def:
+                key_value = tag.get("key_value")
+                if key_value not in (None, ""):
+                    has_key = False
+                    for key in parameters.keys():
+                        if (key or "").strip().lower() in ("keynote value", "key value", "keynote"):
+                            has_key = True
+                            break
+                    if not has_key:
+                        parameters["Keynote Value"] = key_value
+                keynote_value = self._extract_keynote_value(parameters)
+                keynote_source = self._extract_keynote_source(parameters)
+                keynote_text = self._extract_keynote_text(parameters)
 
             sym_cat = getattr(symbol, "Category", None)
             fam_cat = None
@@ -1419,6 +1446,15 @@ class PlaceElementsEngine(object):
             combined_cat = " ".join([category_name, sym_cat_name, fam_cat_name])
             is_tag_family = "tag" in combined_cat
             is_annotation_family = ("annotation" in combined_cat) and not is_tag_family
+            keynote_by_element = bool(keynote_source and "element" in keynote_source)
+            keynote_host_applied = False
+            if is_keynote_def and is_tag_family and host_instance and keynote_value not in (None, "") and keynote_by_element:
+                keynote_host_applied = self._apply_keynote_value_to_host(host_instance, keynote_value, logger)
+                if not keynote_host_applied and logger:
+                    logger.info(
+                        "[Place Elements] Host has no writable keynote param; placing keynote as by-keynote tag for '%s'.",
+                        label,
+                    )
 
             key = tag_key_from_dict(tag)
             target_views = []
@@ -1600,6 +1636,8 @@ class PlaceElementsEngine(object):
                             )
                         except Exception:
                             pass
+                    if is_keynote_def and keynote_value not in (None, ""):
+                        self._apply_keynote_value_to_tag(instance, keynote_value, keynote_text, logger)
                 else:
                     if abs(tag_rotation) > 1e-6:
                         try:
@@ -2029,6 +2067,362 @@ class PlaceElementsEngine(object):
             return None
         return self._load_classification_map().get(key)
 
+    def _keynote_entry_map(self):
+        cache = getattr(self, "_keynote_entry_cache", None)
+        if cache is not None:
+            return cache
+        mapping = {}
+        normalized = {}
+        text_map = {}
+        entries_list = []
+        try:
+            from Autodesk.Revit.DB import KeynoteTable
+        except Exception:
+            KeynoteTable = None
+        if KeynoteTable is not None:
+            try:
+                table = KeynoteTable.GetKeynoteTable(self.doc)
+            except Exception:
+                table = None
+            if table:
+                entries = None
+                for method_name in ("GetKeynoteEntries", "GetKeynoteEntriesByCategory", "GetKeynoteEntriesByGroup"):
+                    if hasattr(table, method_name):
+                        try:
+                            entries = getattr(table, method_name)()
+                        except Exception:
+                            entries = None
+                        if entries:
+                            break
+                if entries is None:
+                    try:
+                        entries = table.KeynoteEntries
+                    except Exception:
+                        entries = None
+                if entries:
+                    try:
+                        entries_list = list(entries)
+                    except Exception:
+                        entries_list = []
+                    for entry in entries_list:
+                        try:
+                            key = getattr(entry, "Key", None)
+                        except Exception:
+                            key = None
+                        if not key:
+                            continue
+                        key_text = str(key).strip()
+                        mapping[key_text] = entry.Id
+                        norm_key = self._normalize_keynote_key(key_text)
+                        if norm_key and norm_key not in normalized:
+                            normalized[norm_key] = entry.Id
+                        text_value = None
+                        for attr in ("Text", "KeynoteText"):
+                            try:
+                                text_value = getattr(entry, attr, None)
+                            except Exception:
+                                text_value = None
+                            if text_value:
+                                break
+                        if text_value:
+                            norm_text = self._normalize_keynote_text(text_value)
+                            if norm_text and norm_text not in text_map:
+                                text_map[norm_text] = entry.Id
+        self._keynote_entry_cache = mapping
+        self._keynote_entry_norm_cache = normalized
+        self._keynote_entry_text_cache = text_map
+        self._keynote_entry_list = entries_list
+        return mapping
+
+    def _normalize_keynote_key(self, value):
+        if value is None:
+            return ""
+        text = re.sub(r"[^0-9A-Za-z]+", "", str(value))
+        return text.upper().strip()
+
+    def _normalize_keynote_text(self, value):
+        if value is None:
+            return ""
+        return " ".join(str(value).strip().lower().split())
+
+    def _resolve_keynote_entry_id(self, value, fallback_text=None):
+        if value is None:
+            return None
+        if isinstance(value, ElementId):
+            return value
+        key = str(value).strip()
+        if not key:
+            return None
+        mapping = self._keynote_entry_map()
+        entry_id = mapping.get(key)
+        if entry_id:
+            return entry_id
+        normalized = getattr(self, "_keynote_entry_norm_cache", {}) or {}
+        norm_key = self._normalize_keynote_key(key)
+        entry_id = normalized.get(norm_key)
+        if entry_id:
+            return entry_id
+        if fallback_text:
+            text_map = getattr(self, "_keynote_entry_text_cache", {}) or {}
+            norm_text = self._normalize_keynote_text(fallback_text)
+            entry_id = text_map.get(norm_text)
+            if entry_id:
+                return entry_id
+        return None
+
+    def _extract_keynote_source(self, params_dict):
+        if not params_dict:
+            return ""
+        for key, value in params_dict.items():
+            key_name = (key or "").strip().lower()
+            if "key source" in key_name or "keynote source" in key_name:
+                return (str(value).strip().lower() if value is not None else "")
+        return ""
+
+    def _extract_keynote_text(self, params_dict):
+        if not params_dict:
+            return ""
+        for key in ("Keynote Text", "Keynote Description"):
+            value = params_dict.get(key)
+            if value not in (None, ""):
+                return str(value)
+        for key, value in params_dict.items():
+            key_name = (key or "").strip().lower()
+            if "keynote text" in key_name or "keynote description" in key_name:
+                if value not in (None, ""):
+                    return str(value)
+        return ""
+
+    def _is_keynote_param_name(self, name):
+        if not name:
+            return False
+        lowered = str(name).strip().lower()
+        return "keynote" in lowered or lowered == "key value"
+
+    def _extract_keynote_value(self, params_dict):
+        if not params_dict:
+            return None
+        for key in ("Key Value", "Keynote Value", "Keynote"):
+            value = params_dict.get(key)
+            if value not in (None, ""):
+                return value
+        for key, value in params_dict.items():
+            if (key or "").strip().lower() in ("key value", "keynote value", "keynote"):
+                if value not in (None, ""):
+                    return value
+        return None
+
+    def _apply_keynote_value_to_host(self, host_element, key_value, logger=None):
+        if host_element is None or key_value in (None, ""):
+            return False
+        def _resolve_param(target):
+            try:
+                param = target.get_Parameter(BuiltInParameter.KEYNOTE_PARAM)
+            except Exception:
+                param = None
+            if not param:
+                for name in ("Keynote", "Keynote Value"):
+                    try:
+                        param = target.LookupParameter(name)
+                    except Exception:
+                        param = None
+                    if param:
+                        break
+            return param
+
+        param = _resolve_param(host_element)
+        if not param or param.IsReadOnly:
+            type_elem = None
+            try:
+                type_id = host_element.GetTypeId()
+                type_elem = host_element.Document.GetElement(type_id)
+            except Exception:
+                type_elem = None
+            if type_elem:
+                param = _resolve_param(type_elem)
+        if not param or param.IsReadOnly:
+            return False
+        try:
+            from Autodesk.Revit.DB import StorageType
+        except Exception:
+            StorageType = None
+        try:
+            storage_type = param.StorageType if StorageType else None
+        except Exception:
+            storage_type = None
+        try:
+            if storage_type and storage_type == StorageType.ElementId:
+                resolved = None
+                try:
+                    resolved = ElementId(int(key_value))
+                except Exception:
+                    resolved = self._resolve_keynote_entry_id(key_value)
+                if resolved:
+                    param.Set(resolved)
+                else:
+                    param.SetValueString(str(key_value))
+            elif storage_type and storage_type == StorageType.Integer:
+                param.Set(int(key_value))
+            elif storage_type and storage_type == StorageType.Double:
+                param.Set(float(key_value))
+            else:
+                param.Set(str(key_value))
+            if logger:
+                try:
+                    pname = getattr(getattr(param, "Definition", None), "Name", None) or ""
+                except Exception:
+                    pname = ""
+                logger.info(
+                    "[Place Elements] Applied keynote value '%s' to host (%s).",
+                    key_value,
+                    pname or "Keynote",
+                )
+            return True
+        except Exception:
+            try:
+                param.SetValueString(str(key_value))
+                if logger:
+                    logger.info(
+                        "[Place Elements] Applied keynote value '%s' to host (value string).",
+                        key_value,
+                    )
+                return True
+            except Exception:
+                return False
+
+    def _apply_keynote_value_to_tag(self, tag_element, key_value, keynote_text=None, logger=None):
+        if tag_element is None or key_value in (None, ""):
+            return False
+        diagnostics = []
+        resolved_entry = self._resolve_keynote_entry_id(key_value, fallback_text=keynote_text)
+        if resolved_entry is None and logger:
+            if keynote_text:
+                diagnostics.append(
+                    "no keynote entry for '{}' (text='{}')".format(key_value, keynote_text)
+                )
+            else:
+                diagnostics.append("no keynote entry for '{}'".format(key_value))
+        param = None
+        try:
+            param = tag_element.get_Parameter(BuiltInParameter.KEYNOTE_PARAM)
+        except Exception:
+            param = None
+        if param:
+            try:
+                storage = param.StorageType
+                storage_name = storage.ToString() if storage else ""
+            except Exception:
+                storage_name = ""
+            diagnostics.append("KEYNOTE_PARAM storage={}".format(storage_name or "?"))
+            if param.IsReadOnly:
+                diagnostics.append("KEYNOTE_PARAM readonly")
+            else:
+                if resolved_entry is not None:
+                    try:
+                        param.Set(resolved_entry)
+                        if logger:
+                            logger.info(
+                                "[Place Elements] Applied keynote value '%s' to tag (entry id).",
+                                key_value,
+                            )
+                        return True
+                    except Exception as exc:
+                        diagnostics.append("KEYNOTE_PARAM set id failed: {}".format(exc))
+                try:
+                    param.SetValueString(str(key_value))
+                    if logger:
+                        logger.info(
+                            "[Place Elements] Applied keynote value '%s' to tag (value string).",
+                            key_value,
+                        )
+                    return True
+                except Exception as exc:
+                    diagnostics.append("KEYNOTE_PARAM set value string failed: {}".format(exc))
+        for name in ("Key Value", "Keynote Value", "Keynote"):
+            try:
+                param = tag_element.LookupParameter(name)
+            except Exception:
+                param = None
+            if not param:
+                continue
+            if param.IsReadOnly:
+                diagnostics.append("{} readonly".format(name))
+                continue
+            try:
+                param.Set(str(key_value))
+                if logger:
+                    logger.info(
+                        "[Place Elements] Applied keynote value '%s' to tag (%s).",
+                        key_value,
+                        name,
+                    )
+                return True
+            except Exception as exc:
+                diagnostics.append("{} set failed: {}".format(name, exc))
+                continue
+
+        type_elem = None
+        try:
+            type_id = tag_element.GetTypeId()
+            type_elem = tag_element.Document.GetElement(type_id)
+        except Exception:
+            type_elem = None
+        if type_elem:
+            try:
+                param = type_elem.get_Parameter(BuiltInParameter.KEYNOTE_PARAM)
+            except Exception:
+                param = None
+            if param:
+                try:
+                    if param.IsReadOnly:
+                        diagnostics.append("type KEYNOTE_PARAM readonly")
+                    else:
+                        if resolved_entry is not None:
+                            param.Set(resolved_entry)
+                        else:
+                            param.SetValueString(str(key_value))
+                        if logger:
+                            logger.info(
+                                "[Place Elements] Applied keynote value '%s' to tag type.",
+                                key_value,
+                            )
+                        return True
+                except Exception as exc:
+                    diagnostics.append("type KEYNOTE_PARAM set failed: {}".format(exc))
+            for name in ("Key Value", "Keynote Value", "Keynote"):
+                try:
+                    param = type_elem.LookupParameter(name)
+                except Exception:
+                    param = None
+                if not param:
+                    continue
+                if param.IsReadOnly:
+                    diagnostics.append("type {} readonly".format(name))
+                    continue
+                try:
+                    param.Set(str(key_value))
+                    if logger:
+                        logger.info(
+                            "[Place Elements] Applied keynote value '%s' to tag type (%s).",
+                            key_value,
+                            name,
+                        )
+                    return True
+                except Exception as exc:
+                    diagnostics.append("type {} set failed: {}".format(name, exc))
+
+        if logger:
+            logger.info(
+                "[Place Elements] Failed to apply keynote value '%s' to tag.",
+                key_value,
+            )
+            if diagnostics:
+                logger.info(
+                    "[Place Elements] Keynote tag parameter diagnostics: %s",
+                    "; ".join(diagnostics),
+                )
+        return False
+
     def _apply_parameters(self, element, params_dict, parent_element=None):
         from Autodesk.Revit.DB import StorageType, UnitUtils
 
@@ -2040,6 +2434,24 @@ class PlaceElementsEngine(object):
                 param = element.LookupParameter(name)
             except Exception:
                 param = None
+            if (not param or param.IsReadOnly) and isinstance(element, IndependentTag):
+                lowered = name.strip().lower()
+                if lowered in ("key value", "keynote value", "keynote"):
+                    if not param or param.IsReadOnly:
+                        for alias in ("Key Value", "Keynote Value", "Keynote"):
+                            try:
+                                param = element.LookupParameter(alias)
+                            except Exception:
+                                param = None
+                            if param and not param.IsReadOnly:
+                                break
+                            if param and param.IsReadOnly:
+                                param = None
+                    if not param:
+                        try:
+                            param = element.get_Parameter(BuiltInParameter.KEYNOTE_PARAM)
+                        except Exception:
+                            param = None
             if not param or param.IsReadOnly:
                 continue
             parent_param_name = self._extract_parent_parameter_name(value)
@@ -2064,6 +2476,19 @@ class PlaceElementsEngine(object):
                     try:
                         param.Set(ElementId(int(value)))
                     except Exception:
+                        if self._is_keynote_param_name(name_hint):
+                            resolved = self._resolve_keynote_entry_id(value)
+                            if resolved is not None:
+                                try:
+                                    param.Set(resolved)
+                                    continue
+                                except Exception:
+                                    pass
+                            try:
+                                param.SetValueString(str(value))
+                                continue
+                            except Exception:
+                                pass
                         continue
                 if storage_type == StorageType.Integer:
                     param.Set(int(value))

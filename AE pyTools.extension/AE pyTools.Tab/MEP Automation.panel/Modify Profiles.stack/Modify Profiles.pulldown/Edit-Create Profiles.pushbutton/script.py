@@ -504,19 +504,71 @@ def _tag_entry_key(tag_entry):
     return (_tag_signature(family), _tag_signature(type_name), _tag_signature(category))
 
 
+def _normalize_keynote_family(value):
+    if not value:
+        return ""
+    text = str(value)
+    if ":" in text:
+        text = text.split(":", 1)[0]
+    return "".join([ch for ch in text.lower() if ch.isalnum()])
+
+
+def _is_ga_keynote_symbol(family_name):
+    return _normalize_keynote_family(family_name) == "gakeynotesymbolced"
+
+
+def _normalize_keynote_params(params):
+    if not isinstance(params, dict):
+        return {}
+    if "Keynote Value" in params:
+        if "Key Value" in params:
+            params.pop("Key Value", None)
+        return params
+    if "Key Value" in params:
+        params["Keynote Value"] = params.pop("Key Value")
+    return params
+
+
+def _is_ga_keynote_symbol_element(elem):
+    if elem is None:
+        return False
+    try:
+        cat = getattr(elem, "Category", None)
+        cat_name = getattr(cat, "Name", None) if cat else ""
+    except Exception:
+        cat_name = ""
+    if "generic annotation" not in (cat_name or "").lower():
+        return False
+    fam_name, _ = _annotation_family_type(elem)
+    return _is_ga_keynote_symbol(fam_name)
+
+
+def _is_builtin_keynote_tag(tag_entry):
+    if isinstance(tag_entry, dict):
+        family = tag_entry.get("family_name") or tag_entry.get("family") or ""
+        category = tag_entry.get("category_name") or tag_entry.get("category") or ""
+    else:
+        family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
+        category = getattr(tag_entry, "category_name", None) or getattr(tag_entry, "category", None) or ""
+    if _is_ga_keynote_symbol(family):
+        return False
+    fam_text = (family or "").lower()
+    cat_text = (category or "").lower()
+    if "keynote tags" in cat_text:
+        return True
+    if "keynote tag" in fam_text:
+        return True
+    return False
+
+
 def _is_keynote_entry(tag_entry):
     if not tag_entry:
         return False
     if isinstance(tag_entry, dict):
         family = tag_entry.get("family_name") or tag_entry.get("family") or ""
-        type_name = tag_entry.get("type_name") or tag_entry.get("type") or ""
-        category = tag_entry.get("category_name") or tag_entry.get("category") or ""
     else:
         family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
-        type_name = getattr(tag_entry, "type_name", None) or getattr(tag_entry, "type", None) or ""
-        category = getattr(tag_entry, "category_name", None) or getattr(tag_entry, "category", None) or ""
-    text = "{} {} {}".format(family, type_name, category).lower()
-    return "keynote" in text
+    return _is_ga_keynote_symbol(family)
 
 
 def _tag_offsets_near(tag_a, tag_b, pos_tol=0.05, rot_tol=0.5):
@@ -636,6 +688,11 @@ def _collect_tag_parameters(tag_elem, include_read_only=True):
         try:
             if storage_str == "String":
                 value = param.AsString()
+                if value is None:
+                    try:
+                        value = param.AsValueString()
+                    except Exception:
+                        value = None
             elif storage_str == "Integer":
                 value = param.AsInteger()
             elif storage_str == "Double":
@@ -643,6 +700,11 @@ def _collect_tag_parameters(tag_elem, include_read_only=True):
             elif storage_str == "ElementId":
                 elem_id = param.AsElementId()
                 value = elem_id.IntegerValue if elem_id else None
+                if value is None:
+                    try:
+                        value = param.AsValueString()
+                    except Exception:
+                        value = None
             else:
                 value = param.AsValueString()
         except Exception:
@@ -652,6 +714,34 @@ def _collect_tag_parameters(tag_elem, include_read_only=True):
         safe_name = (name or "").replace("#", SAFE_HASH)
         results[safe_name] = value
     return results
+
+
+def _collect_keynote_parameters(tag_elem):
+    if tag_elem is None:
+        return {}
+    params = _collect_tag_parameters(tag_elem, include_read_only=True)
+    type_params = {}
+    type_elem = None
+    try:
+        sym = getattr(tag_elem, "Symbol", None)
+        if sym:
+            type_elem = sym
+    except Exception:
+        type_elem = None
+    if type_elem is None:
+        try:
+            doc = getattr(tag_elem, "Document", None)
+            type_id = tag_elem.GetTypeId()
+            if doc and type_id:
+                type_elem = doc.GetElement(type_id)
+        except Exception:
+            type_elem = None
+    if type_elem is not None:
+        type_params = _collect_tag_parameters(type_elem, include_read_only=True)
+    merged = {}
+    merged.update(type_params)
+    merged.update(params)
+    return merged
 
 
 def _build_annotation_tag_entry(annotation_elem, host_point):
@@ -682,7 +772,9 @@ def _build_annotation_tag_entry(annotation_elem, host_point):
         "offsets": offsets,
     }
     if _is_keynote_entry(entry):
-        entry["parameters"] = _collect_tag_parameters(annotation_elem, include_read_only=True)
+        entry["parameters"] = _normalize_keynote_params(
+            _collect_keynote_parameters(annotation_elem)
+        )
     return entry
 
 
@@ -801,7 +893,9 @@ def _build_independent_tag_entry(tag, host_point):
         "leader_end": leader_end,
     }
     if _is_keynote_entry(entry):
-        entry["parameters"] = _collect_tag_parameters(tag, include_read_only=True)
+        entry["parameters"] = _normalize_keynote_params(
+            _collect_keynote_parameters(tag)
+        )
     return entry
 
 
@@ -1129,6 +1223,34 @@ def _assign_selected_tags(child_entries, tag_elems):
         tags.append(entry)
 
 
+def _assign_ga_keynotes(child_entries, keynote_elems):
+    if not child_entries or not keynote_elems:
+        return
+    for note_elem in keynote_elems:
+        target_idx = _find_closest_child_entry(child_entries, note_elem)
+        if target_idx is None:
+            continue
+        host_point = child_entries[target_idx].get("point")
+        if host_point is None:
+            continue
+        entry = _build_annotation_tag_entry(note_elem, host_point)
+        if not entry or not _is_keynote_entry(entry):
+            continue
+        target_list = child_entries[target_idx].setdefault("keynotes", [])
+        entry_key = _tag_entry_key(entry)
+        if entry_key:
+            existing = False
+            for existing_tag in target_list:
+                if _tag_entry_key(existing_tag) != entry_key:
+                    continue
+                if _tag_offsets_near(existing_tag, entry):
+                    existing = True
+                    break
+            if existing:
+                continue
+        target_list.append(entry)
+
+
 def _collect_hosted_tags(elem, host_point, active_view_id=None):
     doc = getattr(elem, "Document", None)
     if not doc or host_point is None:
@@ -1162,6 +1284,8 @@ def _collect_hosted_tags(elem, host_point, active_view_id=None):
         if _is_tag_like(dep_elem):
             entry = _build_independent_tag_entry(dep_elem, host_point)
             if entry:
+                if _is_builtin_keynote_tag(entry):
+                    continue
                 if _is_keynote_entry(entry):
                     keynotes.append(entry)
                 else:
@@ -1169,6 +1293,8 @@ def _collect_hosted_tags(elem, host_point, active_view_id=None):
             continue
         annotation_entry = _build_annotation_tag_entry(dep_elem, host_point)
         if annotation_entry:
+            if _is_builtin_keynote_tag(annotation_entry):
+                continue
             if _is_keynote_entry(annotation_entry):
                 keynotes.append(annotation_entry)
             else:
@@ -2392,6 +2518,7 @@ def _run_selection_flow(doc, data, context, truth_groups, child_to_group, parent
 
         text_note_elems = []
         tag_elems = []
+        keynote_elems = []
         host_candidates = []
         for elem in picked:
             if isinstance(elem, TextNote):
@@ -2399,6 +2526,9 @@ def _run_selection_flow(doc, data, context, truth_groups, child_to_group, parent
                 continue
             if isinstance(elem, IndependentTag):
                 tag_elems.append(elem)
+                continue
+            if _is_ga_keynote_symbol_element(elem):
+                keynote_elems.append(elem)
                 continue
             host_candidates.append(elem)
 
@@ -2416,6 +2546,7 @@ def _run_selection_flow(doc, data, context, truth_groups, child_to_group, parent
             return
         _assign_selected_text_notes(child_entries, text_note_elems)
         _assign_selected_tags(child_entries, tag_elems)
+        _assign_ga_keynotes(child_entries, keynote_elems)
 
         linked_set = get_type_set(eq_def)
         linked_set["linked_element_definitions"] = []
