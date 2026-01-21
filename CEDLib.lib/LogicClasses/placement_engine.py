@@ -1331,6 +1331,10 @@ class PlaceElementsEngine(object):
         for tag in tag_defs:
             family = tag.get("family")
             type_name = tag.get("type")
+            category_name = tag.get("category") or ""
+            family_text = (family or "").lower()
+            type_text = (type_name or "").lower()
+            is_keynote_def = "keynote" in (category_name or "").lower() or "keynote" in family_text or "keynote" in type_text
             label = None
             if family and type_name:
                 label = u"{} : {}".format(family, type_name)
@@ -1345,8 +1349,21 @@ class PlaceElementsEngine(object):
                 key = u"{} : {}".format(family, type_name)
                 symbol = self.symbol_label_map.get(key)
             if not symbol:
+                if logger and is_keynote_def:
+                    logger.info(
+                        "[Place Elements] Keynote symbol not found: label='%s' family='%s' type='%s' category='%s'.",
+                        label,
+                        family or "",
+                        type_name or "",
+                        category_name or "",
+                    )
                 continue
             if not self._activate_symbol(symbol):
+                if logger and is_keynote_def:
+                    logger.info(
+                        "[Place Elements] Keynote symbol activation failed: label='%s'.",
+                        label,
+                    )
                 continue
 
             offsets = tag.get("offset") or (0.0, 0.0, 0.0)
@@ -1375,7 +1392,7 @@ class PlaceElementsEngine(object):
                         continue
             leader_elbow = self._convert_offset_to_tuple(tag.get("leader_elbow"))
             leader_end = self._convert_offset_to_tuple(tag.get("leader_end"))
-            category_name = (tag.get("category") or "").lower()
+            category_name = (category_name or "").lower()
             parameters = tag.get("parameters") or {}
 
             sym_cat = getattr(symbol, "Category", None)
@@ -1424,23 +1441,51 @@ class PlaceElementsEngine(object):
                         if not view_obj or not host_instance:
                             continue
                         if self._existing_tag_for_host(host_instance, symbol.Id, view_obj):
+                            if logger and is_keynote_def:
+                                logger.info(
+                                    "[Place Elements] Keynote skipped: tag already exists for host (%s).",
+                                    label,
+                                )
                             continue
                         try:
                             reference = Reference(host_instance)
                         except Exception:
                             continue
-                        independent = IndependentTag.Create(
-                            self.doc,
-                            view_obj.Id,
-                            reference,
-                            True,
-                            TagMode.TM_ADDBY_CATEGORY,
-                            TagOrientation.Horizontal,
-                            tag_loc,
-                        )
+                        tag_mode = TagMode.TM_ADDBY_CATEGORY
+                        if is_keynote_def:
+                            tag_mode = getattr(TagMode, "TM_ADDBY_KEYNOTE", TagMode.TM_ADDBY_CATEGORY)
+                        try:
+                            independent = IndependentTag.Create(
+                                self.doc,
+                                view_obj.Id,
+                                reference,
+                                True,
+                                tag_mode,
+                                TagOrientation.Horizontal,
+                                tag_loc,
+                                symbol.Id,
+                            )
+                        except TypeError:
+                            independent = IndependentTag.Create(
+                                self.doc,
+                                view_obj.Id,
+                                reference,
+                                True,
+                                tag_mode,
+                                TagOrientation.Horizontal,
+                                tag_loc,
+                            )
                         if not independent:
                             continue
-                        independent.ChangeTypeId(symbol.Id)
+                        try:
+                            independent.ChangeTypeId(symbol.Id)
+                        except Exception as exc:
+                            if logger and is_keynote_def:
+                                logger.info(
+                                    "[Place Elements] Keynote ChangeTypeId failed for '%s': %s",
+                                    label,
+                                    exc,
+                                )
                         instance = independent
                     elif is_annotation_family:
                         if not view_obj or (hasattr(view_obj, "ViewType") and view_obj.ViewType == ViewType.ThreeD):
@@ -1459,7 +1504,13 @@ class PlaceElementsEngine(object):
                             level,
                             Structure.StructuralType.NonStructural,
                         )
-                except Exception:
+                except Exception as exc:
+                    if logger and is_keynote_def:
+                        logger.info(
+                            "[Place Elements] Keynote placement failed for '%s': %s",
+                            label,
+                            exc,
+                        )
                     instance = None
                 if not instance:
                     continue

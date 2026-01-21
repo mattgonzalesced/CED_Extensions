@@ -480,6 +480,16 @@ def _tag_host_element_id(tag):
     return None
 
 
+def _is_tag_like(elem):
+    if isinstance(elem, IndependentTag):
+        return True
+    try:
+        _ = elem.TagHeadPosition
+    except Exception:
+        return False
+    return True
+
+
 def _tag_entry_key(tag_entry):
     if not tag_entry:
         return None
@@ -1099,7 +1109,7 @@ def _collect_hosted_tags(elem, host_point, active_view_id=None):
                     continue
             except Exception:
                 pass
-        if isinstance(dep_elem, IndependentTag):
+        if _is_tag_like(dep_elem):
             entry = _build_independent_tag_entry(dep_elem, host_point)
             if entry:
                 if _is_keynote_entry(entry):
@@ -1400,6 +1410,15 @@ def _tag_display_label(tag):
     return type_name or fam_name or "<Tag?>"
 
 
+def _fmt_point(point):
+    if point is None:
+        return "<none>"
+    try:
+        return "{:.3f},{:.3f},{:.3f}".format(point.X, point.Y, point.Z)
+    except Exception:
+        return "<none>"
+
+
 def _ensure_element_id(value):
     if isinstance(value, ElementId):
         return value
@@ -1513,6 +1532,16 @@ def _cleanup_far_tags_by_type(doc, active_view_id, tag_type_keys, max_distance_f
                 )
                 continue
             dist = _distance_to_nearest_expected(tag_point)
+            if allowed_ids is not None:
+                label = _tag_display_label(tag)
+                is_keynote = "keynote" in (label or "").lower()
+                LOG.info(
+                    "[Edit-Create Profiles] Autoload tag check: '%s' head=(%s) nearest=%.2f ft keynote=%s",
+                    label,
+                    _fmt_point(tag_point),
+                    dist if dist is not None else -1.0,
+                    is_keynote,
+                )
             source_label = "expected tag"
             if dist is None or dist <= limit:
                 continue
@@ -1981,6 +2010,8 @@ def _place_existing_configuration(doc, data, cad_name, parent_point, parent_rota
     if not labels:
         return
     tag_type_keys = set()
+    total_tag_defs = 0
+    total_keynote_defs = 0
     for label in labels:
         linked_def = repo.definition_for_label(cad_name, label)
         if not linked_def:
@@ -1989,9 +2020,18 @@ def _place_existing_configuration(doc, data, cad_name, parent_point, parent_rota
         if not placement:
             continue
         for tag_def in placement.get_tags() or []:
+            total_tag_defs += 1
+            if _is_keynote_entry(tag_def):
+                total_keynote_defs += 1
             key = _tag_key_from_def(tag_def)
             if key:
                 tag_type_keys.add(key)
+    LOG.info(
+        "[Edit-Create Profiles] Autoload tag defs: total=%s keynotes=%s labels=%s",
+        total_tag_defs,
+        total_keynote_defs,
+        len(labels),
+    )
     selection_map = {cad_name: labels}
     rows = [{
         "Name": cad_name,

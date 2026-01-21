@@ -838,6 +838,16 @@ def _normalize_tag_entry(tag_entry):
     return tag_entry
 
 
+def _is_tag_like(elem):
+    if isinstance(elem, IndependentTag):
+        return True
+    try:
+        _ = elem.TagHeadPosition
+    except Exception:
+        return False
+    return True
+
+
 class OffsetShim(object):
 
 
@@ -1732,7 +1742,7 @@ def _collect_hosted_tags(elem, host_point):
 
 
 
-        if isinstance(dep_elem, IndependentTag):
+        if _is_tag_like(dep_elem):
 
 
 
@@ -3803,6 +3813,45 @@ def _shims_from_dict(data):
     return profiles
 
 
+def _log_keynote_counts(stage_label, entries):
+    logger = script.get_logger()
+    for cad_name, type_label, tags, keynotes in entries:
+        logger.info(
+            "[Manage Profiles] %s cad=%s type=%s tags=%s keynotes=%s",
+            stage_label,
+            cad_name or "",
+            type_label or "",
+            len(tags or []),
+            len(keynotes or []),
+        )
+
+
+def _iter_equipment_def_entries(equipment_defs):
+    for eq in equipment_defs or []:
+        cad_name = (eq.get("name") or eq.get("id") or "").strip()
+        for linked_set in eq.get("linked_sets") or []:
+            for led in linked_set.get("linked_element_definitions") or []:
+                if not isinstance(led, dict):
+                    continue
+                type_label = led.get("label") or led.get("id") or ""
+                tags = led.get("tags") or []
+                keynotes = led.get("keynotes") or []
+                yield cad_name, type_label, tags, keynotes
+
+
+def _iter_legacy_type_entries(legacy_profiles):
+    for prof in legacy_profiles or []:
+        cad_name = (prof.get("cad_name") or "").strip()
+        for type_entry in prof.get("types") or []:
+            if not isinstance(type_entry, dict):
+                continue
+            inst_cfg = type_entry.get("instance_config") or {}
+            type_label = type_entry.get("label") or ""
+            tags = inst_cfg.get("tags") or []
+            keynotes = inst_cfg.get("keynotes") or []
+            yield cad_name, type_label, tags, keynotes
+
+
 
 def _build_relations_index(equipment_defs):
 
@@ -4494,7 +4543,10 @@ def main():
 
 
 
-            legacy_dict_local = {"profiles": equipment_defs_to_legacy(equipment_defs)}
+            _log_keynote_counts("equipment_defs", _iter_equipment_def_entries(equipment_defs))
+            legacy_profiles_local = equipment_defs_to_legacy(equipment_defs)
+            _log_keynote_counts("legacy_profiles", _iter_legacy_type_entries(legacy_profiles_local))
+            legacy_dict_local = {"profiles": legacy_profiles_local}
 
 
 

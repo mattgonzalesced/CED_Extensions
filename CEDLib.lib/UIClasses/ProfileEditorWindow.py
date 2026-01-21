@@ -16,7 +16,7 @@ Changes are written back into the existing InstanceConfig objects in memory.
 
 import copy
 
-from pyrevit import forms
+from pyrevit import forms, script
 from LogicClasses.Element_Linker import OffsetConfig, TagConfig
 
 try:
@@ -648,6 +648,14 @@ class ProfileEditorWindow(forms.WPFWindow):
             raw_tags = getattr(inst_cfg, "tags", []) or []
             raw_keynotes = getattr(inst_cfg, "keynotes", None)
             raw_text_notes = getattr(inst_cfg, "text_notes", []) or []
+        logger = script.get_logger()
+        logger.info(
+            "[Manage Profiles] UI load label=%s tags=%s keynotes=%s text_notes=%s",
+            getattr(self._current_typecfg, "label", None) if self._current_typecfg else "",
+            len(raw_tags or []),
+            len(raw_keynotes or []),
+            len(raw_text_notes or []),
+        )
         normal_tags = [tg for tg in raw_tags if not self._is_keynote_entry(tg)]
         if raw_keynotes:
             keynote_tags = list(raw_keynotes)
