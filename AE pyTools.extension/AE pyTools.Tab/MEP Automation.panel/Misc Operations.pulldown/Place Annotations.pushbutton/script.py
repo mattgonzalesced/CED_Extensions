@@ -417,20 +417,22 @@ def _get_point(inst):
 
 def _get_rotation_degrees(inst):
     loc = getattr(inst, "Location", None)
-    if loc is None:
-        return 0.0
-    rot = getattr(loc, "Rotation", None)
-    if rot:
+    if loc is not None and hasattr(loc, "Rotation"):
         try:
-            return math.degrees(rot)
+            return math.degrees(loc.Rotation)
         except Exception:
-            return 0.0
-    basis = getattr(inst, "FacingOrientation", None)
-    if basis:
-        try:
-            return math.degrees(math.atan2(basis.Y, basis.X))
-        except Exception:
-            return 0.0
+            pass
+    try:
+        transform = inst.GetTransform()
+    except Exception:
+        transform = None
+    if transform is not None:
+        basis = getattr(transform, "BasisX", None)
+        if basis:
+            try:
+                return math.degrees(math.atan2(basis.Y, basis.X))
+            except Exception:
+                pass
     return 0.0
 
 

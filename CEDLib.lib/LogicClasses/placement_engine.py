@@ -1350,8 +1350,9 @@ class PlaceElementsEngine(object):
                 return _normalize_keynote_family(name) == "gakeynotesymbolced"
             family_text = (family or "").lower()
             type_text = (type_name or "").lower()
+            is_ga_keynote = _is_ga_keynote_symbol(family)
             is_keynote_def = "keynote" in (category_name or "").lower() or "keynote" in family_text or "keynote" in type_text
-            if _is_ga_keynote_symbol(family):
+            if is_ga_keynote:
                 is_keynote_def = False
             label = None
             if family and type_name:
@@ -1390,7 +1391,16 @@ class PlaceElementsEngine(object):
                 continue
 
             offsets = tag.get("offset") or (0.0, 0.0, 0.0)
-            if self.max_tag_distance_feet not in (None, ""):
+            if is_ga_keynote:
+                try:
+                    ang = math.radians(final_rot_deg or 0.0)
+                    cos_a = math.cos(ang)
+                    sin_a = math.sin(ang)
+                    ox, oy, oz = offsets[0] or 0.0, offsets[1] or 0.0, offsets[2] or 0.0
+                    offsets = (ox * cos_a - oy * sin_a, ox * sin_a + oy * cos_a, oz)
+                except Exception:
+                    pass
+            if self.max_tag_distance_feet not in (None, "") and not is_ga_keynote:
                 try:
                     limit = float(self.max_tag_distance_feet)
                 except Exception:
@@ -1446,6 +1456,9 @@ class PlaceElementsEngine(object):
             combined_cat = " ".join([category_name, sym_cat_name, fam_cat_name])
             is_tag_family = "tag" in combined_cat
             is_annotation_family = ("annotation" in combined_cat) and not is_tag_family
+            if is_ga_keynote:
+                is_tag_family = False
+                is_annotation_family = True
             keynote_by_element = bool(keynote_source and "element" in keynote_source)
             keynote_host_applied = False
             if is_keynote_def and is_tag_family and host_instance and keynote_value not in (None, "") and keynote_by_element:
