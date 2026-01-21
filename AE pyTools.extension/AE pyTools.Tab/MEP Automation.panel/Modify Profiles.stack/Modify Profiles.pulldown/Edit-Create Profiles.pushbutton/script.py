@@ -7,6 +7,7 @@ then capture offsets/tags for the selected equipment to update the
 active YAML definition.
 """
 
+import copy
 import json
 import math
 import os
@@ -458,6 +459,76 @@ def _tag_signature(name):
     return " ".join((name or "").strip().split()).lower()
 
 
+def _tag_host_element_id(tag):
+    if tag is None:
+        return None
+    try:
+        getter = getattr(tag, "GetTaggedLocalElementIds", None)
+        if callable(getter):
+            ids = list(getter() or [])
+            if ids:
+                return ids[0]
+    except Exception:
+        pass
+    for attr in ("TaggedLocalElementId", "TaggedElementId"):
+        try:
+            value = getattr(tag, attr, None)
+        except Exception:
+            value = None
+        if value:
+            return value
+    return None
+
+
+def _tag_entry_key(tag_entry):
+    if not tag_entry:
+        return None
+    if isinstance(tag_entry, dict):
+        family = tag_entry.get("family_name") or tag_entry.get("family") or ""
+        type_name = tag_entry.get("type_name") or tag_entry.get("type") or ""
+        category = tag_entry.get("category_name") or tag_entry.get("category") or ""
+    else:
+        family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
+        type_name = getattr(tag_entry, "type_name", None) or getattr(tag_entry, "type", None) or ""
+        category = getattr(tag_entry, "category_name", None) or getattr(tag_entry, "category", None) or ""
+    return (_tag_signature(family), _tag_signature(type_name), _tag_signature(category))
+
+
+def _tag_offsets_near(tag_a, tag_b, pos_tol=0.05, rot_tol=0.5):
+    def _extract(entry):
+        offsets = {}
+        if isinstance(entry, dict):
+            offsets = entry.get("offsets") or {}
+        else:
+            offsets = getattr(entry, "offsets", None) or {}
+        try:
+            x_val = float(offsets.get("x_inches", 0.0) or 0.0)
+        except Exception:
+            x_val = 0.0
+        try:
+            y_val = float(offsets.get("y_inches", 0.0) or 0.0)
+        except Exception:
+            y_val = 0.0
+        try:
+            z_val = float(offsets.get("z_inches", 0.0) or 0.0)
+        except Exception:
+            z_val = 0.0
+        try:
+            rot_val = float(offsets.get("rotation_deg", 0.0) or 0.0)
+        except Exception:
+            rot_val = 0.0
+        return (x_val, y_val, z_val, rot_val)
+
+    ax, ay, az, ar = _extract(tag_a)
+    bx, by, bz, br = _extract(tag_b)
+    return (
+        abs(ax - bx) <= pos_tol
+        and abs(ay - by) <= pos_tol
+        and abs(az - bz) <= pos_tol
+        and abs(ar - br) <= rot_tol
+    )
+
+
 def _annotation_family_type(elem):
     fam_name = None
     type_name = None
@@ -520,7 +591,8 @@ def _build_annotation_tag_entry(annotation_elem, host_point):
         cat_name = getattr(cat, "Name", "") if cat else ""
     except Exception:
         cat_name = ""
-    if not cat_name or "generic annotation" not in cat_name.lower():
+    cat_lower = (cat_name or "").lower()
+    if not cat_name or ("generic annotation" not in cat_lower and "keynote" not in cat_lower):
         return None
     ann_point = _get_point(annotation_elem)
     if ann_point is None or host_point is None:
@@ -538,6 +610,106 @@ def _build_annotation_tag_entry(annotation_elem, host_point):
         "type_name": type_name,
         "category_name": cat_name,
         "parameters": params,
+        "offsets": offsets,
+    }
+
+
+def _build_independent_tag_entry(tag, host_point):
+    if tag is None or host_point is None:
+        return None
+    try:
+        tag_point = tag.TagHeadPosition
+    except Exception:
+        tag_point = None
+    if tag_point is None:
+        return None
+    doc = getattr(tag, "Document", None)
+    tag_symbol = None
+    if doc is not None:
+        try:
+            tag_symbol = doc.GetElement(tag.GetTypeId())
+        except Exception:
+            tag_symbol = None
+    fam_name = None
+    type_name = None
+    category_name = None
+    if tag_symbol:
+        try:
+            fam = getattr(tag_symbol, "Family", None)
+            fam_name = getattr(fam, "Name", None) if fam else getattr(tag_symbol, "FamilyName", None)
+        except Exception:
+            fam_name = None
+        try:
+            type_name = getattr(tag_symbol, "Name", None)
+        except Exception:
+            type_name = None
+        try:
+            cat = getattr(tag_symbol, "Category", None)
+            category_name = getattr(cat, "Name", None) if cat else None
+        except Exception:
+            category_name = None
+    if not (fam_name and type_name):
+        try:
+            symbols = getattr(tag, "Symbol", None)
+        except Exception:
+            symbols = None
+        if symbols:
+            try:
+                fam = getattr(symbols, "Family", None)
+                fam_name = getattr(fam, "Name", None) if fam else fam_name
+            except Exception:
+                pass
+            try:
+                type_name = getattr(symbols, "Name", None) or type_name
+                if not type_name and hasattr(symbols, "get_Parameter"):
+                    param = symbols.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
+                    if param:
+                        type_name = param.AsString()
+            except Exception:
+                pass
+    if not type_name:
+        try:
+            tag_type = getattr(tag, "TagType", None)
+            type_name = getattr(tag_type, "Name", None)
+        except Exception:
+            type_name = None
+    if not category_name:
+        try:
+            cat = getattr(tag, "Category", None)
+            category_name = getattr(cat, "Name", None) if cat else None
+        except Exception:
+            category_name = None
+    offsets = {
+        "x_inches": _feet_to_inches((tag_point.X - host_point.X)),
+        "y_inches": _feet_to_inches((tag_point.Y - host_point.Y)),
+        "z_inches": _feet_to_inches((tag_point.Z - host_point.Z)),
+        "rotation_deg": 0.0,
+    }
+    family_field = fam_name or ""
+    type_field = type_name or ""
+    if not type_field and tag_symbol:
+        try:
+            param = tag_symbol.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
+            if param:
+                type_field = param.AsString() or ""
+        except Exception:
+            pass
+    if not type_field:
+        try:
+            tag_type = getattr(tag, "TagType", None)
+            if tag_type:
+                type_field = getattr(tag_type, "Name", None) or type_field
+        except Exception:
+            pass
+    if not type_field and ":" in (family_field or ""):
+        fam_part, type_part = family_field.split(":", 1)
+        family_field = fam_part.strip()
+        type_field = type_part.strip()
+    return {
+        "family_name": family_field,
+        "type_name": type_field,
+        "category_name": category_name,
+        "parameters": {},
         "offsets": offsets,
     }
 
@@ -751,13 +923,8 @@ def _build_text_note_entry(note_elem, host_point):
     }
 
 
-def _find_closest_child_entry(entries, note_elem):
-    if not entries or note_elem is None:
-        return None
-    note_point = getattr(note_elem, "Coord", None)
-    if note_point is None:
-        note_point = _get_point(note_elem)
-    if note_point is None:
+def _find_closest_entry_by_point(entries, point):
+    if not entries or point is None:
         return None
     closest_idx = None
     closest_dist = None
@@ -766,12 +933,12 @@ def _find_closest_child_entry(entries, note_elem):
         if host_point is None:
             continue
         try:
-            dist = host_point.DistanceTo(note_point)
+            dist = host_point.DistanceTo(point)
         except Exception:
             try:
-                dx = host_point.X - note_point.X
-                dy = host_point.Y - note_point.Y
-                dz = host_point.Z - note_point.Z
+                dx = host_point.X - point.X
+                dy = host_point.Y - point.Y
+                dz = host_point.Z - point.Z
                 dist = math.sqrt(dx * dx + dy * dy + dz * dz)
             except Exception:
                 continue
@@ -779,6 +946,17 @@ def _find_closest_child_entry(entries, note_elem):
             closest_idx = idx
             closest_dist = dist
     return closest_idx
+
+
+def _find_closest_child_entry(entries, note_elem):
+    if not entries or note_elem is None:
+        return None
+    note_point = getattr(note_elem, "Coord", None)
+    if note_point is None:
+        note_point = _get_point(note_elem)
+    if note_point is None:
+        return None
+    return _find_closest_entry_by_point(entries, note_point)
 
 
 def _assign_selected_text_notes(child_entries, note_elems):
@@ -798,7 +976,68 @@ def _assign_selected_text_notes(child_entries, note_elems):
         notes.append(entry)
 
 
-def _collect_hosted_tags(elem, host_point):
+def _assign_selected_tags(child_entries, tag_elems):
+    if not child_entries or not tag_elems:
+        return
+    host_index = {}
+    for idx, entry in enumerate(child_entries):
+        elem = entry.get("element")
+        if elem is None:
+            continue
+        try:
+            elem_id = elem.Id.IntegerValue
+        except Exception:
+            elem_id = None
+        if elem_id is not None and elem_id not in host_index:
+            host_index[elem_id] = idx
+    for tag in tag_elems:
+        target_idx = None
+        host_id = _tag_host_element_id(tag)
+        host_id_val = None
+        if host_id is not None:
+            try:
+                host_id_val = host_id.IntegerValue
+            except Exception:
+                try:
+                    host_id_val = int(host_id)
+                except Exception:
+                    host_id_val = None
+            if host_id_val is not None:
+                target_idx = host_index.get(host_id_val)
+                if target_idx is None:
+                    continue
+        if target_idx is None:
+            try:
+                tag_point = tag.TagHeadPosition
+            except Exception:
+                tag_point = None
+            if tag_point is None:
+                continue
+            target_idx = _find_closest_entry_by_point(child_entries, tag_point)
+        if target_idx is None:
+            continue
+        host_point = child_entries[target_idx].get("point")
+        if host_point is None:
+            continue
+        entry = _build_independent_tag_entry(tag, host_point)
+        if not entry:
+            continue
+        tags = child_entries[target_idx].setdefault("tags", [])
+        entry_key = _tag_entry_key(entry)
+        if entry_key:
+            existing = False
+            for existing_tag in tags:
+                if _tag_entry_key(existing_tag) != entry_key:
+                    continue
+                if _tag_offsets_near(existing_tag, entry):
+                    existing = True
+                    break
+            if existing:
+                continue
+        tags.append(entry)
+
+
+def _collect_hosted_tags(elem, host_point, active_view_id=None):
     doc = getattr(elem, "Document", None)
     if not doc or host_point is None:
         return [], []
@@ -810,103 +1049,33 @@ def _collect_hosted_tags(elem, host_point):
     text_notes = []
     for dep_id in dep_ids:
         try:
-            tag = doc.GetElement(dep_id)
+            dep_elem = doc.GetElement(dep_id)
         except Exception:
-            tag = None
-        if isinstance(tag, IndependentTag):
-            try:
-                tag_point = tag.TagHeadPosition
-            except Exception:
-                tag_point = None
-            if tag_point is None:
-                continue
-            tag_symbol = None
-            try:
-                tag_symbol = doc.GetElement(tag.GetTypeId())
-            except Exception:
-                tag_symbol = None
-            fam_name = None
-            type_name = None
-            category_name = None
-            if tag_symbol:
-                try:
-                    fam = getattr(tag_symbol, "Family", None)
-                    fam_name = getattr(fam, "Name", None) if fam else getattr(tag_symbol, "FamilyName", None)
-                except Exception:
-                    fam_name = None
-                try:
-                    type_name = getattr(tag_symbol, "Name", None)
-                except Exception:
-                    type_name = None
-                try:
-                    cat = getattr(tag_symbol, "Category", None)
-                    category_name = getattr(cat, "Name", None) if cat else None
-                except Exception:
-                    category_name = None
-            if not (fam_name and type_name):
-                try:
-                    symbols = getattr(tag, "Symbol", None)
-                except Exception:
-                    symbols = None
-                if symbols:
-                    try:
-                        fam = getattr(symbols, "Family", None)
-                        fam_name = getattr(fam, "Name", None) if fam else fam_name
-                    except Exception:
-                        pass
-                    try:
-                        type_name = getattr(symbols, "Name", None) or type_name
-                        if not type_name and hasattr(symbols, "get_Parameter"):
-                            param = symbols.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
-                            if param:
-                                type_name = param.AsString()
-                    except Exception:
-                        pass
-            if not type_name:
-                try:
-                    tag_type = getattr(tag, "TagType", None)
-                    type_name = getattr(tag_type, "Name", None)
-                except Exception:
-                    type_name = None
-            offsets = {
-                "x_inches": _feet_to_inches((tag_point.X - host_point.X)),
-                "y_inches": _feet_to_inches((tag_point.Y - host_point.Y)),
-                "z_inches": _feet_to_inches((tag_point.Z - host_point.Z)),
-                "rotation_deg": 0.0,
-            }
-            family_field = fam_name or ""
-            type_field = type_name or ""
-            if not type_field and tag_symbol:
-                try:
-                    param = tag_symbol.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
-                    if param:
-                        type_field = param.AsString() or ""
-                except Exception:
-                    pass
-            if not type_field:
-                try:
-                    tag_type = getattr(tag, "TagType", None)
-                    if tag_type:
-                        type_field = getattr(tag_type, "Name", None) or type_field
-                except Exception:
-                    pass
-            if not type_field and ":" in (family_field or ""):
-                fam_part, type_part = family_field.split(":", 1)
-                family_field = fam_part.strip()
-                type_field = type_part.strip()
-            tags.append({
-                "family_name": family_field,
-                "type_name": type_field,
-                "category_name": category_name,
-                "parameters": {},
-                "offsets": offsets,
-            })
+            dep_elem = None
+        if dep_elem is None:
             continue
-        annotation_entry = _build_annotation_tag_entry(tag, host_point)
+        if active_view_id is not None:
+            try:
+                owner_view_id = getattr(dep_elem, "OwnerViewId", None)
+            except Exception:
+                owner_view_id = None
+            if not owner_view_id:
+                continue
+            try:
+                if owner_view_id.IntegerValue != active_view_id:
+                    continue
+            except Exception:
+                pass
+        if isinstance(dep_elem, IndependentTag):
+            entry = _build_independent_tag_entry(dep_elem, host_point)
+            if entry:
+                tags.append(entry)
+            continue
+        annotation_entry = _build_annotation_tag_entry(dep_elem, host_point)
         if annotation_entry:
             tags.append(annotation_entry)
             continue
-        text_entry = _build_text_note_entry(tag, host_point)
+        text_entry = _build_text_note_entry(dep_elem, host_point)
         if text_entry:
             text_notes.append(text_entry)
     return tags, text_notes
@@ -1079,13 +1248,348 @@ def _build_repository(data):
     return ProfileRepository(eq_defs)
 
 
-def _place_existing_configuration(doc, data, cad_name, parent_point, parent_rotation):
+def _extract_set_id(payload_text):
+    if not payload_text:
+        return ""
+    text = str(payload_text)
+    if "\n" in text:
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            if not line or ":" not in line:
+                continue
+            key, _, remainder = line.partition(":")
+            if key.strip().lower() == "set definition id":
+                return remainder.strip()
+    marker = "Set Definition ID:"
+    idx = text.find(marker)
+    if idx < 0:
+        return ""
+    remainder = text[idx + len(marker):]
+    return remainder.split(",", 1)[0].strip()
+
+
+def _get_element_linker_text(elem):
+    if elem is None:
+        return ""
+    for name in ELEMENT_LINKER_PARAM_NAMES:
+        try:
+            param = elem.LookupParameter(name)
+        except Exception:
+            param = None
+        if not param:
+            continue
+        try:
+            text = param.AsString()
+        except Exception:
+            text = None
+        if not text:
+            try:
+                text = param.AsValueString()
+            except Exception:
+                text = None
+        if text and str(text).strip():
+            return str(text)
+    return ""
+
+
+def _tag_host_element_ids(tag):
+    if tag is None:
+        return []
+    try:
+        getter = getattr(tag, "GetTaggedLocalElementIds", None)
+        if callable(getter):
+            return list(getter() or [])
+    except Exception:
+        pass
+    ids = []
+    for attr in ("TaggedLocalElementId", "TaggedElementId"):
+        try:
+            value = getattr(tag, attr, None)
+        except Exception:
+            value = None
+        if value:
+            ids.append(value)
+    return ids
+
+
+def _tag_display_label(tag):
+    if tag is None:
+        return "<Tag?>"
+    doc = getattr(tag, "Document", None)
+    tag_type = None
+    if doc is not None:
+        try:
+            tag_type = doc.GetElement(tag.GetTypeId())
+        except Exception:
+            tag_type = None
+    fam_name = None
+    type_name = None
+    if tag_type:
+        try:
+            fam = getattr(tag_type, "Family", None)
+            fam_name = getattr(fam, "Name", None) if fam else getattr(tag_type, "FamilyName", None)
+        except Exception:
+            fam_name = None
+        try:
+            type_name = getattr(tag_type, "Name", None)
+        except Exception:
+            type_name = None
+    if fam_name and type_name:
+        return u"{} : {}".format(fam_name, type_name)
+    return type_name or fam_name or "<Tag?>"
+
+
+def _tag_label_key(label):
+    if not label:
+        return ""
+    return " ".join(str(label).strip().lower().split())
+
+
+def _tag_key_from_def(tag_def):
+    if not isinstance(tag_def, dict):
+        return ""
+    family = tag_def.get("family") or tag_def.get("family_name") or ""
+    type_name = tag_def.get("type") or tag_def.get("type_name") or ""
+    if family and type_name:
+        return _tag_label_key(u"{} : {}".format(family, type_name))
+    return _tag_label_key(type_name or family)
+
+
+def _cleanup_far_tags_by_type(doc, active_view_id, tag_type_keys, max_distance_ft):
+    if not doc or not active_view_id or not tag_type_keys or not max_distance_ft:
+        return 0
+    try:
+        limit = float(max_distance_ft)
+    except Exception:
+        return 0
+    try:
+        tags = list(FilteredElementCollector(doc, active_view_id).OfClass(IndependentTag))
+    except Exception:
+        tags = []
+    if not tags:
+        return 0
+    removed = 0
+    txn = Transaction(doc, "Clean Autoload Tag Types")
+    try:
+        txn.Start()
+        for tag in tags:
+            label = _tag_label_key(_tag_display_label(tag))
+            if label not in tag_type_keys:
+                continue
+            host_elem = None
+            for host_id in _tag_host_element_ids(tag):
+                try:
+                    host_elem = doc.GetElement(host_id)
+                except Exception:
+                    host_elem = None
+                if host_elem is not None:
+                    break
+            if host_elem is None:
+                continue
+            host_point = _get_point(host_elem)
+            if host_point is None:
+                continue
+            try:
+                tag_point = tag.TagHeadPosition
+            except Exception:
+                tag_point = None
+            if tag_point is None:
+                continue
+            try:
+                dist = host_point.DistanceTo(tag_point)
+            except Exception:
+                try:
+                    dx = host_point.X - tag_point.X
+                    dy = host_point.Y - tag_point.Y
+                    dz = host_point.Z - tag_point.Z
+                    dist = math.sqrt(dx * dx + dy * dy + dz * dz)
+                except Exception:
+                    dist = None
+            if dist is None or dist <= limit:
+                continue
+            try:
+                doc.Delete(tag.Id)
+                removed += 1
+                LOG.info(
+                    "[Edit-Create Profiles] Removed tag '%s' %.2f ft from host (limit %.2f ft).",
+                    _tag_display_label(tag),
+                    dist,
+                    limit,
+                )
+            except Exception:
+                continue
+        txn.Commit()
+    except Exception:
+        try:
+            txn.RollBack()
+        except Exception:
+            pass
+    return removed
+
+
+def _cleanup_far_autoload_tags(doc, active_view_id, set_ids, max_distance_ft):
+    if not doc or not active_view_id or not set_ids or not max_distance_ft:
+        return 0
+    try:
+        limit = float(max_distance_ft)
+    except Exception:
+        return 0
+    host_lookup = {}
+    try:
+        elements = FilteredElementCollector(doc, active_view_id).WhereElementIsNotElementType()
+    except Exception:
+        elements = []
+    for elem in elements:
+        payload = _get_element_linker_text(elem)
+        if not payload:
+            continue
+        set_id = _extract_set_id(payload)
+        if not set_id or set_id not in set_ids:
+            continue
+        try:
+            elem_id = elem.Id.IntegerValue
+        except Exception:
+            continue
+        host_lookup[elem_id] = elem
+    if not host_lookup:
+        return 0
+    try:
+        tags = list(FilteredElementCollector(doc, active_view_id).OfClass(IndependentTag))
+    except Exception:
+        tags = []
+    if not tags:
+        return 0
+    removed = 0
+    txn = Transaction(doc, "Clean Autoload Tags")
+    try:
+        txn.Start()
+        for tag in tags:
+            host_elem = None
+            for host_id in _tag_host_element_ids(tag):
+                try:
+                    host_id_val = host_id.IntegerValue
+                except Exception:
+                    try:
+                        host_id_val = int(host_id)
+                    except Exception:
+                        host_id_val = None
+                if host_id_val is None:
+                    continue
+                host_elem = host_lookup.get(host_id_val)
+                if host_elem is not None:
+                    break
+            if host_elem is None:
+                continue
+            host_point = _get_point(host_elem)
+            if host_point is None:
+                continue
+            try:
+                tag_point = tag.TagHeadPosition
+            except Exception:
+                tag_point = None
+            if tag_point is None:
+                continue
+            try:
+                dist = host_point.DistanceTo(tag_point)
+            except Exception:
+                try:
+                    dx = host_point.X - tag_point.X
+                    dy = host_point.Y - tag_point.Y
+                    dz = host_point.Z - tag_point.Z
+                    dist = math.sqrt(dx * dx + dy * dy + dz * dz)
+                except Exception:
+                    dist = None
+            if dist is None or dist <= limit:
+                continue
+            try:
+                doc.Delete(tag.Id)
+                removed += 1
+                LOG.info(
+                    "[Edit-Create Profiles] Removed autoload tag '%s' %.2f ft from host (limit %.2f ft).",
+                    _tag_display_label(tag),
+                    dist,
+                    limit,
+                )
+            except Exception:
+                continue
+        txn.Commit()
+    except Exception:
+        try:
+            txn.RollBack()
+        except Exception:
+            pass
+    return removed
+
+
+def _filter_tags_for_autoload(data, cad_name, max_distance_ft):
+    if not data or not cad_name or not max_distance_ft:
+        return data
+    try:
+        filtered = copy.deepcopy(data)
+    except Exception:
+        return data
+    target = (cad_name or "").strip().lower()
+    for eq in filtered.get("equipment_definitions") or []:
+        name = (eq.get("name") or eq.get("id") or "").strip().lower()
+        if name != target:
+            continue
+        for linked_set in eq.get("linked_sets") or []:
+            for led in linked_set.get("linked_element_definitions") or []:
+                if not isinstance(led, dict):
+                    continue
+                tags = led.get("tags")
+                if not isinstance(tags, list):
+                    continue
+                kept = []
+                for tag in tags:
+                    if not isinstance(tag, dict):
+                        kept.append(tag)
+                        continue
+                    offsets = tag.get("offsets") or {}
+                    if not isinstance(offsets, dict):
+                        kept.append(tag)
+                        continue
+                    try:
+                        x_ft = float(offsets.get("x_inches", 0.0) or 0.0) / 12.0
+                        y_ft = float(offsets.get("y_inches", 0.0) or 0.0) / 12.0
+                        z_ft = float(offsets.get("z_inches", 0.0) or 0.0) / 12.0
+                    except Exception:
+                        kept.append(tag)
+                        continue
+                    dist = math.sqrt((x_ft * x_ft) + (y_ft * y_ft) + (z_ft * z_ft))
+                    if dist <= max_distance_ft:
+                        kept.append(tag)
+                led["tags"] = kept
+    return filtered
+
+
+def _place_existing_configuration(doc, data, cad_name, parent_point, parent_rotation, active_view_id=None):
     if not cad_name or parent_point is None:
         return
-    repo = _build_repository(data)
+    filtered_data = _filter_tags_for_autoload(data, cad_name, 5.0)
+    repo = _build_repository(filtered_data)
+    eq_def = _find_equipment_definition_by_name(data, cad_name)
+    set_ids = set()
+    if eq_def:
+        for linked_set in eq_def.get("linked_sets") or []:
+            set_id = (linked_set.get("id") or "").strip()
+            if set_id:
+                set_ids.add(set_id)
     labels = repo.labels_for_cad(cad_name)
     if not labels:
         return
+    tag_type_keys = set()
+    for label in labels:
+        linked_def = repo.definition_for_label(cad_name, label)
+        if not linked_def:
+            continue
+        placement = linked_def.get_placement()
+        if not placement:
+            continue
+        for tag_def in placement.get_tags() or []:
+            key = _tag_key_from_def(tag_def)
+            if key:
+                tag_type_keys.add(key)
     selection_map = {cad_name: labels}
     rows = [{
         "Name": cad_name,
@@ -1099,10 +1603,15 @@ def _place_existing_configuration(doc, data, cad_name, parent_point, parent_rota
         doc,
         repo,
         allow_tags=True,
+        max_tag_distance_feet=5.0,
         transaction_name="Load Profile for Edit/Create",
     )
     try:
         engine.place_from_csv(rows, selection_map)
+        if active_view_id and set_ids:
+            _cleanup_far_autoload_tags(doc, active_view_id, set_ids, 5.0)
+        if active_view_id and tag_type_keys:
+            _cleanup_far_tags_by_type(doc, active_view_id, tag_type_keys, 5.0)
     except Exception as exc:
         LOG.warning("Failed to place existing profile: %s", exc)
 
@@ -1165,7 +1674,7 @@ def _truth_group_metadata(equipment_defs):
     return groups, child_to_group
 
 
-def _gather_child_entries(elements, parent_point, parent_rotation, parent_elem):
+def _gather_child_entries(elements, parent_point, parent_rotation, parent_elem, active_view_id=None):
     entries = []
     for elem in elements:
         if elem is None or isinstance(elem, IndependentTag) or isinstance(elem, TextNote):
@@ -1180,7 +1689,6 @@ def _gather_child_entries(elements, parent_point, parent_rotation, parent_elem):
         offsets["z_inches"] = _level_relative_z_inches(elem, point)
         if isinstance(elem, Group):
             offsets["rotation_deg"] = _normalize_angle(rotation - parent_rotation)
-        tags, hosted_notes = _collect_hosted_tags(elem, point)
         params = _collect_params(elem)
         led_entry = {
             "element": elem,
@@ -1191,8 +1699,8 @@ def _gather_child_entries(elements, parent_point, parent_rotation, parent_elem):
             "is_group": isinstance(elem, Group),
             "offsets": offsets,
             "parameters": params,
-            "tags": tags,
-            "text_notes": hosted_notes,
+            "tags": [],
+            "text_notes": [],
         }
         entries.append(led_entry)
     return entries
@@ -1332,18 +1840,31 @@ def _run_selection_flow(doc, data, context, truth_groups, child_to_group, parent
             return
 
         text_note_elems = []
+        tag_elems = []
         host_candidates = []
         for elem in picked:
             if isinstance(elem, TextNote):
                 text_note_elems.append(elem)
                 continue
+            if isinstance(elem, IndependentTag):
+                tag_elems.append(elem)
+                continue
             host_candidates.append(elem)
 
-        child_entries = _gather_child_entries(host_candidates, parent_point, parent_rotation, parent_elem)
+        active_view = getattr(doc, "ActiveView", None)
+        active_view_id = getattr(getattr(active_view, "Id", None), "IntegerValue", None)
+        child_entries = _gather_child_entries(
+            host_candidates,
+            parent_point,
+            parent_rotation,
+            parent_elem,
+            active_view_id=active_view_id,
+        )
         if not child_entries:
             forms.alert("None of the selected elements produced valid entries.", title=TITLE)
             return
         _assign_selected_text_notes(child_entries, text_note_elems)
+        _assign_selected_tags(child_entries, tag_elems)
 
         linked_set = get_type_set(eq_def)
         linked_set["linked_element_definitions"] = []
@@ -1448,8 +1969,17 @@ def main():
     if not eq_def or not cad_name:
         return
     if not created_new:
+        active_view = getattr(doc, "ActiveView", None)
+        active_view_id = getattr(getattr(active_view, "Id", None), "IntegerValue", None)
         try:
-            _place_existing_configuration(doc, data, cad_name, parent_point, parent_rotation)
+            _place_existing_configuration(
+                doc,
+                data,
+                cad_name,
+                parent_point,
+                parent_rotation,
+                active_view_id=active_view_id,
+            )
         except Exception as exc:
             LOG.warning("Autoload failed: %s", exc)
 

@@ -689,10 +689,12 @@ class ProfileEditorWindow(forms.WPFWindow):
         if isinstance(tag_entry, dict):
             family = tag_entry.get("family_name") or tag_entry.get("family") or ""
             category = tag_entry.get("category_name") or tag_entry.get("category") or ""
+            type_name = tag_entry.get("type_name") or tag_entry.get("type") or ""
         else:
             family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
             category = getattr(tag_entry, "category_name", None) or getattr(tag_entry, "category", None) or ""
-        text = "{} {}".format(family, category).lower()
+            type_name = getattr(tag_entry, "type_name", None) or getattr(tag_entry, "type", None) or ""
+        text = "{} {} {}".format(family, type_name, category).lower()
         return "keynote" in text
 
     def _add_text_note_row(self, note=None):

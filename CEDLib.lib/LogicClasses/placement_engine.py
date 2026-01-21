@@ -172,6 +172,8 @@ class PlaceElementsEngine(object):
         default_level=None,
         tag_view_map=None,
         allow_tags=True,
+        allow_text_notes=False,
+        max_tag_distance_feet=None,
         transaction_name="Place Elements (YAML)",
         apply_recorded_level=True,
     ):
@@ -180,6 +182,8 @@ class PlaceElementsEngine(object):
         self.default_level = default_level
         self.tag_view_map = tag_view_map or {}
         self.allow_tags = bool(allow_tags)
+        self.allow_text_notes = bool(allow_text_notes)
+        self.max_tag_distance_feet = max_tag_distance_feet
         self.transaction_name = transaction_name or "Place Elements (YAML)"
         self.apply_recorded_level = bool(apply_recorded_level)
         self._init_symbol_map()
@@ -1091,7 +1095,8 @@ class PlaceElementsEngine(object):
             )
             if self.allow_tags:
                 self._place_tags(tags, instance, loc, final_rot_deg)
-            self._place_text_notes(text_notes, loc, final_rot_deg, host_instance=instance, host_location=loc)
+            if self.allow_text_notes and text_notes:
+                self._place_text_notes(text_notes, loc, final_rot_deg, host_instance=instance, host_location=loc)
             return True
         return False
 
@@ -1269,6 +1274,7 @@ class PlaceElementsEngine(object):
     def _place_tags(self, tag_defs, host_instance, base_loc, final_rot_deg):
         if not tag_defs:
             return
+        logger = self._get_logger()
         active_view = getattr(self.doc, "ActiveView", None)
         for tag in tag_defs:
             family = tag.get("family")
@@ -1292,6 +1298,29 @@ class PlaceElementsEngine(object):
                 continue
 
             offsets = tag.get("offset") or (0.0, 0.0, 0.0)
+            if self.max_tag_distance_feet not in (None, ""):
+                try:
+                    limit = float(self.max_tag_distance_feet)
+                except Exception:
+                    limit = None
+                if limit:
+                    try:
+                        dist = math.sqrt(
+                            float(offsets[0] or 0.0) ** 2
+                            + float(offsets[1] or 0.0) ** 2
+                            + float(offsets[2] or 0.0) ** 2
+                        )
+                    except Exception:
+                        dist = None
+                    if dist is not None and dist > limit:
+                        if logger:
+                            logger.info(
+                                "[Place Elements] Skipping tag '%s' offset distance %.2f ft > %.2f ft.",
+                                label,
+                                dist,
+                                limit,
+                            )
+                        continue
             category_name = (tag.get("category") or "").lower()
             parameters = tag.get("parameters") or {}
 
