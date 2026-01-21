@@ -494,6 +494,21 @@ def _tag_entry_key(tag_entry):
     return (_tag_signature(family), _tag_signature(type_name), _tag_signature(category))
 
 
+def _is_keynote_entry(tag_entry):
+    if not tag_entry:
+        return False
+    if isinstance(tag_entry, dict):
+        family = tag_entry.get("family_name") or tag_entry.get("family") or ""
+        type_name = tag_entry.get("type_name") or tag_entry.get("type") or ""
+        category = tag_entry.get("category_name") or tag_entry.get("category") or ""
+    else:
+        family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
+        type_name = getattr(tag_entry, "type_name", None) or getattr(tag_entry, "type", None) or ""
+        category = getattr(tag_entry, "category_name", None) or getattr(tag_entry, "category", None) or ""
+    text = "{} {} {}".format(family, type_name, category).lower()
+    return "keynote" in text
+
+
 def _tag_offsets_near(tag_a, tag_b, pos_tol=0.05, rot_tol=0.5):
     def _extract(entry):
         offsets = {}
@@ -1038,7 +1053,8 @@ def _assign_selected_tags(child_entries, tag_elems):
         entry = _build_independent_tag_entry(tag, host_point)
         if not entry:
             continue
-        tags = child_entries[target_idx].setdefault("tags", [])
+        target_list_name = "keynotes" if _is_keynote_entry(entry) else "tags"
+        tags = child_entries[target_idx].setdefault(target_list_name, [])
         entry_key = _tag_entry_key(entry)
         if entry_key:
             existing = False
@@ -1062,6 +1078,7 @@ def _collect_hosted_tags(elem, host_point, active_view_id=None):
     except Exception:
         dep_ids = []
     tags = []
+    keynotes = []
     text_notes = []
     for dep_id in dep_ids:
         try:
@@ -1085,16 +1102,22 @@ def _collect_hosted_tags(elem, host_point, active_view_id=None):
         if isinstance(dep_elem, IndependentTag):
             entry = _build_independent_tag_entry(dep_elem, host_point)
             if entry:
-                tags.append(entry)
+                if _is_keynote_entry(entry):
+                    keynotes.append(entry)
+                else:
+                    tags.append(entry)
             continue
         annotation_entry = _build_annotation_tag_entry(dep_elem, host_point)
         if annotation_entry:
-            tags.append(annotation_entry)
+            if _is_keynote_entry(annotation_entry):
+                keynotes.append(annotation_entry)
+            else:
+                tags.append(annotation_entry)
             continue
         text_entry = _build_text_note_entry(dep_elem, host_point)
         if text_entry:
             text_notes.append(text_entry)
-    return tags, text_notes
+    return tags, keynotes, text_notes
 
 
 def _normalize_angle(value):
@@ -1247,6 +1270,8 @@ def _sanitize_profiles(profiles):
             inst_cfg["offsets"] = [off if isinstance(off, dict) else {} for off in offsets]
             tags = inst_cfg.get("tags") or []
             inst_cfg["tags"] = [tag if isinstance(tag, dict) else {} for tag in tags]
+            keynotes = inst_cfg.get("keynotes") or []
+            inst_cfg["keynotes"] = [tag if isinstance(tag, dict) else {} for tag in keynotes]
             params = inst_cfg.get("parameters")
             inst_cfg["parameters"] = params if isinstance(params, dict) else {}
             type_entry["instance_config"] = inst_cfg
@@ -1770,29 +1795,33 @@ def _filter_tags_for_autoload(data, cad_name, max_distance_ft):
             for led in linked_set.get("linked_element_definitions") or []:
                 if not isinstance(led, dict):
                     continue
+                def _filter_tag_list(items):
+                    kept = []
+                    for tag in items:
+                        if not isinstance(tag, dict):
+                            kept.append(tag)
+                            continue
+                        offsets = tag.get("offsets") or {}
+                        if not isinstance(offsets, dict):
+                            kept.append(tag)
+                            continue
+                        try:
+                            x_ft = float(offsets.get("x_inches", 0.0) or 0.0) / 12.0
+                            y_ft = float(offsets.get("y_inches", 0.0) or 0.0) / 12.0
+                            z_ft = float(offsets.get("z_inches", 0.0) or 0.0) / 12.0
+                        except Exception:
+                            kept.append(tag)
+                            continue
+                        dist = math.sqrt((x_ft * x_ft) + (y_ft * y_ft) + (z_ft * z_ft))
+                        if dist <= max_distance_ft:
+                            kept.append(tag)
+                    return kept
                 tags = led.get("tags")
-                if not isinstance(tags, list):
-                    continue
-                kept = []
-                for tag in tags:
-                    if not isinstance(tag, dict):
-                        kept.append(tag)
-                        continue
-                    offsets = tag.get("offsets") or {}
-                    if not isinstance(offsets, dict):
-                        kept.append(tag)
-                        continue
-                    try:
-                        x_ft = float(offsets.get("x_inches", 0.0) or 0.0) / 12.0
-                        y_ft = float(offsets.get("y_inches", 0.0) or 0.0) / 12.0
-                        z_ft = float(offsets.get("z_inches", 0.0) or 0.0) / 12.0
-                    except Exception:
-                        kept.append(tag)
-                        continue
-                    dist = math.sqrt((x_ft * x_ft) + (y_ft * y_ft) + (z_ft * z_ft))
-                    if dist <= max_distance_ft:
-                        kept.append(tag)
-                led["tags"] = kept
+                if isinstance(tags, list):
+                    led["tags"] = _filter_tag_list(tags)
+                keynotes = led.get("keynotes")
+                if isinstance(keynotes, list):
+                    led["keynotes"] = _filter_tag_list(keynotes)
     return filtered
 
 
@@ -2005,6 +2034,7 @@ def _place_existing_configuration(doc, data, cad_name, parent_point, parent_rota
         doc,
         repo,
         allow_tags=True,
+        allow_text_notes=True,
         max_tag_distance_feet=5.0,
         transaction_name="Load Profile for Edit/Create",
     )
@@ -2130,6 +2160,7 @@ def _gather_child_entries(elements, parent_point, parent_rotation, parent_elem, 
             "offsets": offsets,
             "parameters": params,
             "tags": [],
+            "keynotes": [],
             "text_notes": [],
         }
         entries.append(led_entry)
@@ -2304,6 +2335,7 @@ def _run_selection_flow(doc, data, context, truth_groups, child_to_group, parent
             offsets = dict(entry["offsets"])
             entry_params = dict(entry.get("parameters") or {})
             entry_tags = list(entry.get("tags") or [])
+            entry_keynotes = list(entry.get("keynotes") or [])
             entry_text_notes = list(entry.get("text_notes") or [])
             led_entry = {
                 "id": led_id,
@@ -2313,6 +2345,7 @@ def _run_selection_flow(doc, data, context, truth_groups, child_to_group, parent
                 "offsets": [offsets],
                 "parameters": entry_params,
                 "tags": entry_tags,
+                "keynotes": entry_keynotes,
                 "text_notes": entry_text_notes,
             }
             payload = _build_element_linker_payload(

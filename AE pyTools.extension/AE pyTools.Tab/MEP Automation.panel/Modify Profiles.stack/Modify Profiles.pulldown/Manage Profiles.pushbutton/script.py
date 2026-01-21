@@ -802,6 +802,42 @@ def _unique_truth_id(data, equipment_def, cad_label):
 
 
 
+def _is_keynote_entry(tag_entry):
+    if isinstance(tag_entry, dict):
+        family = tag_entry.get("family_name") or tag_entry.get("family") or ""
+        category = tag_entry.get("category_name") or tag_entry.get("category") or ""
+        type_name = tag_entry.get("type_name") or tag_entry.get("type") or ""
+    else:
+        family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
+        category = getattr(tag_entry, "category_name", None) or getattr(tag_entry, "category", None) or ""
+        type_name = getattr(tag_entry, "type_name", None) or getattr(tag_entry, "type", None) or ""
+    text = "{} {} {}".format(family, type_name, category).lower()
+    return "keynote" in text
+
+
+def _split_keynote_entries(entries):
+    normal = []
+    keynotes = []
+    for entry in entries or []:
+        if _is_keynote_entry(entry):
+            keynotes.append(entry)
+        else:
+            normal.append(entry)
+    return normal, keynotes
+
+
+def _normalize_tag_entry(tag_entry):
+    if isinstance(tag_entry, dict):
+        return {
+            "category_name": tag_entry.get("category_name"),
+            "family_name": tag_entry.get("family_name"),
+            "type_name": tag_entry.get("type_name"),
+            "parameters": tag_entry.get("parameters") or {},
+            "offsets": tag_entry.get("offsets") or {},
+        }
+    return tag_entry
+
+
 class OffsetShim(object):
 
 
@@ -855,58 +891,20 @@ class InstanceConfigShim(object):
 
 
         raw_tags = dct.get("tags") or []
+        raw_keynotes = dct.get("keynotes") or []
 
 
 
-        shim_tags = []
-
-
-
-        for tg in raw_tags:
-
-
-
-            if isinstance(tg, dict):
-
-
-
-                shim_tags.append({
-
-
-
-                    "category_name": tg.get("category_name"),
-
-
-
-                    "family_name": tg.get("family_name"),
-
-
-
-                    "type_name": tg.get("type_name"),
-
-
-
-                    "parameters": tg.get("parameters") or {},
-
-
-
-                    "offsets": tg.get("offsets") or {},
-
-
-
-                })
-
-
-
-            else:
-
-
-
-                shim_tags.append(tg)
-
-
-
-        self.tags = shim_tags
+        shim_tags = [_normalize_tag_entry(tg) for tg in raw_tags]
+        shim_keynotes = [_normalize_tag_entry(tg) for tg in raw_keynotes]
+        if shim_keynotes:
+            shim_tags = [tg for tg in shim_tags if not _is_keynote_entry(tg)]
+            self.tags = shim_tags
+            self.keynotes = shim_keynotes
+        else:
+            normal_tags, keynote_tags = _split_keynote_entries(shim_tags)
+            self.tags = normal_tags
+            self.keynotes = keynote_tags
 
         raw_text_notes = dct.get("text_notes") or []
 
@@ -1129,6 +1127,7 @@ def _dict_from_shims(profiles):
 
 
                     "tags": _serialize_tags(getattr(inst, "tags", []) or []),
+                    "keynotes": _serialize_tags(getattr(inst, "keynotes", []) or []),
 
 
 
@@ -1708,9 +1707,7 @@ def _collect_hosted_tags(elem, host_point):
 
 
     tags = []
-
-
-
+    keynotes = []
     text_notes = []
 
 
@@ -1971,31 +1968,17 @@ def _collect_hosted_tags(elem, host_point):
 
 
 
-            tags.append({
-
-
-
+            entry = {
                 "family_name": fam_name or "",
-
-
-
                 "type_name": type_name or "",
-
-
-
                 "category_name": category_name,
-
-
-
                 "parameters": {},
-
-
-
                 "offsets": offsets,
-
-
-
-            })
+            }
+            if _is_keynote_entry(entry):
+                keynotes.append(entry)
+            else:
+                tags.append(entry)
 
 
 
@@ -2016,7 +1999,7 @@ def _collect_hosted_tags(elem, host_point):
 
 
 
-    return tags, text_notes
+    return tags, keynotes, text_notes
 
 
 def _find_closest_record_index(records, note_elem):
@@ -2855,7 +2838,7 @@ def _build_type_entry(elem, offset_vec, rot_deg, host_point):
 
 
 
-    tags, text_notes = _collect_hosted_tags(elem, host_point)
+    tags, keynotes, text_notes = _collect_hosted_tags(elem, host_point)
 
 
 
@@ -2908,6 +2891,7 @@ def _build_type_entry(elem, offset_vec, rot_deg, host_point):
 
 
             "tags": tags,
+            "keynotes": keynotes,
 
 
 
@@ -3277,6 +3261,7 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
 
         entry_tags = inst_cfg.get("tags") or []
+        entry_keynotes = inst_cfg.get("keynotes") or []
 
 
 
@@ -3329,6 +3314,7 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
 
             "tags": entry_tags,
+            "keynotes": entry_keynotes,
 
 
 
@@ -3580,6 +3566,7 @@ def _capture_profile_additions(doc, cad_name, state, refresh_callback, yaml_labe
         entry_offsets = inst_cfg.get("offsets") or [{}]
         entry_params = inst_cfg.setdefault("parameters", {})
         entry_tags = inst_cfg.get("tags") or []
+        entry_keynotes = inst_cfg.get("keynotes") or []
         entry_text_notes = inst_cfg.get("text_notes") or []
 
         led_id = next_led_id(type_set, equipment_def)
@@ -3595,6 +3582,7 @@ def _capture_profile_additions(doc, cad_name, state, refresh_callback, yaml_labe
             "offsets": entry_offsets,
             "parameters": entry_params,
             "tags": entry_tags,
+            "keynotes": entry_keynotes,
             "text_notes": entry_text_notes,
         })
 
@@ -3738,7 +3726,9 @@ def _find_negative_z_offsets(profile_dict):
 
 
 
-            for tag in inst.get("tags") or []:
+            tag_entries = list(inst.get("tags") or [])
+            tag_entries.extend(inst.get("keynotes") or [])
+            for tag in tag_entries:
 
 
 

@@ -642,12 +642,17 @@ class ProfileEditorWindow(forms.WPFWindow):
     def _reload_annotation_rows(self):
         inst_cfg = getattr(self._current_typecfg, "instance_config", None)
         raw_tags = []
+        raw_keynotes = None
         raw_text_notes = []
         if inst_cfg is not None:
             raw_tags = getattr(inst_cfg, "tags", []) or []
+            raw_keynotes = getattr(inst_cfg, "keynotes", None)
             raw_text_notes = getattr(inst_cfg, "text_notes", []) or []
         normal_tags = [tg for tg in raw_tags if not self._is_keynote_entry(tg)]
-        keynote_tags = [tg for tg in raw_tags if self._is_keynote_entry(tg)]
+        if raw_keynotes:
+            keynote_tags = list(raw_keynotes)
+        else:
+            keynote_tags = [tg for tg in raw_tags if self._is_keynote_entry(tg)]
         self._populate_tag_rows(normal_tags)
         self._populate_keynote_rows(keynote_tags)
         self._populate_text_note_rows(raw_text_notes)
@@ -780,7 +785,7 @@ class ProfileEditorWindow(forms.WPFWindow):
             )
             category = self._extract_tag_category(original_tag)
             if not category and panel_type == "_keynote_rows":
-                category = "Generic Annotations"
+                category = "Keynote Tags"
             elif not category:
                 category = "Annotation Symbols"
             parameters = self._extract_tag_parameters(original_tag)
@@ -1359,12 +1364,11 @@ class ProfileEditorWindow(forms.WPFWindow):
         # --- Tags / Keynotes ---
         normal_tags = self._collect_tag_configs(self._tag_rows)
         keynote_tags = self._collect_tag_configs(self._keynote_rows)
-        combined_tags = normal_tags + keynote_tags
-
         if hasattr(inst_cfg, "tags"):
-            inst_cfg.tags = combined_tags
+            inst_cfg.tags = normal_tags
         elif hasattr(inst_cfg, "set_tags"):
-            inst_cfg.set_tags(combined_tags)
+            inst_cfg.set_tags(normal_tags)
+        inst_cfg.keynotes = keynote_tags
 
         # --- Text Notes ---
         text_notes = self._collect_text_note_entries()

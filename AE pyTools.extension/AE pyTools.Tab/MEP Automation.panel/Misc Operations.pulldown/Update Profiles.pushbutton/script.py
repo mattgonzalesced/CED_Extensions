@@ -230,12 +230,43 @@ def _replace_entries(current, incoming):
     return True, added, updated, new_entries
 
 
+def _is_keynote_entry(tag_entry):
+    if isinstance(tag_entry, dict):
+        family = tag_entry.get("family_name") or tag_entry.get("family") or ""
+        category = tag_entry.get("category_name") or tag_entry.get("category") or ""
+        type_name = tag_entry.get("type_name") or tag_entry.get("type") or ""
+    else:
+        family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
+        category = getattr(tag_entry, "category_name", None) or getattr(tag_entry, "category", None) or ""
+        type_name = getattr(tag_entry, "type_name", None) or getattr(tag_entry, "type", None) or ""
+    text = "{} {} {}".format(family, type_name, category).lower()
+    return "keynote" in text
+
+
+def _split_keynote_entries(entries):
+    normal = []
+    keynotes = []
+    for entry in entries or []:
+        if _is_keynote_entry(entry):
+            keynotes.append(entry)
+        else:
+            normal.append(entry)
+    return normal, keynotes
+
+
 def _merge_tag_entries(led, tags):
+    normal_tags, keynotes = _split_keynote_entries(tags)
     existing = led.get("tags")
     if not isinstance(existing, list):
         existing = []
         led["tags"] = existing
-    return _merge_entries(existing, tags, _tag_key, _update_tag_entry)
+    changed, added, updated = _merge_entries(existing, normal_tags, _tag_key, _update_tag_entry)
+    existing_keynotes = led.get("keynotes")
+    if not isinstance(existing_keynotes, list):
+        existing_keynotes = []
+        led["keynotes"] = existing_keynotes
+    changed_kn, added_kn, updated_kn = _merge_entries(existing_keynotes, keynotes, _tag_key, _update_tag_entry)
+    return (changed or changed_kn), (added + added_kn), (updated + updated_kn)
 
 
 def _merge_text_note_entries(led, notes):
@@ -247,9 +278,12 @@ def _merge_text_note_entries(led, notes):
 
 
 def _set_tag_entries(led, tags):
-    changed, added, updated, new_entries = _replace_entries(led.get("tags"), tags)
+    normal_tags, keynotes = _split_keynote_entries(tags)
+    changed, added, updated, new_entries = _replace_entries(led.get("tags"), normal_tags)
     led["tags"] = new_entries
-    return changed, added, updated
+    changed_kn, added_kn, updated_kn, new_keynotes = _replace_entries(led.get("keynotes"), keynotes)
+    led["keynotes"] = new_keynotes
+    return (changed or changed_kn), (added + added_kn), (updated + updated_kn)
 
 
 def _set_text_note_entries(led, notes):
@@ -455,8 +489,8 @@ def main():
         for key, value in (params or {}).items():
             _track_param_value(obs, key, value)
 
-        tags, text_notes = manage._collect_hosted_tags(elem, host_point)
-        for tag in tags or []:
+        tags, keynotes, text_notes = manage._collect_hosted_tags(elem, host_point)
+        for tag in (tags or []) + (keynotes or []):
             _track_annotation(obs, "tags", tag, _tag_key)
         for note in text_notes or []:
             _track_annotation(obs, "notes", note, _text_note_key)

@@ -125,7 +125,10 @@ class ProfileRepository(object):
                     )
 
                 tag_defs = []
-                for tag_data in inst_cfg.get("tags") or []:
+                tag_sources = []
+                tag_sources.extend(inst_cfg.get("tags") or [])
+                tag_sources.extend(inst_cfg.get("keynotes") or [])
+                for tag_data in tag_sources:
                     if not isinstance(tag_data, dict):
                         continue
                     offsets_dict = tag_data.get("offsets") or {}

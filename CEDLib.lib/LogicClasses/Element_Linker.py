@@ -37,11 +37,13 @@ class TagConfig(object):
 
 
 class InstanceConfig(object):
-    def __init__(self, parameters=None, offsets=None, tags=None):
+    def __init__(self, parameters=None, offsets=None, tags=None, keynotes=None, text_notes=None):
         """
         parameters: dict of {param_name: value}
         offsets:    OffsetConfig or list[OffsetConfig]
         tags:       list[TagConfig]
+        keynotes:   list[TagConfig]
+        text_notes: list[dict]
         """
         self.parameters = parameters or {}
         if offsets is None:
@@ -51,6 +53,8 @@ class InstanceConfig(object):
         else:
             self._offsets = [offsets]
         self.tags = tags or []
+        self.keynotes = keynotes or []
+        self.text_notes = text_notes or []
 
     def get_offset(self, occurrence_index):
         if not self._offsets:
@@ -62,6 +66,9 @@ class InstanceConfig(object):
 
     def get_tags(self):
         return self.tags
+
+    def get_keynotes(self):
+        return self.keynotes
 
     def get_parameters(self):
         return self.parameters
