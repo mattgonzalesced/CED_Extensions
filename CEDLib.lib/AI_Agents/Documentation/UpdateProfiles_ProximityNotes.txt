@@ -1,0 +1,41 @@
+Update Profiles - Proximity Capture for Keynotes and Text Notes
+
+Overview
+- Goal: Capture keynotes and text notes by proximity so notes within 3 ft (XY only) of an Element_Linker host attach to that host's profile, choosing the closest host and preventing duplicates across profiles by location.
+- Background: Update Profiles currently gathers notes without proximity matching; the new flow maps notes to nearby hosts.
+
+Scope
+- In scope: Identify current note collection/mapping; define proximity rules (3 ft XY-only radius, closest host, location-based dedupe); add spatial lookup for Element_Linker hosts; resolve each note to nearest eligible host; enforce uniqueness by location; handle exact-distance ties via user selection; verify behavior.
+- Out of scope: No migration of existing profile notes.
+
+Plan summary
+- Steps:
+  1) Locate where Update Profiles gathers keynotes/text notes and how it maps them to profiles.
+  2) Define proximity rules: 3 ft radius in XY only (ignore Z), closest host, and location-based dedupe key.
+  3) Build or reuse a host-element spatial lookup (Element_Linker only) and resolve each note to the nearest host using insertion point XY distance.
+  4) Enforce uniqueness by location across profiles; skip notes already assigned (track assigned XYZ keys).
+  5) If distances tie exactly, prompt the user to select the host profile.
+  6) Verify: closest host wins (or user selection on ties); notes outside 3 ft are ignored.
+
+Behavior details
+- Notes are assigned based on insertion point XY distance to eligible Element_Linker hosts only (ignore Z).
+- A location-based key prevents duplicate note assignment across profiles.
+- Tie handling requires explicit user choice when distances are equal.
+
+Risks
+- Floating-point noise may cause inconsistent host selection or duplicate detection without XY tolerances.
+- Large models may need spatial indexing to keep proximity searches fast.
+- Notes near linked model boundaries might match unintended hosts if context is ignored.
+
+Open questions
+- None.
+
+Validation checklist
+- Notes within 3 ft attach to the nearest eligible host profile.
+- Notes outside 3 ft are ignored.
+- Location-based dedupe prevents duplicate assignment across profiles.
+- Tie cases prompt for user selection and resolve deterministically.
+
+Assumptions
+- Element_Linker identifies the eligible host elements for proximity matching.
+- Note insertion points are available for distance calculations.

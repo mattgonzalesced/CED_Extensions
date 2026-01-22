@@ -1,28 +1,31 @@
 ## Goal
-Add a new "Place Linked Elements" workflow that lets users select specific host
-profile names (from the active YAML) via checkboxes, so only those profiles are
-placed instead of always placing every profile in storage.
+Update Update Profiles so keynotes and text notes are captured by proximity:
+if a keynote or text note is within 3 feet of an element with Element_Linker,
+attach it to that element’s profile, choosing the closest host and preventing
+duplicates across profiles by location.
 
 ## Plan
-1) Locate the current Place Linked Elements entry point and confirm where
-   profile names are sourced (active YAML -> equipment definitions).
-2) Define the new button entry point ("Place Linked Elements (Profile Filter)")
-   and a checkbox selection dialog listing truth-source groups, defaulting to
-   none checked, with search and select-all/none actions.
-3) Map selected truth-source groups back to the concrete CAD/profile names
-   used by placement so only those profiles generate rows.
-4) Filter the placement inputs (equipment_names, selection_map, rows) to the
-   chosen profile set and keep summaries scoped to selected profiles only.
-5) Validate the workflow messaging: no YAML mutations, clear output on skipped
-   profiles, and graceful handling when no matches exist.
+1) Identify where Update Profiles currently gathers keynotes and text notes and
+   how it maps them to profiles (hosted vs non-hosted elements).
+2) Define proximity capture rules: 3 ft radius in XY only (ignore Z), choose
+   closest host element, and a location-based de-duplication key so a note is
+   stored in only one profile.
+3) Build or reuse a host-element spatial lookup (Element_Linker only) and
+   update note collection to resolve each note to the nearest eligible host
+   using the note insertion point for XY distance.
+4) Enforce uniqueness by location across profiles (track assigned XYZ keys
+   during the scan) and skip notes already assigned.
+5) Handle exact distance ties by prompting the user to select the host profile
+   for the keynote/text note.
+6) Verify placement updates: keynotes/text notes near multiple hosts resolve to
+   the closest (or user-selected on ties), and notes outside 3 ft are ignored.
 
 ## Risks
-- Profile naming and truth-source grouping may hide duplicates; filtering by
-  display name could place unexpected profiles or skip merged/child entries.
-- Large profile sets could make the checkbox UI sluggish or hard to use without
-  search and bulk actions.
-- Users may expect category-filter and standard Place Linked Elements to behave
-  consistently; divergent behavior could cause confusion.
+- Ambiguous distances or floating-point noise can cause inconsistent host
+  selection or duplicate detection unless XY tolerances are defined.
+- Large models could make proximity searches slow without spatial indexing.
+- Notes near linked model boundaries might match unintended hosts if level or
+  view context is ignored.
 
 ## Open Questions
-- None
+- None (no existing profile notes to migrate).
