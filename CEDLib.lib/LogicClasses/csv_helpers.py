@@ -12,6 +12,7 @@ def feet_inch_to_inches(value):
     try:
         if value is None:
             return None
+        original = value
         s = value.strip()
         if not s:
             return None
@@ -38,15 +39,26 @@ def feet_inch_to_inches(value):
             if len(parts) == 1:
                 if "/" in parts[0]:
                     num, den = parts[0].split("/")
-                    inches = float(num) / float(den)
+                    inches = abs(float(num) / float(den))
                 else:
-                    inches = float(parts[0])
+                    inches = abs(float(parts[0]))
             elif len(parts) == 2:
-                whole = float(parts[0])
+                whole = abs(float(parts[0]))
                 num, den = parts[1].split("/")
                 inches = whole + (float(num) / float(den))
 
-        return sign * (feet * 12.0 + inches)
+        result = sign * (feet * 12.0 + inches)
+
+        # DEBUG LOGGING
+        try:
+            from pyrevit import script
+            logger = script.get_logger()
+            logger.debug("feet_inch_to_inches: '{}' -> sign={}, feet={}, inches={}, result={} inches ({} feet)".format(
+                original, sign, feet, inches, result, result/12.0))
+        except:
+            pass
+
+        return result
     except Exception:
         return None
 

@@ -1,0 +1,24 @@
+Place CAD Elements – Code Explained
+===================================
+
+Intent
+------
+Legacy helper that reads CSV data exported from CAD workflows and instantiates
+families or groups accordingly.  It exists to bridge older projects onto the
+YAML-based system without rewriting scripts.
+
+Process
+-------
+1. **CSV Parsing** – Utilizes helpers in `LogicClasses.csv_helpers` to parse
+   coordinate columns (`Position X`, `Position Y`, `Position Z`) and rotation.
+2. **Repository Setup** – Builds a `ProfileRepository` from the CSV’s implied
+   definitions so the placement engine can resolve labels to Revit families.
+3. **Placement** – Calls `PlaceElementsEngine.place_from_csv`, which handles
+   symbol activation, group placement, rotation, elevation adjustments, and
+   optional tagging.
+
+Differences from YAML Flow
+--------------------------
+* Does not interact with Extensible Storage; CSV is the source of truth.
+* Lack of Element_Linker metadata means QA/QC and Merge workflows do not see
+  these placements unless manually converted to YAML using Add Profiles later.

@@ -35,7 +35,7 @@ def parse_feet_inches(value_str):
     Parse Revit feet-inches format like "76'-2 7/8"" to decimal feet.
 
     Args:
-        value_str: String like "76'-2 7/8"" or "0'-0""
+        value_str: String like "76'-2 7/8"" or "0'-0"" or "-16'-10 15/16""
 
     Returns:
         float: Value in decimal feet
@@ -43,20 +43,29 @@ def parse_feet_inches(value_str):
     if not value_str:
         return 0.0
 
-    # Remove extra quotes and whitespace
-    value_str = value_str.strip().strip('"')
+    # Remove extra quotes and whitespace (strip all quotes, not just one)
+    value_str = value_str.strip()
+    while value_str.startswith('"') and value_str.endswith('"'):
+        value_str = value_str[1:-1].strip()
+
+    # Check for negative sign at the start
+    sign = 1.0
+    if value_str.startswith('-'):
+        sign = -1.0
+        value_str = value_str[1:].strip()
 
     # Pattern: feet'-inches fractional"
     # Examples: 76'-2 7/8", 0'-0", 25'-1 15/16"
-    pattern = r"(-?\d+)'-(-?\d+(?:\s+\d+/\d+)?)\""
+    # Note: No negative signs in pattern since we handle that above
+    pattern = r"(\d+)'-(\d+(?:\s+\d+/\d+)?)\""
     match = re.match(pattern, value_str)
 
     if not match:
         # Try just feet
-        feet_pattern = r"(-?\d+)'"
+        feet_pattern = r"(\d+)'"
         feet_match = re.match(feet_pattern, value_str)
         if feet_match:
-            return float(feet_match.group(1))
+            return sign * float(feet_match.group(1))
         LOG.warning("Could not parse coordinate: {}".format(value_str))
         return 0.0
 
@@ -64,21 +73,22 @@ def parse_feet_inches(value_str):
     inches_str = match.group(2)
 
     # Parse inches which might be like "2 7/8" or just "0"
+    # Use abs() to handle any remaining negative signs in the inches portion
     inches = 0.0
     if ' ' in inches_str:
         # Has fractional part
         parts = inches_str.split()
-        inches = float(parts[0])
+        inches = abs(float(parts[0]))
         if len(parts) > 1:
             # Parse fraction
             frac_parts = parts[1].split('/')
             if len(frac_parts) == 2:
                 inches += float(frac_parts[0]) / float(frac_parts[1])
     else:
-        inches = float(inches_str)
+        inches = abs(float(inches_str))
 
-    # Convert to feet (inches / 12)
-    total_feet = feet + (inches / 12.0)
+    # Convert to feet (inches / 12) and apply sign
+    total_feet = sign * (feet + (inches / 12.0))
     return total_feet
 
 
@@ -122,6 +132,10 @@ def read_csv_spaces(csv_path):
     """
     Read spaces from CSV file.
 
+    Supports two formats:
+    1. Old format: '#' column for number, '#(1)' and '#(2)' for name parts
+    2. New format: 'Room Name' column like "Room Name 107A ROOM ELECTRICAL"
+
     Returns:
         List of dicts with keys: number, name, x, y
     """
@@ -132,26 +146,48 @@ def read_csv_spaces(csv_path):
 
         for row_num, row in enumerate(reader, start=2):  # Start at 2 (header is row 1)
             try:
-                # Get space number from '#' column
-                space_number = (row.get('#') or '').strip()
+                space_number = None
+                space_name = None
+
+                # Check for 'Room Name' column first (new format)
+                room_name = (row.get('Room Name') or row.get('Name') or '').strip()
+
+                # ONLY process rows that start with "Room Name"
+                if room_name and room_name.startswith("Room Name"):
+                    # Parse "Room Name 107A ROOM ELECTRICAL" format
+                    # Pattern: "Room Name <number> <name>"
+                    remaining = room_name.replace("Room Name", "", 1).strip()
+                    # Split into number (first word) and rest
+                    remaining_parts = remaining.split(None, 1)
+                    if remaining_parts:
+                        space_number = remaining_parts[0]
+                        space_name = remaining_parts[1] if len(remaining_parts) > 1 else ""
+                    else:
+                        # Just "Room Name" with no number - skip
+                        continue
+
+                # Fall back to old format with '#', '#(1)', '#(2)' columns
+                if not space_number:
+                    space_number = (row.get('#') or '').strip()
+
+                    if space_number:
+                        # Get name parts from '#(2)' and '#(1)' columns
+                        name_part2 = (row.get('#(2)') or '').strip()
+                        name_part1 = (row.get('#(1)') or '').strip()
+
+                        # Concatenate: #(2) + " " + #(1)
+                        if name_part2 and name_part1:
+                            space_name = "{} {}".format(name_part2, name_part1)
+                        elif name_part2:
+                            space_name = name_part2
+                        elif name_part1:
+                            space_name = name_part1
+                        else:
+                            space_name = ""
 
                 # Skip rows without space number
                 if not space_number:
                     continue
-
-                # Get name parts from '#(2)' and '#(1)' columns
-                name_part2 = (row.get('#(2)') or '').strip()
-                name_part1 = (row.get('#(1)') or '').strip()
-
-                # Concatenate: #(2) + " " + #(1)
-                if name_part2 and name_part1:
-                    space_name = "{} {}".format(name_part2, name_part1)
-                elif name_part2:
-                    space_name = name_part2
-                elif name_part1:
-                    space_name = name_part1
-                else:
-                    space_name = ""
 
                 # Parse coordinates
                 x_str = row.get('Position X', '')
@@ -162,7 +198,7 @@ def read_csv_spaces(csv_path):
 
                 spaces.append({
                     'number': space_number,
-                    'name': space_name,
+                    'name': space_name or "",
                     'x': x_feet,
                     'y': y_feet,
                     'row': row_num
