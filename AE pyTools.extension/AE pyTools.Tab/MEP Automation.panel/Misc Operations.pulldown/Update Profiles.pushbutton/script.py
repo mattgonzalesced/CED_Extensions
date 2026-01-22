@@ -4,7 +4,7 @@ Update Profiles
 ---------------
 Scans elements with Element_Linker metadata and merges hosted annotations
 (tags/keynotes/text notes) plus parameter changes back into the active YAML.
-Also captures nearby keynotes and text notes within a 3 ft radius.
+Also captures nearby keynotes and text notes within a 5 ft radius.
 """
 
 import imp
@@ -30,8 +30,8 @@ from ExtensibleStorage.yaml_store import (  # noqa: E402
 
 LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
 TITLE = "Update Profiles"
-PROXIMITY_RADIUS_FT = 3.0
-PROXIMITY_CELL_SIZE_FT = 3.0
+PROXIMITY_RADIUS_FT = 5.0
+PROXIMITY_CELL_SIZE_FT = 5.0
 NOTE_KEY_PRECISION = 3
 TIE_DISTANCE_TOLERANCE_FT = 1e-4
 
@@ -719,6 +719,9 @@ def _assign_proximity_notes(doc, host_records, assigned_keys, observations, led_
             note_entry = manage._build_annotation_tag_entry(note_elem, host_point)
             if not note_entry or not _is_keynote_entry(note_entry):
                 return
+            offsets = note_entry.get("offsets") or {}
+            offsets["rotation_deg"] = 0.0
+            note_entry["offsets"] = offsets
             obs = _ensure_obs(led_id)
             _track_annotation(obs, "tags", note_entry, _tag_key)
         assigned_keys.add(key)
