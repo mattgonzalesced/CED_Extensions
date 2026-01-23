@@ -142,6 +142,8 @@ def _build_linker_payload(
     host_name=None,
     parent_element_id=None,
     parent_location=None,
+    ckt_circuit_number=None,
+    ckt_panel=None,
 ):
     rotation = float(rotation_deg or 0.0)
     parent_rotation = float(parent_rotation_deg or 0.0)
@@ -160,6 +162,8 @@ def _build_linker_payload(
         "LevelId: {}".format(level_id if level_id is not None else ""),
         "ElementId: {}".format(element_id if element_id is not None else ""),
         "FacingOrientation: {}".format(_format_xyz(facing)),
+        "CKT_Circuit Number_CEDT: {}".format(ckt_circuit_number or ""),
+        "CKT_Panel_CEDT: {}".format(ckt_panel or ""),
     ]
     return ", ".join(parts).strip()
 
@@ -1953,6 +1957,83 @@ class PlaceElementsEngine(object):
                 return None
         return None
 
+    def _get_linker_param_value(self, element, param_name):
+        if not element or not param_name:
+            return ""
+        try:
+            param = element.LookupParameter(param_name)
+        except Exception:
+            param = None
+        if not param:
+            return ""
+        try:
+            if hasattr(param, "HasValue") and not param.HasValue:
+                return ""
+        except Exception:
+            pass
+
+        from Autodesk.Revit.DB import StorageType
+
+        try:
+            storage = param.StorageType
+        except Exception:
+            storage = None
+
+        if storage == StorageType.String:
+            try:
+                value = param.AsString()
+            except Exception:
+                value = None
+            if value not in (None, ""):
+                return str(value)
+            try:
+                value = param.AsValueString()
+            except Exception:
+                value = None
+            return str(value) if value not in (None, "") else ""
+
+        if storage == StorageType.Integer:
+            try:
+                return str(param.AsInteger())
+            except Exception:
+                return ""
+
+        if storage == StorageType.Double:
+            try:
+                value = param.AsValueString()
+            except Exception:
+                value = None
+            if value not in (None, ""):
+                return str(value)
+            try:
+                return str(param.AsDouble())
+            except Exception:
+                return ""
+
+        if storage == StorageType.ElementId:
+            try:
+                value = param.AsValueString()
+            except Exception:
+                value = None
+            if value not in (None, ""):
+                return str(value)
+            try:
+                elem_id = param.AsElementId()
+            except Exception:
+                elem_id = None
+            if elem_id is not None:
+                try:
+                    return str(elem_id.IntegerValue)
+                except Exception:
+                    return ""
+            return ""
+
+        try:
+            value = param.AsValueString()
+        except Exception:
+            value = None
+        return str(value) if value not in (None, "") else ""
+
     def _get_parent_type_parameter(self, parent_element, parent_param_name):
         if not parent_element or not parent_param_name:
             return None
@@ -2700,6 +2781,8 @@ class PlaceElementsEngine(object):
         except Exception:
             element_id = None
         facing = getattr(instance, "FacingOrientation", None)
+        ckt_circuit_number = self._get_linker_param_value(instance, "CKT_Circuit Number_CEDT")
+        ckt_panel = self._get_linker_param_value(instance, "CKT_Panel_CEDT")
         payload = _build_linker_payload(
             led_id=led_id,
             set_id=set_id,
@@ -2712,6 +2795,8 @@ class PlaceElementsEngine(object):
             host_name=host_name,
             parent_element_id=parent_element_id,
             parent_location=parent_location,
+            ckt_circuit_number=ckt_circuit_number,
+            ckt_panel=ckt_panel,
         )
         self._set_element_linker_param(instance, payload)
 
