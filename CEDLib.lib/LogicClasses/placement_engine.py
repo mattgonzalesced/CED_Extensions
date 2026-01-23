@@ -1953,6 +1953,31 @@ class PlaceElementsEngine(object):
                 return None
         return None
 
+    def _get_parent_type_parameter(self, parent_element, parent_param_name):
+        if not parent_element or not parent_param_name:
+            return None
+        type_elem = None
+        try:
+            type_id = parent_element.GetTypeId()
+        except Exception:
+            type_id = None
+        if type_id:
+            try:
+                type_elem = self.doc.GetElement(type_id)
+            except Exception:
+                type_elem = None
+        if type_elem is None:
+            try:
+                type_elem = getattr(parent_element, "Symbol", None)
+            except Exception:
+                type_elem = None
+        if not type_elem:
+            return None
+        try:
+            return type_elem.LookupParameter(parent_param_name)
+        except Exception:
+            return None
+
     def _apply_parent_parameter(self, child_param, parent_element, parent_param_name):
         if not child_param or child_param.IsReadOnly or not parent_param_name:
             return False
@@ -1962,6 +1987,8 @@ class PlaceElementsEngine(object):
             parent_param = parent_element.LookupParameter(parent_param_name)
         except Exception:
             parent_param = None
+        if not parent_param:
+            parent_param = self._get_parent_type_parameter(parent_element, parent_param_name)
         if not parent_param:
             return False
 
