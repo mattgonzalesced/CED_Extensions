@@ -1059,12 +1059,7 @@ class PlaceElementsEngine(object):
 
         parent_element = None
         if parent_element_id not in (None, ""):
-            try:
-                parent_element = self.doc.GetElement(ElementId(int(parent_element_id)))
-            except Exception:
-                parent_element = None
-        if parent_element_id not in (None, "") and parent_element is None:
-            return False
+            parent_element = self._resolve_parent_element(parent_element_id)
 
         label = linked_def.get_element_def_id()
         family = linked_def.get_family()
@@ -1892,6 +1887,51 @@ class PlaceElementsEngine(object):
             return script.get_logger()
         except Exception:
             return None
+
+    def _resolve_parent_element(self, parent_element_id):
+        if parent_element_id in (None, ""):
+            return None
+        try:
+            parent_id = int(parent_element_id)
+        except Exception:
+            return None
+        try:
+            parent_element = self.doc.GetElement(ElementId(parent_id))
+        except Exception:
+            parent_element = None
+        if parent_element is not None:
+            return parent_element
+        cache = getattr(self, "_linked_parent_cache", None)
+        if cache is None:
+            cache = {}
+            self._linked_parent_cache = cache
+        if parent_id in cache:
+            return cache[parent_id]
+        try:
+            from Autodesk.Revit.DB import RevitLinkInstance
+        except Exception:
+            cache[parent_id] = None
+            return None
+        try:
+            link_instances = FilteredElementCollector(self.doc).OfClass(RevitLinkInstance)
+        except Exception:
+            link_instances = []
+        parent_element = None
+        for link_inst in link_instances:
+            try:
+                link_doc = link_inst.GetLinkDocument()
+            except Exception:
+                link_doc = None
+            if not link_doc:
+                continue
+            try:
+                parent_element = link_doc.GetElement(ElementId(parent_id))
+            except Exception:
+                parent_element = None
+            if parent_element is not None:
+                break
+        cache[parent_id] = parent_element
+        return parent_element
 
     def _extract_parent_parameter_name(self, value):
         if not isinstance(value, basestring):
