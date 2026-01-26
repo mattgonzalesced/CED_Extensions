@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
-import math
-import csv
 import codecs
+import csv
+import math
 import os
 
-# pyRevit imports
-from pyrevit import revit, forms, script
-
+import clr
 # Revit API imports
 from Autodesk.Revit.DB import (
     FilteredElementCollector,
@@ -20,17 +18,16 @@ from Autodesk.Revit.DB import (
     Line
 )
 from Autodesk.Revit.Exceptions import InvalidOperationException
+# pyRevit imports
+from pyrevit import revit, forms, script
 
-import clr
 clr.AddReference("PresentationFramework")
 clr.AddReference("PresentationCore")
 clr.AddReference("WindowsBase")
 
 # Import required WPF types.
-from System.Windows import Application, Window, WindowStartupLocation, Thickness, HorizontalAlignment, GridLength, GridUnitType, TextWrapping, FontWeights
-from System.Windows.Controls import StackPanel, ComboBox, TextBox, Button, ScrollViewer, ScrollBarVisibility, Border, Grid, ColumnDefinition, Label, TextBlock
-import System.Windows.Controls as swc  # For Orientation
-from System.Windows.Interop import WindowInteropHelper
+from System.Windows import Thickness, HorizontalAlignment, GridLength, GridUnitType, TextWrapping, FontWeights
+from System.Windows.Controls import ComboBox, Border, Grid, ColumnDefinition, TextBlock
 from System.Windows.Media import Brushes
 from System.Windows.Markup import XamlReader
 from System.IO import FileStream, FileMode
@@ -253,7 +250,7 @@ for name in sorted(unique_names):
         for index, label in enumerate(symbol_labels_sorted):
             symbol = symbol_label_map[label]
             # Use LookupParameter to get the type parameter "Fixture Type_CEDT"
-            param = symbol.LookupParameter("Fixture Type_CEDT")
+            param = symbol.LookupParameter("Identity Type Mark")
             if param:
                 symbol_type_value = param.AsString()  # or param.AsValueString() if needed
                 # Compare case-insensitively
