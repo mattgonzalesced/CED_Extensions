@@ -475,7 +475,23 @@ def _index_leds(data):
     return index, meta
 
 
-def _collect_candidate_elements(doc):
+def _collect_candidate_elements(doc, elements=None):
+    if elements is not None:
+        filtered = []
+        seen = set()
+        for elem in elements:
+            if not isinstance(elem, (FamilyInstance, Group)):
+                continue
+            try:
+                elem_id = elem.Id.IntegerValue
+            except Exception:
+                elem_id = None
+            if elem_id is None or elem_id in seen:
+                continue
+            seen.add(elem_id)
+            filtered.append(elem)
+        return filtered
+
     elements = []
     seen = set()
     for cls in (FamilyInstance, Group):
@@ -754,10 +770,18 @@ def main():
         forms.alert("No linked element definitions found in {}.".format(yaml_label), title=TITLE)
         return
 
-    elements = _collect_candidate_elements(doc)
-    if not elements:
-        forms.alert("No candidate elements found in the current model.", title=TITLE)
-        return
+    selection = revit.get_selection()
+    selected_elements = list(getattr(selection, "elements", []) or []) if selection else []
+    if selected_elements:
+        elements = _collect_candidate_elements(doc, selected_elements)
+        if not elements:
+            forms.alert("No candidate elements found in the current selection.", title=TITLE)
+            return
+    else:
+        elements = _collect_candidate_elements(doc)
+        if not elements:
+            forms.alert("No candidate elements found in the current model.", title=TITLE)
+            return
 
     stats = {
         "elements_scanned": 0,

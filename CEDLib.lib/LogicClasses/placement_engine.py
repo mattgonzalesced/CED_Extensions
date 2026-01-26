@@ -47,6 +47,10 @@ PARENT_PARAMETER_PATTERN = re.compile(
     r'^\s*parent_parameter\s*:\s*(?:"([^"]+)"|\'([^\']+)\')\s*$',
     re.IGNORECASE,
 )
+SIBLING_PARAMETER_PATTERN = re.compile(
+    r'^\s*sibling_parameter\s*:\s*([^:]+?)\s*:\s*(?:"([^"]+)"|\'([^\']+)\')\s*$',
+    re.IGNORECASE,
+)
 
 
 def _parse_linker_payload(payload_text):
@@ -1083,7 +1087,16 @@ class PlaceElementsEngine(object):
         if is_group:
             instance = self._place_group(label, family, type_name, linked_def, loc, gtype, detail_type)
         if not instance:
-            instance = self._place_symbol(label, family, type_name, linked_def, loc, offset[2], parent_element)
+            instance = self._place_symbol(
+                label,
+                family,
+                type_name,
+                linked_def,
+                loc,
+                offset[2],
+                parent_element,
+                parent_element_id,
+            )
         if instance:
             if self.apply_recorded_level:
                 self._apply_recorded_level(instance, linked_def)
@@ -1229,7 +1242,17 @@ class PlaceElementsEngine(object):
         except Exception:
             return False
 
-    def _place_symbol(self, label, family_name, type_name, linked_def, location, z_offset_feet, parent_element=None):
+    def _place_symbol(
+        self,
+        label,
+        family_name,
+        type_name,
+        linked_def,
+        location,
+        z_offset_feet,
+        parent_element=None,
+        parent_element_id=None,
+    ):
         symbol = self.symbol_label_map.get(label)
         if not symbol and family_name and type_name:
             key = u"{} : {}".format(family_name, type_name)
@@ -1264,7 +1287,13 @@ class PlaceElementsEngine(object):
                     if elev_param and not elev_param.IsReadOnly:
                         elev_param.Set(z_offset_feet)
 
-            self._apply_parameters(instance, linked_def.get_static_params(), parent_element)
+            self._apply_parameters(
+                instance,
+                linked_def.get_static_params(),
+                parent_element,
+                linked_def,
+                parent_element_id,
+            )
             return instance
         except Exception:
             return None
@@ -1948,6 +1977,18 @@ class PlaceElementsEngine(object):
             return None
         return name.replace(SAFE_HASH, "#")
 
+    def _extract_sibling_parameter_spec(self, value):
+        if not isinstance(value, basestring):
+            return (None, None)
+        match = SIBLING_PARAMETER_PATTERN.match(value)
+        if not match:
+            return (None, None)
+        led_id = (match.group(1) or "").strip()
+        param_name = (match.group(2) or match.group(3) or "").strip()
+        if not led_id or not param_name:
+            return (None, None)
+        return (led_id, param_name.replace(SAFE_HASH, "#"))
+
     def _get_param_unit_type_id(self, param):
         get_unit = getattr(param, "GetUnitTypeId", None)
         if callable(get_unit):
@@ -2033,6 +2074,109 @@ class PlaceElementsEngine(object):
         except Exception:
             value = None
         return str(value) if value not in (None, "") else ""
+
+    def _get_linker_payload_from_element(self, element):
+        if not element:
+            return {}
+        payload_text = ""
+        for name in ELEMENT_LINKER_PARAM_NAMES:
+            try:
+                param = element.LookupParameter(name)
+            except Exception:
+                param = None
+            if not param:
+                continue
+            try:
+                payload_text = param.AsString()
+            except Exception:
+                payload_text = None
+            if not payload_text:
+                try:
+                    payload_text = param.AsValueString()
+                except Exception:
+                    payload_text = None
+            if payload_text:
+                break
+        if not payload_text:
+            return {}
+        return _parse_linker_payload(payload_text)
+
+    def _build_sibling_index(self):
+        index = {}
+        try:
+            collector = FilteredElementCollector(self.doc).WhereElementIsNotElementType()
+        except Exception:
+            collector = []
+        for elem in collector:
+            payload = self._get_linker_payload_from_element(elem)
+            led_id = payload.get("led_id") if payload else None
+            if not led_id:
+                continue
+            try:
+                elem_id = elem.Id.IntegerValue
+            except Exception:
+                elem_id = None
+            record = {"id": elem_id, "element": elem, "payload": payload}
+            index.setdefault(led_id, []).append(record)
+        self._sibling_linker_index = index
+        return index
+
+    def _register_sibling_payload(self, element, payload):
+        if not element or not payload:
+            return
+        led_id = payload.get("led_id")
+        if not led_id:
+            return
+        index = getattr(self, "_sibling_linker_index", None)
+        if index is None:
+            return
+        try:
+            elem_id = element.Id.IntegerValue
+        except Exception:
+            elem_id = None
+        records = index.setdefault(led_id, [])
+        if elem_id is not None:
+            for record in records:
+                if record.get("id") == elem_id:
+                    return
+        records.append({"id": elem_id, "element": element, "payload": payload})
+
+    def _resolve_sibling_element(self, sibling_led_id, parent_element_id=None, set_id=None, exclude_element=None):
+        if not sibling_led_id:
+            return None
+        index = getattr(self, "_sibling_linker_index", None)
+        if index is None:
+            index = self._build_sibling_index()
+        records = list(index.get(sibling_led_id, []) or [])
+        if not records:
+            return None
+        exclude_id = None
+        if exclude_element is not None:
+            try:
+                exclude_id = exclude_element.Id.IntegerValue
+            except Exception:
+                exclude_id = None
+
+        def _filter(match_parent):
+            filtered = []
+            for record in records:
+                if exclude_id is not None and record.get("id") == exclude_id:
+                    continue
+                payload = record.get("payload") or {}
+                if set_id and payload.get("set_id") and payload.get("set_id") != set_id:
+                    continue
+                if match_parent and parent_element_id not in (None, ""):
+                    if payload.get("parent_element_id") not in (None, parent_element_id):
+                        continue
+                filtered.append(record)
+            return filtered
+
+        filtered = _filter(match_parent=True)
+        if not filtered:
+            filtered = _filter(match_parent=False)
+        if not filtered:
+            return None
+        return filtered[0].get("element")
 
     def _get_parent_type_parameter(self, parent_element, parent_param_name):
         if not parent_element or not parent_param_name:
@@ -2584,11 +2728,27 @@ class PlaceElementsEngine(object):
                 )
         return False
 
-    def _apply_parameters(self, element, params_dict, parent_element=None):
+    def _apply_parameters(self, element, params_dict, parent_element=None, linked_def=None, parent_element_id=None):
         from Autodesk.Revit.DB import StorageType, UnitUtils
 
         if not params_dict:
             return
+        current_parent_id = parent_element_id
+        if current_parent_id in (None, "") and parent_element is not None:
+            try:
+                current_parent_id = parent_element.Id.IntegerValue
+            except Exception:
+                current_parent_id = None
+        current_set_id = None
+        if linked_def is not None:
+            template = self._get_linker_template(linked_def) or {}
+            current_set_id = template.get("set_id")
+        if current_set_id is None or current_parent_id in (None, ""):
+            payload = self._get_linker_payload_from_element(element)
+            if current_set_id is None:
+                current_set_id = payload.get("set_id")
+            if current_parent_id in (None, ""):
+                current_parent_id = payload.get("parent_element_id")
         for raw_name, value in params_dict.items():
             name = (raw_name or "").replace(SAFE_HASH, "#")
             try:
@@ -2618,6 +2778,17 @@ class PlaceElementsEngine(object):
             parent_param_name = self._extract_parent_parameter_name(value)
             if parent_param_name:
                 self._apply_parent_parameter(param, parent_element, parent_param_name)
+                continue
+            sibling_led_id, sibling_param_name = self._extract_sibling_parameter_spec(value)
+            if sibling_led_id and sibling_param_name:
+                sibling_element = self._resolve_sibling_element(
+                    sibling_led_id,
+                    parent_element_id=current_parent_id,
+                    set_id=current_set_id,
+                    exclude_element=element,
+                )
+                if sibling_element:
+                    self._apply_parent_parameter(param, sibling_element, sibling_param_name)
                 continue
             try:
                 storage_type = param.StorageType
@@ -2798,7 +2969,11 @@ class PlaceElementsEngine(object):
             ckt_circuit_number=ckt_circuit_number,
             ckt_panel=ckt_panel,
         )
-        self._set_element_linker_param(instance, payload)
+        if self._set_element_linker_param(instance, payload):
+            try:
+                self._register_sibling_payload(instance, _parse_linker_payload(payload))
+            except Exception:
+                pass
 
     def _apply_recorded_level(self, instance, linked_def):
         if not instance or not linked_def:

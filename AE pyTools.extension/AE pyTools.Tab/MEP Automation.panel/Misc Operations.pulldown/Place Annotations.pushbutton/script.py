@@ -436,7 +436,7 @@ def _get_rotation_degrees(inst):
     return 0.0
 
 
-def _collect_instance_lookup(doc, view):
+def _collect_instance_lookup(doc, view, elements=None):
     lookup = {}
     symbol_lookup = {}
 
@@ -456,8 +456,11 @@ def _collect_instance_lookup(doc, view):
         symbol_lookup.setdefault((f_norm, t_norm), []).append(inst)
         lookup.setdefault(f_norm, []).append(inst)
 
-    collector = FilteredElementCollector(doc, view.Id).OfClass(FamilyInstance)
-    for inst in collector:
+    if elements is None:
+        instances = FilteredElementCollector(doc, view.Id).OfClass(FamilyInstance)
+    else:
+        instances = [elem for elem in elements if isinstance(elem, FamilyInstance)]
+    for inst in instances:
         label = _get_label(inst)
         if not label:
             continue
@@ -744,7 +747,15 @@ def main():
     if not selected_tags and not selected_keynotes and not selected_text_notes:
         return
 
-    host_lookup, symbol_lookup = _collect_instance_lookup(doc, active_view)
+    selection = revit.get_selection()
+    selected_elements = list(getattr(selection, "elements", []) or []) if selection else []
+    if selected_elements:
+        host_lookup, symbol_lookup = _collect_instance_lookup(doc, active_view, selected_elements)
+        if not host_lookup and not symbol_lookup:
+            forms.alert("No family instances found in the current selection.", title=TITLE)
+            return
+    else:
+        host_lookup, symbol_lookup = _collect_instance_lookup(doc, active_view)
     if not host_lookup and not symbol_lookup:
         forms.alert("No family instances found in the active view.", title=TITLE)
         return
