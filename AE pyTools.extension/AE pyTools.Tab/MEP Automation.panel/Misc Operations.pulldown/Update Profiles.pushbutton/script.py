@@ -124,7 +124,7 @@ def _parse_linker_payload(payload_text):
         pattern = re.compile(
             r"(Linked Element Definition ID|Set Definition ID|Location XYZ \(ft\)|"
             r"Rotation \(deg\)|Parent Rotation \(deg\)|Parent ElementId|LevelId|"
-            r"ElementId|FacingOrientation)\s*:\s*"
+            r"ElementId|FacingOrientation|CKT_Circuit Number_CEDT|CKT_Panel_CEDT)\s*:\s*"
         )
         matches = list(pattern.finditer(text))
         for idx, match in enumerate(matches):
@@ -136,7 +136,21 @@ def _parse_linker_payload(payload_text):
     return {
         "led_id": entries.get("Linked Element Definition ID", "").strip(),
         "set_id": entries.get("Set Definition ID", "").strip(),
+        "CKT_Circuit Number_CEDT": entries.get("CKT_Circuit Number_CEDT", "").strip(),
+        "CKT_Panel_CEDT": entries.get("CKT_Panel_CEDT", "").strip(),
     }
+
+
+def _apply_linker_params(params, payload):
+    if not isinstance(params, dict):
+        params = {}
+    updated = dict(params)
+    for key in ("CKT_Circuit Number_CEDT", "CKT_Panel_CEDT"):
+        updated.pop(key, None)
+        value = payload.get(key) if isinstance(payload, dict) else None
+        if value not in (None, ""):
+            updated[key] = value
+    return updated
 
 
 def _normalize_key(value):
@@ -796,6 +810,7 @@ def main():
         "notes_updated": 0,
         "missing_defs": set(),
         "missing_led": 0,
+        "missing_linker_ckts": 0,
     }
 
     observations = {}
@@ -846,6 +861,10 @@ def main():
                 "type_label": type_label,
             })
         params = manage._collect_params(elem)
+        if isinstance(payload, dict):
+            if not payload.get("CKT_Circuit Number_CEDT") or not payload.get("CKT_Panel_CEDT"):
+                stats["missing_linker_ckts"] += 1
+        params = _apply_linker_params(params, payload)
         for key, value in (params or {}).items():
             _track_param_value(obs, key, value)
 
@@ -1060,6 +1079,12 @@ def main():
         "Tags added/updated: {} / {}".format(stats["tags_added"], stats["tags_updated"]),
         "Text notes added/updated: {} / {}".format(stats["notes_added"], stats["notes_updated"]),
     ])
+    if stats["missing_linker_ckts"]:
+        summary.append(
+            "Note: {} element(s) missing CKT values in Element_Linker payload.".format(
+                stats["missing_linker_ckts"]
+            )
+        )
     if stats["param_conflicts"]:
         summary.append("Parameter conflicts detected: {}".format(stats["param_conflicts"]))
     if stats["missing_defs"]:
