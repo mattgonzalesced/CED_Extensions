@@ -3330,7 +3330,8 @@ def _capture_orphan_profile(doc, cad_name, state, refresh_callback, yaml_label):
 
 
 
-        type_entry = _build_type_entry(elem, rel_vec, 0.0, loc)
+        rot_deg = _get_rotation_degrees(elem)
+        type_entry = _build_type_entry(elem, rel_vec, rot_deg, loc)
 
 
 

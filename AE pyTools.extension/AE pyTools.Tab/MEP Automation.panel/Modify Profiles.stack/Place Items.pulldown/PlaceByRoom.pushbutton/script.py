@@ -150,6 +150,95 @@ def _room_extents(room):
     }
 
 
+def _room_boundary_points(room):
+    if room is None:
+        return []
+    points = []
+    try:
+        options = SpatialElementBoundaryOptions()
+        loops = room.GetBoundarySegments(options)
+    except Exception:
+        loops = None
+    if loops:
+        for loop in loops:
+            for segment in loop:
+                try:
+                    curve = segment.GetCurve()
+                except Exception:
+                    curve = None
+                if curve is None:
+                    continue
+                try:
+                    points.append(curve.GetEndPoint(0))
+                    points.append(curve.GetEndPoint(1))
+                except Exception:
+                    pass
+    if points:
+        return points
+    try:
+        bbox = room.get_BoundingBox(None)
+    except Exception:
+        bbox = None
+    if bbox is None:
+        return []
+    try:
+        return [bbox.Min, bbox.Max]
+    except Exception:
+        return []
+
+
+def _room_boundary_segments(room):
+    if room is None:
+        return []
+    segments = []
+    try:
+        options = SpatialElementBoundaryOptions()
+        loops = room.GetBoundarySegments(options)
+    except Exception:
+        loops = None
+    if loops:
+        for loop in loops:
+            for segment in loop:
+                try:
+                    curve = segment.GetCurve()
+                except Exception:
+                    curve = None
+                if curve is None:
+                    continue
+                try:
+                    start = curve.GetEndPoint(0)
+                    end = curve.GetEndPoint(1)
+                except Exception:
+                    continue
+                segments.append((start, end))
+    return segments
+
+
+def _room_extents_host(room, transform):
+    points = _room_boundary_points(room)
+    if not points:
+        return None
+    transformed = []
+    if transform:
+        for point in points:
+            try:
+                transformed.append(transform.OfPoint(point))
+            except Exception:
+                transformed.append(point)
+    else:
+        transformed = points
+    min_x = min(point.X for point in transformed)
+    max_x = max(point.X for point in transformed)
+    min_y = min(point.Y for point in transformed)
+    max_y = max(point.Y for point in transformed)
+    return {
+        "min_x": min_x,
+        "max_x": max_x,
+        "min_y": min_y,
+        "max_y": max_y,
+    }
+
+
 def _axis_for_rotation(rotation_deg):
     if rotation_deg is None:
         return None
@@ -161,6 +250,35 @@ def _axis_for_rotation(rotation_deg):
     if abs(angle - 90.0) <= 15.0 or abs(angle - 270.0) <= 15.0:
         return "y"
     return "x"
+
+
+def _rotation_is_vertical(rotation_deg):
+    if rotation_deg is None:
+        return False
+    try:
+        angle = float(rotation_deg) % 360.0
+    except Exception:
+        return False
+    return abs(angle - 90.0) <= 15.0 or abs(angle - 270.0) <= 15.0
+
+
+def _axis_for_symbol(symbol, fallback_axis):
+    if symbol is None:
+        return fallback_axis
+    try:
+        bbox = symbol.get_BoundingBox(None)
+    except Exception:
+        bbox = None
+    if bbox is None:
+        return fallback_axis
+    try:
+        span_x = abs(bbox.Max.X - bbox.Min.X)
+        span_y = abs(bbox.Max.Y - bbox.Min.Y)
+    except Exception:
+        return fallback_axis
+    if span_x <= 1e-6 or span_y <= 1e-6:
+        return fallback_axis
+    return "x" if span_x >= span_y else "y"
 
 
 def _room_layout_points(room, count, axis_hint=None, element_width=None, min_offset=None):
@@ -232,34 +350,6 @@ def _room_name(room):
     return ""
 
 
-def _room_extents_host(room, transform):
-    extents = _room_extents(room)
-    if not extents:
-        return None
-    if not transform:
-        return extents
-    points = [
-        XYZ(extents["min_x"], extents["min_y"], 0.0),
-        XYZ(extents["min_x"], extents["max_y"], 0.0),
-        XYZ(extents["max_x"], extents["min_y"], 0.0),
-        XYZ(extents["max_x"], extents["max_y"], 0.0),
-    ]
-    transformed = []
-    for point in points:
-        try:
-            transformed.append(transform.OfPoint(point))
-        except Exception:
-            transformed.append(point)
-    min_x = min(point.X for point in transformed)
-    max_x = max(point.X for point in transformed)
-    min_y = min(point.Y for point in transformed)
-    max_y = max(point.Y for point in transformed)
-    return {
-        "min_x": min_x,
-        "max_x": max_x,
-        "min_y": min_y,
-        "max_y": max_y,
-    }
 
 
 def _room_number(room):
@@ -515,13 +605,87 @@ def _instance_axis_bounds(instance, axis_hint):
     return bbox.Min.Y, bbox.Max.Y
 
 
+def _instance_axis_from_bbox(instance, fallback_axis):
+    if instance is None:
+        return fallback_axis
+    try:
+        bbox = instance.get_BoundingBox(None)
+    except Exception:
+        bbox = None
+    if bbox is None:
+        return fallback_axis
+    try:
+        span_x = abs(bbox.Max.X - bbox.Min.X)
+        span_y = abs(bbox.Max.Y - bbox.Min.Y)
+    except Exception:
+        return fallback_axis
+    if span_x <= 1e-6 or span_y <= 1e-6:
+        return fallback_axis
+    return "x" if span_x >= span_y else "y"
+
+
 def _axis_from_extents(extents):
     span_x = extents["max_x"] - extents["min_x"]
     span_y = extents["max_y"] - extents["min_y"]
     return "x" if span_x >= span_y else "y"
 
 
-def _nudge_instances(doc, groups, room_extents_map, axis_map):
+def _median(values):
+    if not values:
+        return None
+    ordered = sorted(values)
+    count = len(ordered)
+    mid = count // 2
+    if count % 2:
+        return ordered[mid]
+    return (ordered[mid - 1] + ordered[mid]) / 2.0
+
+
+def _axis_span_from_segments(segments, axis_hint, coord, tol=1e-6):
+    if not segments or axis_hint not in ("x", "y") or coord is None:
+        return None
+    values = []
+    for p1, p2 in segments:
+        if axis_hint == "x":
+            y0 = p1.Y
+            y1 = p2.Y
+            if abs(y1 - y0) <= tol:
+                if abs(y0 - coord) <= tol:
+                    values.append(p1.X)
+                    values.append(p2.X)
+                continue
+            if (y0 <= coord <= y1) or (y1 <= coord <= y0):
+                t = (coord - y0) / (y1 - y0)
+                values.append(p1.X + t * (p2.X - p1.X))
+        else:
+            x0 = p1.X
+            x1 = p2.X
+            if abs(x1 - x0) <= tol:
+                if abs(x0 - coord) <= tol:
+                    values.append(p1.Y)
+                    values.append(p2.Y)
+                continue
+            if (x0 <= coord <= x1) or (x1 <= coord <= x0):
+                t = (coord - x0) / (x1 - x0)
+                values.append(p1.Y + t * (p2.Y - p1.Y))
+    if len(values) < 2:
+        return None
+    return min(values), max(values)
+
+
+def _axis_center_coord(instances, axis_hint):
+    if not instances or axis_hint not in ("x", "y"):
+        return None
+    coords = []
+    for inst in instances:
+        pt = _instance_point(inst)
+        if pt is None:
+            continue
+        coords.append(pt.Y if axis_hint == "x" else pt.X)
+    return _median(coords)
+
+
+def _nudge_instances(doc, groups, room_extents_map, room_boundary_map, axis_map):
     moved = 0
     if not groups:
         return moved
@@ -533,18 +697,31 @@ def _nudge_instances(doc, groups, room_extents_map, axis_map):
             if not extents:
                 continue
             axis_hint = axis_map.get(symbol_id) or _axis_from_extents(extents)
-            if axis_hint == "x":
-                axis_min = extents["min_x"]
-                axis_max = extents["max_x"]
-            else:
-                axis_min = extents["min_y"]
-                axis_max = extents["max_y"]
+            axis_locked = symbol_id in axis_map
+            axis_hint_group = axis_hint
+            if not axis_locked and instances:
+                axis_hint_group = _instance_axis_from_bbox(instances[0], axis_hint_group)
+            axis_min = None
+            axis_max = None
+            segments = room_boundary_map.get(room_id) if room_boundary_map else None
+            if segments:
+                coord = _axis_center_coord(instances, axis_hint_group)
+                span = _axis_span_from_segments(segments, axis_hint_group, coord)
+                if span:
+                    axis_min, axis_max = span
+            if axis_min is None or axis_max is None:
+                if axis_hint_group == "x":
+                    axis_min = extents["min_x"]
+                    axis_max = extents["max_x"]
+                else:
+                    axis_min = extents["min_y"]
+                    axis_max = extents["max_y"]
             span = axis_max - axis_min
             if span <= 1e-6:
                 continue
             items = []
             for inst in instances:
-                min_val, max_val = _instance_axis_bounds(inst, axis_hint)
+                min_val, max_val = _instance_axis_bounds(inst, axis_hint_group)
                 if min_val is None or max_val is None:
                     continue
                 width = max_val - min_val
@@ -562,7 +739,7 @@ def _nudge_instances(doc, groups, room_extents_map, axis_map):
             for item in items:
                 delta = target_min - item["min"]
                 if abs(delta) > 1e-6:
-                    move_vec = XYZ(delta, 0.0, 0.0) if axis_hint == "x" else XYZ(0.0, delta, 0.0)
+                    move_vec = XYZ(delta, 0.0, 0.0) if axis_hint_group == "x" else XYZ(0.0, delta, 0.0)
                     try:
                         ElementTransformUtils.MoveElement(doc, item["inst"].Id, move_vec)
                         moved += 1
@@ -730,26 +907,44 @@ def main():
                 placement = linked_def.get_placement()
                 rotation = placement.get_rotation_degrees() if placement else None
                 axis_hint = _axis_for_rotation(rotation)
+                axis_locked = _rotation_is_vertical(rotation)
                 family_name = linked_def.get_family()
                 type_name = linked_def.get_type()
                 if family_name and type_name:
                     symbol_key = u"{} : {}".format(family_name, type_name)
                     symbol = symbol_map.get(symbol_key)
-                    if symbol is not None:
-                        try:
-                            symbol_id = symbol.Id.IntegerValue
-                        except Exception:
-                            symbol_id = None
-                        if symbol_id is not None:
-                            target_symbol_ids.add(symbol_id)
-                            if symbol_id not in symbol_axis_map and axis_hint:
-                                symbol_axis_map[symbol_id] = axis_hint
+                    if symbol is not None and not axis_locked:
+                        axis_hint = _axis_for_symbol(symbol, axis_hint)
+                    try:
+                        symbol_id = symbol.Id.IntegerValue if symbol is not None else None
+                    except Exception:
+                        symbol_id = None
+                    if symbol_id is not None:
+                        target_symbol_ids.add(symbol_id)
+                        if symbol_id not in symbol_axis_map and axis_hint:
+                            symbol_axis_map[symbol_id] = axis_hint
 
     pre_existing = _collect_symbol_instance_ids(doc, target_symbol_ids)
     room_extents_map = {}
+    room_boundary_map = {}
     for room in rooms:
         room_id = getattr(room.Id, "IntegerValue", None)
         room_extents_map[room_id] = _room_extents_host(room, transform)
+        segments = _room_boundary_segments(room)
+        if segments and transform:
+            transformed = []
+            for start, end in segments:
+                try:
+                    start = transform.OfPoint(start)
+                except Exception:
+                    pass
+                try:
+                    end = transform.OfPoint(end)
+                except Exception:
+                    pass
+                transformed.append((start, end))
+            segments = transformed
+        room_boundary_map[room_id] = segments
 
     for profile_name in profiles:
         labels = profile_labels.get(profile_name) or []
@@ -784,11 +979,15 @@ def main():
                     placement = linked_def.get_placement()
                     rotation = placement.get_rotation_degrees() if placement else None
                     axis_hint = _axis_for_rotation(rotation)
+                    axis_locked = _rotation_is_vertical(rotation)
                     family_name = linked_def.get_family()
                     type_name = linked_def.get_type()
                     if family_name and type_name:
                         symbol_key = u"{} : {}".format(family_name, type_name)
-                        element_width, min_offset = _symbol_axis_metrics(symbol_map.get(symbol_key), axis_hint)
+                        symbol = symbol_map.get(symbol_key)
+                        if not axis_locked:
+                            axis_hint = _axis_for_symbol(symbol, axis_hint)
+                        element_width, min_offset = _symbol_axis_metrics(symbol, axis_hint)
                 type_count = type_counts.get(label, 1)
                 total_count = profile_mult * type_count
                 if total_count <= 0:
@@ -880,7 +1079,7 @@ def main():
             if not assigned:
                 continue
 
-    nudged = _nudge_instances(doc, groups, room_extents_map, symbol_axis_map)
+    nudged = _nudge_instances(doc, groups, room_extents_map, room_boundary_map, symbol_axis_map)
 
     summary = [
         "Processed {} placement(s).".format(len(rows)),
