@@ -15,6 +15,7 @@ Changes are written back into the existing InstanceConfig objects in memory.
 """
 
 import copy
+import re
 
 from pyrevit import forms, script
 from LogicClasses.Element_Linker import OffsetConfig, TagConfig
@@ -25,8 +26,18 @@ except NameError:
     basestring = str
 
 # WPF controls for building parameter rows dynamically
-from System.Windows.Controls import StackPanel, TextBlock, TextBox, Orientation, ListBoxItem
-from System.Windows import Thickness, TextWrapping
+from System.Windows.Controls import StackPanel, TextBlock, TextBox, Orientation, ListBoxItem, ComboBox
+from System.Windows import Thickness, TextWrapping, Visibility
+
+PARENT_PARAMETER_PATTERN = re.compile(
+    r'^\s*parent_parameter\s*:\s*(?:"([^"]+)"|\'([^\']+)\')\s*$',
+    re.IGNORECASE,
+)
+SIBLING_PARAMETER_PATTERN = re.compile(
+    r'^\s*sibling_parameter\s*:\s*([^:]+?)\s*:\s*(?:"([^"]+)"|\'([^\']+)\')\s*$',
+    re.IGNORECASE,
+)
+PARAM_SOURCES = ("Static", "Parent", "Sibling")
 
 
 class ProfileEditorWindow(forms.WPFWindow):
@@ -553,7 +564,13 @@ class ProfileEditorWindow(forms.WPFWindow):
         for textbox in (self.OffsetXBox, self.OffsetYBox, self.OffsetZBox, self.OffsetRotBox):
             textbox.IsReadOnly = read_only
         for entry in self._param_rows:
-            entry["value_box"].IsReadOnly = read_only
+            for key in ("value_box", "parent_box", "sibling_led_box", "sibling_param_box"):
+                box = entry.get(key)
+                if box:
+                    box.IsReadOnly = read_only
+            source_box = entry.get("source_box")
+            if source_box:
+                source_box.IsEnabled = not read_only
         for row in self._tag_rows:
             for key in ("family", "type", "x", "y", "z", "rot"):
                 box = row.get(key)
@@ -1345,6 +1362,95 @@ class ProfileEditorWindow(forms.WPFWindow):
         except Exception:
             return 0.0
 
+    def _parse_parameter_value(self, value):
+        text = u"{}".format(value if value is not None else u"")
+        match = PARENT_PARAMETER_PATTERN.match(text)
+        if match:
+            name = (match.group(1) or match.group(2) or "").strip()
+            return {
+                "source": "Parent",
+                "value": u"",
+                "parent": name,
+                "sibling_led": u"",
+                "sibling_param": u"",
+            }
+        match = SIBLING_PARAMETER_PATTERN.match(text)
+        if match:
+            led_id = (match.group(1) or "").strip()
+            param_name = (match.group(2) or match.group(3) or "").strip()
+            return {
+                "source": "Sibling",
+                "value": u"",
+                "parent": u"",
+                "sibling_led": led_id,
+                "sibling_param": param_name,
+            }
+        return {
+            "source": "Static",
+            "value": text,
+            "parent": u"",
+            "sibling_led": u"",
+            "sibling_param": u"",
+        }
+
+    def _param_source_text(self, entry):
+        source_box = entry.get("source_box")
+        if not source_box:
+            return PARAM_SOURCES[0]
+        selected = source_box.SelectedItem
+        if selected is None:
+            selected = source_box.Text or PARAM_SOURCES[0]
+        return str(selected)
+
+    def _apply_param_row_mode(self, entry):
+        mode = self._param_source_text(entry).strip().lower()
+        value_container = entry.get("value_container")
+        parent_container = entry.get("parent_container")
+        sibling_led_container = entry.get("sibling_led_container")
+        sibling_param_container = entry.get("sibling_param_container")
+
+        def _toggle(container, visible):
+            if not container:
+                return
+            container.Visibility = Visibility.Visible if visible else Visibility.Collapsed
+
+        if mode == "parent":
+            _toggle(value_container, False)
+            _toggle(parent_container, True)
+            _toggle(sibling_led_container, False)
+            _toggle(sibling_param_container, False)
+        elif mode == "sibling":
+            _toggle(value_container, False)
+            _toggle(parent_container, False)
+            _toggle(sibling_led_container, True)
+            _toggle(sibling_param_container, True)
+        else:
+            _toggle(value_container, True)
+            _toggle(parent_container, False)
+            _toggle(sibling_led_container, False)
+            _toggle(sibling_param_container, False)
+
+    def _on_param_source_changed(self, sender, args):
+        entry = getattr(sender, "Tag", None)
+        if entry:
+            self._apply_param_row_mode(entry)
+
+    def _format_parameter_value(self, entry):
+        mode = self._param_source_text(entry).strip().lower()
+        if mode == "parent":
+            parent_name = (entry.get("parent_box").Text or u"").strip()
+            if not parent_name:
+                return u""
+            return u'parent_parameter: "{}"'.format(parent_name)
+        if mode == "sibling":
+            sibling_led = (entry.get("sibling_led_box").Text or u"").strip()
+            sibling_param = (entry.get("sibling_param_box").Text or u"").strip()
+            if not sibling_led or not sibling_param:
+                return u""
+            return u'sibling_parameter: {}: "{}"'.format(sibling_led, sibling_param)
+        value_box = entry.get("value_box")
+        return (value_box.Text or u"").strip() if value_box else u""
+
     def _save_current_typecfg(self):
         if not self._current_profile or not self._current_typecfg:
             forms.alert("Select a type before saving.", title="Element Linker Profile Editor")
@@ -1386,9 +1492,7 @@ class ProfileEditorWindow(forms.WPFWindow):
         new_params = {}
         for entry in self._param_rows:
             name = entry["name"]
-            value_box = entry["value_box"]
-            val_text = (value_box.Text or u"").strip()
-            new_params[name] = val_text
+            new_params[name] = self._format_parameter_value(entry)
 
         if hasattr(inst_cfg, "parameters"):
             inst_cfg.parameters = new_params
@@ -1416,26 +1520,63 @@ class ProfileEditorWindow(forms.WPFWindow):
     def _add_param_row(self, name, value):
         row_panel = StackPanel()
         row_panel.Orientation = Orientation.Horizontal
-        row_panel.Margin = Thickness(0, 0, 0, 4)
+        row_panel.Margin = Thickness(0, 0, 0, 6)
 
         name_block = TextBlock()
         name_block.Text = name
-        name_block.Width = 200
+        name_block.Width = 160
         name_block.Margin = Thickness(0, 0, 8, 0)
-
-        value_box = TextBox()
-        value_box.Text = u"{}".format(value if value is not None else u"")
-        value_box.Width = 200
-
+        name_block.TextWrapping = TextWrapping.Wrap
         row_panel.Children.Add(name_block)
-        row_panel.Children.Add(value_box)
+
+        def _make_field(label_text, width, control="text"):
+            container = StackPanel(Margin=Thickness(0, 0, 8, 0))
+            container.Width = width
+            label = TextBlock(Text=label_text, Margin=Thickness(0, 0, 0, 2))
+            if control == "combo":
+                box = ComboBox(Width=width)
+                for item in PARAM_SOURCES:
+                    box.Items.Add(item)
+            else:
+                box = TextBox()
+                box.Width = width
+            container.Children.Add(label)
+            container.Children.Add(box)
+            row_panel.Children.Add(container)
+            return container, box
+
+        source_container, source_box = _make_field("Source", 90.0, control="combo")
+        value_container, value_box = _make_field("Value", 160.0)
+        parent_container, parent_box = _make_field("Parent Param", 140.0)
+        sibling_led_container, sibling_led_box = _make_field("Sibling LED", 120.0)
+        sibling_param_container, sibling_param_box = _make_field("Sibling Param", 140.0)
+
+        parsed = self._parse_parameter_value(value)
+        source_box.SelectedItem = parsed.get("source") or PARAM_SOURCES[0]
+        value_box.Text = parsed.get("value") or u""
+        parent_box.Text = parsed.get("parent") or u""
+        sibling_led_box.Text = parsed.get("sibling_led") or u""
+        sibling_param_box.Text = parsed.get("sibling_param") or u""
+
+        entry = {
+            "name": name,
+            "panel": row_panel,
+            "source_box": source_box,
+            "value_box": value_box,
+            "parent_box": parent_box,
+            "sibling_led_box": sibling_led_box,
+            "sibling_param_box": sibling_param_box,
+            "value_container": value_container,
+            "parent_container": parent_container,
+            "sibling_led_container": sibling_led_container,
+            "sibling_param_container": sibling_param_container,
+        }
+        source_box.Tag = entry
+        source_box.SelectionChanged += self._on_param_source_changed
+        self._apply_param_row_mode(entry)
 
         self.ParamList.Items.Add(row_panel)
-        self._param_rows.append({
-            "name": name,
-            "value_box": value_box,
-            "panel": row_panel,
-        })
+        self._param_rows.append(entry)
         self._apply_read_only_state()
         self.ParamList.SelectedItem = row_panel
         self._refresh_param_buttons()

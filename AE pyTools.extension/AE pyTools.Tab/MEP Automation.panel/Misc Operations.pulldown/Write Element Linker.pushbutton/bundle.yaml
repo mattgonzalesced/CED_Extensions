@@ -1,0 +1,9 @@
+title: Write Element Linker
+tooltip: |
+  Writes Element_Linker metadata onto fixtures and model groups that are missing it.
+  Matching uses the active YAML profiles and chooses the best LED by parameter score,
+  without relying on element XYZ location for matching.
+
+  If there are multiple LEDs with the same label and no clear parameter winner,
+  the element is skipped to avoid incorrect assignments.
+is_beta: false
