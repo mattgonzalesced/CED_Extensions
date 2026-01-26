@@ -1,4 +1,4 @@
 {
-  "parent_param_conflict_check": false, 
+  "parent_param_conflict_check": true, 
   "yaml_path": "C:\\CED_Extensions\\CEDLib.lib\\prototypeHEB_FinalCheckPoint16.yaml"
 }

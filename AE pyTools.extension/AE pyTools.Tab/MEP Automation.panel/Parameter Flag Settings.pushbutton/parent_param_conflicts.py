@@ -51,7 +51,7 @@ PARENT_PARAMETER_PATTERN = re.compile(
     r'^\s*parent_parameter\s*:\s*(?:"([^"]+)"|\'([^\']+)\'|(.+))\s*$',
     re.IGNORECASE,
 )
-FLOAT_PATTERN = re.compile(r"[-+]?[0-9]*\.?[0-9]+")
+NUMERIC_TOKEN_PATTERN = re.compile(r"[-+]?\d+(?:[.,]\d+)?")
 
 ACTION_UPDATE_CHILD = "update_child"
 ACTION_UPDATE_PARENT = "update_parent"
@@ -459,14 +459,21 @@ def _element_label(elem):
     return label
 
 
-def _try_float(text):
+def _numeric_token(text):
     if text in (None, ""):
         return None
-    match = FLOAT_PATTERN.search(str(text))
+    match = NUMERIC_TOKEN_PATTERN.search(str(text))
     if not match:
         return None
+    return match.group(0).replace(",", ".")
+
+
+def _try_float(text):
+    token = _numeric_token(text)
+    if not token:
+        return None
     try:
-        return float(match.group(0))
+        return float(token)
     except Exception:
         return None
 
@@ -532,7 +539,6 @@ def _param_info(param):
             info["display"] = "<unset>"
             info["has_value"] = False
         else:
-            info["numeric"] = float(raw)
             display = None
             try:
                 display = param.AsValueString()
@@ -541,6 +547,7 @@ def _param_info(param):
             if display in (None, ""):
                 display = raw
             info["display"] = str(display)
+            info["numeric"] = _try_float(info["display"])
             info["has_value"] = True
         return info
     if storage == StorageType.ElementId:
@@ -623,19 +630,25 @@ def _copy_param_value(source_param, target_param):
         return False
     source_storage = getattr(source_param, "StorageType", None)
     target_storage = getattr(target_param, "StorageType", None)
-    if target_storage == StorageType.String:
-        value = None
+    source_text = None
+    try:
+        source_text = source_param.AsString()
+    except Exception:
+        source_text = None
+    if source_text in (None, ""):
         try:
-            value = source_param.AsString()
+            source_text = source_param.AsValueString()
         except Exception:
-            value = None
-        if value in (None, ""):
-            try:
-                value = source_param.AsValueString()
-            except Exception:
-                value = None
-        if value is None:
-            value = ""
+            source_text = None
+    source_token = _numeric_token(source_text)
+    source_numeric = _try_float(source_text)
+    if target_storage == StorageType.String:
+        if source_numeric is not None:
+            value = str(int(round(source_numeric))) if abs(source_numeric - round(source_numeric)) < 1e-6 else str(source_numeric)
+        elif source_token is not None:
+            value = source_token
+        else:
+            value = source_text if source_text is not None else ""
         try:
             target_param.Set(str(value))
             return True
@@ -654,7 +667,7 @@ def _copy_param_value(source_param, target_param):
             except Exception:
                 value = None
         else:
-            value = _try_float(source_param.AsString() or source_param.AsValueString())
+            value = source_numeric
             if value is not None:
                 value = int(round(value))
         if value is None:
@@ -677,7 +690,7 @@ def _copy_param_value(source_param, target_param):
             except Exception:
                 value = None
         else:
-            value = _try_float(source_param.AsString() or source_param.AsValueString())
+            value = source_numeric
         if value is None:
             return False
         try:
@@ -692,7 +705,7 @@ def _copy_param_value(source_param, target_param):
                 return True
             except Exception:
                 return False
-        value = _try_float(source_param.AsString() or source_param.AsValueString())
+        value = source_numeric
         if value is None:
             return False
         try:

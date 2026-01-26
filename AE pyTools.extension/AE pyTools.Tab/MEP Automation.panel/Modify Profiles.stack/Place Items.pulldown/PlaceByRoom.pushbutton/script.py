@@ -1,6 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
-"""Place selected profiles at selected linked-room centers using the active YAML store."""
+"""Place selected profiles in linked rooms using the active YAML store."""
 
+import imp
 import os
 import sys
 
@@ -8,10 +9,16 @@ from pyrevit import revit, forms, script
 from Autodesk.Revit.DB import (
     BuiltInCategory,
     BuiltInParameter,
+    Transaction,
     FilteredElementCollector,
+    FamilySymbol,
+    FamilyInstance,
+    ElementId,
+    ElementTransformUtils,
     Level,
     LocationPoint,
     RevitLinkInstance,
+    SpatialElementBoundaryOptions,
     XYZ,
 )
 
@@ -97,6 +104,115 @@ def _room_center(room):
         return None
 
 
+def _room_extents(room):
+    if room is None:
+        return None
+    points = []
+    try:
+        options = SpatialElementBoundaryOptions()
+        loops = room.GetBoundarySegments(options)
+    except Exception:
+        loops = None
+    if loops:
+        for loop in loops:
+            for segment in loop:
+                try:
+                    curve = segment.GetCurve()
+                except Exception:
+                    curve = None
+                if curve is None:
+                    continue
+                try:
+                    points.append(curve.GetEndPoint(0))
+                    points.append(curve.GetEndPoint(1))
+                except Exception:
+                    pass
+    if not points:
+        try:
+            bbox = room.get_BoundingBox(None)
+        except Exception:
+            bbox = None
+        if bbox is None:
+            return None
+        try:
+            points = [bbox.Min, bbox.Max]
+        except Exception:
+            return None
+    min_x = min(point.X for point in points)
+    max_x = max(point.X for point in points)
+    min_y = min(point.Y for point in points)
+    max_y = max(point.Y for point in points)
+    return {
+        "min_x": min_x,
+        "max_x": max_x,
+        "min_y": min_y,
+        "max_y": max_y,
+    }
+
+
+def _axis_for_rotation(rotation_deg):
+    if rotation_deg is None:
+        return None
+    try:
+        angle = float(rotation_deg) % 360.0
+    except Exception:
+        return None
+    # Treat ~90/270 as Y-axis spacing, everything else as X-axis.
+    if abs(angle - 90.0) <= 15.0 or abs(angle - 270.0) <= 15.0:
+        return "y"
+    return "x"
+
+
+def _room_layout_points(room, count, axis_hint=None, element_width=None, min_offset=None):
+    if room is None or count <= 0:
+        return []
+    center = _room_center(room)
+    if center is None:
+        return []
+    extents = _room_extents(room)
+    if not extents:
+        return [center]
+    span_x = extents["max_x"] - extents["min_x"]
+    span_y = extents["max_y"] - extents["min_y"]
+    if span_x <= 1e-6 or span_y <= 1e-6:
+        return [center]
+    if axis_hint == "x":
+        span = span_x
+        base = extents["min_x"]
+        fixed = (extents["min_y"] + extents["max_y"]) / 2.0
+        axis = "x"
+    elif axis_hint == "y":
+        span = span_y
+        base = extents["min_y"]
+        fixed = (extents["min_x"] + extents["max_x"]) / 2.0
+        axis = "y"
+    elif span_x >= span_y:
+        span = span_x
+        base = extents["min_x"]
+        fixed = (extents["min_y"] + extents["max_y"]) / 2.0
+        axis = "x"
+    else:
+        span = span_y
+        base = extents["min_y"]
+        fixed = (extents["min_x"] + extents["max_x"]) / 2.0
+        axis = "y"
+    width = 0.0 if element_width is None else float(element_width)
+    offset = 0.0 if min_offset is None else float(min_offset)
+    if width < 0.0:
+        width = 0.0
+    spacing = (span - (count * width)) / float(count + 1)
+    if spacing < 0.0:
+        spacing = 0.0
+    points = []
+    for idx in range(count):
+        position = base + spacing - offset + (width + spacing) * idx
+        if axis == "x":
+            points.append(XYZ(position, fixed, center.Z))
+        else:
+            points.append(XYZ(fixed, position, center.Z))
+    return points
+
+
 def _room_name(room):
     try:
         name = getattr(room, "Name", None)
@@ -114,6 +230,36 @@ def _room_name(room):
         except Exception:
             return ""
     return ""
+
+
+def _room_extents_host(room, transform):
+    extents = _room_extents(room)
+    if not extents:
+        return None
+    if not transform:
+        return extents
+    points = [
+        XYZ(extents["min_x"], extents["min_y"], 0.0),
+        XYZ(extents["min_x"], extents["max_y"], 0.0),
+        XYZ(extents["max_x"], extents["min_y"], 0.0),
+        XYZ(extents["max_x"], extents["max_y"], 0.0),
+    ]
+    transformed = []
+    for point in points:
+        try:
+            transformed.append(transform.OfPoint(point))
+        except Exception:
+            transformed.append(point)
+    min_x = min(point.X for point in transformed)
+    max_x = max(point.X for point in transformed)
+    min_y = min(point.Y for point in transformed)
+    max_y = max(point.Y for point in transformed)
+    return {
+        "min_x": min_x,
+        "max_x": max_x,
+        "min_y": min_y,
+        "max_y": max_y,
+    }
 
 
 def _room_number(room):
@@ -211,6 +357,226 @@ def _select_profiles(repo):
     return list(selection)
 
 
+def _room_label(room):
+    number = _room_number(room)
+    name = _room_name(room)
+    label = "{} - {}".format(number, name).strip(" -")
+    return label or "<Room>"
+
+
+def _load_counts_ui():
+    module_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "PlaceByRoomUI.py"))
+    if not os.path.exists(module_path):
+        forms.alert("Counts UI not found at:\n{}".format(module_path), title=TITLE)
+        return None
+    try:
+        return imp.load_source("ced_place_by_room_ui", module_path)
+    except Exception as exc:
+        forms.alert("Failed to load counts UI:\n{}\n\n{}".format(module_path, exc), title=TITLE)
+        return None
+
+
+def _prompt_counts_ui(room_entries, profiles, profile_labels):
+    module = _load_counts_ui()
+    if module is None:
+        return None
+    xaml_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "PlaceByRoomWindow.xaml"))
+    if not os.path.exists(xaml_path):
+        forms.alert("Counts XAML not found at:\n{}".format(xaml_path), title=TITLE)
+        return None
+    window = module.PlaceByRoomWindow(xaml_path, room_entries, profiles, profile_labels)
+    result = window.show_dialog()
+    if not result:
+        return None
+    return getattr(window, "counts", None)
+
+
+def _build_symbol_map(doc):
+    symbol_map = {}
+    try:
+        symbols = list(FilteredElementCollector(doc).OfClass(FamilySymbol).ToElements())
+    except Exception:
+        symbols = []
+    for sym in symbols:
+        try:
+            family = getattr(sym, "Family", None)
+            fam_name = getattr(family, "Name", None) if family else None
+            if not fam_name:
+                continue
+            type_param = sym.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
+            type_name = type_param.AsString() if type_param else None
+            if not type_name and hasattr(sym, "Name"):
+                type_name = sym.Name
+            if not type_name:
+                continue
+            label = u"{} : {}".format(fam_name, type_name)
+            symbol_map[label] = sym
+        except Exception:
+            continue
+    return symbol_map
+
+
+def _symbol_axis_metrics(symbol, axis_hint):
+    if symbol is None or axis_hint not in ("x", "y"):
+        return None, None
+    try:
+        bbox = symbol.get_BoundingBox(None)
+    except Exception:
+        bbox = None
+    if bbox is None:
+        return None, None
+    try:
+        min_x = bbox.Min.X
+        max_x = bbox.Max.X
+        min_y = bbox.Min.Y
+        max_y = bbox.Max.Y
+        width_x = abs(max_x - min_x)
+        width_y = abs(max_y - min_y)
+    except Exception:
+        return None, None
+    if axis_hint == "x":
+        return width_x, min_x
+    return width_y, min_y
+
+
+def _collect_symbol_instance_ids(doc, symbol_ids):
+    ids_map = {sid: set() for sid in symbol_ids}
+    if not ids_map:
+        return ids_map
+    try:
+        instances = list(FilteredElementCollector(doc).OfClass(FamilyInstance).WhereElementIsNotElementType())
+    except Exception:
+        instances = []
+    for inst in instances:
+        try:
+            symbol = inst.Symbol
+            symbol_id = symbol.Id.IntegerValue if symbol is not None else None
+        except Exception:
+            symbol_id = None
+        if symbol_id is None:
+            continue
+        if symbol_id in ids_map:
+            try:
+                ids_map[symbol_id].add(inst.Id.IntegerValue)
+            except Exception:
+                continue
+    return ids_map
+
+
+def _instance_point(instance):
+    if instance is None:
+        return None
+    try:
+        loc = instance.Location
+    except Exception:
+        loc = None
+    if isinstance(loc, LocationPoint):
+        try:
+            return loc.Point
+        except Exception:
+            return None
+    if loc is not None:
+        try:
+            curve = loc.Curve
+        except Exception:
+            curve = None
+        if curve is not None:
+            try:
+                return curve.Evaluate(0.5, True)
+            except Exception:
+                pass
+    try:
+        bbox = instance.get_BoundingBox(None)
+    except Exception:
+        bbox = None
+    if bbox is None:
+        return None
+    try:
+        return XYZ(
+            (bbox.Min.X + bbox.Max.X) / 2.0,
+            (bbox.Min.Y + bbox.Max.Y) / 2.0,
+            (bbox.Min.Z + bbox.Max.Z) / 2.0,
+        )
+    except Exception:
+        return None
+
+
+def _instance_axis_bounds(instance, axis_hint):
+    if instance is None or axis_hint not in ("x", "y"):
+        return None, None
+    try:
+        bbox = instance.get_BoundingBox(None)
+    except Exception:
+        bbox = None
+    if bbox is None:
+        return None, None
+    if axis_hint == "x":
+        return bbox.Min.X, bbox.Max.X
+    return bbox.Min.Y, bbox.Max.Y
+
+
+def _axis_from_extents(extents):
+    span_x = extents["max_x"] - extents["min_x"]
+    span_y = extents["max_y"] - extents["min_y"]
+    return "x" if span_x >= span_y else "y"
+
+
+def _nudge_instances(doc, groups, room_extents_map, axis_map):
+    moved = 0
+    if not groups:
+        return moved
+    t = Transaction(doc, "Nudge Place by Room")
+    t.Start()
+    try:
+        for (room_id, symbol_id), instances in groups.items():
+            extents = room_extents_map.get(room_id)
+            if not extents:
+                continue
+            axis_hint = axis_map.get(symbol_id) or _axis_from_extents(extents)
+            if axis_hint == "x":
+                axis_min = extents["min_x"]
+                axis_max = extents["max_x"]
+            else:
+                axis_min = extents["min_y"]
+                axis_max = extents["max_y"]
+            span = axis_max - axis_min
+            if span <= 1e-6:
+                continue
+            items = []
+            for inst in instances:
+                min_val, max_val = _instance_axis_bounds(inst, axis_hint)
+                if min_val is None or max_val is None:
+                    continue
+                width = max_val - min_val
+                if width <= 1e-6:
+                    continue
+                items.append({"inst": inst, "min": min_val, "width": width})
+            if not items:
+                continue
+            items.sort(key=lambda item: item["min"])
+            total_width = sum(item["width"] for item in items)
+            gap = (span - total_width) / float(len(items) + 1)
+            if gap < 0.0:
+                gap = 0.0
+            target_min = axis_min + gap
+            for item in items:
+                delta = target_min - item["min"]
+                if abs(delta) > 1e-6:
+                    move_vec = XYZ(delta, 0.0, 0.0) if axis_hint == "x" else XYZ(0.0, delta, 0.0)
+                    try:
+                        ElementTransformUtils.MoveElement(doc, item["inst"].Id, move_vec)
+                        moved += 1
+                    except Exception:
+                        pass
+                target_min += item["width"] + gap
+    except Exception:
+        t.RollBack()
+        raise
+    else:
+        t.Commit()
+    return moved
+
+
 def _select_rooms(link_doc):
     try:
         rooms = list(FilteredElementCollector(link_doc).OfCategory(BuiltInCategory.OST_Rooms).WhereElementIsNotElementType())
@@ -229,7 +595,7 @@ def _select_rooms(link_doc):
         number = _room_number(room)
         if not name and not number:
             continue
-        label = "{} - {}".format(number, name).strip(" -")
+        label = _room_label(room)
         if label in display_map:
             continue
         display_map[label] = room
@@ -263,9 +629,42 @@ def main():
         return
     yaml_label = get_yaml_display_name(data_path)
     repo = _build_repository(data)
+    symbol_map = _build_symbol_map(doc)
 
     profiles = _select_profiles(repo)
     if not profiles:
+        return
+
+    repo_names = set(repo.cad_names() or [])
+    profile_labels = {}
+    missing_profiles = set()
+    missing_labels = set()
+    for profile_name in profiles:
+        if profile_name not in repo_names:
+            missing_profiles.add(profile_name)
+            continue
+        labels = repo.labels_for_cad(profile_name)
+        if not labels:
+            missing_labels.add(profile_name)
+            continue
+        profile_labels[profile_name] = labels
+
+    profiles = [name for name in profiles if name in profile_labels]
+    if not profiles:
+        summary = [
+            "No valid profiles were selected.",
+        ]
+        if missing_profiles:
+            summary.append("")
+            summary.append("Missing profiles:")
+            for name in sorted(missing_profiles):
+                summary.append(" - {}".format(name))
+        if missing_labels:
+            summary.append("")
+            summary.append("Profiles missing linked types:")
+            for name in sorted(missing_labels):
+                summary.append(" - {}".format(name))
+        forms.alert("\n".join(summary), title=TITLE)
         return
 
     link = _select_link_instance(doc)
@@ -286,6 +685,15 @@ def main():
         forms.alert("No rooms selected from linked model.", title=TITLE)
         return
 
+    room_entries = []
+    for room in rooms:
+        room_id = getattr(room.Id, "IntegerValue", None)
+        room_entries.append({"id": room_id, "label": _room_label(room)})
+
+    room_counts = _prompt_counts_ui(room_entries, profiles, profile_labels)
+    if not room_counts:
+        return
+
     level_lookup = _build_level_lookup(doc)
     default_level = _find_level_one(doc)
     default_level_id = None
@@ -297,35 +705,60 @@ def main():
 
     rows = []
     selection_map = {}
-    missing_profiles = set()
-    missing_labels = set()
     deduped = 0
     seen = set()
+    symbol_axis_map = {}
+    target_symbol_ids = set()
 
     try:
         transform = link.GetTransform()
     except Exception:
         transform = None
 
+    row_name_map = {}
     for profile_name in profiles:
-        if profile_name not in set(repo.cad_names() or []):
-            missing_profiles.add(profile_name)
-            continue
-        labels = repo.labels_for_cad(profile_name)
-        if not labels:
-            missing_labels.add(profile_name)
-            continue
-        selection_map.setdefault(profile_name, labels)
+        labels = profile_labels.get(profile_name) or []
+        for label in labels:
+            row_name = "{}:{}".format(profile_name, label)
+            selection_map[row_name] = [label]
+            row_name_map[(profile_name, label)] = row_name
+            try:
+                linked_def = repo.definition_for_label(profile_name, label)
+            except Exception:
+                linked_def = None
+            if linked_def is not None:
+                placement = linked_def.get_placement()
+                rotation = placement.get_rotation_degrees() if placement else None
+                axis_hint = _axis_for_rotation(rotation)
+                family_name = linked_def.get_family()
+                type_name = linked_def.get_type()
+                if family_name and type_name:
+                    symbol_key = u"{} : {}".format(family_name, type_name)
+                    symbol = symbol_map.get(symbol_key)
+                    if symbol is not None:
+                        try:
+                            symbol_id = symbol.Id.IntegerValue
+                        except Exception:
+                            symbol_id = None
+                        if symbol_id is not None:
+                            target_symbol_ids.add(symbol_id)
+                            if symbol_id not in symbol_axis_map and axis_hint:
+                                symbol_axis_map[symbol_id] = axis_hint
 
+    pre_existing = _collect_symbol_instance_ids(doc, target_symbol_ids)
+    room_extents_map = {}
+    for room in rooms:
+        room_id = getattr(room.Id, "IntegerValue", None)
+        room_extents_map[room_id] = _room_extents_host(room, transform)
+
+    for profile_name in profiles:
+        labels = profile_labels.get(profile_name) or []
         for room in rooms:
-            point = _room_center(room)
-            if point is None:
-                continue
-            if transform:
-                try:
-                    point = transform.OfPoint(point)
-                except Exception:
-                    pass
+            room_id = getattr(room.Id, "IntegerValue", None)
+            room_payload = room_counts.get(room_id) or {}
+            profile_mult = (room_payload.get("profile") or {}).get(profile_name, 1)
+            type_counts = (room_payload.get("types") or {}).get(profile_name, {})
+
             level_id = default_level_id
             try:
                 link_level_id = getattr(room, "LevelId", None)
@@ -339,12 +772,53 @@ def main():
             except Exception:
                 pass
 
-            key = (getattr(room.Id, "IntegerValue", None), profile_name)
-            if key in seen:
-                deduped += 1
-                continue
-            seen.add(key)
-            rows.append(_build_row(profile_name, point, 0.0, level_id))
+            for label in labels:
+                axis_hint = None
+                element_width = None
+                min_offset = None
+                try:
+                    linked_def = repo.definition_for_label(profile_name, label)
+                except Exception:
+                    linked_def = None
+                if linked_def is not None:
+                    placement = linked_def.get_placement()
+                    rotation = placement.get_rotation_degrees() if placement else None
+                    axis_hint = _axis_for_rotation(rotation)
+                    family_name = linked_def.get_family()
+                    type_name = linked_def.get_type()
+                    if family_name and type_name:
+                        symbol_key = u"{} : {}".format(family_name, type_name)
+                        element_width, min_offset = _symbol_axis_metrics(symbol_map.get(symbol_key), axis_hint)
+                type_count = type_counts.get(label, 1)
+                total_count = profile_mult * type_count
+                if total_count <= 0:
+                    continue
+                points = _room_layout_points(
+                    room,
+                    total_count,
+                    axis_hint=axis_hint,
+                    element_width=element_width,
+                    min_offset=min_offset,
+                )
+                if not points:
+                    continue
+                if transform:
+                    transformed = []
+                    for point in points:
+                        try:
+                            transformed.append(transform.OfPoint(point))
+                        except Exception:
+                            transformed.append(point)
+                    points = transformed
+
+                row_name = row_name_map.get((profile_name, label)) or "{}:{}".format(profile_name, label)
+                for idx, point in enumerate(points):
+                    key = (room_id, profile_name, label, idx)
+                    if key in seen:
+                        deduped += 1
+                        continue
+                    seen.add(key)
+                    rows.append(_build_row(row_name, point, 0.0, level_id))
 
     if not rows:
         summary = [
@@ -367,12 +841,55 @@ def main():
     results = _place_requests(doc, repo, selection_map, rows, default_level=default_level)
     placed = results.get("placed", 0)
 
+    post_existing = _collect_symbol_instance_ids(doc, target_symbol_ids)
+    new_ids_map = {}
+    for symbol_id in target_symbol_ids:
+        before = pre_existing.get(symbol_id, set())
+        after = post_existing.get(symbol_id, set())
+        new_ids = after - before
+        if new_ids:
+            new_ids_map[symbol_id] = new_ids
+
+    groups = {}
+    tol = 0.1
+    for symbol_id, new_ids in new_ids_map.items():
+        for elem_id in new_ids:
+            inst = None
+            try:
+                inst = doc.GetElement(ElementId(int(elem_id)))
+            except Exception:
+                inst = None
+            if inst is None:
+                continue
+            pt = _instance_point(inst)
+            if pt is None:
+                continue
+            assigned = False
+            for room_id, extents in room_extents_map.items():
+                if not extents:
+                    continue
+                if (
+                    pt.X >= extents["min_x"] - tol
+                    and pt.X <= extents["max_x"] + tol
+                    and pt.Y >= extents["min_y"] - tol
+                    and pt.Y <= extents["max_y"] + tol
+                ):
+                    groups.setdefault((room_id, symbol_id), []).append(inst)
+                    assigned = True
+                    break
+            if not assigned:
+                continue
+
+    nudged = _nudge_instances(doc, groups, room_extents_map, symbol_axis_map)
+
     summary = [
         "Processed {} placement(s).".format(len(rows)),
         "Placed {} element(s).".format(placed),
     ]
+    if nudged:
+        summary.append("Nudged {} element(s) for equal edge gaps.".format(nudged))
     if deduped:
-        summary.append("Skipped {} duplicate room/profile pair(s).".format(deduped))
+        summary.append("Skipped {} duplicate placement(s).".format(deduped))
     if missing_profiles:
         summary.append("")
         summary.append("Missing profiles:")
