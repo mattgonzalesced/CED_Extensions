@@ -131,7 +131,7 @@ class PlaceByRoomWindow(forms.WPFWindow):
                         grid.Children.Add(type_label)
 
                         count_box = TextBox()
-                        count_box.Text = "1"
+                        count_box.Text = "0"
                         count_box.Width = 60
                         Grid.SetRow(count_box, row_idx)
                         Grid.SetColumn(count_box, 1)
