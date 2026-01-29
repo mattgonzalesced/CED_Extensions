@@ -14,7 +14,7 @@ try:
 except ImportError:
     from collections import Mapping
 
-from pyrevit import forms, revit, script
+from pyrevit import forms, revit
 from Autodesk.Revit.DB import (
     BoundingBoxXYZ,
     BuiltInParameter,
@@ -32,8 +32,6 @@ from Autodesk.Revit.DB import (
     Transaction,
     ViewFamily,
     ViewFamilyType,
-    View3D,
-    ViewOrientation3D,
     ViewPlan,
     PlanViewRange,
     ViewDetailLevel,
@@ -52,13 +50,13 @@ from Autodesk.Revit.UI import ExternalEvent, IExternalEventHandler
 from Autodesk.Revit.UI.Selection import ObjectSnapTypes
 from System.Drawing import Size, Color, Bitmap
 from System import IntPtr, Uri, TimeSpan
-from System.Windows import Int32Rect, Thickness, Point, Rect, Visibility
+from System.Windows import Int32Rect, Point, Rect, Visibility
 from System.Windows.Controls import Canvas, Image
 from System.Windows.Media import Stretch
 from System.Windows.Media import Brushes, DrawingVisual, Pen, StreamGeometry, PixelFormats
 from System.Windows.Media.Imaging import BitmapSizeOptions, CroppedBitmap, BitmapImage, BitmapCacheOption, RenderTargetBitmap
 from System.Windows.Interop import Imaging
-from System.Windows.Shapes import Ellipse, Line, Rectangle
+from System.Windows.Shapes import Line, Rectangle
 from System.Collections.Generic import List
 from System.Windows.Threading import DispatcherTimer
 
@@ -389,7 +387,6 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
 
         self._raw_data = {}
         self._repo = None
-        self._choices = []
         self._choice_map = {}
         self._preview_cache = {}
         self._symbol_cache = {}
@@ -411,10 +408,7 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
         self._preview_ready = False
         self._last_preview_key = None
         self._preview3d_cache = {}
-        self._preview3d_pending = set()
-        self._preview3d_request = None
         self._preview3d_reason_cache = {}
-        self._preview3d_angle = "preview"
         self._preview3d_composite_reason = None
 
         self._profile_combo = self.FindName("ProfileCombo")
@@ -422,15 +416,8 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
         self._place_button = self.FindName("PlaceButton")
         self._refresh_button = self.FindName("RefreshButton")
         self._preview_canvas = self.FindName("PreviewCanvas")
-        self._preview_image = self.FindName("PreviewImage")
-        self._preview_zoom_slider = None
-        self._preview_zoom_value = None
         self._profile_types_list = self.FindName("ProfileTypesList")
         self._preview3d_image = self.FindName("Preview3DImage")
-        self._preview3d_iso = self.FindName("Preview3DIsoButton")
-        self._preview3d_front = self.FindName("Preview3DFrontButton")
-        self._preview3d_right = self.FindName("Preview3DRightButton")
-        self._preview3d_top = self.FindName("Preview3DTopButton")
         self._status_text = self.FindName("StatusText")
         self._place_handler = _PlaceSingleProfileHandler()
         self._place_event = ExternalEvent.Create(self._place_handler)
@@ -455,15 +442,6 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
             self._preview_canvas.SizeChanged += self._on_preview_size_changed
             self._preview_canvas.Loaded += self._on_preview_loaded
         self._preview_zoom = 1.0
-        if self._preview3d_iso is not None:
-            self._preview3d_iso.Click += self._on_preview3d_iso
-        if self._preview3d_front is not None:
-            self._preview3d_front.Click += self._on_preview3d_front
-        if self._preview3d_right is not None:
-            self._preview3d_right.Click += self._on_preview3d_right
-        if self._preview3d_top is not None:
-            self._preview3d_top.Click += self._on_preview3d_top
-
         self._refresh_data()
 
     @classmethod
@@ -522,37 +500,6 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
             self._preview_ready = True
             self._update_preview()
 
-    def _on_preview_zoom_changed(self, sender, args):
-        try:
-            self._preview_zoom = float(self._preview_zoom_slider.Value)
-        except Exception:
-            self._preview_zoom = 1.0
-        self._update_zoom_label()
-        self._preview_cache = {}
-        self._preview_reason_cache = {}
-        self._symbol_lookup = None
-        self._symbol_lookup_info = {}
-        self._preview_queue = []
-        self._preview_pending = set()
-        self._preview_rendered = 0
-        self._preview_total = 0
-        self._preview_last_render_ts = None
-        self._preview_first_request_ts = None
-        self._preview3d_cache = {}
-        self._preview3d_pending = set()
-        self._preview3d_request = None
-        self._preview3d_reason_cache = {}
-        self._preview3d_composite_reason = None
-        self._update_preview()
-
-    def _update_zoom_label(self):
-        if self._preview_zoom_value is None:
-            return
-        try:
-            self._preview_zoom_value.Text = "{:.1f}x".format(self._preview_zoom)
-        except Exception:
-            self._preview_zoom_value.Text = "1.0x"
-
     def _setup_preview_timer(self):
         if self._preview_timer is not None:
             return
@@ -566,7 +513,7 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
             self._preview_timer = None
 
     def _on_preview_timer_tick(self, sender, args):
-        if self._preview_in_handler or (not self._preview_queue and not self._preview3d_request and not self._preview3d_pending):
+        if self._preview_in_handler or not self._preview_queue:
             return
         try:
             self._preview_event.Raise()
@@ -587,7 +534,6 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
                 return
             self._raw_data = {}
             self._repo = None
-            self._choices = []
             self._choice_map = {}
             self._set_status("Failed to load active YAML: {}".format(exc))
             if self._profile_combo is not None:
@@ -610,8 +556,6 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
         self._preview_last_render_ts = None
         self._preview_first_request_ts = None
         self._preview3d_cache = {}
-        self._preview3d_pending = set()
-        self._preview3d_request = None
         self._preview3d_reason_cache = {}
         self._preview3d_composite_reason = None
         self._refresh_profile_choices()
@@ -648,8 +592,6 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
     def _clear_preview(self):
         if self._preview_canvas is not None:
             self._preview_canvas.Children.Clear()
-        if self._preview_image is not None:
-            self._preview_image.Source = None
         self._last_preview_key = None
 
     def _collect_preview_points(self, parent_def, cad_choice=None):
@@ -692,7 +634,7 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
         return points
 
     def _update_preview(self):
-        if self._preview_canvas is None and self._preview_image is None:
+        if self._preview_canvas is None:
             return
         if self._preview_busy:
             return
@@ -717,11 +659,7 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
                 preview_key = labels[0]
                 if preview_key != self._last_preview_key:
                     self._last_preview_key = preview_key
-                cached = self._preview_cache.get(preview_key)
-                if cached is None:
-                    cached = self._label_preview_source(preview_key)
-                if cached is not None and self._preview_image is not None:
-                    self._preview_image.Source = cached
+                self._label_preview_source(preview_key)
             parent_def = find_equipment_by_name(self._raw_data, cad_choice)
             entries = self._collect_preview_points(parent_def, cad_choice=cad_choice)
             if not entries:
@@ -809,7 +747,6 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
                             reason = self._preview_reason_cache.get(label)
                             if reason:
                                 missing_reasons.append("{} ({})".format(label, reason))
-                    self._draw_receptacle_marker(px, py, rect_w, rect_h)
                 if preview is not None:
                     rect = Rectangle()
                     rect.Width = rect_w
@@ -871,10 +808,9 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
                 except Exception:
                     stalled = False
                 if stalled:
-                    self._set_status("Preview render stalled (queue={}, pending={}, 3d_pending={}).".format(
+                    self._set_status("Preview render stalled (queue={}, pending={}).".format(
                         len(self._preview_queue),
                         len(self._preview_pending),
-                        len(self._preview3d_pending),
                     ))
                 else:
                     self._set_status("Rendering previews for: {} ({} pending)".format(", ".join(pending_previews[:3]), len(self._preview_pending)))
@@ -887,12 +823,10 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
             elif self._preview3d_composite_reason:
                 self._set_status("3D preview failed: {}".format(self._preview3d_composite_reason))
             elif preview_key:
-                key3d = (preview_key, self._preview3d_angle)
+                key3d = (preview_key, "preview")
                 if self._preview3d_cache.get(key3d) is _PREVIEW_FAILED:
                     reason = self._preview3d_reason_cache.get(key3d) or "Unknown failure"
                     self._set_status("3D preview failed: {} ({})".format(preview_key, reason))
-                elif self._preview3d_pending:
-                    self._set_status("Rendering 3D previews... ({} pending)".format(len(self._preview3d_pending)))
                 else:
                     try:
                         total = len(entries)
@@ -900,8 +834,6 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
                         self._set_status("Preview ready: {} item(s), {} image(s).".format(total, with_images))
                     except Exception:
                         self._set_status("Preview ready.")
-            elif self._preview3d_pending:
-                self._set_status("Rendering 3D previews... ({} pending)".format(len(self._preview3d_pending)))
             else:
                 try:
                     total = len(entries)
@@ -1055,135 +987,6 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
             pass
         self._preview3d_image.Source = bmp
 
-    def _update_3d_preview_for_label(self, label):
-        if self._preview3d_image is None:
-            return
-        if not label:
-            self._preview3d_image.Source = None
-            return
-        key = (label, self._preview3d_angle)
-        cached = self._preview3d_cache.get(key)
-        if cached is _PREVIEW_FAILED:
-            self._preview3d_image.Source = None
-            reason = self._preview3d_reason_cache.get(key)
-            if reason:
-                self._set_status("3D preview failed: {} ({})".format(label, reason))
-            return
-        if cached is not None:
-            self._preview3d_image.Source = cached
-            return
-        try:
-            symbol = self._symbol_for_label(revit.doc, label)
-        except Exception:
-            symbol = None
-        if symbol is None:
-            self._preview3d_cache[key] = _PREVIEW_FAILED
-            self._preview3d_reason_cache[key] = "Family type not loaded."
-            self._preview3d_image.Source = None
-            self._set_status("3D preview failed: {} (Family type not loaded.)".format(label))
-            return
-        preview = self._symbol_preview_source(symbol)
-        if preview is None:
-            self._preview3d_cache[key] = _PREVIEW_FAILED
-            self._preview3d_reason_cache[key] = "Preview image missing."
-            self._preview3d_image.Source = None
-            self._set_status("3D preview failed: {} (Preview image missing.)".format(label))
-            return
-        self._preview3d_cache[key] = preview
-        self._preview3d_image.Source = preview
-
-    def _request_3d_render(self, label, angle):
-        if not label or self._preview_in_handler:
-            return
-        key = (label, angle)
-        if key in self._preview3d_pending:
-            return
-        self._preview3d_pending.add(key)
-        self._preview3d_request = key
-        try:
-            self._preview_event.Raise()
-        except Exception:
-            pass
-
-    def _on_preview3d_iso(self, sender, args):
-        self._preview3d_angle = "iso"
-        self._update_3d_preview_for_label(self._last_preview_key)
-
-    def _on_preview3d_front(self, sender, args):
-        self._preview3d_angle = "front"
-        self._update_3d_preview_for_label(self._last_preview_key)
-
-    def _on_preview3d_right(self, sender, args):
-        self._preview3d_angle = "right"
-        self._update_3d_preview_for_label(self._last_preview_key)
-
-    def _on_preview3d_top(self, sender, args):
-        self._preview3d_angle = "top"
-        self._update_3d_preview_for_label(self._last_preview_key)
-
-    def _selected_profile_label(self):
-        if self._profile_combo is None:
-            return None
-        label = self._profile_combo.SelectedItem
-        if label is None:
-            label = getattr(self._profile_combo, "Text", None)
-        if not label:
-            return None
-        return label
-
-    def _first_label_with_preview(self, labels):
-        if not labels:
-            return None
-        for label in labels:
-            try:
-                symbol = self._symbol_for_label(revit.doc, label)
-            except Exception:
-                symbol = None
-            if symbol is None:
-                continue
-            preview = self._symbol_preview_source(symbol)
-            if preview is not None:
-                return label
-        return None
-
-    def _draw_receptacle_marker(self, px, py, rect_w, rect_h):
-        if self._preview_canvas is None:
-            return
-        radius = min(rect_w, rect_h) / 2.0
-        if radius < 6.0:
-            radius = 6.0
-        ellipse = Ellipse()
-        ellipse.Width = radius * 2.0
-        ellipse.Height = radius * 2.0
-        ellipse.Stroke = Brushes.LimeGreen
-        ellipse.StrokeThickness = 1.0
-        ellipse.Fill = Brushes.Transparent
-        Canvas.SetLeft(ellipse, px - radius)
-        Canvas.SetTop(ellipse, py - radius)
-        self._preview_canvas.Children.Add(ellipse)
-
-        line_len = radius * 1.2
-        stem = Line()
-        stem.X1 = px
-        stem.X2 = px
-        stem.Y1 = py + radius * 0.2
-        stem.Y2 = py + line_len
-        stem.Stroke = Brushes.LimeGreen
-        stem.StrokeThickness = 1.0
-        self._preview_canvas.Children.Add(stem)
-
-        body_w = radius * 0.9
-        body_h = radius * 0.45
-        body = Rectangle()
-        body.Width = body_w
-        body.Height = body_h
-        body.Stroke = Brushes.LimeGreen
-        body.StrokeThickness = 1.0
-        body.Fill = Brushes.Transparent
-        Canvas.SetLeft(body, px - body_w / 2.0)
-        Canvas.SetTop(body, py + line_len)
-        self._preview_canvas.Children.Add(body)
-
     def _request_preview_render(self, label):
         if not label or self._preview_in_handler:
             return
@@ -1242,27 +1045,6 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
                     self._preview_last_render_ts = time.time()
                 except Exception:
                     self._preview_last_render_ts = None
-            if self._preview3d_request:
-                label, angle = self._preview3d_request
-                self._preview3d_request = None
-                try:
-                    symbol = self._symbol_for_label(revit.doc, label)
-                    rendered, reason = self._render_3d_preview(symbol, angle, uiapp=uiapp)
-                    key = (label, angle)
-                    if rendered is None and reason:
-                        self._preview_reason_cache[label] = reason
-                    if rendered is None and reason:
-                        self._preview3d_reason_cache[key] = reason
-                    self._preview3d_cache[key] = rendered if rendered is not None else _PREVIEW_FAILED
-                except Exception as exc:
-                    self._preview3d_cache[(label, angle)] = _PREVIEW_FAILED
-                    self._preview3d_reason_cache[(label, angle)] = "3D preview error: {}".format(exc)
-                if (label, angle) in self._preview3d_pending:
-                    self._preview3d_pending.remove((label, angle))
-                try:
-                    self._update_3d_preview_for_label(label)
-                except Exception:
-                    pass
         finally:
             self._preview_in_handler = False
         try:
@@ -1517,112 +1299,6 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
                     pass
         return None, "Unknown render failure."
 
-    def _render_3d_preview(self, symbol, angle, uiapp=None):
-        if symbol is None:
-            return None, "Family type not loaded."
-        doc = revit.doc
-        try:
-            if uiapp is None or uiapp.ActiveUIDocument is None:
-                return None, "No active UIDocument."
-        except Exception:
-            return None, "No active UIDocument."
-        vft = self._get_3d_view_family_type(doc)
-        level = self._get_first_level(doc)
-        if vft is None or level is None:
-            return None, "No 3D view type or level."
-        temp_view = None
-        temp_inst = None
-        try:
-            t = Transaction(doc, "CED Temp 3D Preview")
-            t.Start()
-            try:
-                if not symbol.IsActive:
-                    symbol.Activate()
-            except Exception:
-                pass
-            try:
-                temp_view = View3D.CreateIsometric(doc, vft.Id)
-            except Exception:
-                t.RollBack()
-                return None, "Failed to create 3D view."
-            try:
-                if StructuralType is not None:
-                    temp_inst = doc.Create.NewFamilyInstance(XYZ(0, 0, 0), symbol, level, StructuralType.NonStructural)
-                else:
-                    temp_inst = doc.Create.NewFamilyInstance(XYZ(0, 0, 0), symbol, level)
-            except Exception:
-                t.RollBack()
-                return None, "Failed to place temp instance."
-            try:
-                doc.Regenerate()
-            except Exception:
-                pass
-            bbox = None
-            try:
-                bbox = temp_inst.get_BoundingBox(None)
-            except Exception:
-                bbox = None
-            size = None
-            center = None
-            if bbox is not None:
-                try:
-                    dx = max(bbox.Max.X - bbox.Min.X, 0.01)
-                    dy = max(bbox.Max.Y - bbox.Min.Y, 0.01)
-                    dz = max(bbox.Max.Z - bbox.Min.Z, 0.01)
-                    size = max(dx, dy, dz)
-                    center = XYZ(
-                        (bbox.Min.X + bbox.Max.X) * 0.5,
-                        (bbox.Min.Y + bbox.Max.Y) * 0.5,
-                        (bbox.Min.Z + bbox.Max.Z) * 0.5,
-                    )
-                    expand = max(size * 0.2, 1.0)
-                    min_pt = XYZ(bbox.Min.X - expand, bbox.Min.Y - expand, bbox.Min.Z - expand)
-                    max_pt = XYZ(bbox.Max.X + expand, bbox.Max.Y + expand, bbox.Max.Z + expand)
-                    crop = BoundingBoxXYZ()
-                    crop.Min = min_pt
-                    crop.Max = max_pt
-                    temp_view.SetSectionBox(crop)
-                    try:
-                        temp_view.IsSectionBoxActive = True
-                    except Exception:
-                        pass
-                except Exception:
-                    pass
-            try:
-                self._apply_3d_orientation(temp_view, angle, center=center, size=size)
-            except Exception:
-                pass
-            t.Commit()
-            img_path = self._export_view_image(doc, temp_view)
-            if img_path:
-                if self._is_blank_bitmap(img_path):
-                    return None, "3D export blank."
-                return self._load_bitmap_image(img_path), None
-            export_err = self._preview_last_export_error
-            if export_err:
-                return None, "3D export failed. {}".format(export_err)
-            return None, "3D export failed."
-        finally:
-            t_cleanup = None
-            try:
-                t_cleanup = Transaction(doc, "CED Temp 3D Preview Cleanup")
-                t_cleanup.Start()
-                ids = List[ElementId]()
-                if temp_inst is not None:
-                    ids.Add(temp_inst.Id)
-                if temp_view is not None:
-                    ids.Add(temp_view.Id)
-                if ids.Count > 0:
-                    doc.Delete(ids)
-                t_cleanup.Commit()
-            except Exception:
-                try:
-                    if t_cleanup is not None:
-                        t_cleanup.RollBack()
-                except Exception:
-                    pass
-        return None, "Unknown 3D render failure."
-
     def _render_plan_vector_preview(self, instance, view, bbox=None):
         if instance is None or view is None:
             return None, "Missing instance or view."
@@ -1783,38 +1459,6 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
         except Exception:
             pass
         return bmp, None
-
-    def _apply_3d_orientation(self, view, angle, center=None, size=None):
-        if view is None:
-            return
-        if angle == "front":
-            eye = XYZ(0, -1, 0)
-            forward = XYZ(0, 1, 0)
-            up = XYZ(0, 0, 1)
-        elif angle == "right":
-            eye = XYZ(1, 0, 0)
-            forward = XYZ(-1, 0, 0)
-            up = XYZ(0, 0, 1)
-        elif angle == "top":
-            eye = XYZ(0, 0, 1)
-            forward = XYZ(0, 0, -1)
-            up = XYZ(0, 1, 0)
-        else:
-            eye = XYZ(1, -1, 1)
-            forward = XYZ(-1, 1, -1)
-            up = XYZ(0, 0, 1)
-        try:
-            if center is not None and size is not None:
-                try:
-                    direction = forward.Normalize()
-                    distance = max(size * 2.5, 5.0)
-                    eye = center + direction.Multiply(distance)
-                    forward = (center - eye).Normalize()
-                except Exception:
-                    pass
-            view.SetOrientation(ViewOrientation3D(eye, up, forward))
-        except Exception:
-            pass
 
     def _export_view_image(self, doc, view):
         if doc is None or view is None:
@@ -2000,21 +1644,6 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
         for vft in types:
             try:
                 if vft.ViewFamily == ViewFamily.FloorPlan:
-                    return vft
-            except Exception:
-                continue
-        return None
-
-    def _get_3d_view_family_type(self, doc):
-        if doc is None:
-            return None
-        try:
-            types = list(FilteredElementCollector(doc).OfClass(ViewFamilyType))
-        except Exception:
-            types = []
-        for vft in types:
-            try:
-                if vft.ViewFamily == ViewFamily.ThreeDimensional:
                     return vft
             except Exception:
                 continue
