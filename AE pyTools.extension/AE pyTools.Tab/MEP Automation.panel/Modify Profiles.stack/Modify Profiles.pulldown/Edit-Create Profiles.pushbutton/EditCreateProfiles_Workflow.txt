@@ -1,0 +1,10 @@
+Run Edit-Create Profiles to build a parent/child definition from model
+elements. Choose whether the parent is in a linked model or the host model; if
+linked, select the link instance first and then the parent element.
+
+Select the equipment, tags, text notes, and keynotes to capture. The tool
+records XYZ offsets and rotation relative to the parent and stores them as a
+linked set inside the profile entry in Extensible Storage.
+
+If a profile already exists for the parent type, it is placed for preview so
+you can append or adjust items before saving.

@@ -1,0 +1,7 @@
+Run Add Equipment to Profiles to append items to an existing profile without
+re-running the full Edit-Create workflow. Select the parent, then select the
+equipment to add.
+
+The tool calculates each element's offset and rotation relative to the parent
+and writes new linked element definitions into the profile entry stored in
+Extensible Storage.

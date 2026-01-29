@@ -1,0 +1,7 @@
+Use Place by Room to place selected profiles inside rooms from a linked model.
+Pick the profiles, the linked model, and the rooms to target; the UI then lets
+you set per-room profile multipliers and per-type counts.
+
+Placement points are computed from linked room boundaries, with spacing based
+on the profile rotation and symbol size. After placement, the tool nudges new
+instances to balance the edge gaps against the internal spacing.

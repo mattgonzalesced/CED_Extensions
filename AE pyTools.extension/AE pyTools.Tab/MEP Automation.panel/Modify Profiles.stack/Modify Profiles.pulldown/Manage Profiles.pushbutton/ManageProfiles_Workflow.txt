@@ -1,0 +1,7 @@
+Use Manage Profiles to review and edit equipment_definitions in a structured
+UI. Select a profile to edit parameters, add/remove equipment, tags, text
+notes, or keynotes, or create independent profiles with absolute placements.
+
+When adding items without offsets, placement defaults to the parent center; set
+offsets and rotation to control placement. Saving writes all changes back into
+Extensible Storage for immediate use by placement tools.

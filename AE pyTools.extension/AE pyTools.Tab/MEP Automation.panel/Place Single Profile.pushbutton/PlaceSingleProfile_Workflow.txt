@@ -1,0 +1,8 @@
+Use Place Single Profile to open a dockable pane and place one equipment
+definition from the active YAML at a picked point. You can optionally filter
+the list to independent profiles only.
+
+Select the equipment definition (grouped by truth-source metadata); the pane
+shows a simple 2D preview of the stored offsets. Pick a base point, and the
+tool places the parent instance. If the profile has linked child definitions,
+you can choose to place those as well at their stored offsets and rotations.

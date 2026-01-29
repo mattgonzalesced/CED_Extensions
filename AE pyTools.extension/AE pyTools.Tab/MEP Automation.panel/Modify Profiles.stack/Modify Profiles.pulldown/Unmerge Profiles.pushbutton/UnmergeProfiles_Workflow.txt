@@ -1,0 +1,6 @@
+Run Unmerge Profiles to detach a profile from a merged truth-source group.
+Select the merged group, then choose the member profile to unmerge.
+
+The tool resets the truth-source metadata on the selected entry so it becomes
+its own source again, then saves the updated YAML back into Extensible
+Storage.
