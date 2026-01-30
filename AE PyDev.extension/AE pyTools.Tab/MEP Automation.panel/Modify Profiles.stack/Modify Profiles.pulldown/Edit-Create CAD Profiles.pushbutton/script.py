@@ -1,0 +1,1504 @@
+# -*- coding: utf-8 -*-
+"""
+Edit/Create CAD Profiles
+-------------------------
+Type a CAD name, then capture equipment elements to create or update the
+profile definition. Offsets are calculated relative to the centroid of
+selected elements.
+"""
+
+import json
+import math
+import os
+import sys
+
+from pyrevit import revit, forms, script
+from Autodesk.Revit.DB import (
+    BuiltInParameter,
+    ElementId,
+    FilteredElementCollector,
+    Group,
+    IndependentTag,
+    TextNote,
+    RevitLinkInstance,
+    Transaction,
+    TransactionGroup,
+    Transform,
+    UnitUtils,
+    XYZ,
+)
+from Autodesk.Revit.UI.Selection import ObjectType
+
+LIB_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib"))
+if LIB_ROOT not in sys.path:
+    sys.path.append(LIB_ROOT)
+
+from LogicClasses.PlaceElementsLogic import PlaceElementsEngine, ProfileRepository  # noqa: E402
+from LogicClasses.linked_equipment import compute_offsets_from_points  # noqa: E402
+from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
+from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data  # noqa: E402
+from LogicClasses.profile_schema import ensure_equipment_definition, get_type_set, next_led_id, equipment_defs_to_legacy  # noqa: E402
+
+TITLE = "Edit/Create YAML Profiles"
+LOG = script.get_logger()
+ELEMENT_LINKER_PARAM_NAME = "Element_Linker Parameter"
+ELEMENT_LINKER_PARAM_NAMES = ("Element_Linker", ELEMENT_LINKER_PARAM_NAME)
+TRUTH_SOURCE_ID_KEY = "ced_truth_source_id"
+TRUTH_SOURCE_NAME_KEY = "ced_truth_source_name"
+SESSION_KEY = "edit_create_yaml_session"
+SAFE_HASH = u"\uff03"
+
+try:
+    basestring
+except NameError:
+    basestring = str
+
+
+# --------------------------------------------------------------------------- #
+# Session helpers
+# --------------------------------------------------------------------------- #
+
+
+def _session_file():
+    try:
+        return script.get_appdata_file("edit_create_yaml_session.json")
+    except Exception:
+        return os.path.join(os.path.expanduser("~"), "edit_create_yaml_session.json")
+
+
+def _session_storage():
+    path = _session_file()
+    if os.path.exists(path):
+        try:
+            with open(path, "r") as handle:
+                data = json.load(handle)
+                if isinstance(data, dict):
+                    return data
+        except Exception:
+            return {}
+    return {}
+
+
+def _doc_session_key(doc):
+    path = getattr(doc, "PathName", "") or ""
+    if path:
+        return path.lower()
+    title = getattr(doc, "Title", "") or ""
+    return title.lower()
+
+
+def _load_session(doc):
+    key = _doc_session_key(doc)
+    store = _session_storage()
+    return store.get(key)
+
+
+def _save_session(doc, session):
+    key = _doc_session_key(doc)
+    store = _session_storage()
+    if session:
+        store[key] = session
+    elif key in store:
+        store.pop(key, None)
+    try:
+        directory = os.path.dirname(_session_file())
+        if directory and not os.path.exists(directory):
+            os.makedirs(directory)
+        with open(_session_file(), "w") as handle:
+            json.dump(store, handle)
+    except Exception:
+        pass
+
+
+# --------------------------------------------------------------------------- #
+# Identifier helpers
+# --------------------------------------------------------------------------- #
+
+
+def _next_eq_number(data, exclude_defs=None):
+    excluded = {id(entry) for entry in (exclude_defs or []) if entry is not None}
+    max_id = 0
+    for entry in data.get("equipment_definitions") or []:
+        if excluded and id(entry) in excluded:
+            continue
+        eq_id = (entry.get("id") or "").strip()
+        if not eq_id:
+            continue
+        suffix = eq_id.split("-")[-1]
+        try:
+            num = int(suffix)
+        except Exception:
+            continue
+        if num > max_id:
+            max_id = num
+    return max_id + 1
+
+
+# --------------------------------------------------------------------------- #
+# Selection helpers
+# --------------------------------------------------------------------------- #
+
+
+def _linked_element_from_reference(doc, reference):
+    linked_id = getattr(reference, "LinkedElementId", None)
+    if isinstance(linked_id, ElementId) and linked_id != ElementId.InvalidElementId:
+        try:
+            host_elem = doc.GetElement(reference.ElementId)
+        except Exception:
+            host_elem = None
+        if isinstance(host_elem, RevitLinkInstance):
+            link_doc = host_elem.GetLinkDocument()
+            if link_doc:
+                transform = host_elem.GetTransform()
+                if not isinstance(transform, Transform):
+                    transform = None
+                try:
+                    linked_elem = link_doc.GetElement(linked_id)
+                except Exception:
+                    linked_elem = None
+                return linked_elem, transform
+    try:
+        elem = doc.GetElement(reference.ElementId)
+    except Exception:
+        elem = None
+    return elem, None
+
+
+def _pick_parent_element(prompt):
+    uidoc = getattr(revit, "uidoc", None)
+    doc = getattr(revit, "doc", None)
+    if uidoc is None or doc is None:
+        return None, None
+    try:
+        reference = uidoc.Selection.PickObject(ObjectType.Element, prompt)
+    except Exception:
+        return None, None
+    elem, transform = _linked_element_from_reference(doc, reference)
+    if isinstance(elem, RevitLinkInstance):
+        forms.alert("Select the specific element inside the link after this message.", title=TITLE)
+        try:
+            link_ref = uidoc.Selection.PickObject(ObjectType.LinkedElement, prompt)
+        except Exception:
+            return None, None
+        return _linked_element_from_reference(doc, link_ref)
+    return elem, transform
+
+
+# --------------------------------------------------------------------------- #
+# Geometry helpers
+# --------------------------------------------------------------------------- #
+
+
+def _get_point(elem):
+    loc = getattr(elem, "Location", None)
+    if loc is None:
+        return None
+    if hasattr(loc, "Point") and loc.Point:
+        return loc.Point
+    if hasattr(loc, "Curve") and loc.Curve:
+        try:
+            return loc.Curve.Evaluate(0.5, True)
+        except Exception:
+            pass
+    return None
+
+
+def _feet_to_inches(value):
+    try:
+        return float(value) * 12.0
+    except Exception:
+        return 0.0
+
+
+def _inches_to_feet(value):
+    try:
+        return float(value) / 12.0
+    except Exception:
+        return 0.0
+
+
+def _get_rotation_degrees(elem):
+    loc = getattr(elem, "Location", None)
+    if loc is not None and hasattr(loc, "Rotation"):
+        try:
+            return math.degrees(loc.Rotation)
+        except Exception:
+            pass
+    try:
+        transform = elem.GetTransform()
+    except Exception:
+        transform = None
+    if transform is not None:
+        basis = getattr(transform, "BasisX", None)
+        if basis:
+            try:
+                return math.degrees(math.atan2(basis.Y, basis.X))
+            except Exception:
+                pass
+    return 0.0
+
+
+def _transform_point(point, transform):
+    if point is None or transform is None:
+        return point
+    try:
+        return transform.OfPoint(point)
+    except Exception:
+        return point
+
+
+def _transform_rotation(rotation_deg, transform):
+    if transform is None:
+        return rotation_deg
+    try:
+        ang = math.radians(rotation_deg or 0.0)
+    except Exception:
+        ang = 0.0
+    vec = XYZ(math.cos(ang), math.sin(ang), 0.0)
+    try:
+        vec_world = transform.OfVector(vec)
+        return math.degrees(math.atan2(vec_world.Y, vec_world.X))
+    except Exception:
+        return rotation_deg
+
+
+def _level_relative_z_inches(elem, world_point):
+    if elem is None:
+        return 0.0
+
+    direct = _instance_elevation_inches(elem)
+    if direct is not None:
+        return direct
+
+    doc = getattr(elem, "Document", None)
+    level = None
+    level_id = getattr(elem, "LevelId", None)
+    if doc and level_id:
+        try:
+            level = doc.GetElement(level_id)
+        except Exception:
+            level = None
+    if not level:
+        fallback_names = (
+            "SCHEDULE_LEVEL_PARAM",
+            "INSTANCE_REFERENCE_LEVEL_PARAM",
+            "FAMILY_LEVEL_PARAM",
+            "INSTANCE_LEVEL_PARAM",
+        )
+        for name in fallback_names:
+            bip = getattr(BuiltInParameter, name, None)
+            if not bip:
+                continue
+            try:
+                param = elem.get_Parameter(bip)
+            except Exception:
+                param = None
+            if not param:
+                continue
+            try:
+                eid = param.AsElementId()
+                if eid and doc:
+                    level = doc.GetElement(eid)
+            except Exception:
+                level = None
+            if level:
+                break
+    level_z = 0.0
+    if level:
+        try:
+            level_z = float(level.Elevation or 0.0)
+        except Exception:
+            level_z = 0.0
+    world_z = getattr(world_point, "Z", None) or 0.0
+    return _feet_to_inches(world_z - level_z)
+
+
+def _instance_elevation_inches(elem):
+    param_names = (
+        "INSTANCE_ELEV_PARAM",
+        "INSTANCE_ELEVATION_PARAM",
+        "INSTANCE_FREE_HOST_OFFSET_PARAM",
+        "INSTANCE_SILL_HEIGHT_PARAM",
+        "SILL_HEIGHT_PARAM",
+        "HEAD_HEIGHT_PARAM",
+    )
+    for name in param_names:
+        bip = getattr(BuiltInParameter, name, None)
+        if not bip:
+            continue
+        try:
+            param = elem.get_Parameter(bip)
+        except Exception:
+            param = None
+        if not param:
+            continue
+        try:
+            raw = param.AsDouble()
+        except Exception:
+            raw = None
+        if raw is None:
+            continue
+        return _feet_to_inches(raw)
+    return None
+
+
+# --------------------------------------------------------------------------- #
+# YAML helpers
+# --------------------------------------------------------------------------- #
+
+
+def _collect_params(elem):
+    def _convert_double_value(target_key, param_obj, raw_value):
+        if target_key not in ("Apparent Load Input_CED", "Voltage_CED"):
+            return raw_value
+        get_unit = getattr(param_obj, "GetUnitTypeId", None)
+        if not callable(get_unit):
+            return raw_value
+        try:
+            unit_id = get_unit()
+        except Exception:
+            unit_id = None
+        if not unit_id:
+            return raw_value
+        try:
+            return UnitUtils.ConvertFromInternalUnits(raw_value, unit_id)
+        except Exception:
+            return raw_value
+    try:
+        cat = getattr(elem, "Category", None)
+        cat_name = getattr(cat, "Name", "") if cat else ""
+    except Exception:
+        cat_name = ""
+    cat_lower = (cat_name or "").strip().lower()
+    power_categories = {"electrical fixtures", "electrical equipment", "electrical devices"}
+    circuit_categories = power_categories | {"lighting fixtures", "lighting devices", "data devices"}
+    capture_power = cat_lower in power_categories
+    capture_circuits = cat_lower in circuit_categories
+
+    base_targets = {"dev-Group ID": ["dev-Group ID", "dev_Group ID"]}
+    power_targets = {
+        "Number of Poles_CED": ["Number of Poles_CED", "Number of Poles_CEDT"],
+        "Apparent Load Input_CED": ["Apparent Load Input_CED", "Apparent Load Input_CEDT"],
+        "Voltage_CED": ["Voltage_CED", "Voltage_CEDT"],
+        "Load Classification_CED": ["Load Classification_CED", "Load Classification_CEDT"],
+        "FLA Input_CED": ["FLA Input_CED", "FLA Input_CEDT"],
+        "Wattage Input_CED": ["Wattage Input_CED", "Wattage Input_CEDT"],
+        "Power Factor_CED": ["Power Factor_CED", "Power Factor_CEDT"],
+        "Product Datasheet URL": [
+            "Product Datasheet URL",
+            "Product Datasheet URL_CED",
+            "Product Datasheet URL_CEDT",
+        ],
+        "Product Specification": [
+            "Product Specification",
+            "Product Specification_CED",
+            "Product Specification_CEDT",
+        ],
+        "SLD_Component ID_CED": ["SLD_Component ID_CED"],
+        "SLD_Symbol ID_CED": ["SLD_Symbol ID_CED"],
+    }
+    circuit_targets = {
+        "CKT_Rating_CED": ["CKT_Rating_CED"],
+        "CKT_Panel_CEDT": ["CKT_Panel_CED", "CKT_Panel_CEDT"],
+        "CKT_Schedule Notes_CEDT": ["CKT_Schedule Notes_CED", "CKT_Schedule Notes_CEDT"],
+        "CKT_Circuit Number_CEDT": ["CKT_Circuit Number_CED", "CKT_Circuit Number_CEDT"],
+        "CKT_Load Name_CEDT": ["CKT_Load Name_CED", "CKT_Load Name_CEDT"],
+    }
+
+    targets = dict(base_targets)
+    if capture_power:
+        targets.update(power_targets)
+    if capture_circuits:
+        targets.update(circuit_targets)
+
+    found = {key: "" for key in targets}
+    for param in getattr(elem, "Parameters", []) or []:
+        try:
+            name = param.Definition.Name
+        except Exception:
+            continue
+        target = None
+        for out_key, aliases in targets.items():
+            if name in aliases:
+                target = out_key
+                break
+        if not target:
+            continue
+        try:
+            storage = param.StorageType
+        except Exception:
+            storage = None
+        try:
+            storage_str = storage.ToString() if storage else ""
+        except Exception:
+            storage_str = ""
+        try:
+            if storage_str == "String":
+                found[target] = param.AsString() or ""
+            elif storage_str == "Double":
+                found[target] = _convert_double_value(target, param, param.AsDouble())
+            elif storage_str == "Integer":
+                found[target] = param.AsInteger()
+            else:
+                found[target] = param.AsValueString() or ""
+        except Exception:
+            continue
+    if "dev-Group ID" not in found:
+        found["dev-Group ID"] = ""
+    if capture_power and "Voltage_CED" in targets and not found.get("Voltage_CED"):
+        found["Voltage_CED"] = 120
+    if capture_power or capture_circuits:
+        return found
+    if any(value for key, value in found.items() if key != "dev-Group ID" and value):
+        return found
+    return {"dev-Group ID": found.get("dev-Group ID", "")}
+
+
+def _tag_signature(name):
+    return " ".join((name or "").strip().split()).lower()
+
+
+def _annotation_family_type(elem):
+    fam_name = None
+    type_name = None
+    try:
+        symbol = getattr(elem, "Symbol", None)
+        if symbol:
+            fam = getattr(symbol, "Family", None)
+            fam_name = getattr(fam, "Name", None) if fam else None
+            type_name = getattr(symbol, "Name", None)
+            if not type_name and hasattr(symbol, "get_Parameter"):
+                param = symbol.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
+                if param:
+                    type_name = param.AsString()
+    except Exception:
+        fam_name = fam_name
+    if fam_name and type_name:
+        return fam_name, type_name
+    label = _build_label(elem)
+    if ":" in label:
+        fam_part, type_part = label.split(":", 1)
+        return fam_part.strip(), type_part.strip()
+    return label, ""
+
+
+def _collect_annotation_string_params(annotation_elem):
+    results = {}
+    for param in getattr(annotation_elem, "Parameters", []) or []:
+        try:
+            definition = getattr(param, "Definition", None)
+            name = getattr(definition, "Name", None)
+        except Exception:
+            name = None
+        if not name:
+            continue
+        try:
+            storage = param.StorageType
+            is_string = storage and storage.ToString() == "String"
+        except Exception:
+            is_string = False
+        if not is_string:
+            continue
+        try:
+            if param.IsReadOnly:
+                continue
+        except Exception:
+            pass
+        try:
+            value = param.AsString()
+        except Exception:
+            value = None
+        if value:
+            safe_name = (name or "").replace("#", SAFE_HASH)
+            results[safe_name] = value
+    return results
+
+
+def _build_annotation_tag_entry(annotation_elem, host_point):
+    try:
+        cat = getattr(annotation_elem, "Category", None)
+        cat_name = getattr(cat, "Name", "") if cat else ""
+    except Exception:
+        cat_name = ""
+    if not cat_name or "generic annotation" not in cat_name.lower():
+        return None
+    ann_point = _get_point(annotation_elem)
+    if ann_point is None or host_point is None:
+        return None
+    fam_name, type_name = _annotation_family_type(annotation_elem)
+    offsets = {
+        "x_inches": _feet_to_inches(ann_point.X - host_point.X),
+        "y_inches": _feet_to_inches(ann_point.Y - host_point.Y),
+        "z_inches": _feet_to_inches(ann_point.Z - host_point.Z),
+        "rotation_deg": _normalize_angle(_get_rotation_degrees(annotation_elem)),
+    }
+    params = _collect_annotation_string_params(annotation_elem)
+    return {
+        "family_name": fam_name,
+        "type_name": type_name,
+        "category_name": cat_name,
+        "parameters": params,
+        "offsets": offsets,
+    }
+
+
+def _point_offsets_dict(point, origin):
+    if point is None or origin is None:
+        return None
+    return {
+        "x_inches": _feet_to_inches(point.X - origin.X),
+        "y_inches": _feet_to_inches(point.Y - origin.Y),
+        "z_inches": _feet_to_inches(point.Z - origin.Z),
+    }
+
+
+def _get_text_note_family_label(note_type):
+    if note_type is None:
+        return ""
+    try:
+        fam = getattr(note_type, "Family", None)
+        fam_name = getattr(fam, "Name", None) if fam else None
+        if fam_name:
+            return fam_name
+    except Exception:
+        pass
+    try:
+        family_name = getattr(note_type, "FamilyName", None)
+        if family_name:
+            return family_name
+    except Exception:
+        pass
+    if hasattr(note_type, "get_Parameter"):
+        for bip in (BuiltInParameter.ALL_MODEL_FAMILY_NAME, BuiltInParameter.SYMBOL_FAMILY_NAME_PARAM):
+            if not bip:
+                continue
+            try:
+                param = note_type.get_Parameter(bip)
+            except Exception:
+                param = None
+            if param:
+                try:
+                    value = (param.AsString() or "").strip()
+                except Exception:
+                    value = ""
+                if value:
+                    return value
+    return ""
+
+
+def _text_note_leader_type_label(leader):
+    if leader is None:
+        return None
+    for attr in ("LeaderType", "GetLeaderType", "LeaderStyle", "GetLeaderStyle", "LeaderShape"):
+        try:
+            raw = getattr(leader, attr, None)
+            if callable(raw):
+                raw = raw()
+            if raw is not None:
+                to_string = getattr(raw, "ToString", None)
+                label = to_string() if callable(to_string) else str(raw)
+                if label:
+                    return label
+        except Exception:
+            continue
+    curve = getattr(leader, "Curve", None)
+    if curve is None:
+        try:
+            curve_getter = getattr(leader, "GetCurve", None)
+            curve = curve_getter() if callable(curve_getter) else None
+        except Exception:
+            curve = None
+    if curve is not None:
+        try:
+            type_info = curve.GetType()
+            type_name = getattr(type_info, "Name", None) or ""
+        except Exception:
+            try:
+                type_name = type(curve).__name__
+            except Exception:
+                type_name = ""
+        lowered = (type_name or "").lower()
+        if "arc" in lowered:
+            return "ArcLeader"
+        if "line" in lowered or "straight" in lowered:
+            return "StraightLeader"
+        if "free" in lowered:
+            return "FreeLeader"
+    try:
+        has_elbow = getattr(leader, "HasElbow", None)
+        if callable(has_elbow):
+            has_elbow = has_elbow()
+    except Exception:
+        has_elbow = None
+    return None
+
+
+def _capture_text_note_leaders(note_elem, host_point):
+    leaders = []
+    if note_elem is None or host_point is None:
+        return leaders
+    try:
+        leader_list = list(getattr(note_elem, "GetLeaders", lambda: [])() or [])
+    except Exception:
+        leader_list = []
+    for leader in leader_list:
+        data = {}
+        label = _text_note_leader_type_label(leader)
+        if label:
+            data["type"] = label
+        try:
+            end_pos = getattr(leader, "EndPosition", None)
+        except Exception:
+            end_pos = None
+        if end_pos:
+            data["end"] = _point_offsets_dict(end_pos, host_point)
+        try:
+            elbow_pos = getattr(leader, "ElbowPosition", None)
+        except Exception:
+            elbow_pos = None
+        if elbow_pos:
+            data["elbow"] = _point_offsets_dict(elbow_pos, host_point)
+        if data:
+            leaders.append(data)
+    return leaders
+
+
+def _build_text_note_entry(note_elem, host_point):
+    if TextNote is None or host_point is None:
+        return None
+    try:
+        if note_elem is None or not isinstance(note_elem, TextNote):
+            return None
+    except Exception:
+        return None
+    try:
+        text_value = (note_elem.Text or "").strip()
+    except Exception:
+        text_value = ""
+    if not text_value:
+        return None
+    note_point = getattr(note_elem, "Coord", None)
+    if note_point is None:
+        note_point = _get_point(note_elem)
+    if note_point is None:
+        return None
+    offsets = {
+        "x_inches": _feet_to_inches(note_point.X - host_point.X),
+        "y_inches": _feet_to_inches(note_point.Y - host_point.Y),
+        "z_inches": _feet_to_inches(note_point.Z - host_point.Z),
+        "rotation_deg": 0.0,
+    }
+    try:
+        rotation_val = getattr(note_elem, "Rotation", None)
+        if rotation_val not in (None, False):
+            offsets["rotation_deg"] = math.degrees(rotation_val)
+    except Exception:
+        pass
+    width_inches = 0.0
+    try:
+        width_val = getattr(note_elem, "Width", None)
+        if width_val not in (None, False):
+            width_inches = float(width_val) * 12.0
+    except Exception:
+        width_inches = 0.0
+    note_type_name = ""
+    note_family_name = ""
+    doc = getattr(note_elem, "Document", None)
+    type_id = None
+    try:
+        type_id = note_elem.GetTypeId()
+    except Exception:
+        type_id = None
+    note_type = None
+    if doc is not None and type_id:
+        try:
+            note_type = doc.GetElement(type_id)
+        except Exception:
+            note_type = None
+    if note_type is not None:
+        note_type_name = (getattr(note_type, "Name", None) or "").strip()
+        if not note_type_name and hasattr(note_type, "get_Parameter"):
+            for bip in (BuiltInParameter.ALL_MODEL_TYPE_NAME, BuiltInParameter.SYMBOL_NAME_PARAM):
+                if not bip:
+                    continue
+                try:
+                    param = note_type.get_Parameter(bip)
+                except Exception:
+                    param = None
+                if param:
+                    try:
+                        candidate = (param.AsString() or "").strip()
+                    except Exception:
+                        candidate = ""
+                    if candidate:
+                        note_type_name = candidate
+                        break
+        note_family_name = _get_text_note_family_label(note_type)
+    display_type = ""
+    if note_family_name and note_type_name:
+        display_type = u"{} : {}".format(note_family_name.strip(), note_type_name.strip())
+    elif note_family_name:
+        display_type = note_family_name.strip()
+    else:
+        display_type = note_type_name.strip()
+    leaders = _capture_text_note_leaders(note_elem, host_point)
+    return {
+        "text": text_value,
+        "type_name": display_type,
+        "width_inches": width_inches,
+        "offsets": offsets,
+        "leaders": leaders,
+    }
+
+
+def _find_closest_child_entry(entries, note_elem):
+    if not entries or note_elem is None:
+        return None
+    note_point = getattr(note_elem, "Coord", None)
+    if note_point is None:
+        note_point = _get_point(note_elem)
+    if note_point is None:
+        return None
+    closest_idx = None
+    closest_dist = None
+    for idx, entry in enumerate(entries):
+        host_point = entry.get("point")
+        if host_point is None:
+            continue
+        try:
+            dist = host_point.DistanceTo(note_point)
+        except Exception:
+            try:
+                dx = host_point.X - note_point.X
+                dy = host_point.Y - note_point.Y
+                dz = host_point.Z - note_point.Z
+                dist = math.sqrt(dx * dx + dy * dy + dz * dz)
+            except Exception:
+                continue
+        if closest_idx is None or dist < closest_dist:
+            closest_idx = idx
+            closest_dist = dist
+    return closest_idx
+
+
+def _assign_selected_text_notes(child_entries, note_elems):
+    if not child_entries or not note_elems:
+        return
+    for note in note_elems:
+        target_idx = _find_closest_child_entry(child_entries, note)
+        if target_idx is None:
+            continue
+        host_point = child_entries[target_idx].get("point")
+        if host_point is None:
+            continue
+        entry = _build_text_note_entry(note, host_point)
+        if not entry:
+            continue
+        notes = child_entries[target_idx].setdefault("text_notes", [])
+        notes.append(entry)
+
+
+def _collect_hosted_tags(elem, host_point):
+    doc = getattr(elem, "Document", None)
+    if not doc or host_point is None:
+        return [], []
+    try:
+        dep_ids = list(elem.GetDependentElements(None))
+    except Exception:
+        dep_ids = []
+    tags = []
+    text_notes = []
+    for dep_id in dep_ids:
+        try:
+            tag = doc.GetElement(dep_id)
+        except Exception:
+            tag = None
+        if isinstance(tag, IndependentTag):
+            try:
+                tag_point = tag.TagHeadPosition
+            except Exception:
+                tag_point = None
+            if tag_point is None:
+                continue
+            tag_symbol = None
+            try:
+                tag_symbol = doc.GetElement(tag.GetTypeId())
+            except Exception:
+                tag_symbol = None
+            fam_name = None
+            type_name = None
+            category_name = None
+            if tag_symbol:
+                try:
+                    fam = getattr(tag_symbol, "Family", None)
+                    fam_name = getattr(fam, "Name", None) if fam else getattr(tag_symbol, "FamilyName", None)
+                except Exception:
+                    fam_name = None
+                try:
+                    type_name = getattr(tag_symbol, "Name", None)
+                except Exception:
+                    type_name = None
+                try:
+                    cat = getattr(tag_symbol, "Category", None)
+                    category_name = getattr(cat, "Name", None) if cat else None
+                except Exception:
+                    category_name = None
+            if not (fam_name and type_name):
+                try:
+                    symbols = getattr(tag, "Symbol", None)
+                except Exception:
+                    symbols = None
+                if symbols:
+                    try:
+                        fam = getattr(symbols, "Family", None)
+                        fam_name = getattr(fam, "Name", None) if fam else fam_name
+                    except Exception:
+                        pass
+                    try:
+                        type_name = getattr(symbols, "Name", None) or type_name
+                        if not type_name and hasattr(symbols, "get_Parameter"):
+                            param = symbols.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
+                            if param:
+                                type_name = param.AsString()
+                    except Exception:
+                        pass
+            if not type_name:
+                try:
+                    tag_type = getattr(tag, "TagType", None)
+                    type_name = getattr(tag_type, "Name", None)
+                except Exception:
+                    type_name = None
+            offsets = {
+                "x_inches": _feet_to_inches((tag_point.X - host_point.X)),
+                "y_inches": _feet_to_inches((tag_point.Y - host_point.Y)),
+                "z_inches": _feet_to_inches((tag_point.Z - host_point.Z)),
+                "rotation_deg": 0.0,
+            }
+            family_field = fam_name or ""
+            type_field = type_name or ""
+            if not type_field and tag_symbol:
+                try:
+                    param = tag_symbol.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
+                    if param:
+                        type_field = param.AsString() or ""
+                except Exception:
+                    pass
+            if not type_field:
+                try:
+                    tag_type = getattr(tag, "TagType", None)
+                    if tag_type:
+                        type_field = getattr(tag_type, "Name", None) or type_field
+                except Exception:
+                    pass
+            if not type_field and ":" in (family_field or ""):
+                fam_part, type_part = family_field.split(":", 1)
+                family_field = fam_part.strip()
+                type_field = type_part.strip()
+            tags.append({
+                "family_name": family_field,
+                "type_name": type_field,
+                "category_name": category_name,
+                "parameters": {},
+                "offsets": offsets,
+            })
+            continue
+        annotation_entry = _build_annotation_tag_entry(tag, host_point)
+        if annotation_entry:
+            tags.append(annotation_entry)
+            continue
+        text_entry = _build_text_note_entry(tag, host_point)
+        if text_entry:
+            text_notes.append(text_entry)
+    return tags, text_notes
+
+
+def _normalize_angle(value):
+    if value is None:
+        return 0.0
+    ang = float(value)
+    while ang <= -180.0:
+        ang += 360.0
+    while ang > 180.0:
+        ang -= 360.0
+    return ang
+
+
+def _build_label(elem):
+    fam_name = None
+    type_name = None
+    if isinstance(elem, Group):
+        try:
+            fam_name = elem.Name
+            type_name = elem.Name
+        except Exception:
+            pass
+    else:
+        try:
+            sym = getattr(elem, "Symbol", None)
+            if sym:
+                fam = getattr(sym, "Family", None)
+                fam_name = getattr(fam, "Name", None) if fam else None
+                type_name = getattr(sym, "Name", None)
+                if not fam_name:
+                    fam_name = getattr(sym, "FamilyName", None)
+                if not type_name and hasattr(sym, "get_Parameter"):
+                    try:
+                        name_param = sym.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
+                        if name_param:
+                            type_name = name_param.AsString()
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+    if not fam_name and hasattr(elem, "Name"):
+        try:
+            fam_name = elem.Name
+        except Exception:
+            fam_name = None
+    if not type_name and not fam_name and hasattr(elem, "Name"):
+        try:
+            type_name = elem.Name
+        except Exception:
+            type_name = None
+    if fam_name and type_name:
+        return "{} : {}".format(fam_name, type_name)
+    return type_name or fam_name or "Unnamed"
+
+
+def _get_category(elem):
+    try:
+        cat = elem.Category
+        if cat:
+            return cat.Name or ""
+    except Exception:
+        pass
+    return ""
+
+
+def _candidate_equipment_names(elem):
+    names = []
+    try:
+        if hasattr(elem, "Name") and elem.Name:
+            names.append(elem.Name.strip())
+    except Exception:
+        pass
+    label = _build_label(elem)
+    if label:
+        names.insert(0, label)
+    uniq = []
+    seen = set()
+    for name in names:
+        norm = (name or "").strip()
+        if not norm:
+            continue
+        key = norm.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        uniq.append(norm)
+    return uniq
+
+
+def _normalize_key(value):
+    value = (value or "").strip().lower()
+    if not value:
+        return ""
+    return "".join(ch for ch in value if ch.isalnum())
+
+
+def _find_equipment_definition_by_name(data, name):
+    raw = (name or "").strip()
+    target = raw.lower()
+    if not target:
+        return None
+    for eq in data.get("equipment_definitions") or []:
+        current_raw = (eq.get("name") or eq.get("id") or "").strip()
+        if not current_raw:
+            continue
+        current = current_raw.lower()
+        if current == target:
+            return eq
+    return None
+
+
+def _sanitize_equipment_definitions(equipment_defs):
+    cleaned_defs = []
+    for eq in equipment_defs or []:
+        if not isinstance(eq, dict):
+            continue
+        sanitized = dict(eq)
+        linked_sets = []
+        for linked_set in sanitized.get("linked_sets") or []:
+            if not isinstance(linked_set, dict):
+                continue
+            ls_copy = dict(linked_set)
+            led_defs = []
+            for led in ls_copy.get("linked_element_definitions") or []:
+                if not isinstance(led, dict):
+                    continue
+                led_defs.append(dict(led))
+            ls_copy["linked_element_definitions"] = led_defs
+            linked_sets.append(ls_copy)
+        sanitized["linked_sets"] = linked_sets
+        cleaned_defs.append(sanitized)
+    return cleaned_defs
+
+
+def _sanitize_profiles(profiles):
+    cleaned = []
+    for prof in profiles or []:
+        if not isinstance(prof, dict):
+            continue
+        prof_copy = dict(prof)
+        type_list = []
+        for entry in prof_copy.get("types") or []:
+            if not isinstance(entry, dict):
+                continue
+            type_entry = dict(entry)
+            inst_cfg = type_entry.get("instance_config") or {}
+            offsets = inst_cfg.get("offsets")
+            if not isinstance(offsets, list) or not offsets:
+                offsets = [{}]
+            inst_cfg["offsets"] = [off if isinstance(off, dict) else {} for off in offsets]
+            tags = inst_cfg.get("tags") or []
+            inst_cfg["tags"] = [tag if isinstance(tag, dict) else {} for tag in tags]
+            params = inst_cfg.get("parameters")
+            inst_cfg["parameters"] = params if isinstance(params, dict) else {}
+            type_entry["instance_config"] = inst_cfg
+            type_list.append(type_entry)
+        prof_copy["types"] = type_list
+        cleaned.append(prof_copy)
+    return cleaned
+
+
+def _build_repository(data):
+    cleaned_defs = _sanitize_equipment_definitions(data.get("equipment_definitions") or [])
+    legacy_profiles = equipment_defs_to_legacy(cleaned_defs)
+    cleaned_profiles = _sanitize_profiles(legacy_profiles)
+    eq_defs = ProfileRepository._parse_profiles(cleaned_profiles)
+    return ProfileRepository(eq_defs)
+
+
+def _place_existing_configuration(doc, data, cad_name, parent_point, parent_rotation):
+    if not cad_name or parent_point is None:
+        return
+    repo = _build_repository(data)
+    labels = repo.labels_for_cad(cad_name)
+    if not labels:
+        return
+    selection_map = {cad_name: labels}
+    rows = [{
+        "Name": cad_name,
+        "Count": "1",
+        "Position X": str(parent_point.X * 12.0),
+        "Position Y": str(parent_point.Y * 12.0),
+        "Position Z": str(parent_point.Z * 12.0),
+        "Rotation": str(parent_rotation or 0.0),
+    }]
+    engine = PlaceElementsEngine(
+        doc,
+        repo,
+        allow_tags=True,
+        transaction_name="Load Profile for Edit/Create",
+    )
+    try:
+        engine.place_from_csv(rows, selection_map)
+    except Exception as exc:
+        LOG.warning("Failed to place existing profile: %s", exc)
+
+
+def _build_element_linker_payload(led_id, set_id, elem, host_point, rotation_override=None, parent_rotation=None, parent_elem_id=None):
+    point = host_point or _get_point(elem)
+    rot = rotation_override if rotation_override is not None else _get_rotation_degrees(elem)
+    level_id = getattr(getattr(elem, "LevelId", None), "IntegerValue", None)
+    elem_id = getattr(getattr(elem, "Id", None), "IntegerValue", None)
+    facing = getattr(elem, "FacingOrientation", None)
+    lines = [
+        "Linked Element Definition ID: {}".format(led_id or ""),
+        "Set Definition ID: {}".format(set_id or ""),
+        "Location XYZ (ft): {:.6f},{:.6f},{:.6f}".format(point.X, point.Y, point.Z) if point else "Location XYZ (ft):",
+        "Rotation (deg): {:.6f}".format(rot or 0.0),
+        "Parent Rotation (deg): {}".format("{:.6f}".format(parent_rotation) if parent_rotation is not None else ""),
+        "Parent ElementId: {}".format(parent_elem_id if parent_elem_id is not None else ""),
+        "LevelId: {}".format(level_id if level_id is not None else ""),
+        "ElementId: {}".format(elem_id if elem_id is not None else ""),
+        "FacingOrientation: {}".format("{:.6f},{:.6f},{:.6f}".format(facing.X, facing.Y, facing.Z) if facing else ""),
+    ]
+    return "\n".join(lines)
+
+
+def _set_element_linker_parameter(elem, value):
+    for name in ELEMENT_LINKER_PARAM_NAMES:
+        try:
+            param = elem.LookupParameter(name)
+        except Exception:
+            param = None
+        if not param or param.IsReadOnly:
+            continue
+        try:
+            param.Set(value)
+            return True
+        except Exception:
+            continue
+    return False
+
+
+def _truth_group_metadata(equipment_defs):
+    groups = {}
+    child_to_group = {}
+    for entry in equipment_defs or []:
+        eq_name = (entry.get("name") or entry.get("id") or "").strip()
+        if not eq_name:
+            continue
+        source_id = (entry.get(TRUTH_SOURCE_ID_KEY) or "").strip()
+        if not source_id:
+            source_id = (entry.get("id") or eq_name).strip()
+        display = (entry.get(TRUTH_SOURCE_NAME_KEY) or "").strip()
+        if not display:
+            display = eq_name
+        group = groups.setdefault(source_id, {
+            "display": display,
+            "members": [],
+        })
+        group["members"].append(eq_name)
+        child_to_group[eq_name] = source_id
+    return groups, child_to_group
+
+
+def _gather_child_entries(elements, parent_point, parent_rotation, parent_elem):
+    entries = []
+    for elem in elements:
+        if elem is None or isinstance(elem, IndependentTag) or isinstance(elem, TextNote):
+            continue
+        if parent_elem is not None and getattr(elem, "Id", None) == getattr(parent_elem, "Id", None):
+            continue
+        point = _get_point(elem)
+        if point is None:
+            continue
+        rotation = _get_rotation_degrees(elem)
+        offsets = compute_offsets_from_points(parent_point, parent_rotation, point, rotation)
+        offsets["z_inches"] = _level_relative_z_inches(elem, point)
+        if isinstance(elem, Group):
+            offsets["rotation_deg"] = _normalize_angle(rotation - parent_rotation)
+        tags, hosted_notes = _collect_hosted_tags(elem, point)
+        params = _collect_params(elem)
+        led_entry = {
+            "element": elem,
+            "point": point,
+            "rotation_deg": rotation,
+            "label": _build_label(elem),
+            "category": _get_category(elem),
+            "is_group": isinstance(elem, Group),
+            "offsets": offsets,
+            "parameters": params,
+            "tags": tags,
+            "text_notes": hosted_notes,
+        }
+        entries.append(led_entry)
+    return entries
+
+
+def _context_from_parent(parent_elem, cad_name, parent_point, parent_rotation):
+    context = {
+        "cad_name": cad_name,
+        "parent_point": (parent_point.X, parent_point.Y, parent_point.Z),
+        "parent_rotation": parent_rotation,
+    }
+    try:
+        context["parent_element_id"] = parent_elem.Id.IntegerValue
+    except Exception:
+        context["parent_element_id"] = None
+    return context
+
+
+def _xyz_from_tuple(values):
+    if not isinstance(values, (list, tuple)) or len(values) != 3:
+        return XYZ(0, 0, 0)
+    return XYZ(float(values[0]), float(values[1]), float(values[2]))
+
+
+def _match_truth_group(name, truth_groups, data):
+    if not truth_groups:
+        return None
+    raw = (name or "").strip()
+    norm = _normalize_key(raw)
+    if not norm:
+        return None
+    for group in truth_groups.values():
+        display = (group.get("display") or "").strip()
+        display_norm = _normalize_key(display)
+        if display_norm != norm:
+            continue
+        for member in group.get("members") or []:
+            eq_def = _find_equipment_definition_by_name(data, member)
+            if eq_def:
+                resolved_name = display or member or eq_def.get("name") or eq_def.get("id")
+                return eq_def, resolved_name, False
+    return None
+
+
+def _resolve_equipment_definition(parent_elem, data, truth_groups=None):
+    candidates = _candidate_equipment_names(parent_elem) or []
+    for name in candidates:
+        eq_def = _find_equipment_definition_by_name(data, name)
+        if eq_def:
+            resolved_name = (eq_def.get("name") or eq_def.get("id") or name).strip() or name
+            return eq_def, resolved_name, False
+        group_match = _match_truth_group(name, truth_groups, data)
+        if group_match:
+            eq_def, member_name, _ = group_match
+            resolved_name = (eq_def.get("name") or eq_def.get("id") or member_name).strip() or member_name
+            return eq_def, resolved_name, False
+    default_name = candidates[0] if candidates else "New Profile"
+    cad_name = default_name or "New Profile"
+    sample_entry = {
+        "label": default_name or cad_name,
+        "category_name": _get_category(parent_elem),
+    }
+    eq_def = ensure_equipment_definition(data, cad_name, sample_entry)
+    linked_set = get_type_set(eq_def)
+    next_idx = _next_eq_number(data, exclude_defs=[eq_def])
+    eq_id = "EQ-{:03d}".format(next_idx)
+    set_id = "SET-{:03d}".format(next_idx)
+    eq_def["id"] = eq_id
+    linked_set["id"] = set_id
+    linked_set["name"] = "{} Types".format(cad_name)
+    source_id = eq_def.get("id") or cad_name
+    if source_id:
+        if not eq_def.get(TRUTH_SOURCE_ID_KEY):
+            eq_def[TRUTH_SOURCE_ID_KEY] = source_id
+        if not eq_def.get(TRUTH_SOURCE_NAME_KEY):
+            eq_def[TRUTH_SOURCE_NAME_KEY] = cad_name
+    return eq_def, cad_name, True
+
+
+def _write_metadata_updates(updates):
+    if not updates:
+        return
+    doc = revit.doc
+    if doc is None:
+        return
+    txn = Transaction(doc, "Set Element_Linker metadata")
+    try:
+        txn.Start()
+        for elem, payload in updates:
+            _set_element_linker_parameter(elem, payload)
+        txn.Commit()
+    except Exception:
+        try:
+            txn.RollBack()
+        except Exception:
+            pass
+
+
+def _run_selection_flow(doc, data, context, truth_groups, child_to_group, parent_elem=None):
+    cad_name = context.get("cad_name")
+    if not cad_name:
+        forms.alert("Missing profile name for this session.", title=TITLE)
+        return
+    eq_def = _find_equipment_definition_by_name(data, cad_name)
+    if not eq_def:
+        forms.alert("Could not locate equipment definition '{}'.".format(cad_name), title=TITLE)
+        _save_session(doc, None)
+        return
+    parent_point = _xyz_from_tuple(context.get("parent_point") or (0.0, 0.0, 0.0))
+    parent_rotation = context.get("parent_rotation") or 0.0
+    if parent_elem is None:
+        elem_id = context.get("parent_element_id")
+        if elem_id is not None:
+            try:
+                parent_elem = doc.GetElement(ElementId(int(elem_id)))
+            except Exception:
+                parent_elem = None
+    parent_elem_id = None
+    if parent_elem is not None:
+        try:
+            parent_elem_id = parent_elem.Id.IntegerValue
+        except Exception:
+            parent_elem_id = None
+    if parent_elem_id is None:
+        parent_elem_id = context.get("parent_element_id")
+
+    trans_group = TransactionGroup(doc, TITLE)
+    trans_group.Start()
+    success = False
+    try:
+        try:
+            picked = list(revit.pick_elements(message="Select equipment/tag elements for '{}'".format(cad_name)))
+        except Exception:
+            picked = []
+        if not picked:
+            forms.alert("No elements were selected.", title=TITLE)
+            return
+
+        text_note_elems = []
+        host_candidates = []
+        for elem in picked:
+            if isinstance(elem, TextNote):
+                text_note_elems.append(elem)
+                continue
+            host_candidates.append(elem)
+
+        child_entries = _gather_child_entries(host_candidates, parent_point, parent_rotation, parent_elem)
+        if not child_entries:
+            forms.alert("None of the selected elements produced valid entries.", title=TITLE)
+            return
+        _assign_selected_text_notes(child_entries, text_note_elems)
+
+        linked_set = get_type_set(eq_def)
+        linked_set["linked_element_definitions"] = []
+        metadata_updates = []
+        for entry in child_entries:
+            led_id = next_led_id(linked_set, eq_def)
+            offsets = dict(entry["offsets"])
+            entry_params = dict(entry.get("parameters") or {})
+            entry_tags = list(entry.get("tags") or [])
+            entry_text_notes = list(entry.get("text_notes") or [])
+            led_entry = {
+                "id": led_id,
+                "label": entry["label"],
+                "category": entry["category"],
+                "is_group": entry["is_group"],
+                "offsets": [offsets],
+                "parameters": entry_params,
+                "tags": entry_tags,
+                "text_notes": entry_text_notes,
+            }
+            payload = _build_element_linker_payload(
+                led_id,
+                linked_set.get("id") or "",
+                entry["element"],
+                entry["point"],
+                entry["rotation_deg"],
+                parent_rotation,
+                parent_elem_id,
+            )
+            led_entry["parameters"][ELEMENT_LINKER_PARAM_NAME] = payload
+            metadata_updates.append((entry["element"], payload))
+            linked_set["linked_element_definitions"].append(led_entry)
+
+        group_id = eq_def.get(TRUTH_SOURCE_ID_KEY) or child_to_group.get(cad_name) or (eq_def.get("id") or cad_name)
+        display_name = truth_groups.get(group_id, {}).get("display") if truth_groups else None
+        eq_def[TRUTH_SOURCE_ID_KEY] = group_id
+        eq_def[TRUTH_SOURCE_NAME_KEY] = display_name or cad_name
+
+        _write_metadata_updates(metadata_updates)
+
+        save_active_yaml_data(
+            None,
+            data,
+            TITLE,
+            "Updated profile '{}' with {} item(s)".format(cad_name, len(child_entries)),
+        )
+        forms.alert(
+            "Saved {} element(s) to '{}'.\nReload any tools that cache YAML."
+            .format(len(child_entries), cad_name),
+            title=TITLE,
+        )
+        _save_session(doc, None)
+        success = True
+    finally:
+        try:
+            if success:
+                trans_group.Assimilate()
+            else:
+                trans_group.RollBack()
+        except Exception:
+            pass
+
+
+def main():
+    doc = getattr(revit, "doc", None)
+    if doc is None:
+        forms.alert("No active document detected.", title=TITLE)
+        return
+    try:
+        data_path, data = load_active_yaml_data()
+    except RuntimeError as exc:
+        forms.alert(str(exc), title=TITLE)
+        return
+    truth_groups, child_to_group = _truth_group_metadata(data.get("equipment_definitions") or [])
+
+    session = _load_session(doc)
+    if session:
+        cad_name = session.get("cad_name") or "<Unknown>"
+        resume = forms.alert(
+            "Resume editing profile '{}'?".format(cad_name),
+            title=TITLE,
+            yes=True,
+            no=True,
+        )
+        if resume:
+            _run_selection_flow(doc, data, session, truth_groups, child_to_group)
+            return
+        _save_session(doc, None)
+        forms.alert("Edit/Create session cleared. Continue selecting a new parent.", title=TITLE)
+
+    # Prompt for CAD name instead of selecting parent element
+    cad_name = forms.ask_for_string(
+        prompt="Enter CAD name for this profile:",
+        title=TITLE,
+        default=""
+    )
+    if not cad_name or not cad_name.strip():
+        return
+    cad_name = cad_name.strip()
+
+    # Check if profile exists
+    eq_def = _find_equipment_definition_by_name(data, cad_name)
+    created_new = False
+    if not eq_def:
+        # Create new equipment definition
+        sample_entry = {
+            "label": cad_name,
+            "category_name": "",
+        }
+        eq_def = ensure_equipment_definition(data, cad_name, sample_entry)
+        linked_set = get_type_set(eq_def)
+        next_idx = _next_eq_number(data, exclude_defs=[eq_def])
+        eq_id = "EQ-{:03d}".format(next_idx)
+        set_id = "SET-{:03d}".format(next_idx)
+        eq_def["id"] = eq_id
+        linked_set["id"] = set_id
+        linked_set["name"] = "{} Types".format(cad_name)
+        source_id = eq_def.get("id") or cad_name
+        if source_id:
+            if not eq_def.get(TRUTH_SOURCE_ID_KEY):
+                eq_def[TRUTH_SOURCE_ID_KEY] = source_id
+            if not eq_def.get(TRUTH_SOURCE_NAME_KEY):
+                eq_def[TRUTH_SOURCE_NAME_KEY] = cad_name
+        created_new = True
+
+    # Use centroid as parent point (0,0,0 - will be calculated from selected elements)
+    parent_point = XYZ(0, 0, 0)
+    parent_rotation = 0.0
+    parent_elem = None
+
+    context = {
+        "cad_name": cad_name,
+        "parent_point": (parent_point.X, parent_point.Y, parent_point.Z),
+        "parent_rotation": parent_rotation,
+        "parent_element_id": None,
+    }
+
+    proceed_now = forms.alert(
+        "Profile '{}' ready.\nSelect 'Yes' to capture equipment now, or 'No' to pause and place equipment first."
+        .format(cad_name),
+        title=TITLE,
+        yes=True,
+        no=True,
+    )
+    if not proceed_now:
+        _save_session(doc, context)
+        forms.alert(
+            "Session saved for '{}'. Use Revit tools to place equipment, then run this tool again to capture."
+            .format(cad_name),
+            title=TITLE,
+        )
+        return
+
+    _run_selection_flow(doc, data, context, truth_groups, child_to_group, parent_elem)
+
+
+if __name__ == "__main__":
+    main()

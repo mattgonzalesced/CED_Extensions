@@ -892,7 +892,14 @@ class PlaceElementsEngine(object):
                     if parsed is not None:
                         return parsed
                     try:
-                        return float(raw) * 12.0
+                        fallback = float(raw) * 12.0
+                        try:
+                            from pyrevit import script
+                            logger = script.get_logger()
+                            logger.debug("FALLBACK: '{}' parsed as {} feet = {} inches".format(raw, float(raw), fallback))
+                        except:
+                            pass
+                        return fallback
                     except Exception:
                         return None
 

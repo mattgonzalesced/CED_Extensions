@@ -228,6 +228,67 @@ def _ensure_drafting_view(doc):
     return active_view
 
 
+def collect_all_circuits(doc, option_filter):
+    circuits = []
+
+    ckt_collector = DB.FilteredElementCollector(doc) \
+        .OfClass(DB.Electrical.ElectricalSystem) \
+        .WherePasses(option_filter) \
+        .ToElements()
+
+    for ckt in ckt_collector:
+
+        panel_name = get_model_param_value(
+            ckt, DB.BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM
+        )
+        cnum = get_model_param_value(
+            ckt, DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER
+        )
+
+        if not panel_name or not cnum:
+            continue
+
+        circuits.append({
+            "panel_name": str(panel_name),
+            "ckt_number": str(cnum),
+            "element": ckt,
+            "id": str(ckt.Id.IntegerValue)
+        })
+
+    return circuits
+
+
+def build_circuits_by_panel(resolved_panels, circuits):
+    result = {}
+
+    for panel_name, pdata in resolved_panels.items():
+        pid = pdata["panel_id"]
+        panel_elem = pdata["panel"]
+
+        result[pid] = {}
+
+        try:
+            systems = panel_elem.MEPModel.GetAssignedElectricalSystems()
+        except:
+            systems = []
+
+        for sys in systems:
+            cnum = get_model_param_value(
+                sys, DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER
+            )
+            if not cnum:
+                continue
+
+            cdata = {}
+            for dp, bip in CIRCUIT_VALUE_MAP.items():
+                cdata[dp] = get_model_param_value(sys, bip)
+
+            cdata["circuit_id"] = str(sys.Id.IntegerValue)
+            result[pid][str(cnum)] = cdata
+
+    return result
+
+
 def _collect_circuits(doc, option_filter):
     circuit_map = {}
     circuited_panel_names = set()
@@ -253,6 +314,42 @@ def _collect_circuits(doc, option_filter):
             circuit_map[key] = cdata
 
     return ckt_collector, circuit_map, circuited_panel_names
+
+
+def _is_spare_or_space_circuit(electrical_system):
+    """
+    Returns True if ElectricalSystem.CircuitType is Spare or Space.
+    Safe for IronPython / enum weirdness.
+    """
+    if not electrical_system:
+        return False
+
+    try:
+        ctype = electrical_system.CircuitType
+    except:
+        return False
+
+    # Prefer enum compare if available
+    try:
+        if ctype == DB.Electrical.CircuitType.Spare:
+            return True
+        if ctype == DB.Electrical.CircuitType.Space:
+            return True
+    except:
+        pass
+
+    # Fallback to string compare (for API/enum binding edge cases)
+    try:
+        ctype_str = str(ctype).upper()
+        if "SPARE" in ctype_str:
+            return True
+        if "SPACE" in ctype_str:
+            return True
+    except:
+        pass
+
+    return False
+
 
 def _get_fed_from_label(equipment):
     """
@@ -315,8 +412,9 @@ def _get_fed_from_label(equipment):
 
     return ""
 
+
 def _collect_panels(doc, option_filter):
-    panel_map = {}          # name -> [pdata, pdata, ...]
+    panel_map = {}  # name -> [pdata, pdata, ...]
     panel_map_by_id = {}
 
     pnl_collector = DB.FilteredElementCollector(doc) \
@@ -343,150 +441,193 @@ def _collect_panels(doc, option_filter):
 
     return panel_map, panel_map_by_id
 
-def _parse_component_id(value):
-    """
-    Returns (equipment_id, symbol_id) or (None, None)
-    """
-    if not value:
-        return None, None
 
-    try:
-        parts = value.split("|")
-        eid = None
-        sid = None
-        for p in parts:
-            if p.startswith("EID:"):
-                eid = p.replace("EID:", "")
-            elif p.startswith("SID:"):
-                sid = p.replace("SID:", "")
-        return eid, sid
-    except:
-        return None, None
+def resolve_panels(panel_map, circuited_panel_names):
+    resolved = {}  # panel_name -> {panel, panel_id}
+    failed = {}  # panel_name -> {used, rejected}
 
-def _format_equipment_choice(equipment, include_fed_from):
-    panel_name = get_model_param_value(
-        equipment,
-        DB.BuiltInParameter.RBS_ELEC_PANEL_NAME
-    ) or ""
+    for panel_name, candidates in panel_map.items():
 
-    dist = get_model_param_value(
-        equipment,
-        DB.BuiltInParameter.RBS_FAMILY_CONTENT_DISTRIBUTION_SYSTEM
-    ) or ""
+        # Single panel — always valid
+        if len(candidates) == 1:
+            pdata = candidates[0]
+            resolved[panel_name] = {
+                "panel": pdata["_element"],
+                "panel_id": pdata["panel_id"]
+            }
+            continue
 
-    mains = get_model_param_value(
-        equipment,
-        "Mains Rating_CED"
-    ) or ""
-
-    fed_from = ""
-    if include_fed_from:
-        fed_from = _get_fed_from_label(equipment)
-
-    label = (
-        "ID " + str(equipment.Id.IntegerValue) +
-        " | Panel: " + panel_name +
-        " | Dist: " + str(dist) +
-        " | Mains: " + str(mains)
-    )
-
-    if fed_from:
-        label += " | Fed From: " + fed_from
-
-    return label
-
-
-
-def _resolve_equipment_ambiguity(panel_name, equipment_list):
-    options = {}
-    display = []
-
-    for eq in equipment_list:
-        label = _format_equipment_choice(eq, include_fed_from=True)
-        options[label] = eq
-        display.append(label)
-
-    choice = forms.SelectFromList.show(
-        display,
-        title="Multiple equipment named '" + panel_name + "'",
-        multiselect=False,
-        button_name="Use Selected Equipment"
-    )
-
-    if not choice:
-        return None
-
-    return options.get(choice)
-
-
-def _resolve_equipment_panel(panel_name, panel_map, detail_symbol):
-    candidates = panel_map.get(panel_name)
-    if not candidates:
-        return None
-
-    # IMPORTANT: only ambiguous names should reach this function
-    if len(candidates) == 1:
-        return candidates[0]["_element"]
-
-    # Check if already resolved via component ID
-    comp_val = get_detail_param_value(detail_symbol, "SLD_Component ID_CED")
-    eid, _ = _parse_component_id(comp_val)
-
-    if eid:
-        for pdata in candidates:
-            if pdata["panel_id"] == eid:
-                return pdata["_element"]
-
-    # Prompt user
-    equipment_elems = [p["_element"] for p in candidates]
-    return _resolve_equipment_ambiguity(panel_name, equipment_elems, detail_symbol)
-
-def _write_component_id(equipment_elem, symbol_elem):
-    value = "EID:" + str(equipment_elem.Id.IntegerValue) + "|SID:" + str(symbol_elem.Id.IntegerValue)
-    set_detail_param_value(equipment_elem, "SLD_Component ID_CED", value)
-    set_detail_param_value(symbol_elem, "SLD_Component ID_CED", value)
-
-
-def _resolve_panel_by_name(panel_name, panel_map, circuited_panel_names, warnings):
-    candidates = panel_map.get(panel_name)
-    if not candidates:
-        return None
-
-    # Prefer circuited panels
-    if panel_name in circuited_panel_names:
+        # Prefer circuited panels
         circuited = []
-        for pdata in candidates:
-            pnl = pdata.get("_element")
-            if pnl:
+        if panel_name in circuited_panel_names:
+            for pdata in candidates:
+                pnl = pdata["_element"]
                 try:
-                    mep = pnl.MEPModel
-                    if mep and mep.GetElectricalSystems():
+                    if pnl.MEPModel and pnl.MEPModel.GetElectricalSystems():
                         circuited.append(pdata)
                 except:
                     pass
 
-        if circuited:
-            if len(circuited) > 1:
-                warnings.append(
-                    "Multiple circuited panels named '" + panel_name +
-                    "' found. Using lowest ElementId."
-                )
-            return sorted(
-                circuited,
-                key=lambda d: int(d["panel_id"])
-            )[0]
+        pool = circuited if circuited else candidates
 
-    # Fallback: deterministic placeholder
-    if len(candidates) > 1:
-        warnings.append(
-            "Multiple panels named '" + panel_name +
-            "' found (no circuits). Using lowest ElementId."
+        winner = sorted(pool, key=lambda d: int(d["panel_id"]))[0]
+        losers = [d for d in candidates if d != winner]
+
+        resolved[panel_name] = {
+            "panel": winner["_element"],
+            "panel_id": winner["panel_id"]
+        }
+
+        failed[panel_name] = {
+            "used": winner["panel_id"],
+            "rejected": [d["panel_id"] for d in losers]
+        }
+
+    return resolved, failed
+
+
+
+
+def _get_supplied_panel_id_from_circuit(circuit):
+    """
+    Try to find a single ElectricalEquipment element that this circuit supplies.
+    Returns panel_id string or None.
+    """
+    try:
+        elems = circuit.Elements  # ElementSet-like
+    except:
+        elems = None
+
+    if not elems:
+        return None
+
+    supplied_ids = []
+
+    try:
+        for el in elems:
+            try:
+                if el and el.Category and el.Category.Id == DB.ElementId(DB.BuiltInCategory.OST_ElectricalEquipment):
+                    supplied_ids.append(str(el.Id.IntegerValue))
+            except:
+                continue
+    except:
+        return None
+
+    supplied_ids = sorted(set([x for x in supplied_ids if x]))
+    if len(supplied_ids) == 1:
+        return supplied_ids[0]
+
+    return None
+
+
+def reconcile_panel_identity_from_circuit(
+        ditem,
+        resolved_panels,
+        circuits_by_panel,
+        auto_panel_updates,
+        auto_panel_warnings
+):
+    # -------------------------
+    # Guardrail 1: must have all 3 params
+    # -------------------------
+    pname_val = get_detail_param_value(ditem, DETAIL_PARAM_PANEL_NAME)
+    cpanel_val = get_detail_param_value(ditem, DETAIL_PARAM_CKT_PANEL)
+    cnum_val = get_detail_param_value(ditem, DETAIL_PARAM_CKT_NUMBER)
+
+    if not (pname_val and cpanel_val and cnum_val):
+        return False
+
+    identity_name = str(pname_val)
+    circuit_panel_name = str(cpanel_val)
+    ckt_number = str(cnum_val)
+
+    # -------------------------
+    # Guardrail 2: identity panel must be resolved
+    # -------------------------
+    identity_pdata = resolved_panels.get(identity_name)
+    if not identity_pdata:
+        return False
+
+    current_panel_id = identity_pdata.get("panel_id")
+    if not current_panel_id:
+        return False
+
+    # -------------------------
+    # Guardrail 3: resolve circuit via circuit's panel
+    # -------------------------
+    circuit_panel_pdata = resolved_panels.get(circuit_panel_name)
+    if not circuit_panel_pdata:
+        return False
+
+    owner_panel_id = circuit_panel_pdata.get("panel_id")
+    if not owner_panel_id:
+        return False
+
+    cdict = circuits_by_panel.get(owner_panel_id, {}).get(ckt_number)
+    if not cdict:
+        return False
+
+    cid = cdict.get("circuit_id")
+    if not cid:
+        return False
+
+    try:
+        circuit_elem = revit.doc.GetElement(DB.ElementId(int(cid)))
+    except:
+        return False
+
+    if not circuit_elem:
+        return False
+
+    # -------------------------
+    # ✅ NEW GUARDRAIL: ignore Spare / Space circuits
+    # -------------------------
+    if _is_spare_or_space_circuit(circuit_elem):
+        return False
+
+    # -------------------------
+    # Guardrail 4: resolve supplied panel
+    # -------------------------
+    supplied_panel_id = _get_supplied_panel_id_from_circuit(circuit_elem)
+    if not supplied_panel_id:
+        return False
+
+    supplied_panel_name = None
+    supplied_panel_elem = None
+
+    for name, pdata in resolved_panels.items():
+        if pdata.get("panel_id") == supplied_panel_id:
+            supplied_panel_name = name
+            supplied_panel_elem = pdata.get("panel")
+            break
+
+    if not supplied_panel_name or not supplied_panel_elem:
+        return False
+
+    # -------------------------
+    # Already correct
+    # -------------------------
+    if supplied_panel_id == current_panel_id:
+        return False
+
+    # -------------------------
+    # APPLY CORRECTION
+    # -------------------------
+    set_detail_param_value(ditem, DETAIL_PARAM_PANEL_NAME, supplied_panel_name)
+
+    for detail_param_name, bip in PANEL_VALUE_MAP.items():
+        set_detail_param_value(
+            ditem,
+            detail_param_name,
+            get_model_param_value(supplied_panel_elem, bip)
         )
 
-    return sorted(
-        candidates,
-        key=lambda d: int(d["panel_id"])
-    )[0]
+    auto_panel_updates.setdefault(
+        "The following Equipment Symbols were updated automatically based on new supply circuit number.",
+        set()
+    ).add(str(ditem.Id.IntegerValue))
+
+    return True
 
 
 def _collect_detail_items(doc, option_filter, active_view):
@@ -501,6 +642,7 @@ def _collect_detail_items(doc, option_filter, active_view):
         if is_not_in_group(el)]
     logger.debug("Collected " + str(len(detail_items)) + " detail item(s).")
     return detail_items
+
 
 def _get_circuit_sort_key(circuit_label):
     """
@@ -517,9 +659,11 @@ def _get_circuit_sort_key(circuit_label):
         pass
     return 999999
 
-def _build_output_summary(detail_items, circuit_map, panel_map, panel_map_by_id, circuited_panel_names, warnings):
-    equipment_rows = {}   # panel_name -> {"panel_ids": set(), "detail_ids": set()}
-    circuit_rows = {}     # (ckt_panel, ckt_number) -> {"circuit_ids": set(), "detail_ids": set()}
+
+def _build_output_summary(detail_items, circuit_map, panel_map, panel_map_by_id, resolved_panels, failed_panels,
+                          auto_panel_updates, auto_panel_warnings):
+    equipment_rows = {}
+    circuit_rows = {}
     unmapped_details = []
     mapped_panel_names = set()
 
@@ -532,31 +676,25 @@ def _build_output_summary(detail_items, circuit_map, panel_map, panel_map_by_id,
 
         had_mapping = False
 
-        # -------------------------
-        # EE mapping (Panel Name)
-        # -------------------------
         if pname_val:
             panel_name = str(pname_val)
+
             row = equipment_rows.get(panel_name)
             if not row:
-                pdict = _resolve_panel_by_name(panel_name, panel_map, circuited_panel_names, warnings)
-                row = {
-                    "panel_ids": set(),
-                    "detail_ids": set()
-                }
+                row = {"panel_ids": set(), "detail_ids": set()}
+
+                pdict = resolved_panels.get(panel_name)
                 if pdict:
                     pid = pdict.get("panel_id")
                     if pid:
                         row["panel_ids"].add(pid)
+
                 equipment_rows[panel_name] = row
 
             row["detail_ids"].add(detail_id)
             mapped_panel_names.add(panel_name)
             had_mapping = True
 
-        # -------------------------
-        # EC mapping (CKT Panel + Number)
-        # -------------------------
         if cpanel_val and cnum_val:
             ckt_panel = str(cpanel_val)
             ckt_number = str(cnum_val)
@@ -577,7 +715,6 @@ def _build_output_summary(detail_items, circuit_map, panel_map, panel_map_by_id,
                     cid = cdict.get("circuit_id")
                     if cid:
                         row["circuit_ids"].add(cid)
-
                     row["load_name"] = cdict.get(DETAIL_PARAM_CKT_LOAD_NAME) or ""
 
                 circuit_rows[ckey] = row
@@ -585,43 +722,68 @@ def _build_output_summary(detail_items, circuit_map, panel_map, panel_map_by_id,
             row["detail_ids"].add(detail_id)
             had_mapping = True
 
-        # -------------------------
-        # Truly unmapped detail item
-        # -------------------------
         if not had_mapping:
             label = get_detail_type_label(revit.doc, ditem)
             unmapped_details.append((detail_id, label))
 
-    # Unmapped model equipment = panels never referenced by Panel Name in detail items
     unmapped_panels = []
+
+    # (1) Never-mapped panels
     for panel_id, pdata in panel_map_by_id.items():
         panel_name = pdata.get(DETAIL_PARAM_PANEL_NAME) or pdata.get(DETAIL_PARAM_CKT_PANEL, "") or "(Unnamed Panel)"
         if panel_name not in mapped_panel_names:
-            unmapped_panels.append({
-                "name": panel_name,
-                "ids": [panel_id]
-            })
+            unmapped_panels.append({"name": panel_name, "ids": [panel_id]})
 
-    return equipment_rows, circuit_rows, unmapped_details, unmapped_panels
+    # (2) Duplicate-name rejected panels
+    if failed_panels:
+        for panel_name, dupdata in failed_panels.items():
+            rejected_ids = dupdata.get("rejected", [])
+            if rejected_ids:
+                unmapped_panels.append({
+                    "name": panel_name + " (Duplicate Name – Not Used)",
+                    "ids": rejected_ids
+                })
+
+    return equipment_rows, circuit_rows, unmapped_details, unmapped_panels, auto_panel_updates, auto_panel_warnings
 
 
-
-
-def _render_summary(equipment_rows, circuit_rows, unmapped_details, unmapped_panels, warnings):
-
+def _render_summary(equipment_rows, circuit_rows, unmapped_details, unmapped_panels, failed_panels,
+                    auto_panel_updates, auto_panel_warnings):
     output = script.get_output()
     output.close_others()
     output.print_md("## Sync One Line Results")
 
     headers = ["Element", "Category", "Name", "Detail Items", "Detail Count"]
 
-    # -------------------------
-    # Warnings
-    # -------------------------
-    if warnings:
+    # Duplicate-name conflicts (your "bigger problem" text stays)
+    if failed_panels:
+        output.print_md("### ⚠ Duplicate Panel Name Conflicts")
+        for panel_name in sorted(failed_panels.keys(), key=lambda x: x.upper()):
+            data = failed_panels.get(panel_name, {})
+            used_id = data.get("used")
+            rejected_ids = data.get("rejected", [])
+
+            used_link = _linkify_id(output, used_id, "element " + str(used_id)) if used_id else "(unknown)"
+            rejected_link = _linkify_ids(output, rejected_ids) if rejected_ids else ""
+
+            output.print_md(
+                "- Multiple panels named **'" + panel_name + "'** detected. "
+                "Using " + used_link + " for mapping panel and associated circuits on one-line diagram."
+            )
+            if rejected_link:
+                output.print_md("  - Please give elements " + rejected_link + " unique names.")
+
+    # Auto panel identity updates (grouped)
+    if auto_panel_updates:
+        output.print_md("### Notices")
+        for msg in sorted(auto_panel_updates.keys()):
+            output.print_md("- " + msg + " " + _linkify_ids(output, auto_panel_updates.get(msg, set())))
+
+    # Auto panel identity warnings (grouped)
+    if auto_panel_warnings:
         output.print_md("### Warnings")
-        for w in sorted(set(warnings)):
-            output.print_md("- " + w)
+        for msg in sorted(auto_panel_warnings.keys()):
+            output.print_md("- " + msg + " " + _linkify_ids(output, auto_panel_warnings.get(msg, set())))
 
     # -------------------------
     # Build flattened panel order
@@ -659,9 +821,9 @@ def _render_summary(equipment_rows, circuit_rows, unmapped_details, unmapped_pan
 
         for crow in sorted(panel_circuits, key=_ckt_sort_key):
             label = (
-                panel_name + " / " +
-                str(crow.get("ckt_number")) +
-                (" - " + crow.get("load_name") if crow.get("load_name") else "")
+                    panel_name + " / " +
+                    str(crow.get("ckt_number")) +
+                    (" - " + crow.get("load_name") if crow.get("load_name") else "")
             )
 
             table_data.append([
@@ -734,12 +896,11 @@ def main():
     if not active_view:
         return
 
-    # ------------------------------------------------------------
-    # Setup / collection (NO TRANSACTIONS)
-    # ------------------------------------------------------------
+    auto_panel_updates = {}  # message -> set(detail_ids)
+    auto_panel_warnings = {}  # message -> set(detail_ids)
+
     option_filter = DB.ElementDesignOptionFilter(DB.ElementId.InvalidElementId)
 
-    warnings = []
     logger.debug("Collecting circuits...")
     ckt_collector, circuit_map, circuited_panel_names = _collect_circuits(doc, option_filter)
 
@@ -748,65 +909,19 @@ def main():
 
     detail_items = _collect_detail_items(doc, option_filter, active_view)
 
-    # ------------------------------------------------------------
-    # Detect duplicate equipment names (ONCE)
-    # ------------------------------------------------------------
-    duplicate_panel_names = set()
-    for panel_name, pdata_list in panel_map.items():
-        if len(pdata_list) > 1:
-            duplicate_panel_names.add(panel_name)
+    # Resolve duplicate panels ONCE
+    resolved_panels, failed_panels = resolve_panels(panel_map, circuited_panel_names)
 
-    # ------------------------------------------------------------
-    # PHASE 1: Resolve equipment ambiguity (NO TRANSACTION)
-    # ------------------------------------------------------------
-    pending_component_links = []  # (equipment_elem, detail_elem)
-    resolved_equipment_cache = {}  # panel_name -> equipment
+    # Build circuits scoped to resolved panels
+    all_circuits = collect_all_circuits(doc, option_filter)
+    circuits_by_panel = build_circuits_by_panel(resolved_panels, all_circuits)
 
-    for ditem in detail_items:
-        pname_val = get_detail_param_value(ditem, DETAIL_PARAM_PANEL_NAME)
-        if not pname_val:
-            continue
-
-        panel_name = str(pname_val)
-
-        # Only resolve ambiguity if this panel name is actually duplicated
-        if panel_name in duplicate_panel_names:
-            if panel_name not in resolved_equipment_cache:
-                equipment = _resolve_equipment_panel(panel_name, panel_map, ditem)
-                resolved_equipment_cache[panel_name] = equipment
-            else:
-                equipment = resolved_equipment_cache[panel_name]
-        else:
-            # Single equipment with this name — safe, no UI, no connectors
-            pdata_list = panel_map.get(panel_name)
-            equipment = pdata_list[0]["_element"] if pdata_list else None
-            resolved_equipment_cache[panel_name] = equipment
-
-        if not equipment:
-            continue
-
-        # Only queue link if not already persisted
-        comp_val = get_detail_param_value(ditem, "SLD_Component ID_CED")
-        eid, sid = _parse_component_id(comp_val)
-
-        if not eid:
-            pending_component_links.append((equipment, ditem))
-
-    # ------------------------------------------------------------
-    # PHASE 2: Apply ALL model changes (ONE TRANSACTION)
-    # ------------------------------------------------------------
+    # Apply ALL model changes (ONE TRANSACTION)
     t = DB.Transaction(doc, "Sync Circuits/Panels to Detail Items")
     t.Start()
 
     update_count = 0
 
-    # Persist component ID links
-    for equipment, ditem in pending_component_links:
-        _write_component_id(equipment, ditem)
-
-    # ------------------------------------------------------------
-    # Sync parameters
-    # ------------------------------------------------------------
     for ditem in detail_items:
         logger.debug("Detail item " + str(ditem.Id) + ":")
 
@@ -816,62 +931,67 @@ def main():
 
         changed = False
 
-        # -------- Circuit sync --------
-        cdict = None
-        if cpanel_val and cnum_val:
-            ckey = (str(cpanel_val), str(cnum_val))
-            cdict = circuit_map.get(ckey)
-
-        if cdict:
-            for detail_pname, ckt_val in cdict.items():
-                set_detail_param_value(ditem, detail_pname, ckt_val)
-            changed = True
-
-        # -------- Equipment sync --------
-        pdict = None
+        panel_identity_name = None
+        circuit_panel_name = None
 
         if pname_val:
-            panel_name = str(pname_val)
-            equipment = resolved_equipment_cache.get(panel_name)
+            panel_identity_name = str(pname_val)
 
-            if equipment:
-                pdict = {}
-                for detail_param_name, bip in PANEL_VALUE_MAP.items():
-                    pdict[detail_param_name] = get_model_param_value(equipment, bip)
+        if cpanel_val:
+            circuit_panel_name = str(cpanel_val)
 
-                pdict["panel_id"] = str(equipment.Id.IntegerValue)
+        # -------------------------
+        # PANEL SYNC (identity-based)
+        # -------------------------
+        if panel_identity_name and panel_identity_name in resolved_panels:
+            pdata = resolved_panels[panel_identity_name]
+            panel_elem = pdata["panel"]
 
-        elif cpanel_val:
-            panel_name = str(cpanel_val)
-            pdict = _resolve_panel_by_name(
-                panel_name,
-                panel_map,
-                circuited_panel_names,
-                warnings
-            )
-
-        if pdict:
-            for detail_pname, pval in pdict.items():
-                set_detail_param_value(ditem, detail_pname, pval)
+            for detail_param_name, bip in PANEL_VALUE_MAP.items():
+                set_detail_param_value(
+                    ditem,
+                    detail_param_name,
+                    get_model_param_value(panel_elem, bip)
+                )
             changed = True
+        # -------------------------
+        # CIRCUIT SYNC (ownership-based)
+        # -------------------------
+        if circuit_panel_name and cnum_val:
+            cpdata = resolved_panels.get(circuit_panel_name)
+            if cpdata:
+                cp_id = cpdata["panel_id"]
+                cdict = circuits_by_panel.get(cp_id, {}).get(str(cnum_val))
+                if cdict:
+                    for detail_pname, ckt_val in cdict.items():
+                        set_detail_param_value(ditem, detail_pname, ckt_val)
+                    changed = True
 
-        if changed:
+        did_reconcile = reconcile_panel_identity_from_circuit(
+            ditem,
+            resolved_panels,
+            circuits_by_panel,
+            auto_panel_updates,
+            auto_panel_warnings
+        )
+
+        if changed or did_reconcile:
             update_count += 1
 
     t.Commit()
 
     logger.info("Sync finished. Updated " + str(update_count) + " detail item(s).")
 
-    # ------------------------------------------------------------
     # Reporting (NO TRANSACTION)
-    # ------------------------------------------------------------
-    equipment_rows, circuit_rows, unmapped_details, unmapped_panels = _build_output_summary(
+    equipment_rows, circuit_rows, unmapped_details, unmapped_panels, auto_panel_updates, auto_panel_warnings = _build_output_summary(
         detail_items,
         circuit_map,
         panel_map,
         panel_map_by_id,
-        circuited_panel_names,
-        warnings
+        resolved_panels,
+        failed_panels,
+        auto_panel_updates,
+        auto_panel_warnings
     )
 
     choice = forms.alert(
@@ -887,7 +1007,9 @@ def main():
             circuit_rows,
             unmapped_details,
             unmapped_panels,
-            warnings
+            failed_panels,
+            auto_panel_updates,
+            auto_panel_warnings
         )
 
 

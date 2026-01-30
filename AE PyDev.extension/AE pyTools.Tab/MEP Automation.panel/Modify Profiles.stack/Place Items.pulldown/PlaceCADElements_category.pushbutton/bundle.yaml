@@ -1,0 +1,17 @@
+title: Place CAD Elements by Category
+tooltip: |
+  Use Place CAD Elements to populate the model with legacy CSV driven
+  arrangements, primarily when translating designs from older workflows into the
+  current YAML driven environment for validation and cleanup.
+
+  Provide the CSV file exported from CAD, review the column mappings, and specify
+  the level or base plane; the engine reads each row, converts imperial offsets,
+  and instantiates the referenced family types automatically.
+
+  Because this process predates Extensible Storage, it does not consult the active
+  YAML; treat it as a bridge tool for finishing existing projects while the team
+  transitions to linked element definitions recorded through Add YAML Profiles.
+
+  After placement, consider converting the resulting assemblies into YAML
+  definitions so future iterations rely on the modern automation pipeline, then
+  archive the original CSV for documentation purposes only.

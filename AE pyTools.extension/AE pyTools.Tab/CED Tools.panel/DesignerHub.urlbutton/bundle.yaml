@@ -1,5 +1,5 @@
 title: 
-  en_us: Docs
+  en_us: Designer Hub
 tooltip: 
   en_us: >-
     Version = 1.0
@@ -8,10 +8,18 @@ tooltip:
     ________________________________________________________________
     Description:
 
-    Link to AE pyTools Documentation
+    Opens the CED Designer Hub page. Here you can:
+    
+       -> Report bugs and issues
+    
+       -> submit ideas or requests
+    
+       -> Access training material, tutorials and documentation
+    
+    
     ________________________________________________________________
 
-hyperlink: "https://productivitynow.imaginit.com/peak/content/2711eee5-0bc4-4c52-9c1a-18835163ff0b"
+hyperlink: "https://coolsysinc.sharepoint.com/sites/ToolDevelopment-Public"
 author: Anthony Evelina - CoolSys (2025)
 context: zero-doc
 
