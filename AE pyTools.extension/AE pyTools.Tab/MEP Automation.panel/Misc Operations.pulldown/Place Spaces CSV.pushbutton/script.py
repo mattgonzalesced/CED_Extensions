@@ -48,12 +48,12 @@ def parse_feet_inches(value_str):
     if not value_str:
         return 0.0
 
-    # Remove extra quotes and whitespace
-    value_str = value_str.strip().strip('"')
+    # Remove whitespace and all quote characters for easier parsing
+    value_str = value_str.strip().replace('"', '')
 
-    # Pattern: feet'-inches fractional"
-    # Examples: 76'-2 7/8", 0'-0", 25'-1 15/16"
-    pattern = r"(-?\d+)'-(-?\d+(?:\s+\d+/\d+)?)\""
+    # Pattern: feet'-inches fractional (quotes already removed)
+    # Examples: 76'-2 7/8, 0'-0, 25'-1 15/16, -167'-5 1/16
+    pattern = r"(-?\d+)'-(\d+(?:\s+\d+/\d+)?)"
     match = re.match(pattern, value_str)
 
     if not match:
@@ -83,7 +83,12 @@ def parse_feet_inches(value_str):
         inches = float(inches_str)
 
     # Convert to feet (inches / 12)
-    total_feet = feet + (inches / 12.0)
+    # If feet is negative, inches should also be negative
+    inches_in_feet = inches / 12.0
+    if feet < 0:
+        total_feet = feet - inches_in_feet
+    else:
+        total_feet = feet + inches_in_feet
     return total_feet
 
 

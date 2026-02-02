@@ -4990,7 +4990,7 @@ equipment_definitions:
               -
                 rotation_deg: 180.0
                 x_inches: 0.0
-                y_inches: -36.0
+                y_inches: 0.0
                 z_inches: 0.0
           -
             is_group: true

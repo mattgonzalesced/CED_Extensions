@@ -38,11 +38,11 @@ def feet_inch_to_inches(value):
             if len(parts) == 1:
                 if "/" in parts[0]:
                     num, den = parts[0].split("/")
-                    inches = float(num) / float(den)
+                    inches = abs(float(num)) / float(den)
                 else:
-                    inches = float(parts[0])
+                    inches = abs(float(parts[0]))
             elif len(parts) == 2:
-                whole = float(parts[0])
+                whole = abs(float(parts[0]))
                 num, den = parts[1].split("/")
                 inches = whole + (float(num) / float(den))
 
