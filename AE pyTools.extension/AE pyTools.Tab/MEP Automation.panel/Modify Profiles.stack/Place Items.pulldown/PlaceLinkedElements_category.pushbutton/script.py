@@ -106,6 +106,7 @@ def _place_requests(doc, repo, selection_map, rows, default_level=None):
         allow_tags=False,
         transaction_name="Place Linked Elements",
         apply_recorded_level=False,
+        resolve_parent_ids=True,
     )
     return engine.place_from_csv(rows, selection_map)
 

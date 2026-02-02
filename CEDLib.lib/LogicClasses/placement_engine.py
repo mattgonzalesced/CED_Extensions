@@ -184,6 +184,7 @@ class PlaceElementsEngine(object):
         max_tag_distance_feet=None,
         transaction_name="Place Elements (YAML)",
         apply_recorded_level=True,
+        resolve_parent_ids=False,
     ):
         self.doc = doc
         self.repo = repo
@@ -194,6 +195,7 @@ class PlaceElementsEngine(object):
         self.max_tag_distance_feet = max_tag_distance_feet
         self.transaction_name = transaction_name or "Place Elements (YAML)"
         self.apply_recorded_level = bool(apply_recorded_level)
+        self.resolve_parent_ids = bool(resolve_parent_ids)
         self._init_symbol_map()
         self._init_group_map()
         self._init_text_note_types()
@@ -862,6 +864,8 @@ class PlaceElementsEngine(object):
         self._group_fail_error = []
         self._group_fail_error_msgs = []
 
+        placed_by_row = {} if self.resolve_parent_ids else None
+
         t = Transaction(self.doc, self.transaction_name)
         t.Start()
 
@@ -926,6 +930,19 @@ class PlaceElementsEngine(object):
                     self.default_level = fallback_level
 
                 canonical_name = repo_key or cad_name
+                row_key = None
+                if placed_by_row is not None:
+                    row_key = self._placement_row_key(canonical_name, base_loc, base_rot_deg)
+                    row_entry = placed_by_row.get(row_key)
+                    if row_entry is None:
+                        row_entry = {
+                            "base_loc": base_loc,
+                            "base_rot": base_rot_deg,
+                            "host_name": canonical_name,
+                            "parent_element_id": parent_element_id,
+                            "instances": [],
+                        }
+                        placed_by_row[row_key] = row_entry
                 for label in labels:
                     key = (canonical_name, label)
                     occ_index = occurrence_counter.get(key, 0)
@@ -933,7 +950,7 @@ class PlaceElementsEngine(object):
                     linked_def = self.repo.definition_for_label(canonical_name, label)
                     if not linked_def:
                         continue
-                    placed = self._place_one(
+                    placed_instance = self._place_one(
                         linked_def,
                         base_loc,
                         base_rot_deg,
@@ -941,8 +958,13 @@ class PlaceElementsEngine(object):
                         parent_element_id,
                         canonical_name,
                     )
-                    if placed:
+                    if placed_instance:
                         placed_count += 1
+                        if placed_by_row is not None:
+                            try:
+                                placed_by_row[row_key]["instances"].append(placed_instance)
+                            except Exception:
+                                pass
                         placement = linked_def.get_placement()
                         offsets_ft = (0.0, 0.0, 0.0)
                         rot_off = 0.0
@@ -973,6 +995,8 @@ class PlaceElementsEngine(object):
                                 label,
                                 canonical_name,
                             )
+            if placed_by_row:
+                self._apply_missing_parent_ids(placed_by_row)
             self.default_level = fallback_level
             t.Commit()
         except Exception:
@@ -1116,8 +1140,131 @@ class PlaceElementsEngine(object):
                 self._place_tags(tags, instance, loc, final_rot_deg)
             if self.allow_text_notes and text_notes:
                 self._place_text_notes(text_notes, loc, final_rot_deg, host_instance=instance, host_location=loc)
-            return True
-        return False
+            return instance
+        return None
+
+    def _placement_row_key(self, host_name, base_loc, base_rot_deg):
+        if base_loc is None:
+            return None
+        try:
+            x_val = round(float(base_loc.X), 6)
+            y_val = round(float(base_loc.Y), 6)
+            z_val = round(float(base_loc.Z), 6)
+        except Exception:
+            return None
+        try:
+            rot_val = round(float(base_rot_deg or 0.0), 3)
+        except Exception:
+            rot_val = 0.0
+        return (host_name or "", x_val, y_val, z_val, rot_val)
+
+    def _apply_missing_parent_ids(self, placed_by_row):
+        if not placed_by_row:
+            return
+        for entry in placed_by_row.values():
+            if not entry:
+                continue
+            if entry.get("parent_element_id") not in (None, ""):
+                continue
+            instances = entry.get("instances") or []
+            if not instances:
+                continue
+            base_loc = entry.get("base_loc")
+            anchor = self._resolve_anchor_instance(instances, base_loc)
+            if anchor is None:
+                continue
+            try:
+                parent_id_val = anchor.Id.IntegerValue
+            except Exception:
+                parent_id_val = None
+            if parent_id_val in (None, ""):
+                continue
+            entry["parent_element_id"] = parent_id_val
+            for inst in instances:
+                self._set_parent_element_id(inst, parent_id_val)
+
+    def _resolve_anchor_instance(self, instances, base_loc):
+        if not instances:
+            return None
+        if base_loc is None:
+            return instances[0]
+        best = None
+        best_dist = None
+        for inst in instances:
+            pt = self._element_location_point(inst)
+            if pt is None:
+                continue
+            try:
+                dist = pt.DistanceTo(base_loc)
+            except Exception:
+                try:
+                    dx = pt.X - base_loc.X
+                    dy = pt.Y - base_loc.Y
+                    dz = pt.Z - base_loc.Z
+                    dist = math.sqrt((dx * dx) + (dy * dy) + (dz * dz))
+                except Exception:
+                    dist = None
+            if dist is None:
+                continue
+            if best_dist is None or dist < best_dist:
+                best_dist = dist
+                best = inst
+        return best or (instances[0] if instances else None)
+
+    def _get_linker_payload_text(self, element):
+        if not element:
+            return ""
+        payload_text = ""
+        for name in ELEMENT_LINKER_PARAM_NAMES:
+            try:
+                param = element.LookupParameter(name)
+            except Exception:
+                param = None
+            if not param:
+                continue
+            try:
+                payload_text = param.AsString()
+            except Exception:
+                payload_text = None
+            if not payload_text:
+                try:
+                    payload_text = param.AsValueString()
+                except Exception:
+                    payload_text = None
+            if payload_text:
+                break
+        return payload_text or ""
+
+    def _replace_parent_element_id(self, payload_text, parent_id):
+        if not payload_text:
+            return payload_text
+        parent_text = str(parent_id)
+        text = str(payload_text)
+        if "\n" in text:
+            lines = text.splitlines()
+            found = False
+            for idx, line in enumerate(lines):
+                lower = line.strip().lower()
+                if lower.startswith("parent elementid") or lower.startswith("parent element id"):
+                    lines[idx] = "Parent ElementId: {}".format(parent_text)
+                    found = True
+            if not found:
+                lines.append("Parent ElementId: {}".format(parent_text))
+            return "\n".join(lines)
+        pattern = re.compile(r"(Parent ElementId|Parent Element ID)\s*:\s*[^,]*", re.IGNORECASE)
+        if pattern.search(text):
+            return pattern.sub("Parent ElementId: {}".format(parent_text), text)
+        sep = ", " if text and not text.strip().endswith(",") else " "
+        return "{}{}Parent ElementId: {}".format(text, sep, parent_text)
+
+    def _set_parent_element_id(self, element, parent_id):
+        if element is None or parent_id in (None, ""):
+            return False
+        payload_text = self._get_linker_payload_text(element)
+        if not payload_text:
+            return False
+        updated = self._replace_parent_element_id(payload_text, parent_id)
+        return self._set_element_linker_param(element, updated)
 
     def _find_group_type(self, label, family_name, type_name):
         """Case-insensitive matching of possible keys to a model group type (and attached detail)."""

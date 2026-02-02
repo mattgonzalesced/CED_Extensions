@@ -111,6 +111,7 @@ def main():
         default_level=level,
         allow_tags=False,
         transaction_name="Place CAD Elements (YAML)",
+        resolve_parent_ids=True,
     )
     try:
         results = engine.place_from_csv(csv_rows, selection_map)
