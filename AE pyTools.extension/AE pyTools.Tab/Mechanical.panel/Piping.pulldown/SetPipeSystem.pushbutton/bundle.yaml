@@ -1,0 +1,15 @@
+title: 
+  en_us: Set Piping System
+tooltip: 
+  en_us: >-
+
+    ________________________________________________________________
+    Description:
+    
+    Set pipe system
+    ________________________________________________________________
+
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: false
+  full_frame: false
