@@ -584,25 +584,56 @@ def _resolve_hosts(host_lookup, symbol_lookup, label, canonical):
     return []
 
 
-def _select_entries(entries, title, view_name, button_name):
-    if not entries:
-        return []
-    choices = [entry["display"] for entry in entries]
-    selection = forms.SelectFromList.show(
-        choices,
-        title="Select {0} to place in '{1}'".format(title, view_name),
-        multiselect=True,
-        button_name=button_name,
-    )
-    if not selection:
-        return None
-    if isinstance(selection, basestring):
-        selected_entries = [entry for entry in entries if entry["display"] == selection]
-    else:
-        selected_entries = [entry for entry in entries if entry["display"] in selection]
-    if not selected_entries:
-        return None
-    return selected_entries
+class _AnnotationChoice(object):
+    def __init__(self, kind, entry, display):
+        self.kind = kind
+        self.entry = entry
+        self.display = display
+
+    def __str__(self):
+        return self.display
+
+
+def _build_annotation_choices(tag_entries, keynote_entries, text_note_entries):
+    grouped = {}
+    all_choices = []
+
+    def _add_group(kind_label, kind_key, entries, prefix_label):
+        if not entries:
+            return
+        group_items = []
+        for entry in entries:
+            display = entry.get("display") or ""
+            if prefix_label:
+                display = "{0} | {1}".format(kind_label, display)
+            choice = _AnnotationChoice(kind_key, entry, display)
+            group_items.append(choice)
+            all_choices.append(choice)
+        group_items.sort(key=lambda item: (item.display or "").lower())
+        grouped[kind_label] = group_items
+
+    _add_group("Tags", "tag", tag_entries, prefix_label=True)
+    _add_group("Keynotes", "keynote", keynote_entries, prefix_label=True)
+    _add_group("Text Notes", "text_note", text_note_entries, prefix_label=False)
+
+    if len(grouped) > 1:
+        grouped_with_all = {" All": sorted(all_choices, key=lambda item: (item.display or "").lower())}
+        grouped_with_all.update(grouped)
+        grouped = grouped_with_all
+    return grouped
+
+
+def _flatten_choices(grouped_choices):
+    unique = []
+    seen = set()
+    for group_items in grouped_choices.values():
+        for item in group_items:
+            item_id = id(item)
+            if item_id in seen:
+                continue
+            seen.add(item_id)
+            unique.append(item)
+    return unique
 
 
 def _place_tag_entries(entries, engine, host_lookup, symbol_lookup, placed_tag_pairs, missing):
@@ -708,42 +739,34 @@ def main():
         forms.alert("No annotations found in {}.".format(yaml_label), title=TITLE)
         return
 
-    annotation_choices = []
-    if tag_entries:
-        annotation_choices.append("Tags")
-    if keynote_entries:
-        annotation_choices.append("Keynotes")
-    if text_note_entries:
-        annotation_choices.append("Text Notes")
-    if len(annotation_choices) == 1:
-        selection = annotation_choices
-    else:
-        selection = forms.SelectFromList.show(
-            annotation_choices,
-            title="Select annotations to place in '{}'".format(active_view.Name),
-            multiselect=True,
-            button_name="Next",
-        )
+    grouped_choices = _build_annotation_choices(tag_entries, keynote_entries, text_note_entries)
+    choice_map = {item.display: item for item in _flatten_choices(grouped_choices)}
+    selection = forms.SelectFromList.show(
+        grouped_choices,
+        title="Select annotations to place in '{}'".format(active_view.Name),
+        group_selector_title="Annotation Type:",
+        multiselect=True,
+        button_name="Place",
+    )
     if not selection:
         return
     if isinstance(selection, basestring):
         selection = [selection]
+    if not isinstance(selection, (list, tuple)):
+        selection = [selection]
 
-    selected_tags = []
-    selected_keynotes = []
-    selected_text_notes = []
-    if "Tags" in selection:
-        selected_tags = _select_entries(tag_entries, "tags", active_view.Name, "Place")
-        if selected_tags is None:
-            return
-    if "Keynotes" in selection:
-        selected_keynotes = _select_entries(keynote_entries, "keynotes", active_view.Name, "Place")
-        if selected_keynotes is None:
-            return
-    if "Text Notes" in selection:
-        selected_text_notes = _select_entries(text_note_entries, "text notes", active_view.Name, "Place")
-        if selected_text_notes is None:
-            return
+    selected_items = []
+    for item in selection:
+        if isinstance(item, basestring):
+            mapped = choice_map.get(item)
+            if mapped:
+                selected_items.append(mapped)
+        else:
+            selected_items.append(item)
+
+    selected_tags = [item.entry for item in selected_items if getattr(item, "kind", None) == "tag"]
+    selected_keynotes = [item.entry for item in selected_items if getattr(item, "kind", None) == "keynote"]
+    selected_text_notes = [item.entry for item in selected_items if getattr(item, "kind", None) == "text_note"]
     if not selected_tags and not selected_keynotes and not selected_text_notes:
         return
 
