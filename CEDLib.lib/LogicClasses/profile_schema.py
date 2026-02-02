@@ -508,8 +508,12 @@ def equipment_defs_to_legacy(equipment_defs):
         host_candidates = []
         ga_keynotes = []
         for linked_set in eq.get("linked_sets") or []:
+            if not isinstance(linked_set, Mapping):
+                continue
             set_id = linked_set.get("id")
             for led in linked_set.get("linked_element_definitions") or []:
+                if not isinstance(led, Mapping):
+                    continue
                 if led.get("is_parent_anchor"):
                     continue
                 label = led.get("label") or ""
