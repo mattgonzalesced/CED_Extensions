@@ -2006,6 +2006,10 @@ def _filter_tags_for_autoload(data, cad_name, max_distance_ft):
                         if not isinstance(tag, dict):
                             kept.append(tag)
                             continue
+                        # Keynotes (GA or built-in) should always preview, regardless of distance.
+                        if _is_keynote_entry(tag) or _is_builtin_keynote_tag(tag):
+                            kept.append(tag)
+                            continue
                         offsets = tag.get("offsets") or {}
                         if not isinstance(offsets, dict):
                             kept.append(tag)
