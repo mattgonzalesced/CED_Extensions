@@ -845,7 +845,7 @@ def _collect_placeholders(doc, normalized_targets):
         return placements
     host_level_by_name = _collect_host_levels(doc)
 
-    def _store(name, point, rotation, parent_element_id, level=None, level_name=None):
+    def _store(name, point, rotation, parent_element_id, level=None, level_name=None, is_linked=False):
         if not name or point is None:
             return
         placements.setdefault(name, []).append({
@@ -854,6 +854,7 @@ def _collect_placeholders(doc, normalized_targets):
             "parent_element_id": parent_element_id,
             "level": level,
             "level_name": level_name,
+            "is_linked": bool(is_linked),
         })
 
     collector = FilteredElementCollector(doc).WhereElementIsNotElementType()
@@ -877,7 +878,7 @@ def _collect_placeholders(doc, normalized_targets):
             parent_element_id = None
         for name in variants:
             if name in normalized_targets:
-                _store(name, point, rotation, parent_element_id, level, level_name)
+                _store(name, point, rotation, parent_element_id, level, level_name, is_linked=False)
 
     for link_doc, transform in _iter_link_documents(doc):
         linked_instances = FilteredElementCollector(link_doc).OfClass(FamilyInstance)
@@ -915,9 +916,64 @@ def _collect_placeholders(doc, normalized_targets):
                 parent_element_id = None
             for name in variants:
                 if name in normalized_targets:
-                    _store(name, point, rotation, parent_element_id, host_level, level_name)
+                    _store(name, point, rotation, parent_element_id, host_level, level_name, is_linked=True)
 
     return placements
+
+
+def _build_level_choice_map(levels):
+    options = {}
+    display = []
+    if not levels:
+        return display, options
+    by_name = {}
+    for level in levels:
+        name = getattr(level, "Name", None) or "(unnamed)"
+        by_name.setdefault(name, []).append(level)
+    for name in sorted(by_name.keys(), key=lambda value: value.lower()):
+        entries = by_name.get(name) or []
+        if len(entries) == 1:
+            label = name
+            options[label] = entries[0]
+            display.append(label)
+        else:
+            for level in entries:
+                try:
+                    elev = float(getattr(level, "Elevation", 0.0) or 0.0)
+                except Exception:
+                    elev = 0.0
+                try:
+                    level_id = level.Id.IntegerValue
+                except Exception:
+                    level_id = 0
+                label = "{} [id:{} elev:{:.3f}]".format(name, level_id, elev)
+                options[label] = level
+                display.append(label)
+    return display, options
+
+
+def _prompt_level_mapping(missing_level_names, host_levels):
+    mapping = {}
+    if not missing_level_names or not host_levels:
+        return mapping
+    display, options = _build_level_choice_map(host_levels)
+    if not display:
+        return mapping
+    for link_name in sorted(set(missing_level_names), key=lambda value: value.lower()):
+        title = "Map linked level '{}' to host".format(link_name)
+        choice = forms.SelectFromList.show(
+            display,
+            title=title,
+            multiselect=False,
+            button_name="Map Level"
+        )
+        if not choice:
+            continue
+        level = options.get(choice)
+        if level is None:
+            continue
+        mapping[_normalize_level_name(link_name)] = level
+    return mapping
 
 
 def _anchor_rows_for_cad(repo, cad_name):
@@ -1072,6 +1128,24 @@ def main():
             host_level_names_by_id[level.Id.IntegerValue] = getattr(level, "Name", None)
         except Exception:
             continue
+    level_map = {}
+    missing_level_names = []
+    for matches in placeholders.values():
+        for match in matches:
+            if not match.get("is_linked"):
+                continue
+            if match.get("level") is None and match.get("level_name"):
+                missing_level_names.append(match.get("level_name"))
+    if missing_level_names:
+        choice = forms.alert(
+            "Linked levels were found that do not match host level names.\n\n"
+            "Would you like to map linked levels to host levels now?",
+            title=TITLE,
+            options=["Map Levels", "Skip"],
+            ok=False
+        )
+        if choice == "Map Levels":
+            level_map = _prompt_level_mapping(missing_level_names, host_levels)
 
     skipped_by_category = 0
     for cad_name in equipment_names:
@@ -1123,8 +1197,21 @@ def main():
                         level_id_val = level.Id.IntegerValue
                     except Exception:
                         level_id_val = None
+            level_name = match.get("level_name")
+            if (
+                match.get("is_linked")
+                and level_name
+                and level_map
+                and level_id_val is None
+                and match.get("level") is None
+            ):
+                mapped_level = level_map.get(_normalize_level_name(level_name))
+                if mapped_level is not None:
+                    try:
+                        level_id_val = mapped_level.Id.IntegerValue
+                    except Exception:
+                        level_id_val = None
             if level_id_val is None:
-                level_name = match.get("level_name")
                 if default_level_id is not None:
                     level_id_val = default_level_id
                     if level_name:
