@@ -5,7 +5,6 @@ Runs after sync to warn when child parameters that depend on parent_parameter
 mappings no longer match the parent element values.
 """
 
-import io
 import json
 import os
 import re
@@ -36,9 +35,6 @@ except NameError:  # pragma: no cover
     basestring = str
 
 SETTING_KEY = "parent_param_conflict_check"
-CONFIG_FILE = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "CEDLib.lib", "LetThereBeYAML.settings.json")
-)
 
 LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
 LED_ID_PARAM_NAMES = (
@@ -60,31 +56,26 @@ ACTION_SKIP = "skip"
 ENV_RUNNING_KEY = "ced_parent_param_conflict_running"
 ENV_LAST_RUN_KEY = "ced_parent_param_conflict_last_run"
 LOCK_WINDOW_SECONDS = 60.0
-LOCK_FILE = os.path.abspath(
-    os.path.join(os.path.dirname(CONFIG_FILE), "parent_param_conflicts.lock.json")
-)
+LOCK_PAYLOAD_KEY = "parent_param_conflicts_lock"
+
+
+def _get_config():
+    return script.get_config("parent_param_conflicts_config")
 
 
 def _read_config():
-    if not os.path.exists(CONFIG_FILE):
-        return {}
-    try:
-        with io.open(CONFIG_FILE, "r", encoding="utf-8") as handle:  # type: ignore
-            return json.load(handle)
-    except Exception:
-        try:
-            with open(CONFIG_FILE, "r") as handle:
-                return json.load(handle)
-        except Exception:
-            return {}
+    cfg = _get_config()
+    data = {}
+    if hasattr(cfg, SETTING_KEY):
+        data[SETTING_KEY] = bool(getattr(cfg, SETTING_KEY))
+    return data
 
 
 def _write_config(data):
-    directory = os.path.dirname(CONFIG_FILE)
-    if directory and not os.path.exists(directory):
-        os.makedirs(directory)
-    with open(CONFIG_FILE, "w") as handle:
-        json.dump(data, handle, indent=2)
+    cfg = _get_config()
+    if SETTING_KEY in data:
+        setattr(cfg, SETTING_KEY, bool(data.get(SETTING_KEY)))
+    script.save_config()
 
 
 def _get_env(name, default=None):
@@ -105,33 +96,16 @@ def _set_env(name, value):
     return True
 
 
-def _read_lock_file():
-    if not os.path.exists(LOCK_FILE):
-        return {}
-    try:
-        with io.open(LOCK_FILE, "r", encoding="utf-8") as handle:  # type: ignore
-            return json.load(handle)
-    except Exception:
-        try:
-            with open(LOCK_FILE, "r") as handle:
-                return json.load(handle)
-        except Exception:
-            return {}
+def _read_lock_payload():
+    cfg = _get_config()
+    payload = getattr(cfg, LOCK_PAYLOAD_KEY, None)
+    return payload if isinstance(payload, dict) else {}
 
 
-def _write_lock_file(payload):
-    directory = os.path.dirname(LOCK_FILE)
-    if directory and not os.path.exists(directory):
-        os.makedirs(directory)
-    try:
-        with io.open(LOCK_FILE, "w", encoding="utf-8") as handle:  # type: ignore
-            json.dump(payload, handle, indent=2)
-    except Exception:
-        try:
-            with open(LOCK_FILE, "w") as handle:
-                json.dump(payload, handle, indent=2)
-        except Exception:
-            pass
+def _write_lock_payload(payload):
+    cfg = _get_config()
+    setattr(cfg, LOCK_PAYLOAD_KEY, payload or {})
+    script.save_config()
 
 
 def _doc_key(doc):
@@ -146,7 +120,7 @@ def _doc_key(doc):
 def _should_open_ui(doc):
     doc_key = _doc_key(doc)
     now = time.time()
-    lock_payload = _read_lock_file()
+    lock_payload = _read_lock_payload()
     last_key = lock_payload.get("doc_key")
     last_ts = lock_payload.get("timestamp") or 0.0
     is_running = bool(lock_payload.get("running"))
@@ -158,7 +132,7 @@ def _should_open_ui(doc):
         return False
     if not doc_key:
         _set_env(ENV_RUNNING_KEY, "1")
-        _write_lock_file({"doc_key": None, "timestamp": now, "running": True})
+        _write_lock_payload({"doc_key": None, "timestamp": now, "running": True})
         return True
     raw = _get_env(ENV_LAST_RUN_KEY, "{}")
     try:
@@ -172,17 +146,17 @@ def _should_open_ui(doc):
     payload = {"doc_key": doc_key, "timestamp": now}
     _set_env(ENV_LAST_RUN_KEY, json.dumps(payload))
     _set_env(ENV_RUNNING_KEY, "1")
-    _write_lock_file({"doc_key": doc_key, "timestamp": now, "running": True})
+    _write_lock_payload({"doc_key": doc_key, "timestamp": now, "running": True})
     return True
 
 
 def _release_ui_lock():
     _set_env(ENV_RUNNING_KEY, "0")
     now = time.time()
-    payload = _read_lock_file()
+    payload = _read_lock_payload()
     payload["timestamp"] = now
     payload["running"] = False
-    _write_lock_file(payload)
+    _write_lock_payload(payload)
 
 
 def get_setting(default=True):
