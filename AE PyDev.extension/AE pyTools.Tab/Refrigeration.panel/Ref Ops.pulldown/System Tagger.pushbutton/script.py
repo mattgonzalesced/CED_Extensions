@@ -2,6 +2,8 @@
 __title__ = "System Tagger"
 __doc__ = "Place system ID text notes on refrigerated cases from an Excel list."
 
+import os
+
 from Autodesk.Revit.UI.Selection import ObjectType
 from pyrevit import revit, DB, forms, script
 from pyrevit.interop import xl as pyxl
@@ -12,10 +14,40 @@ doc = revit.doc
 uidoc = revit.uidoc
 
 ORANGE_RGB = (255, 128, 0)
+CONFIG_NAME = "system_tagger_config"
 
 
 def _rgb(r, g, b):
     return DB.Color(bytearray([r])[0], bytearray([g])[0], bytearray([b])[0])
+
+
+def _get_config():
+    return script.get_config(CONFIG_NAME)
+
+
+def _load_resume_state():
+    cfg = _get_config()
+    path = getattr(cfg, "resume_excel_path", None)
+    idx = getattr(cfg, "resume_index", None)
+    try:
+        idx = int(idx)
+    except Exception:
+        idx = None
+    return path, idx
+
+
+def _save_resume_state(path, idx):
+    cfg = _get_config()
+    cfg.resume_excel_path = path
+    cfg.resume_index = int(idx)
+    script.save_config()
+
+
+def _clear_resume_state():
+    cfg = _get_config()
+    cfg.resume_excel_path = None
+    cfg.resume_index = None
+    script.save_config()
 
 
 def _get_solid_fill_pattern_id():
@@ -157,14 +189,16 @@ def _toggle_pick_cases(system_id, view, ogs):
                         _apply_override(view, elem_id, ogs)
 
         choice = forms.CommandSwitchWindow.show(
-            ["Done", "Pick More", "Cancel"],
+            ["Done", "Pick More", "Pause", "Cancel"],
             message="System ID '{}': {} case(s) selected.".format(system_id, len(selected_ids)),
         )
         if choice == "Pick More":
             continue
+        if choice == "Pause":
+            return "pause", selected_ids
         if choice == "Cancel" or choice is None:
-            return None
-        return selected_ids
+            return "cancel", selected_ids
+        return "done", selected_ids
 
 
 def _place_text_notes(system_id, element_ids, view, text_type):
@@ -217,17 +251,45 @@ def main():
     if active_view.IsTemplate:
         forms.alert("Active view is a template. Open a working view first.", exitscript=True)
 
-    path = forms.pick_file(file_ext="xlsx", title="Select System ID Excel File")
-    if not path:
-        script.exit()
+    resume_path, resume_index = _load_resume_state()
+    system_ids = None
+    start_index = 0
+    path = None
 
-    try:
-        system_ids = _read_system_ids_from_excel(path)
-    except Exception as ex:
-        forms.alert("Failed to read Excel file: {}".format(ex), exitscript=True)
+    if resume_path and os.path.exists(resume_path) and resume_index is not None:
+        try:
+            resume_ids = _read_system_ids_from_excel(resume_path)
+        except Exception:
+            resume_ids = None
+        if resume_ids and 0 <= resume_index < len(resume_ids):
+            next_id = resume_ids[resume_index]
+            choice = forms.CommandSwitchWindow.show(
+                ["Resume", "Start Over", "Cancel"],
+                message="Resume System Tagger at '{}'? ({} of {})".format(
+                    next_id, resume_index + 1, len(resume_ids)
+                ),
+            )
+            if choice == "Resume":
+                path = resume_path
+                system_ids = resume_ids
+                start_index = resume_index
+            elif choice == "Start Over":
+                _clear_resume_state()
+            else:
+                script.exit()
+        else:
+            _clear_resume_state()
 
-    if not system_ids:
-        forms.alert("No System IDs found in the first column. Expected header: 'System ID'.", exitscript=True)
+    if system_ids is None:
+        path = forms.pick_file(file_ext="xlsx", title="Select System ID Excel File")
+        if not path:
+            script.exit()
+        try:
+            system_ids = _read_system_ids_from_excel(path)
+        except Exception as ex:
+            forms.alert("Failed to read Excel file: {}".format(ex), exitscript=True)
+        if not system_ids:
+            forms.alert("No System IDs found in the first column. Expected header: 'System ID'.", exitscript=True)
 
     text_type = _pick_text_type()
     if not text_type:
@@ -239,25 +301,29 @@ def main():
         "Select refrigerated cases for each System ID.\n"
         "- Click a case again to unselect.\n"
         "- Press ESC when done selecting, then click Done.\n"
+        "- Click Pause to save progress and exit.\n"
         "The script will advance to the next System ID."
     )
 
-    for system_id in system_ids:
-        tg = DB.TransactionGroup(doc, "System Tagger - {}".format(system_id))
-        tg.Start()
+    for idx in range(start_index, len(system_ids)):
+        system_id = system_ids[idx]
+        _save_resume_state(path, idx)
+        status, picked_ids = _toggle_pick_cases(system_id, active_view, highlight_ogs)
+        if status == "cancel":
+            _clear_highlights(active_view, picked_ids)
+            return
         try:
-            picked_ids = _toggle_pick_cases(system_id, active_view, highlight_ogs)
-            if picked_ids is None:
-                tg.RollBack()
-                script.exit()
-
             _place_text_notes(system_id, picked_ids, active_view, text_type)
             _clear_highlights(active_view, picked_ids)
-
-            tg.Assimilate()
+            _save_resume_state(path, idx + 1)
         except Exception:
-            tg.RollBack()
+            _clear_highlights(active_view, picked_ids)
             raise
+        if status == "pause":
+            forms.alert("System Tagger paused. Run again to resume.")
+            return
+
+    _clear_resume_state()
 
 
 if __name__ == "__main__":
