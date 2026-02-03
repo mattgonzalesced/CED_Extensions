@@ -7,6 +7,9 @@ import os
 from Autodesk.Revit.UI.Selection import ObjectType
 from pyrevit import revit, DB, forms, script
 from pyrevit.interop import xl as pyxl
+from Autodesk.Revit.DB.ExtensibleStorage import Entity, Schema, SchemaBuilder
+from Autodesk.Revit.DB.ExtensibleStorage import AccessLevel
+from System import Guid, String, Int32
 
 
 logger = script.get_logger()
@@ -14,40 +17,75 @@ doc = revit.doc
 uidoc = revit.uidoc
 
 ORANGE_RGB = (255, 128, 0)
-CONFIG_NAME = "system_tagger_config"
+RESUME_SCHEMA_GUID = Guid("5f1a3c2e-9e4c-4e42-9f26-9c8f8f5c6f14")
+RESUME_SCHEMA_NAME = "CED_SystemTagger_Resume"
 
 
 def _rgb(r, g, b):
     return DB.Color(bytearray([r])[0], bytearray([g])[0], bytearray([b])[0])
 
 
-def _get_config():
-    return script.get_config(CONFIG_NAME)
-
-
 def _load_resume_state():
-    cfg = _get_config()
-    path = getattr(cfg, "resume_excel_path", None)
-    idx = getattr(cfg, "resume_index", None)
+    if doc is None:
+        return None, None
+    schema = _get_resume_schema()
+    proj_info = doc.ProjectInformation
+    if proj_info is None:
+        return None, None
     try:
-        idx = int(idx)
+        entity = proj_info.GetEntity(schema)
+    except Exception:
+        return None, None
+    if not entity or not entity.IsValid():
+        return None, None
+    try:
+        path = entity.Get[String](schema.GetField("ExcelPath"))
+    except Exception:
+        path = None
+    try:
+        idx = entity.Get[Int32](schema.GetField("Index"))
     except Exception:
         idx = None
-    return path, idx
+    if idx is not None and idx < 0:
+        idx = None
+    return path or None, idx
 
 
 def _save_resume_state(path, idx):
-    cfg = _get_config()
-    cfg.resume_excel_path = path
-    cfg.resume_index = int(idx)
-    script.save_config()
+    if doc is None:
+        return
+    schema = _get_resume_schema()
+    proj_info = doc.ProjectInformation
+    if proj_info is None:
+        return
+    entity = Entity(schema)
+    try:
+        entity.Set[String](schema.GetField("ExcelPath"), path or "")
+    except Exception:
+        pass
+    try:
+        entity.Set[Int32](schema.GetField("Index"), int(idx))
+    except Exception:
+        pass
+    with revit.Transaction("System Tagger - Save Resume State"):
+        proj_info.SetEntity(entity)
 
 
 def _clear_resume_state():
-    cfg = _get_config()
-    cfg.resume_excel_path = None
-    cfg.resume_index = None
-    script.save_config()
+    _save_resume_state("", -1)
+
+
+def _get_resume_schema():
+    schema = Schema.Lookup(RESUME_SCHEMA_GUID)
+    if schema is not None:
+        return schema
+    sb = SchemaBuilder(RESUME_SCHEMA_GUID)
+    sb.SetSchemaName(RESUME_SCHEMA_NAME)
+    sb.SetReadAccessLevel(AccessLevel.Public)
+    sb.SetWriteAccessLevel(AccessLevel.Public)
+    sb.AddSimpleField("ExcelPath", String)
+    sb.AddSimpleField("Index", Int32)
+    return sb.Finish()
 
 
 def _get_solid_fill_pattern_id():
