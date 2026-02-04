@@ -9,6 +9,9 @@ Creates unbounded spaces from a CSV file with the following columns:
 - #(1): Second part of space name
 - #(2): First part of space name
 Space Name = #(2) + " " + #(1)
+
+Tags are automatically created in all floor plan and ceiling plan views
+with "Construction / Permit" classification.
 """
 
 import csv
@@ -23,6 +26,8 @@ from Autodesk.Revit.DB import (
     Level,
     Transaction,
     UV,
+    ViewPlan,
+    ViewType,
     XYZ,
 )
 
@@ -43,12 +48,12 @@ def parse_feet_inches(value_str):
     if not value_str:
         return 0.0
 
-    # Remove extra quotes and whitespace
-    value_str = value_str.strip().strip('"')
+    # Remove whitespace and all quote characters for easier parsing
+    value_str = value_str.strip().replace('"', '')
 
-    # Pattern: feet'-inches fractional"
-    # Examples: 76'-2 7/8", 0'-0", 25'-1 15/16"
-    pattern = r"(-?\d+)'-(-?\d+(?:\s+\d+/\d+)?)\""
+    # Pattern: feet'-inches fractional (quotes already removed)
+    # Examples: 76'-2 7/8, 0'-0, 25'-1 15/16, -167'-5 1/16
+    pattern = r"(-?\d+)'-(\d+(?:\s+\d+/\d+)?)"
     match = re.match(pattern, value_str)
 
     if not match:
@@ -78,7 +83,12 @@ def parse_feet_inches(value_str):
         inches = float(inches_str)
 
     # Convert to feet (inches / 12)
-    total_feet = feet + (inches / 12.0)
+    # If feet is negative, inches should also be negative
+    inches_in_feet = inches / 12.0
+    if feet < 0:
+        total_feet = feet - inches_in_feet
+    else:
+        total_feet = feet + inches_in_feet
     return total_feet
 
 
@@ -175,6 +185,32 @@ def read_csv_spaces(csv_path):
     return spaces
 
 
+def get_construction_permit_views(doc):
+    """Get all floor plan and ceiling plan views in 'Construction / Permit' classification."""
+    # Collect all floor plans and ceiling plans
+    floor_plans = FilteredElementCollector(doc)\
+        .OfClass(ViewPlan)\
+        .ToElements()
+
+    construction_permit_views = []
+
+    for view in floor_plans:
+        view_type = view.ViewType
+        if view_type == ViewType.FloorPlan or view_type == ViewType.CeilingPlan:
+            param = view.LookupParameter("View Classification")
+            if param and param.HasValue:
+                view_classification = param.AsString()
+                if view_classification == "Construction / Permit":
+                    construction_permit_views.append(view)
+                    LOG.debug("Found Construction / Permit view: {} ({})".format(
+                        view.Name,
+                        "Floor Plan" if view_type == ViewType.FloorPlan else "Ceiling Plan"
+                    ))
+
+    LOG.info("Found {} Construction / Permit views".format(len(construction_permit_views)))
+    return construction_permit_views
+
+
 def get_space_tag_type(doc):
     """Get the first available space tag type, preferring PR_Space Tag_CED."""
     # Collect all Space Tag FamilySymbols
@@ -224,7 +260,7 @@ def get_space_tag_type(doc):
     return result
 
 
-def create_spaces(doc, level, spaces, active_view, add_tags=True):
+def create_spaces(doc, level, spaces, construction_permit_views, add_tags=True):
     """
     Create spaces in Revit.
 
@@ -232,7 +268,7 @@ def create_spaces(doc, level, spaces, active_view, add_tags=True):
         doc: Revit document
         level: Level to place spaces on
         spaces: List of space dicts
-        active_view: Active view for tagging
+        construction_permit_views: List of Construction/Permit views to tag in
         add_tags: Whether to add tags
 
     Returns:
@@ -241,6 +277,7 @@ def create_spaces(doc, level, spaces, active_view, add_tags=True):
     placed = 0
     failed = 0
     tagged = 0
+    tagged_views = {}
     errors = []
 
     # Get space tag type if tagging is enabled
@@ -250,10 +287,14 @@ def create_spaces(doc, level, spaces, active_view, add_tags=True):
         if not tag_type:
             LOG.warning("No space tag type found - tags will not be created")
 
+    # Store created spaces with their UV coordinates for tagging
+    created_spaces = []
+
     with Transaction(doc, "Place Spaces from CSV") as t:
         t.Start()
 
         try:
+            # Step 1: Create all spaces
             for space_data in spaces:
                 try:
                     # Create unbounded space at X,Y coordinate
@@ -273,29 +314,13 @@ def create_spaces(doc, level, spaces, active_view, add_tags=True):
                             name_param.Set(space_data['name'])
 
                     placed += 1
+                    created_spaces.append((space, uv, space_data['number']))
                     LOG.debug("Created space: {} - {} at ({}, {})".format(
                         space_data['number'],
                         space_data['name'],
                         space_data['x'],
                         space_data['y']
                     ))
-
-                    # Tag the space if enabled and in a valid view
-                    if add_tags and tag_type and active_view:
-                        try:
-                            # Get space location point
-                            location = space.Location
-                            if location:
-                                point = location.Point
-                                # Create tag at space location
-                                tag = doc.Create.NewSpaceTag(space, uv, active_view)
-                                if tag:
-                                    tagged += 1
-                                    LOG.debug("Tagged space: {}".format(space_data['number']))
-                        except Exception as tag_error:
-                            LOG.warning("Failed to tag space {}: {}".format(
-                                space_data['number'], tag_error
-                            ))
 
                 except Exception as e:
                     failed += 1
@@ -306,6 +331,27 @@ def create_spaces(doc, level, spaces, active_view, add_tags=True):
                     )
                     errors.append(error_msg)
                     LOG.error("Failed to create space: {}".format(error_msg))
+
+            # Step 2: Tag spaces in all Construction/Permit views
+            if add_tags and tag_type and construction_permit_views and created_spaces:
+                for view in construction_permit_views:
+                    view_name = view.Name
+                    view_tag_count = 0
+
+                    for space, uv, space_number in created_spaces:
+                        try:
+                            tag = doc.Create.NewSpaceTag(space, uv, view)
+                            if tag:
+                                view_tag_count += 1
+                                tagged += 1
+                        except Exception as tag_error:
+                            LOG.warning("Failed to tag space {} in view '{}': {}".format(
+                                space_number, view_name, tag_error
+                            ))
+
+                    if view_tag_count > 0:
+                        tagged_views[view_name] = view_tag_count
+                        LOG.debug("Tagged {} spaces in view '{}'".format(view_tag_count, view_name))
 
             t.Commit()
 
@@ -318,6 +364,7 @@ def create_spaces(doc, level, spaces, active_view, add_tags=True):
         'placed': placed,
         'failed': failed,
         'tagged': tagged,
+        'tagged_views': tagged_views,
         'errors': errors
     }
 
@@ -353,28 +400,53 @@ def main():
     if not level:
         forms.alert("No level selected.", title=TITLE, exitscript=True)
 
-    # Step 4: Confirm
-    message = "Ready to create {} spaces on level '{}'.\n\nContinue?".format(
-        len(spaces),
-        level.Name
-    )
-    if not forms.alert(message, title=TITLE, yes=True, no=True):
-        script.exit()
+    # Step 4: Get Construction/Permit views for tagging
+    construction_permit_views = get_construction_permit_views(doc)
+    if not construction_permit_views:
+        LOG.warning("No Construction / Permit views found - tags will not be created")
+        if not forms.alert(
+            "No 'Construction / Permit' floor or ceiling plans found.\n\n"
+            "Spaces will be created but NOT tagged.\n\n"
+            "Continue?",
+            title=TITLE,
+            yes=True,
+            no=True
+        ):
+            script.exit()
+    else:
+        # Show confirmation with view count
+        message = "Ready to create {} spaces on level '{}'.\n\n" \
+                  "Tags will be created in {} Construction / Permit views.\n\n" \
+                  "Continue?".format(
+            len(spaces),
+            level.Name,
+            len(construction_permit_views)
+        )
+        if not forms.alert(message, title=TITLE, yes=True, no=True):
+            script.exit()
 
-    # Step 5: Create spaces
+    # Step 5: Create spaces and tags
     LOG.info("Creating spaces...")
-    active_view = doc.ActiveView
     try:
-        results = create_spaces(doc, level, spaces, active_view, add_tags=True)
+        results = create_spaces(doc, level, spaces, construction_permit_views, add_tags=True)
     except Exception as e:
         forms.alert("Error creating spaces:\n{}".format(e), title=TITLE, exitscript=True)
 
     # Step 6: Report results
     summary = []
     summary.append("Spaces Created: {}".format(results['placed']))
-    summary.append("Spaces Tagged: {}".format(results['tagged']))
+    summary.append("Total Tags Created: {}".format(results['tagged']))
+
+    # Show per-view tag counts
+    tagged_views = results.get('tagged_views', {})
+    if tagged_views:
+        summary.append("")
+        summary.append("Tags per view:")
+        for view_name, count in sorted(tagged_views.items()):
+            summary.append("  - {}: {}".format(view_name, count))
 
     if results['failed']:
+        summary.append("")
         summary.append("Failed: {}".format(results['failed']))
         summary.append("")
         summary.append("Errors:")
@@ -384,8 +456,8 @@ def main():
             summary.append("  ... and {} more".format(len(results['errors']) - 10))
 
     forms.alert("\n".join(summary), title=TITLE)
-    LOG.info("Complete: {} placed, {} tagged, {} failed".format(
-        results['placed'], results['tagged'], results['failed']
+    LOG.info("Complete: {} placed, {} tagged across {} views, {} failed".format(
+        results['placed'], results['tagged'], len(tagged_views), results['failed']
     ))
 
 
