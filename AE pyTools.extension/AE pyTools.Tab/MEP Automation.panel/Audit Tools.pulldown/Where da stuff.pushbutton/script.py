@@ -1,6 +1,8 @@
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI import *
-from pyrevit import revit, forms
+from pyrevit import revit, forms, script
+output = script.get_output()
+output.close_others()
 from System.Collections.Generic import List
 import re
 

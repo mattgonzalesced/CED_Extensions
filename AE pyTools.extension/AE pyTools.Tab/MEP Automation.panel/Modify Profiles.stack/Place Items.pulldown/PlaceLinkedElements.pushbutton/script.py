@@ -7,6 +7,8 @@ import re
 import sys
 
 from pyrevit import revit, forms, script
+output = script.get_output()
+output.close_others()
 from Autodesk.Revit.DB import BuiltInParameter, FamilyInstance, FilteredElementCollector, Group, Level, RevitLinkInstance, XYZ
 
 LIB_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib"))

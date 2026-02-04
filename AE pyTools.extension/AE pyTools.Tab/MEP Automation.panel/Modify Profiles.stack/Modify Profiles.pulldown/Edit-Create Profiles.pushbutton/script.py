@@ -14,6 +14,8 @@ import os
 import sys
 
 from pyrevit import revit, forms, script
+output = script.get_output()
+output.close_others()
 from Autodesk.Revit.DB import (
     BuiltInParameter,
     ElementId,

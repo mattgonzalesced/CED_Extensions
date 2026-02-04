@@ -18,6 +18,8 @@ import csv
 import os
 import re
 from pyrevit import forms, revit, script
+output = script.get_output()
+output.close_others()
 from Autodesk.Revit.DB import (
     BuiltInCategory,
     BuiltInParameter,

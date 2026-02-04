@@ -14,6 +14,8 @@ from collections import Counter
 from difflib import SequenceMatcher
 
 from pyrevit import forms, revit, script
+output = script.get_output()
+output.close_others()
 from Autodesk.Revit.DB import (
     FilteredElementCollector,
     FamilyInstance,

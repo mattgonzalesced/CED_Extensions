@@ -10,7 +10,9 @@ simple YAML serializer so the output resembles the original profile file.
 import io
 import os
 
-from pyrevit import forms
+from pyrevit import forms, script
+output = script.get_output()
+output.close_others()
 
 from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
 

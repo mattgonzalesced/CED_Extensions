@@ -13,7 +13,9 @@ try:
 except ImportError:
     from collections import Mapping
 
-from pyrevit import forms
+from pyrevit import forms, script
+output = script.get_output()
+output.close_others()
 
 LIB_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib")

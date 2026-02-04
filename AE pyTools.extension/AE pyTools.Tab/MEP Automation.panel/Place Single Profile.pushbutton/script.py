@@ -5,7 +5,9 @@ Place Single Profile (Dockable Pane)
 Opens the dockable pane for placing a single equipment definition.
 """
 
-from pyrevit import forms
+from pyrevit import forms, script
+output = script.get_output()
+output.close_others()
 
 from PlaceSingleProfilePanel import ensure_panel_visible  # noqa: E402
 

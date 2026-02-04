@@ -10,7 +10,9 @@ instances and model groups. Includes category filtering before placement.
 import os
 import sys
 
-from pyrevit import revit, forms
+from pyrevit import revit, forms, script
+output = script.get_output()
+output.close_others()
 from Autodesk.Revit.DB import FamilySymbol, FilteredElementCollector, GroupType, BuiltInParameter
 
 # Add CEDLib.lib to sys.path so LogicClasses/UIClasses can be imported

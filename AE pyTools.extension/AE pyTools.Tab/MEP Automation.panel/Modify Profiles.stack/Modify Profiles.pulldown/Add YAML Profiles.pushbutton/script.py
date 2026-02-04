@@ -19,6 +19,8 @@ import math
 import os
 
 from pyrevit import revit, forms, script
+output = script.get_output()
+output.close_others()
 
 # Add CEDLib.lib to sys.path for shared assets
 import sys

@@ -257,7 +257,8 @@ def main():
                     for child_id in child_map.get(pid, []):
                         move_candidates.append((child_id, delta, pid))
 
-    output = script.get_output()
+    \1
+output.close_others()
     output.print_md("# Post Audit Compare")
     output.print_md("## Summary")
     output.print_md("- Moved IDs: **{}**".format(len(moved)))

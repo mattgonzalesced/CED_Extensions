@@ -7,7 +7,9 @@ import os
 import sys
 import io
 
-from pyrevit import forms, revit
+from pyrevit import forms, revit, script
+output = script.get_output()
+output.close_others()
 
 LIB_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib")

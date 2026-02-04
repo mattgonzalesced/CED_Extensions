@@ -1,3 +1,6 @@
+from pyrevit import script
+output = script.get_output()
+output.close_others()
 import os
 import sys
 import io

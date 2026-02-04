@@ -8,7 +8,9 @@ Toggle and test parent-parameter conflict checks that run after sync.
 import imp
 import os
 
-from pyrevit import forms, revit
+from pyrevit import forms, revit, script
+output = script.get_output()
+output.close_others()
 
 TITLE = "Parameter Flag Settings"
 

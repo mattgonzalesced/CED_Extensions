@@ -51,6 +51,8 @@ import os
 
 
 from pyrevit import script, forms, revit
+output = script.get_output()
+output.close_others()
 
 
 

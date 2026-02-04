@@ -10,7 +10,9 @@ instances and model groups.
 import os
 import sys
 
-from pyrevit import revit, forms
+from pyrevit import revit, forms, script
+output = script.get_output()
+output.close_others()
 
 # Add CEDLib.lib to sys.path so LogicClasses/UIClasses can be imported
 # (relative to extension root: ...\AE PyDev.extension\AE pyTools.Tab\...)
