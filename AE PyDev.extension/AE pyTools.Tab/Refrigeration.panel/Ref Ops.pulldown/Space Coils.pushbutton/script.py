@@ -66,23 +66,101 @@ def _find_spatial_element(doc, point):
     return None
 
 
-def _bounds_from_spatial(spatial):
+def _bounds_from_spatial(spatial, direction):
     options = DB.SpatialElementBoundaryOptions()
     options.SpatialElementBoundaryLocation = DB.SpatialElementBoundaryLocation.Finish
     segments = spatial.GetBoundarySegments(options)
     if not segments:
         return None
-    points = []
+    center = None
+    try:
+        loc = spatial.Location
+        if loc and hasattr(loc, "Point"):
+            center = loc.Point
+    except Exception:
+        center = None
+    if center is None:
+        points = []
+        for seg_list in segments:
+            for seg in seg_list:
+                curve = seg.GetCurve()
+                points.append(curve.GetEndPoint(0))
+                points.append(curve.GetEndPoint(1))
+        if not points:
+            return None
+        cx = sum(p.X for p in points) / float(len(points))
+        cy = sum(p.Y for p in points) / float(len(points))
+        center = DB.XYZ(cx, cy, 0)
+
+    candidates = []
     for seg_list in segments:
         for seg in seg_list:
             curve = seg.GetCurve()
-            points.append(curve.GetEndPoint(0))
-            points.append(curve.GetEndPoint(1))
-    if not points:
+            if not isinstance(curve, DB.Line):
+                continue
+            p0 = curve.GetEndPoint(0)
+            p1 = curve.GetEndPoint(1)
+            mid = (p0 + p1) * 0.5
+            wall_type = _classify_wall(curve)
+            candidates.append({
+                "line": curve,
+                "p0": p0,
+                "p1": p1,
+                "mid": mid,
+                "type": wall_type,
+            })
+
+    if not candidates:
         return None
-    xs = [pt.X for pt in points]
-    ys = [pt.Y for pt in points]
-    return min(xs), max(xs), min(ys), max(ys)
+
+    if direction in ("North", "South"):
+        horiz = [c for c in candidates if c["type"] == "H"]
+        if not horiz:
+            return None
+        if direction == "North":
+            horiz = [c for c in horiz if c["mid"].Y >= center.Y]
+            if not horiz:
+                return None
+            chosen = min(horiz, key=lambda c: c["mid"].Y - center.Y)
+        else:
+            horiz = [c for c in horiz if c["mid"].Y <= center.Y]
+            if not horiz:
+                return None
+            chosen = min(horiz, key=lambda c: center.Y - c["mid"].Y)
+        left = min(chosen["p0"].X, chosen["p1"].X)
+        right = max(chosen["p0"].X, chosen["p1"].X)
+        wall_coord = (chosen["p0"].Y + chosen["p1"].Y) * 0.5
+        return {
+            "axis": "X",
+            "perp": "Y",
+            "left": left,
+            "right": right,
+            "wall": wall_coord,
+        }
+
+    vert = [c for c in candidates if c["type"] == "V"]
+    if not vert:
+        return None
+    if direction == "East":
+        vert = [c for c in vert if c["mid"].X >= center.X]
+        if not vert:
+            return None
+        chosen = min(vert, key=lambda c: c["mid"].X - center.X)
+    else:
+        vert = [c for c in vert if c["mid"].X <= center.X]
+        if not vert:
+            return None
+        chosen = min(vert, key=lambda c: center.X - c["mid"].X)
+    left = min(chosen["p0"].Y, chosen["p1"].Y)
+    right = max(chosen["p0"].Y, chosen["p1"].Y)
+    wall_coord = (chosen["p0"].X + chosen["p1"].X) * 0.5
+    return {
+        "axis": "Y",
+        "perp": "X",
+        "left": left,
+        "right": right,
+        "wall": wall_coord,
+    }
 
 
 def _wall_line(wall):
@@ -131,34 +209,58 @@ def _bounds_from_walls(center, direction):
             continue
         mid = _wall_midpoint(line)
         if _classify_wall(line) == "H":
-            horiz.append(mid.Y)
+            horiz.append((line, mid))
         else:
-            vert.append(mid.X)
+            vert.append((line, mid))
 
     if direction in ("North", "South"):
-        wall_coord = _closest_coord(horiz, center.Y, "pos" if direction == "North" else "neg")
-        left = _closest_coord(vert, center.X, "neg")
-        right = _closest_coord(vert, center.X, "pos")
-        if wall_coord is None or left is None or right is None:
+        candidates = []
+        for line, mid in horiz:
+            if direction == "North" and mid.Y >= center.Y:
+                candidates.append((line, mid))
+            elif direction == "South" and mid.Y <= center.Y:
+                candidates.append((line, mid))
+        if not candidates:
             return None
+        if direction == "North":
+            line, mid = min(candidates, key=lambda c: c[1].Y - center.Y)
+        else:
+            line, mid = min(candidates, key=lambda c: center.Y - c[1].Y)
+        p0 = line.GetEndPoint(0)
+        p1 = line.GetEndPoint(1)
+        left = min(p0.X, p1.X)
+        right = max(p0.X, p1.X)
+        wall_coord = (p0.Y + p1.Y) * 0.5
         return {
             "axis": "X",
             "perp": "Y",
-            "left": min(left, right),
-            "right": max(left, right),
+            "left": left,
+            "right": right,
             "wall": wall_coord,
         }
 
-    wall_coord = _closest_coord(vert, center.X, "pos" if direction == "East" else "neg")
-    left = _closest_coord(horiz, center.Y, "neg")
-    right = _closest_coord(horiz, center.Y, "pos")
-    if wall_coord is None or left is None or right is None:
+    candidates = []
+    for line, mid in vert:
+        if direction == "East" and mid.X >= center.X:
+            candidates.append((line, mid))
+        elif direction == "West" and mid.X <= center.X:
+            candidates.append((line, mid))
+    if not candidates:
         return None
+    if direction == "East":
+        line, mid = min(candidates, key=lambda c: c[1].X - center.X)
+    else:
+        line, mid = min(candidates, key=lambda c: center.X - c[1].X)
+    p0 = line.GetEndPoint(0)
+    p1 = line.GetEndPoint(1)
+    left = min(p0.Y, p1.Y)
+    right = max(p0.Y, p1.Y)
+    wall_coord = (p0.X + p1.X) * 0.5
     return {
         "axis": "Y",
         "perp": "X",
-        "left": min(left, right),
-        "right": max(left, right),
+        "left": left,
+        "right": right,
         "wall": wall_coord,
     }
 
@@ -167,26 +269,10 @@ def _resolve_bounds(coils, direction):
     point = _get_location_point(coils[0])
     spatial = _find_spatial_element(doc, point)
     if spatial:
-        bounds = _bounds_from_spatial(spatial)
+        bounds = _bounds_from_spatial(spatial, direction)
         if bounds:
-            min_x, max_x, min_y, max_y = bounds
-            if direction in ("North", "South"):
-                return {
-                    "axis": "X",
-                    "perp": "Y",
-                    "left": min_x,
-                    "right": max_x,
-                    "wall": max_y if direction == "North" else min_y,
-                    "source": "space",
-                }
-            return {
-                "axis": "Y",
-                "perp": "X",
-                "left": min_y,
-                "right": max_y,
-                "wall": max_x if direction == "East" else min_x,
-                "source": "space",
-            }
+            bounds["source"] = "space"
+            return bounds
 
     pts = [p for p in (_get_location_point(c) for c in coils) if p]
     if pts:
