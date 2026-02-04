@@ -7,6 +7,7 @@
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
@@ -41,7 +42,11 @@
       <Button Name="RefreshButton" Content="Refresh" Width="80" Height="24" Margin="8,0,0,0"/>
     </StackPanel>
 
-    <StackPanel Grid.Row="5">
+    <StackPanel Grid.Row="5" Margin="0,0,0,8">
+      <Button Name="PlaceOnReferenceButton" Content="Place on Reference Elements" Width="230" Height="24"/>
+    </StackPanel>
+
+    <StackPanel Grid.Row="6">
       <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
         <TextBlock Text="Profile Preview (Top View)" VerticalAlignment="Center"/>
       </StackPanel>
@@ -60,6 +65,6 @@
       </Border>
     </StackPanel>
 
-    <TextBlock Grid.Row="6" Name="StatusText" Margin="0,6,0,0" Foreground="#444444"/>
+    <TextBlock Grid.Row="7" Name="StatusText" Margin="0,6,0,0" Foreground="#444444"/>
   </Grid>
 </Page>

@@ -47,7 +47,7 @@ try:
 except Exception:
     StructuralType = None
 from Autodesk.Revit.UI import ExternalEvent, IExternalEventHandler
-from Autodesk.Revit.UI.Selection import ObjectSnapTypes
+from Autodesk.Revit.UI.Selection import ObjectSnapTypes, ObjectType
 from System.Drawing import Size, Color, Bitmap
 from System import IntPtr, Uri, TimeSpan
 from System.Windows import Int32Rect, Point, Rect, Visibility
@@ -262,6 +262,73 @@ def _gather_child_requests(parent_def, base_point, base_rotation, repo, data):
     return requests
 
 
+def _reference_point_from_element(elem):
+    if elem is None:
+        return None
+    try:
+        loc = elem.Location
+    except Exception:
+        loc = None
+    if loc is not None and hasattr(loc, "Point"):
+        try:
+            return loc.Point
+        except Exception:
+            pass
+    if loc is not None and hasattr(loc, "Curve"):
+        try:
+            curve = loc.Curve
+        except Exception:
+            curve = None
+        if curve is not None:
+            try:
+                return curve.Evaluate(0.5, True)
+            except Exception:
+                pass
+    try:
+        bbox = elem.get_BoundingBox(None)
+    except Exception:
+        bbox = None
+    if not bbox:
+        try:
+            bbox = elem.get_BoundingBox(revit.active_view)
+        except Exception:
+            bbox = None
+    if not bbox:
+        return None
+    return (bbox.Min + bbox.Max) * 0.5
+
+
+def _collect_reference_points(uidoc):
+    if uidoc is None:
+        return []
+    doc = uidoc.Document
+    points = []
+    elem_ids = []
+    try:
+        elem_ids = list(uidoc.Selection.GetElementIds())
+    except Exception:
+        elem_ids = []
+    if not elem_ids:
+        try:
+            refs = uidoc.Selection.PickObjects(
+                ObjectType.Element,
+                "Select reference elements (ESC to finish)",
+            )
+        except Exception:
+            refs = None
+        if refs:
+            elem_ids = [r.ElementId for r in refs if r is not None]
+    for elem_id in elem_ids:
+        try:
+            elem = doc.GetElement(elem_id)
+        except Exception:
+            elem = None
+        pt = _reference_point_from_element(elem)
+        if pt is not None:
+            points.append(pt)
+    return points
+
+
 class _PlaceSingleProfileHandler(IExternalEventHandler):
     def __init__(self):
         self._payload = None
@@ -357,6 +424,81 @@ class _PlaceSingleProfileHandler(IExternalEventHandler):
         return "PlaceSingleProfileHandler"
 
 
+class _PlaceOnReferenceHandler(IExternalEventHandler):
+    def __init__(self):
+        self._payload = None
+
+    def set_payload(self, raw_data, cad_choice):
+        self._payload = {
+            "raw_data": raw_data,
+            "cad_choice": cad_choice,
+        }
+
+    def Execute(self, uiapp):  # noqa: N802
+        payload = self._payload
+        self._payload = None
+        if not payload:
+            return
+        raw_data = payload.get("raw_data") or {}
+        cad_choice = payload.get("cad_choice")
+        if not cad_choice:
+            return
+        try:
+            doc = uiapp.ActiveUIDocument.Document
+            uidoc = uiapp.ActiveUIDocument
+            repo = _build_repository(raw_data)
+            labels = repo.labels_for_cad(cad_choice)
+            if not labels:
+                forms.alert("Equipment definition '{}' has no linked types.".format(cad_choice), title=TITLE)
+                return
+            points = _collect_reference_points(uidoc)
+            if not points:
+                forms.alert("No reference elements selected.", title=TITLE)
+                return
+            selection_map = {cad_choice: labels}
+            rows = []
+            for base_pt in points:
+                rows.append({
+                    "Name": cad_choice,
+                    "Count": "1",
+                    "Position X": str(base_pt.X * 12.0),
+                    "Position Y": str(base_pt.Y * 12.0),
+                    "Position Z": str(base_pt.Z * 12.0),
+                    "Rotation": "0",
+                })
+            parent_def = find_equipment_by_name(raw_data, cad_choice)
+            if parent_def:
+                for base_pt in points:
+                    child_requests = _gather_child_requests(parent_def, base_pt, 0.0, repo, raw_data)
+                    if not child_requests:
+                        continue
+                    for request in child_requests:
+                        name = request.get("name")
+                        req_labels = request.get("labels")
+                        point = request.get("target_point")
+                        rotation = request.get("rotation")
+                        if not name or not req_labels or point is None:
+                            continue
+                        selection_map[name] = req_labels
+                        rows.append({
+                            "Name": name,
+                            "Count": "1",
+                            "Position X": str(point.X * 12.0),
+                            "Position Y": str(point.Y * 12.0),
+                            "Position Z": str(point.Z * 12.0),
+                            "Rotation": str(rotation or 0.0),
+                        })
+            engine = PlaceElementsEngine(doc, repo, allow_tags=False, transaction_name=TITLE)
+            results = engine.place_from_csv(rows, selection_map)
+            placed = results.get("placed", 0)
+            forms.alert("Placed {} element(s) for equipment definition '{}'.".format(placed, cad_choice), title=TITLE)
+        except Exception as exc:
+            forms.alert("Error during placement:\n\n{}".format(exc), title=TITLE)
+
+    def GetName(self):  # noqa: N802
+        return "PlaceOnReferenceHandler"
+
+
 class _PreviewRenderHandler(IExternalEventHandler):
     def __init__(self):
         self._payload = None
@@ -415,12 +557,15 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
         self._independent_only = self.FindName("IndependentOnlyCheck")
         self._place_button = self.FindName("PlaceButton")
         self._refresh_button = self.FindName("RefreshButton")
+        self._place_on_reference_button = self.FindName("PlaceOnReferenceButton")
         self._preview_canvas = self.FindName("PreviewCanvas")
         self._profile_types_list = self.FindName("ProfileTypesList")
         self._preview3d_image = self.FindName("Preview3DImage")
         self._status_text = self.FindName("StatusText")
         self._place_handler = _PlaceSingleProfileHandler()
         self._place_event = ExternalEvent.Create(self._place_handler)
+        self._place_on_reference_handler = _PlaceOnReferenceHandler()
+        self._place_on_reference_event = ExternalEvent.Create(self._place_on_reference_handler)
         self._preview_handler = _PreviewRenderHandler()
         self._preview_event = ExternalEvent.Create(self._preview_handler)
         self._setup_preview_timer()
@@ -436,6 +581,8 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
         self._place_multi_button = self.FindName("PlaceMultiButton")
         if self._place_multi_button is not None:
             self._place_multi_button.Click += self._on_place_multi
+        if self._place_on_reference_button is not None:
+            self._place_on_reference_button.Click += self._on_place_on_reference
         if self._refresh_button is not None:
             self._refresh_button.Click += self._on_refresh
         if self._preview_canvas is not None:
@@ -2043,6 +2190,27 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
         self._place_handler.set_payload(self._raw_data, cad_choice, multi=not single)
         self._place_event.Raise()
         self._set_status("Placement requested for '{}'.".format(cad_choice))
+
+    def _on_place_on_reference(self, sender, args):
+        if not self._repo:
+            self._set_status("No active YAML loaded.")
+            return
+        cad_choice = self._selected_profile()
+        if not cad_choice:
+            self._set_status("Select a profile to place.")
+            return
+        try:
+            forms.alert(
+                "Select reference elements in the model, then press Enter or Finish.\n"
+                "The profile will be placed on each selected element.",
+                title="Place on Reference Elements",
+                warn_icon=False,
+            )
+        except Exception:
+            pass
+        self._place_on_reference_handler.set_payload(self._raw_data, cad_choice)
+        self._place_on_reference_event.Raise()
+        self._set_status("Placement requested for '{}' on reference elements.".format(cad_choice))
 
 
 def ensure_panel_visible():
