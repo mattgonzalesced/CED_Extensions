@@ -99,7 +99,7 @@ class ParentParamConflictsWindow(forms.WPFWindow):
             "Action",
         ]
 
-        widths = [260, 260, 220, 140, 140, 180]
+        widths = [260, 260, 360, 160, 160, 180]
         for idx, _ in enumerate(columns):
             col_def = ColumnDefinition()
             width = widths[idx] if idx < len(widths) else 180
