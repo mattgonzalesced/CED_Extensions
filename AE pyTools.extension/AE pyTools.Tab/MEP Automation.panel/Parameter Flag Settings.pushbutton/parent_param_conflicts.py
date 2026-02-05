@@ -47,6 +47,10 @@ PARENT_PARAMETER_PATTERN = re.compile(
     r'^\s*parent_parameter\s*:\s*(?:"([^"]+)"|\'([^\']+)\'|(.+))\s*$',
     re.IGNORECASE,
 )
+SIBLING_PARAMETER_PATTERN = re.compile(
+    r'^\s*sibling_parameter\s*:\s*([^:]+?)\s*:\s*(?:"([^"]+)"|\'([^\']+)\')\s*$',
+    re.IGNORECASE,
+)
 NUMERIC_TOKEN_PATTERN = re.compile(r"[-+]?\d+(?:[.,]\d+)?")
 
 ACTION_UPDATE_CHILD = "update_child"
@@ -190,8 +194,35 @@ def _extract_parent_parameter_name(value):
     return name or None
 
 
-def _collect_parent_param_mappings(data):
-    led_map = {}
+def _extract_sibling_parameter_spec(value):
+    if isinstance(value, dict):
+        for key in ("sibling_parameter", "Sibling Parameter", "sibling parameter"):
+            if key in value:
+                raw = value.get(key)
+                if raw is None:
+                    return (None, None)
+                text = str(raw).strip()
+                match = SIBLING_PARAMETER_PATTERN.match(text)
+                if not match:
+                    return (None, None)
+                led_id = (match.group(1) or "").strip()
+                param_name = (match.group(2) or match.group(3) or "").strip()
+                return (led_id or None, param_name or None)
+    if not isinstance(value, basestring):
+        return (None, None)
+    match = SIBLING_PARAMETER_PATTERN.match(value)
+    if not match:
+        return (None, None)
+    led_id = (match.group(1) or "").strip()
+    param_name = (match.group(2) or match.group(3) or "").strip()
+    if not led_id or not param_name:
+        return (None, None)
+    return (led_id, param_name)
+
+
+def _collect_param_mappings(data):
+    parent_map = {}
+    sibling_map = {}
     for eq_def in data.get("equipment_definitions") or []:
         if not isinstance(eq_def, dict):
             continue
@@ -207,14 +238,16 @@ def _collect_parent_param_mappings(data):
                 params = led.get("parameters") or {}
                 if not isinstance(params, dict):
                     continue
-                mappings = []
                 for child_param, raw_value in params.items():
                     parent_param = _extract_parent_parameter_name(raw_value)
                     if parent_param:
-                        mappings.append((child_param, parent_param))
-                if mappings:
-                    led_map.setdefault(led_id, []).extend(mappings)
-    return led_map
+                        parent_map.setdefault(led_id, []).append((child_param, parent_param))
+                    sibling_led_id, sibling_param = _extract_sibling_parameter_spec(raw_value)
+                    if sibling_led_id and sibling_param:
+                        sibling_map.setdefault(led_id, []).append(
+                            (child_param, sibling_led_id, sibling_param)
+                        )
+    return parent_map, sibling_map
 
 
 def _get_linker_text(elem):
@@ -268,6 +301,7 @@ def _parse_linker_payload(payload_text):
             value = text[start:end].strip().rstrip(",")
             entries[key] = value.strip(" ,")
     led_id = (entries.get("Linked Element Definition ID") or "").strip()
+    set_id = (entries.get("Set Definition ID") or "").strip()
     parent_element_id = None
     raw_parent = entries.get("Parent ElementId")
     if raw_parent not in (None, ""):
@@ -278,7 +312,7 @@ def _parse_linker_payload(payload_text):
                 parent_element_id = int(float(raw_parent))
             except Exception:
                 parent_element_id = None
-    return {"led_id": led_id, "parent_element_id": parent_element_id}
+    return {"led_id": led_id, "set_id": set_id, "parent_element_id": parent_element_id}
 
 
 def _read_param_text(param):
@@ -384,6 +418,66 @@ def _payload_from_element_params(elem):
     if parent_id is not None:
         payload["parent_element_id"] = parent_id
     return payload
+
+
+def _payload_from_element(elem):
+    linker_text = _get_linker_text(elem)
+    payload = _parse_linker_payload(linker_text) if linker_text else {}
+    if not payload.get("led_id") or payload.get("parent_element_id") is None:
+        param_payload = _payload_from_element_params(elem)
+        for key, value in param_payload.items():
+            if payload.get(key) in (None, ""):
+                payload[key] = value
+    return payload
+
+
+def _build_sibling_index(doc):
+    index = {}
+    elements = _collect_candidate_elements(doc)
+    for elem in elements:
+        payload = _payload_from_element(elem)
+        led_id = payload.get("led_id") if payload else None
+        if not led_id:
+            continue
+        try:
+            elem_id = elem.Id.IntegerValue
+        except Exception:
+            elem_id = None
+        record = {"id": elem_id, "element": elem, "payload": payload}
+        index.setdefault(led_id, []).append(record)
+    return index
+
+
+def _resolve_sibling_element(records, parent_element_id=None, set_id=None, exclude_element=None):
+    if not records:
+        return None
+    exclude_id = None
+    if exclude_element is not None:
+        try:
+            exclude_id = exclude_element.Id.IntegerValue
+        except Exception:
+            exclude_id = None
+
+    def _filter(match_parent):
+        filtered = []
+        for record in records:
+            if exclude_id is not None and record.get("id") == exclude_id:
+                continue
+            payload = record.get("payload") or {}
+            if set_id and payload.get("set_id") and payload.get("set_id") != set_id:
+                continue
+            if match_parent and parent_element_id not in (None, ""):
+                if payload.get("parent_element_id") not in (None, parent_element_id):
+                    continue
+            filtered.append(record)
+        return filtered
+
+    filtered = _filter(match_parent=True)
+    if not filtered:
+        filtered = _filter(match_parent=False)
+    if not filtered:
+        return None
+    return filtered[0].get("element")
 
 
 def _collect_candidate_elements(doc):
@@ -691,92 +785,156 @@ def _copy_param_value(source_param, target_param):
 
 
 def collect_conflicts(doc, data):
-    led_map = _collect_parent_param_mappings(data)
-    if not led_map:
+    parent_map, sibling_map = _collect_param_mappings(data)
+    if not parent_map and not sibling_map:
         return []
     elements = _collect_candidate_elements(doc)
     if not elements:
         return []
     conflicts = []
     seen = set()
+    sibling_index = _build_sibling_index(doc) if sibling_map else {}
     for elem in elements:
-        linker_text = _get_linker_text(elem)
-        payload = _parse_linker_payload(linker_text) if linker_text else {}
-        if not payload.get("led_id") or payload.get("parent_element_id") is None:
-            param_payload = _payload_from_element_params(elem)
-            for key, value in param_payload.items():
-                if payload.get(key) in (None, ""):
-                    payload[key] = value
+        payload = _payload_from_element(elem)
         led_id = payload.get("led_id")
         if not led_id:
             continue
-        mappings = led_map.get(led_id)
-        if not mappings:
-            continue
-        parent_id = payload.get("parent_element_id")
-        if parent_id is None:
-            continue
-        try:
-            parent_elem = doc.GetElement(ElementId(int(parent_id)))
-        except Exception:
-            parent_elem = None
-        if parent_elem is None:
-            continue
-        parent_label = _element_label(parent_elem)
         child_label = _element_label(elem)
-        for child_param_name, parent_param_name in mappings:
-            key = (elem.Id.IntegerValue, child_param_name, parent_param_name)
-            if key in seen:
-                continue
-            seen.add(key)
-            try:
-                child_param = elem.LookupParameter(child_param_name)
-            except Exception:
-                child_param = None
-            try:
-                parent_param = parent_elem.LookupParameter(parent_param_name)
-            except Exception:
-                parent_param = None
-            type_param = _get_type_param(parent_elem, parent_param_name)
-            parent_is_type = _is_type_param(parent_elem, parent_param_name, parent_param, type_param)
-            if parent_param is None and type_param is not None:
-                parent_param = type_param
-            child_info = _param_info(child_param)
-            parent_info = _param_info(parent_param)
-            if not parent_info["exists"] and not child_info["exists"]:
-                continue
-            if parent_info["exists"] and not parent_info["has_value"]:
-                is_conflict = True
-            elif not parent_info["exists"]:
-                is_conflict = True
-            elif not child_info["exists"]:
-                is_conflict = True
-            elif not child_info["has_value"]:
-                is_conflict = True
-            else:
-                is_conflict = not _values_match(parent_info, child_info)
-            if not is_conflict:
-                continue
-            allow_update_child = bool(child_param and not child_param.IsReadOnly)
-            allow_update_parent = bool(
-                parent_param and not parent_param.IsReadOnly and not parent_is_type
-            )
-            conflicts.append({
-                "id": "{}:{}:{}".format(elem.Id.IntegerValue, child_param_name, parent_param_name),
-                "led_id": led_id,
-                "parent_id": parent_id,
-                "child_id": elem.Id.IntegerValue,
-                "parent_label": parent_label,
-                "child_label": child_label,
-                "child_param": child_param_name,
-                "parent_param": parent_param_name,
-                "child_display": child_info["display"],
-                "parent_display": parent_info["display"],
-                "parent_is_type": parent_is_type,
-                "allow_update_child": allow_update_child,
-                "allow_update_parent": allow_update_parent,
-                "param_key": "{} -> {}".format(child_param_name, parent_param_name),
-            })
+        parent_mappings = parent_map.get(led_id) or []
+        if parent_mappings:
+            parent_id = payload.get("parent_element_id")
+            if parent_id is not None:
+                try:
+                    parent_elem = doc.GetElement(ElementId(int(parent_id)))
+                except Exception:
+                    parent_elem = None
+                if parent_elem is not None:
+                    parent_label = _element_label(parent_elem)
+                    for child_param_name, parent_param_name in parent_mappings:
+                        key = (elem.Id.IntegerValue, child_param_name, parent_param_name, "parent")
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        try:
+                            child_param = elem.LookupParameter(child_param_name)
+                        except Exception:
+                            child_param = None
+                        try:
+                            parent_param = parent_elem.LookupParameter(parent_param_name)
+                        except Exception:
+                            parent_param = None
+                        type_param = _get_type_param(parent_elem, parent_param_name)
+                        parent_is_type = _is_type_param(parent_elem, parent_param_name, parent_param, type_param)
+                        if parent_param is None and type_param is not None:
+                            parent_param = type_param
+                        child_info = _param_info(child_param)
+                        parent_info = _param_info(parent_param)
+                        if not parent_info["exists"] and not child_info["exists"]:
+                            continue
+                        if parent_info["exists"] and not parent_info["has_value"]:
+                            is_conflict = True
+                        elif not parent_info["exists"]:
+                            is_conflict = True
+                        elif not child_info["exists"]:
+                            is_conflict = True
+                        elif not child_info["has_value"]:
+                            is_conflict = True
+                        else:
+                            is_conflict = not _values_match(parent_info, child_info)
+                        if not is_conflict:
+                            continue
+                        allow_update_child = bool(child_param and not child_param.IsReadOnly)
+                        allow_update_parent = bool(
+                            parent_param and not parent_param.IsReadOnly and not parent_is_type
+                        )
+                        conflicts.append({
+                            "id": "{}:{}:{}:parent".format(elem.Id.IntegerValue, child_param_name, parent_param_name),
+                            "led_id": led_id,
+                            "parent_id": parent_id,
+                            "child_id": elem.Id.IntegerValue,
+                            "parent_label": parent_label,
+                            "child_label": child_label,
+                            "child_param": child_param_name,
+                            "parent_param": parent_param_name,
+                            "child_display": child_info["display"],
+                            "parent_display": parent_info["display"],
+                            "parent_is_type": parent_is_type,
+                            "allow_update_child": allow_update_child,
+                            "allow_update_parent": allow_update_parent,
+                            "param_key": "{} -> {}".format(child_param_name, parent_param_name),
+                        })
+
+        sibling_mappings = sibling_map.get(led_id) or []
+        if sibling_mappings:
+            parent_id = payload.get("parent_element_id")
+            set_id = payload.get("set_id")
+            for child_param_name, sibling_led_id, sibling_param_name in sibling_mappings:
+                key = (elem.Id.IntegerValue, child_param_name, sibling_led_id, sibling_param_name, "sibling")
+                if key in seen:
+                    continue
+                seen.add(key)
+                records = sibling_index.get(sibling_led_id) or []
+                sibling_elem = _resolve_sibling_element(
+                    records,
+                    parent_element_id=parent_id,
+                    set_id=set_id,
+                    exclude_element=elem,
+                )
+                if sibling_elem is None:
+                    continue
+                sibling_label = _element_label(sibling_elem)
+                try:
+                    child_param = elem.LookupParameter(child_param_name)
+                except Exception:
+                    child_param = None
+                try:
+                    sibling_param = sibling_elem.LookupParameter(sibling_param_name)
+                except Exception:
+                    sibling_param = None
+                type_param = _get_type_param(sibling_elem, sibling_param_name)
+                sibling_is_type = _is_type_param(sibling_elem, sibling_param_name, sibling_param, type_param)
+                if sibling_param is None and type_param is not None:
+                    sibling_param = type_param
+                child_info = _param_info(child_param)
+                sibling_info = _param_info(sibling_param)
+                if not sibling_info["exists"] and not child_info["exists"]:
+                    continue
+                if sibling_info["exists"] and not sibling_info["has_value"]:
+                    is_conflict = True
+                elif not sibling_info["exists"]:
+                    is_conflict = True
+                elif not child_info["exists"]:
+                    is_conflict = True
+                elif not child_info["has_value"]:
+                    is_conflict = True
+                else:
+                    is_conflict = not _values_match(sibling_info, child_info)
+                if not is_conflict:
+                    continue
+                allow_update_child = bool(child_param and not child_param.IsReadOnly)
+                allow_update_parent = bool(
+                    sibling_param and not sibling_param.IsReadOnly and not sibling_is_type
+                )
+                conflicts.append({
+                    "id": "{}:{}:{}:{}:sibling".format(
+                        elem.Id.IntegerValue, child_param_name, sibling_led_id, sibling_param_name
+                    ),
+                    "led_id": led_id,
+                    "parent_id": sibling_elem.Id.IntegerValue,
+                    "child_id": elem.Id.IntegerValue,
+                    "parent_label": "Sibling: {}".format(sibling_label),
+                    "child_label": child_label,
+                    "child_param": child_param_name,
+                    "parent_param": sibling_param_name,
+                    "child_display": child_info["display"],
+                    "parent_display": sibling_info["display"],
+                    "parent_is_type": sibling_is_type,
+                    "allow_update_child": allow_update_child,
+                    "allow_update_parent": allow_update_parent,
+                    "param_key": "{} -> {} (sibling {})".format(
+                        child_param_name, sibling_param_name, sibling_led_id
+                    ),
+                })
     return conflicts
 
 

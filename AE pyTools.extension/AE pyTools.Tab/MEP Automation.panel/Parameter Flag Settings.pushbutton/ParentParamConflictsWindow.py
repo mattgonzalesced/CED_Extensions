@@ -37,7 +37,7 @@ class ParentParamConflictsWindow(forms.WPFWindow):
 
         header = self.FindName("HeaderText")
         if header is not None:
-            header.Text = "Resolve parent parameter discrepancies detected after sync."
+            header.Text = "Resolve parent/sibling parameter discrepancies detected after sync."
 
         self._build_param_defaults()
         self._build_grid()

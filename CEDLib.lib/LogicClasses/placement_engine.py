@@ -196,6 +196,7 @@ class PlaceElementsEngine(object):
         self.transaction_name = transaction_name or "Place Elements (YAML)"
         self.apply_recorded_level = bool(apply_recorded_level)
         self.resolve_parent_ids = bool(resolve_parent_ids)
+        self._pending_sibling_updates = []
         self._init_symbol_map()
         self._init_group_map()
         self._init_text_note_types()
@@ -997,6 +998,7 @@ class PlaceElementsEngine(object):
                             )
             if placed_by_row:
                 self._apply_missing_parent_ids(placed_by_row)
+            self._apply_pending_sibling_updates()
             self.default_level = fallback_level
             t.Commit()
         except Exception:
@@ -2288,6 +2290,80 @@ class PlaceElementsEngine(object):
                     return
         records.append({"id": elem_id, "element": element, "payload": payload})
 
+    def _queue_sibling_update(
+        self,
+        child_element,
+        child_param_name,
+        sibling_led_id,
+        sibling_param_name,
+        parent_element_id=None,
+        set_id=None,
+    ):
+        if not child_element or not child_param_name or not sibling_led_id or not sibling_param_name:
+            return
+        try:
+            child_id = child_element.Id.IntegerValue
+        except Exception:
+            return
+        self._pending_sibling_updates.append({
+            "child_id": child_id,
+            "child_param": child_param_name,
+            "sibling_led_id": sibling_led_id,
+            "sibling_param": sibling_param_name,
+            "parent_element_id": parent_element_id,
+            "set_id": set_id,
+        })
+
+    def _apply_pending_sibling_updates(self):
+        pending = getattr(self, "_pending_sibling_updates", None) or []
+        if not pending:
+            return 0
+        try:
+            self._build_sibling_index()
+        except Exception:
+            pass
+        applied = 0
+        remaining = []
+        for item in pending:
+            child_id = item.get("child_id")
+            if child_id in (None, ""):
+                continue
+            try:
+                child_elem = self.doc.GetElement(ElementId(int(child_id)))
+            except Exception:
+                child_elem = None
+            if child_elem is None:
+                continue
+            try:
+                child_param = child_elem.LookupParameter(item.get("child_param"))
+            except Exception:
+                child_param = None
+            if not child_param or child_param.IsReadOnly:
+                continue
+            parent_id = item.get("parent_element_id")
+            set_id = item.get("set_id")
+            if parent_id in (None, "") or set_id in (None, ""):
+                payload = self._get_linker_payload_from_element(child_elem)
+                if parent_id in (None, ""):
+                    parent_id = payload.get("parent_element_id")
+                if set_id in (None, ""):
+                    set_id = payload.get("set_id")
+            sibling_led_id = item.get("sibling_led_id")
+            sibling_param_name = item.get("sibling_param")
+            records = getattr(self, "_sibling_linker_index", {}).get(sibling_led_id) or []
+            sibling_elem = self._resolve_sibling_element(
+                sibling_led_id,
+                parent_element_id=parent_id,
+                set_id=set_id,
+                exclude_element=child_elem,
+            ) if records is not None else None
+            if sibling_elem and self._apply_parent_parameter(child_param, sibling_elem, sibling_param_name):
+                applied += 1
+            else:
+                remaining.append(item)
+        self._pending_sibling_updates = remaining
+        return applied
+
     def _resolve_sibling_element(self, sibling_led_id, parent_element_id=None, set_id=None, exclude_element=None):
         if not sibling_led_id:
             return None
@@ -2936,6 +3012,15 @@ class PlaceElementsEngine(object):
                 )
                 if sibling_element:
                     self._apply_parent_parameter(param, sibling_element, sibling_param_name)
+                else:
+                    self._queue_sibling_update(
+                        element,
+                        name,
+                        sibling_led_id,
+                        sibling_param_name,
+                        current_parent_id,
+                        current_set_id,
+                    )
                 continue
             try:
                 storage_type = param.StorageType
