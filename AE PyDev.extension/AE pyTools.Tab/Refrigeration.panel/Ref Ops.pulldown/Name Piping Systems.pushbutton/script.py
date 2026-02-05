@@ -323,6 +323,103 @@ def _pick_trunk_neighbor(current_pipe, parent_id, neighbor_ids, pipe_map, adjace
     return best_id
 
 
+def _downstream_metrics(
+    start_pid,
+    blocked_pid,
+    adjacency,
+    pipe_map,
+    allowed_ids=None,
+    blocked_ids=None,
+    extra_blocked=None,
+    size_cache=None,
+):
+    if start_pid is None:
+        return (0, 0, 0.0)
+    cache = size_cache if size_cache is not None else {}
+    extra = tuple(sorted(extra_blocked)) if extra_blocked else ()
+    key = (start_pid, blocked_pid, extra)
+    if key in cache:
+        return cache[key]
+    blocked_ids = set(blocked_ids or [])
+    if extra_blocked:
+        blocked_ids.update(extra_blocked)
+    visited = set()
+    stack = [start_pid]
+    count = 0
+    total_len = 0.0
+    max_depth = 0
+    stack = [(start_pid, 0)]
+    while stack:
+        pid, depth = stack.pop()
+        if pid == blocked_pid or pid in blocked_ids or pid in visited:
+            continue
+        if allowed_ids is not None and pid not in allowed_ids:
+            continue
+        visited.add(pid)
+        count += 1
+        if depth > max_depth:
+            max_depth = depth
+        pipe = pipe_map.get(pid) if pipe_map else None
+        curve = _pipe_curve(pipe) if pipe is not None else None
+        if curve is not None:
+            try:
+                total_len += float(curve.Length)
+            except Exception:
+                pass
+        for nbr in adjacency.get(pid, []):
+            if nbr == blocked_pid or nbr in blocked_ids:
+                continue
+            if allowed_ids is not None and nbr not in allowed_ids:
+                continue
+            if nbr not in visited:
+                stack.append((nbr, depth + 1))
+    cache[key] = (count, max_depth, total_len)
+    return cache[key]
+
+
+def _downstream_component(start_pid, blocked_pid, adjacency, allowed_ids=None, blocked_ids=None, extra_blocked=None):
+    if start_pid is None:
+        return set(), 0
+    blocked_ids = set(blocked_ids or [])
+    if extra_blocked:
+        blocked_ids.update(extra_blocked)
+    visited = set()
+    max_depth = 0
+    stack = [(start_pid, 0)]
+    while stack:
+        pid, depth = stack.pop()
+        if pid == blocked_pid or pid in blocked_ids or pid in visited:
+            continue
+        if allowed_ids is not None and pid not in allowed_ids:
+            continue
+        visited.add(pid)
+        if depth > max_depth:
+            max_depth = depth
+        for nbr in adjacency.get(pid, []):
+            if nbr == blocked_pid or nbr in blocked_ids:
+                continue
+            if allowed_ids is not None and nbr not in allowed_ids:
+                continue
+            if nbr not in visited:
+                stack.append((nbr, depth + 1))
+    return visited, max_depth
+
+
+def _leaf_count(comp, adjacency, blocked_ids=None):
+    blocked_ids = set(blocked_ids or [])
+    leaves = 0
+    for pid in comp:
+        deg = 0
+        for nbr in adjacency.get(pid, []):
+            if nbr in blocked_ids:
+                continue
+            if nbr in comp:
+                deg += 1
+        if deg <= 1:
+            leaves += 1
+    return leaves
+
+
 def _build_network(start_pipes):
     pipe_map = {}
     adjacency = {}
@@ -403,30 +500,34 @@ def _collect_traversal_records(start_pid, adjacency, pipe_map, allowed_ids, base
                 stack.append((nbr, pid, t_count, is_trunk, set(seen_tees), False))
             continue
 
-        info = [(n, _pipe_diameter(pipe_map.get(n))) for n in tee_neighbors]
-        curr_d = _pipe_diameter(pipe)
         trunk = None
-        tol = 1e-6
-        if curr_d > 0:
-            same_as_parent = [n for n, d in info if abs(d - curr_d) <= tol]
-            if len(same_as_parent) == 1:
-                trunk = same_as_parent[0]
-            elif len(same_as_parent) > 1:
-                trunk = _pick_trunk_neighbor(pipe, parent_id, same_as_parent, pipe_map, adjacency, allowed_ids)
-        if trunk is None:
-            max_d = max(d for _, d in info)
-            cand = [n for n, d in info if abs(d - max_d) <= tol]
-            if len(cand) == 1 and max_d > 0:
+        if tee_neighbors:
+            size_cache = {}
+            sizes = [
+                (n, _downstream_metrics(n, pid, adjacency, pipe_map, allowed_ids, blocked_ids, set(tee_neighbors) - {n}, size_cache))
+                for n in tee_neighbors
+            ]
+            max_count = max(sz[0] for _, sz in sizes) if sizes else 0
+            cand = [n for n, sz in sizes if sz[0] == max_count]
+            if len(cand) > 1:
+                max_depth = max(sz[1] for n, sz in sizes if n in cand)
+                cand = [n for n, sz in sizes if n in cand and sz[1] == max_depth]
+            if len(cand) > 1:
+                diameters = {n: _pipe_diameter(pipe_map.get(n)) for n in cand}
+                max_d = max(diameters.values()) if diameters else 0.0
+                tol = 1e-6
+                cand = [n for n, d in diameters.items() if abs(d - max_d) <= tol]
+            if len(cand) == 1:
                 trunk = cand[0]
             else:
-                trunk = _pick_trunk_neighbor(pipe, parent_id, cand or tee_neighbors, pipe_map, adjacency, allowed_ids)
-            if trunk is None:
-                trunk = cand[0] if cand else tee_neighbors[0]
+                trunk = _pick_trunk_neighbor(pipe, parent_id, cand, pipe_map, adjacency, allowed_ids)
+                if trunk is None:
+                    trunk = min(cand)
         if trunk is None and tee_neighbors:
             trunk = min(tee_neighbors)
 
-        branches = [(n, d) for n, d in info if n != trunk]
-        branches.sort(key=lambda x: (x[1], x[0]))
+        branches = [(n, 0.0) for n in tee_neighbors if n != trunk]
+        branches.sort(key=lambda x: x[0])
 
         next_count = max(t_count, 0) + 1
         next_seen = set(seen_tees)
@@ -460,27 +561,74 @@ def _apply_traversal_labels(records, base_number, letter, label_map):
         label_map[pid] = label
 
 
-def _select_trunk_neighbor(current_pipe, parent_id, neighbor_ids, pipe_map, adjacency, allowed_ids=None):
-    if not neighbor_ids:
+def _select_trunk_neighbor(current_pipe, parent_id, neighbor_ids, pipe_map, adjacency, allowed_ids=None, blocked_ids=None, size_cache=None):
+    if not neighbor_ids or current_pipe is None:
         return None
-    curr_d = _pipe_diameter(current_pipe)
+    curr_id = current_pipe.Id.IntegerValue
+    size_cache = size_cache if size_cache is not None else {}
+    best_id = None
+    best_count = None
+    best_depth = None
+    best_d = None
+    neighbor_set = set(neighbor_ids)
     tol = 1e-6
-    info = [(nid, _pipe_diameter(pipe_map.get(nid))) for nid in neighbor_ids]
-    if curr_d > 0:
-        same = [nid for nid, d in info if abs(d - curr_d) <= tol]
-        if len(same) == 1:
-            return same[0]
-        if len(same) > 1:
-            pick = _pick_trunk_neighbor(current_pipe, parent_id, same, pipe_map, adjacency, allowed_ids)
+    comp_map = {}
+    depth_map = {}
+    leaf_map = {}
+    for nid in neighbor_ids:
+        comp, depth = _downstream_component(
+            nid,
+            curr_id,
+            adjacency,
+            allowed_ids,
+            blocked_ids,
+            neighbor_set - {nid},
+        )
+        comp_map[nid] = comp
+        depth_map[nid] = depth
+        leaf_map[nid] = _leaf_count(comp, adjacency, blocked_ids)
+    for nid in neighbor_ids:
+        other_union = set()
+        for oid, comp in comp_map.items():
+            if oid == nid:
+                continue
+            other_union.update(comp)
+        unique_count = len(comp_map.get(nid, set()) - other_union)
+        size = _downstream_metrics(
+            nid,
+            curr_id,
+            adjacency,
+            pipe_map,
+            allowed_ids,
+            blocked_ids,
+            neighbor_set - {nid},
+            size_cache,
+        )
+        diam = _pipe_diameter(pipe_map.get(nid))
+        count = unique_count if unique_count > 0 else (size[0] if isinstance(size, tuple) else size)
+        depth = depth_map.get(nid, 0)
+        leafs = leaf_map.get(nid, 0)
+        if (
+            best_count is None
+            or leafs > best_count
+            or (leafs == best_count and (best_d is None or diam > best_d + tol))
+        ):
+            best_count = leafs
+            best_depth = depth
+            best_d = diam
+            best_id = nid
+        elif (
+            best_count is not None
+            and leafs == best_count
+            and best_d is not None
+            and abs(diam - best_d) <= tol
+        ):
+            pick = _pick_trunk_neighbor(current_pipe, parent_id, [best_id, nid], pipe_map, adjacency, allowed_ids)
             if pick is not None:
-                return pick
-            return same[0]
-    max_d = max(d for _, d in info)
-    cand = [nid for nid, d in info if abs(d - max_d) <= tol]
-    if len(cand) == 1 and max_d > 0:
-        return cand[0]
-    pick = _pick_trunk_neighbor(current_pipe, parent_id, cand or neighbor_ids, pipe_map, adjacency, allowed_ids)
-    return pick if pick is not None else (cand[0] if cand else neighbor_ids[0])
+                best_id = pick
+            else:
+                best_id = min(best_id, nid)
+    return best_id
 
 
 def _find_tee_neighbors(pipe, neighbors, seen_tees):
@@ -519,22 +667,78 @@ def _label_tree_from_trunk(start_pid, adjacency, pipe_map, blocked_ids, base_num
     allowed_ids = _collect_component(start_pid, adjacency, blocked_ids)
     trunk_order = []
     visited = set(blocked_ids)
+    size_cache = {}
 
     curr = start_pid
     parent = None
     while curr is not None and curr not in visited:
         visited.add(curr)
         trunk_order.append(curr)
-        neighbors = [n for n in adjacency.get(curr, []) if n != parent and n not in blocked_ids]
+        walk_blocked = set(blocked_ids)
+        walk_blocked.update(visited)
+        if curr in walk_blocked:
+            walk_blocked.remove(curr)
+        neighbors = [n for n in adjacency.get(curr, []) if n != parent and n not in walk_blocked]
         if allowed_ids is not None:
             neighbors = [n for n in neighbors if n in allowed_ids]
+        # Always include tee-connected pipes to avoid missing trunk continuation.
+        curr_pipe = pipe_map.get(curr)
+        if curr_pipe is not None:
+            tee_extra = set()
+            for tid in _tee_ids_in_pipe(curr_pipe):
+                tee_elem = doc.GetElement(DB.ElementId(tid))
+                if tee_elem is None:
+                    continue
+                for n in _connected_pipe_ids(tee_elem):
+                    if n == curr or n == parent:
+                        continue
+                    if allowed_ids is not None and n not in allowed_ids:
+                        continue
+                    if n in walk_blocked:
+                        continue
+                    tee_extra.add(n)
+            if tee_extra:
+                neighbors = sorted(set(neighbors).union(tee_extra))
+        if not neighbors and parent is not None:
+            tee_elem = _tee_between_pipes(pipe_map.get(parent), pipe_map.get(curr))
+            if tee_elem is not None:
+                tee_connected = _connected_pipe_ids(tee_elem)
+                neighbors = [n for n in tee_connected if n not in (parent, curr)]
+                if allowed_ids is not None:
+                    neighbors = [n for n in neighbors if n in allowed_ids]
+                if walk_blocked:
+                    neighbors = [n for n in neighbors if n not in walk_blocked]
         if not neighbors:
             break
 
         if len(neighbors) == 1:
+            single = neighbors[0]
+            # If the only forward neighbor is the third leg of a tee (parent+curr+single),
+            # stop the trunk walk here to avoid walking into a branch.
+            if parent is not None and curr_pipe is not None:
+                stop_at_tee = False
+                for tid in _tee_ids_in_pipe(curr_pipe):
+                    tee_elem = doc.GetElement(DB.ElementId(tid))
+                    if tee_elem is None:
+                        continue
+                    tee_connected = _connected_pipe_ids(tee_elem)
+                    if parent in tee_connected and single in tee_connected:
+                        stop_at_tee = True
+                        break
+                if stop_at_tee:
+                    break
             parent, curr = curr, neighbors[0]
         else:
-            trunk = _select_trunk_neighbor(pipe_map.get(curr), parent, neighbors, pipe_map, adjacency, allowed_ids)
+            trunk = _select_trunk_neighbor(
+                pipe_map.get(curr),
+                parent,
+                neighbors,
+                pipe_map,
+                adjacency,
+                allowed_ids,
+                walk_blocked,
+                size_cache,
+            )
             parent, curr = curr, trunk
 
     trunk_set = set(trunk_order)
@@ -547,7 +751,7 @@ def _label_tree_from_trunk(start_pid, adjacency, pipe_map, blocked_ids, base_num
     # Walk trunk in order and assign tee indices + branch roots.
     tee_seen = set()
     branch_idx = 0
-    branch_roots = []  # list of (tee_index, root_pid)
+    branch_roots = []  # list of (tee_index, root_pid, blocked_ids)
     if DEBUG:
         logger.info("Name Piping Systems Debug - Branch %s", base_number)
         logger.info("Start pipe: %s", start_pid)
@@ -566,45 +770,124 @@ def _label_tree_from_trunk(start_pid, adjacency, pipe_map, blocked_ids, base_num
             continue
         tid = tee_elem.Id.IntegerValue
         tee_connected = _connected_pipe_ids(tee_elem)
-        trunk_candidates = [n for n in tee_connected if n in trunk_set]
-        branch_candidates = [
+        upstream_ids = set(trunk_order_sorted[:i])
+        tee_neighbors = [
             n for n in tee_connected
-            if n in allowed_ids and n not in trunk_set and n not in blocked_ids
+            if n in allowed_ids
+            and n not in blocked_ids
+            and n != prev_pid
+            and n not in upstream_ids
         ]
-        trunk_d = _pipe_diameter(curr_pipe)
-        if trunk_d > 0:
-            branch_candidates = [
-                n for n in branch_candidates
-                if _pipe_diameter(pipe_map.get(n)) > 0
-                and _pipe_diameter(pipe_map.get(n)) < trunk_d
-            ]
-        if tid in tee_seen or not branch_candidates or len(trunk_candidates) < 2:
+        trunk_candidates = [n for n in tee_neighbors if n in trunk_set]
+
+        size_cache = {}
+        comp_map = {}
+        leaf_map = {}
+        sizes = {}
+        for n in tee_neighbors:
+            extra_blocked = set(tee_neighbors) - {n}
+            extra_blocked.update(upstream_ids)
+            extra_blocked.add(prev_pid)
+            if n != curr_pid:
+                extra_blocked.add(curr_pid)
+            comp, depth = _downstream_component(
+                n,
+                prev_pid,
+                adjacency,
+                allowed_ids,
+                blocked_ids,
+                extra_blocked,
+            )
+            comp_map[n] = comp
+            leaf_map[n] = _leaf_count(comp, adjacency, blocked_ids)
+            sizes[n] = _downstream_metrics(
+                n,
+                prev_pid,
+                adjacency,
+                pipe_map,
+                allowed_ids,
+                blocked_ids,
+                extra_blocked,
+                size_cache,
+            )
+
+        if tid in tee_seen or not trunk_candidates:
             trunk_index[curr_pid] = idx
             if DEBUG:
                 logger.info(
-                    "tee %s skipped between %s-%s: trunk_candidates=%s branch_candidates=%s",
+                    "tee %s skipped between %s-%s: trunk_candidates=%s branch_candidates=%s sizes=%s",
                     tid,
                     prev_pid,
                     curr_pid,
                     trunk_candidates,
                     branch_candidates,
+                    sizes,
                 )
             continue
-        branch_idx += 1
+
         tee_seen.add(tid)
         trunk_index[curr_pid] = idx + 1
+
+        trunk_pick = None
+        if leaf_map:
+            max_leaf = max(leaf_map.values())
+            trunk_side = [n for n, cnt in leaf_map.items() if cnt == max_leaf]
+            if len(trunk_side) > 1:
+                max_count = max(sizes.get(n, (0, 0, 0.0))[0] for n in trunk_side)
+                trunk_side = [n for n in trunk_side if sizes.get(n, (0, 0, 0.0))[0] == max_count]
+            if len(trunk_side) > 1:
+                diameters = {n: _pipe_diameter(pipe_map.get(n)) for n in trunk_side}
+                max_d = max(diameters.values()) if diameters else 0.0
+                tol = 1e-6
+                trunk_side = [n for n, d in diameters.items() if abs(d - max_d) <= tol]
+            if len(trunk_side) > 1:
+                trunk_pick = _pick_trunk_neighbor(prev_pipe, prev_pid, trunk_side, pipe_map, adjacency, allowed_ids)
+                if trunk_pick is None:
+                    if curr_pid in trunk_side:
+                        trunk_pick = curr_pid
+                    else:
+                        trunk_pick = min(trunk_side)
+            else:
+                trunk_pick = trunk_side[0] if trunk_side else None
+        if trunk_pick is None and tee_neighbors:
+            trunk_pick = min(tee_neighbors)
+        branch_candidates = [n for n in tee_neighbors if n != trunk_pick]
+
+        existing_branch_roots = set(b for _, b, _ in branch_roots)
+        new_branch_candidates = [b for b in branch_candidates if b not in existing_branch_roots]
+        if new_branch_candidates:
+            branch_idx += 1
+            for b in new_branch_candidates:
+                blocked_for_branch = set(upstream_ids)
+                blocked_for_branch.add(prev_pid)
+                if trunk_pick is not None:
+                    blocked_for_branch.add(trunk_pick)
+                branch_roots.append((branch_idx, b, blocked_for_branch))
+        else:
+            trunk_index[curr_pid] = idx
+            if DEBUG:
+                logger.info(
+                    "tee %s skipped between %s-%s (no new branch): trunk_candidates=%s branch_candidates=%s sizes=%s",
+                    tid,
+                    prev_pid,
+                    curr_pid,
+                    trunk_candidates,
+                    branch_candidates,
+                    sizes,
+                )
+            continue
+
         if DEBUG:
             logger.info(
-                "tee %s counted between %s-%s: branch_idx=%s trunk_candidates=%s branch_candidates=%s",
+                "tee %s counted between %s-%s: branch_idx=%s trunk_candidates=%s branch_candidates=%s sizes=%s",
                 tid,
                 prev_pid,
                 curr_pid,
                 branch_idx,
                 trunk_candidates,
                 branch_candidates,
+                sizes,
             )
-        for b in branch_candidates:
-            branch_roots.append((branch_idx, b))
 
     for pid in trunk_order_sorted:
         idx = trunk_index.get(pid, 0)
@@ -619,38 +902,29 @@ def _label_tree_from_trunk(start_pid, adjacency, pipe_map, blocked_ids, base_num
     # Assign each branch pipe to the nearest branch root (FIFO),
     # keeping branch indices in trunk order.
     branch_roots_sorted = sorted(branch_roots, key=lambda x: (x[0], x[1]))
+    all_branch_roots = set(root for _, root, _ in branch_roots_sorted)
     branch_assign = {}
-    queue = []
-    for idx, root_pid in branch_roots_sorted:
-        if root_pid in blocked_ids or root_pid in trunk_set:
+    for idx, root_pid, blocked_for_branch in branch_roots_sorted:
+        if root_pid in blocked_ids:
             continue
         if allowed_ids is not None and root_pid not in allowed_ids:
             continue
-        if root_pid in branch_assign:
-            continue
-        branch_assign[root_pid] = idx
-        queue.append(root_pid)
-
-    q_index = 0
-    while q_index < len(queue):
-        pid = queue[q_index]
-        q_index += 1
-        idx = branch_assign.get(pid)
-        if idx is None:
-            continue
-        for nbr in adjacency.get(pid, []):
-            if nbr in trunk_set or nbr in blocked_ids:
+        blocked = set(blocked_ids)
+        blocked.update(blocked_for_branch)
+        blocked.update(trunk_set)
+        blocked.discard(root_pid)
+        blocked.update(all_branch_roots - {root_pid})
+        comp = _collect_component(root_pid, adjacency, blocked)
+        for pid in comp:
+            if allowed_ids is not None and pid not in allowed_ids:
                 continue
-            if allowed_ids is not None and nbr not in allowed_ids:
+            if pid in blocked:
                 continue
-            if nbr in branch_assign:
+            if pid in branch_assign:
                 continue
-            branch_assign[nbr] = idx
-            queue.append(nbr)
+            branch_assign[pid] = idx
 
     for pid, idx in branch_assign.items():
-        if pid in label_map:
-            continue
         label_map[pid] = "{}.{:02d}{}".format(base_number, idx, letter)
         if DEBUG:
             logger.info("branch label: pipe %s -> %s", pid, label_map[pid])
