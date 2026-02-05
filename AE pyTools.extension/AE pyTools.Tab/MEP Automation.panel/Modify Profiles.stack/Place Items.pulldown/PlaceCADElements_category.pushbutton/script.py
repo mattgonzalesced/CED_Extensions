@@ -120,6 +120,13 @@ def _get_category_name_from_label(doc, label):
     if not label or not doc:
         return None
 
+    # Strip duplicate-label suffixes like " #2" added by the repo
+    cleaned_label = label.strip()
+    if " #" in cleaned_label:
+        base, _sep, tail = cleaned_label.rpartition(" #")
+        if base and tail.isdigit():
+            cleaned_label = base
+
     # Try as FamilySymbol first
     symbols = list(FilteredElementCollector(doc).OfClass(FamilySymbol))
     for sym in symbols:
@@ -135,7 +142,7 @@ def _get_category_name_from_label(doc, label):
             if not type_name:
                 continue
             sym_label = u"{} : {}".format(fam_name, type_name)
-            if sym_label == label:
+            if sym_label == cleaned_label:
                 category = sym.Category
                 if category:
                     return category.Name
@@ -147,7 +154,7 @@ def _get_category_name_from_label(doc, label):
     for gtype in group_types:
         try:
             group_name = getattr(gtype, "Name", None)
-            if group_name == label:
+            if group_name == cleaned_label:
                 category = gtype.Category
                 if category:
                     return category.Name
