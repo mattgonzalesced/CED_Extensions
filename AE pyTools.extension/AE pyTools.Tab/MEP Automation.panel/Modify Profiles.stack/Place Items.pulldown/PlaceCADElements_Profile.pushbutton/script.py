@@ -258,10 +258,13 @@ def main():
         )
         return
 
+    # Only show filtered CAD names in the window
+    filtered_cad_names = list(initial_mapping.keys())
+
     xaml_path = os.path.join(LIB_ROOT, "UIClasses", "PlaceElementsUI.xaml")
     window = PlaceElementsWindow(
         xaml_path=xaml_path,
-        cad_names=cad_names,
+        cad_names=filtered_cad_names,
         profile_repo=repo,
         initial_mapping=initial_mapping,
     )
@@ -274,9 +277,22 @@ def main():
         forms.alert("No selections to place.", title=TITLE)
         return
 
-    # Re-filter selection_map to ensure only selected categories are placed
+    # Re-filter selection_map to ensure only selected categories AND profiles are placed
     filtered_selection_map = {}
     for cad, labels in selection_map.items():
+        # First check if this CAD name should be placed based on profile filter
+        if cad not in selected_profiles:
+            # Check if it matches any selected profile (with space-stripping and case-insensitivity)
+            cad_normalized = cad.replace(" ", "").lower()
+            matched = False
+            for profile in selected_profiles:
+                if profile.replace(" ", "").lower() == cad_normalized:
+                    matched = True
+                    break
+            if not matched:
+                skipped_by_profile += 1
+                continue
+
         filtered_labels = []
         for label in labels:
             cat_name = _get_category_name_from_label(revit.doc, label)
