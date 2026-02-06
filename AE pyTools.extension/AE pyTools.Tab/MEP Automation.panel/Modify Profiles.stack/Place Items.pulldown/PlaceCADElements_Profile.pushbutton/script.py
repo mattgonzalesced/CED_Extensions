@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Place Elements (YAML) - Category & Profile Filter
+Place Elements (YAML) - Category, Profile, & Plan View Filter
 --------------------------------------------------
 YAML-driven placement tool that mirrors the old Populate Elements flow but now
 reads the active YAML stored in Extensible Storage. Supports both family
-instances and model groups. Includes category AND profile filtering before placement.
+instances and model groups. Includes category, profile, and optional Plan View filtering.
 """
 
 import os
@@ -33,7 +33,7 @@ from LogicClasses.profile_schema import equipment_defs_to_legacy  # noqa: E402
 from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
 
-TITLE = "Place Elements (YAML) - Category & Profile Filter"
+TITLE = "Place Elements (YAML) - Category, Profile, & Plan View Filter"
 
 # MEP and Architecture categories for filtering
 MEP_CATEGORIES = [
@@ -164,6 +164,28 @@ def _get_category_name_from_label(doc, label):
     return None
 
 
+def _normalize_plan_view_value(value):
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text if text else None
+
+
+def _get_plan_view_param(repo, cad_name, label):
+    if not repo or not cad_name or not label:
+        return None
+    linked_def = repo.definition_for_label(cad_name, label)
+    if not linked_def:
+        return None
+    params = linked_def.get_static_params() or {}
+    if not isinstance(params, dict):
+        return None
+    for key, value in params.items():
+        if isinstance(key, basestring) and key.strip().lower() == "plan view":
+            return value
+    return None
+
+
 def main():
     try:
         data_path, raw_data = load_active_yaml_data()
@@ -218,10 +240,34 @@ def main():
     # Convert to set for faster lookup
     selected_profiles = set(selected_profiles)
 
-    # Build initial mapping with category AND profile filtering
+    # Optional Plan View filter if any selected profiles include the parameter
+    selected_plan_views = None
+    available_plan_views = set()
+    for cad in selected_profiles:
+        labels = _dedupe_preserve(repo.labels_for_cad(cad))
+        for label in labels:
+            cat_name = _get_category_name_from_label(revit.doc, label)
+            if cat_name and cat_name in selected_categories:
+                plan_val = _normalize_plan_view_value(_get_plan_view_param(repo, cad, label))
+                if plan_val is not None:
+                    available_plan_views.add(plan_val)
+
+    if available_plan_views:
+        plan_view_choice = forms.SelectFromList.show(
+            sorted(available_plan_views),
+            title="Select Plan View values to place",
+            multiselect=True,
+            button_name="Continue"
+        )
+        if not plan_view_choice:
+            return  # User cancelled
+        selected_plan_views = set(plan_view_choice)
+
+    # Build initial mapping with category/profile/plan view filtering
     initial_mapping = {}
     skipped_by_category = 0
     skipped_by_profile = 0
+    skipped_by_plan_view = 0
 
     for cad in cad_names:
         # First check if this CAD profile is in the selected profiles
@@ -239,6 +285,11 @@ def main():
             cat_name = _get_category_name_from_label(revit.doc, label)
 
             if cat_name and cat_name in selected_categories:
+                if selected_plan_views is not None:
+                    plan_val = _normalize_plan_view_value(_get_plan_view_param(repo, cad, label))
+                    if plan_val is not None and plan_val not in selected_plan_views:
+                        skipped_by_plan_view += 1
+                        continue
                 filtered_labels.append(label)
             else:
                 skipped_by_category += 1
@@ -250,9 +301,11 @@ def main():
         forms.alert(
             "No profiles found matching the selected categories and profiles.\n\n"
             "Selected categories: {}\n"
-            "Selected profiles: {}".format(
+            "Selected profiles: {}\n"
+            "Selected plan views: {}".format(
                 ", ".join(sorted(selected_categories)),
-                ", ".join(sorted(selected_profiles))
+                ", ".join(sorted(selected_profiles)),
+                ", ".join(sorted(selected_plan_views)) if selected_plan_views else "None"
             ),
             title=TITLE
         )
@@ -297,6 +350,11 @@ def main():
         for label in labels:
             cat_name = _get_category_name_from_label(revit.doc, label)
             if cat_name and cat_name in selected_categories:
+                if selected_plan_views is not None:
+                    plan_val = _normalize_plan_view_value(_get_plan_view_param(repo, cad, label))
+                    if plan_val is not None and plan_val not in selected_plan_views:
+                        skipped_by_plan_view += 1
+                        continue
                 filtered_labels.append(label)
             else:
                 skipped_by_category += 1
@@ -320,7 +378,7 @@ def main():
         repo,
         default_level=level,
         allow_tags=False,
-        transaction_name="Place CAD Elements (YAML) - Category & Profile Filter",
+        transaction_name="Place CAD Elements (YAML) - Category, Profile, & Plan View Filter",
     )
     try:
         results = engine.place_from_csv(csv_rows, selection_map)
@@ -336,8 +394,10 @@ def main():
         "",
         "Selected categories: {}".format(", ".join(sorted(selected_categories))),
         "Selected profiles: {}".format(", ".join(sorted(selected_profiles))),
+        "Selected plan views: {}".format(", ".join(sorted(selected_plan_views)) if selected_plan_views else "None"),
         "Labels skipped by category filter: {}".format(skipped_by_category),
         "Profiles skipped by profile filter: {}".format(skipped_by_profile),
+        "Labels skipped by plan view filter: {}".format(skipped_by_plan_view),
         "",
         "Total CSV rows: {0}".format(results.get("total_rows", 0)),
         "Rows with a selected CAD mapping: {0}".format(results.get("rows_with_mapping", 0)),
