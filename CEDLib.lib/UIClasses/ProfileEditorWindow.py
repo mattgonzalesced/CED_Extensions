@@ -460,10 +460,46 @@ class ProfileEditorWindow(forms.WPFWindow):
             new_label = u"{} : {}".format(family_name, type_name).strip()
             self._current_typecfg.label = new_label
             self._current_typecfg.is_group = False
-            if category_name:
-                self._current_typecfg.category_name = category_name
+        if category_name:
+            self._current_typecfg.category_name = category_name
         type_list = self._discover_type_configs(self._current_profile)
         self._populate_type_list(type_list, select_typecfg=self._current_typecfg, select_first=False)
+
+    def DuplicateTypeButton_Click(self, sender, args):
+        if self._force_read_only:
+            root_key = self._active_root_key or self._child_to_root.get(self._current_profile_name, self._current_profile_name)
+            root_display = self._root_display_name(root_key) if root_key else None
+            if root_display:
+                msg = "Select the non-indented '{}' entry to edit merged profiles.".format(root_display)
+            else:
+                msg = "Select a source profile to edit."
+            forms.alert(msg, title="Element Linker Profile Editor")
+            return
+        if not self._current_profile or not self._current_typecfg:
+            forms.alert("Select a type before duplicating.", title="Element Linker Profile Editor")
+            return
+        if self._in_edit_mode and not self._save_current_typecfg():
+            return
+        type_list_ref = self._get_profile_type_list_ref(self._current_profile)
+        if type_list_ref is None and not hasattr(self._current_profile, "add_type"):
+            forms.alert("Could not duplicate type; profile storage was not writable.", title="Element Linker Profile Editor")
+            return
+        duplicated = copy.deepcopy(self._current_typecfg)
+        new_led_id = self._next_led_id_for_profile(self._current_profile)
+        duplicated.led_id = new_led_id
+        duplicated.element_def_id = new_led_id
+        if type_list_ref is not None:
+            type_list_ref.append(duplicated)
+        else:
+            try:
+                self._current_profile.add_type(duplicated)
+            except Exception:
+                forms.alert("Could not add duplicated type to profile.", title="Element Linker Profile Editor")
+                return
+        type_list = self._discover_type_configs(self._current_profile)
+        self._populate_type_list(type_list, select_typecfg=duplicated, select_first=False)
+        self._update_change_type_button_state()
+        self._update_duplicate_type_button_state()
 
     def OkButton_Click(self, sender, args):
         """Apply edits back into the current TypeConfig's InstanceConfig."""
@@ -544,6 +580,7 @@ class ProfileEditorWindow(forms.WPFWindow):
         self.DeleteProfileButton.IsEnabled = enabled
         self._update_add_equipment_button_state()
         self._update_change_type_button_state()
+        self._update_duplicate_type_button_state()
 
     def _update_add_equipment_button_state(self):
         if not hasattr(self, "AddEquipmentButton"):
@@ -558,6 +595,12 @@ class ProfileEditorWindow(forms.WPFWindow):
             bool(self._change_type_callback) or bool(self._change_group_callback)
         )
         self.ChangeTypeButton.IsEnabled = enabled
+
+    def _update_duplicate_type_button_state(self):
+        if not hasattr(self, "DuplicateTypeButton"):
+            return
+        enabled = bool(self._current_typecfg) and not self._force_read_only
+        self.DuplicateTypeButton.IsEnabled = enabled
 
     def _apply_read_only_state(self):
         read_only = (not self._in_edit_mode) or self._force_read_only
@@ -602,6 +645,7 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._update_rename_button_state()
         self._update_profile_delete_state()
         self._update_change_type_button_state()
+        self._update_duplicate_type_button_state()
 
     def _clear_fields(self):
         self.OffsetXBox.Text = ""
@@ -618,6 +662,44 @@ class ProfileEditorWindow(forms.WPFWindow):
             self.ParentInfoText.Text = "Parent: (none)"
         self._apply_read_only_state()
         self._refresh_param_buttons()
+
+    def _get_profile_type_list_ref(self, profile):
+        if not profile:
+            return None
+        for attr_name in ("_types", "types", "type_configs"):
+            if not hasattr(profile, attr_name):
+                continue
+            attr_val = getattr(profile, attr_name)
+            if isinstance(attr_val, list):
+                return attr_val
+        return None
+
+    def _next_led_id_for_profile(self, profile):
+        type_list = self._discover_type_configs(profile)
+        existing = []
+        for tc in type_list or []:
+            for attr in ("led_id", "element_def_id"):
+                value = getattr(tc, attr, None)
+                if isinstance(value, basestring):
+                    value = value.strip()
+                    if value:
+                        existing.append(value)
+        base = None
+        for led_id in existing:
+            if "-LED-" in led_id:
+                base = led_id.split("-LED-")[0]
+                break
+        if not base:
+            base = existing[0] if existing else None
+        if not base:
+            base = (self._current_profile_name or getattr(profile, "cad_name", None) or "SET").strip()
+        used = set(existing)
+        counter = 1
+        while True:
+            candidate = "{}-LED-{:03d}".format(base, counter)
+            if candidate not in used:
+                return candidate
+            counter += 1
 
     def _clear_annotation_lists(self):
         if hasattr(self, "KeynoteList"):
