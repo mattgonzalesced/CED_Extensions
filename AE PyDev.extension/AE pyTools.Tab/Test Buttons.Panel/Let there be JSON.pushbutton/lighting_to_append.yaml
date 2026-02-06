@@ -1,0 +1,1357 @@
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: E1
+    schema_version: 1
+    id: EQ-092
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Exit Sign_CED : E1"
+            parameters:
+              dev-Group ID: E1
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: EMERGENCY
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: EMERGENCY - (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-088-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-088
+        name: E1 Types
+    allow_parentless: "true"
+    ced_truth_source_name: E1
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: Emergency lighting
+    ced_truth_source_id: EQ-092
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: E2
+    schema_version: 1
+    id: EQ-093
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Exit Sign_CED : E2"
+            parameters:
+              dev-Group ID: E2
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: EMERGENCY
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: EMERGENCY - (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-089-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-089
+        name: E2 Types
+    allow_parentless: "true"
+    ced_truth_source_name: E2
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: Emergency lighting with arrows
+    ced_truth_source_id: EQ-093
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: Exit Directional Sign
+    schema_version: 1
+    id: EQ-094
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Exit Sign_CED : E2"
+            parameters:
+              dev-Group ID: E2
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: EMERGENCY
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: EMERGENCY - (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-090-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-090
+        name: Exit Directional Sign Types
+    allow_parentless: "true"
+    ced_truth_source_name: Exit Directional Sign
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: Emergency lighting with arrows
+    ced_truth_source_id: EQ-094
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: Exit Sign
+    schema_version: 1
+    id: EQ-095
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Exit Sign_CED : E1"
+            parameters:
+              dev-Group ID: E1
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: EMERGENCY
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: EMERGENCY - (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-091-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-091
+        name: Exit Sign Types
+    allow_parentless: "true"
+    ced_truth_source_name: Exit Sign
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: Emergency lighting
+    ced_truth_source_id: EQ-095
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: F1
+    schema_version: 1
+    id: EQ-096
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Round Fixture_CED : F1"
+            parameters:
+              dev-Group ID: F1
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-092-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-092
+        name: F1 Types
+    allow_parentless: "true"
+    ced_truth_source_name: F1
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: Lighting and power
+    ced_truth_source_id: EQ-096
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: F10
+    schema_version: 1
+    id: EQ-097
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Rectangular Fixture_CED : F10"
+            parameters:
+              dev-Group ID: F10
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-093-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-093
+        name: F10 Types
+    allow_parentless: "true"
+    ced_truth_source_name: F10
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: Lighting and power
+    ced_truth_source_id: EQ-097
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: F12
+    schema_version: 1
+    id: EQ-098
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Wall Sconce Fixture_CED : F12"
+            parameters:
+              dev-Group ID: F12
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-094-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-094
+        name: F12 Types
+    allow_parentless: "true"
+    ced_truth_source_name: F12
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: Lighting and power
+    ced_truth_source_id: EQ-098
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: F12C
+    schema_version: 1
+    id: EQ-099
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Round Fixture_CED : F9C"
+            parameters:
+              dev-Group ID: F9C
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-095-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-095
+        name: F12C Types
+    allow_parentless: "true"
+    ced_truth_source_name: F12C
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: General lighting
+    ced_truth_source_id: EQ-099
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: F13
+    schema_version: 1
+    id: EQ-100
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Rectangular Fixture_CED : F10"
+            parameters:
+              dev-Group ID: F10
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-096-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-096
+        name: F13 Types
+    allow_parentless: "true"
+    ced_truth_source_name: F13
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: General lighting
+    ced_truth_source_id: EQ-100
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: F1A
+    schema_version: 1
+    id: EQ-101
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Round Fixture_CED : F1A"
+            parameters:
+              dev-Group ID: F1A and F1B
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-097-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-097
+        name: F1A Types
+    allow_parentless: "true"
+    ced_truth_source_name: F1A
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: General lighting
+    ced_truth_source_id: EQ-101
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: F2
+    schema_version: 1
+    id: EQ-102
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Universal Light Fixture_CED : F2"
+            parameters:
+              dev-Group ID: F2
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-098-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-098
+        name: F2 Types
+    allow_parentless: "true"
+    ced_truth_source_name: F2
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: Lighting and power
+    ced_truth_source_id: EQ-102
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: F3
+    schema_version: 1
+    id: EQ-103
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Round Fixture_CED : F3"
+            parameters:
+              dev-Group ID: F3
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-099-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-099
+        name: F3 Types
+    allow_parentless: "true"
+    ced_truth_source_name: F3
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: General lighting
+    ced_truth_source_id: EQ-103
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: F6
+    schema_version: 1
+    id: EQ-104
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Rectangular Fixture_CED : F6"
+            parameters:
+              dev-Group ID: F6
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-100-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-100
+        name: F6 Types
+    allow_parentless: "true"
+    ced_truth_source_name: F6
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: Lighting and power
+    ced_truth_source_id: EQ-104
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: F6-1
+    schema_version: 1
+    id: EQ-105
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Lighting Track_CED : F5"
+            parameters:
+              dev-Group ID: F10
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-101-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-101
+        name: F6-1 Types
+    allow_parentless: "true"
+    ced_truth_source_name: F6-1
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: General lighting
+    ced_truth_source_id: EQ-105
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: F9
+    schema_version: 1
+    id: EQ-106
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Universal Light Fixture_CED : F8"
+            parameters:
+              dev-Group ID: F9
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-102-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-102
+        name: F9 Types
+    allow_parentless: "true"
+    ced_truth_source_name: F9
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: General lighting
+    ced_truth_source_id: EQ-106
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: N-MIRROR
+    schema_version: 1
+    id: EQ-107
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Rectangular Fixture_CED : F7"
+            parameters:
+              dev-Group ID: F7
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-103-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-103
+        name: N-MIRROR Types
+    allow_parentless: "true"
+    ced_truth_source_name: N-MIRROR
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: General lighting
+    ced_truth_source_id: EQ-107
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: PF_Light Exterior
+    schema_version: 1
+    id: EQ-108
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Bug Eye Fixture_CED : F13"
+            parameters:
+              dev-Group ID: F13
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-104-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-104
+        name: PF_Light Exterior Types
+    allow_parentless: "true"
+    ced_truth_source_name: PF_Light Exterior
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: General lighting
+    ced_truth_source_id: EQ-108
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: PF_Light Fluorescent
+    schema_version: 1
+    id: EQ-109
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Rectangular Fixture_CED : F10"
+            parameters:
+              dev-Group ID: F10
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-105-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-105
+        name: PF_Light Fluorescent Types
+    allow_parentless: "true"
+    ced_truth_source_name: PF_Light Fluorescent
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: Lighting and power
+    ced_truth_source_id: EQ-109
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: PF_Light Linear Bay
+    schema_version: 1
+    id: EQ-110
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Universal Light Fixture_CED : F2"
+            parameters:
+              dev-Group ID: F2
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-106-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-106
+        name: PF_Light Linear Bay Types
+    allow_parentless: "true"
+    ced_truth_source_name: PF_Light Linear Bay
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: Lighting and power
+    ced_truth_source_id: EQ-110
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: PF_Light Podium Desk
+    schema_version: 1
+    id: EQ-111
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Rectangular Fixture_CED : F6"
+            parameters:
+              dev-Group ID: F6
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-107-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-107
+        name: PF_Light Podium Desk Types
+    allow_parentless: "true"
+    ced_truth_source_name: PF_Light Podium Desk
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: Lighting and power
+    ced_truth_source_id: EQ-111
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: PF_Light Recess
+    schema_version: 1
+    id: EQ-112
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Round Fixture_CED : F1A"
+            parameters:
+              dev-Group ID: F1A and F1B
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-108-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-108
+        name: PF_Light Recess Types
+    allow_parentless: "true"
+    ced_truth_source_name: PF_Light Recess
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: General lighting
+    ced_truth_source_id: EQ-112
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: PF_Light Sconce
+    schema_version: 1
+    id: EQ-113
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Wall Sconce Fixture_CED : F12"
+            parameters:
+              dev-Group ID: F12
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-109-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-109
+        name: PF_Light Sconce Types
+    allow_parentless: "true"
+    ced_truth_source_name: PF_Light Sconce
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: Lighting and power
+    ced_truth_source_id: EQ-113
+  -
+    parent_filter:
+      family_name_pattern: null
+      category: Lighting Fixtures
+      type_name_pattern: null
+      parameter_filters:
+        {}:
+          {}
+    name: PF_Light Surface Mtd
+    schema_version: 1
+    id: EQ-114
+    linked_sets:
+      -
+        linked_element_definitions:
+          -
+            is_group: true
+            text_notes:
+              []
+            label: "LF-U_Rectangular Fixture_CED : F9"
+            parameters:
+              dev-Group ID: F9
+              FLA Input_CED: 0
+              Apparent Load Input_CED: 180
+              Load Classification_CED: L
+              Voltage_CED: 120
+              Number of Poles_CED: 1
+              CKT_Panel_CEDT: L3
+              CKT_Circuit Number_CEDT: STANDARD
+              CKT_Rating_CED: 20
+              CKT_Load Name_CEDT: (Space)
+              CKT_Schedule Notes_CEDT: ""
+            id: SET-110-LED-001
+            tags:
+              -
+                parameters:
+                  {}
+                type_name: null
+                offsets:
+                  {}
+                category_name: null
+                family_name: null
+            category: Lighting Fixtures
+            offsets:
+              -
+                rotation_deg: 0.0
+                x_inches: 0.0
+                y_inches: 0.0
+                z_inches: 0.0
+            keynotes:
+              []
+        id: SET-110
+        name: PF_Light Surface Mtd Types
+    allow_parentless: "true"
+    ced_truth_source_name: PF_Light Surface Mtd
+    allow_unmatched_parents: "true"
+    version: 1
+    equipment_properties:
+      notes: General lighting
+    ced_truth_source_id: EQ-114
