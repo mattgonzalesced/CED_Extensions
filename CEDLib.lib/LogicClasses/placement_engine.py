@@ -1026,6 +1026,11 @@ class PlaceElementsEngine(object):
         normalized = lookup_name.strip()
         normalized_lower = normalized.lower()
         normalized_root = normalized_lower.split(":", 1)[0].strip()
+
+        # Space-stripped versions for CAD block name matching
+        normalized_no_spaces = normalized.replace(" ", "")
+        normalized_no_spaces_lower = normalized_no_spaces.lower()
+
         for key, value in selection_map.items():
             if not isinstance(key, basestring):
                 continue
@@ -1033,6 +1038,13 @@ class PlaceElementsEngine(object):
             if key_stripped == normalized or key_stripped.lower() == normalized_lower:
                 canonical = self._canonical_repo_name(key)
                 return value, canonical
+
+            # Try space-stripped matching (for CAD block names)
+            key_no_spaces = key_stripped.replace(" ", "")
+            if key_no_spaces == normalized_no_spaces or key_no_spaces.lower() == normalized_no_spaces_lower:
+                canonical = self._canonical_repo_name(key)
+                return value, canonical
+
             key_root = key_stripped.lower().split(":", 1)[0].strip()
             if key_root and key_root == normalized_root:
                 canonical = self._canonical_repo_name(key)
