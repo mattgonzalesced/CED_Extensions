@@ -1,0 +1,1313 @@
+[
+  {
+    "id": "EQ-092",
+    "name": "E1",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "Emergency lighting"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-088",
+        "name": "E1 Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-088-LED-001",
+            "is_group": true,
+            "label": "LF-U_Exit Sign_CED : E1",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "E1",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "EMERGENCY",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "EMERGENCY - (Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-092",
+    "ced_truth_source_name": "E1"
+  },
+  {
+    "id": "EQ-093",
+    "name": "E2",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "Emergency lighting with arrows"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-089",
+        "name": "E2 Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-089-LED-001",
+            "is_group": true,
+            "label": "LF-U_Exit Sign_CED : E2",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "E2",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "EMERGENCY",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "EMERGENCY - (Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-093",
+    "ced_truth_source_name": "E2"
+  },
+  {
+    "id": "EQ-094",
+    "name": "Exit Directional Sign",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "Emergency lighting with arrows"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-090",
+        "name": "Exit Directional Sign Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-090-LED-001",
+            "is_group": true,
+            "label": "LF-U_Exit Sign_CED : E2",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "E2",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "EMERGENCY",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "EMERGENCY - (Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-094",
+    "ced_truth_source_name": "Exit Directional Sign"
+  },
+  {
+    "id": "EQ-095",
+    "name": "Exit Sign",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "Emergency lighting"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-091",
+        "name": "Exit Sign Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-091-LED-001",
+            "is_group": true,
+            "label": "LF-U_Exit Sign_CED : E1",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "E1",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "EMERGENCY",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "EMERGENCY - (Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-095",
+    "ced_truth_source_name": "Exit Sign"
+  },
+  {
+    "id": "EQ-096",
+    "name": "F1",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "Lighting and power"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-092",
+        "name": "F1 Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-092-LED-001",
+            "is_group": true,
+            "label": "LF-U_Round Fixture_CED : F1",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F1",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-096",
+    "ced_truth_source_name": "F1"
+  },
+  {
+    "id": "EQ-097",
+    "name": "F10",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "Lighting and power"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-093",
+        "name": "F10 Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-093-LED-001",
+            "is_group": true,
+            "label": "LF-U_Rectangular Fixture_CED : F10",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F10",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-097",
+    "ced_truth_source_name": "F10"
+  },
+  {
+    "id": "EQ-098",
+    "name": "F12",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "Lighting and power"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-094",
+        "name": "F12 Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-094-LED-001",
+            "is_group": true,
+            "label": "LF-U_Wall Sconce Fixture_CED : F12",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F12",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-098",
+    "ced_truth_source_name": "F12"
+  },
+  {
+    "id": "EQ-099",
+    "name": "F12C",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "General lighting"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-095",
+        "name": "F12C Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-095-LED-001",
+            "is_group": true,
+            "label": "LF-U_Round Fixture_CED : F9C",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F9C",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-099",
+    "ced_truth_source_name": "F12C"
+  },
+  {
+    "id": "EQ-100",
+    "name": "F13",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "General lighting"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-096",
+        "name": "F13 Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-096-LED-001",
+            "is_group": true,
+            "label": "LF-U_Rectangular Fixture_CED : F10",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F10",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-100",
+    "ced_truth_source_name": "F13"
+  },
+  {
+    "id": "EQ-101",
+    "name": "F1A",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "General lighting"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-097",
+        "name": "F1A Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-097-LED-001",
+            "is_group": true,
+            "label": "LF-U_Round Fixture_CED : F1A",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F1A and F1B",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-101",
+    "ced_truth_source_name": "F1A"
+  },
+  {
+    "id": "EQ-102",
+    "name": "F2",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "Lighting and power"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-098",
+        "name": "F2 Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-098-LED-001",
+            "is_group": true,
+            "label": "LF-U_Universal Light Fixture_CED : F2",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F2",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-102",
+    "ced_truth_source_name": "F2"
+  },
+  {
+    "id": "EQ-103",
+    "name": "F3",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "General lighting"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-099",
+        "name": "F3 Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-099-LED-001",
+            "is_group": true,
+            "label": "LF-U_Round Fixture_CED : F3",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F3",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-103",
+    "ced_truth_source_name": "F3"
+  },
+  {
+    "id": "EQ-104",
+    "name": "F6",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "Lighting and power"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-100",
+        "name": "F6 Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-100-LED-001",
+            "is_group": true,
+            "label": "LF-U_Rectangular Fixture_CED : F6",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F6",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-104",
+    "ced_truth_source_name": "F6"
+  },
+  {
+    "id": "EQ-105",
+    "name": "F6-1",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "General lighting"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-101",
+        "name": "F6-1 Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-101-LED-001",
+            "is_group": true,
+            "label": "LF-U_Lighting Track_CED : F5",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F10",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-105",
+    "ced_truth_source_name": "F6-1"
+  },
+  {
+    "id": "EQ-106",
+    "name": "F9",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "General lighting"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-102",
+        "name": "F9 Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-102-LED-001",
+            "is_group": true,
+            "label": "LF-U_Universal Light Fixture_CED : F8",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F9",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-106",
+    "ced_truth_source_name": "F9"
+  },
+  {
+    "id": "EQ-107",
+    "name": "N-MIRROR",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "General lighting"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-103",
+        "name": "N-MIRROR Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-103-LED-001",
+            "is_group": true,
+            "label": "LF-U_Rectangular Fixture_CED : F7",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F7",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-107",
+    "ced_truth_source_name": "N-MIRROR"
+  },
+  {
+    "id": "EQ-108",
+    "name": "PF_Light Exterior",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "General lighting"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-104",
+        "name": "PF_Light Exterior Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-104-LED-001",
+            "is_group": true,
+            "label": "LF-U_Bug Eye Fixture_CED : F13",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F13",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-108",
+    "ced_truth_source_name": "PF_Light Exterior"
+  },
+  {
+    "id": "EQ-109",
+    "name": "PF_Light Fluorescent",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "Lighting and power"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-105",
+        "name": "PF_Light Fluorescent Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-105-LED-001",
+            "is_group": true,
+            "label": "LF-U_Rectangular Fixture_CED : F10",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F10",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-109",
+    "ced_truth_source_name": "PF_Light Fluorescent"
+  },
+  {
+    "id": "EQ-110",
+    "name": "PF_Light Linear Bay",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "Lighting and power"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-106",
+        "name": "PF_Light Linear Bay Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-106-LED-001",
+            "is_group": true,
+            "label": "LF-U_Universal Light Fixture_CED : F2",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F2",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-110",
+    "ced_truth_source_name": "PF_Light Linear Bay"
+  },
+  {
+    "id": "EQ-111",
+    "name": "PF_Light Podium Desk",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "Lighting and power"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-107",
+        "name": "PF_Light Podium Desk Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-107-LED-001",
+            "is_group": true,
+            "label": "LF-U_Rectangular Fixture_CED : F6",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F6",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-111",
+    "ced_truth_source_name": "PF_Light Podium Desk"
+  },
+  {
+    "id": "EQ-112",
+    "name": "PF_Light Recess",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "General lighting"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-108",
+        "name": "PF_Light Recess Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-108-LED-001",
+            "is_group": true,
+            "label": "LF-U_Round Fixture_CED : F1A",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F1A and F1B",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-112",
+    "ced_truth_source_name": "PF_Light Recess"
+  },
+  {
+    "id": "EQ-113",
+    "name": "PF_Light Sconce",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "Lighting and power"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-109",
+        "name": "PF_Light Sconce Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-109-LED-001",
+            "is_group": true,
+            "label": "LF-U_Wall Sconce Fixture_CED : F12",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F12",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-113",
+    "ced_truth_source_name": "PF_Light Sconce"
+  },
+  {
+    "id": "EQ-114",
+    "name": "PF_Light Surface Mtd",
+    "version": 1,
+    "schema_version": 1,
+    "allow_parentless": "true",
+    "allow_unmatched_parents": "true",
+    "parent_filter": {
+      "category": "Lighting Fixtures",
+      "family_name_pattern": null,
+      "type_name_pattern": null,
+      "parameter_filters": {}
+    },
+    "equipment_properties": {
+      "notes": "General lighting"
+    },
+    "linked_sets": [
+      {
+        "id": "SET-110",
+        "name": "PF_Light Surface Mtd Types",
+        "linked_element_definitions": [
+          {
+            "id": "SET-110-LED-001",
+            "is_group": true,
+            "label": "LF-U_Rectangular Fixture_CED : F9",
+            "category": "Lighting Fixtures",
+            "parameters": {
+              "dev-Group ID": "F9",
+              "FLA Input_CED": "0",
+              "Apparent Load Input_CED": "180",
+              "Load Classification_CED": "L",
+              "Voltage_CED": "120",
+              "Number of Poles_CED": "1",
+              "CKT_Panel_CEDT": "L3",
+              "CKT_Circuit Number_CEDT": "STANDARD",
+              "CKT_Rating_CED": "20",
+              "CKT_Load Name_CEDT": "(Space)",
+              "CKT_Schedule Notes_CEDT": ""
+            },
+            "tags": [],
+            "offsets": [
+              {
+                "x_inches": 0.0,
+                "y_inches": 0.0,
+                "z_inches": 0.0,
+                "rotation_deg": 0.0
+              }
+            ],
+            "keynotes": [],
+            "text_notes": []
+          }
+        ]
+      }
+    ],
+    "ced_truth_source_id": "EQ-114",
+    "ced_truth_source_name": "PF_Light Surface Mtd"
+  }
+]
