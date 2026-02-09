@@ -1,0 +1,23 @@
+title:
+  en_us: Merge Circuits
+tooltip:
+  en_us: >-
+    Version = 1.0
+
+    Date    = 02.09.2026
+    ________________________________________________________________
+    Description:
+
+    Select a main circuit, then select one or more circuits to merge into it.
+    Elements from the selected circuits will be added to the main circuit. Any
+    now-empty circuits are deleted automatically.
+
+    Notes:
+      - Circuits must be compatible (system type, voltage, and poles).
+      - Spares and spaces are excluded.
+    ________________________________________________________________
+
+author: Anthony Evelina - CoolSys (2026)
+engine:
+  persistent: false
+  full_frame: false
