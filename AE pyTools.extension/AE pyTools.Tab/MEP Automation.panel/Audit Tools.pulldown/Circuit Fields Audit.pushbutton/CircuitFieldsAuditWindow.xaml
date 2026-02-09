@@ -1,0 +1,92 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Circuit Fields Audit"
+        Height="320"
+        Width="540"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Text="Filter Electrical Fixtures by parameter contents. Text searches are case-insensitive contains."
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,10" />
+
+        <Grid Grid.Row="1" Margin="0,0,0,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="180" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Element Linker Parameter:" VerticalAlignment="Center" />
+            <TextBox x:Name="ElementLinkerText"
+                     Grid.Column="1"
+                     Margin="8,0,8,0"
+                     Foreground="Black"
+                     Background="White"
+                     CaretBrush="Black" />
+            <CheckBox x:Name="ElementLinkerBlank"
+                      Grid.Column="2"
+                      Content="Include blank"
+                      VerticalAlignment="Center" />
+        </Grid>
+
+        <Grid Grid.Row="2" Margin="0,0,0,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="180" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="CKT_Circuit Number_CEDT:" VerticalAlignment="Center" />
+            <TextBox x:Name="CircuitNumberText"
+                     Grid.Column="1"
+                     Margin="8,0,8,0"
+                     Foreground="Black"
+                     Background="White"
+                     CaretBrush="Black" />
+            <CheckBox x:Name="CircuitNumberBlank"
+                      Grid.Column="2"
+                      Content="Include blank"
+                      VerticalAlignment="Center" />
+        </Grid>
+
+        <Grid Grid.Row="3" Margin="0,0,0,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="180" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="CKT_Panel_CEDT:" VerticalAlignment="Center" />
+            <TextBox x:Name="PanelText"
+                     Grid.Column="1"
+                     Margin="8,0,8,0"
+                     Foreground="Black"
+                     Background="White"
+                     CaretBrush="Black" />
+            <CheckBox x:Name="PanelBlank"
+                      Grid.Column="2"
+                      Content="Include blank"
+                      VerticalAlignment="Center" />
+        </Grid>
+
+        <StackPanel Grid.Row="4"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,8,0,8">
+            <Button x:Name="ApplyButton" Content="Apply Filters" Width="110" Margin="0,0,8,0" />
+            <Button x:Name="ClearButton" Content="Clear filters" Width="110" Margin="0,0,8,0" />
+            <Button x:Name="CloseButton" Content="Close" Width="80" />
+        </StackPanel>
+
+        <TextBlock x:Name="StatusText" Grid.Row="5" Text="Ready" />
+    </Grid>
+</Window>

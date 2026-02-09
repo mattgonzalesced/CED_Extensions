@@ -1,0 +1,10 @@
+title: Place Identity Mark
+tooltip: |
+  Copy Identity Mark from refrigerated cases (workset CED REFRIGERATED CASES)
+  to Mechanical Control Devices that are hosted on, within, or directly above
+  the case geometry.
+
+  Controllers are matched by host first, then by location within the case
+  bounding box (with a small top tolerance). A summary is printed to the
+  pyRevit output panel.
+is_beta: false

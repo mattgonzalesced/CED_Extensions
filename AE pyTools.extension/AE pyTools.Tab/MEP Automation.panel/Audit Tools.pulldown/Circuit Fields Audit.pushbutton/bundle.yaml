@@ -1,0 +1,9 @@
+title: Circuit Fields Audit
+tooltip: |
+  Filter electrical fixtures by Element Linker, Circuit Number, and Panel fields.
+
+  Enter text to match (case-insensitive contains) and/or check "Include blank" to
+  include empty values. Matching fixtures are highlighted in orange and their
+  ElementIds are printed to the pyRevit output panel. Use "Clear filters" to
+  remove the highlight.
+is_beta: false
