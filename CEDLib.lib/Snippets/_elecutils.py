@@ -75,6 +75,16 @@ def get_all_light_fixtures(doc, el_id=False):
     return collector
 
 
+def get_all_mech_control_devices(doc, el_id=False):
+    collector = FilteredElementCollector(doc).OfCategory(
+        BuiltInCategory.OST_MechanicalControlDevices).WhereElementIsNotElementType().WherePasses(option_filter)
+    if el_id:
+        collector = collector.ToElementIds()
+    else:
+        collector = collector.ToElements()
+    return collector
+
+
 # Helper function to get panel's distribution system and voltage capacity
 def get_panel_dist_system(panel, doc, debug=False):
     """Returns a dictionary with the panel's distribution system name, voltage, and phase."""

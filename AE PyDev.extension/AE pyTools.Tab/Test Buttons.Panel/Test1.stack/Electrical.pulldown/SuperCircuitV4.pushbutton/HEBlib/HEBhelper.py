@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from Autodesk.Revit import DB
 from Autodesk.Revit.DB import XYZ
 
@@ -16,6 +18,31 @@ def _normalize(value):
         return str(value).strip().upper()
     except Exception:
         return ""
+
+
+_CASECONTROLLER_TOKEN = "CASECONTROLLER"
+
+
+def _extract_casecontroller_prefix(circuit_number):
+    if not circuit_number:
+        return None
+    text = str(circuit_number).strip()
+    if not text:
+        return None
+    if _CASECONTROLLER_TOKEN not in text.upper():
+        return None
+    if "_" not in text:
+        return None
+    parts = text.split("_")
+    prefix = parts[0].strip() if parts else text
+    return prefix or None
+
+
+def _normalize_casecontroller_circuit(circuit_number):
+    prefix = _extract_casecontroller_prefix(circuit_number)
+    if not prefix:
+        return None
+    return "{}_CASECONTROLLER".format(prefix)
 
 
 def classify_items(items):
@@ -364,6 +391,22 @@ def _nearest_panel(location, panel_cache, allowed=None):
     return best
 
 
+def _sorted_panels_by_distance(location, panel_cache, allowed=None):
+    if not location:
+        return []
+    allowed_set = {item.upper() for item in (allowed or []) if item}
+    ranked = []
+    for entry in panel_cache.values():
+        if allowed_set and entry.get("upper") not in allowed_set:
+            continue
+        dist = _distance(location, entry.get("point"))
+        if dist is None:
+            continue
+        ranked.append((dist, entry))
+    ranked.sort(key=lambda item: item[0])
+    return [entry for _, entry in ranked]
+
+
 def _candidate_spaces_for_panels(spaces, allowed_panels, panel_space_map):
     if not spaces or not allowed_panels or not panel_space_map:
         return []
@@ -572,6 +615,84 @@ def _parse_load_value(value):
     return number
 
 
+def _parse_voltage_values(value):
+    if value is None:
+        return []
+    if isinstance(value, (int, float)):
+        return [float(value)]
+    text = str(value).strip()
+    if not text:
+        return []
+    numbers = []
+    current = []
+    for ch in text:
+        if ch.isdigit() or ch == ".":
+            current.append(ch)
+        else:
+            if current:
+                try:
+                    numbers.append(float("".join(current)))
+                except Exception:
+                    pass
+                current = []
+    if current:
+        try:
+            numbers.append(float("".join(current)))
+        except Exception:
+            pass
+    return numbers
+
+
+def _voltage_is_208(value):
+    for number in _parse_voltage_values(value):
+        if abs(number - 208.0) < 1.0:
+            return True
+    return False
+
+
+def _casecontroller_group_is_208(members):
+    if not members:
+        return False
+    found_208 = False
+    found_other = False
+    for member in members:
+        voltage = member.get("voltage_ced")
+        if voltage is None or str(voltage).strip() == "":
+            continue
+        if _voltage_is_208(voltage):
+            found_208 = True
+        else:
+            found_other = True
+    return found_208 and not found_other
+
+
+def _apply_casecontroller_grouping(items, logger=None):
+    buckets = defaultdict(list)
+    for item in items or []:
+        normalized = _normalize_casecontroller_circuit(item.get("circuit_number"))
+        if not normalized:
+            continue
+        item["circuit_number"] = normalized
+        panel_name = item.get("panel_name") or "NO_PANEL"
+        buckets[(panel_name, normalized)].append(item)
+
+    for (panel_name, circuit_number), members in buckets.items():
+        if not members or not _casecontroller_group_is_208(members):
+            continue
+        count = len(members)
+        desired_poles = 3 if count >= 3 else 2
+        for member in members:
+            member["number_of_poles"] = desired_poles
+        if logger:
+            logger.debug(
+                "HEB CASECONTROLLER group %s on panel %s set to %sp (%s member(s)).",
+                circuit_number,
+                panel_name,
+                desired_poles,
+                count,
+            )
+
+
 def _split_members_by_load(members, max_total_load):
     if not members:
         return []
@@ -716,9 +837,26 @@ def preprocess_items(items, doc, panel_lookup, logger=None):
             _apply_space_load_name(item, space_label)
             allowed_panels = set(chosen.get("panels") or allowed_panels)
 
-        nearest = _nearest_panel(location, panel_cache, allowed_panels)
-        if not nearest:
+        ordered_panels = _sorted_panels_by_distance(location, panel_cache, allowed_panels)
+        if not ordered_panels:
             continue
+        panel_choices = []
+        for entry in ordered_panels:
+            info = entry.get("info") or {}
+            panel_elem = info.get("element")
+            if not panel_elem:
+                continue
+            panel_choices.append(
+                {
+                    "name": entry.get("name"),
+                    "element": panel_elem,
+                    "distribution_system_ids": list(info.get("distribution_system_ids") or []),
+                }
+            )
+        if panel_choices:
+            item["panel_choices"] = panel_choices
+
+        nearest = ordered_panels[0]
         if nearest["upper"] not in allowed:
             continue
         panel_info = nearest.get("info") or {}
@@ -733,4 +871,5 @@ def preprocess_items(items, doc, panel_lookup, logger=None):
                 nearest["name"],
                 elem_id if elem_id is not None else "unknown",
             )
+    _apply_casecontroller_grouping(items, logger)
     return items

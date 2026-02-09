@@ -10,6 +10,7 @@ from Snippets._elecutils import (
     get_all_elec_fixtures,
     get_all_light_devices,
     get_all_light_fixtures,
+    get_all_mech_control_devices,
     get_all_panels,
 )
 
@@ -60,6 +61,7 @@ def _collect_elements(doc):
         get_all_light_devices,
         get_all_light_fixtures,
         get_all_data_devices,
+        get_all_mech_control_devices,
     )
     return circuits.collect_target_elements(doc, collectors, revit.get_selection, logger)
 

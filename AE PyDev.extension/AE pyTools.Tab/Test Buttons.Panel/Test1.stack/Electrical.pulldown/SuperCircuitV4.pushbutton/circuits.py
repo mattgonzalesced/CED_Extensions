@@ -13,8 +13,10 @@ from collections import defaultdict, OrderedDict
 import math
 
 from System.Collections.Generic import List
-from pyrevit import revit, DB
+from pyrevit import revit, DB, forms
 from pyrevit.revit.db import query
+
+_OVERFLOW_PANEL_CACHE = {}
 
 # =============================================================================
 # COMMON UTILITIES
@@ -326,6 +328,238 @@ def build_panel_lookup(panels):
     return lookup
 
 
+def _panel_display_name(panel_element, panel_name=None):
+    name = panel_name or get_param_value(panel_element, "Panel Name") or getattr(panel_element, "Name", None)
+    if name:
+        return str(name).strip()
+    return "Unnamed Panel"
+
+
+def _collect_panel_option_map(doc, exclude_ids=None):
+    exclude_ids = set(exclude_ids or [])
+    options = {}
+    collector = DB.FilteredElementCollector(doc).OfCategory(
+        DB.BuiltInCategory.OST_ElectricalEquipment
+    ).WhereElementIsNotElementType()
+    for panel in collector:
+        panel_id = getattr(getattr(panel, "Id", None), "IntegerValue", None)
+        if panel_id is not None and panel_id in exclude_ids:
+            continue
+        display = "{} (Id {})".format(_panel_display_name(panel), panel_id if panel_id is not None else "NA")
+        if display in options:
+            display = "{} [{}]".format(display, getattr(panel, "Name", "Unknown"))
+        options[display] = panel
+    return options
+
+
+def _prompt_overflow_panel(doc, base_panel_name, exclude_ids=None, logger=None):
+    options = _collect_panel_option_map(doc, exclude_ids)
+    if not options:
+        if logger:
+            logger.warning("No panels available for overflow selection.")
+        return None
+    panel_name = base_panel_name or "Selected panel"
+    prompt_msg = (
+        "Panel '{}' is full. Select a similar panel for overflow circuits "
+        "(avoid unrelated panels).".format(panel_name)
+    )
+    choice = forms.SelectFromList.show(
+        sorted(options.keys(), key=lambda value: value.lower()),
+        title="Select Overflow Panel (Full: {})".format(panel_name),
+        prompt=prompt_msg,
+        multiselect=False,
+    )
+    if not choice:
+        if logger:
+            logger.warning("Overflow panel selection cancelled.")
+        return None
+    return options.get(choice)
+
+
+def _get_overflow_panel(doc, base_panel_name, exclude_ids=None, logger=None):
+    cache_key = (base_panel_name or "").strip().upper() or "UNKNOWN"
+    if cache_key in _OVERFLOW_PANEL_CACHE:
+        return _OVERFLOW_PANEL_CACHE[cache_key]
+    selected = _prompt_overflow_panel(doc, base_panel_name, exclude_ids, logger)
+    if selected:
+        _OVERFLOW_PANEL_CACHE[cache_key] = selected
+    return selected
+
+
+def _panel_candidates_from_group(group):
+    candidates = []
+    for choice in group.get("panel_choices") or []:
+        panel_elem = choice.get("element")
+        if not panel_elem:
+            continue
+        candidates.append(
+            {
+                "name": choice.get("name") or _panel_display_name(panel_elem),
+                "element": panel_elem,
+                "distribution_system_ids": list(choice.get("distribution_system_ids") or []),
+            }
+        )
+
+    if not candidates:
+        panel_element = group.get("panel_element")
+        if panel_element:
+            candidates.append(
+                {
+                    "name": group.get("panel_name") or _panel_display_name(panel_element),
+                    "element": panel_element,
+                    "distribution_system_ids": list(group.get("panel_distribution_system_ids") or []),
+                }
+            )
+
+    unique = []
+    seen = set()
+    for candidate in candidates:
+        panel_element = candidate.get("element")
+        panel_id = getattr(getattr(panel_element, "Id", None), "IntegerValue", None)
+        if panel_id is not None and panel_id in seen:
+            continue
+        if panel_id is not None:
+            seen.add(panel_id)
+        unique.append(candidate)
+    return unique
+
+
+def _attempt_assign_to_panel(doc, system, group, candidate, desired_poles, logger=None):
+    panel_element = candidate.get("element")
+    if not panel_element:
+        return False
+
+    panel_name = candidate.get("name") or _panel_display_name(panel_element)
+    panel_distribution_ids = candidate.get("distribution_system_ids") or group.get("panel_distribution_system_ids")
+    aligned = _align_distribution_system(
+        doc,
+        system,
+        panel_element,
+        desired_poles,
+        panel_distribution_ids,
+        logger,
+        group.get("key"),
+    )
+    if not aligned and logger:
+        logger.debug(
+            "Distribution system alignment failed for circuit {} (panel {}).".format(
+                group.get("key"), panel_name
+            )
+        )
+
+    can_assign = True
+    can_assign_method = getattr(system, "CanAssignToPanel", None)
+    if callable(can_assign_method):
+        try:
+            can_assign = bool(can_assign_method(panel_element))
+        except Exception as ex:
+            if logger:
+                logger.debug(
+                    "CanAssignToPanel check failed for panel {} and circuit {}: {}".format(
+                        panel_element.Id, group.get("key"), ex
+                    )
+                )
+
+    if can_assign:
+        try:
+            system.SelectPanel(panel_element)
+            group["panel_name"] = panel_name
+            group["panel_element"] = panel_element
+            group["panel_distribution_system_ids"] = list(panel_distribution_ids or [])
+            return True
+        except Exception as ex:
+            system_ds_id, system_ds_name = _describe_distribution(system, doc)
+            panel_ds_id = None
+            panel_ds_name = None
+            for attr in ("RBS_FAMILY_CONTENT_SECONDARY_DISTRIBSYS", "RBS_FAMILY_CONTENT_DISTRIBUTION_SYSTEM"):
+                bip = getattr(DB.BuiltInParameter, attr, None)
+                if not bip:
+                    continue
+                try:
+                    param = panel_element.get_Parameter(bip)
+                except Exception:
+                    param = None
+                if param and param.HasValue:
+                    try:
+                        panel_ds_id = param.AsElementId()
+                    except Exception:
+                        panel_ds_id = None
+                    if panel_ds_id and panel_ds_id.IntegerValue > 0:
+                        try:
+                            ds_elem = doc.GetElement(panel_ds_id)
+                            panel_ds_name = getattr(ds_elem, "Name", None)
+                        except Exception:
+                            panel_ds_name = None
+                        break
+            if logger:
+                logger.warning(
+                    "Unable to select panel {} (Id {}) for circuit {}: {}. Requested poles {} system poles {} | system DS {} (Id {}) vs panel DS {} (Id {}).".format(
+                        panel_name,
+                        panel_element.Id,
+                        group.get("key"),
+                        ex,
+                        desired_poles or "unknown",
+                        getattr(system, "PolesNumber", None) or "unknown",
+                        system_ds_name or "unknown",
+                        system_ds_id.IntegerValue if system_ds_id else "None",
+                        panel_ds_name or "unknown",
+                        panel_ds_id.IntegerValue if panel_ds_id else "None",
+                    )
+                )
+    else:
+        panel_phases = None
+        try:
+            phases_param = panel_element.get_Parameter(DB.BuiltInParameter.RBS_ELEC_PANEL_NUMPHASES_PARAM)
+            if phases_param and phases_param.HasValue:
+                panel_phases = phases_param.AsInteger()
+        except Exception:
+            panel_phases = None
+        if logger:
+            logger.warning(
+                "Panel {} (Id {}) is not compatible with circuit {} (requested poles: {}, system poles: {}, panel phases: {}). Leaving circuit unassigned.".format(
+                    panel_name or "Unnamed",
+                    panel_element.Id,
+                    group.get("key"),
+                    desired_poles or "unknown",
+                    getattr(system, "PolesNumber", None) or "unknown",
+                    panel_phases or "unknown",
+                )
+            )
+    return False
+
+
+def _assign_panel_with_fallback(doc, system, group, logger=None):
+    connector_poles = group.get("connector_poles")
+    desired_poles = try_parse_int(group.get("number_of_poles")) or connector_poles
+    candidates = _panel_candidates_from_group(group)
+    if not candidates:
+        if logger:
+            logger.warning("No panel found for group {}; circuit left unassigned.".format(group.get("key")))
+        return False
+
+    for candidate in candidates:
+        if _attempt_assign_to_panel(doc, system, group, candidate, desired_poles, logger):
+            return True
+
+    if len(candidates) <= 1:
+        base_panel_name = group.get("panel_name") or candidates[0].get("name")
+        exclude_ids = [getattr(getattr(candidates[0].get("element"), "Id", None), "IntegerValue", None)]
+        overflow_panel = _get_overflow_panel(doc, base_panel_name, exclude_ids, logger)
+        if overflow_panel:
+            panel_info = describe_panel(overflow_panel) or {"element": overflow_panel, "distribution_system_ids": []}
+            overflow_candidate = {
+                "name": _panel_display_name(overflow_panel),
+                "element": overflow_panel,
+                "distribution_system_ids": list(panel_info.get("distribution_system_ids") or []),
+            }
+            if _attempt_assign_to_panel(doc, system, group, overflow_candidate, desired_poles, logger):
+                return True
+
+    if logger:
+        logger.warning("Unable to assign panel for circuit {}.".format(group.get("key")))
+    return False
+
+
 def get_power_connectors(element, log_details=True, logger=None):
     connectors_result = []
     if not element:
@@ -511,6 +745,11 @@ def make_group(key, members, group_type=None, parent_key=None):
     circuit_number = sample.get("circuit_number")
     circuit_notes = sample.get("circuit_notes")
     number_of_poles = sample.get("number_of_poles")
+    panel_choices = None
+    for item in members:
+        if item.get("panel_choices"):
+            panel_choices = item.get("panel_choices")
+            break
 
     if not rating:
         for item in members:
@@ -563,6 +802,7 @@ def make_group(key, members, group_type=None, parent_key=None):
         "parent_key": parent_key,
         "connector_poles": connector_poles,
         "panel_distribution_system_ids": panel_distribution_ids,
+        "panel_choices": panel_choices,
     }
 
 
@@ -1155,104 +1395,7 @@ def create_circuit(doc, group, logger=None):
             logger.error("Circuit creation failed for {}: {}".format(group.get("key"), ex))
         return None
 
-    connector_poles = group.get("connector_poles")
-    desired_poles = try_parse_int(group.get("number_of_poles")) or connector_poles
-
-    panel_element = group.get("panel_element")
-    if panel_element:
-        panel_distribution_ids = group.get("panel_distribution_system_ids")
-        aligned = _align_distribution_system(
-            doc,
-            system,
-            panel_element,
-            desired_poles,
-            panel_distribution_ids,
-            logger,
-            group.get("key"),
-        )
-        if not aligned and logger:
-            logger.debug(
-                "Distribution system alignment failed for circuit {}.".format(group.get("key"))
-            )
-
-        can_assign = True
-        can_assign_method = getattr(system, "CanAssignToPanel", None)
-        if callable(can_assign_method):
-            try:
-                can_assign = bool(can_assign_method(panel_element))
-            except Exception as ex:
-                if logger:
-                    logger.debug(
-                        "CanAssignToPanel check failed for panel {} and circuit {}: {}".format(
-                            panel_element.Id, group.get("key"), ex
-                        )
-                    )
-        if can_assign:
-            try:
-                system.SelectPanel(panel_element)
-            except Exception as ex:
-                panel_name = group.get("panel_name") or getattr(panel_element, "Name", None) or panel_element.Id
-                system_ds_id, system_ds_name = _describe_distribution(system, doc)
-                panel_ds_id = None
-                panel_ds_name = None
-                for attr in ("RBS_FAMILY_CONTENT_SECONDARY_DISTRIBSYS", "RBS_FAMILY_CONTENT_DISTRIBUTION_SYSTEM"):
-                    bip = getattr(DB.BuiltInParameter, attr, None)
-                    if not bip:
-                        continue
-                    try:
-                        param = panel_element.get_Parameter(bip)
-                    except Exception:
-                        param = None
-                    if param and param.HasValue:
-                        try:
-                            panel_ds_id = param.AsElementId()
-                        except Exception:
-                            panel_ds_id = None
-                        if panel_ds_id and panel_ds_id.IntegerValue > 0:
-                            try:
-                                ds_elem = doc.GetElement(panel_ds_id)
-                                panel_ds_name = getattr(ds_elem, "Name", None)
-                            except Exception:
-                                panel_ds_name = None
-                            break
-                if logger:
-                    logger.warning(
-                        "Unable to select panel {} (Id {}) for circuit {}: {}. Requested poles {} system poles {} | system DS {} (Id {}) vs panel DS {} (Id {}).".format(
-                            panel_name,
-                            panel_element.Id,
-                            group.get("key"),
-                            ex,
-                            desired_poles or "unknown",
-                            getattr(system, "PolesNumber", None) or "unknown",
-                            system_ds_name or "unknown",
-                            system_ds_id.IntegerValue if system_ds_id else "None",
-                            panel_ds_name or "unknown",
-                            panel_ds_id.IntegerValue if panel_ds_id else "None",
-                        )
-                    )
-        else:
-            panel_phases = None
-            panel_name = getattr(panel_element, "Name", None)
-            try:
-                phases_param = panel_element.get_Parameter(DB.BuiltInParameter.RBS_ELEC_PANEL_NUMPHASES_PARAM)
-                if phases_param and phases_param.HasValue:
-                    panel_phases = phases_param.AsInteger()
-            except Exception:
-                panel_phases = None
-            if logger:
-                logger.warning(
-                    "Panel {} (Id {}) is not compatible with circuit {} (requested poles: {}, system poles: {}, panel phases: {}). Leaving circuit unassigned.".format(
-                        panel_name or "Unnamed",
-                        panel_element.Id,
-                        group.get("key"),
-                        desired_poles or "unknown",
-                        getattr(system, "PolesNumber", None) or "unknown",
-                        panel_phases or "unknown",
-                    )
-                )
-    else:
-        if logger:
-            logger.warning("No panel found for group {}; circuit left unassigned.".format(group.get("key")))
+    _assign_panel_with_fallback(doc, system, group, logger)
 
     return system
 
@@ -1311,76 +1454,7 @@ def configure_circuit(doc, system, group, logger=None):
     doc = doc or getattr(system, "Document", None)
     if not doc:
         return False
-
-    connector_poles = group.get("connector_poles")
-    desired_poles = try_parse_int(group.get("number_of_poles")) or connector_poles
-
-    panel_element = group.get("panel_element")
-    if not panel_element:
-        if logger:
-            logger.warning("No panel found for group {}; circuit left unassigned.".format(group.get("key")))
-        return False
-
-    aligned = _align_distribution_system(
-        doc,
-        system,
-        panel_element,
-        desired_poles,
-        group.get("panel_distribution_system_ids"),
-        logger,
-        group.get("key"),
-    )
-    if not aligned and logger:
-        logger.debug(
-            "Distribution system alignment failed for circuit {}.".format(group.get("key"))
-        )
-
-    can_assign = True
-    can_assign_method = getattr(system, "CanAssignToPanel", None)
-    if callable(can_assign_method):
-        try:
-            can_assign = bool(can_assign_method(panel_element))
-        except Exception as ex:
-            if logger:
-                logger.debug(
-                    "CanAssignToPanel check failed for panel {} and circuit {}: {}".format(
-                        panel_element.Id, group.get("key"), ex
-                    )
-                )
-    if can_assign:
-        try:
-            system.SelectPanel(panel_element)
-            return True
-        except Exception as ex:
-            panel_name = group.get("panel_name") or getattr(panel_element, "Name", None) or panel_element.Id
-            if logger:
-                logger.warning(
-                    "Unable to select panel {} (Id {}) for circuit {}: {}. Verify distribution system and pole settings.".format(
-                        panel_name, panel_element.Id, group.get("key"), ex
-                    )
-                )
-    else:
-        panel_phases = None
-        panel_name = getattr(panel_element, "Name", None)
-        try:
-            phases_param = panel_element.get_Parameter(DB.BuiltInParameter.RBS_ELEC_PANEL_NUMPHASES_PARAM)
-            if phases_param and phases_param.HasValue:
-                panel_phases = phases_param.AsInteger()
-        except Exception:
-            panel_phases = None
-        if logger:
-            logger.warning(
-                "Panel {} (Id {}) is not compatible with circuit {} (requested poles: {}, system poles: {}, panel phases: {}). Leaving circuit unassigned.".format(
-                    panel_name or "Unnamed",
-                    panel_element.Id,
-                    group.get("key"),
-                    desired_poles or "unknown",
-                    getattr(system, "PolesNumber", None) or "unknown",
-                    panel_phases or "unknown",
-                )
-            )
-
-    return False
+    return _assign_panel_with_fallback(doc, system, group, logger)
 
 
 # =============================================================================
