@@ -2,6 +2,8 @@
 __title__ = "SUPER CIRCUIT V4"
 
 from collections import OrderedDict
+import logging
+import re
 
 from pyrevit import revit, script, forms, DB
 
@@ -17,6 +19,12 @@ from Snippets._elecutils import (
 import circuits
 
 logger = script.get_logger()
+logger.setLevel(logging.INFO)
+
+try:
+    basestring
+except NameError:  # Python 3 fallback
+    basestring = str
 CLIENT_CHOICES = OrderedDict([
     ("Planet Fitness", "planet_fitness"),
     ("HEB", "heb"),
@@ -48,11 +56,177 @@ def _load_client_helpers(client_key):
     elif client_key == "heb":
         try:
             from HEBlib import HEBhelper
+            try:
+                import importlib
+
+                importlib.reload(HEBhelper)
+                logger.info("Reloaded HEBhelper module.")
+            except Exception:
+                try:
+                    reload(HEBhelper)  # IronPython fallback
+                    logger.info("Reloaded HEBhelper module via reload().")
+                except Exception as ex:
+                    logger.warning("HEBhelper reload failed: {}".format(ex))
 
             return HEBhelper
         except ImportError as ex:
             logger.warning("HEB helpers unavailable: {}".format(ex))
     return None
+
+
+def _split_panel_choices(value):
+    if not value:
+        return []
+    text = value if isinstance(value, basestring) else str(value)
+    for sep in (",", ";", "|", "/", "\n", "\r"):
+        text = text.replace(sep, " ")
+    candidates = [part.strip() for part in text.split(" ") if part.strip()]
+    unique = []
+    seen = set()
+    for name in candidates:
+        upper = name.upper()
+        if upper in seen:
+            continue
+        seen.add(upper)
+        unique.append(name)
+    return unique
+
+
+def _tokenize_panel_value(value):
+    if not value:
+        return []
+    text = value if isinstance(value, basestring) else str(value)
+    tokens = re.findall(r"[A-Za-z0-9]+", text)
+    return [token.strip() for token in tokens if token.strip()]
+
+
+def _get_point(elem):
+    if not elem:
+        return None
+    location = getattr(elem, "Location", None)
+    if location:
+        point = getattr(location, "Point", None)
+        if point:
+            return point
+        curve = getattr(location, "Curve", None)
+        if curve:
+            try:
+                return curve.Evaluate(0.5, True)
+            except Exception:
+                pass
+    try:
+        bbox = elem.get_BoundingBox(None)
+    except Exception:
+        bbox = None
+    if bbox:
+        return DB.XYZ(
+            (bbox.Min.X + bbox.Max.X) * 0.5,
+            (bbox.Min.Y + bbox.Max.Y) * 0.5,
+            (bbox.Min.Z + bbox.Max.Z) * 0.5,
+        )
+    return None
+
+
+def _distance(point_a, point_b):
+    if point_a is None or point_b is None:
+        return None
+    try:
+        return point_a.DistanceTo(point_b)
+    except Exception:
+        try:
+            dx = point_a.X - point_b.X
+            dy = point_a.Y - point_b.Y
+            dz = point_a.Z - point_b.Z
+            return (dx * dx + dy * dy + dz * dz) ** 0.5
+        except Exception:
+            return None
+
+
+def _build_panel_point_cache(panel_lookup):
+    cache = {}
+    for name, info in (panel_lookup or {}).items():
+        panel_elem = info.get("element")
+        point = _get_point(panel_elem)
+        if not point:
+            continue
+        upper = (name or "").strip().upper()
+        if not upper or upper in cache:
+            continue
+        cache[upper] = {"name": name, "point": point}
+    return cache
+
+
+def _emit_debug(output, text):
+    try:
+        output.print_md(text)
+    except Exception:
+        pass
+    try:
+        print(text)
+    except Exception:
+        pass
+
+
+def _debug_ba_da(label, items, panel_lookup, output):
+    panel_point_cache = _build_panel_point_cache(panel_lookup)
+    for item in items:
+        panel_value = item.get("panel_name")
+        tokens = _tokenize_panel_value(panel_value)
+        token_set = {token.upper() for token in tokens}
+        if not (("BA" in token_set) or ("DA" in token_set)):
+            continue
+        element = item.get("element")
+        elem_id = getattr(getattr(element, "Id", None), "IntegerValue", None)
+        location = item.get("location")
+        load_name = item.get("load_name") or "None"
+        if location:
+            loc_text = "{:.3f},{:.3f},{:.3f}".format(location.X, location.Y, location.Z)
+        else:
+            loc_text = "None"
+        _emit_debug(
+            output,
+            "INFO SuperCircuitV4 {} BA/DA debug | element {} | location {} | CKT_Panel_CEDT {} | CKT_Load Name_CEDT {} | tokens {}".format(
+                label,
+                elem_id if elem_id is not None else "unknown",
+                loc_text,
+                panel_value or "None",
+                load_name,
+                ", ".join(sorted(token_set)) if token_set else "none",
+            ),
+        )
+        for panel_key in ("BA", "DA"):
+            if panel_key not in token_set:
+                _emit_debug(
+                    output,
+                    "INFO SuperCircuitV4 {} BA/DA debug | panel {} not listed in CKT_Panel_CEDT".format(
+                        label, panel_key
+                    ),
+                )
+                continue
+            entry = panel_point_cache.get(panel_key)
+            if not entry:
+                _emit_debug(
+                    output,
+                    "INFO SuperCircuitV4 {} BA/DA debug | panel {} missing from cache".format(
+                        label, panel_key
+                    ),
+                )
+                continue
+            point = entry.get("point")
+            dist = _distance(location, point) if location and point else None
+            if point:
+                ptext = "{:.3f},{:.3f},{:.3f}".format(point.X, point.Y, point.Z)
+            else:
+                ptext = "None"
+            _emit_debug(
+                output,
+                "INFO SuperCircuitV4 {} BA/DA debug | panel {} point {} | distance {}".format(
+                    label,
+                    panel_key,
+                    ptext,
+                    "{:.3f}".format(dist) if dist is not None else "None",
+                ),
+            )
 
 
 def _collect_elements(doc):
@@ -143,6 +317,15 @@ def main():
 
     global client_helpers
     client_helpers = _load_client_helpers(client_key)
+    if client_helpers:
+        logger.info(
+            "Client helpers loaded: %s",
+            getattr(client_helpers, "__file__", "unknown"),
+        )
+        logger.info(
+            "Client helpers has preprocess_items: %s",
+            hasattr(client_helpers, "preprocess_items"),
+        )
 
     doc = revit.doc
     panels = list(get_all_panels(doc))
@@ -155,16 +338,23 @@ def main():
         return
 
     info_items = circuits.gather_element_info(doc, elements, panel_lookup, logger)
+    logger.info("Gathered circuit info items: {}".format(len(info_items)))
     if not info_items:
         logger.info("No elements with circuit data were found.")
         return
+
+    output = script.get_output()
+    _debug_ba_da("pre", info_items, panel_lookup, output)
     if client_helpers and hasattr(client_helpers, "preprocess_items"):
         try:
+            logger.info("Calling client_helpers.preprocess_items")
             processed = client_helpers.preprocess_items(info_items, doc, panel_lookup, logger)
             if processed:
                 info_items = processed
         except Exception as ex:
             logger.warning("Client preprocess_items failed: {}".format(ex))
+
+    _debug_ba_da("post", info_items, panel_lookup, output)
 
     groups = circuits.assemble_groups(info_items, client_helpers, logger)
     if not groups:

@@ -156,6 +156,38 @@ def extract_parent_location(element):
     return None
 
 
+def extract_parent_element_id(element):
+    """Extract parent element id from Element_Linker parameter."""
+    if not element:
+        return None
+
+    try:
+        linker_param = element.LookupParameter("Element_Linker")
+    except Exception:
+        return None
+
+    if not linker_param or not linker_param.HasValue:
+        return None
+
+    try:
+        linker_text = linker_param.AsString()
+    except Exception:
+        return None
+
+    if not linker_text:
+        return None
+
+    for line in linker_text.split('\n'):
+        line = line.strip()
+        if line.lower().startswith("parent elementid:"):
+            value = line.split(":", 1)[1].strip()
+            try:
+                return int(value)
+            except Exception:
+                return None
+    return None
+
+
 # =============================================================================
 # PANEL UTILITIES
 # =============================================================================
@@ -711,6 +743,7 @@ def gather_element_info(doc, elements, panel_lookup, logger=None):
             panel_distribution_system_ids = []
 
         parent_location = extract_parent_location(element)
+        parent_element_id = extract_parent_element_id(element)
 
         info_items.append(
             {
@@ -729,6 +762,7 @@ def gather_element_info(doc, elements, panel_lookup, logger=None):
                 "voltage_ced": voltage_value,
                 "panel_distribution_system_ids": list(panel_distribution_system_ids),
                 "parent_location": parent_location,
+                "parent_element_id": parent_element_id,
             }
         )
     return info_items
@@ -855,24 +889,28 @@ def create_nongroupedblock_groups(items):
 
 
 def create_circuitbyparent_groups(items, keyword_suffix=""):
-    """Group items by panel and parent_location from Element_Linker parameter."""
+    """Group items by panel and parent_element_id from Element_Linker parameter."""
     buckets = defaultdict(list)
 
     for item in items:
         panel_name = item.get("panel_name") or "NO_PANEL"
-        parent_location = item.get("parent_location") or "NO_PARENT"
+        parent_element_id = item.get("parent_element_id")
+        if parent_element_id is None:
+            element = item.get("element")
+            elem_id = getattr(getattr(element, "Id", None), "IntegerValue", None)
+            parent_element_id = "NO_PARENT_{}".format(elem_id if elem_id is not None else id(item))
 
-        # Group by panel + parent_location
-        key = (panel_name, parent_location)
+        # Group by panel + parent_element_id
+        key = (panel_name, parent_element_id)
         buckets[key].append(item)
 
     groups = []
     counters = defaultdict(int)
 
-    for (panel_name, parent_location), members in sorted(buckets.items()):
+    for (panel_name, parent_element_id), members in sorted(buckets.items()):
         counters[panel_name] += 1
-        # Key format: PANEL1CIRCUITBYPARENT1 or PANEL1SECONDCIRCUITBYPARENT1
-        base_name = "CIRCUITBYPARENT" if not keyword_suffix else keyword_suffix
+        # Key format: PANEL1BYPARENT1 or PANEL1SECONDBYPARENT1
+        base_name = "BYPARENT" if not keyword_suffix else keyword_suffix
         group_key = "{}{}{}".format(panel_name, base_name, counters[panel_name])
         group_type = "circuitbyparent" if not keyword_suffix else "secondcircuitbyparent"
         groups.append(make_group(group_key, members, group_type=group_type))
@@ -1019,13 +1057,13 @@ def assemble_groups(items, client_helpers, logger):
             if logger:
                 logger.warning("Client classify_items failed: {}".format(ex))
 
-    # Extract CIRCUITBYPARENT and SECONDCIRCUITBYPARENT items from normal bucket
+    # Extract BYPARENT and SECONDBYPARENT items from normal bucket
     filtered_normal = []
     for item in normal:
         circuit_upper = (item.get("circuit_number") or "").strip().upper()
-        if circuit_upper == "CIRCUITBYPARENT":
+        if circuit_upper in ("CIRCUITBYPARENT", "BYPARENT"):
             circuitbyparent.append(item)
-        elif circuit_upper == "SECONDCIRCUITBYPARENT":
+        elif circuit_upper in ("SECONDCIRCUITBYPARENT", "SECONDBYPARENT"):
             secondcircuitbyparent.append(item)
         else:
             filtered_normal.append(item)
@@ -1041,7 +1079,7 @@ def assemble_groups(items, client_helpers, logger):
         groups.extend(create_circuitbyparent_groups(circuitbyparent))
 
     if secondcircuitbyparent:
-        groups.extend(create_circuitbyparent_groups(secondcircuitbyparent, "SECONDCIRCUITBYPARENT"))
+        groups.extend(create_circuitbyparent_groups(secondcircuitbyparent, "SECONDBYPARENT"))
 
     # tvtruss is now handled by client position rules, this is just a fallback
     if tvtruss:

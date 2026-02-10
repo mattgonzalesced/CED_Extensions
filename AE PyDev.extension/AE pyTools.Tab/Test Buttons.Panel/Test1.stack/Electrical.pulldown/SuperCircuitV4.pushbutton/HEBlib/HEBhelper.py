@@ -825,18 +825,6 @@ def preprocess_items(items, doc, panel_lookup, logger=None):
         if not allowed:
             continue
         allowed_panels = set(allowed.keys())
-        candidates = _candidate_spaces_for_panels(spaces, allowed_panels, _PANEL_SPACE_MAP)
-        chosen = _select_space_for_point(location, candidates, SPACE_TOLERANCE_FT)
-        if not chosen and candidates:
-            chosen = _nearest_space(location, candidates)
-
-        if chosen:
-            space_label = chosen.get("space", {}).get("name")
-            item["space_label"] = space_label or item.get("space_label")
-            item["space_id"] = chosen.get("space", {}).get("id")
-            _apply_space_load_name(item, space_label)
-            allowed_panels = set(chosen.get("panels") or allowed_panels)
-
         ordered_panels = _sorted_panels_by_distance(location, panel_cache, allowed_panels)
         if not ordered_panels:
             continue
