@@ -90,6 +90,30 @@ def _set_param_text(elem, name, value):
         return False
 
 
+def _get_param_text(elem, name):
+    if not elem or not name:
+        return None
+    try:
+        param = elem.LookupParameter(name)
+    except Exception:
+        param = None
+    if not param:
+        return None
+    try:
+        value = param.AsString()
+        if value is not None:
+            return value
+    except Exception:
+        pass
+    try:
+        value = param.AsValueString()
+        if value is not None:
+            return value
+    except Exception:
+        pass
+    return None
+
+
 def _get_bbox(elem):
     if not elem:
         return None
@@ -297,25 +321,30 @@ def _distance(point_a, point_b):
 
 def _collect_cases(doc):
     cases = []
-    blank_ids = []
+    blank_cases = []
     if not doc:
-        return cases, blank_ids
+        return cases, blank_cases
     collector = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_MechanicalEquipment)
     collector = collector.WhereElementIsNotElementType()
     for elem in collector:
         mark = _get_identity_value(elem)
-        if not (mark or "").strip():
-            blank_ids.append(elem.Id.IntegerValue)
+        system_first = _get_param_text(elem, "SYSTEM FIRST")
+        if not (mark or "").strip() and not (system_first or "").strip():
+            blank_cases.append({
+                "id": elem.Id.IntegerValue,
+                "family": _controller_family(elem),
+            })
         bbox = _get_bbox(elem)
         center = _bbox_center(bbox) if bbox else _get_point(elem)
         cases.append({
             "element": elem,
             "id": elem.Id.IntegerValue,
             "mark": mark,
+            "system_first": system_first,
             "bbox": bbox,
             "center": center,
         })
-    return cases, blank_ids
+    return cases, blank_cases
 
 
 def _collect_controllers(doc):
@@ -376,12 +405,14 @@ def main():
 
     if blank_case_ids:
         output.print_md("### Place Identity Mark - Missing Case Identity Marks")
-        output.print_md("Cases with blank Identity Mark: `{}`".format(len(blank_case_ids)))
-        output.print_md("**Case ElementIds (blank Identity Mark)**")
-        for elem_id in blank_case_ids:
-            output.print_md("- `{}`".format(elem_id))
+        output.print_md("Cases with blank Identity Mark and SYSTEM FIRST: `{}`".format(len(blank_case_ids)))
+        output.print_md("**Case ElementIds (blank Identity Mark + SYSTEM FIRST)**")
+        for entry in blank_case_ids:
+            elem_id = entry.get("id")
+            fam_name = entry.get("family") or "<Unknown Family>"
+            output.print_md("- `{}` | {}".format(elem_id, fam_name))
         forms.alert(
-            "Found {} refrigerated case(s) with blank Identity Mark.\n"
+            "Found {} refrigerated case(s) with blank Identity Mark and SYSTEM FIRST.\n"
             "See the pyRevit output panel for the ElementId list, then fix and rerun."
             .format(len(blank_case_ids)),
             title=TITLE,
@@ -402,14 +433,19 @@ def main():
                 unmatched_ids.append(controller.Id.IntegerValue)
                 continue
 
-            case_mark = case.get("mark") or ""
-            base_mark = _strip_trailing_letter(case_mark)
+            case_mark = (case.get("mark") or "").strip()
+            system_first = (case.get("system_first") or "").strip()
+            source_mark = case_mark or system_first
+            if not source_mark:
+                stats["controllers_skipped_blank_case_mark"] += 1
+                continue
+            base_mark = _strip_trailing_letter(source_mark)
             updates_applied = False
             readonly_hit = False
 
             current_identity = _get_identity_value(controller)
-            if current_identity != case_mark:
-                if _set_identity_value(controller, case_mark):
+            if current_identity != source_mark:
+                if _set_identity_value(controller, source_mark):
                     updates_applied = True
                 else:
                     readonly_hit = True
@@ -461,6 +497,7 @@ def main():
     output.print_md("Controllers updated: `{}`".format(stats["controllers_updated"]))
     output.print_md("Controllers already correct: `{}`".format(stats["controllers_already"]))
     output.print_md("Controllers unmatched: `{}`".format(stats["controllers_unmatched"]))
+    output.print_md("Controllers skipped (case mark blank): `{}`".format(stats["controllers_skipped_blank_case_mark"]))
     output.print_md("Controllers read-only: `{}`".format(stats["controllers_readonly"]))
 
     if updated_ids:
