@@ -267,11 +267,28 @@ def _place_text_notes(system_id, element_ids, view, text_type):
                 opts.VerticalAlignment = DB.VerticalTextAlignment.Middle
             except Exception:
                 pass
+            placed = False
             try:
                 DB.TextNote.Create(doc, view.Id, pt, label, opts)
                 count += 1
+                placed = True
             except Exception as ex:
                 logger.warning("Failed to place text note for {}: {}".format(elem_int, ex))
+                placed = False
+            if placed:
+                try:
+                    param = elem.LookupParameter("Identity Mark")
+                    if not param:
+                        param = elem.get_Parameter(DB.BuiltInParameter.ALL_MODEL_MARK)
+                    if param and not param.IsReadOnly:
+                        if param.StorageType == DB.StorageType.String:
+                            param.Set(label)
+                        else:
+                            param.SetValueString(label)
+                except Exception as ex:
+                    logger.warning(
+                        "Failed to set Identity Mark for {}: {}".format(elem_int, ex)
+                    )
     return count
 
 
