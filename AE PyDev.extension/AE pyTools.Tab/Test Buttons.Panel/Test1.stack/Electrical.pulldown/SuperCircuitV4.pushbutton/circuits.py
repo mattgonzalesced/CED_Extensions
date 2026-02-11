@@ -11,6 +11,7 @@ Consolidated circuits library - combines all libGeneral modules:
 
 from collections import defaultdict, OrderedDict
 import math
+import re
 
 from System.Collections.Generic import List
 from pyrevit import revit, DB, forms
@@ -161,22 +162,36 @@ def extract_parent_element_id(element):
     if not element:
         return None
 
-    try:
-        linker_param = element.LookupParameter("Element_Linker")
-    except Exception:
-        return None
-
-    if not linker_param or not linker_param.HasValue:
-        return None
-
-    try:
-        linker_text = linker_param.AsString()
-    except Exception:
-        return None
+    linker_text = None
+    for param_name in ("Element_Linker", "Element_Linker Parameter"):
+        try:
+            linker_param = element.LookupParameter(param_name)
+        except Exception:
+            linker_param = None
+        if linker_param and linker_param.HasValue:
+            try:
+                linker_text = linker_param.AsString()
+            except Exception:
+                linker_text = None
+            if linker_text:
+                break
 
     if not linker_text:
         return None
 
+    try:
+        match = re.search(
+            r"parent\s*elementid\s*[:=]\s*([-]?\d+)",
+            linker_text,
+            re.IGNORECASE,
+        )
+    except Exception:
+        match = None
+    if match:
+        try:
+            return int(match.group(1))
+        except Exception:
+            return None
     for line in linker_text.split('\n'):
         line = line.strip()
         if line.lower().startswith("parent elementid:"):
@@ -889,29 +904,25 @@ def create_nongroupedblock_groups(items):
 
 
 def create_circuitbyparent_groups(items, keyword_suffix=""):
-    """Group items by panel and parent_element_id from Element_Linker parameter."""
+    """Group items by parent_element_id from Element_Linker parameter."""
     buckets = defaultdict(list)
 
     for item in items:
-        panel_name = item.get("panel_name") or "NO_PANEL"
         parent_element_id = item.get("parent_element_id")
         if parent_element_id is None:
             element = item.get("element")
             elem_id = getattr(getattr(element, "Id", None), "IntegerValue", None)
             parent_element_id = "NO_PARENT_{}".format(elem_id if elem_id is not None else id(item))
 
-        # Group by panel + parent_element_id
-        key = (panel_name, parent_element_id)
+        # Group by parent_element_id only
+        key = parent_element_id
         buckets[key].append(item)
 
     groups = []
-    counters = defaultdict(int)
-
-    for (panel_name, parent_element_id), members in sorted(buckets.items()):
-        counters[panel_name] += 1
-        # Key format: PANEL1BYPARENT1 or PANEL1SECONDBYPARENT1
+    for parent_element_id, members in sorted(buckets.items(), key=lambda kv: str(kv[0])):
+        # Key format: BYPARENT<ParentElementId> or SECONDBYPARENT<ParentElementId>
         base_name = "BYPARENT" if not keyword_suffix else keyword_suffix
-        group_key = "{}{}{}".format(panel_name, base_name, counters[panel_name])
+        group_key = "{}{}".format(base_name, parent_element_id)
         group_type = "circuitbyparent" if not keyword_suffix else "secondcircuitbyparent"
         groups.append(make_group(group_key, members, group_type=group_type))
 
