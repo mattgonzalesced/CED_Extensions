@@ -9,7 +9,7 @@ simple YAML serializer so the output resembles the original profile file.
 
 import io
 import os
-
+import re
 from pyrevit import forms, script
 output = script.get_output()
 output.close_others()
@@ -18,6 +18,29 @@ from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
 
 TITLE = "Export YAML File"
 SAFE_HASH = u"\uff03"
+
+BOOL_KEYS = {
+    "allow_parentless",
+    "allow_unmatched_parents",
+    "prompt_on_parent_mismatch",
+}
+FLOAT_PATTERN = re.compile(r"^-?\d+\.\d+$")
+NUMERIC_LIST_PATTERN = re.compile(r"^-?\d+(?:\.\d+)?(?:,-?\d+(?:\.\d+)?)+$")
+
+
+def _coerce_bool_strings(value, key=None):
+    if isinstance(value, dict):
+        return {k: _coerce_bool_strings(v, k) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_coerce_bool_strings(item, key) for item in value]
+    if key in BOOL_KEYS and isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered == "true":
+            return True
+        if lowered == "false":
+            return False
+    return value
+
 
 try:
     basestring
@@ -34,17 +57,21 @@ def _format_scalar(value):
         return str(value)
     text = value if isinstance(value, basestring) else str(value)
     if text == "":
-        return '""'
+        return "''"
+    looks_like_numeric_list = bool(NUMERIC_LIST_PATTERN.match(text))
     needs_quotes = any(ch in text for ch in (":", "#", "{", "}", "[", "]", ",", "\n", "\r"))
+    if looks_like_numeric_list:
+        needs_quotes = False
     if text.lower() in ("true", "false", "null"):
         needs_quotes = True
     if needs_quotes:
         text = text.replace(SAFE_HASH, "#")
-        text = text.replace("\\", "\\\\")
         text = text.replace("\r\n", "\n").replace("\r", "\n")
-        text = text.replace("\n", "\\n")
-        text = text.replace('"', '\\"')
-        return '"' + text + '"'
+        if "'" in text and '"' not in text:
+            text = text.replace('"', '\\"')
+            return '"' + text + '"'
+        text = text.replace("'", "''")
+        return "'" + text + "'"
     return text.replace(SAFE_HASH, "#")
 
 
@@ -54,9 +81,18 @@ def _dump_yaml_lines(value, indent=0):
         lines = []
         for key, val in value.items():
             clean_key = (key or "").replace(SAFE_HASH, "#")
-            if isinstance(val, (dict, list)):
-                lines.append("{}{}:".format(pad, clean_key))
-                lines.extend(_dump_yaml_lines(val, indent + 2))
+            if isinstance(val, dict):
+                if not val:
+                    lines.append("{}{}: {{}}".format(pad, clean_key))
+                else:
+                    lines.append("{}{}:".format(pad, clean_key))
+                    lines.extend(_dump_yaml_lines(val, indent + 2))
+            elif isinstance(val, list):
+                if not val:
+                    lines.append("{}{}: []".format(pad, clean_key))
+                else:
+                    lines.append("{}{}:".format(pad, clean_key))
+                    lines.extend(_dump_yaml_lines(val, indent))
             else:
                 lines.append("{}{}: {}".format(pad, clean_key, _format_scalar(val)))
         if not lines:
@@ -68,7 +104,31 @@ def _dump_yaml_lines(value, indent=0):
             lines.append("{}[]".format(pad))
             return lines
         for item in value:
-            if isinstance(item, (dict, list)):
+            if isinstance(item, dict):
+                if not item:
+                    lines.append("{}- {{}}".format(pad))
+                    continue
+                items = list(item.items())
+                first_key, first_val = items[0]
+                clean_key = (first_key or "").replace(SAFE_HASH, "#")
+                if isinstance(first_val, dict):
+                    if not first_val:
+                        lines.append("{}- {}: {{}}".format(pad, clean_key))
+                    else:
+                        lines.append("{}- {}:".format(pad, clean_key))
+                        lines.extend(_dump_yaml_lines(first_val, indent + 2))
+                elif isinstance(first_val, list):
+                    if not first_val:
+                        lines.append("{}- {}: []".format(pad, clean_key))
+                    else:
+                        lines.append("{}- {}:".format(pad, clean_key))
+                        lines.extend(_dump_yaml_lines(first_val, indent + 2))
+                else:
+                    lines.append("{}- {}: {}".format(pad, clean_key, _format_scalar(first_val)))
+                if len(items) > 1:
+                    rest = dict(items[1:])
+                    lines.extend(_dump_yaml_lines(rest, indent + 2))
+            elif isinstance(item, list):
                 lines.append("{}-".format(pad))
                 lines.extend(_dump_yaml_lines(item, indent + 2))
             else:
@@ -89,6 +149,7 @@ def main():
         forms.alert(str(exc), title=TITLE)
         return
 
+    data = _coerce_bool_strings(data)
     yaml_text = _dump_yaml_text(data)
     default_name = os.path.basename(source_path) or "equipment_profiles.yaml"
     save_path = forms.save_file(

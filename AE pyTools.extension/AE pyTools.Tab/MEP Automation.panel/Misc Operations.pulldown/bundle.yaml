@@ -1,5 +1,6 @@
 layout:
   - Audit Linked Model
+  - Convert Schema
   - SchemaViewer
   - Place Annotations
   - Update Profiles

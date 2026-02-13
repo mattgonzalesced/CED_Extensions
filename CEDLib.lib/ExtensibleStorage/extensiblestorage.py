@@ -15,10 +15,36 @@ from datetime import datetime
 import System
 import clr
 try:
+    clr.AddReference("RevitAPI")
+except Exception:
+    pass
+try:
     clr.AddReference("RevitAPIUI")
 except Exception:
     pass
-from Autodesk.Revit.DB import Transaction
+try:
+    import Autodesk.Revit.DB as DB
+except Exception:  # pragma: no cover
+    DB = None
+
+if DB:
+    Transaction = DB.Transaction
+    FilteredElementCollector = DB.FilteredElementCollector
+else:  # pragma: no cover
+    Transaction = None
+    FilteredElementCollector = None
+
+DataStorage = None
+if DB:
+    try:
+        DataStorage = DB.DataStorage
+    except Exception:
+        DataStorage = None
+if DataStorage is None:
+    try:
+        DataStorage = System.Type.GetType("Autodesk.Revit.DB.DataStorage, RevitAPI")
+    except Exception:
+        DataStorage = None
 from Autodesk.Revit.DB.ExtensibleStorage import Entity, Schema, SchemaBuilder
 from Autodesk.Revit.DB.Events import DocumentChangedEventArgs, UndoOperation
 from System import Guid, String, EventHandler, Array, Byte  # noqa: E402
@@ -51,7 +77,7 @@ class ExtensibleStorage(object):
     META_FIELD_NAME = "MetadataJson"
     HISTORY_CHUNKS_FIELD_NAME = "HistoryJsonChunks"
     META_CHUNKS_FIELD_NAME = "MetadataJsonChunks"
-    SCHEMA_VERSION = 2
+    SCHEMA_VERSION = 3
     MAX_ES_STRING = 16 * 1024 * 1024
     CHUNK_SIZE = 8 * 1024 * 1024
 
@@ -66,6 +92,7 @@ class ExtensibleStorage(object):
     _sync_handler = None
     _entry_cache = {}
     _recent_entries = {}
+    _datastorage_not_found_logged = False
 
     @classmethod
     def _log(cls, message):
@@ -634,16 +661,40 @@ class ExtensibleStorage(object):
         return cls._schema_and_fields_versioned(doc, prefer_chunked=False)
 
     @classmethod
-    def _schema_and_fields_versioned(cls, doc, prefer_chunked=False):
+    def _schema_and_fields_versioned(cls, doc, prefer_chunked=False, force_version=None):
         doc_key = getattr(doc, "Title", "unknown")
         cache = cls._schema_cache.get(doc_key, {})
-        if not prefer_chunked and cache.get("default"):
-            return cache["default"]
-        if prefer_chunked and cache.get("v2"):
-            return cache["v2"]
+        if force_version == 3 and cache.get("v3"):
+            return cache["v3"]
+        if not force_version:
+            if not prefer_chunked and cache.get("default"):
+                return cache["default"]
+            if prefer_chunked:
+                if cache.get("v3"):
+                    return cache["v3"]
+                if cache.get("v2"):
+                    return cache["v2"]
+
+        if force_version == 3:
+            schema_v3 = Schema.Lookup(_make_doc_guid(doc, version=3))
+            if schema_v3 is None:
+                schema_v3 = cls._build_schema_v3(doc)
+            packed = cls._pack_schema(schema_v3, version=3)
+            cache["v3"] = packed
+            cache["default"] = packed
+            cls._schema_cache[doc_key] = cache
+            return packed
+
+        schema_v3 = Schema.Lookup(_make_doc_guid(doc, version=3))
+        if schema_v3 is not None:
+            packed = cls._pack_schema(schema_v3, version=3)
+            cache["v3"] = packed
+            cache["default"] = packed
+            cls._schema_cache[doc_key] = cache
+            return packed
 
         schema_v2 = Schema.Lookup(_make_doc_guid(doc, version=2))
-        if schema_v2 is not None:
+        if schema_v2 is not None and not prefer_chunked:
             packed = cls._pack_schema(schema_v2, version=2)
             cache["v2"] = packed
             cache["default"] = packed
@@ -658,9 +709,9 @@ class ExtensibleStorage(object):
             cls._schema_cache[doc_key] = cache
             return packed
 
-        schema_v2 = cls._build_schema_v2(doc)
-        packed = cls._pack_schema(schema_v2, version=2)
-        cache["v2"] = packed
+        schema_v3 = cls._build_schema_v3(doc)
+        packed = cls._pack_schema(schema_v3, version=3)
+        cache["v3"] = packed
         cache["default"] = packed
         cls._schema_cache[doc_key] = cache
         return packed
@@ -670,6 +721,22 @@ class ExtensibleStorage(object):
         builder = SchemaBuilder(_make_doc_guid(doc, version=2))
         builder.SetSchemaName("{}_v2".format(cls.SCHEMA_NAME))
         builder.SetDocumentation("Stores YAML history deltas (chunked).")
+        builder.AddSimpleField(cls.HISTORY_FIELD_NAME, String)
+        builder.AddSimpleField(cls.META_FIELD_NAME, String)
+        try:
+            builder.AddArrayField(cls.HISTORY_CHUNKS_FIELD_NAME, String)
+            builder.AddArrayField(cls.META_CHUNKS_FIELD_NAME, String)
+        except Exception:
+            # If array fields are unavailable, continue with only simple fields.
+            pass
+        builder.AddSimpleField("DocGuid", String)
+        return builder.Finish()
+
+    @classmethod
+    def _build_schema_v3(cls, doc):
+        builder = SchemaBuilder(_make_doc_guid(doc, version=3))
+        builder.SetSchemaName("{}_v3".format(cls.SCHEMA_NAME))
+        builder.SetDocumentation("Stores YAML history deltas (chunked, fixed schema GUID).")
         builder.AddSimpleField(cls.HISTORY_FIELD_NAME, String)
         builder.AddSimpleField(cls.META_FIELD_NAME, String)
         try:
@@ -789,11 +856,11 @@ class ExtensibleStorage(object):
     def _read_storage(cls, doc):
         schema, history_field, meta_field, history_chunks_field, meta_chunks_field, doc_field, version = cls._schema_and_fields(doc)
         payload = {"entries": [], "meta": {"next_seq": 1}}
-        project_info = getattr(doc, "ProjectInformation", None)
-        if project_info is None:
-            return payload
-        entity = project_info.GetEntity(schema)
         needed_guid = cls._normalize_guid(doc)
+        storage_elem = cls._find_data_storage(doc, schema, doc_field, needed_guid)
+        entity = None
+        if storage_elem is not None:
+            entity = storage_elem.GetEntity(schema)
         if not entity or not entity.IsValid():
             return payload
         doc_guid = entity.Get[str](doc_field) if doc_field else None
@@ -826,20 +893,37 @@ class ExtensibleStorage(object):
         schema, history_field, meta_field, history_chunks_field, meta_chunks_field, doc_field, version = cls._schema_and_fields_versioned(
             doc,
             prefer_chunked=needs_chunking,
+            force_version=3,
         )
-        project_info = getattr(doc, "ProjectInformation", None)
-        if project_info is None:
-            raise RuntimeError("ProjectInformation element is required for ExtensibleStorage writes.")
+        if cls._resolve_datastorage_type() is None:
+            version = None
+            try:
+                version = doc.Application.VersionNumber
+            except Exception:
+                version = None
+            db_loaded = DB is not None
+            raise RuntimeError(
+                "DataStorage is required for ExtensibleStorage writes. Revit API version: {}. DB loaded: {}.".format(
+                    version or "unknown",
+                    db_loaded,
+                )
+            )
+        storage_elem = cls._find_data_storage(doc, schema, doc_field, cls._normalize_guid(doc))
 
         def _apply():
-            entity = project_info.GetEntity(schema)
+            target_elem = storage_elem
+            if target_elem is None:
+                target_elem = cls._get_or_create_data_storage(doc, schema, doc_field, cls._normalize_guid(doc))
+            if target_elem is None:
+                raise RuntimeError("DataStorage element is required for ExtensibleStorage writes.")
+            entity = target_elem.GetEntity(schema)
             if not entity or not entity.IsValid():
                 entity = Entity(schema)
             cls._write_chunked_field(entity, history_field, history_chunks_field, history_json)
             cls._write_chunked_field(entity, meta_field, meta_chunks_field, meta_json)
             if doc_field:
                 entity.Set[str](doc_field, cls._normalize_guid(doc))
-            project_info.SetEntity(entity)
+            target_elem.SetEntity(entity)
 
         # Always wrap in our own transaction so Undo stack records it
         t = Transaction(doc, transaction_name or "YAML Change")
@@ -966,6 +1050,155 @@ class ExtensibleStorage(object):
         return cls._normalize_guid(doc)
 
     @classmethod
+    def _resolve_datastorage_type(cls):
+        global DataStorage, DB
+        if DataStorage is not None:
+            return DataStorage
+        if DB:
+            try:
+                DataStorage = DB.DataStorage
+            except Exception:
+                DataStorage = None
+        if DataStorage is None:
+            try:
+                DataStorage = System.Type.GetType("Autodesk.Revit.DB.DataStorage, RevitAPI")
+            except Exception:
+                DataStorage = None
+        if DataStorage is None:
+            candidates = []
+            matches = []
+            try:
+                for asm in System.AppDomain.CurrentDomain.GetAssemblies():
+                    asm_name = None
+                    try:
+                        asm_name = asm.GetName().Name
+                    except Exception:
+                        asm_name = None
+                    ds_type = None
+                    try:
+                        ds_type = asm.GetType("Autodesk.Revit.DB.DataStorage")
+                    except Exception:
+                        ds_type = None
+                    if ds_type is None:
+                        try:
+                            ds_type = asm.GetType("Autodesk.Revit.DB.DataStorage", False)
+                        except Exception:
+                            ds_type = None
+                    if ds_type is None:
+                        try:
+                            types = asm.GetExportedTypes()
+                        except Exception:
+                            try:
+                                types = asm.GetTypes()
+                            except Exception:
+                                types = None
+                        if types:
+                            base_element = None
+                            if DB:
+                                try:
+                                    base_element = DB.Element
+                                except Exception:
+                                    base_element = None
+                            for t in types:
+                                try:
+                                    if t.Name != "DataStorage":
+                                        continue
+                                    ns = t.Namespace or ""
+                                    if asm_name:
+                                        matches.append("{} ({})".format(ns or "<no-namespace>", asm_name))
+                                    is_revit_db = ns.startswith("Autodesk.Revit.DB")
+                                    is_element = False
+                                    if base_element is not None:
+                                        try:
+                                            is_element = t.IsSubclassOf(base_element)
+                                        except Exception:
+                                            is_element = False
+                                    if is_revit_db or is_element:
+                                        ds_type = t
+                                        break
+                                    if ns:
+                                        candidates.append(ns)
+                                except Exception:
+                                    pass
+                    if ds_type is not None:
+                        DataStorage = ds_type
+                        break
+            except Exception:
+                pass
+            if DataStorage is None and not cls._datastorage_not_found_logged:
+                cls._datastorage_not_found_logged = True
+                try:
+                    assemblies = [asm.GetName().Name for asm in System.AppDomain.CurrentDomain.GetAssemblies()]
+                    revit_assemblies = [name for name in assemblies if "Revit" in name]
+                    candidates = sorted(set(candidates))[:8]
+                    matches = sorted(set(matches))[:8]
+                    cls._log(
+                        "DataStorage type not found. Loaded assemblies: {}. DataStorage candidates: {}. Matches: {}.".format(
+                            ", ".join(revit_assemblies) or "<none>",
+                            ", ".join(candidates) or "<none>",
+                            ", ".join(matches) or "<none>",
+                        )
+                    )
+                except Exception:
+                    cls._log("DataStorage type not found; unable to enumerate loaded assemblies.")
+        return DataStorage
+
+    @classmethod
+    def _find_data_storage(cls, doc, schema, doc_field=None, needed_guid=None):
+        ds_type = cls._resolve_datastorage_type()
+        if doc is None or ds_type is None:
+            return None
+        try:
+            collector = FilteredElementCollector(doc).OfClass(ds_type)
+        except Exception:
+            return None
+        for storage_elem in collector:
+            try:
+                entity = storage_elem.GetEntity(schema)
+            except Exception:
+                entity = None
+            if not entity or not entity.IsValid():
+                continue
+            if doc_field and needed_guid:
+                try:
+                    doc_guid = entity.Get[str](doc_field)
+                except Exception:
+                    doc_guid = None
+                if doc_guid and doc_guid != needed_guid:
+                    continue
+            return storage_elem
+        return None
+
+    @classmethod
+    def _get_or_create_data_storage(cls, doc, schema, doc_field=None, needed_guid=None):
+        ds_type = cls._resolve_datastorage_type()
+        if ds_type is None:
+            return None
+        storage_elem = cls._find_data_storage(doc, schema, doc_field, needed_guid)
+        if storage_elem is not None:
+            return storage_elem
+        try:
+            return ds_type.Create(doc)
+        except Exception:
+            pass
+        try:
+            create = ds_type.GetMethod("Create")
+        except Exception:
+            create = None
+        if create is None:
+            return None
+        try:
+            args = Array[System.Object]([doc])
+        except Exception:
+            args = None
+        try:
+            if args is not None:
+                return create.Invoke(None, args)
+            return create.Invoke(None, [doc])
+        except Exception:
+            return None
+
+    @classmethod
     def _compress_text(cls, text):
         data = text.encode("utf-8")
         return base64.b64encode(zlib.compress(data)).decode("ascii")
@@ -1052,6 +1285,8 @@ def _make_doc_guid(doc, version=1):
 def _make_doc_guid_versioned(doc, version):
     import hashlib
     import uuid
+    if version == 3:
+        return Guid("4a2f6b98-2b5e-4d1b-9e7e-0c92fd18b6d4")
     title = getattr(doc, "Title", "unknown")
     salt = "9f6633b1d77f49ef93905111fbb16d82"
     if version == 2:

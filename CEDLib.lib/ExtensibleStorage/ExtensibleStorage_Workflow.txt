@@ -12,7 +12,7 @@ Purpose
 How it works
 1. Each time a command modifies the active YAML file, call `ExtensibleStorage.capture_change(...)` with the file
    path, previous text, new text, and a short action description.
-2. The module stores a history entry in Extensible Storage on `ProjectInformation`. Entries are always **deltas**:
+2. The module stores a history entry in Extensible Storage on `DataStorage`. Entries are always **deltas**:
    ndiff-formatted differences between the previous and new YAML text. The calling command is responsible for keeping
    track of the “base” file that existed before the first recorded change so it can reconstruct any revision later.
 3. Each entry records: timestamp (UTC), user, action, optional description, YAML path, entry type, and content.
@@ -43,7 +43,7 @@ Undo / revert integration
 
 Storage & sync details
 - All content is compressed (zlib + base64) so even full snapshots stay small.
-- The schema is identified by GUID `9f6633b1-d77f-49ef-9390-5111fbb16d82` and stored on `ProjectInformation`.
+- The v3 schema uses a fixed GUID and is stored on `DataStorage`; per-document isolation is handled by a DocGuid field on the entity.
 - Because Revit replicates Extensible Storage, the history is preserved in workshared models and travels with
   detached copies.
 
