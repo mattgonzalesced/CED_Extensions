@@ -297,6 +297,11 @@ def _load_priority(group, group_priority_value):
 
 def _sort_groups(groups):
     def sort_key(group):
+        members = group.get("members") or []
+        choice_counts = [m.get("panel_choice_count") for m in members if m.get("panel_choice_count") is not None]
+        panel_choice_count = min(choice_counts) if choice_counts else 99
+        panel_choice_priority = 0 if panel_choice_count == 1 else 1
+
         priority = _group_priority(group.get("group_type"))
         panel = (group.get("panel_name") or "").lower()
         load_priority = _load_priority(group, priority)
@@ -304,7 +309,15 @@ def _sort_groups(groups):
         circuit_sort = circuits.try_parse_int(circuit_number)
         if circuit_sort is None:
             circuit_sort = circuit_number or group.get("key") or ""
-        return (priority, panel, load_priority, circuit_sort, group.get("key"))
+        return (
+            panel_choice_priority,
+            panel_choice_count,
+            priority,
+            panel,
+            load_priority,
+            circuit_sort,
+            group.get("key"),
+        )
 
     return sorted(groups, key=sort_key)
 
@@ -342,6 +355,13 @@ def main():
     if not info_items:
         logger.info("No elements with circuit data were found.")
         return
+
+    for item in info_items:
+        panel_raw = item.get("panel_name")
+        choices = _split_panel_choices(panel_raw)
+        if choices:
+            unique = {c.strip().upper() for c in choices if c and c.strip()}
+            item["panel_choice_count"] = len(unique)
 
     output = script.get_output()
     _debug_ba_da("pre", info_items, panel_lookup, output)
