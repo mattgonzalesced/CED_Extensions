@@ -151,6 +151,53 @@ class ProfileRepository(object):
                     if "keynote tag" in fam_text:
                         return True
                     return False
+
+                def _extract_key_value_from_params(param_dict):
+                    if not isinstance(param_dict, dict):
+                        return None
+                    for key, value in param_dict.items():
+                        if (key or "").strip().lower() in ("keynote value", "key value", "keynote"):
+                            return value
+                    return None
+
+                def _normalize_tag_parameters(tag_data):
+                    if not isinstance(tag_data, dict):
+                        return {}
+                    params = tag_data.get("parameters")
+                    if isinstance(params, dict):
+                        params = dict(params)
+                    else:
+                        params = {}
+                    # Some converted YAMLs flatten keynote parameters at the top level.
+                    flattened = False
+                    for key in tag_data.keys():
+                        key_lower = (key or "").strip().lower()
+                        if "keynote" in key_lower or "key value" in key_lower:
+                            flattened = True
+                            break
+                    if flattened:
+                        for key, value in tag_data.items():
+                            if key in (
+                                "parameters",
+                                "offsets",
+                                "offset",
+                                "rotation_deg",
+                                "leader_elbow",
+                                "leader_end",
+                                "family_name",
+                                "family",
+                                "type_name",
+                                "type",
+                                "category_name",
+                                "category",
+                                "key_value",
+                            ):
+                                continue
+                            key_lower = (key or "").strip().lower()
+                            if "keynote" in key_lower or "key value" in key_lower:
+                                if key not in params:
+                                    params[key] = value
+                    return params
                 for tag_data in tag_sources:
                     if not isinstance(tag_data, dict):
                         continue
@@ -162,11 +209,29 @@ class ProfileRepository(object):
 
                     leader_elbow = _offset_dict_to_tuple(tag_data.get("leader_elbow"))
                     leader_end = _offset_dict_to_tuple(tag_data.get("leader_end"))
+                    parameters = _normalize_tag_parameters(tag_data)
+                    key_value = tag_data.get("key_value")
+                    if key_value in (None, ""):
+                        for key in ("Keynote Value", "Key Value", "Keynote"):
+                            if key in tag_data and tag_data.get(key) not in (None, ""):
+                                key_value = tag_data.get(key)
+                                break
+                    if key_value in (None, ""):
+                        key_value = _extract_key_value_from_params(parameters)
+                    if key_value not in (None, ""):
+                        has_key = False
+                        for key in parameters.keys():
+                            if (key or "").strip().lower() in ("keynote value", "key value", "keynote"):
+                                has_key = True
+                                break
+                        if not has_key:
+                            parameters["Keynote Value"] = key_value
                     tag_defs.append({
                         "family": tag_data.get("family_name") or tag_data.get("family"),
                         "type": tag_data.get("type_name") or tag_data.get("type"),
                         "category": tag_data.get("category_name") or tag_data.get("category"),
-                        "parameters": tag_data.get("parameters") or {},
+                        "parameters": parameters,
+                        "key_value": key_value,
                         "offset": (
                             _inch_to_ft(offsets_dict.get("x_inches", 0.0) or 0.0),
                             _inch_to_ft(offsets_dict.get("y_inches", 0.0) or 0.0),
