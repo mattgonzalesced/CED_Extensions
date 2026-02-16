@@ -83,6 +83,7 @@ class ExtensibleStorage(object):
 
     DIFF_FORMAT = "ndiff"
     TRANSACTION_PREFIX = "YAML_HISTORY::"
+    USER_SETTINGS_KEY = "user_settings"
 
     _schema_cache = {}
     _undo_handler_registered = False
@@ -292,6 +293,47 @@ class ExtensibleStorage(object):
         meta = payload.get("meta", {})
         lock = meta.get("editor_lock")
         return dict(lock) if isinstance(lock, dict) else None
+
+    @classmethod
+    def get_user_setting(cls, doc, setting_key, default=None, user=None):
+        if doc is None or not setting_key:
+            return default
+        payload = cls._read_storage(doc)
+        meta = payload.get("meta", {})
+        settings = meta.get(cls.USER_SETTINGS_KEY) or {}
+        if not isinstance(settings, dict):
+            return default
+        setting_map = settings.get(setting_key)
+        if not isinstance(setting_map, dict):
+            return default
+        normalized_user = user or cls._current_user(doc)
+        if not normalized_user:
+            return default
+        if normalized_user not in setting_map:
+            return default
+        return setting_map.get(normalized_user)
+
+    @classmethod
+    def set_user_setting(cls, doc, setting_key, value, user=None, transaction_name=None):
+        if doc is None or not setting_key:
+            return False
+        payload = cls._read_storage(doc)
+        meta = payload.setdefault("meta", {})
+        settings = meta.get(cls.USER_SETTINGS_KEY)
+        if not isinstance(settings, dict):
+            settings = {}
+            meta[cls.USER_SETTINGS_KEY] = settings
+        setting_map = settings.get(setting_key)
+        if not isinstance(setting_map, dict):
+            setting_map = {}
+            settings[setting_key] = setting_map
+        normalized_user = user or cls._current_user(doc)
+        if not normalized_user:
+            return False
+        setting_map[normalized_user] = value
+        txn_name = transaction_name or "USER_SETTING::{}".format(setting_key)
+        cls._write_storage(doc, payload, txn_name)
+        return True
 
     @classmethod
     def get_active_yaml(cls, doc):

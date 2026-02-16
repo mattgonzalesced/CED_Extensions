@@ -31,7 +31,11 @@ def main():
     module = _load_module()
     if module is None:
         return
-    enabled = module.get_setting(default=True)
+    doc = getattr(revit, "doc", None)
+    if doc is None:
+        forms.alert("No active document detected; project-based settings require an open document.", title=TITLE)
+        return
+    enabled = module.get_setting(default=True, doc=doc)
     status = "enabled" if enabled else "disabled"
     options = [
         "Enable after-sync check",
@@ -46,13 +50,12 @@ def main():
     if not result:
         return
     if result == "Enable after-sync check":
-        module.set_setting(True)
+        module.set_setting(True, doc=doc)
         forms.alert("After-sync parent parameter checks are now enabled.", title=TITLE)
     elif result == "Disable after-sync check":
-        module.set_setting(False)
+        module.set_setting(False, doc=doc)
         forms.alert("After-sync parent parameter checks are now disabled.", title=TITLE)
     elif result == "Run check now":
-        doc = getattr(revit, "doc", None)
         if doc is None:
             forms.alert("No active document detected.", title=TITLE)
             return

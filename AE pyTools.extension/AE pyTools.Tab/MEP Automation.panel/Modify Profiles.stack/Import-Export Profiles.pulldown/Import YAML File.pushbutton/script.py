@@ -17,8 +17,8 @@ LIB_ROOT = os.path.abspath(
 if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
-from LogicClasses.yaml_path_cache import get_cached_yaml_path, set_cached_yaml_path  # noqa: E402
 from LogicClasses.profile_schema import load_data_from_text, dump_data_to_string  # noqa: E402
+from ExtensibleStorage import ExtensibleStorage  # noqa: E402
 from ExtensibleStorage.yaml_store import seed_active_yaml  # noqa: E402
 
 DEFAULT_DATA_PATH = os.path.join(LIB_ROOT, "profileData.yaml")
@@ -61,8 +61,14 @@ def _collect_schema_versions(data):
 
 
 def main():
-    cached = get_cached_yaml_path()
-    init_dir = os.path.dirname(cached) if cached else os.path.dirname(DEFAULT_DATA_PATH)
+    active_path = None
+    doc = getattr(revit, "doc", None)
+    if doc is not None:
+        try:
+            active_path, _, _ = ExtensibleStorage.get_active_yaml(doc)
+        except Exception:
+            active_path = None
+    init_dir = os.path.dirname(active_path) if active_path else os.path.dirname(DEFAULT_DATA_PATH)
     picked = forms.pick_file(
         file_ext="yaml",
         title="Select default equipment definition YAML",
@@ -70,7 +76,6 @@ def main():
     )
     if not picked:
         return
-    set_cached_yaml_path(picked)
     with io.open(picked, "r", encoding="utf-8") as handle:
         raw_text = handle.read()
     is_blank = not (raw_text or "").strip()

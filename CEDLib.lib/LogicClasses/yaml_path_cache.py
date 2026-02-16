@@ -1,61 +1,64 @@
 # -*- coding: utf-8 -*-
 """
-Shared helpers for persisting the active Let There Be YAML profileData path.
+Shared helpers for resolving the active Let There Be YAML profileData path.
 """
 
-import io
-import json
 import os
 
+try:
+    from pyrevit import revit
+except Exception:
+    revit = None
 
-CONFIG_FILE = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "LetThereBeYAML.settings.json")
-)
 
-
-def _read_config():
-    if not os.path.exists(CONFIG_FILE):
-        return {}
-    try:
-        with io.open(CONFIG_FILE, "r", encoding="utf-8") as handle:  # type: ignore # noqa
-            return json.load(handle)
-    except Exception:
+def _get_doc(doc=None):
+    if doc is not None:
+        return doc
+    if revit is not None:
         try:
-            with open(CONFIG_FILE, "r") as handle:
-                return json.load(handle)
+            return getattr(revit, "doc", None)
         except Exception:
-            return {}
+            return None
+    try:
+        return __revit__.ActiveUIDocument.Document
+    except Exception:
+        return None
 
 
-def _write_config(data):
-    directory = os.path.dirname(CONFIG_FILE)
-    if directory and not os.path.exists(directory):
-        os.makedirs(directory)
-    with open(CONFIG_FILE, "w") as handle:
-        json.dump(data, handle, indent=2)
+def _get_storage():
+    try:
+        from ExtensibleStorage import ExtensibleStorage
+    except Exception:
+        return None
+    return ExtensibleStorage
 
 
-def get_cached_yaml_path():
-    data = _read_config()
-    path = data.get("yaml_path")
+def get_cached_yaml_path(doc=None):
+    doc = _get_doc(doc)
+    if doc is None:
+        return None
+    storage = _get_storage()
+    if storage is None:
+        return None
+    try:
+        path, _, _ = storage.get_active_yaml(doc)
+    except Exception:
+        return None
     if not path:
         return None
     return os.path.abspath(path)
 
 
-def set_cached_yaml_path(path):
-    if not path:
-        return
-    data = _read_config()
-    data["yaml_path"] = os.path.abspath(path)
-    _write_config(data)
+def set_cached_yaml_path(path, doc=None):
+    # Deprecated: settings are stored in-model via Extensible Storage.
+    return False
 
 
-def get_yaml_display_name(active_path=None):
+def get_yaml_display_name(active_path=None, doc=None):
     """
     Returns a friendly name for the current YAML file (basename of the cached path).
     """
-    path = active_path or get_cached_yaml_path()
+    path = active_path or get_cached_yaml_path(doc)
     if not path:
         return "selected YAML file"
     try:

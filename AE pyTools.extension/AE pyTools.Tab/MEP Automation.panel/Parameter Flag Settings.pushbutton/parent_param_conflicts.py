@@ -11,7 +11,7 @@ import re
 import sys
 import time
 
-from pyrevit import forms, script
+from pyrevit import forms, script, revit
 from Autodesk.Revit.DB import (
     ElementId,
     FamilyInstance,
@@ -28,6 +28,7 @@ if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
 from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
+from ExtensibleStorage import ExtensibleStorage  # noqa: E402
 
 try:
     basestring
@@ -62,24 +63,17 @@ ENV_LAST_RUN_KEY = "ced_parent_param_conflict_last_run"
 LOCK_WINDOW_SECONDS = 60.0
 LOCK_PAYLOAD_KEY = "parent_param_conflicts_lock"
 
+def _get_doc(doc=None):
+    if doc is not None:
+        return doc
+    try:
+        return getattr(revit, "doc", None)
+    except Exception:
+        return None
 
-def _get_config():
+
+def _get_lock_config():
     return script.get_config("parent_param_conflicts_config")
-
-
-def _read_config():
-    cfg = _get_config()
-    data = {}
-    if hasattr(cfg, SETTING_KEY):
-        data[SETTING_KEY] = bool(getattr(cfg, SETTING_KEY))
-    return data
-
-
-def _write_config(data):
-    cfg = _get_config()
-    if SETTING_KEY in data:
-        setattr(cfg, SETTING_KEY, bool(data.get(SETTING_KEY)))
-    script.save_config()
 
 
 def _get_env(name, default=None):
@@ -101,13 +95,13 @@ def _set_env(name, value):
 
 
 def _read_lock_payload():
-    cfg = _get_config()
+    cfg = _get_lock_config()
     payload = getattr(cfg, LOCK_PAYLOAD_KEY, None)
     return payload if isinstance(payload, dict) else {}
 
 
 def _write_lock_payload(payload):
-    cfg = _get_config()
+    cfg = _get_lock_config()
     setattr(cfg, LOCK_PAYLOAD_KEY, payload or {})
     script.save_config()
 
@@ -163,17 +157,21 @@ def _release_ui_lock():
     _write_lock_payload(payload)
 
 
-def get_setting(default=True):
-    data = _read_config()
-    if SETTING_KEY not in data:
+def get_setting(default=True, doc=None):
+    doc = _get_doc(doc)
+    if doc is None:
         return bool(default)
-    return bool(data.get(SETTING_KEY))
+    value = ExtensibleStorage.get_user_setting(doc, SETTING_KEY, default=None)
+    if value is None:
+        return bool(default)
+    return bool(value)
 
 
-def set_setting(value):
-    data = _read_config()
-    data[SETTING_KEY] = bool(value)
-    _write_config(data)
+def set_setting(value, doc=None):
+    doc = _get_doc(doc)
+    if doc is None:
+        return False
+    return ExtensibleStorage.set_user_setting(doc, SETTING_KEY, bool(value))
 
 
 def _extract_parent_parameter_name(value):
@@ -1014,7 +1012,7 @@ def _load_ui_module():
 def run_sync_check(doc):
     if doc is None or getattr(doc, "IsFamilyDocument", False):
         return
-    if not get_setting(default=True):
+    if not get_setting(default=True, doc=doc):
         return
     try:
         _, data = load_active_yaml_data(doc)
