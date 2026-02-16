@@ -15,8 +15,8 @@ PIPING_DOMAIN = DB.Domain.DomainPiping
 
 
 # ============================================================
-# UNUSED / PARKED HELPERS (NOT USED BY CURRENT FLOW)
-# Keep these here for potential reuse in other tools.
+# SHARED HELPERS / PARKED EXPERIMENTS
+# Some helpers are active; others are intentionally retained for reuse.
 # ============================================================
 
 def xyz_equal(a, b, tol):
@@ -302,6 +302,166 @@ def network_is_eligible(pipes):
                 pass
 
     return False
+
+
+def _is_plumbing_fixture_owner(el):
+    try:
+        cat = el.Category
+        if not cat:
+            return False
+        return cat.Id.IntegerValue == int(DB.BuiltInCategory.OST_PlumbingFixtures)
+    except:
+        return False
+
+
+def _owner_has_three_plus_piping_connectors(el):
+    count = 0
+    for _ in iter_piping_connectors(el):
+        count += 1
+        if count >= 3:
+            return True
+    return False
+
+
+def _connector_key(conn, tol_digits=6):
+    try:
+        oid = conn.Owner.Id.IntegerValue
+    except:
+        oid = -1
+
+    try:
+        o = conn.Origin
+        return (oid, round(o.X, tol_digits), round(o.Y, tol_digits), round(o.Z, tol_digits))
+    except:
+        return (oid, id(conn))
+
+
+def _collect_eligible_connectors_for_undefined_system(pipes):
+    """
+    Traverse connectivity from selected pipes and collect connectors that can
+    seed a new undefined-system assignment attempt:
+      - plumbing fixture connectors
+      - tee/cross connectors (3+ piping connectors on owner)
+    """
+    visited = set()
+    queued = set()
+    queue = []
+
+    for p in pipes:
+        try:
+            pid = p.Id.IntegerValue
+        except:
+            continue
+        queue.append(p)
+        queued.add(pid)
+
+    con_set = DB.ConnectorSet()
+    seen_keys = set()
+
+    while queue:
+        el = queue.pop(0)
+        try:
+            elid = el.Id.IntegerValue
+        except:
+            continue
+
+        if elid in visited:
+            continue
+        visited.add(elid)
+
+        is_fixture = _is_plumbing_fixture_owner(el)
+        is_tee_like = _owner_has_three_plus_piping_connectors(el)
+
+        for c in iter_piping_connectors(el):
+            if is_fixture or is_tee_like:
+                key = _connector_key(c)
+                if key not in seen_keys:
+                    try:
+                        con_set.Insert(c)
+                        seen_keys.add(key)
+                    except:
+                        pass
+
+            try:
+                refs = list(c.AllRefs)
+            except:
+                refs = []
+
+            for other in refs:
+                if other == c:
+                    continue
+
+                try:
+                    other_owner = other.Owner
+                    other_id = other_owner.Id.IntegerValue
+                except:
+                    continue
+
+                if other_id not in visited and other_id not in queued:
+                    queue.append(other_owner)
+                    queued.add(other_id)
+
+                if _is_plumbing_fixture_owner(other_owner) or _owner_has_three_plus_piping_connectors(other_owner):
+                    key = _connector_key(other)
+                    if key not in seen_keys:
+                        try:
+                            con_set.Insert(other)
+                            seen_keys.add(key)
+                        except:
+                            pass
+
+    return con_set
+
+
+def _add_eligible_connectors_to_system(new_sys, connectors):
+    if not new_sys:
+        return False
+
+    try:
+        if connectors.Size == 0:
+            logger.warning('Undefined system creation skipped: no eligible connectors found.')
+            return False
+    except:
+        logger.warning('Undefined system creation skipped: invalid ConnectorSet.')
+        return False
+
+    try:
+        new_sys.Add(connectors)
+        return True
+    except Exception as ex:
+        logger.error('Failed adding eligible connectors to system {}: {}'.format(new_sys.Id, ex))
+        return False
+
+
+def _create_system_from_eligible_connectors(pipes, target_system_type):
+    """
+    Undefined mode assignment strategy requested by user:
+    1) Create a new piping system instance
+    2) Add only eligible connectors (fixtures + tee-like owners)
+    """
+    print('\n--- Undefined mode: create system + add eligible connectors ---')
+
+    connectors = _collect_eligible_connectors_for_undefined_system(pipes)
+
+    try:
+        connector_count = connectors.Size
+    except:
+        connector_count = 0
+
+    print('Eligible connectors found: {}'.format(connector_count))
+
+    if connector_count == 0:
+        return False
+
+    new_sys = _create_empty_piping_system(target_system_type)
+    if not new_sys:
+        logger.error('Could not create new piping system for undefined network.')
+        return False
+
+    ok = _add_eligible_connectors_to_system(new_sys, connectors)
+    if ok:
+        print('Created undefined system {}'.format(output.linkify(new_sys.Id)))
+    return ok
 
 
 # ============================================================
@@ -783,8 +943,8 @@ def main():
     # --------------------------------------------------------
     # PLAN B: No systems on selected pipes (undefined mode)
     #
-    # - If eligible (tee/fixture/etc.), behave like Systemizer:
-    #   set pipe system type param and let Revit propagate.
+    # - If eligible (tee/fixture/etc.), create a new system and
+    #   add only eligible connectors (fixture / tee-like connectors).
     #
     # - If NOT eligible (isolated linear runs), do nothing.
     # --------------------------------------------------------
@@ -794,10 +954,13 @@ def main():
         print("\n=== COMPLETE (PLAN B - NOOP) ===\n")
         return
 
-    _run_tx("SetPipeSystem - Set type via pipe parameter (undefined)",
-            _set_pipe_system_type_param,
-            pipes,
-            target_system_type)
+    created = _run_tx("SetPipeSystem - Create system from eligible connectors (undefined)",
+                      _create_system_from_eligible_connectors,
+                      pipes,
+                      target_system_type)
+
+    if not created:
+        logger.warning("Undefined system creation did not assign any connectors.")
 
     print("\n=== COMPLETE (PLAN B) ===\n")
 
