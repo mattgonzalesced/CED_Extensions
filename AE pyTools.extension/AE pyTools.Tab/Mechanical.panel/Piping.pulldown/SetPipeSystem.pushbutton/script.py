@@ -342,6 +342,10 @@ def _collect_eligible_connectors_for_undefined_system(pipes):
     seed a new undefined-system assignment attempt:
       - plumbing fixture connectors
       - tee/cross connectors (3+ piping connectors on owner)
+
+    Tee handling note:
+    We only capture the *branch-facing* tee connector encountered from the walk,
+    not every connector on the tee owner.
     """
     visited = set()
     queued = set()
@@ -370,10 +374,10 @@ def _collect_eligible_connectors_for_undefined_system(pipes):
         visited.add(elid)
 
         is_fixture = _is_plumbing_fixture_owner(el)
-        is_tee_like = _owner_has_three_plus_piping_connectors(el)
 
-        for c in iter_piping_connectors(el):
-            if is_fixture or is_tee_like:
+        # Fixtures are typically endpoint owners; include their piping connectors.
+        if is_fixture:
+            for c in iter_piping_connectors(el):
                 key = _connector_key(c)
                 if key not in seen_keys:
                     try:
@@ -382,6 +386,7 @@ def _collect_eligible_connectors_for_undefined_system(pipes):
                     except:
                         pass
 
+        for c in iter_piping_connectors(el):
             try:
                 refs = list(c.AllRefs)
             except:
@@ -401,6 +406,8 @@ def _collect_eligible_connectors_for_undefined_system(pipes):
                     queue.append(other_owner)
                     queued.add(other_id)
 
+                # If the neighboring owner is a fixture or tee-like element,
+                # add only this specific boundary connector.
                 if _is_plumbing_fixture_owner(other_owner) or _owner_has_three_plus_piping_connectors(other_owner):
                     key = _connector_key(other)
                     if key not in seen_keys:
@@ -414,23 +421,104 @@ def _collect_eligible_connectors_for_undefined_system(pipes):
 
 
 def _add_eligible_connectors_to_system(new_sys, connectors):
+    """
+    Add connectors one-by-one so bad connectors (already used / incompatible
+    classification) do not fail the entire undefined assignment attempt.
+    Returns tuple: (added_count, skipped_count)
+    """
     if not new_sys:
-        return False
+        return 0, 0
 
     try:
         if connectors.Size == 0:
             logger.warning('Undefined system creation skipped: no eligible connectors found.')
-            return False
+            return 0, 0
     except:
         logger.warning('Undefined system creation skipped: invalid ConnectorSet.')
-        return False
+        return 0, 0
 
-    try:
-        new_sys.Add(connectors)
-        return True
-    except Exception as ex:
-        logger.error('Failed adding eligible connectors to system {}: {}'.format(new_sys.Id, ex))
-        return False
+    added = 0
+    skipped = 0
+
+    for conn in connectors:
+        one = DB.ConnectorSet()
+        try:
+            one.Insert(conn)
+        except:
+            skipped += 1
+            continue
+
+        try:
+            new_sys.Add(one)
+            added += 1
+        except Exception as ex:
+            skipped += 1
+            logger.warning('Skipping connector during undefined add ({}): {}'.format(output.linkify(new_sys.Id), ex))
+
+    return added, skipped
+
+
+def _iter_piping_system_types_for_seed(target_system_type):
+    """
+    Yield seed system types with target first, then all other types.
+    This allows fallback seeding when target classification is too strict for
+    the first connector assignment on undefined networks.
+    """
+    yielded = set()
+
+    if target_system_type:
+        try:
+            yielded.add(target_system_type.Id.IntegerValue)
+            yield target_system_type
+        except:
+            pass
+
+    for st in DB.FilteredElementCollector(doc).OfClass(DBP.PipingSystemType).ToElements():
+        try:
+            sid = st.Id.IntegerValue
+        except:
+            continue
+        if sid in yielded:
+            continue
+        yielded.add(sid)
+        yield st
+
+
+def _seed_undefined_system_with_fallback(connectors, target_system_type):
+    """
+    Try target type first; if connector-domain/classification blocks assignment,
+    try other seed types until at least one connector is accepted.
+    """
+    for seed_type in _iter_piping_system_types_for_seed(target_system_type):
+        seed_name = None
+        try:
+            seed_name = DB.Element.Name.__get__(seed_type)
+        except:
+            seed_name = str(seed_type.Id.IntegerValue)
+
+        new_sys = _create_empty_piping_system(seed_type)
+        if not new_sys:
+            continue
+
+        added, skipped = _add_eligible_connectors_to_system(new_sys, connectors)
+        print('Undefined seed attempt [{}] -> added: {}, skipped: {}'.format(seed_name, added, skipped))
+
+        if added > 0:
+            # If we seeded with a non-target type, flip to requested target type now.
+            try:
+                if seed_type.Id.IntegerValue != target_system_type.Id.IntegerValue:
+                    _set_type_on_system(new_sys, target_system_type)
+            except:
+                pass
+            return True, new_sys
+
+        # No connectors added for this seed type; delete empty system and try next.
+        try:
+            doc.Delete(new_sys.Id)
+        except:
+            pass
+
+    return False, None
 
 
 def _create_system_from_eligible_connectors(pipes, target_system_type):
@@ -438,8 +526,10 @@ def _create_system_from_eligible_connectors(pipes, target_system_type):
     Undefined mode assignment strategy requested by user:
     1) Create a new piping system instance
     2) Add only eligible connectors (fixtures + tee-like owners)
+    3) Use seed-type fallback to avoid connector classification dead-ends,
+       then set final type to user target.
     """
-    print('\n--- Undefined mode: create system + add eligible connectors ---')
+    print("\n--- Undefined mode: create system + add eligible connectors ---")
 
     connectors = _collect_eligible_connectors_for_undefined_system(pipes)
 
@@ -453,13 +543,8 @@ def _create_system_from_eligible_connectors(pipes, target_system_type):
     if connector_count == 0:
         return False
 
-    new_sys = _create_empty_piping_system(target_system_type)
-    if not new_sys:
-        logger.error('Could not create new piping system for undefined network.')
-        return False
-
-    ok = _add_eligible_connectors_to_system(new_sys, connectors)
-    if ok:
+    ok, new_sys = _seed_undefined_system_with_fallback(connectors, target_system_type)
+    if ok and new_sys:
         print('Created undefined system {}'.format(output.linkify(new_sys.Id)))
     return ok
 
