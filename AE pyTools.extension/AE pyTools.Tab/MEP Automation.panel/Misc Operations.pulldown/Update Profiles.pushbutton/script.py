@@ -12,10 +12,16 @@ import math
 import os
 import re
 import sys
+import traceback
+try:
+    from collections import Mapping
+except Exception:
+    Mapping = None
 
 from pyrevit import revit, forms, script
 output = script.get_output()
 output.close_others()
+logger = script.get_logger()
 from Autodesk.Revit.DB import FamilyInstance, FilteredElementCollector, Group, TextNote
 
 LIB_ROOT = os.path.abspath(
@@ -27,6 +33,7 @@ if LIB_ROOT not in sys.path:
 from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 from ExtensibleStorage.yaml_store import (  # noqa: E402
     load_active_yaml_data,
+    load_active_yaml_text,
     save_active_yaml_data,
 )
 
@@ -39,6 +46,546 @@ TIE_DISTANCE_TOLERANCE_FT = 1e-4
 
 _MANAGE_MODULE = None
 _UI_MODULE = None
+_LOG_VERSION = "2026-02-13f"
+
+
+def _decode_bytes(data):
+    if data is None:
+        return u""
+    for encoding in ("utf-8", "cp1252", "latin-1"):
+        try:
+            return data.decode(encoding)
+        except Exception:
+            continue
+    try:
+        return data.decode("utf-8", "replace")
+    except Exception:
+        return u""
+
+
+def _coerce_text(value):
+    if value is None:
+        return u""
+    try:
+        unicode_type = unicode  # type: ignore # noqa: F821
+    except Exception:
+        unicode_type = None
+    if unicode_type is not None:
+        if isinstance(value, unicode_type):
+            return value
+        if isinstance(value, str):
+            return _decode_bytes(value)
+    else:
+        if isinstance(value, str):
+            return value
+        try:
+            if isinstance(value, (bytes, bytearray)):
+                return _decode_bytes(bytes(value))
+        except Exception:
+            pass
+    try:
+        from System import Array, Byte  # type: ignore
+        if isinstance(value, Array[Byte]):
+            try:
+                data = bytes(bytearray(value))
+            except Exception:
+                data = "".join(chr(b) for b in list(value))
+            return _decode_bytes(data)
+    except Exception:
+        pass
+    try:
+        to_string = getattr(value, "ToString", None)
+        if callable(to_string):
+            return to_string()
+    except Exception:
+        pass
+    try:
+        return unicode(value)  # type: ignore # noqa: F821
+    except Exception:
+        try:
+            return str(value)
+        except Exception:
+            return u""
+
+
+def _is_string_like(value):
+    try:
+        basestring  # type: ignore # noqa: F821
+    except Exception:
+        basestring = str
+    try:
+        if isinstance(value, basestring):
+            return True
+    except Exception:
+        pass
+    try:
+        if isinstance(value, (bytes, bytearray)):
+            return True
+    except Exception:
+        pass
+    try:
+        from System import Array, Byte  # type: ignore
+        if isinstance(value, Array[Byte]):
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _is_byte_string(value):
+    try:
+        unicode_type = unicode  # type: ignore # noqa: F821
+    except Exception:
+        unicode_type = None
+    if unicode_type is not None:
+        return isinstance(value, str)
+    return isinstance(value, (bytes, bytearray))
+
+
+def _collect_byte_values(value, path, hits, max_hits):
+    if len(hits) >= max_hits:
+        return
+    if isinstance(value, dict):
+        for key, item in value.items():
+            key_path = path + [u"<key>"]
+            if _is_byte_string(key):
+                hits.append((key_path, key))
+                if len(hits) >= max_hits:
+                    return
+            _collect_byte_values(item, path + [key], hits, max_hits)
+            if len(hits) >= max_hits:
+                return
+        return
+    if isinstance(value, list):
+        for idx, item in enumerate(value):
+            _collect_byte_values(item, path + [idx], hits, max_hits)
+            if len(hits) >= max_hits:
+                return
+        return
+    if _is_byte_string(value):
+        hits.append((path, value))
+        return
+    try:
+        from System import Array, Byte  # type: ignore
+        if isinstance(value, Array[Byte]):
+            hits.append((path, value))
+    except Exception:
+        pass
+
+
+def _log_byte_hits(label, value, max_hits=5):
+    try:
+        hits = []
+        _collect_byte_values(value, [label], hits, max_hits)
+        if hits:
+            logger.info("[Update Profiles] %s byte-like hits=%s", label, len(hits))
+            for path, raw in hits:
+                try:
+                    sample = raw[:40] if hasattr(raw, "__getitem__") else raw
+                except Exception:
+                    sample = raw
+                logger.info("[Update Profiles] byte-like path=%s type=%s sample=%r", path, type(raw), sample)
+        else:
+            logger.info("[Update Profiles] %s byte-like hits=0", label)
+    except Exception as exc:
+        logger.info("[Update Profiles] %s byte-scan failed: %s", label, exc)
+
+
+def _log_text_info(label, text, max_hits=3):
+    try:
+        unicode_type = unicode  # type: ignore # noqa: F821
+    except Exception:
+        unicode_type = None
+    try:
+        is_unicode = unicode_type is not None and isinstance(text, unicode_type)
+    except Exception:
+        is_unicode = False
+    try:
+        is_bytes = isinstance(text, (bytes, bytearray))
+    except Exception:
+        is_bytes = False
+    if not is_bytes and unicode_type is not None:
+        try:
+            if isinstance(text, str) and not is_unicode:
+                is_bytes = True
+        except Exception:
+            pass
+    try:
+        logger.info(
+            "[Update Profiles] %s type=%s unicode=%s bytes=%s len=%s",
+            label,
+            type(text),
+            is_unicode,
+            is_bytes,
+            len(text or ""),
+        )
+    except Exception:
+        pass
+    try:
+        hits = []
+        if is_unicode:
+            for idx, ch in enumerate(text):
+                if ord(ch) > 127:
+                    hits.append((idx, ord(ch), ch))
+                    if len(hits) >= max_hits:
+                        break
+        else:
+            try:
+                raw = bytearray(text)
+            except Exception:
+                raw = None
+            if raw is not None:
+                for idx, b in enumerate(raw):
+                    if b > 127:
+                        hits.append((idx, b, None))
+                        if len(hits) >= max_hits:
+                            break
+        if hits:
+            logger.info("[Update Profiles] %s non-ascii hits=%s", label, len(hits))
+            for idx, code, ch in hits:
+                logger.info("[Update Profiles] %s non-ascii idx=%s code=%s char=%r", label, idx, code, ch)
+        else:
+            logger.info("[Update Profiles] %s non-ascii hits=0", label)
+    except Exception as exc:
+        logger.info("[Update Profiles] %s non-ascii scan failed: %s", label, exc)
+
+
+def _iter_mapping_items(value):
+    if Mapping is not None and isinstance(value, Mapping):
+        try:
+            return list(value.items())
+        except Exception:
+            return []
+    keys_attr = getattr(value, "Keys", None)
+    if keys_attr is not None and callable(keys_attr):
+        try:
+            keys = list(value.Keys)
+        except Exception:
+            keys = []
+        items = []
+        for key in keys:
+            try:
+                items.append((key, value[key]))
+            except Exception:
+                continue
+        return items
+    return []
+
+
+def _iter_sequence_items(value):
+    if _is_string_like(value):
+        return None
+    if isinstance(value, (list, tuple)):
+        return list(value)
+    try:
+        return list(value)
+    except Exception:
+        return None
+
+
+def _log_non_ascii_bytes(label, value, max_hits=5):
+    try:
+        hits = []
+
+        def _scan(val, path):
+            if len(hits) >= max_hits:
+                return
+            if _is_string_like(val):
+                if _is_byte_string(val):
+                    try:
+                        raw = bytearray(val)
+                    except Exception:
+                        raw = None
+                    if raw is not None:
+                        for idx, b in enumerate(raw):
+                            if b > 127:
+                                hits.append((path, idx, b, None))
+                                break
+                else:
+                    try:
+                        for idx, ch in enumerate(val):
+                            if ord(ch) > 127:
+                                hits.append((path, idx, ord(ch), ch))
+                                break
+                    except Exception:
+                        pass
+                return
+            items = _iter_mapping_items(val)
+            if items:
+                for key, item in items:
+                    _scan(key, path + [u"<key>"])
+                    _scan(item, path + [key])
+                    if len(hits) >= max_hits:
+                        return
+                return
+            seq = _iter_sequence_items(val)
+            if seq is not None:
+                for idx, item in enumerate(seq):
+                    _scan(item, path + [idx])
+                    if len(hits) >= max_hits:
+                        return
+                return
+
+        _scan(value, [label])
+        if hits:
+            logger.info("[Update Profiles] %s non-ascii byte hits=%s", label, len(hits))
+            for path, idx, code, ch in hits:
+                logger.info(
+                    "[Update Profiles] non-ascii path=%s idx=%s code=%s char=%r",
+                    path,
+                    idx,
+                    code,
+                    ch,
+                )
+        else:
+            logger.info("[Update Profiles] %s non-ascii byte hits=0", label)
+    except Exception as exc:
+        logger.info("[Update Profiles] %s non-ascii byte scan failed: %s", label, exc)
+
+
+def _json_escape_text(text):
+    if text is None:
+        return u""
+    out = []
+    for ch in text:
+        try:
+            code = ord(ch)
+        except Exception:
+            code = None
+        if ch == u"\"":
+            out.append(u"\\\"")
+        elif ch == u"\\":
+            out.append(u"\\\\")
+        elif ch == u"\b":
+            out.append(u"\\b")
+        elif ch == u"\f":
+            out.append(u"\\f")
+        elif ch == u"\n":
+            out.append(u"\\n")
+        elif ch == u"\r":
+            out.append(u"\\r")
+        elif ch == u"\t":
+            out.append(u"\\t")
+        elif code is None:
+            out.append(u"")
+        elif code < 0x20:
+            out.append(u"\\u%04x" % code)
+        elif code < 0x80:
+            out.append(ch)
+        elif code <= 0xFFFF:
+            out.append(u"\\u%04x" % code)
+        else:
+            code -= 0x10000
+            hi = 0xD800 + (code >> 10)
+            lo = 0xDC00 + (code & 0x3FF)
+            out.append(u"\\u%04x\\u%04x" % (hi, lo))
+    return u"".join(out)
+
+
+def _json_encode_ascii(value):
+    if value is None:
+        return u"null"
+    if value is True:
+        return u"true"
+    if value is False:
+        return u"false"
+    if isinstance(value, (int, long)):  # type: ignore # noqa: F821
+        return unicode(value)  # type: ignore # noqa: F821
+    if isinstance(value, float):
+        try:
+            if value != value or value in (float("inf"), float("-inf")):
+                return u"null"
+        except Exception:
+            pass
+        return unicode(value)  # type: ignore # noqa: F821
+    if _is_string_like(value):
+        text = _coerce_text(value)
+        return u"\"" + _json_escape_text(text) + u"\""
+    items = _iter_mapping_items(value)
+    if items:
+        chunks = []
+        for key, item in items:
+            key_text = _coerce_text(key) if _is_string_like(key) else _coerce_text(repr(key))
+            chunks.append(u"\"" + _json_escape_text(key_text) + u"\": " + _json_encode_ascii(item))
+        return u"{" + u", ".join(chunks) + u"}"
+    seq = _iter_sequence_items(value)
+    if seq is not None:
+        return u"[" + u", ".join(_json_encode_ascii(item) for item in seq) + u"]"
+    return u"\"" + _json_escape_text(_coerce_text(repr(value))) + u"\""
+
+
+def _json_dumps_ascii(payload, *args, **kwargs):
+    return _json_encode_ascii(payload)
+
+
+def _coerce_tree(value):
+    items = _iter_mapping_items(value)
+    if items:
+        coerced = {}
+        for key, item in items:
+            coerced_key = _coerce_text(key) if _is_string_like(key) else key
+            coerced[coerced_key] = _coerce_tree(item)
+        return coerced
+    seq = _iter_sequence_items(value)
+    if seq is not None:
+        coerced_list = [_coerce_tree(item) for item in seq]
+        if isinstance(value, tuple):
+            return tuple(coerced_list)
+        return coerced_list
+    if _is_string_like(value):
+        return _coerce_text(value)
+    return value
+
+
+def _sanitize_text_notes_bytes(data):
+    try:
+        unicode_type = unicode  # type: ignore # noqa: F821
+    except Exception:
+        unicode_type = None
+    changed = 0
+    defs = data.get("equipment_definitions") if isinstance(data, dict) else None
+    if not defs:
+        return changed
+    for eq in defs:
+        if not isinstance(eq, dict):
+            continue
+        linked_sets = eq.get("linked_sets") or []
+        seq_sets = _iter_sequence_items(linked_sets) or []
+        for linked_set in seq_sets:
+            if not isinstance(linked_set, dict):
+                continue
+            leds = linked_set.get("linked_element_definitions") or []
+            seq_leds = _iter_sequence_items(leds) or []
+            for led in seq_leds:
+                if not isinstance(led, dict):
+                    continue
+                notes = led.get("text_notes")
+                if notes is None:
+                    continue
+                seq_notes = _iter_sequence_items(notes)
+                if seq_notes is None:
+                    continue
+                for note in seq_notes:
+                    if not isinstance(note, dict):
+                        continue
+                    text_val = note.get("text")
+                    if text_val is None:
+                        continue
+                    is_unicode = unicode_type is not None and isinstance(text_val, unicode_type)
+                    if _is_byte_string(text_val) or (not is_unicode and _is_string_like(text_val)):
+                        note["text"] = _coerce_text(text_val)
+                        changed += 1
+                led["text_notes"] = seq_notes
+    return changed
+
+
+def _save_active_yaml_data_safe(doc, data, action, description):
+    """
+    Coerce bytes to unicode before saving to avoid codepage decode errors in ExtensibleStorage.
+    """
+    try:
+        from ExtensibleStorage import ExtensibleStorage
+        from LogicClasses.profile_schema import dump_data_to_string
+    except Exception:
+        return save_active_yaml_data(doc, data, action, description)
+    try:
+        yaml_path, prev_text = load_active_yaml_text(doc)
+    except Exception:
+        return save_active_yaml_data(doc, data, action, description)
+
+    logger.info("[Update Profiles] save start v=%s action=%s yaml=%s", _LOG_VERSION, action, yaml_path)
+    _log_byte_hits("raw-data", data)
+    _log_non_ascii_bytes("raw-data", data)
+    changed_notes = _sanitize_text_notes_bytes(data)
+    logger.info("[Update Profiles] sanitized text_notes bytes=%s", changed_notes)
+    safe_data = _coerce_tree(data)
+    _log_byte_hits("safe-data", safe_data)
+    _log_non_ascii_bytes("safe-data", safe_data)
+    def _safe_json_dumps(payload):
+        import json
+        try:
+            return json.dumps(payload, indent=2, ensure_ascii=False, encoding="utf-8")
+        except TypeError:
+            return json.dumps(payload, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+        for enc in ("cp1252", "latin-1"):
+            try:
+                return json.dumps(payload, indent=2, ensure_ascii=False, encoding=enc)
+            except Exception:
+                continue
+        return json.dumps(payload, indent=2)
+
+    try:
+        new_text = dump_data_to_string(safe_data)
+        logger.info("[Update Profiles] dump_data_to_string(safe_data) ok")
+    except Exception as exc:
+        logger.info("[Update Profiles] dump_data_to_string(safe_data) failed: %s", exc)
+        logger.info("[Update Profiles] dump_data_to_string(safe_data) traceback: %s", traceback.format_exc())
+        try:
+            new_text = _safe_json_dumps(safe_data)
+            logger.info("[Update Profiles] safe_json_dumps(safe_data) ok")
+        except Exception as exc2:
+            logger.info("[Update Profiles] safe_json_dumps(safe_data) failed: %s", exc2)
+            logger.info("[Update Profiles] safe_json_dumps(safe_data) traceback: %s", traceback.format_exc())
+            try:
+                new_text = dump_data_to_string(data)
+                logger.info("[Update Profiles] dump_data_to_string(data) ok")
+            except Exception as exc3:
+                logger.info("[Update Profiles] dump_data_to_string(data) failed: %s", exc3)
+                logger.info("[Update Profiles] dump_data_to_string(data) traceback: %s", traceback.format_exc())
+                raise
+    prev_text = _coerce_text(prev_text)
+    new_text = _coerce_text(new_text)
+    logger.info("[Update Profiles] coerced prev/new text")
+    _log_text_info("prev_text", prev_text)
+    _log_text_info("new_text", new_text)
+    try:
+        logger.info("[Update Profiles] prev_text len=%s new_text len=%s", len(prev_text or ""), len(new_text or ""))
+    except Exception:
+        pass
+    if new_text == prev_text:
+        logger.info("[Update Profiles] save skipped (no changes).")
+        return
+    try:
+        import ExtensibleStorage.extensiblestorage as es_mod
+    except Exception:
+        es_mod = None
+
+    def _with_ascii_json_dumps(callable_fn):
+        if es_mod is None or not hasattr(es_mod, "json"):
+            return callable_fn()
+        json_mod = es_mod.json
+        real_dumps = getattr(json_mod, "dumps", None)
+        if real_dumps is None:
+            return callable_fn()
+
+        json_mod.dumps = _json_dumps_ascii
+        try:
+            return callable_fn()
+        finally:
+            json_mod.dumps = real_dumps
+
+    def _do_save():
+        ExtensibleStorage.update_active_yaml(doc, yaml_path, prev_text, new_text, action, description)
+        ExtensibleStorage.update_active_text_only(doc, yaml_path, new_text)
+        logger.info("[Update Profiles] save completed.")
+
+    try:
+        _with_ascii_json_dumps(_do_save)
+    except Exception as exc:
+        logger.info("[Update Profiles] save failed: %s", exc)
+        logger.info("[Update Profiles] save failed traceback: %s", traceback.format_exc())
+        raise
+    try:
+        import json as _json
+        import ExtensibleStorage.yaml_store as ys
+        ys._ACTIVE_CACHE = {
+            "normalized": ExtensibleStorage._normalize_path(yaml_path),
+            "data": _json.loads(_json.dumps(safe_data)),
+        }
+    except Exception:
+        pass
 
 
 def _manage_profiles_module():
@@ -1055,7 +1602,7 @@ def main():
         return
 
     try:
-        save_active_yaml_data(doc, data, "Update Profiles", "Merged model changes into profiles")
+        _save_active_yaml_data_safe(doc, data, "Update Profiles", "Merged model changes into profiles")
     except Exception as exc:
         forms.alert("Failed to save updated profiles:\n\n{}".format(exc), title=TITLE)
         return

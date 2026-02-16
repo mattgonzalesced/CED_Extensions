@@ -28,6 +28,35 @@ FLOAT_PATTERN = re.compile(r"^-?\d+\.\d+$")
 NUMERIC_LIST_PATTERN = re.compile(r"^-?\d+(?:\.\d+)?(?:,-?\d+(?:\.\d+)?)+$")
 
 
+def _strip_control_chars(text):
+    cleaned = []
+    for ch in text:
+        code = ord(ch)
+        if code < 0x20 and code not in (0x09, 0x0A, 0x0D):
+            cleaned.append(" ")
+        else:
+            cleaned.append(ch)
+    return "".join(cleaned)
+
+
+def _normalize_scalar_whitespace(text):
+    if not text:
+        return text
+    text = text.replace("\r\n", " ").replace("\r", " ").replace("\n", " ")
+    return text.replace("\t", " ")
+
+
+def _strip_non_ascii(text):
+    cleaned = []
+    for ch in text:
+        code = ord(ch)
+        if code > 0x7E:
+            cleaned.append(" ")
+        else:
+            cleaned.append(ch)
+    return "".join(cleaned)
+
+
 def _coerce_bool_strings(value, key=None):
     if isinstance(value, dict):
         return {k: _coerce_bool_strings(v, k) for k, v in value.items()}
@@ -48,7 +77,7 @@ except NameError:
     basestring = str
 
 
-def _format_scalar(value):
+def _format_scalar(value, key=None):
     if value is None:
         return "null"
     if isinstance(value, bool):
@@ -56,10 +85,14 @@ def _format_scalar(value):
     if isinstance(value, (int, float)):
         return str(value)
     text = value if isinstance(value, basestring) else str(value)
+    text = _normalize_scalar_whitespace(text)
+    text = _strip_non_ascii(_strip_control_chars(text))
     if text == "":
         return "''"
     looks_like_numeric_list = bool(NUMERIC_LIST_PATTERN.match(text))
     needs_quotes = any(ch in text for ch in (":", "#", "{", "}", "[", "]", ",", "\n", "\r"))
+    if key == "text":
+        needs_quotes = True
     if looks_like_numeric_list:
         needs_quotes = False
     if text.lower() in ("true", "false", "null"):
@@ -94,7 +127,7 @@ def _dump_yaml_lines(value, indent=0):
                     lines.append("{}{}:".format(pad, clean_key))
                     lines.extend(_dump_yaml_lines(val, indent))
             else:
-                lines.append("{}{}: {}".format(pad, clean_key, _format_scalar(val)))
+                lines.append("{}{}: {}".format(pad, clean_key, _format_scalar(val, key)))
         if not lines:
             lines.append("{}{{}}".format(pad))
         return lines
@@ -124,7 +157,7 @@ def _dump_yaml_lines(value, indent=0):
                         lines.append("{}- {}:".format(pad, clean_key))
                         lines.extend(_dump_yaml_lines(first_val, indent + 2))
                 else:
-                    lines.append("{}- {}: {}".format(pad, clean_key, _format_scalar(first_val)))
+                    lines.append("{}- {}: {}".format(pad, clean_key, _format_scalar(first_val, first_key)))
                 if len(items) > 1:
                     rest = dict(items[1:])
                     lines.extend(_dump_yaml_lines(rest, indent + 2))
@@ -142,6 +175,12 @@ def _dump_yaml_text(data):
     return "\n".join(_dump_yaml_lines(root)) + "\n"
 
 
+def _sanitize_export_text(text):
+    if not text:
+        return text
+    return _strip_non_ascii(_strip_control_chars(text))
+
+
 def main():
     try:
         source_path, data = load_active_yaml_data()
@@ -150,7 +189,7 @@ def main():
         return
 
     data = _coerce_bool_strings(data)
-    yaml_text = _dump_yaml_text(data)
+    yaml_text = _sanitize_export_text(_dump_yaml_text(data))
     default_name = os.path.basename(source_path) or "equipment_profiles.yaml"
     save_path = forms.save_file(
         file_ext="yaml",

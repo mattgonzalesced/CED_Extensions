@@ -166,7 +166,7 @@ class UpdateProfilesWindow(forms.WPFWindow):
                 param_info = item.get("param_conflicts", {}).get(name)
                 if not param_info:
                     cell = TextBlock()
-                    cell.Text = "â€”"
+                    cell.Text = "--"
                     cell.Margin = Thickness(0, 0, 6, 2)
                     Grid.SetRow(cell, row_idx)
                     Grid.SetColumn(cell, col_offset)
