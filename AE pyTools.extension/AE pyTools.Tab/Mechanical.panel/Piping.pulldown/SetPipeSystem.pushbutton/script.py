@@ -532,6 +532,63 @@ def _collect_pipe_system_ids(pipes):
     return sys_ids
 
 
+def _get_pipe_system_preop(pipe):
+    """
+    Pre-operation detection for plan routing:
+    - Prefer pipe.MEPSystem
+    - Fallback to connector.MEPSystem (more reliable before topology edits)
+    """
+    sys = _get_pipe_system(pipe)
+    if sys:
+        return sys
+
+    for c in iter_piping_connectors(pipe):
+        try:
+            sys = c.MEPSystem
+        except:
+            sys = None
+        if sys:
+            return sys
+
+    return None
+
+
+def _collect_pipe_system_ids_preop(pipes):
+    """
+    System detection used for evaluation/plan selection only.
+    """
+    sys_ids = set()
+    for p in pipes:
+        sys = _get_pipe_system_preop(p)
+        if sys:
+            try:
+                sys_ids.add(sys.Id.IntegerValue)
+            except:
+                pass
+    return sys_ids
+
+
+def _collect_pipe_system_ids_from_connectors(pipes):
+    """
+    Post-disconnect/divide collector.
+    Connector-level MEPSystem is more dependable after topology edits.
+    """
+    sys_ids = set()
+    for p in pipes:
+        for c in iter_piping_connectors(p):
+            try:
+                sys = c.MEPSystem
+            except:
+                sys = None
+
+            if sys:
+                try:
+                    sys_ids.add(sys.Id.IntegerValue)
+                except:
+                    pass
+    return sys_ids
+
+
 def _set_type_on_system(sys_el, target_system_type):
     try:
         param = sys_el.LookupParameter("Type")
@@ -653,7 +710,7 @@ def _evaluate_selection(elements, pipes, saved_pairs, affected_system_ids):
     data["has_boundary_pairs"] = (len(saved_pairs) > 0)
 
     # "Has systems" means at least one selected pipe has an actual system object
-    sys_ids = _collect_pipe_system_ids(pipes)
+    sys_ids = _collect_pipe_system_ids_preop(pipes)
     data["selected_pipe_system_ids"] = sys_ids
     data["has_existing_systems"] = (len(sys_ids) > 0)
 
@@ -711,7 +768,7 @@ def main():
             eval_data["affected_system_ids"] = new_affected
 
         # Re-collect system ids from pipes post-divide (safer than relying on affected ids)
-        sys_ids_after = _collect_pipe_system_ids(pipes)
+        sys_ids_after = _collect_pipe_system_ids_from_connectors(pipes)
         _run_tx("SetPipeSystem - Set type on existing systems",
                 _set_type_on_system_ids,
                 sys_ids_after,
@@ -737,21 +794,10 @@ def main():
         print("\n=== COMPLETE (PLAN B - NOOP) ===\n")
         return
 
-    # Eligible undefined: optional disconnect/reconnect if boundary pairs exist
-    if eval_data["has_boundary_pairs"]:
-        _run_tx("SetPipeSystem - Disconnect boundary (undefined)",
-                disconnect_pairs_now,
-                saved_pairs)
-
     _run_tx("SetPipeSystem - Set type via pipe parameter (undefined)",
             _set_pipe_system_type_param,
             pipes,
             target_system_type)
-
-    if eval_data["has_boundary_pairs"]:
-        _run_tx("SetPipeSystem - Reconnect boundary (undefined)",
-                reconnect_pairs,
-                saved_pairs)
 
     print("\n=== COMPLETE (PLAN B) ===\n")
 
