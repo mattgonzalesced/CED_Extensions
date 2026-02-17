@@ -461,32 +461,6 @@ def _add_eligible_connectors_to_system(new_sys, connectors):
     return added, skipped
 
 
-def _iter_piping_system_types_for_seed(target_system_type):
-    """
-    Yield seed system types with target first, then all other types.
-    This allows fallback seeding when target classification is too strict for
-    the first connector assignment on undefined networks.
-    """
-    yielded = set()
-
-    if target_system_type:
-        try:
-            yielded.add(target_system_type.Id.IntegerValue)
-            yield target_system_type
-        except:
-            pass
-
-    for st in DB.FilteredElementCollector(doc).OfClass(DBP.PipingSystemType).ToElements():
-        try:
-            sid = st.Id.IntegerValue
-        except:
-            continue
-        if sid in yielded:
-            continue
-        yielded.add(sid)
-        yield st
-
-
 def _get_system_type_abbreviation(target_system_type):
     """Get preferred abbreviation token for naming new systems."""
     try:
@@ -742,49 +716,44 @@ def _create_system_from_open_pipe_stub(pipes, target_system_type):
     return True, sys
 
 
-def _seed_undefined_system_with_fallback(connectors, target_system_type, pipes):
+def _seed_undefined_system(connectors, target_system_type, pipes):
     """
-    Try target type first; if connector-domain/classification blocks assignment,
-    try other seed types until at least one selected pipe is actually assigned.
+    Seed undefined system using only the user-selected target system type.
+    If no selected pipes are assigned, delete the created system.
     """
-    for seed_type in _iter_piping_system_types_for_seed(target_system_type):
-        seed_name = None
-        try:
-            seed_name = DB.Element.Name.__get__(seed_type)
-        except:
-            seed_name = str(seed_type.Id.IntegerValue)
+    seed_name = None
+    try:
+        seed_name = DB.Element.Name.__get__(target_system_type)
+    except:
+        seed_name = str(target_system_type.Id.IntegerValue)
 
-        new_sys = _create_empty_piping_system(seed_type)
-        if not new_sys:
-            continue
+    new_sys = _create_empty_piping_system(target_system_type)
+    if not new_sys:
+        return False, None
 
-        added, skipped = _add_eligible_connectors_to_system(new_sys, connectors)
-        print('Undefined seed attempt [{}] -> added: {}, skipped: {}'.format(seed_name, added, skipped))
+    added, skipped = _add_eligible_connectors_to_system(new_sys, connectors)
+    print('Undefined seed attempt [{}] -> added: {}, skipped: {}'.format(seed_name, added, skipped))
 
-        if added > 0:
-            # If we seeded with a non-target type, flip to requested target type now.
-            try:
-                if seed_type.Id.IntegerValue != target_system_type.Id.IntegerValue:
-                    _set_type_on_system(new_sys, target_system_type)
-            except:
-                pass
-
-            sid = new_sys.Id.IntegerValue
-            assigned = _count_selected_pipes_on_system(pipes, sid)
-            if assigned > 0:
-                _set_unique_system_name(new_sys, target_system_type)
-                print('Selected pipes assigned to new system: {}'.format(assigned))
-                return True, new_sys
-
-            logger.warning('Seeded system {} but no selected pipes were assigned. Deleting empty/unrelated system.'.format(output.linkify(new_sys.Id)))
-
-        # No useful assignment for this seed type; delete and try next.
+    if added <= 0:
         try:
             doc.Delete(new_sys.Id)
         except:
             pass
+        return False, None
 
-    return False, None
+    sid = new_sys.Id.IntegerValue
+    assigned = _count_selected_pipes_on_system(pipes, sid)
+    if assigned <= 0:
+        logger.warning('Seeded system {} but no selected pipes were assigned. Deleting system.'.format(output.linkify(new_sys.Id)))
+        try:
+            doc.Delete(new_sys.Id)
+        except:
+            pass
+        return False, None
+
+    _set_unique_system_name(new_sys, target_system_type)
+    print('Selected pipes assigned to new system: {}'.format(assigned))
+    return True, new_sys
 
 
 def _create_system_from_eligible_connectors(pipes, target_system_type):
@@ -809,7 +778,7 @@ def _create_system_from_eligible_connectors(pipes, target_system_type):
     if connector_count == 0:
         return False
 
-    ok, new_sys = _seed_undefined_system_with_fallback(connectors, target_system_type, pipes)
+    ok, new_sys = _seed_undefined_system(connectors, target_system_type, pipes)
     if ok and new_sys:
         print('Created undefined system {}'.format(output.linkify(new_sys.Id)))
         return True
