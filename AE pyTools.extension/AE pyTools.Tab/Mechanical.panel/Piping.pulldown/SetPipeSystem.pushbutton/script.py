@@ -1054,7 +1054,7 @@ def _get_single_open_pipe_connector(pipe):
     return None
 
 
-def _create_short_pipe_from_open_connector(pipe, open_conn, target_system_type, created_stub_ids=None):
+def _create_short_pipe_from_open_connector(pipe, open_conn, target_system_type):
     length_ft = 0.5 / 12.0
 
     try:
@@ -1123,12 +1123,6 @@ def _create_short_pipe_from_open_connector(pipe, open_conn, target_system_type, 
             _set_unique_mep_system_name(new_sys, target_system_type)
     except:
         pass
-
-    if created_stub_ids is not None:
-        try:
-            created_stub_ids.append(stub.Id.IntegerValue)
-        except:
-            pass
 
     logger.info("Created short pipe stub {} from {}".format(output.linkify(stub.Id), output.linkify(pipe.Id)))
     return stub
@@ -1263,7 +1257,7 @@ def _create_open_branch_stubs_from_selection(pipes, target_system_type):
             pass
 
     if not selected_pipe_ids:
-        return 0
+        return []
 
     open_connectors = []
     seen = set()
@@ -1316,8 +1310,24 @@ def _create_open_branch_stubs_from_selection(pipes, target_system_type):
             pass
 
     created_stub_ids = []
+    failed_count = 0
+
     for pipe, conn in open_connectors:
-        _create_short_pipe_from_open_connector(pipe, conn, target_system_type, created_stub_ids)
+        stub = _create_short_pipe_from_open_connector(pipe, conn, target_system_type)
+        if stub:
+            try:
+                created_stub_ids.append(stub.Id.IntegerValue)
+            except:
+                pass
+        else:
+            failed_count += 1
+            try:
+                logger.info('Open-branch stub creation failed for pipe {}.'.format(output.linkify(pipe.Id)))
+            except:
+                logger.info('Open-branch stub creation failed for a selected pipe.')
+
+    if failed_count > 0:
+        logger.info('Open-branch stub summary -> created: {}, failed: {}'.format(len(created_stub_ids), failed_count))
 
     return created_stub_ids
 
