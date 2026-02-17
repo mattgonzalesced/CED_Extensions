@@ -39,18 +39,19 @@ def xyz_equal(a, b, tol):
         return False
 
 
-def find_connector_by_origin(el, origin, tol):
+def find_connector_by_origin(el, origin, tol, connector_iter=None):
     """
-    Find a piping connector on element whose Origin matches within tolerance.
+    Find a connector on element whose Origin matches within tolerance.
     """
-    for c in iter_piping_connectors(el):
+    iterator = connector_iter or iter_piping_connectors
+
+    for c in iterator(el):
         try:
             if xyz_equal(c.Origin, origin, tol):
                 return c
         except:
             continue
     return None
-
 
 def _make_elementid_list(elements):
     ids = List[DB.ElementId]()
@@ -235,7 +236,7 @@ def pick_piping_system_type():
 def pick_duct_system_type():
     system_types = (
         DB.FilteredElementCollector(doc)
-        .OfClass(DBM.DuctSystemType)
+        .OfClass(DBM.MechanicalSystemType)
         .ToElements()
     )
 
@@ -541,10 +542,10 @@ def _collect_eligible_connectors_for_undefined_system(pipes):
                     if other_id in fixture_owner_added:
                         continue
 
-                    key = _connector_key(other)
+                    key = _connector_key(c)
                     if key not in seen_keys:
                         try:
-                            con_set.Insert(other)
+                            con_set.Insert(c)
                             seen_keys.add(key)
                             fixture_owner_added.add(other_id)
                         except:
@@ -703,19 +704,19 @@ def _create_system_from_eligible_connectors(pipes, target_system_type):
 # PHASE 0 — COLLECT BOUNDARY PAIRS + AFFECTED SYSTEM IDS
 # ============================================================
 
-def collect_boundary_work(elements):
+def collect_boundary_work(elements, connector_iter):
     """
     Returns:
       selected_ids: set(int)
       saved_pairs: list(dict) with owner ids + connector origins (for reconnect)
-      affected_system_ids: set(int) piping system ids to divide later
+      affected_system_ids: set(int) system ids to divide later
     """
     selected_ids = set([el.Id.IntegerValue for el in elements])
     saved_pairs = []
     affected_system_ids = set()
 
     logger.info("\n--- Collecting boundary connections ---")
-    # collect systems directly from selected elements
+
     for el in elements:
         try:
             sys = el.MEPSystem
@@ -724,7 +725,7 @@ def collect_boundary_work(elements):
         except:
             pass
 
-        for c in iter_piping_connectors(el):
+        for c in connector_iter(el):
             try:
                 if not c.IsConnected:
                     continue
@@ -745,7 +746,6 @@ def collect_boundary_work(elements):
                 except:
                     continue
 
-                # disconnect only across selection boundary
                 try:
                     if other_owner.Id.IntegerValue in selected_ids:
                         continue
@@ -754,7 +754,6 @@ def collect_boundary_work(elements):
 
                 driver, target = pick_disconnect_driver(c, other)
 
-                # record affected system id BEFORE disconnect (store id only, not object)
                 try:
                     sys = driver.MEPSystem
                     if sys:
@@ -762,7 +761,6 @@ def collect_boundary_work(elements):
                 except:
                     pass
 
-                # record reconnect descriptors BEFORE disconnect
                 try:
                     driver_owner_id = driver.Owner.Id.IntegerValue
                     driver_origin = driver.Origin
@@ -783,18 +781,12 @@ def collect_boundary_work(elements):
                 })
 
     logger.info("Boundary connection pairs found: {}".format(len(saved_pairs)))
-    logger.info("Affected piping system ids: {}".format(len(affected_system_ids)))
+    logger.info("Affected system ids: {}".format(len(affected_system_ids)))
     return selected_ids, saved_pairs, affected_system_ids
 
-
-# ============================================================
-# TX ACTIONS (small, single-purpose)
-# ============================================================
-
-def disconnect_pairs_now(saved_pairs):
+def disconnect_pairs_now(saved_pairs, connector_iter):
     """
-    Disconnect using live connector objects found by origin in the current model state.
-    Note: uses origin matching strategy; do not change unless you replace the pair schema.
+    Disconnect using live connector objects found by origin in current model state.
     """
     logger.info("\n--- Disconnecting boundary pairs ---")
     ok = 0
@@ -809,8 +801,8 @@ def disconnect_pairs_now(saved_pairs):
             logger.warning("Disconnect skip: missing owner element(s).")
             continue
 
-        a_conn = find_connector_by_origin(a_el, pair["a_origin"], tol)
-        b_conn = find_connector_by_origin(b_el, pair["b_origin"], tol)
+        a_conn = find_connector_by_origin(a_el, pair["a_origin"], tol, connector_iter)
+        b_conn = find_connector_by_origin(b_el, pair["b_origin"], tol, connector_iter)
         if not a_conn or not b_conn:
             fail += 1
             logger.warning("Disconnect skip: could not resolve connector(s) by origin.")
@@ -826,7 +818,8 @@ def disconnect_pairs_now(saved_pairs):
             logger.warning("Failed disconnect: {}".format(ex))
 
     logger.info("Disconnect results -> ok: {}, fail: {}".format(ok, fail))
-def divide_affected_systems(affected_system_ids):
+
+def divide_affected_systems(affected_system_ids, system_class):
     logger.info("\n--- Dividing affected systems ---")
     ok = 0
     skip = 0
@@ -850,7 +843,7 @@ def divide_affected_systems(affected_system_ids):
                 skip += 1
                 continue
 
-            if not isinstance(sys_el, DBP.PipingSystem):
+            if not isinstance(sys_el, system_class):
                 skip += 1
                 continue
 
@@ -876,6 +869,7 @@ def divide_affected_systems(affected_system_ids):
 
             ok += 1
             logger.info("Divided system {}".format(output.linkify(DB.ElementId(sid))))
+
             if new_ids:
                 for nid in new_ids:
                     try:
@@ -890,6 +884,7 @@ def divide_affected_systems(affected_system_ids):
     if created_ids:
         logger.info("New systems created by DivideSystem: {}".format(len(created_ids)))
     logger.info("Divide results -> ok: {}, skip: {}, fail: {}".format(ok, skip, fail))
+
     refreshed = set()
     for sid in survived_ids:
         refreshed.add(sid)
@@ -897,7 +892,6 @@ def divide_affected_systems(affected_system_ids):
         refreshed.add(sid)
 
     return refreshed
-
 
 def _get_pipe_system(pipe):
     try:
@@ -1135,7 +1129,7 @@ def _set_pipe_system_type_param(pipes, target_system_type):
     return ok, fail
 
 
-def reconnect_pairs(saved_pairs):
+def reconnect_pairs(saved_pairs, connector_iter):
     logger.info("\n--- Reconnecting boundary pairs ---")
     ok = 0
     fail = 0
@@ -1149,8 +1143,8 @@ def reconnect_pairs(saved_pairs):
             logger.warning("Reconnect skip: missing owner element(s).")
             continue
 
-        a_conn = find_connector_by_origin(a_el, pair["a_origin"], tol)
-        b_conn = find_connector_by_origin(b_el, pair["b_origin"], tol)
+        a_conn = find_connector_by_origin(a_el, pair["a_origin"], tol, connector_iter)
+        b_conn = find_connector_by_origin(b_el, pair["b_origin"], tol, connector_iter)
         if not a_conn or not b_conn:
             fail += 1
             logger.warning("Reconnect skip: could not resolve connector(s) by origin.")
@@ -1165,9 +1159,6 @@ def reconnect_pairs(saved_pairs):
             logger.warning("Failed reconnect: {}".format(ex))
 
     logger.info("Reconnect results -> ok: {}, fail: {}".format(ok, fail))
-# ============================================================
-# TRANSACTION WRAPPERS
-# ============================================================
 
 def _run_tx(tx_name, fn, *args, **kwargs):
     """
@@ -1226,9 +1217,8 @@ def main():
         pipes = selected_curves
         target_system_type = pick_piping_system_type()
 
-        selected_ids, saved_pairs, affected_system_ids = collect_boundary_work(elements)
-
-        eval_data = _evaluate_selection(elements, pipes, saved_pairs, affected_system_ids)
+        selected_ids, saved_pairs, affected_system_ids = collect_boundary_work(pipes, iter_piping_connectors)
+        eval_data = _evaluate_selection(pipes, pipes, saved_pairs, affected_system_ids)
         _print_plan(eval_data)
 
         with DB.TransactionGroup(doc, "SetPipeSystem - Apply Plan") as tg:
@@ -1236,12 +1226,13 @@ def main():
 
             if eval_data["has_existing_systems"]:
                 if eval_data["has_boundary_pairs"]:
-                    _run_tx("SetPipeSystem - Disconnect boundary", disconnect_pairs_now, saved_pairs)
+                    _run_tx("SetPipeSystem - Disconnect boundary", disconnect_pairs_now, saved_pairs, iter_piping_connectors)
 
                 if len(eval_data["affected_system_ids"]) > 0:
                     new_affected = _run_tx("SetPipeSystem - Divide affected systems",
                                            divide_affected_systems,
-                                           eval_data["affected_system_ids"])
+                                           eval_data["affected_system_ids"],
+                                           DBP.PipingSystem)
                     eval_data["affected_system_ids"] = new_affected
 
                 sys_ids_after = _collect_pipe_system_ids_from_connectors(pipes)
@@ -1253,7 +1244,7 @@ def main():
                         "piping")
 
                 if eval_data["has_boundary_pairs"]:
-                    _run_tx("SetPipeSystem - Reconnect boundary", reconnect_pairs, saved_pairs)
+                    _run_tx("SetPipeSystem - Reconnect boundary", reconnect_pairs, saved_pairs, iter_piping_connectors)
 
                 tg.Assimilate()
                 logger.info("\n=== COMPLETE (PIPING PLAN A) ===\n")
@@ -1280,18 +1271,34 @@ def main():
 
     ducts = selected_curves
     target_system_type = pick_duct_system_type()
+
+    selected_ids, saved_pairs, affected_system_ids = collect_boundary_work(ducts, iter_duct_connectors)
     sys_ids_pre = _collect_duct_system_ids_preop(ducts)
 
     with DB.TransactionGroup(doc, "SetDuctSystem - Apply Plan") as tg:
         tg.Start()
 
         if len(sys_ids_pre) > 0:
+            if len(saved_pairs) > 0:
+                _run_tx("SetDuctSystem - Disconnect boundary", disconnect_pairs_now, saved_pairs, iter_duct_connectors)
+
+            if len(affected_system_ids) > 0:
+                _run_tx("SetDuctSystem - Divide affected systems",
+                        divide_affected_systems,
+                        affected_system_ids,
+                        DBM.MechanicalSystem)
+
+            sys_ids_after = _collect_duct_system_ids_from_connectors(ducts)
             _run_tx("SetDuctSystem - Set type on existing systems",
                     _set_type_on_system_ids,
-                    sys_ids_pre,
+                    sys_ids_after,
                     target_system_type,
                     DBM.MechanicalSystem,
                     "duct")
+
+            if len(saved_pairs) > 0:
+                _run_tx("SetDuctSystem - Reconnect boundary", reconnect_pairs, saved_pairs, iter_duct_connectors)
+
             tg.Assimilate()
             logger.info("\n=== COMPLETE (DUCT EXISTING) ===\n")
             return
