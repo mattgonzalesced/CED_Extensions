@@ -361,6 +361,7 @@ def _collect_eligible_connectors_for_undefined_system(pipes):
 
     con_set = DB.ConnectorSet()
     seen_keys = set()
+    fixture_owner_added = set()
 
     while queue:
         el = queue.pop(0)
@@ -372,19 +373,6 @@ def _collect_eligible_connectors_for_undefined_system(pipes):
         if elid in visited:
             continue
         visited.add(elid)
-
-        is_fixture = _is_plumbing_fixture_owner(el)
-
-        # Fixtures are typically endpoint owners; include their piping connectors.
-        if is_fixture:
-            for c in iter_piping_connectors(el):
-                key = _connector_key(c)
-                if key not in seen_keys:
-                    try:
-                        con_set.Insert(c)
-                        seen_keys.add(key)
-                    except:
-                        pass
 
         for c in iter_piping_connectors(el):
             try:
@@ -406,9 +394,24 @@ def _collect_eligible_connectors_for_undefined_system(pipes):
                     queue.append(other_owner)
                     queued.add(other_id)
 
-                # If the neighboring owner is a fixture or tee-like element,
-                # add only this specific boundary connector.
-                if _is_plumbing_fixture_owner(other_owner) or _owner_has_three_plus_piping_connectors(other_owner):
+                # If neighboring owner is eligible, add boundary connector only.
+                # Fixture rule: add only the first connected fixture connector we hit
+                # per fixture owner to avoid grabbing unused fixture ports.
+                if _is_plumbing_fixture_owner(other_owner):
+                    if other_id in fixture_owner_added:
+                        continue
+
+                    key = _connector_key(other)
+                    if key not in seen_keys:
+                        try:
+                            con_set.Insert(other)
+                            seen_keys.add(key)
+                            fixture_owner_added.add(other_id)
+                        except:
+                            pass
+                    continue
+
+                if _owner_has_three_plus_piping_connectors(other_owner):
                     key = _connector_key(other)
                     if key not in seen_keys:
                         try:
@@ -997,57 +1000,63 @@ def main():
     eval_data = _evaluate_selection(elements, pipes, saved_pairs, affected_system_ids)
     _print_plan(eval_data)
 
-    # --------------------------------------------------------
-    # PLAN A: Existing systems present (do NOT break this flow)
-    # Disconnect -> Divide -> Set system type on systems -> Reconnect
-    # --------------------------------------------------------
-    if eval_data["has_existing_systems"]:
-        if eval_data["has_boundary_pairs"]:
-            _run_tx("SetPipeSystem - Disconnect boundary", disconnect_pairs_now, saved_pairs)
+    with DB.TransactionGroup(doc, "SetPipeSystem - Apply Plan") as tg:
+        tg.Start()
 
-        # Divide only if we actually have affected system ids
-        if len(eval_data["affected_system_ids"]) > 0:
-            new_affected = _run_tx("SetPipeSystem - Divide affected systems",
-                                   divide_affected_systems,
-                                   eval_data["affected_system_ids"])
-            eval_data["affected_system_ids"] = new_affected
+        # --------------------------------------------------------
+        # PLAN A: Existing systems present (do NOT break this flow)
+        # Disconnect -> Divide -> Set system type on systems -> Reconnect
+        # --------------------------------------------------------
+        if eval_data["has_existing_systems"]:
+            if eval_data["has_boundary_pairs"]:
+                _run_tx("SetPipeSystem - Disconnect boundary", disconnect_pairs_now, saved_pairs)
 
-        # Re-collect system ids from pipes post-divide (safer than relying on affected ids)
-        sys_ids_after = _collect_pipe_system_ids_from_connectors(pipes)
-        _run_tx("SetPipeSystem - Set type on existing systems",
-                _set_type_on_system_ids,
-                sys_ids_after,
-                target_system_type)
+            # Divide only if we actually have affected system ids
+            if len(eval_data["affected_system_ids"]) > 0:
+                new_affected = _run_tx("SetPipeSystem - Divide affected systems",
+                                       divide_affected_systems,
+                                       eval_data["affected_system_ids"])
+                eval_data["affected_system_ids"] = new_affected
 
-        if eval_data["has_boundary_pairs"]:
-            _run_tx("SetPipeSystem - Reconnect boundary", reconnect_pairs, saved_pairs)
+            # Re-collect system ids from pipes post-divide (safer than relying on affected ids)
+            sys_ids_after = _collect_pipe_system_ids_from_connectors(pipes)
+            _run_tx("SetPipeSystem - Set type on existing systems",
+                    _set_type_on_system_ids,
+                    sys_ids_after,
+                    target_system_type)
 
-        print("\n=== COMPLETE (PLAN A) ===\n")
-        return
+            if eval_data["has_boundary_pairs"]:
+                _run_tx("SetPipeSystem - Reconnect boundary", reconnect_pairs, saved_pairs)
 
-    # --------------------------------------------------------
-    # PLAN B: No systems on selected pipes (undefined mode)
-    #
-    # - If eligible (tee/fixture/etc.), create a new system and
-    #   add only eligible connectors (fixture / tee-like connectors).
-    #
-    # - If NOT eligible (isolated linear runs), do nothing.
-    # --------------------------------------------------------
-    if not eval_data["undefined_network_eligible"]:
-        print("\nUndefined network is not eligible for system assignment (matches Systemizer behavior).")
-        print("No changes made.")
-        print("\n=== COMPLETE (PLAN B - NOOP) ===\n")
-        return
+            tg.Assimilate()
+            print("\n=== COMPLETE (PLAN A) ===\n")
+            return
 
-    created = _run_tx("SetPipeSystem - Create system from eligible connectors (undefined)",
-                      _create_system_from_eligible_connectors,
-                      pipes,
-                      target_system_type)
+        # --------------------------------------------------------
+        # PLAN B: No systems on selected pipes (undefined mode)
+        #
+        # - If eligible (tee/fixture/etc.), create a new system and
+        #   add only eligible connectors (fixture / tee-like connectors).
+        #
+        # - If NOT eligible (isolated linear runs), do nothing.
+        # --------------------------------------------------------
+        if not eval_data["undefined_network_eligible"]:
+            print("\nUndefined network is not eligible for system assignment (matches Systemizer behavior).")
+            print("No changes made.")
+            tg.Assimilate()
+            print("\n=== COMPLETE (PLAN B - NOOP) ===\n")
+            return
 
-    if not created:
-        logger.warning("Undefined system creation did not assign any connectors.")
+        created = _run_tx("SetPipeSystem - Create system from eligible connectors (undefined)",
+                          _create_system_from_eligible_connectors,
+                          pipes,
+                          target_system_type)
 
-    print("\n=== COMPLETE (PLAN B) ===\n")
+        if not created:
+            logger.warning("Undefined system creation did not assign any connectors.")
+
+        tg.Assimilate()
+        print("\n=== COMPLETE (PLAN B) ===\n")
 
 
 if __name__ == "__main__":
