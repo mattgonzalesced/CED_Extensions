@@ -593,24 +593,34 @@ def _add_eligible_connectors_to_system(new_sys, connectors):
     """
     Add connectors one-by-one so bad connectors (already used / incompatible
     classification) do not fail the entire undefined assignment attempt.
-    Returns tuple: (added_count, skipped_count)
+    Returns tuple: (added_count, skipped_count, first_skip_exception)
     """
     if not new_sys:
-        return 0, 0
+        return 0, 0, None
 
     try:
         if connectors.Size == 0:
-            logger.warning('Undefined system creation skipped: no eligible connectors found.')
-            return 0, 0
+            logger.info('Undefined system creation skipped: no eligible connectors found.')
+            return 0, 0, None
     except:
-        logger.warning('Undefined system creation skipped: invalid ConnectorSet.')
-        return 0, 0
+        logger.info('Undefined system creation skipped: invalid ConnectorSet.')
+        return 0, 0, None
 
     added = 0
     skipped = 0
     first_skip = None
 
     for conn in connectors:
+        try:
+            existing = conn.MEPSystem
+            if existing:
+                skipped += 1
+                if first_skip is None:
+                    first_skip = Exception('Connector already belongs to system {}'.format(output.linkify(existing.Id)))
+                continue
+        except:
+            pass
+
         one = DB.ConnectorSet()
         try:
             one.Insert(conn)
@@ -627,13 +637,13 @@ def _add_eligible_connectors_to_system(new_sys, connectors):
                 first_skip = ex
 
     if skipped > 0:
-        logger.warning('Skipped {} connector(s) during undefined add on {}. First error: {}'.format(
+        logger.info('Skipped {} connector(s) during undefined add on {}. First error: {}'.format(
             skipped,
             output.linkify(new_sys.Id),
             first_skip
         ))
 
-    return added, skipped
+    return added, skipped, first_skip
 
 
 def _iter_piping_system_types_for_seed(target_system_type):
@@ -678,7 +688,7 @@ def _seed_undefined_system_with_fallback(connectors, target_system_type):
         if not new_sys:
             continue
 
-        added, skipped = _add_eligible_connectors_to_system(new_sys, connectors)
+        added, skipped, first_skip = _add_eligible_connectors_to_system(new_sys, connectors)
         logger.info('Undefined seed attempt [{}] -> added: {}, skipped: {}'.format(seed_name, added, skipped))
         if added > 0:
             # If we seeded with a non-target type, flip to requested target type now.
@@ -688,6 +698,16 @@ def _seed_undefined_system_with_fallback(connectors, target_system_type):
             except:
                 pass
             return True, new_sys
+
+        try:
+            if first_skip and 'have been used' in str(first_skip):
+                try:
+                    doc.Delete(new_sys.Id)
+                except:
+                    pass
+                return False, None
+        except:
+            pass
 
         # No connectors added for this seed type; delete empty system and try next.
         try:
@@ -1034,7 +1054,7 @@ def _get_single_open_pipe_connector(pipe):
     return None
 
 
-def _create_short_pipe_from_open_connector(pipe, open_conn, target_system_type):
+def _create_short_pipe_from_open_connector(pipe, open_conn, target_system_type, created_stub_ids=None):
     length_ft = 0.5 / 12.0
 
     try:
@@ -1104,8 +1124,14 @@ def _create_short_pipe_from_open_connector(pipe, open_conn, target_system_type):
     except:
         pass
 
+    if created_stub_ids is not None:
+        try:
+            created_stub_ids.append(stub.Id.IntegerValue)
+        except:
+            pass
+
     logger.info("Created short pipe stub {} from {}".format(output.linkify(stub.Id), output.linkify(pipe.Id)))
-    return True
+    return stub
 
 
 def _is_selected_pipe_element(el, selected_pipe_ids):
@@ -1289,12 +1315,27 @@ def _create_open_branch_stubs_from_selection(pipes, target_system_type):
         except:
             pass
 
-    created = 0
+    created_stub_ids = []
     for pipe, conn in open_connectors:
-        if _create_short_pipe_from_open_connector(pipe, conn, target_system_type):
-            created += 1
+        _create_short_pipe_from_open_connector(pipe, conn, target_system_type, created_stub_ids)
 
-    return created
+    return created_stub_ids
+
+def _delete_elements_by_ids(ids_to_delete):
+    if not ids_to_delete:
+        return 0
+
+    deleted = 0
+    for sid in ids_to_delete:
+        try:
+            doc.Delete(DB.ElementId(sid))
+            deleted += 1
+        except:
+            pass
+
+    if deleted > 0:
+        logger.info('Deleted {} temporary stub pipe(s).'.format(deleted))
+    return deleted
 
 
 def _get_system_type_abbreviation(system_type):
@@ -1575,15 +1616,19 @@ def main():
                 logger.info("\n=== COMPLETE (PIPING PLAN A) ===\n")
                 return
 
-            created_stubs = _run_tx("SetPipeSystem - Create open-branch stubs",
-                                    _create_open_branch_stubs_from_selection,
-                                    pipes,
-                                    target_system_type)
-            if created_stubs > 0:
-                logger.info("Created {} open-branch stub pipe(s).".format(created_stubs))
+            created_stub_ids = _run_tx("SetPipeSystem - Create open-branch stubs",
+                                       _create_open_branch_stubs_from_selection,
+                                       pipes,
+                                       target_system_type)
+            created_stub_count = len(created_stub_ids)
+            if created_stub_count > 0:
+                logger.info("Created {} open-branch stub pipe(s).".format(created_stub_count))
 
             if not eval_data["undefined_network_eligible"]:
-                if created_stubs > 0:
+                if created_stub_count > 0:
+                    _run_tx("SetPipeSystem - Delete temporary stubs",
+                            _delete_elements_by_ids,
+                            created_stub_ids)
                     tg.Assimilate()
                     logger.info("\n=== COMPLETE (PIPING PLAN B - STUBS ONLY) ===\n")
                     return
@@ -1600,7 +1645,12 @@ def main():
                               target_system_type)
 
             if not created:
-                logger.warning("Undefined system creation did not assign any connectors.")
+                logger.info("Undefined system creation did not assign any connectors.")
+
+            if created_stub_count > 0:
+                _run_tx("SetPipeSystem - Delete temporary stubs",
+                        _delete_elements_by_ids,
+                        created_stub_ids)
 
             tg.Assimilate()
             logger.info("\n=== COMPLETE (PIPING PLAN B) ===\n")
