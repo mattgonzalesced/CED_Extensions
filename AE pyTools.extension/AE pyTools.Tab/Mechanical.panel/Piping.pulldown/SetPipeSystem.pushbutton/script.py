@@ -487,10 +487,265 @@ def _iter_piping_system_types_for_seed(target_system_type):
         yield st
 
 
-def _seed_undefined_system_with_fallback(connectors, target_system_type):
+def _get_system_type_abbreviation(target_system_type):
+    """Get preferred abbreviation token for naming new systems."""
+    try:
+        p = target_system_type.LookupParameter("Abbreviation")
+        if p:
+            val = p.AsString()
+            if val:
+                return val.strip()
+    except:
+        pass
+
+    try:
+        p = target_system_type.get_Parameter(DB.BuiltInParameter.RBS_SYSTEM_ABBREVIATION_PARAM)
+        if p:
+            val = p.AsString()
+            if val:
+                return val.strip()
+    except:
+        pass
+
+    try:
+        name = DB.Element.Name.__get__(target_system_type)
+        if name:
+            return name.split()[0]
+    except:
+        pass
+
+    return "SYS"
+
+
+def _collect_used_piping_system_names():
+    names = set()
+    for s in DB.FilteredElementCollector(doc).OfClass(DBP.PipingSystem).ToElements():
+        try:
+            name = DB.Element.Name.__get__(s)
+            if name:
+                names.add(name)
+        except:
+            pass
+    return names
+
+
+def _set_unique_system_name(sys_el, target_system_type):
+    if not sys_el:
+        return False
+
+    used = _collect_used_piping_system_names()
+    try:
+        current_name = DB.Element.Name.__get__(sys_el)
+        if current_name in used:
+            used.remove(current_name)
+    except:
+        pass
+
+    prefix = _get_system_type_abbreviation(target_system_type)
+
+    i = 1
+    while i < 100000:
+        candidate = "{} {}".format(prefix, i)
+        if candidate not in used:
+            try:
+                sys_el.Name = candidate
+                return True
+            except:
+                try:
+                    DB.Element.Name.__set__(sys_el, candidate)
+                    return True
+                except Exception as ex:
+                    logger.warning("Could not set system name {}: {}".format(candidate, ex))
+                    return False
+        i += 1
+
+    logger.warning("Could not find unique system name for prefix {}".format(prefix))
+    return False
+
+
+def _pipe_is_on_system(pipe, sys_id_int):
+    try:
+        sys = pipe.MEPSystem
+        if sys and sys.Id.IntegerValue == sys_id_int:
+            return True
+    except:
+        pass
+
+    for c in iter_piping_connectors(pipe):
+        try:
+            sys = c.MEPSystem
+            if sys and sys.Id.IntegerValue == sys_id_int:
+                return True
+        except:
+            pass
+
+    return False
+
+
+def _count_selected_pipes_on_system(pipes, sys_id_int):
+    n = 0
+    for p in pipes:
+        if _pipe_is_on_system(p, sys_id_int):
+            n += 1
+    return n
+
+
+def _connectorset_has_fixture_connector(connectors):
+    for conn in connectors:
+        try:
+            if _is_plumbing_fixture_owner(conn.Owner):
+                return True
+        except:
+            pass
+    return False
+
+
+def _find_open_selected_pipe_connector(pipes):
+    for p in pipes:
+        for c in iter_piping_connectors(p):
+            try:
+                if not c.IsConnected:
+                    return c
+            except:
+                pass
+    return None
+
+
+def _get_pipe_level_id(pipe):
+    try:
+        rl = pipe.ReferenceLevel
+        if rl:
+            return rl.Id
+    except:
+        pass
+
+    try:
+        p = pipe.get_Parameter(DB.BuiltInParameter.RBS_START_LEVEL_PARAM)
+        if p:
+            lid = p.AsElementId()
+            if lid and lid.IntegerValue > 0:
+                return lid
+    except:
+        pass
+
+    try:
+        lid = pipe.LevelId
+        if lid and lid.IntegerValue > 0:
+            return lid
+    except:
+        pass
+
+    return DB.ElementId.InvalidElementId
+
+
+def _create_short_pipe_from_open_connector(open_conn, target_system_type):
+    try:
+        owner_pipe = open_conn.Owner
+    except:
+        return None
+
+    if not isinstance(owner_pipe, DBP.Pipe):
+        return None
+
+    try:
+        start = open_conn.Origin
+    except:
+        return None
+
+    direction = None
+    try:
+        direction = open_conn.CoordinateSystem.BasisZ
+    except:
+        direction = None
+
+    try:
+        if direction is None or direction.GetLength() == 0:
+            direction = DB.XYZ.BasisX
+    except:
+        direction = DB.XYZ.BasisX
+
+    try:
+        direction = direction.Normalize()
+    except:
+        direction = DB.XYZ.BasisX
+
+    stub_len = 0.1
+    end = start + direction.Multiply(stub_len)
+
+    try:
+        pipe_type_id = owner_pipe.GetTypeId()
+    except:
+        return None
+
+    level_id = _get_pipe_level_id(owner_pipe)
+    if level_id == DB.ElementId.InvalidElementId:
+        return None
+
+    try:
+        new_pipe = DBP.Pipe.Create(doc, target_system_type.Id, pipe_type_id, level_id, start, end)
+    except Exception as ex:
+        logger.warning("Stub create failed: {}".format(ex))
+        return None
+
+    try:
+        src_d = owner_pipe.get_Parameter(DB.BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)
+        dst_d = new_pipe.get_Parameter(DB.BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)
+        if src_d and dst_d:
+            dst_d.Set(src_d.AsDouble())
+    except:
+        pass
+
+    # Best effort connect near the start point.
+    try:
+        new_conn = find_connector_by_origin(new_pipe, start, 0.01)
+        if new_conn and (not new_conn.IsConnected):
+            new_conn.ConnectTo(open_conn)
+    except:
+        pass
+
+    return new_pipe
+
+
+def _create_system_from_open_pipe_stub(pipes, target_system_type):
+    """
+    Undefined fallback for branches with no fixture driver:
+    create a short pipe off a selected open connector and use it to drive
+    system assignment.
+    """
+    open_conn = _find_open_selected_pipe_connector(pipes)
+    if not open_conn:
+        return False, None
+
+    new_pipe = _create_short_pipe_from_open_connector(open_conn, target_system_type)
+    if not new_pipe:
+        return False, None
+
+    try:
+        p = new_pipe.get_Parameter(DB.BuiltInParameter.RBS_PIPING_SYSTEM_TYPE_PARAM)
+        if p:
+            p.Set(target_system_type.Id)
+    except:
+        pass
+
+    sys = _get_pipe_system_preop(new_pipe)
+    if not sys:
+        return False, None
+
+    sid = sys.Id.IntegerValue
+    assigned = _count_selected_pipes_on_system(pipes, sid)
+    if assigned <= 0:
+        logger.warning("Stub fallback created system {}, but no selected pipes were assigned.".format(output.linkify(sys.Id)))
+        return False, None
+
+    _set_unique_system_name(sys, target_system_type)
+    print("Stub fallback assigned selected pipes: {}".format(assigned))
+    return True, sys
+
+
+def _seed_undefined_system_with_fallback(connectors, target_system_type, pipes):
     """
     Try target type first; if connector-domain/classification blocks assignment,
-    try other seed types until at least one connector is accepted.
+    try other seed types until at least one selected pipe is actually assigned.
     """
     for seed_type in _iter_piping_system_types_for_seed(target_system_type):
         seed_name = None
@@ -513,9 +768,17 @@ def _seed_undefined_system_with_fallback(connectors, target_system_type):
                     _set_type_on_system(new_sys, target_system_type)
             except:
                 pass
-            return True, new_sys
 
-        # No connectors added for this seed type; delete empty system and try next.
+            sid = new_sys.Id.IntegerValue
+            assigned = _count_selected_pipes_on_system(pipes, sid)
+            if assigned > 0:
+                _set_unique_system_name(new_sys, target_system_type)
+                print('Selected pipes assigned to new system: {}'.format(assigned))
+                return True, new_sys
+
+            logger.warning('Seeded system {} but no selected pipes were assigned. Deleting empty/unrelated system.'.format(output.linkify(new_sys.Id)))
+
+        # No useful assignment for this seed type; delete and try next.
         try:
             doc.Delete(new_sys.Id)
         except:
@@ -546,10 +809,21 @@ def _create_system_from_eligible_connectors(pipes, target_system_type):
     if connector_count == 0:
         return False
 
-    ok, new_sys = _seed_undefined_system_with_fallback(connectors, target_system_type)
+    ok, new_sys = _seed_undefined_system_with_fallback(connectors, target_system_type, pipes)
     if ok and new_sys:
         print('Created undefined system {}'.format(output.linkify(new_sys.Id)))
-    return ok
+        return True
+
+    # Additional fallback for branches with no fixture-driven connector:
+    # create a short stub from an open selected pipe connector.
+    if not _connectorset_has_fixture_connector(connectors):
+        print('No fixture connector available; attempting open-end stub fallback.')
+        ok_stub, sys_stub = _create_system_from_open_pipe_stub(pipes, target_system_type)
+        if ok_stub and sys_stub:
+            print('Created undefined system via stub {}'.format(output.linkify(sys_stub.Id)))
+            return True
+
+    return False
 
 
 # ============================================================
