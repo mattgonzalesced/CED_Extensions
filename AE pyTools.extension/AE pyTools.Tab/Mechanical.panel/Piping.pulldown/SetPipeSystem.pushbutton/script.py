@@ -997,6 +997,133 @@ def _collect_pipe_system_ids_from_connectors(pipes):
     return sys_ids
 
 
+def _get_pipe_level_id(pipe):
+    try:
+        lvl = pipe.ReferenceLevel
+        if lvl:
+            return lvl.Id
+    except:
+        pass
+
+    for bip in [DB.BuiltInParameter.RBS_START_LEVEL_PARAM,
+                DB.BuiltInParameter.LEVEL_PARAM]:
+        try:
+            p = pipe.get_Parameter(bip)
+            if p:
+                lid = p.AsElementId()
+                if lid and lid != DB.ElementId.InvalidElementId:
+                    return lid
+        except:
+            pass
+
+    return None
+
+
+def _get_single_open_pipe_connector(pipe):
+    open_connectors = []
+    for c in iter_piping_connectors(pipe):
+        try:
+            if not c.IsConnected:
+                open_connectors.append(c)
+        except:
+            pass
+
+    if len(open_connectors) == 1:
+        return open_connectors[0]
+
+    return None
+
+
+def _create_short_pipe_from_open_connector(pipe, open_conn, target_system_type):
+    length_ft = 0.5 / 12.0
+
+    try:
+        start = open_conn.Origin
+    except Exception as ex:
+        logger.error("Failed to read open connector origin: {}".format(ex))
+        return False
+
+    direction = None
+    try:
+        curve = pipe.Location.Curve
+        p0 = curve.GetEndPoint(0)
+        p1 = curve.GetEndPoint(1)
+        if p0.DistanceTo(start) <= p1.DistanceTo(start):
+            direction = (p0 - p1).Normalize()
+        else:
+            direction = (p1 - p0).Normalize()
+    except:
+        pass
+
+    if not direction:
+        try:
+            direction = open_conn.CoordinateSystem.BasisZ.Normalize()
+        except Exception as ex:
+            logger.error("Failed to resolve direction for stub pipe: {}".format(ex))
+            return False
+
+    end = start + (direction.Multiply(length_ft))
+
+    pipe_type_id = pipe.GetTypeId()
+    level_id = _get_pipe_level_id(pipe)
+    if not level_id:
+        logger.error("Could not determine level for selected pipe {}".format(output.linkify(pipe.Id)))
+        return False
+
+    try:
+        stub = DBP.Pipe.Create(doc, target_system_type.Id, pipe_type_id, level_id, start, end)
+    except Exception as ex:
+        logger.error("Failed creating short pipe stub: {}".format(ex))
+        return False
+
+    try:
+        src_dia = pipe.get_Parameter(DB.BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)
+        dst_dia = stub.get_Parameter(DB.BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)
+        if src_dia and dst_dia:
+            dst_dia.Set(src_dia.AsDouble())
+    except Exception as ex:
+        logger.warning("Could not copy diameter to short pipe stub: {}".format(ex))
+
+    try:
+        nearest = None
+        nearest_d = None
+        for c in iter_piping_connectors(stub):
+            d = c.Origin.DistanceTo(start)
+            if nearest is None or d < nearest_d:
+                nearest = c
+                nearest_d = d
+        if nearest:
+            open_conn.ConnectTo(nearest)
+    except Exception as ex:
+        logger.warning("Could not connect short pipe stub to source connector: {}".format(ex))
+
+    try:
+        new_sys = stub.MEPSystem
+        if new_sys:
+            _set_unique_mep_system_name(new_sys, target_system_type)
+    except:
+        pass
+
+    logger.info("Created short pipe stub {} from {}".format(output.linkify(stub.Id), output.linkify(pipe.Id)))
+    return True
+
+
+def _single_open_pipe_stub_mode(pipes, target_system_type):
+    if len(pipes) != 1:
+        return False
+
+    pipe = pipes[0]
+    if _get_pipe_system_preop(pipe):
+        return False
+
+    open_conn = _get_single_open_pipe_connector(pipe)
+    if not open_conn:
+        return False
+
+    logger.info("Single-open-pipe undefined mode detected. Creating 1/2\" inline stub.")
+    return _create_short_pipe_from_open_connector(pipe, open_conn, target_system_type)
+
+
 def _get_system_type_abbreviation(system_type):
     try:
         p = system_type.LookupParameter("Abbreviation")
@@ -1273,6 +1400,15 @@ def main():
 
                 tg.Assimilate()
                 logger.info("\n=== COMPLETE (PIPING PLAN A) ===\n")
+                return
+
+            stub_created = _run_tx("SetPipeSystem - Single open pipe stub",
+                                   _single_open_pipe_stub_mode,
+                                   pipes,
+                                   target_system_type)
+            if stub_created:
+                tg.Assimilate()
+                logger.info("\n=== COMPLETE (PIPING SINGLE-PIPE STUB MODE) ===\n")
                 return
 
             if not eval_data["undefined_network_eligible"]:
