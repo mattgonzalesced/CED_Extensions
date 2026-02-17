@@ -1108,20 +1108,100 @@ def _create_short_pipe_from_open_connector(pipe, open_conn, target_system_type):
     return True
 
 
-def _single_open_pipe_stub_mode(pipes, target_system_type):
-    if len(pipes) != 1:
+def _is_selected_pipe_element(el, selected_pipe_ids):
+    try:
+        return isinstance(el, DBP.Pipe) and el.Id.IntegerValue in selected_pipe_ids
+    except:
         return False
 
-    pipe = pipes[0]
-    if _get_pipe_system_preop(pipe):
+
+def _open_connector_has_selected_path_to_tee(open_conn, selected_pipe_ids):
+    try:
+        start_owner = open_conn.Owner
+        start_id = start_owner.Id.IntegerValue
+    except:
         return False
 
-    open_conn = _get_single_open_pipe_connector(pipe)
-    if not open_conn:
+    if start_id not in selected_pipe_ids:
         return False
 
-    logger.info("Single-open-pipe undefined mode detected. Creating 1/2\" inline stub.")
-    return _create_short_pipe_from_open_connector(pipe, open_conn, target_system_type)
+    queue = [start_owner]
+    visited = set()
+
+    while queue:
+        el = queue.pop(0)
+        try:
+            eid = el.Id.IntegerValue
+        except:
+            continue
+
+        if eid in visited:
+            continue
+        visited.add(eid)
+
+        for c in iter_piping_connectors(el):
+            try:
+                refs = list(c.AllRefs)
+            except:
+                refs = []
+
+            for other in refs:
+                if other == c:
+                    continue
+
+                try:
+                    other_owner = other.Owner
+                except:
+                    continue
+
+                if _owner_has_three_plus_piping_connectors(other_owner):
+                    return True
+
+                if _is_selected_pipe_element(other_owner, selected_pipe_ids):
+                    try:
+                        oid = other_owner.Id.IntegerValue
+                    except:
+                        continue
+                    if oid not in visited:
+                        queue.append(other_owner)
+
+    return False
+
+
+def _create_open_branch_stubs_from_selection(pipes, target_system_type):
+    selected_pipe_ids = set()
+    for p in pipes:
+        try:
+            selected_pipe_ids.add(p.Id.IntegerValue)
+        except:
+            pass
+
+    if not selected_pipe_ids:
+        return 0
+
+    created = 0
+    seen = set()
+
+    for pipe in pipes:
+        for conn in iter_piping_connectors(pipe):
+            try:
+                if conn.IsConnected:
+                    continue
+            except:
+                continue
+
+            key = _connector_key(conn)
+            if key in seen:
+                continue
+            seen.add(key)
+
+            if not _open_connector_has_selected_path_to_tee(conn, selected_pipe_ids):
+                continue
+
+            if _create_short_pipe_from_open_connector(pipe, conn, target_system_type):
+                created += 1
+
+    return created
 
 
 def _get_system_type_abbreviation(system_type):
@@ -1402,14 +1482,12 @@ def main():
                 logger.info("\n=== COMPLETE (PIPING PLAN A) ===\n")
                 return
 
-            stub_created = _run_tx("SetPipeSystem - Single open pipe stub",
-                                   _single_open_pipe_stub_mode,
-                                   pipes,
-                                   target_system_type)
-            if stub_created:
-                tg.Assimilate()
-                logger.info("\n=== COMPLETE (PIPING SINGLE-PIPE STUB MODE) ===\n")
-                return
+            created_stubs = _run_tx("SetPipeSystem - Create open-branch stubs",
+                                    _create_open_branch_stubs_from_selection,
+                                    pipes,
+                                    target_system_type)
+            if created_stubs > 0:
+                logger.info("Created {} open-branch stub pipe(s).".format(created_stubs))
 
             if not eval_data["undefined_network_eligible"]:
                 logger.info("\nUndefined network is not eligible for system assignment (matches Systemizer behavior).")
