@@ -192,6 +192,31 @@ def get_selected_network_mode(elements):
         script.exit()
 
     if pipes:
+        piping_elements = []
+        for el in elements:
+            has_piping = False
+            for _ in iter_piping_connectors(el):
+                has_piping = True
+                break
+            if has_piping:
+                piping_elements.append(el)
+        return "piping", piping_elements, pipes
+
+    if ducts:
+        duct_elements = []
+        for el in elements:
+            has_duct = False
+            for _ in iter_duct_connectors(el):
+                has_duct = True
+                break
+            if has_duct:
+                duct_elements.append(el)
+        return "duct", duct_elements, ducts
+
+    logger.info("No pipes or ducts selected. Exiting.")
+    script.exit()
+
+    if pipes:
         return "piping", pipes
 
     if ducts:
@@ -542,10 +567,10 @@ def _collect_eligible_connectors_for_undefined_system(pipes):
                     if other_id in fixture_owner_added:
                         continue
 
-                    key = _connector_key(c)
+                    key = _connector_key(other)
                     if key not in seen_keys:
                         try:
-                            con_set.Insert(c)
+                            con_set.Insert(other)
                             seen_keys.add(key)
                             fixture_owner_added.add(other_id)
                         except:
@@ -1211,14 +1236,14 @@ def _print_plan(eval_data):
 def main():
     logger.info("\n=== SET MEP SYSTEM (EVALUATE -> APPLY PLAN) ===\n")
     elements = get_user_selection()
-    mode, selected_curves = get_selected_network_mode(elements)
+    mode, mode_elements, selected_curves = get_selected_network_mode(elements)
 
     if mode == "piping":
         pipes = selected_curves
         target_system_type = pick_piping_system_type()
 
-        selected_ids, saved_pairs, affected_system_ids = collect_boundary_work(pipes, iter_piping_connectors)
-        eval_data = _evaluate_selection(pipes, pipes, saved_pairs, affected_system_ids)
+        selected_ids, saved_pairs, affected_system_ids = collect_boundary_work(mode_elements, iter_piping_connectors)
+        eval_data = _evaluate_selection(mode_elements, pipes, saved_pairs, affected_system_ids)
         _print_plan(eval_data)
 
         with DB.TransactionGroup(doc, "SetPipeSystem - Apply Plan") as tg:
@@ -1272,7 +1297,7 @@ def main():
     ducts = selected_curves
     target_system_type = pick_duct_system_type()
 
-    selected_ids, saved_pairs, affected_system_ids = collect_boundary_work(ducts, iter_duct_connectors)
+    selected_ids, saved_pairs, affected_system_ids = collect_boundary_work(mode_elements, iter_duct_connectors)
     sys_ids_pre = _collect_duct_system_ids_preop(ducts)
 
     with DB.TransactionGroup(doc, "SetDuctSystem - Apply Plan") as tg:
