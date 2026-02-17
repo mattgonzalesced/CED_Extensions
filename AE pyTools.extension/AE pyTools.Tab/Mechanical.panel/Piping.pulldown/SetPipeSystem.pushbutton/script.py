@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import Autodesk.Revit.DB.Plumbing as DBP
+import Autodesk.Revit.DB.Mechanical as DBM
 from System.Collections.Generic import List
 from pyrevit import revit, DB, forms, script
 
@@ -10,6 +11,14 @@ doc = revit.doc
 logger = script.get_logger()
 output = script.get_output()
 output.close_others()
+
+VERBOSE_LOGGING = False
+
+try:
+    if hasattr(logger, "set_verbose_mode"):
+        logger.set_verbose_mode(VERBOSE_LOGGING)
+except Exception:
+    pass
 
 PIPING_DOMAIN = DB.Domain.DomainPiping
 
@@ -125,8 +134,7 @@ def _create_system_for_undefined_pipes(undefined_pipes, target_system_type):
     if not undefined_pipes:
         return False
 
-    print("\n--- Creating piping system for undefined pipes ---")
-
+    logger.info("\n--- Creating piping system for undefined pipes ---")
     new_sys = _create_empty_piping_system(target_system_type)
     if not new_sys:
         logger.error("Could not create piping system.")
@@ -134,7 +142,8 @@ def _create_system_for_undefined_pipes(undefined_pipes, target_system_type):
 
     ok = _add_pipes_to_piping_system(new_sys, undefined_pipes)
     if ok:
-        print("Created new system {}".format(output.linkify(new_sys.Id)))
+        _set_unique_mep_system_name(new_sys, target_system_type)
+        logger.info("Created new system {}".format(output.linkify(new_sys.Id)))
         return True
 
     return False
@@ -167,11 +176,10 @@ def get_user_selection():
 
 def get_selected_pipes(elements):
     pipes = [el for el in elements if isinstance(el, DBP.Pipe)]
-    print("Selected element count: {}".format(len(elements)))
-    print("Selected pipe count: {}".format(len(pipes)))
-
+    logger.info("Selected element count: {}".format(len(elements)))
+    logger.info("Selected pipe count: {}".format(len(pipes)))
     if not pipes:
-        print("No pipes selected. Exiting (Victaulic behavior).")
+        logger.info("No pipes selected. Exiting (Victaulic behavior).")
         script.exit()
 
     return pipes
@@ -235,7 +243,7 @@ def pick_disconnect_driver(conn_a, conn_b):
         a_owner = conn_a.Owner
         b_owner = conn_b.Owner
     except Exception as e:
-        print(e)
+        logger.info(e)
         return conn_a, conn_b
 
     a_is_curve = isinstance(a_owner, DB.MEPCurve)
@@ -504,8 +512,7 @@ def _seed_undefined_system_with_fallback(connectors, target_system_type):
             continue
 
         added, skipped = _add_eligible_connectors_to_system(new_sys, connectors)
-        print('Undefined seed attempt [{}] -> added: {}, skipped: {}'.format(seed_name, added, skipped))
-
+        logger.info('Undefined seed attempt [{}] -> added: {}, skipped: {}'.format(seed_name, added, skipped))
         if added > 0:
             # If we seeded with a non-target type, flip to requested target type now.
             try:
@@ -532,8 +539,7 @@ def _create_system_from_eligible_connectors(pipes, target_system_type):
     3) Use seed-type fallback to avoid connector classification dead-ends,
        then set final type to user target.
     """
-    print("\n--- Undefined mode: create system + add eligible connectors ---")
-
+    logger.info("\n--- Undefined mode: create system + add eligible connectors ---")
     connectors = _collect_eligible_connectors_for_undefined_system(pipes)
 
     try:
@@ -541,14 +547,14 @@ def _create_system_from_eligible_connectors(pipes, target_system_type):
     except:
         connector_count = 0
 
-    print('Eligible connectors found: {}'.format(connector_count))
-
+    logger.info('Eligible connectors found: {}'.format(connector_count))
     if connector_count == 0:
         return False
 
     ok, new_sys = _seed_undefined_system_with_fallback(connectors, target_system_type)
     if ok and new_sys:
-        print('Created undefined system {}'.format(output.linkify(new_sys.Id)))
+        _set_unique_mep_system_name(new_sys, target_system_type)
+        logger.info('Created undefined system {}'.format(output.linkify(new_sys.Id)))
     return ok
 
 
@@ -567,8 +573,7 @@ def collect_boundary_work(elements):
     saved_pairs = []
     affected_system_ids = set()
 
-    print("\n--- Collecting boundary connections ---")
-
+    logger.info("\n--- Collecting boundary connections ---")
     # collect systems directly from selected elements
     for el in elements:
         try:
@@ -636,8 +641,8 @@ def collect_boundary_work(elements):
                     "b_origin": target_origin
                 })
 
-    print("Boundary connection pairs found: {}".format(len(saved_pairs)))
-    print("Affected piping system ids: {}".format(len(affected_system_ids)))
+    logger.info("Boundary connection pairs found: {}".format(len(saved_pairs)))
+    logger.info("Affected piping system ids: {}".format(len(affected_system_ids)))
     return selected_ids, saved_pairs, affected_system_ids
 
 
@@ -650,7 +655,7 @@ def disconnect_pairs_now(saved_pairs):
     Disconnect using live connector objects found by origin in the current model state.
     Note: uses origin matching strategy; do not change unless you replace the pair schema.
     """
-    print("\n--- Disconnecting boundary pairs ---")
+    logger.info("\n--- Disconnecting boundary pairs ---")
     ok = 0
     fail = 0
     tol = 0.001
@@ -674,16 +679,14 @@ def disconnect_pairs_now(saved_pairs):
             if a_conn.IsConnected:
                 a_conn.DisconnectFrom(b_conn)
             ok += 1
-            print("Disconnected {} from {}".format(output.linkify(a_el.Id), output.linkify(b_el.Id)))
+            logger.info("Disconnected {} from {}".format(output.linkify(a_el.Id), output.linkify(b_el.Id)))
         except Exception as ex:
             fail += 1
             logger.warning("Failed disconnect: {}".format(ex))
 
-    print("Disconnect results -> ok: {}, fail: {}".format(ok, fail))
-
-
+    logger.info("Disconnect results -> ok: {}, fail: {}".format(ok, fail))
 def divide_affected_systems(affected_system_ids):
-    print("\n--- Dividing affected systems ---")
+    logger.info("\n--- Dividing affected systems ---")
     ok = 0
     skip = 0
     fail = 0
@@ -720,7 +723,7 @@ def divide_affected_systems(affected_system_ids):
 
             if not multi:
                 skip += 1
-                print("System {} is single network".format(output.linkify(sys_el.Id)))
+                logger.info("System {} is single network".format(output.linkify(sys_el.Id)))
                 continue
 
             try:
@@ -731,8 +734,7 @@ def divide_affected_systems(affected_system_ids):
                 continue
 
             ok += 1
-            print("Divided system {}".format(output.linkify(DB.ElementId(sid))))
-
+            logger.info("Divided system {}".format(output.linkify(DB.ElementId(sid))))
             if new_ids:
                 for nid in new_ids:
                     try:
@@ -745,10 +747,8 @@ def divide_affected_systems(affected_system_ids):
             logger.warning("Divide loop error on system {}: {}".format(sid, ex_outer))
 
     if created_ids:
-        print("New systems created by DivideSystem: {}".format(len(created_ids)))
-
-    print("Divide results -> ok: {}, skip: {}, fail: {}".format(ok, skip, fail))
-
+        logger.info("New systems created by DivideSystem: {}".format(len(created_ids)))
+    logger.info("Divide results -> ok: {}, skip: {}, fail: {}".format(ok, skip, fail))
     refreshed = set()
     for sid in survived_ids:
         refreshed.add(sid)
@@ -837,6 +837,98 @@ def _collect_pipe_system_ids_from_connectors(pipes):
     return sys_ids
 
 
+def _get_system_type_abbreviation(system_type):
+    try:
+        p = system_type.LookupParameter("Abbreviation")
+        if p:
+            val = p.AsString()
+            if val:
+                return val.strip()
+    except:
+        pass
+
+    try:
+        p = system_type.get_Parameter(DB.BuiltInParameter.RBS_SYSTEM_ABBREVIATION_PARAM)
+        if p:
+            val = p.AsString()
+            if val:
+                return val.strip()
+    except:
+        pass
+
+    try:
+        n = DB.Element.Name.__get__(system_type)
+        if n:
+            return n.split()[0]
+    except:
+        pass
+
+    return "SYS"
+
+
+def _collect_used_mep_system_names():
+    names = set()
+
+    for s in (DB.FilteredElementCollector(doc)
+              .OfClass(DBP.PipingSystem)
+              .WhereElementIsNotElementType()
+              .ToElements()):
+        try:
+            n = DB.Element.Name.__get__(s)
+            if n:
+                names.add(n)
+        except:
+            pass
+
+    for s in (DB.FilteredElementCollector(doc)
+              .OfClass(DBM.MechanicalSystem)
+              .WhereElementIsNotElementType()
+              .ToElements()):
+        try:
+            n = DB.Element.Name.__get__(s)
+            if n:
+                names.add(n)
+        except:
+            pass
+
+    return names
+
+
+def _set_unique_mep_system_name(system_el, target_system_type):
+    if not system_el:
+        return False
+
+    used = _collect_used_mep_system_names()
+
+    try:
+        current = DB.Element.Name.__get__(system_el)
+        if current in used:
+            used.remove(current)
+    except:
+        pass
+
+    prefix = _get_system_type_abbreviation(target_system_type)
+
+    i = 1
+    while i < 100000:
+        candidate = "{} {}".format(prefix, i)
+        if candidate not in used:
+            try:
+                system_el.Name = candidate
+                return True
+            except:
+                try:
+                    DB.Element.Name.__set__(system_el, candidate)
+                    return True
+                except Exception as ex:
+                    logger.warning("Could not set system name {}: {}".format(candidate, ex))
+                    return False
+        i += 1
+
+    logger.warning("Could not find unique system name for prefix {}".format(prefix))
+    return False
+
+
 def _set_type_on_system(sys_el, target_system_type):
     try:
         param = sys_el.LookupParameter("Type")
@@ -850,7 +942,7 @@ def _set_type_on_system(sys_el, target_system_type):
 
 
 def _set_type_on_system_ids(system_ids, target_system_type):
-    print("\n--- Setting system type on isolated systems (existing systems) ---")
+    logger.info("\n--- Setting system type on isolated systems (existing systems) ---")
     ok = 0
     fail = 0
     seen = set()
@@ -867,12 +959,13 @@ def _set_type_on_system_ids(system_ids, target_system_type):
             continue
 
         if _set_type_on_system(sys_el, target_system_type):
+            _set_unique_mep_system_name(sys_el, target_system_type)
             ok += 1
-            print("Set type on system {}".format(output.linkify(sys_el.Id)))
+            logger.info("Set type on system {}".format(output.linkify(sys_el.Id)))
         else:
             fail += 1
 
-    print("Set-type results -> ok: {}, fail: {}".format(ok, fail))
+    logger.info("Set-type results -> ok: {}, fail: {}".format(ok, fail))
     return ok, fail
 
 
@@ -881,7 +974,7 @@ def _set_pipe_system_type_param(pipes, target_system_type):
     For undefined networks where Revit can propagate (tee, fixture, etc.),
     this mimics Systemizer: set the pipe param and let Revit assign/propagate.
     """
-    print("\n--- Setting pipe system type param (undefined propagation mode) ---")
+    logger.info("\n--- Setting pipe system type param (undefined propagation mode) ---")
     ok = 0
     fail = 0
 
@@ -892,17 +985,17 @@ def _set_pipe_system_type_param(pipes, target_system_type):
                 raise Exception("Pipe has no RBS_PIPING_SYSTEM_TYPE_PARAM.")
             param.Set(target_system_type.Id)
             ok += 1
-            print("Set system type on pipe {}".format(output.linkify(p.Id)))
+            logger.info("Set system type on pipe {}".format(output.linkify(p.Id)))
         except Exception as ex:
             fail += 1
             logger.error("Failed setting system type on pipe {}: {}".format(p.Id, ex))
 
-    print("Pipe-param results -> ok: {}, fail: {}".format(ok, fail))
+    logger.info("Pipe-param results -> ok: {}, fail: {}".format(ok, fail))
     return ok, fail
 
 
 def reconnect_pairs(saved_pairs):
-    print("\n--- Reconnecting boundary pairs ---")
+    logger.info("\n--- Reconnecting boundary pairs ---")
     ok = 0
     fail = 0
     tol = 0.001
@@ -925,14 +1018,12 @@ def reconnect_pairs(saved_pairs):
         try:
             a_conn.ConnectTo(b_conn)
             ok += 1
-            print("Reconnected {} to {}".format(output.linkify(a_el.Id), output.linkify(b_el.Id)))
+            logger.info("Reconnected {} to {}".format(output.linkify(a_el.Id), output.linkify(b_el.Id)))
         except Exception as ex:
             fail += 1
             logger.warning("Failed reconnect: {}".format(ex))
 
-    print("Reconnect results -> ok: {}, fail: {}".format(ok, fail))
-
-
+    logger.info("Reconnect results -> ok: {}, fail: {}".format(ok, fail))
 # ============================================================
 # TRANSACTION WRAPPERS
 # ============================================================
@@ -975,21 +1066,18 @@ def _evaluate_selection(elements, pipes, saved_pairs, affected_system_ids):
 
 
 def _print_plan(eval_data):
-    print("\n--- Evaluation ---")
-    print("Has existing systems on selected pipes: {}".format(eval_data["has_existing_systems"]))
-    print("Selected pipe system id count: {}".format(len(eval_data["selected_pipe_system_ids"])))
-    print("Boundary pairs: {}".format(eval_data["boundary_pair_count"]))
-    print("Affected system ids: {}".format(len(eval_data["affected_system_ids"])))
-    print("Undefined network eligible: {}".format(eval_data["undefined_network_eligible"]))
-
-
+    logger.info("\n--- Evaluation ---")
+    logger.info("Has existing systems on selected pipes: {}".format(eval_data["has_existing_systems"]))
+    logger.info("Selected pipe system id count: {}".format(len(eval_data["selected_pipe_system_ids"])))
+    logger.info("Boundary pairs: {}".format(eval_data["boundary_pair_count"]))
+    logger.info("Affected system ids: {}".format(len(eval_data["affected_system_ids"])))
+    logger.info("Undefined network eligible: {}".format(eval_data["undefined_network_eligible"]))
 # ============================================================
 # MAIN (EVALUATE FIRST, THEN APPLY SEQUENCE)
 # ============================================================
 
 def main():
-    print("\n=== SET PIPING SYSTEM (EVALUATE -> APPLY PLAN) ===\n")
-
+    logger.info("\n=== SET PIPING SYSTEM (EVALUATE -> APPLY PLAN) ===\n")
     elements = get_user_selection()
     pipes = get_selected_pipes(elements)
     target_system_type = pick_piping_system_type()
@@ -1029,7 +1117,7 @@ def main():
                 _run_tx("SetPipeSystem - Reconnect boundary", reconnect_pairs, saved_pairs)
 
             tg.Assimilate()
-            print("\n=== COMPLETE (PLAN A) ===\n")
+            logger.info("\n=== COMPLETE (PLAN A) ===\n")
             return
 
         # --------------------------------------------------------
@@ -1041,10 +1129,10 @@ def main():
         # - If NOT eligible (isolated linear runs), do nothing.
         # --------------------------------------------------------
         if not eval_data["undefined_network_eligible"]:
-            print("\nUndefined network is not eligible for system assignment (matches Systemizer behavior).")
-            print("No changes made.")
+            logger.info("\nUndefined network is not eligible for system assignment (matches Systemizer behavior).")
+            logger.info("No changes made.")
             tg.Assimilate()
-            print("\n=== COMPLETE (PLAN B - NOOP) ===\n")
+            logger.info("\n=== COMPLETE (PLAN B - NOOP) ===\n")
             return
 
         created = _run_tx("SetPipeSystem - Create system from eligible connectors (undefined)",
@@ -1056,8 +1144,6 @@ def main():
             logger.warning("Undefined system creation did not assign any connectors.")
 
         tg.Assimilate()
-        print("\n=== COMPLETE (PLAN B) ===\n")
-
-
+        logger.info("\n=== COMPLETE (PLAN B) ===\n")
 if __name__ == "__main__":
     main()
