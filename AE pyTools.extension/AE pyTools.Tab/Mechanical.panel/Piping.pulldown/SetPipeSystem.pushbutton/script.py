@@ -15,8 +15,12 @@ output.close_others()
 VERBOSE_LOGGING = False
 
 try:
-    if hasattr(logger, "set_verbose_mode"):
-        logger.set_verbose_mode(VERBOSE_LOGGING)
+    if VERBOSE_LOGGING:
+        if hasattr(logger, "set_verbose_mode"):
+            logger.set_verbose_mode()
+    else:
+        if hasattr(logger, "reset_level"):
+            logger.reset_level()
 except Exception:
     pass
 
@@ -174,15 +178,26 @@ def get_user_selection():
     return elements
 
 
-def get_selected_pipes(elements):
+def get_selected_network_mode(elements):
     pipes = [el for el in elements if isinstance(el, DBP.Pipe)]
+    ducts = [el for el in elements if isinstance(el, DBM.Duct)]
+
     logger.info("Selected element count: {}".format(len(elements)))
     logger.info("Selected pipe count: {}".format(len(pipes)))
-    if not pipes:
-        logger.info("No pipes selected. Exiting (Victaulic behavior).")
+    logger.info("Selected duct count: {}".format(len(ducts)))
+
+    if pipes and ducts:
+        logger.warning("Mixed selection detected (pipes + ducts). Please select one or the other.")
         script.exit()
 
-    return pipes
+    if pipes:
+        return "piping", pipes
+
+    if ducts:
+        return "duct", ducts
+
+    logger.info("No pipes or ducts selected. Exiting.")
+    script.exit()
 
 
 # ============================================================
@@ -217,6 +232,34 @@ def pick_piping_system_type():
     return type_map[selected]
 
 
+def pick_duct_system_type():
+    system_types = (
+        DB.FilteredElementCollector(doc)
+        .OfClass(DBM.DuctSystemType)
+        .ToElements()
+    )
+
+    type_map = {}
+    for st in system_types:
+        try:
+            name = DB.Element.Name.__get__(st)
+        except:
+            name = None
+        if name:
+            type_map[name] = st
+
+    selected = forms.SelectFromList.show(
+        sorted(type_map.keys()),
+        title="Select Duct System Type",
+        multiselect=False
+    )
+
+    if not selected:
+        script.exit()
+
+    return type_map[selected]
+
+
 # ============================================================
 # CONNECTOR HELPERS
 # ============================================================
@@ -233,6 +276,95 @@ def iter_piping_connectors(el):
                 yield c
         except:
             continue
+
+
+def iter_duct_connectors(el):
+    try:
+        cm = get_connector_manager(el)
+    except NoConnectorManagerError:
+        return
+
+    for c in cm.Connectors:
+        try:
+            if c.Domain == DB.Domain.DomainHvac:
+                yield c
+        except:
+            continue
+
+
+def _get_duct_system(duct):
+    try:
+        sys = duct.MEPSystem
+        if sys:
+            return sys
+    except:
+        pass
+    return None
+
+
+def _get_duct_system_preop(duct):
+    sys = _get_duct_system(duct)
+    if sys:
+        return sys
+
+    for c in iter_duct_connectors(duct):
+        try:
+            sys = c.MEPSystem
+        except:
+            sys = None
+        if sys:
+            return sys
+
+    return None
+
+
+def _collect_duct_system_ids_preop(ducts):
+    sys_ids = set()
+    for d in ducts:
+        sys = _get_duct_system_preop(d)
+        if sys:
+            try:
+                sys_ids.add(sys.Id.IntegerValue)
+            except:
+                pass
+    return sys_ids
+
+
+def _collect_duct_system_ids_from_connectors(ducts):
+    sys_ids = set()
+    for d in ducts:
+        for c in iter_duct_connectors(d):
+            try:
+                sys = c.MEPSystem
+            except:
+                sys = None
+            if sys:
+                try:
+                    sys_ids.add(sys.Id.IntegerValue)
+                except:
+                    pass
+    return sys_ids
+
+
+def _set_duct_system_type_param(ducts, target_system_type):
+    logger.info("\n--- Setting duct system type param ---")
+    ok = 0
+    fail = 0
+
+    for d in ducts:
+        try:
+            param = d.get_Parameter(DB.BuiltInParameter.RBS_DUCT_SYSTEM_TYPE_PARAM)
+            if not param:
+                raise Exception("Duct has no RBS_DUCT_SYSTEM_TYPE_PARAM.")
+            param.Set(target_system_type.Id)
+            ok += 1
+            logger.info("Set system type on duct {}".format(output.linkify(d.Id)))
+        except Exception as ex:
+            fail += 1
+            logger.error("Failed setting system type on duct {}: {}".format(d.Id, ex))
+
+    logger.info("Duct-param results -> ok: {}, fail: {}".format(ok, fail))
+    return ok, fail
 
 
 def pick_disconnect_driver(conn_a, conn_b):
@@ -450,6 +582,7 @@ def _add_eligible_connectors_to_system(new_sys, connectors):
 
     added = 0
     skipped = 0
+    first_skip = None
 
     for conn in connectors:
         one = DB.ConnectorSet()
@@ -464,7 +597,15 @@ def _add_eligible_connectors_to_system(new_sys, connectors):
             added += 1
         except Exception as ex:
             skipped += 1
-            logger.warning('Skipping connector during undefined add ({}): {}'.format(output.linkify(new_sys.Id), ex))
+            if first_skip is None:
+                first_skip = ex
+
+    if skipped > 0:
+        logger.warning('Skipped {} connector(s) during undefined add on {}. First error: {}'.format(
+            skipped,
+            output.linkify(new_sys.Id),
+            first_skip
+        ))
 
     return added, skipped
 
@@ -941,8 +1082,8 @@ def _set_type_on_system(sys_el, target_system_type):
         return False
 
 
-def _set_type_on_system_ids(system_ids, target_system_type):
-    logger.info("\n--- Setting system type on isolated systems (existing systems) ---")
+def _set_type_on_system_ids(system_ids, target_system_type, system_class, label):
+    logger.info("\n--- Setting system type on isolated {} systems ---".format(label))
     ok = 0
     fail = 0
     seen = set()
@@ -955,7 +1096,7 @@ def _set_type_on_system_ids(system_ids, target_system_type):
         sys_el = doc.GetElement(DB.ElementId(sid))
         if not sys_el:
             continue
-        if not isinstance(sys_el, DBP.PipingSystem):
+        if not isinstance(sys_el, system_class):
             continue
 
         if _set_type_on_system(sys_el, target_system_type):
@@ -1077,73 +1218,100 @@ def _print_plan(eval_data):
 # ============================================================
 
 def main():
-    logger.info("\n=== SET PIPING SYSTEM (EVALUATE -> APPLY PLAN) ===\n")
+    logger.info("\n=== SET MEP SYSTEM (EVALUATE -> APPLY PLAN) ===\n")
     elements = get_user_selection()
-    pipes = get_selected_pipes(elements)
-    target_system_type = pick_piping_system_type()
+    mode, selected_curves = get_selected_network_mode(elements)
 
-    # Always collect boundary pairs up front (cheap + used in both plans)
-    selected_ids, saved_pairs, affected_system_ids = collect_boundary_work(elements)
+    if mode == "piping":
+        pipes = selected_curves
+        target_system_type = pick_piping_system_type()
 
-    eval_data = _evaluate_selection(elements, pipes, saved_pairs, affected_system_ids)
-    _print_plan(eval_data)
+        selected_ids, saved_pairs, affected_system_ids = collect_boundary_work(elements)
 
-    with DB.TransactionGroup(doc, "SetPipeSystem - Apply Plan") as tg:
+        eval_data = _evaluate_selection(elements, pipes, saved_pairs, affected_system_ids)
+        _print_plan(eval_data)
+
+        with DB.TransactionGroup(doc, "SetPipeSystem - Apply Plan") as tg:
+            tg.Start()
+
+            if eval_data["has_existing_systems"]:
+                if eval_data["has_boundary_pairs"]:
+                    _run_tx("SetPipeSystem - Disconnect boundary", disconnect_pairs_now, saved_pairs)
+
+                if len(eval_data["affected_system_ids"]) > 0:
+                    new_affected = _run_tx("SetPipeSystem - Divide affected systems",
+                                           divide_affected_systems,
+                                           eval_data["affected_system_ids"])
+                    eval_data["affected_system_ids"] = new_affected
+
+                sys_ids_after = _collect_pipe_system_ids_from_connectors(pipes)
+                _run_tx("SetPipeSystem - Set type on existing systems",
+                        _set_type_on_system_ids,
+                        sys_ids_after,
+                        target_system_type,
+                        DBP.PipingSystem,
+                        "piping")
+
+                if eval_data["has_boundary_pairs"]:
+                    _run_tx("SetPipeSystem - Reconnect boundary", reconnect_pairs, saved_pairs)
+
+                tg.Assimilate()
+                logger.info("\n=== COMPLETE (PIPING PLAN A) ===\n")
+                return
+
+            if not eval_data["undefined_network_eligible"]:
+                logger.info("\nUndefined network is not eligible for system assignment (matches Systemizer behavior).")
+                logger.info("No changes made.")
+                tg.Assimilate()
+                logger.info("\n=== COMPLETE (PIPING PLAN B - NOOP) ===\n")
+                return
+
+            created = _run_tx("SetPipeSystem - Create system from eligible connectors (undefined)",
+                              _create_system_from_eligible_connectors,
+                              pipes,
+                              target_system_type)
+
+            if not created:
+                logger.warning("Undefined system creation did not assign any connectors.")
+
+            tg.Assimilate()
+            logger.info("\n=== COMPLETE (PIPING PLAN B) ===\n")
+            return
+
+    ducts = selected_curves
+    target_system_type = pick_duct_system_type()
+    sys_ids_pre = _collect_duct_system_ids_preop(ducts)
+
+    with DB.TransactionGroup(doc, "SetDuctSystem - Apply Plan") as tg:
         tg.Start()
 
-        # --------------------------------------------------------
-        # PLAN A: Existing systems present (do NOT break this flow)
-        # Disconnect -> Divide -> Set system type on systems -> Reconnect
-        # --------------------------------------------------------
-        if eval_data["has_existing_systems"]:
-            if eval_data["has_boundary_pairs"]:
-                _run_tx("SetPipeSystem - Disconnect boundary", disconnect_pairs_now, saved_pairs)
+        if len(sys_ids_pre) > 0:
+            _run_tx("SetDuctSystem - Set type on existing systems",
+                    _set_type_on_system_ids,
+                    sys_ids_pre,
+                    target_system_type,
+                    DBM.MechanicalSystem,
+                    "duct")
+            tg.Assimilate()
+            logger.info("\n=== COMPLETE (DUCT EXISTING) ===\n")
+            return
 
-            # Divide only if we actually have affected system ids
-            if len(eval_data["affected_system_ids"]) > 0:
-                new_affected = _run_tx("SetPipeSystem - Divide affected systems",
-                                       divide_affected_systems,
-                                       eval_data["affected_system_ids"])
-                eval_data["affected_system_ids"] = new_affected
+        _run_tx("SetDuctSystem - Set type via duct parameter",
+                _set_duct_system_type_param,
+                ducts,
+                target_system_type)
 
-            # Re-collect system ids from pipes post-divide (safer than relying on affected ids)
-            sys_ids_after = _collect_pipe_system_ids_from_connectors(pipes)
-            _run_tx("SetPipeSystem - Set type on existing systems",
+        sys_ids_after = _collect_duct_system_ids_from_connectors(ducts)
+        if len(sys_ids_after) > 0:
+            _run_tx("SetDuctSystem - Name resulting systems",
                     _set_type_on_system_ids,
                     sys_ids_after,
-                    target_system_type)
-
-            if eval_data["has_boundary_pairs"]:
-                _run_tx("SetPipeSystem - Reconnect boundary", reconnect_pairs, saved_pairs)
-
-            tg.Assimilate()
-            logger.info("\n=== COMPLETE (PLAN A) ===\n")
-            return
-
-        # --------------------------------------------------------
-        # PLAN B: No systems on selected pipes (undefined mode)
-        #
-        # - If eligible (tee/fixture/etc.), create a new system and
-        #   add only eligible connectors (fixture / tee-like connectors).
-        #
-        # - If NOT eligible (isolated linear runs), do nothing.
-        # --------------------------------------------------------
-        if not eval_data["undefined_network_eligible"]:
-            logger.info("\nUndefined network is not eligible for system assignment (matches Systemizer behavior).")
-            logger.info("No changes made.")
-            tg.Assimilate()
-            logger.info("\n=== COMPLETE (PLAN B - NOOP) ===\n")
-            return
-
-        created = _run_tx("SetPipeSystem - Create system from eligible connectors (undefined)",
-                          _create_system_from_eligible_connectors,
-                          pipes,
-                          target_system_type)
-
-        if not created:
-            logger.warning("Undefined system creation did not assign any connectors.")
+                    target_system_type,
+                    DBM.MechanicalSystem,
+                    "duct")
 
         tg.Assimilate()
-        logger.info("\n=== COMPLETE (PLAN B) ===\n")
+        logger.info("\n=== COMPLETE (DUCT PARAM) ===\n")
+
 if __name__ == "__main__":
     main()
