@@ -1115,57 +1115,117 @@ def _is_selected_pipe_element(el, selected_pipe_ids):
         return False
 
 
-def _open_connector_has_selected_path_to_tee(open_conn, selected_pipe_ids):
+def _iter_connected_piping_owners(conn):
     try:
-        start_owner = open_conn.Owner
-        start_id = start_owner.Id.IntegerValue
+        refs = list(conn.AllRefs)
     except:
-        return False
+        refs = []
 
-    if start_id not in selected_pipe_ids:
-        return False
+    for other in refs:
+        if other == conn:
+            continue
 
-    queue = [start_owner]
-    visited = set()
-
-    while queue:
-        el = queue.pop(0)
         try:
-            eid = el.Id.IntegerValue
+            owner = other.Owner
         except:
             continue
 
-        if eid in visited:
-            continue
-        visited.add(eid)
+        yield owner, other
 
-        for c in iter_piping_connectors(el):
-            try:
-                refs = list(c.AllRefs)
-            except:
-                refs = []
 
-            for other in refs:
-                if other == c:
-                    continue
+def _find_branch_open_connector_from_junction(junction_conn, selected_pipe_ids):
+    """
+    Starting from a tee/cross/wye connector, walk outward until we hit one of:
+      - open end on a pipe     -> return that open connector (if branch includes selected pipe)
+      - another junction       -> stop
+      - fixture                -> stop
+    """
+    start_owner = None
+    start_conn = None
+    for owner, other_conn in _iter_connected_piping_owners(junction_conn):
+        start_owner = owner
+        start_conn = other_conn
+        break
 
+    if not start_owner or not start_conn:
+        return None
+
+    prev_owner_id = None
+    current_owner = start_owner
+    incoming_conn = start_conn
+    visited = set()
+    branch_has_selected = False
+
+    while current_owner:
+        try:
+            owner_id = current_owner.Id.IntegerValue
+        except:
+            return None
+
+        if owner_id in visited:
+            return None
+        visited.add(owner_id)
+
+        if _is_selected_pipe_element(current_owner, selected_pipe_ids):
+            branch_has_selected = True
+
+        if _is_plumbing_fixture_owner(current_owner):
+            return None
+
+        if _owner_has_three_plus_piping_connectors(current_owner):
+            if prev_owner_id is not None:
+                return None
+
+        if isinstance(current_owner, DBP.Pipe):
+            for c in iter_piping_connectors(current_owner):
                 try:
-                    other_owner = other.Owner
+                    if not c.IsConnected:
+                        if branch_has_selected:
+                            return c
+                        return None
+                except:
+                    pass
+
+        next_owner = None
+        next_incoming = None
+
+        for c in iter_piping_connectors(current_owner):
+            if c == incoming_conn:
+                continue
+
+            for other_owner, other_conn in _iter_connected_piping_owners(c):
+                try:
+                    other_id = other_owner.Id.IntegerValue
                 except:
                     continue
 
+                if other_id == prev_owner_id:
+                    continue
+
                 if _owner_has_three_plus_piping_connectors(other_owner):
-                    return True
+                    if branch_has_selected:
+                        return None
+                    else:
+                        return None
 
-                if _is_selected_pipe_element(other_owner, selected_pipe_ids):
-                    try:
-                        oid = other_owner.Id.IntegerValue
-                    except:
-                        continue
-                    if oid not in visited:
-                        queue.append(other_owner)
+                if _is_plumbing_fixture_owner(other_owner):
+                    return None
 
-    return False
+                next_owner = other_owner
+                next_incoming = other_conn
+                break
+
+            if next_owner:
+                break
+
+        if not next_owner:
+            return None
+
+        prev_owner_id = owner_id
+        current_owner = next_owner
+        incoming_conn = next_incoming
+
+    return None
 
 
 def _create_open_branch_stubs_from_selection(pipes, target_system_type):
@@ -1179,9 +1239,10 @@ def _create_open_branch_stubs_from_selection(pipes, target_system_type):
     if not selected_pipe_ids:
         return 0
 
-    created = 0
+    open_connectors = []
     seen = set()
 
+    # 1) Any directly selected open pipe ends should always get stubs first.
     for pipe in pipes:
         for conn in iter_piping_connectors(pipe):
             try:
@@ -1191,15 +1252,47 @@ def _create_open_branch_stubs_from_selection(pipes, target_system_type):
                 continue
 
             key = _connector_key(conn)
-            if key in seen:
-                continue
-            seen.add(key)
+            if key not in seen:
+                seen.add(key)
+                open_connectors.append((pipe, conn))
 
-            if not _open_connector_has_selected_path_to_tee(conn, selected_pipe_ids):
-                continue
+    # 2) For selected pipes touching tees/crosses/wyes, walk each touched branch
+    #    out to an open end and include that open connector as well.
+    touched_junction_conns = []
+    for pipe in pipes:
+        for conn in iter_piping_connectors(pipe):
+            for other_owner, other_conn in _iter_connected_piping_owners(conn):
+                if _owner_has_three_plus_piping_connectors(other_owner):
+                    try:
+                        jkey = _connector_key(other_conn)
+                    except:
+                        jkey = None
+                    if jkey is None or jkey in seen:
+                        continue
+                    seen.add(jkey)
+                    touched_junction_conns.append(other_conn)
 
-            if _create_short_pipe_from_open_connector(pipe, conn, target_system_type):
-                created += 1
+    for junction_conn in touched_junction_conns:
+        open_conn = _find_branch_open_connector_from_junction(junction_conn, selected_pipe_ids)
+        if not open_conn:
+            continue
+
+        okey = _connector_key(open_conn)
+        if okey in seen:
+            continue
+        seen.add(okey)
+
+        try:
+            owner_pipe = open_conn.Owner
+            if isinstance(owner_pipe, DBP.Pipe):
+                open_connectors.append((owner_pipe, open_conn))
+        except:
+            pass
+
+    created = 0
+    for pipe, conn in open_connectors:
+        if _create_short_pipe_from_open_connector(pipe, conn, target_system_type):
+            created += 1
 
     return created
 
@@ -1490,6 +1583,11 @@ def main():
                 logger.info("Created {} open-branch stub pipe(s).".format(created_stubs))
 
             if not eval_data["undefined_network_eligible"]:
+                if created_stubs > 0:
+                    tg.Assimilate()
+                    logger.info("\n=== COMPLETE (PIPING PLAN B - STUBS ONLY) ===\n")
+                    return
+
                 logger.info("\nUndefined network is not eligible for system assignment (matches Systemizer behavior).")
                 logger.info("No changes made.")
                 tg.Assimilate()
