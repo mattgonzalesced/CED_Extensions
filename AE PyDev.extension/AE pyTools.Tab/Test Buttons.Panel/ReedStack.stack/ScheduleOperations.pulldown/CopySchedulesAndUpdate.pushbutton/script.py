@@ -19,20 +19,11 @@ from __future__ import print_function
 import re
 import traceback
 
-from Autodesk.Revit.DB import (
-    FilteredElementCollector, ViewSchedule, ElementId,
-    ElementTransformUtils, CopyPasteOptions, IDuplicateTypeNamesHandler,
-    Transaction, Transform, XYZ
-)
-
-# Sheet schedule instances (standard schedules)
-try:
-    from Autodesk.Revit.DB import ScheduleSheetInstance
-except:
-    ScheduleSheetInstance = None
-
+from Autodesk.Revit.DB import (ElementId,
+                               ElementTransformUtils, CopyPasteOptions, IDuplicateTypeNamesHandler,
+                               Transaction, Transform, XYZ)
 from System.Collections.Generic import List  # for ICollection[ElementId]
-from pyrevit import script, forms
+from pyrevit import script, forms, DB
 
 uiapp = __revit__
 uidoc = uiapp.ActiveUIDocument
@@ -57,7 +48,7 @@ def is_placeable_viewschedule(vs):
     try:
         if vs.IsTemplate: return False
     except: pass
-    return isinstance(vs, ViewSchedule)
+    return isinstance(vs, DB.ViewSchedule)
 
 def get_open_target_docs(source_doc):
     targets = []
@@ -79,7 +70,7 @@ def get_open_target_docs(source_doc):
 
 # ---------- UI selection (STANDARD schedules only) ----------
 def pick_schedules(source_doc):
-    vs_list = [v for v in FilteredElementCollector(source_doc).OfClass(ViewSchedule) if is_placeable_viewschedule(v)]
+    vs_list = [v for v in DB.FilteredElementCollector(source_doc).OfClass(DB.ViewSchedule) if is_placeable_viewschedule(v)]
     if not vs_list:
         forms.alert("No copyable standard schedules found in the active document.", exitscript=True)
 
@@ -103,19 +94,10 @@ def ask_targets(target_docs):
 
 
 # ---------- Copy helpers (batch per target) ----------
-from Autodesk.Revit.DB import DuplicateTypeAction
 
 class _DupTypeUseDestination(IDuplicateTypeNamesHandler):
     def OnDuplicateTypeNamesFound(self, args):
-        try:
-            args.SetAction(DuplicateTypeAction.UseDestinationTypes)
-        except:
-            # Compatibility with pre-2024 Revit versions
-            try:
-                return args.UseDestinationTypes()
-            except:
-                pass
-        return
+        return DB.DuplicateTypeAction.UseDestinationTypes
 
 
 def batch_copy_to_target(src_doc, target_doc, element_ids):
@@ -165,7 +147,7 @@ def close_new_schedule_tabs_in_active_doc(initial_open_ids):
             continue
         try:
             v = doc.GetElement(uiv.ViewId)
-            if isinstance(v, ViewSchedule):
+            if isinstance(v, DB.ViewSchedule):
                 try:
                     uiv.Close()
                 except:
@@ -197,7 +179,7 @@ def _basename_if_suffixed(name):
 def _collect_old_vs_by_name(target_doc):
     """Return dict name -> ViewSchedule (non-template)."""
     d = {}
-    for vs in FilteredElementCollector(target_doc).OfClass(ViewSchedule):
+    for vs in DB.FilteredElementCollector(target_doc).OfClass(DB.ViewSchedule):
         if is_placeable_viewschedule(vs):
             try:
                 d[vs.Name] = vs
@@ -208,10 +190,8 @@ def _collect_old_vs_by_name(target_doc):
 def _gather_schedule_sheet_instances_std(target_doc, vs):
     """Return a list of dicts with placement for a standard schedule on sheets."""
     placements = []
-    if ScheduleSheetInstance is None:
-        return placements
     try:
-        ssi_col = FilteredElementCollector(target_doc).OfClass(ScheduleSheetInstance)
+        ssi_col = DB.FilteredElementCollector(target_doc).OfClass(DB.ScheduleSheetInstance)
         for ssi in ssi_col:
             try:
                 if ssi.ScheduleId == vs.Id:
@@ -236,11 +216,9 @@ def _gather_schedule_sheet_instances_std(target_doc, vs):
 def _place_schedule_instances_std(target_doc, new_vs, placements):
     """Create instances of a standard schedule on given sheets with same point/rotation."""
     created = []
-    if ScheduleSheetInstance is None:
-        return created
     for p in placements:
         try:
-            ssi = ScheduleSheetInstance.Create(target_doc, p["sheet_id"], new_vs.Id, p["point"])
+            ssi = DB.ScheduleSheetInstance.Create(target_doc, p["sheet_id"], new_vs.Id, p["point"])
             try:
                 if p.get("rotation") is not None:
                     ssi.Rotation = p["rotation"]
@@ -279,7 +257,7 @@ def _post_copy_replace_in_target(target_doc, picked_pairs, src_ids, mapped_new_i
             continue
 
         new_elem = new_by_src.get(src_elem.Id.IntegerValue, None)
-        if new_elem is None or not isinstance(new_elem, ViewSchedule):
+        if new_elem is None or not isinstance(new_elem, DB.ViewSchedule):
             continue
 
         try:
