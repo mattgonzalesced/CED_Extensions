@@ -3,6 +3,7 @@ __title__ = "System Tagger"
 __doc__ = "Place system ID text notes on refrigerated cases from an Excel list."
 
 import os
+import time
 
 from Autodesk.Revit.UI.Selection import ObjectType
 from pyrevit import revit, DB, forms, script
@@ -128,6 +129,34 @@ def _apply_override(view, elem_id, ogs):
     view.SetElementOverrides(elem_id, ogs)
 
 
+def _apply_highlights(view, element_ids, ogs):
+    if not element_ids:
+        return
+    for elem_int in element_ids:
+        _apply_override(view, DB.ElementId(elem_int), ogs)
+
+
+def _clear_highlights_in_tx(view, element_ids):
+    if not element_ids:
+        return
+    clear_ogs = DB.OverrideGraphicSettings()
+    for elem_int in element_ids:
+        view.SetElementOverrides(DB.ElementId(elem_int), clear_ogs)
+
+
+def _update_preview_highlights(view, ogs, new_ids, prev_ids):
+    try:
+        with revit.Transaction("System Tagger - Preview Highlights"):
+            _clear_highlights_in_tx(view, prev_ids)
+            _apply_highlights(view, new_ids, ogs)
+        return list(new_ids or [])
+    except Exception as ex:
+        logger.warning("Preview highlight update failed: {}".format(ex))
+        return list(prev_ids or [])
+
+
+
+
 def _pick_text_type():
     types = list(DB.FilteredElementCollector(doc).OfClass(DB.TextNoteType))
     if not types:
@@ -173,6 +202,59 @@ def _index_to_letters(index):
     return letters
 
 
+def _collect_tag_types():
+    tag_types = []
+    for cat_name in ("OST_MultiCategoryTags", "OST_MechanicalEquipmentTags", "OST_SpecialityEquipmentTags"):
+        try:
+            cat = getattr(DB.BuiltInCategory, cat_name)
+        except Exception:
+            cat = None
+        if cat is None:
+            continue
+        tag_types.extend(
+            DB.FilteredElementCollector(doc)
+            .OfClass(DB.FamilySymbol)
+            .OfCategory(cat)
+            .ToElements()
+        )
+    return tag_types
+
+
+def _tag_type_label(tag_type):
+    try:
+        fam_name = tag_type.get_Parameter(DB.BuiltInParameter.SYMBOL_FAMILY_NAME_PARAM).AsString()
+    except Exception:
+        fam_name = None
+    try:
+        type_name = tag_type.get_Parameter(DB.BuiltInParameter.SYMBOL_NAME_PARAM).AsString()
+    except Exception:
+        type_name = None
+    try:
+        cat_name = tag_type.Category.Name if tag_type.Category else "Tag"
+    except Exception:
+        cat_name = "Tag"
+    return "[{}] {} : {}".format(cat_name, fam_name or "?", type_name or "?")
+
+
+def _pick_tag_type():
+    tag_types = _collect_tag_types()
+    if not tag_types:
+        return None
+    options = [_tag_type_label(t) for t in tag_types]
+    picked = forms.SelectFromList.show(
+        options,
+        multiselect=False,
+        title="Select Tag Type",
+    )
+    if not picked:
+        return None
+    try:
+        idx = options.index(picked)
+    except Exception:
+        return None
+    return tag_types[idx]
+
+
 def _read_system_ids_from_excel(path):
     data = pyxl.load(path, sheets=None, columns=["System ID"])
     if not data:
@@ -198,113 +280,195 @@ def _read_system_ids_from_excel(path):
 def _toggle_pick_cases(system_id, view, ogs):
     selected_ids = []
     selected_set = set()
+    preview_ids = []
+    last_preview_time = 0.0
+    preview_group = DB.TransactionGroup(doc, "System Tagger - Preview Highlights")
+    preview_group.Start()
 
-    while True:
-        with forms.WarningBar(
-            title="System ID {}: pick refrigerated cases (ESC to finish)".format(system_id)
-        ):
-            while True:
+    try:
+        while True:
+            with forms.WarningBar(
+                title="System ID {}: pick refrigerated cases (ESC to finish)".format(system_id)
+            ):
+                while True:
+                    try:
+                        ref = uidoc.Selection.PickObject(
+                            ObjectType.Element,
+                            "Pick case (click again to unselect). ESC when done."
+                        )
+                    except Exception:
+                        break
+
+                    elem_int = ref.ElementId.IntegerValue
+                    elem_id = DB.ElementId(elem_int)
+
+                    if elem_int in selected_set:
+                        selected_set.remove(elem_int)
+                        selected_ids = [i for i in selected_ids if i != elem_int]
+                    else:
+                        selected_set.add(elem_int)
+                        selected_ids.append(elem_int)
+
+                    now = time.time()
+                    if now - last_preview_time >= 1.0:
+                        preview_ids = _update_preview_highlights(view, ogs, selected_ids, preview_ids)
+                        last_preview_time = now
+
+            choice = forms.CommandSwitchWindow.show(
+                ["Done", "Pick More", "Pause", "Cancel"],
+                message="System ID '{}': {} case(s) selected.".format(system_id, len(selected_ids)),
+            )
+            if choice == "Pick More":
+                continue
+            if choice == "Pause":
+                preview_ids = _update_preview_highlights(view, ogs, selected_ids, preview_ids)
+                _update_preview_highlights(view, ogs, [], preview_ids)
                 try:
-                    ref = uidoc.Selection.PickObject(
-                        ObjectType.Element,
-                        "Pick case (click again to unselect). ESC when done."
-                    )
+                    preview_group.Assimilate()
                 except Exception:
-                    break
+                    pass
+                return "pause", selected_ids
+            if choice == "Cancel" or choice is None:
+                preview_ids = _update_preview_highlights(view, ogs, selected_ids, preview_ids)
+                _update_preview_highlights(view, ogs, [], preview_ids)
+                try:
+                    preview_group.Assimilate()
+                except Exception:
+                    pass
+                return "cancel", selected_ids
+            preview_ids = _update_preview_highlights(view, ogs, selected_ids, preview_ids)
+            try:
+                preview_group.Assimilate()
+            except Exception:
+                pass
+            return "done", selected_ids
+    finally:
+        try:
+            if preview_group.HasStarted():
+                preview_group.RollBack()
+        except Exception:
+            pass
+        try:
+            preview_group.Dispose()
+        except Exception:
+            pass
 
-                elem_int = ref.ElementId.IntegerValue
-                elem_id = DB.ElementId(elem_int)
 
-                if elem_int in selected_set:
-                    selected_set.remove(elem_int)
-                    selected_ids = [i for i in selected_ids if i != elem_int]
-                    with revit.Transaction("System Tagger - Unhighlight"):
-                        _clear_override(view, elem_id)
-                else:
-                    selected_set.add(elem_int)
-                    selected_ids.append(elem_int)
-                    with revit.Transaction("System Tagger - Highlight"):
-                        _apply_override(view, elem_id, ogs)
-
-        choice = forms.CommandSwitchWindow.show(
-            ["Done", "Pick More", "Pause", "Cancel"],
-            message="System ID '{}': {} case(s) selected.".format(system_id, len(selected_ids)),
-        )
-        if choice == "Pick More":
-            continue
-        if choice == "Pause":
-            return "pause", selected_ids
-        if choice == "Cancel" or choice is None:
-            return "cancel", selected_ids
-        return "done", selected_ids
-
-
-def _place_text_notes(system_id, element_ids, view, text_type):
+def _build_labels(system_id, element_ids):
     if not element_ids:
-        return 0
+        return []
     if len(element_ids) == 1:
         labels = [system_id]
     else:
         labels = [system_id + _index_to_letters(i) for i in range(len(element_ids))]
+    return labels
 
+def _apply_identity_mark(element_ids, labels):
+    if not element_ids or not labels:
+        return
+    for elem_int, label in zip(element_ids, labels):
+        elem = doc.GetElement(DB.ElementId(elem_int))
+        if not elem:
+            continue
+        try:
+            param = elem.LookupParameter("Identity Mark")
+            if not param:
+                param = elem.get_Parameter(DB.BuiltInParameter.ALL_MODEL_MARK)
+            if param and not param.IsReadOnly:
+                if param.StorageType == DB.StorageType.String:
+                    param.Set(label)
+                else:
+                    param.SetValueString(label)
+        except Exception as ex:
+            logger.warning(
+                "Failed to set Identity Mark for {}: {}".format(elem_int, ex)
+            )
+
+
+def _place_text_notes(element_ids, labels, view, text_type):
+    if not element_ids or not labels:
+        return 0
     count = 0
-    with revit.Transaction("System Tagger - Place Text Notes"):
-        for elem_int, label in zip(element_ids, labels):
-            elem = doc.GetElement(DB.ElementId(elem_int))
-            if not elem:
-                continue
-            pt = _get_element_center(elem, view)
-            if not pt:
-                logger.warning("No bounding box for element {}".format(elem_int))
-                continue
-            opts = DB.TextNoteOptions()
-            opts.TypeId = text_type.Id
-            try:
-                opts.HorizontalAlignment = DB.HorizontalTextAlignment.Center
-            except Exception:
-                pass
-            try:
-                opts.VerticalAlignment = DB.VerticalTextAlignment.Middle
-            except Exception:
-                pass
-            placed = False
-            try:
-                DB.TextNote.Create(doc, view.Id, pt, label, opts)
-                count += 1
-                placed = True
-            except Exception as ex:
-                logger.warning("Failed to place text note for {}: {}".format(elem_int, ex))
-                placed = False
-            if placed:
-                try:
-                    param = elem.LookupParameter("Identity Mark")
-                    if not param:
-                        param = elem.get_Parameter(DB.BuiltInParameter.ALL_MODEL_MARK)
-                    if param and not param.IsReadOnly:
-                        if param.StorageType == DB.StorageType.String:
-                            param.Set(label)
-                        else:
-                            param.SetValueString(label)
-                except Exception as ex:
-                    logger.warning(
-                        "Failed to set Identity Mark for {}: {}".format(elem_int, ex)
-                    )
+    for elem_int, label in zip(element_ids, labels):
+        elem = doc.GetElement(DB.ElementId(elem_int))
+        if not elem:
+            continue
+        pt = _get_element_center(elem, view)
+        if not pt:
+            logger.warning("No bounding box for element {}".format(elem_int))
+            continue
+        opts = DB.TextNoteOptions()
+        opts.TypeId = text_type.Id
+        try:
+            opts.HorizontalAlignment = DB.HorizontalTextAlignment.Center
+        except Exception:
+            pass
+        try:
+            opts.VerticalAlignment = DB.VerticalTextAlignment.Middle
+        except Exception:
+            pass
+        try:
+            DB.TextNote.Create(doc, view.Id, pt, label, opts)
+            count += 1
+        except Exception as ex:
+            logger.warning("Failed to place text note for {}: {}".format(elem_int, ex))
     return count
 
 
-def _clear_highlights(view, element_ids):
-    if not element_ids:
-        return
-    with revit.Transaction("System Tagger - Clear Highlights"):
-        clear_ogs = DB.OverrideGraphicSettings()
-        for elem_int in element_ids:
-            view.SetElementOverrides(DB.ElementId(elem_int), clear_ogs)
+def _place_tags(element_ids, labels, view, tag_type):
+    if not element_ids or not labels or tag_type is None:
+        return 0
+    if not tag_type.IsActive:
+        tag_type.Activate()
+        doc.Regenerate()
+    count = 0
+    for elem_int, label in zip(element_ids, labels):
+        elem = doc.GetElement(DB.ElementId(elem_int))
+        if not elem:
+            continue
+        pt = _get_element_center(elem, view)
+        if not pt:
+            logger.warning("No bounding box for element {}".format(elem_int))
+            continue
+        try:
+            reference = DB.Reference(elem)
+            DB.IndependentTag.Create(
+                doc,
+                tag_type.Id,
+                view.Id,
+                reference,
+                False,
+                DB.TagOrientation.Horizontal,
+                pt,
+            )
+            count += 1
+        except Exception as ex:
+            logger.warning("Failed to place tag for {}: {}".format(elem_int, ex))
+    return count
 
 
 def main():
     active_view = revit.active_view
     if active_view.IsTemplate:
         forms.alert("Active view is a template. Open a working view first.", exitscript=True)
+
+    output_mode = forms.CommandSwitchWindow.show(
+        ["Text Notes", "Tags"],
+        message="Place System IDs as:",
+    )
+    if not output_mode:
+        script.exit()
+
+    text_type = None
+    tag_type = None
+    if output_mode == "Text Notes":
+        text_type = _pick_text_type()
+        if not text_type:
+            forms.alert("No TextNoteType available in this project.", exitscript=True)
+    else:
+        tag_type = _pick_tag_type()
+        if not tag_type:
+            forms.alert("No tag type available in this project.", exitscript=True)
 
     resume_path, resume_index = _load_resume_state()
     system_ids = None
@@ -346,10 +510,6 @@ def main():
         if not system_ids:
             forms.alert("No System IDs found in the first column. Expected header: 'System ID'.", exitscript=True)
 
-    text_type = _pick_text_type()
-    if not text_type:
-        forms.alert("No TextNoteType available in this project.", exitscript=True)
-
     highlight_ogs = _build_highlight_ogs()
 
     forms.alert(
@@ -365,14 +525,19 @@ def main():
         _save_resume_state(path, idx)
         status, picked_ids = _toggle_pick_cases(system_id, active_view, highlight_ogs)
         if status == "cancel":
-            _clear_highlights(active_view, picked_ids)
             return
         try:
-            _place_text_notes(system_id, picked_ids, active_view, text_type)
-            _clear_highlights(active_view, picked_ids)
+            labels = _build_labels(system_id, picked_ids)
+            with revit.Transaction("System Tagger - Place Labels {}".format(system_id)):
+                _apply_highlights(active_view, picked_ids, highlight_ogs)
+                _apply_identity_mark(picked_ids, labels)
+                if output_mode == "Tags":
+                    _place_tags(picked_ids, labels, active_view, tag_type)
+                else:
+                    _place_text_notes(picked_ids, labels, active_view, text_type)
+                _clear_highlights_in_tx(active_view, picked_ids)
             _save_resume_state(path, idx + 1)
         except Exception:
-            _clear_highlights(active_view, picked_ids)
             raise
         if status == "pause":
             forms.alert("System Tagger paused. Run again to resume.")

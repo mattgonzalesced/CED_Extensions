@@ -2,7 +2,11 @@
 __title__ = "Name Piping Systems"
 __doc__ = "Place text notes centered on pipe segments using rack-based naming rules."
 
+import math
+import re
+
 from Autodesk.Revit.UI.Selection import ObjectType, ISelectionFilter
+from System.Collections.Generic import List
 from pyrevit import revit, DB, forms, script
 
 
@@ -10,6 +14,8 @@ doc = revit.doc
 uidoc = revit.uidoc
 logger = script.get_logger()
 DEBUG = True
+MAX_PIPE_EQUIP_DIST = 3.0
+NOTE_ON_EQUIP_TOL = 6.0
 
 
 PIPE_CATEGORY_IDS = set()
@@ -68,6 +74,31 @@ def _element_connectors(elem):
 
 def _pipe_connectors(pipe):
     return _element_connectors(pipe)
+
+
+def _pipe_open_points(pipe):
+    points = []
+    for conn in _pipe_connectors(pipe):
+        try:
+            if not conn.IsConnected:
+                points.append(conn.Origin)
+                continue
+        except Exception:
+            pass
+        try:
+            refs = list(conn.AllRefs)
+        except Exception:
+            refs = None
+        if refs is not None and len(refs) == 0:
+            try:
+                points.append(conn.Origin)
+            except Exception:
+                pass
+    return points
+
+
+def _pipe_has_open_connector(pipe):
+    return bool(_pipe_open_points(pipe))
 
 
 def _connected_pipe_ids(elem):
@@ -561,6 +592,183 @@ def _apply_traversal_labels(records, base_number, letter, label_map):
         label_map[pid] = label
 
 
+def _get_element_center(elem, view):
+    if not elem:
+        return None
+    bbox = None
+    try:
+        bbox = elem.get_BoundingBox(view)
+    except Exception:
+        bbox = None
+    if not bbox:
+        try:
+            bbox = elem.get_BoundingBox(None)
+        except Exception:
+            bbox = None
+    if not bbox:
+        return None
+    return (bbox.Min + bbox.Max) * 0.5
+
+
+def _text_note_point(note, view):
+    try:
+        return note.Coord
+    except Exception:
+        pass
+    return _get_element_center(note, view)
+
+
+def _text_note_text(note):
+    try:
+        text = note.Text
+    except Exception:
+        text = None
+    if text:
+        return text.strip()
+    try:
+        param = note.get_Parameter(DB.BuiltInParameter.TEXT_TEXT)
+    except Exception:
+        param = None
+    if param:
+        try:
+            text = param.AsString()
+        except Exception:
+            text = None
+    return text.strip() if text else None
+
+
+def _normalize_system_label(text):
+    if not text:
+        return text
+    raw = text.strip()
+    match = re.match(r"^([A-Za-z]+)([A-Za-z]{2})(\d+)$", raw)
+    if match:
+        return "{}{}".format(match.group(1), match.group(3))
+    return raw
+
+
+def _distance_point_to_bbox(pt, bbox):
+    if pt is None or bbox is None:
+        return None
+    try:
+        x = min(max(pt.X, bbox.Min.X), bbox.Max.X)
+        y = min(max(pt.Y, bbox.Min.Y), bbox.Max.Y)
+        z = min(max(pt.Z, bbox.Min.Z), bbox.Max.Z)
+        closest = DB.XYZ(x, y, z)
+        return pt.DistanceTo(closest)
+    except Exception:
+        return None
+
+
+def _note_near_equipment(note_pt, center, tol):
+    if note_pt is None or center is None:
+        return False
+    try:
+        return note_pt.DistanceTo(center) <= tol
+    except Exception:
+        return False
+
+
+def _collect_text_notes(view):
+    notes = []
+    try:
+        collector = DB.FilteredElementCollector(doc, view.Id).OfClass(DB.TextNote)
+    except Exception:
+        collector = DB.FilteredElementCollector(doc).OfClass(DB.TextNote)
+    for note in collector:
+        pt = _text_note_point(note, view)
+        text = _text_note_text(note)
+        if pt is None or not text:
+            continue
+        notes.append((note.Id.IntegerValue, pt, text))
+    return notes
+
+
+def _collect_equipment_labels(view, notes, note_on_tol):
+    equip = []
+    try:
+        collector = DB.FilteredElementCollector(doc, view.Id).OfCategory(
+            DB.BuiltInCategory.OST_MechanicalEquipment
+        ).WhereElementIsNotElementType()
+    except Exception:
+        collector = DB.FilteredElementCollector(doc).OfCategory(
+            DB.BuiltInCategory.OST_MechanicalEquipment
+        ).WhereElementIsNotElementType()
+    equip_map = {e.Id.IntegerValue: e for e in collector}
+
+    for elem_id, elem in equip_map.items():
+        bbox = None
+        try:
+            bbox = elem.get_BoundingBox(view)
+        except Exception:
+            bbox = None
+        if not bbox:
+            try:
+                bbox = elem.get_BoundingBox(None)
+            except Exception:
+                bbox = None
+        if not bbox:
+            continue
+
+        label = None
+        center = _get_element_center(elem, view)
+        if center is not None and notes:
+            best_dist = None
+            best_text = None
+            for _, pt, text in notes:
+                if not _note_near_equipment(pt, center, note_on_tol):
+                    continue
+                try:
+                    dist = pt.DistanceTo(center)
+                except Exception:
+                    continue
+                if best_dist is None or dist < best_dist:
+                    best_dist = dist
+                    best_text = text
+            label = _normalize_system_label(best_text)
+
+        if not label:
+            continue
+        equip.append((elem_id, bbox, label))
+    return equip
+
+
+def _apply_equipment_labels(label_map, pipe_map, adjacency, view):
+    notes = _collect_text_notes(view)
+    equip_labels = _collect_equipment_labels(view, notes, NOTE_ON_EQUIP_TOL)
+    if not equip_labels:
+        if DEBUG:
+            logger.info("equipment labels: none found")
+        return
+    matched = 0
+    for pid, pipe in pipe_map.items():
+        pipe = pipe_map.get(pid)
+        if pipe is None:
+            continue
+        open_points = _pipe_open_points(pipe)
+        if not open_points:
+            continue
+        best_dist = None
+        best_text = None
+        for _, bbox, text in equip_labels:
+            for pt in open_points:
+                dist = _distance_point_to_bbox(pt, bbox)
+                if dist is None:
+                    continue
+                if dist > MAX_PIPE_EQUIP_DIST:
+                    continue
+                if best_dist is None or dist < best_dist:
+                    best_dist = dist
+                    best_text = text
+        if best_text:
+            label_map[pid] = best_text
+            matched += 1
+            if DEBUG:
+                logger.info("equipment label: pipe %s -> %s", pid, best_text)
+    if DEBUG:
+        logger.info("equipment labels: applied to %s pipe(s)", matched)
+
+
 def _select_trunk_neighbor(current_pipe, parent_id, neighbor_ids, pipe_map, adjacency, allowed_ids=None, blocked_ids=None, size_cache=None):
     if not neighbor_ids or current_pipe is None:
         return None
@@ -663,7 +871,7 @@ def _tee_between_pipes(pipe_a, pipe_b):
                 return owner
     return None
 
-def _label_tree_from_trunk(start_pid, adjacency, pipe_map, blocked_ids, base_number, letter):
+def _label_tree_from_trunk(start_pid, adjacency, pipe_map, blocked_ids, base_number, letter, view):
     allowed_ids = _collect_component(start_pid, adjacency, blocked_ids)
     trunk_order = []
     visited = set(blocked_ids)
@@ -928,6 +1136,7 @@ def _label_tree_from_trunk(start_pid, adjacency, pipe_map, blocked_ids, base_num
         label_map[pid] = "{}.{:02d}{}".format(base_number, idx, letter)
         if DEBUG:
             logger.info("branch label: pipe %s -> %s", pid, label_map[pid])
+
     return label_map
 
 
@@ -944,6 +1153,59 @@ def _pick_text_type():
         except Exception:
             continue
     return types[0]
+
+
+def _pipe_tag_types():
+    tag_types = []
+    for cat_name in ("OST_PipeTags", "OST_MultiCategoryTags"):
+        try:
+            cat = getattr(DB.BuiltInCategory, cat_name)
+        except Exception:
+            cat = None
+        if cat is None:
+            continue
+        tag_types.extend(
+            DB.FilteredElementCollector(doc)
+            .OfClass(DB.FamilySymbol)
+            .OfCategory(cat)
+            .ToElements()
+        )
+    return tag_types
+
+
+def _tag_type_label(tag_type):
+    try:
+        fam_name = tag_type.get_Parameter(DB.BuiltInParameter.SYMBOL_FAMILY_NAME_PARAM).AsString()
+    except Exception:
+        fam_name = None
+    try:
+        type_name = tag_type.get_Parameter(DB.BuiltInParameter.SYMBOL_NAME_PARAM).AsString()
+    except Exception:
+        type_name = None
+    try:
+        cat_name = tag_type.Category.Name if tag_type.Category else "Tag"
+    except Exception:
+        cat_name = "Tag"
+    return "[{}] {} : {}".format(cat_name, fam_name or "?", type_name or "?")
+
+
+def _pick_pipe_tag_type():
+    tag_types = _pipe_tag_types()
+    if not tag_types:
+        return None
+    options = [_tag_type_label(t) for t in tag_types]
+    picked = forms.SelectFromList.show(
+        options,
+        multiselect=False,
+        title="Select Pipe Tag Type",
+    )
+    if not picked:
+        return None
+    try:
+        idx = options.index(picked)
+    except Exception:
+        return None
+    return tag_types[idx]
 
 
 def _place_text_notes(label_map, pipe_map, text_type, view):
@@ -980,6 +1242,105 @@ def _place_text_notes(label_map, pipe_map, text_type, view):
     return count
 
 
+def _pipe_direction_xy(pipe):
+    curve = _pipe_curve(pipe)
+    if curve is None:
+        return None
+    try:
+        deriv = curve.ComputeDerivatives(0.5, True)
+        tangent = deriv.BasisX
+    except Exception:
+        tangent = None
+    if tangent is None:
+        try:
+            p0 = curve.GetEndPoint(0)
+            p1 = curve.GetEndPoint(1)
+            tangent = p1 - p0
+        except Exception:
+            return None
+    try:
+        vec = DB.XYZ(tangent.X, tangent.Y, 0.0)
+        if abs(vec.X) + abs(vec.Y) < 1e-9:
+            return None
+        return vec.Normalize()
+    except Exception:
+        return None
+
+
+def _rotate_element_about_z(elem_id, origin, angle):
+    if elem_id is None or origin is None:
+        return
+    if abs(angle) < 1e-7:
+        return
+    axis = DB.Line.CreateUnbound(origin, DB.XYZ(0, 0, 1))
+    DB.ElementTransformUtils.RotateElement(doc, elem_id, axis, angle)
+
+
+def _place_pipe_tags(label_map, pipe_map, tag_type, view):
+    if not label_map:
+        return 0
+    count = 0
+    with revit.Transaction("Name Piping Systems - Tags"):
+        if not tag_type.IsActive:
+            tag_type.Activate()
+            doc.Regenerate()
+        for pid in label_map.keys():
+            pipe = pipe_map.get(pid)
+            if pipe is None:
+                continue
+            curve = _pipe_curve(pipe)
+            if curve is None:
+                continue
+            try:
+                pt = curve.Evaluate(0.5, True)
+            except Exception:
+                continue
+            try:
+                reference = DB.Reference(pipe)
+                tag = DB.IndependentTag.Create(
+                    doc,
+                    tag_type.Id,
+                    view.Id,
+                    reference,
+                    False,
+                    DB.TagOrientation.Horizontal,
+                    pt,
+                )
+                if tag:
+                    dir_xy = _pipe_direction_xy(pipe)
+                    if dir_xy is not None:
+                        angle = math.atan2(dir_xy.Y, dir_xy.X)
+                        try:
+                            _rotate_element_about_z(tag.Id, tag.TagHeadPosition, angle)
+                        except Exception:
+                            _rotate_element_about_z(tag.Id, pt, angle)
+                    count += 1
+            except Exception:
+                continue
+    return count
+
+
+def _apply_identity_mark(label_map, pipe_map):
+    if not label_map:
+        return
+    with revit.Transaction("Name Piping Systems - Identity Mark"):
+        for pid, label in label_map.items():
+            pipe = pipe_map.get(pid)
+            if pipe is None:
+                continue
+            try:
+                param = pipe.LookupParameter("Identity Mark")
+                if not param:
+                    param = pipe.get_Parameter(DB.BuiltInParameter.ALL_MODEL_MARK)
+                if param and not param.IsReadOnly:
+                    if param.StorageType == DB.StorageType.String:
+                        param.Set(label)
+                    else:
+                        param.SetValueString(label)
+            except Exception as ex:
+                logger.warning("Failed to set Identity Mark for {}: {}".format(pid, ex))
+
+
 def _ask_branch_letter():
     letters = [chr(code) for code in range(ord("A"), ord("H") + 1)]
     letter = forms.ask_for_one_item(
@@ -996,30 +1357,43 @@ def _ask_branch_letter():
 def _prompt_start_pipes():
     try:
         forms.alert(
-            "Select the start pipes for this rack (2-5), then press Finish.",
+            "Select the start pipes for this rack in order (2-5).",
             title="Select Start Pipes",
             warn_icon=False,
         )
     except Exception:
         pass
-    try:
-        picked = uidoc.Selection.PickObjects(
-            ObjectType.Element,
-            _PipeSelectionFilter(),
-            "Select start pipes (ESC to cancel).",
-        )
-    except Exception:
-        picked = None
-    if not picked:
-        forms.alert("No start pipes selected.", exitscript=True)
     start_pipes = []
-    for ref in picked:
+    selected_ids = []
+    while True:
+        if len(start_pipes) >= 5:
+            break
+        prompt = "Select start pipe #{} (ESC to finish)".format(len(start_pipes) + 1)
+        try:
+            with forms.WarningBar(title=prompt):
+                ref = uidoc.Selection.PickObject(
+                    ObjectType.Element,
+                    _PipeSelectionFilter(),
+                    prompt,
+                )
+        except Exception:
+            break
         try:
             elem = doc.GetElement(ref.ElementId)
         except Exception:
             elem = None
-        if _is_pipe_like(elem):
-            start_pipes.append(elem)
+        if not _is_pipe_like(elem):
+            continue
+        elem_id = elem.Id.IntegerValue
+        if elem_id in selected_ids:
+            continue
+        start_pipes.append(elem)
+        selected_ids.append(elem_id)
+        try:
+            uidoc.Selection.SetElementIds(List[DB.ElementId]([p.Id for p in start_pipes]))
+        except Exception:
+            pass
+
     if len(start_pipes) < 2 or len(start_pipes) > 5:
         forms.alert(
             "Select 2 to 5 start pipes. Detected {} pipe(s).".format(len(start_pipes)),
@@ -1044,15 +1418,48 @@ def main():
         blocked_ids = set(start_ids)
         blocked_ids.discard(pid)
         allowed_ids = _collect_component(pid, adjacency, blocked_ids)
-        local_labels = _label_tree_from_trunk(pid, adjacency, pipe_map, blocked_ids, idx, rack_letter)
+        local_labels = _label_tree_from_trunk(
+            pid,
+            adjacency,
+            pipe_map,
+            blocked_ids,
+            idx,
+            rack_letter,
+            active_view,
+        )
         for lpid, lbl in local_labels.items():
             label_map[lpid] = lbl
 
-    text_type = _pick_text_type()
-    if text_type is None:
-        forms.alert("No TextNoteType available in this project.", exitscript=True)
-    placed = _place_text_notes(label_map, pipe_map, text_type, active_view)
-    forms.alert("Placed {} text notes.".format(placed))
+    _apply_equipment_labels(label_map, pipe_map, adjacency, active_view)
+
+    output_mode = forms.CommandSwitchWindow.show(
+        ["Text Notes", "Tags", "Both"],
+        message="Place system names as:",
+    )
+    if not output_mode:
+        script.exit()
+
+    _apply_identity_mark(label_map, pipe_map)
+
+    placed_notes = 0
+    placed_tags = 0
+    if output_mode in ("Tags", "Both"):
+        tag_type = _pick_pipe_tag_type()
+        if tag_type is None:
+            forms.alert("No Pipe Tag type selected or available.", exitscript=True)
+        placed_tags = _place_pipe_tags(label_map, pipe_map, tag_type, active_view)
+    if output_mode in ("Text Notes", "Both"):
+        text_type = _pick_text_type()
+        if text_type is None:
+            forms.alert("No TextNoteType available in this project.", exitscript=True)
+        placed_notes = _place_text_notes(label_map, pipe_map, text_type, active_view)
+
+    if output_mode == "Both":
+        forms.alert("Placed {} tags and {} text notes.".format(placed_tags, placed_notes))
+    elif output_mode == "Tags":
+        forms.alert("Placed {} tags.".format(placed_tags))
+    else:
+        forms.alert("Placed {} text notes.".format(placed_notes))
 
 
 if __name__ == "__main__":
