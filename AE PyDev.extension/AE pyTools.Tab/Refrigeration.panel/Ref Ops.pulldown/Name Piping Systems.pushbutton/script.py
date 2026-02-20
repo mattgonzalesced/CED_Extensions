@@ -15,7 +15,6 @@ uidoc = revit.uidoc
 logger = script.get_logger()
 DEBUG = True
 MAX_PIPE_EQUIP_DIST = 3.0
-NOTE_ON_EQUIP_TOL = 6.0
 
 
 PIPE_CATEGORY_IDS = set()
@@ -610,43 +609,6 @@ def _get_element_center(elem, view):
     return (bbox.Min + bbox.Max) * 0.5
 
 
-def _text_note_point(note, view):
-    try:
-        return note.Coord
-    except Exception:
-        pass
-    return _get_element_center(note, view)
-
-
-def _text_note_text(note):
-    try:
-        text = note.Text
-    except Exception:
-        text = None
-    if text:
-        return text.strip()
-    try:
-        param = note.get_Parameter(DB.BuiltInParameter.TEXT_TEXT)
-    except Exception:
-        param = None
-    if param:
-        try:
-            text = param.AsString()
-        except Exception:
-            text = None
-    return text.strip() if text else None
-
-
-def _normalize_system_label(text):
-    if not text:
-        return text
-    raw = text.strip()
-    match = re.match(r"^([A-Za-z]+)([A-Za-z]{2})(\d+)$", raw)
-    if match:
-        return "{}{}".format(match.group(1), match.group(3))
-    return raw
-
-
 def _distance_point_to_bbox(pt, bbox):
     if pt is None or bbox is None:
         return None
@@ -660,31 +622,48 @@ def _distance_point_to_bbox(pt, bbox):
         return None
 
 
-def _note_near_equipment(note_pt, center, tol):
-    if note_pt is None or center is None:
-        return False
+def _get_identity_mark(elem):
+    if elem is None:
+        return None
     try:
-        return note_pt.DistanceTo(center) <= tol
+        param = elem.LookupParameter("Identity Mark")
     except Exception:
-        return False
+        param = None
+    if not param:
+        try:
+            param = elem.get_Parameter(DB.BuiltInParameter.ALL_MODEL_MARK)
+        except Exception:
+            param = None
+    if param:
+        try:
+            value = param.AsString()
+        except Exception:
+            value = None
+        if value is None:
+            try:
+                value = param.AsValueString()
+            except Exception:
+                value = None
+        if value:
+            return value.strip()
+    return None
 
 
-def _collect_text_notes(view):
-    notes = []
-    try:
-        collector = DB.FilteredElementCollector(doc, view.Id).OfClass(DB.TextNote)
-    except Exception:
-        collector = DB.FilteredElementCollector(doc).OfClass(DB.TextNote)
-    for note in collector:
-        pt = _text_note_point(note, view)
-        text = _text_note_text(note)
-        if pt is None or not text:
-            continue
-        notes.append((note.Id.IntegerValue, pt, text))
-    return notes
+def _normalize_system_label(text):
+    if not text:
+        return text
+    raw = text.strip()
+    match = re.match(r"^([A-Za-z]+)(\d+)([A-Za-z]+)?$", raw)
+    if not match:
+        return raw
+    prefix = match.group(1) or ""
+    number = match.group(2) or ""
+    if len(prefix) > 2:
+        prefix = prefix[:-2]
+    return "{}{}".format(prefix, number)
 
 
-def _collect_equipment_labels(view, notes, note_on_tol):
+def _collect_equipment_labels(view):
     equip = []
     try:
         collector = DB.FilteredElementCollector(doc, view.Id).OfCategory(
@@ -710,22 +689,7 @@ def _collect_equipment_labels(view, notes, note_on_tol):
         if not bbox:
             continue
 
-        label = None
-        center = _get_element_center(elem, view)
-        if center is not None and notes:
-            best_dist = None
-            best_text = None
-            for _, pt, text in notes:
-                if not _note_near_equipment(pt, center, note_on_tol):
-                    continue
-                try:
-                    dist = pt.DistanceTo(center)
-                except Exception:
-                    continue
-                if best_dist is None or dist < best_dist:
-                    best_dist = dist
-                    best_text = text
-            label = _normalize_system_label(best_text)
+        label = _normalize_system_label(_get_identity_mark(elem))
 
         if not label:
             continue
@@ -734,8 +698,7 @@ def _collect_equipment_labels(view, notes, note_on_tol):
 
 
 def _apply_equipment_labels(label_map, pipe_map, adjacency, view):
-    notes = _collect_text_notes(view)
-    equip_labels = _collect_equipment_labels(view, notes, NOTE_ON_EQUIP_TOL)
+    equip_labels = _collect_equipment_labels(view)
     if not equip_labels:
         if DEBUG:
             logger.info("equipment labels: none found")
