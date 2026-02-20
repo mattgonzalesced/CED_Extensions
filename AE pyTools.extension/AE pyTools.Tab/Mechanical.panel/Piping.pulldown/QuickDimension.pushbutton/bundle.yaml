@@ -1,0 +1,12 @@
+title:
+
+  en_us: Quick dimension
+tooltip:
+
+  en_us: |
+    Quick dimension selected elements
+    Warning : 
+      - Full support for line base elements only (eg. pipes, ducts, lines, grids). 
+      - Only supports family instances with Center reference planes.
+
+author: AEvelina
