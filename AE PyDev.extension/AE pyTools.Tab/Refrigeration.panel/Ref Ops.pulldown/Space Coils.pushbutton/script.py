@@ -57,22 +57,43 @@ def _bbox_size_xy(bbox):
 def _find_spatial_element(doc, point):
     if not point:
         return None
-    getter = getattr(doc, "GetSpaceAtPoint", None)
-    if callable(getter):
-        try:
-            space = getter(point)
-            if space:
-                return space
-        except Exception:
-            pass
-    getter = getattr(doc, "GetRoomAtPoint", None)
-    if callable(getter):
-        try:
-            room = getter(point)
-            if room:
-                return room
-        except Exception:
-            pass
+    def _try_point(pt):
+        getter = getattr(doc, "GetSpaceAtPoint", None)
+        if callable(getter):
+            try:
+                space = getter(pt)
+                if space:
+                    return space
+            except Exception:
+                pass
+        getter = getattr(doc, "GetRoomAtPoint", None)
+        if callable(getter):
+            try:
+                room = getter(pt)
+                if room:
+                    return room
+            except Exception:
+                pass
+        return None
+
+    spatial = _try_point(point)
+    if spatial:
+        return spatial
+
+    try:
+        view = revit.active_view
+        level = getattr(view, "GenLevel", None)
+        if level:
+            z = level.Elevation + 0.1
+            spatial = _try_point(DB.XYZ(point.X, point.Y, z))
+            if spatial:
+                return spatial
+    except Exception:
+        pass
+
+    spatial = _try_point(DB.XYZ(point.X, point.Y, 0))
+    if spatial:
+        return spatial
     return None
 
 
@@ -83,20 +104,62 @@ def _bounds_box_from_spatial(spatial):
     if not segments:
         return None
 
-    points = []
-    for seg_list in segments:
-        for seg in seg_list:
+    def _loop_points(seg_list):
+        pts = []
+        try:
+            count = seg_list.Count
+        except Exception:
+            count = len(seg_list) if seg_list else 0
+        if count <= 0:
+            return pts
+        for i in range(count):
+            seg = seg_list[i]
             curve = seg.GetCurve()
-            points.append(curve.GetEndPoint(0))
-            points.append(curve.GetEndPoint(1))
+            pts.append(curve.GetEndPoint(0))
+        try:
+            last_seg = seg_list[count - 1]
+            pts.append(last_seg.GetCurve().GetEndPoint(1))
+        except Exception:
+            pass
+        return pts
 
-    if not points:
-        return None
+    def _poly_area_xy(pts):
+        if len(pts) < 3:
+            return 0.0
+        area = 0.0
+        for i in range(len(pts)):
+            x1, y1 = pts[i].X, pts[i].Y
+            x2, y2 = pts[(i + 1) % len(pts)].X, pts[(i + 1) % len(pts)].Y
+            area += (x1 * y2) - (x2 * y1)
+        return area * 0.5
 
-    min_x = min(p.X for p in points)
-    max_x = max(p.X for p in points)
-    min_y = min(p.Y for p in points)
-    max_y = max(p.Y for p in points)
+    loop_bounds = []
+    for seg_list in segments:
+        pts = _loop_points(seg_list)
+        if not pts:
+            continue
+        min_x = min(p.X for p in pts)
+        max_x = max(p.X for p in pts)
+        min_y = min(p.Y for p in pts)
+        max_y = max(p.Y for p in pts)
+        area = abs(_poly_area_xy(pts))
+        loop_bounds.append((area, min_x, max_x, min_y, max_y))
+
+    if loop_bounds:
+        _, min_x, max_x, min_y, max_y = max(loop_bounds, key=lambda b: b[0])
+    else:
+        points = []
+        for seg_list in segments:
+            for seg in seg_list:
+                curve = seg.GetCurve()
+                points.append(curve.GetEndPoint(0))
+                points.append(curve.GetEndPoint(1))
+        if not points:
+            return None
+        min_x = min(p.X for p in points)
+        max_x = max(p.X for p in points)
+        min_y = min(p.Y for p in points)
+        max_y = max(p.Y for p in points)
 
     center = None
     try:
@@ -311,6 +374,75 @@ def _bounds_from_walls(center, direction):
     }
 
 
+def _bounds_from_walls_extreme(center, direction):
+    walls = DB.FilteredElementCollector(doc, revit.active_view.Id) \
+        .OfCategory(DB.BuiltInCategory.OST_Walls) \
+        .WhereElementIsNotElementType()
+
+    horiz = []
+    vert = []
+    for wall in walls:
+        line = _wall_line(wall)
+        if not line:
+            continue
+        mid = _wall_midpoint(line)
+        if _classify_wall(line) == "H":
+            horiz.append((line, mid))
+        else:
+            vert.append((line, mid))
+
+    if direction in ("North", "South"):
+        candidates = []
+        for line, mid in horiz:
+            if direction == "North" and mid.Y >= center.Y:
+                candidates.append((line, mid))
+            elif direction == "South" and mid.Y <= center.Y:
+                candidates.append((line, mid))
+        if not candidates:
+            return None
+        if direction == "North":
+            line, mid = max(candidates, key=lambda c: (c[1].Y, c[0].Length))
+        else:
+            line, mid = min(candidates, key=lambda c: (c[1].Y, -c[0].Length))
+        p0 = line.GetEndPoint(0)
+        p1 = line.GetEndPoint(1)
+        left = min(p0.X, p1.X)
+        right = max(p0.X, p1.X)
+        wall_coord = (p0.Y + p1.Y) * 0.5
+        return {
+            "axis": "X",
+            "perp": "Y",
+            "left": left,
+            "right": right,
+            "wall": wall_coord,
+        }
+
+    candidates = []
+    for line, mid in vert:
+        if direction == "East" and mid.X >= center.X:
+            candidates.append((line, mid))
+        elif direction == "West" and mid.X <= center.X:
+            candidates.append((line, mid))
+    if not candidates:
+        return None
+    if direction == "East":
+        line, mid = max(candidates, key=lambda c: (c[1].X, c[0].Length))
+    else:
+        line, mid = min(candidates, key=lambda c: (c[1].X, -c[0].Length))
+    p0 = line.GetEndPoint(0)
+    p1 = line.GetEndPoint(1)
+    left = min(p0.Y, p1.Y)
+    right = max(p0.Y, p1.Y)
+    wall_coord = (p0.X + p1.X) * 0.5
+    return {
+        "axis": "Y",
+        "perp": "X",
+        "left": left,
+        "right": right,
+        "wall": wall_coord,
+    }
+
+
 def _resolve_bounds(coils, direction):
     point = _get_location_point(coils[0])
     spatial = _find_spatial_element(doc, point)
@@ -335,10 +467,10 @@ def _resolve_bounds(coils, direction):
 
 
 def _bounds_box_from_walls(center):
-    north = _bounds_from_walls(center, "North")
-    south = _bounds_from_walls(center, "South")
-    east = _bounds_from_walls(center, "East")
-    west = _bounds_from_walls(center, "West")
+    north = _bounds_from_walls_extreme(center, "North")
+    south = _bounds_from_walls_extreme(center, "South")
+    east = _bounds_from_walls_extreme(center, "East")
+    west = _bounds_from_walls_extreme(center, "West")
     if not north or not south or not east or not west:
         return None
     min_x = west["wall"]
@@ -613,6 +745,26 @@ def _place_center_distribution(coils, rows, cols):
     available_y = max_y - min_y
     if available_x <= 0 or available_y <= 0:
         forms.alert("Not enough space between the walls to place the coils.", exitscript=True)
+
+    if rows == 1 and cols == 1 and len(data) == 1:
+        item = data[0]
+        if item["size_x"] > available_x or item["size_y"] > available_y:
+            forms.alert(
+                "Not enough space between the walls to place the coil.",
+                exitscript=True,
+            )
+        target_min_x = min_x + (available_x - item["size_x"]) * 0.5
+        target_min_y = min_y + (available_y - item["size_y"]) * 0.5
+        delta_x = target_min_x - item["min_x"]
+        delta_y = target_min_y - item["min_y"]
+        with revit.Transaction("Space Coils"):
+            try:
+                DB.ElementTransformUtils.MoveElement(
+                    doc, item["id"], DB.XYZ(delta_x, delta_y, 0)
+                )
+            except Exception as ex:
+                logger.warning("Failed to move coil {}: {}".format(item["id"], ex))
+        return
 
     rows_data = []
     idx = 0

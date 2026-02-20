@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 __title__ = "System Tagger"
-__doc__ = "Place system ID text notes on refrigerated cases from an Excel list."
+__doc__ = "Place system ID tags on refrigerated cases from a pasted SYS NO. list."
 
-import os
+import re
 import time
 
 from Autodesk.Revit.UI.Selection import ObjectType
 from pyrevit import revit, DB, forms, script
-from pyrevit.interop import xl as pyxl
 from Autodesk.Revit.DB.ExtensibleStorage import Entity, Schema, SchemaBuilder
 from Autodesk.Revit.DB.ExtensibleStorage import AccessLevel
 from System import Guid, String, Int32
@@ -157,19 +156,38 @@ def _update_preview_highlights(view, ogs, new_ids, prev_ids):
 
 
 
-def _pick_text_type():
-    types = list(DB.FilteredElementCollector(doc).OfClass(DB.TextNoteType))
-    if not types:
-        return None
-    for t in types:
+class SystemIdPasteWindow(forms.WPFWindow):
+    def __init__(self, xaml_path):
+        forms.WPFWindow.__init__(self, xaml_path)
+
+    def OkButton_Click(self, sender, args):
+        self.DialogResult = True
+        self.Close()
+
+    def CancelButton_Click(self, sender, args):
+        self.DialogResult = False
+        self.Close()
+
+    def get_text(self):
         try:
-            name = t.get_Parameter(DB.BuiltInParameter.SYMBOL_NAME_PARAM).AsString() or ""
-            font = t.get_Parameter(DB.BuiltInParameter.TEXT_FONT).AsString() or ""
-            if ("3/32" in name) and ("Arial" in font):
-                return t
+            return (self.InputBox.Text or u"").strip()
         except Exception:
-            continue
-    return types[0]
+            return u""
+
+
+
+def _prompt_system_ids():
+    xaml = script.get_bundle_file("SystemIdPasteWindow.xaml")
+    if xaml:
+        window = SystemIdPasteWindow(xaml)
+        if window.show_dialog():
+            return window.get_text()
+        return None
+    return forms.ask_for_string(
+        prompt="Paste SYS NO. values from Excel (full block is OK).",
+        default="",
+        title="System Tagger"
+    )
 
 
 def _get_element_center(elem, view):
@@ -240,6 +258,17 @@ def _pick_tag_type():
     tag_types = _collect_tag_types()
     if not tag_types:
         return None
+    for tag_type in tag_types:
+        try:
+            fam_name = tag_type.get_Parameter(DB.BuiltInParameter.SYMBOL_FAMILY_NAME_PARAM).AsString() or ""
+        except Exception:
+            fam_name = ""
+        try:
+            type_name = tag_type.get_Parameter(DB.BuiltInParameter.SYMBOL_NAME_PARAM).AsString() or ""
+        except Exception:
+            type_name = ""
+        if fam_name == "M_Mechanical Eqmt Tag" and type_name == "Identity":
+            return tag_type
     options = [_tag_type_label(t) for t in tag_types]
     picked = forms.SelectFromList.show(
         options,
@@ -255,25 +284,19 @@ def _pick_tag_type():
     return tag_types[idx]
 
 
-def _read_system_ids_from_excel(path):
-    data = pyxl.load(path, sheets=None, columns=["System ID"])
-    if not data:
-        return []
-    sheet_name = list(data.keys())[0]
-    rows = data[sheet_name]["rows"]
+def _parse_system_ids(raw_text):
     system_ids = []
-    for row in rows:
-        if not isinstance(row, dict):
+    if not raw_text:
+        return system_ids
+    raw = raw_text.replace("\r", "\n").strip()
+    if not raw:
+        return system_ids
+    tokens = [t.strip() for t in re.split(r"[\t,\n;]+", raw) if t.strip()]
+    for token in tokens:
+        lowered = token.lower()
+        if lowered in ("system id", "sys no.", "sys no", "sys no#", "sys no #"):
             continue
-        raw = row.get("System ID")
-        if raw is None:
-            continue
-        text = str(raw).strip()
-        if not text:
-            continue
-        if text.lower() == "system id":
-            continue
-        system_ids.append(text)
+        system_ids.append(token)
     return system_ids
 
 
@@ -315,7 +338,7 @@ def _toggle_pick_cases(system_id, view, ogs):
                         last_preview_time = now
 
             choice = forms.CommandSwitchWindow.show(
-                ["Done", "Pick More", "Pause", "Cancel"],
+                ["Done", "Pick More", "Pause"],
                 message="System ID '{}': {} case(s) selected.".format(system_id, len(selected_ids)),
             )
             if choice == "Pick More":
@@ -385,36 +408,6 @@ def _apply_identity_mark(element_ids, labels):
             )
 
 
-def _place_text_notes(element_ids, labels, view, text_type):
-    if not element_ids or not labels:
-        return 0
-    count = 0
-    for elem_int, label in zip(element_ids, labels):
-        elem = doc.GetElement(DB.ElementId(elem_int))
-        if not elem:
-            continue
-        pt = _get_element_center(elem, view)
-        if not pt:
-            logger.warning("No bounding box for element {}".format(elem_int))
-            continue
-        opts = DB.TextNoteOptions()
-        opts.TypeId = text_type.Id
-        try:
-            opts.HorizontalAlignment = DB.HorizontalTextAlignment.Center
-        except Exception:
-            pass
-        try:
-            opts.VerticalAlignment = DB.VerticalTextAlignment.Middle
-        except Exception:
-            pass
-        try:
-            DB.TextNote.Create(doc, view.Id, pt, label, opts)
-            count += 1
-        except Exception as ex:
-            logger.warning("Failed to place text note for {}: {}".format(elem_int, ex))
-    return count
-
-
 def _place_tags(element_ids, labels, view, tag_type):
     if not element_ids or not labels or tag_type is None:
         return 0
@@ -452,34 +445,17 @@ def main():
     if active_view.IsTemplate:
         forms.alert("Active view is a template. Open a working view first.", exitscript=True)
 
-    output_mode = forms.CommandSwitchWindow.show(
-        ["Text Notes", "Tags"],
-        message="Place System IDs as:",
-    )
-    if not output_mode:
-        script.exit()
-
-    text_type = None
-    tag_type = None
-    if output_mode == "Text Notes":
-        text_type = _pick_text_type()
-        if not text_type:
-            forms.alert("No TextNoteType available in this project.", exitscript=True)
-    else:
-        tag_type = _pick_tag_type()
-        if not tag_type:
-            forms.alert("No tag type available in this project.", exitscript=True)
+    tag_type = _pick_tag_type()
+    if not tag_type:
+        forms.alert("No tag type available in this project.", exitscript=True)
 
     resume_path, resume_index = _load_resume_state()
     system_ids = None
     start_index = 0
-    path = None
+    raw_text = None
 
-    if resume_path and os.path.exists(resume_path) and resume_index is not None:
-        try:
-            resume_ids = _read_system_ids_from_excel(resume_path)
-        except Exception:
-            resume_ids = None
+    if resume_path and resume_index is not None:
+        resume_ids = _parse_system_ids(resume_path)
         if resume_ids and 0 <= resume_index < len(resume_ids):
             next_id = resume_ids[resume_index]
             choice = forms.CommandSwitchWindow.show(
@@ -489,7 +465,7 @@ def main():
                 ),
             )
             if choice == "Resume":
-                path = resume_path
+                raw_text = resume_path
                 system_ids = resume_ids
                 start_index = resume_index
             elif choice == "Start Over":
@@ -500,15 +476,12 @@ def main():
             _clear_resume_state()
 
     if system_ids is None:
-        path = forms.pick_file(file_ext="xlsx", title="Select System ID Excel File")
-        if not path:
+        raw_text = _prompt_system_ids()
+        if not raw_text:
             script.exit()
-        try:
-            system_ids = _read_system_ids_from_excel(path)
-        except Exception as ex:
-            forms.alert("Failed to read Excel file: {}".format(ex), exitscript=True)
+        system_ids = _parse_system_ids(raw_text)
         if not system_ids:
-            forms.alert("No System IDs found in the first column. Expected header: 'System ID'.", exitscript=True)
+            forms.alert("No System IDs found in the pasted text.", exitscript=True)
 
     highlight_ogs = _build_highlight_ogs()
 
@@ -522,7 +495,7 @@ def main():
 
     for idx in range(start_index, len(system_ids)):
         system_id = system_ids[idx]
-        _save_resume_state(path, idx)
+        _save_resume_state(raw_text, idx)
         status, picked_ids = _toggle_pick_cases(system_id, active_view, highlight_ogs)
         if status == "cancel":
             return
@@ -531,12 +504,9 @@ def main():
             with revit.Transaction("System Tagger - Place Labels {}".format(system_id)):
                 _apply_highlights(active_view, picked_ids, highlight_ogs)
                 _apply_identity_mark(picked_ids, labels)
-                if output_mode == "Tags":
-                    _place_tags(picked_ids, labels, active_view, tag_type)
-                else:
-                    _place_text_notes(picked_ids, labels, active_view, text_type)
+                _place_tags(picked_ids, labels, active_view, tag_type)
                 _clear_highlights_in_tx(active_view, picked_ids)
-            _save_resume_state(path, idx + 1)
+            _save_resume_state(raw_text, idx + 1)
         except Exception:
             raise
         if status == "pause":
