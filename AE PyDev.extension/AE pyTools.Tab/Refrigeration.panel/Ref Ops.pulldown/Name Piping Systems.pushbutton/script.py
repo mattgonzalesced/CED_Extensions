@@ -97,7 +97,6 @@ BALL_VALVE_MAX_OFFSET_FT = 2.0 / 12.0
 
 _MECH_EQUIP_VIEW_CACHE = {}
 _ROOF_RUNNER_BOXES = {}
-_MECH_EQUIP_BOXES = {}
 ROOF_RUNNER_FAMILY = "CED-R-ROOF RUNNER"
 ROOF_RUNNER_TYPE = "XXX"
 
@@ -133,90 +132,6 @@ def _mechanical_equipment_ids_in_view(view):
     return ids
 
 
-def _mechanical_equipment_bboxes(view):
-    if view is None:
-        return []
-    try:
-        vid = view.Id.IntegerValue
-    except Exception:
-        return []
-    cached = _MECH_EQUIP_BOXES.get(vid)
-    if cached is not None:
-        return cached
-    boxes = []
-    try:
-        mec_cat = DB.BuiltInCategory.OST_MechanicalEquipment
-    except Exception:
-        return []
-    try:
-        collector = DB.FilteredElementCollector(doc, view.Id).OfCategory(mec_cat)
-    except Exception:
-        return []
-    for elem in collector.WhereElementIsNotElementType():
-        try:
-            sym = elem.Symbol
-        except Exception:
-            sym = None
-        try:
-            fam_name = sym.Family.Name if sym and sym.Family else ""
-        except Exception:
-            fam_name = ""
-        if ROOF_RUNNER_FAMILY.upper() in (fam_name or "").upper():
-            continue
-        bbox = None
-        try:
-            bbox = elem.get_BoundingBox(view)
-        except Exception:
-            bbox = None
-        if not bbox:
-            try:
-                bbox = elem.get_BoundingBox(None)
-            except Exception:
-                bbox = None
-        if not bbox:
-            continue
-        if bbox.Min is None or bbox.Max is None:
-            continue
-        try:
-            elem_id = elem.Id.IntegerValue
-        except Exception:
-            elem_id = None
-        boxes.append((elem_id, bbox.Min, bbox.Max, elem))
-    _MECH_EQUIP_BOXES[vid] = boxes
-    return boxes
-
-
-def _equipment_label_from_intersection(pipe, view):
-    if pipe is None or view is None:
-        return None, None
-    curve = _pipe_curve(pipe)
-    if curve is None:
-        return None, None
-    try:
-        p0 = curve.GetEndPoint(0)
-        p1 = curve.GetEndPoint(1)
-        mid = curve.Evaluate(0.5, True)
-    except Exception:
-        return None, None
-    best_label = None
-    best_id = None
-    best_dist = None
-    for elem_id, min_pt, max_pt, elem in _mechanical_equipment_bboxes(view):
-        if not _segment_intersects_rect_xy(p0, p1, min_pt, max_pt):
-            continue
-        label = _format_identity_mark(_get_leaf_identity_value(elem))
-        if not label:
-            label = "XXXX"
-        center = (min_pt + max_pt) * 0.5
-        try:
-            dist = mid.DistanceTo(center)
-        except Exception:
-            dist = 0.0
-        if best_dist is None or dist < best_dist:
-            best_dist = dist
-            best_label = label
-            best_id = elem_id
-    return best_label, best_id
 
 
 def _roof_runner_bboxes(view):
@@ -1274,12 +1189,14 @@ def _pick_pipe_tag_type():
 
 
 
-def _place_text_notes(label_map, pipe_map, text_type, view):
+def _place_text_notes(label_map, pipe_map, text_type, view, suppress_ids=None):
     if not label_map:
         return 0
     count = 0
     with revit.Transaction("Name Piping Systems - Text Notes"):
         for pid, label in label_map.items():
+            if suppress_ids and pid in suppress_ids:
+                continue
             pipe = pipe_map.get(pid)
             if pipe is None:
                 continue
@@ -1345,7 +1262,7 @@ def _rotate_element_about_z(elem_id, origin, angle):
 
 
 
-def _place_pipe_tags(label_map, pipe_map, tag_type, view):
+def _place_pipe_tags(label_map, pipe_map, tag_type, view, suppress_ids=None):
     if not label_map:
         return 0
     count = 0
@@ -1354,6 +1271,8 @@ def _place_pipe_tags(label_map, pipe_map, tag_type, view):
             tag_type.Activate()
             doc.Regenerate()
         for pid in label_map.keys():
+            if suppress_ids and pid in suppress_ids:
+                continue
             pipe = pipe_map.get(pid)
             if pipe is None:
                 continue
@@ -1548,6 +1467,45 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
     order_list = []
     fitting_map = {}
     fitting_objs = {}
+    suppress_label_ids = set()
+
+    def _pipe_length(pipe):
+        curve = _pipe_curve(pipe)
+        if curve is None:
+            return 0.0
+        try:
+            return curve.Length
+        except Exception:
+            return 0.0
+
+    def _is_elbow_between(pipe, prev_id):
+        if pipe is None or prev_id is None:
+            return False
+        for fid in _fittings_connecting(pipe, prev_id):
+            try:
+                fitting = doc.GetElement(DB.ElementId(fid))
+            except Exception:
+                fitting = None
+            if fitting is None:
+                continue
+            if _fitting_kind(fitting).lower() == "elbow":
+                return True
+        return False
+
+    def _should_suppress_label(curr_pipe, prev_id, curr_label):
+        if curr_pipe is None or prev_id is None:
+            return False
+        if label_map.get(prev_id) != curr_label:
+            return False
+        if not _is_elbow_between(curr_pipe, prev_id):
+            return False
+        try:
+            prev_pipe = doc.GetElement(DB.ElementId(prev_id))
+        except Exception:
+            prev_pipe = None
+        if prev_pipe is None:
+            return False
+        return (_pipe_length(curr_pipe) + _pipe_length(prev_pipe)) < 30.0
 
     def _find_branch_leaf_marker(branch_pipe, prev_id):
         if branch_pipe is None:
@@ -1567,9 +1525,6 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                     valve_id = None
                 if valve_id is None or valve_id not in used_valve_ids:
                     return curr, "valve", found
-            equip_label, equip_id = _equipment_label_from_intersection(curr, view)
-            if equip_label:
-                return curr, "equip", (equip_label, equip_id)
             neighbors = _pipe_neighbors(curr, back)
             if not neighbors or len(neighbors) != 1:
                 break
@@ -1594,21 +1549,16 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
             if _pipe_hits_roof_runner(curr, view):
                 return True
 
-            if marker_pipe is not None and cid == marker_pipe.Id.IntegerValue and marker_type == "equip":
-                equip_label, equip_id = marker_info
-                if equip_label:
-                    label_map[cid] = equip_label
-                    pipe_map[cid] = curr
-                    logger.info(
-                        "Leaf label: pipe {} -> {} (mech {})".format(
-                            cid,
-                            equip_label,
-                            equip_id if equip_id is not None else "None",
-                        )
-                    )
-                return True
+            is_leaf_marker = (
+                marker_pipe is not None
+                and cid == marker_pipe.Id.IntegerValue
+                and marker_type == "valve"
+                and marker_info
+            )
+            if not is_leaf_marker and _should_suppress_label(curr, back, branch_label):
+                suppress_label_ids.add(cid)
 
-            if marker_pipe is not None and cid == marker_pipe.Id.IntegerValue and marker_type == "valve" and marker_info:
+            if is_leaf_marker:
                 prev_pipe = None
                 if back is not None:
                     try:
@@ -1616,7 +1566,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                     except Exception:
                         prev_pipe = None
                 direction = _oriented_pipe_direction(curr, prev_pipe)
-                valve_elem, valve_point = valve_info
+                valve_elem, valve_point = marker_info
                 try:
                     valve_id = valve_elem.Id.IntegerValue
                 except Exception:
@@ -1634,6 +1584,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                     if label:
                         label_map[cid] = label
                         pipe_map[cid] = curr
+                        suppress_label_ids.discard(cid)
                         logger.info(
                             "Leaf label: pipe {} -> {} (mech {})".format(
                                 cid,
@@ -1660,6 +1611,8 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
             visited.add(cid)
             order_list.append(cid)
             _record_fitting_connections(curr, fitting_map, fitting_objs)
+            if _should_suppress_label(curr, prev_id, label):
+                suppress_label_ids.add(cid)
             label_map[cid] = label
             pipe_map[cid] = curr
             if _pipe_hits_roof_runner(curr, view):
@@ -1743,7 +1696,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                 return
 
     walk_trunk(start_pipe, start_label, None)
-    return order_list, fitting_map, fitting_objs
+    return order_list, fitting_map, fitting_objs, suppress_label_ids
 
 
 
@@ -1826,6 +1779,7 @@ def main():
     label_map = {}
     pipe_map = {}
     used_valve_ids = set()
+    suppress_label_ids = set()
     for idx, start_pipe in enumerate(start_pipes, 1):
         pid = start_pipe.Id.IntegerValue
         if pid in label_map:
@@ -1833,7 +1787,7 @@ def main():
         start_label = "{}A".format(idx)
         local_label_map = {}
         local_pipe_map = {}
-        order_list, fitting_map, fitting_objs = _traverse_and_label(
+        order_list, fitting_map, fitting_objs, local_suppress = _traverse_and_label(
             start_pipe,
             start_label,
             local_label_map,
@@ -1850,6 +1804,8 @@ def main():
             fitting_map,
             fitting_objs,
         )
+        if local_suppress:
+            suppress_label_ids.update(local_suppress)
         for lpid, lbl in local_label_map.items():
             if lpid in label_map:
                 continue
@@ -1863,9 +1819,9 @@ def main():
     tag_count = 0
     text_count = 0
     if output_mode in ("Tags", "Both"):
-        tag_count = _place_pipe_tags(label_map, pipe_map, tag_type, active_view)
+        tag_count = _place_pipe_tags(label_map, pipe_map, tag_type, active_view, suppress_label_ids)
     if output_mode in ("Text Notes", "Both"):
-        text_count = _place_text_notes(label_map, pipe_map, text_type, active_view)
+        text_count = _place_text_notes(label_map, pipe_map, text_type, active_view, suppress_label_ids)
 
     forms.alert(
         "Applied {} label(s). Tags: {}. Text notes: {}.".format(
