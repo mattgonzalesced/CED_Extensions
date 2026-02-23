@@ -376,9 +376,9 @@ class ExtensibleStorage(object):
     @classmethod
     def _on_document_changed(cls, sender, args):
         operation = getattr(args, "Operation", None)
-        cls._log("DocumentChanged event operation={!r}".format(operation))
         if operation not in (UndoOperation.Undo, UndoOperation.Redo):
             return
+        cls._log("DocumentChanged event operation={!r}".format(operation))
         names = []
         get_names = getattr(args, "GetTransactionNames", None)
         if callable(get_names):
