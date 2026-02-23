@@ -30,11 +30,20 @@ _SYNC_HANDLER_APP = None
 _MODULE = None
 _IS_RUNNING = False
 
+_PROX_SYNC_HANDLER_UI = None
+_PROX_SYNC_HANDLER_APP = None
+_PROX_MODULE = None
+_PROX_IS_RUNNING = False
+
 _DOCKABLE_REGISTERED = False
 
 ENV_HANDLER_KEY = "ced_parent_param_sync_handler_registered"
 ENV_LAST_RUN_KEY = "ced_parent_param_sync_last_run"
 ENV_RUNNING_KEY = "ced_parent_param_sync_running"
+
+PROX_ENV_HANDLER_KEY = "ced_proximity_lights_coils_sync_handler_registered"
+PROX_ENV_LAST_RUN_KEY = "ced_proximity_lights_coils_sync_last_run"
+PROX_ENV_RUNNING_KEY = "ced_proximity_lights_coils_sync_running"
 
 
 def _module_path():
@@ -231,6 +240,150 @@ def _register_sync_handler():
             logger.warning("UI sync handler not registered: %s", exc)
 
 
+def _proximity_module_path():
+    return os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "AE pyTools.Tab",
+            "QualityChecks.panel",
+            "Proximity Check.pushbutton",
+            "proximity_lights_coils.py",
+        )
+    )
+
+
+def _load_proximity_checker():
+    global _PROX_MODULE
+    if _PROX_MODULE is not None:
+        return _PROX_MODULE
+    path = _proximity_module_path()
+    if not os.path.exists(path):
+        return None
+    try:
+        _PROX_MODULE = imp.load_source("ced_proximity_lights_coils", path)
+        return _PROX_MODULE
+    except Exception as exc:
+        logger = script.get_logger()
+        logger.warning("Failed to load proximity checker: %s", exc)
+        return None
+
+
+def _on_doc_sync_proximity(sender, args):
+    global _PROX_IS_RUNNING
+    doc = None
+    try:
+        doc = getattr(args, "Document", None)
+    except Exception:
+        doc = None
+    if doc is None:
+        try:
+            doc = __revit__.ActiveUIDocument.Document
+        except Exception:
+            doc = None
+    if doc is None:
+        return
+    if _PROX_IS_RUNNING:
+        return
+    if not _should_run_proximity_sync(doc):
+        return
+    checker = _load_proximity_checker()
+    if checker is None:
+        return
+    try:
+        _PROX_IS_RUNNING = True
+        _set_env(PROX_ENV_RUNNING_KEY, "1")
+        checker.run_sync_check(doc)
+    except Exception as exc:
+        logger = script.get_logger()
+        logger.warning("Proximity check failed: %s", exc)
+    finally:
+        _set_env(PROX_ENV_RUNNING_KEY, "0")
+        _PROX_IS_RUNNING = False
+
+
+def _should_run_proximity_sync(doc):
+    running = _get_env(PROX_ENV_RUNNING_KEY)
+    if str(running).strip() == "1":
+        return False
+    doc_key = _get_doc_key(doc)
+    if not doc_key:
+        return True
+    now = time.time()
+    payload = _load_env_payload(_get_env(PROX_ENV_LAST_RUN_KEY, "{}"))
+    last_key = payload.get("doc_key")
+    last_ts = payload.get("timestamp") or 0.0
+    if last_key == doc_key and now - last_ts < 20.0:
+        return False
+    payload = {"doc_key": doc_key, "timestamp": now}
+    _set_env(PROX_ENV_LAST_RUN_KEY, json.dumps(payload))
+    return True
+
+
+def _proximity_handler_registry(uiapp):
+    if uiapp is None:
+        return None
+    app = None
+    try:
+        app = getattr(uiapp, "Application", None)
+    except Exception:
+        app = None
+    host = app or uiapp
+    registry = getattr(host, "_ced_proximity_lights_coils_handlers", None)
+    if registry is None:
+        registry = {}
+        try:
+            setattr(host, "_ced_proximity_lights_coils_handlers", registry)
+        except Exception:
+            return None
+    return registry
+
+
+def _register_proximity_sync_handler():
+    global _PROX_SYNC_HANDLER_UI, _PROX_SYNC_HANDLER_APP
+    logger = script.get_logger()
+    if EventHandler is None:
+        logger.warning("Proximity sync handler not registered: EventHandler missing.")
+        return
+    if _get_env(PROX_ENV_HANDLER_KEY):
+        return
+    uiapp = None
+    try:
+        uiapp = __revit__
+    except Exception:
+        uiapp = None
+    registry = _proximity_handler_registry(uiapp)
+    app = None
+    try:
+        app = getattr(uiapp, "Application", None)
+    except Exception:
+        app = None
+    if registry is not None and registry.get("registered"):
+        return
+    if app is not None and DbSyncArgs is not None and _PROX_SYNC_HANDLER_APP is None:
+        try:
+            handler = EventHandler[DbSyncArgs](_on_doc_sync_proximity)
+            app.DocumentSynchronizedWithCentral += handler
+            _PROX_SYNC_HANDLER_APP = handler
+            if registry is not None:
+                registry["registered"] = "app"
+            _set_env(PROX_ENV_HANDLER_KEY, "app")
+            logger.info("Proximity check app sync handler registered.")
+            return
+        except Exception as exc:
+            logger.warning("App sync handler not registered: %s", exc)
+    if uiapp is not None and UiSyncArgs is not None and _PROX_SYNC_HANDLER_UI is None:
+        try:
+            handler = EventHandler[UiSyncArgs](_on_doc_sync_proximity)
+            uiapp.DocumentSynchronizedWithCentral += handler
+            _PROX_SYNC_HANDLER_UI = handler
+            if registry is not None:
+                registry["registered"] = "ui"
+            _set_env(PROX_ENV_HANDLER_KEY, "ui")
+            logger.info("Proximity check UI sync handler registered.")
+        except Exception as exc:
+            logger.warning("UI sync handler not registered: %s", exc)
+
+
 def _dockable_panel_path():
     return os.path.abspath(
         os.path.join(
@@ -269,4 +422,5 @@ def _register_place_single_profile_panel():
 
 
 _register_sync_handler()
+_register_proximity_sync_handler()
 _register_place_single_profile_panel()

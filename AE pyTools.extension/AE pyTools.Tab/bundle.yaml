@@ -3,6 +3,7 @@ layout:
   - Orientation
   - Selection
   - Tags
+  - QualityChecks
   - Electrical
   - Miscellaneous
   - MEP Automation
