@@ -35,6 +35,11 @@ _PROX_SYNC_HANDLER_APP = None
 _PROX_MODULE = None
 _PROX_IS_RUNNING = False
 
+_REF_SYNC_HANDLER_UI = None
+_REF_SYNC_HANDLER_APP = None
+_REF_MODULE = None
+_REF_IS_RUNNING = False
+
 _DOCKABLE_REGISTERED = False
 
 ENV_HANDLER_KEY = "ced_parent_param_sync_handler_registered"
@@ -44,6 +49,10 @@ ENV_RUNNING_KEY = "ced_parent_param_sync_running"
 PROX_ENV_HANDLER_KEY = "ced_proximity_lights_coils_sync_handler_registered"
 PROX_ENV_LAST_RUN_KEY = "ced_proximity_lights_coils_sync_last_run"
 PROX_ENV_RUNNING_KEY = "ced_proximity_lights_coils_sync_running"
+
+REF_ENV_HANDLER_KEY = "ced_ref_sched_change_sync_handler_registered"
+REF_ENV_LAST_RUN_KEY = "ced_ref_sched_change_sync_last_run"
+REF_ENV_RUNNING_KEY = "ced_ref_sched_change_sync_running"
 
 
 def _module_path():
@@ -384,6 +393,150 @@ def _register_proximity_sync_handler():
             logger.warning("UI sync handler not registered: %s", exc)
 
 
+def _ref_sched_module_path():
+    return os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "AE pyTools.Tab",
+            "QualityChecks.panel",
+            "Ref Sched Change.pushbutton",
+            "ref_sched_change.py",
+        )
+    )
+
+
+def _load_ref_sched_checker():
+    global _REF_MODULE
+    if _REF_MODULE is not None:
+        return _REF_MODULE
+    path = _ref_sched_module_path()
+    if not os.path.exists(path):
+        return None
+    try:
+        _REF_MODULE = imp.load_source("ced_ref_sched_change", path)
+        return _REF_MODULE
+    except Exception as exc:
+        logger = script.get_logger()
+        logger.warning("Failed to load Ref Sched Change checker: %s", exc)
+        return None
+
+
+def _on_doc_sync_ref_sched(sender, args):
+    global _REF_IS_RUNNING
+    doc = None
+    try:
+        doc = getattr(args, "Document", None)
+    except Exception:
+        doc = None
+    if doc is None:
+        try:
+            doc = __revit__.ActiveUIDocument.Document
+        except Exception:
+            doc = None
+    if doc is None:
+        return
+    if _REF_IS_RUNNING:
+        return
+    if not _should_run_ref_sched_sync(doc):
+        return
+    checker = _load_ref_sched_checker()
+    if checker is None:
+        return
+    try:
+        _REF_IS_RUNNING = True
+        _set_env(REF_ENV_RUNNING_KEY, "1")
+        checker.run_sync_check(doc, args=args)
+    except Exception as exc:
+        logger = script.get_logger()
+        logger.warning("Ref Sched Change check failed: %s", exc)
+    finally:
+        _set_env(REF_ENV_RUNNING_KEY, "0")
+        _REF_IS_RUNNING = False
+
+
+def _should_run_ref_sched_sync(doc):
+    running = _get_env(REF_ENV_RUNNING_KEY)
+    if str(running).strip() == "1":
+        return False
+    doc_key = _get_doc_key(doc)
+    if not doc_key:
+        return True
+    now = time.time()
+    payload = _load_env_payload(_get_env(REF_ENV_LAST_RUN_KEY, "{}"))
+    last_key = payload.get("doc_key")
+    last_ts = payload.get("timestamp") or 0.0
+    if last_key == doc_key and now - last_ts < 20.0:
+        return False
+    payload = {"doc_key": doc_key, "timestamp": now}
+    _set_env(REF_ENV_LAST_RUN_KEY, json.dumps(payload))
+    return True
+
+
+def _ref_sched_handler_registry(uiapp):
+    if uiapp is None:
+        return None
+    app = None
+    try:
+        app = getattr(uiapp, "Application", None)
+    except Exception:
+        app = None
+    host = app or uiapp
+    registry = getattr(host, "_ced_ref_sched_change_handlers", None)
+    if registry is None:
+        registry = {}
+        try:
+            setattr(host, "_ced_ref_sched_change_handlers", registry)
+        except Exception:
+            return None
+    return registry
+
+
+def _register_ref_sched_sync_handler():
+    global _REF_SYNC_HANDLER_UI, _REF_SYNC_HANDLER_APP
+    logger = script.get_logger()
+    if EventHandler is None:
+        logger.warning("Ref Sched Change handler not registered: EventHandler missing.")
+        return
+    if _get_env(REF_ENV_HANDLER_KEY):
+        return
+    uiapp = None
+    try:
+        uiapp = __revit__
+    except Exception:
+        uiapp = None
+    registry = _ref_sched_handler_registry(uiapp)
+    app = None
+    try:
+        app = getattr(uiapp, "Application", None)
+    except Exception:
+        app = None
+    if registry is not None and registry.get("registered"):
+        return
+    if app is not None and DbSyncArgs is not None and _REF_SYNC_HANDLER_APP is None:
+        try:
+            handler = EventHandler[DbSyncArgs](_on_doc_sync_ref_sched)
+            app.DocumentSynchronizedWithCentral += handler
+            _REF_SYNC_HANDLER_APP = handler
+            if registry is not None:
+                registry["registered"] = "app"
+            _set_env(REF_ENV_HANDLER_KEY, "app")
+            logger.info("Ref Sched Change app sync handler registered.")
+            return
+        except Exception as exc:
+            logger.warning("App sync handler not registered: %s", exc)
+    if uiapp is not None and UiSyncArgs is not None and _REF_SYNC_HANDLER_UI is None:
+        try:
+            handler = EventHandler[UiSyncArgs](_on_doc_sync_ref_sched)
+            uiapp.DocumentSynchronizedWithCentral += handler
+            _REF_SYNC_HANDLER_UI = handler
+            if registry is not None:
+                registry["registered"] = "ui"
+            _set_env(REF_ENV_HANDLER_KEY, "ui")
+            logger.info("Ref Sched Change UI sync handler registered.")
+        except Exception as exc:
+            logger.warning("UI sync handler not registered: %s", exc)
+
+
 def _dockable_panel_path():
     return os.path.abspath(
         os.path.join(
@@ -423,4 +576,5 @@ def _register_place_single_profile_panel():
 
 _register_sync_handler()
 _register_proximity_sync_handler()
+_register_ref_sched_sync_handler()
 _register_place_single_profile_panel()
