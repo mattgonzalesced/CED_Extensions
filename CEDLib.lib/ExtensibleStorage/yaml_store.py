@@ -5,6 +5,7 @@ Helpers for working with the active YAML stored inside Extensible Storage.
 
 import json
 import io
+import hashlib
 
 from pyrevit import revit, script
 
@@ -73,9 +74,10 @@ def load_active_yaml_data(doc=None):
     path, text = load_active_yaml_text(doc)
     sanitized_text = _sanitize_hash_keys(text or "")
     normalized = ExtensibleStorage._normalize_path(path)
+    digest = _text_digest(sanitized_text)
     if _ACTIVE_CACHE and _ACTIVE_CACHE.get("normalized") == normalized:
         cached = _ACTIVE_CACHE.get("data")
-        if cached:
+        if cached and _ACTIVE_CACHE.get("digest") == digest:
             data = json.loads(json.dumps(cached))
             logger = script.get_logger()
             logger.info("[YAML Storage] loaded equipment definitions (cached): %s", [eq.get("name") or eq.get("id") for eq in data.get("equipment_definitions") or [] if isinstance(eq, dict)])
@@ -92,6 +94,11 @@ def load_active_yaml_data(doc=None):
         raise
     logger = script.get_logger()
     logger.info("[YAML Storage] loaded equipment definitions: %s | snippet=%s", [eq.get("name") or eq.get("id") for eq in data.get("equipment_definitions") or [] if isinstance(eq, dict)], _extract_led_snippet(text))
+    _ACTIVE_CACHE = {
+        "normalized": normalized,
+        "digest": digest,
+        "data": json.loads(json.dumps(data)),
+    }
     return path, data
 
 
@@ -111,6 +118,7 @@ def save_active_yaml_data(doc, data, action, description):
     ExtensibleStorage.update_active_text_only(doc, path, new_text)
     _ACTIVE_CACHE = {
         "normalized": ExtensibleStorage._normalize_path(path),
+        "digest": _text_digest(_sanitize_hash_keys(new_text or "")),
         "data": json.loads(json.dumps(data)),
     }
 
@@ -121,6 +129,12 @@ def refresh_active_yaml_snapshot(doc, yaml_path, data):
         raise RuntimeError("No active document detected.")
     new_text = dump_data_to_string(data)
     ExtensibleStorage.update_active_text_only(doc, yaml_path, new_text)
+    global _ACTIVE_CACHE
+    _ACTIVE_CACHE = {
+        "normalized": ExtensibleStorage._normalize_path(yaml_path),
+        "digest": _text_digest(_sanitize_hash_keys(new_text or "")),
+        "data": json.loads(json.dumps(data)),
+    }
 
 
 def seed_active_yaml(doc, yaml_path, raw_text):
@@ -129,3 +143,23 @@ def seed_active_yaml(doc, yaml_path, raw_text):
         raise RuntimeError("No active document detected.")
     sanitized = _sanitize_hash_keys(raw_text or "")
     ExtensibleStorage.seed_active_yaml(doc, yaml_path, sanitized)
+    global _ACTIVE_CACHE
+    _ACTIVE_CACHE = {
+        "normalized": ExtensibleStorage._normalize_path(yaml_path),
+        "digest": _text_digest(sanitized),
+        "data": None,
+    }
+
+
+def _text_digest(text):
+    try:
+        payload = (text or "").encode("utf-8")
+    except Exception:
+        try:
+            payload = str(text).encode("utf-8")
+        except Exception:
+            payload = b""
+    try:
+        return hashlib.md5(payload).hexdigest()
+    except Exception:
+        return None
