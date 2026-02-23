@@ -96,9 +96,6 @@ BALL_VALVE_TYPE = "BALL_VALVE"
 BALL_VALVE_MAX_OFFSET_FT = 2.0 / 12.0
 
 _MECH_EQUIP_VIEW_CACHE = {}
-_ROOF_RUNNER_BOXES = {}
-ROOF_RUNNER_FAMILY = "CED-R-ROOF RUNNER"
-ROOF_RUNNER_TYPE = "XXX"
 
 
 def _mechanical_equipment_ids_in_view(view):
@@ -134,122 +131,6 @@ def _mechanical_equipment_ids_in_view(view):
 
 
 
-def _roof_runner_bboxes(view):
-    if view is None:
-        return []
-    try:
-        vid = view.Id.IntegerValue
-    except Exception:
-        return []
-    cached = _ROOF_RUNNER_BOXES.get(vid)
-    if cached is not None:
-        return cached
-    boxes = []
-    try:
-        mec_cat = DB.BuiltInCategory.OST_MechanicalEquipment
-    except Exception:
-        return []
-    try:
-        collector = DB.FilteredElementCollector(doc, view.Id).OfCategory(mec_cat)
-    except Exception:
-        return []
-    for elem in collector.WhereElementIsNotElementType():
-        try:
-            sym = elem.Symbol
-        except Exception:
-            sym = None
-        try:
-            fam_name = sym.Family.Name if sym and sym.Family else ""
-        except Exception:
-            fam_name = ""
-        try:
-            type_name = sym.Name if sym else ""
-        except Exception:
-            type_name = ""
-        try:
-            elem_name = elem.Name or ""
-        except Exception:
-            elem_name = ""
-        fam_upper = (fam_name or "").upper()
-        type_upper = (type_name or "").upper()
-        elem_upper = (elem_name or "").upper()
-        if ROOF_RUNNER_FAMILY.upper() not in fam_upper:
-            continue
-        if ROOF_RUNNER_TYPE.upper() not in type_upper and ROOF_RUNNER_TYPE.upper() not in elem_upper:
-            continue
-        bbox = None
-        try:
-            bbox = elem.get_BoundingBox(view)
-        except Exception:
-            bbox = None
-        if not bbox:
-            try:
-                bbox = elem.get_BoundingBox(None)
-            except Exception:
-                bbox = None
-        if not bbox:
-            continue
-        if bbox.Min is None or bbox.Max is None:
-            continue
-        boxes.append((bbox.Min, bbox.Max))
-    _ROOF_RUNNER_BOXES[vid] = boxes
-    if not boxes:
-        logger.info("Roof runner: no '{}' '{}' instances found in view {}".format(
-            ROOF_RUNNER_FAMILY,
-            ROOF_RUNNER_TYPE,
-            vid,
-        ))
-    return boxes
-
-
-def _segment_intersects_rect_xy(p0, p1, min_pt, max_pt):
-    if p0 is None or p1 is None or min_pt is None or max_pt is None:
-        return False
-    minx, maxx = min_pt.X, max_pt.X
-    miny, maxy = min_pt.Y, max_pt.Y
-    x0, y0 = p0.X, p0.Y
-    x1, y1 = p1.X, p1.Y
-
-    if (minx <= x0 <= maxx and miny <= y0 <= maxy) or (minx <= x1 <= maxx and miny <= y1 <= maxy):
-        return True
-
-    dx = x1 - x0
-    dy = y1 - y0
-    p = [-dx, dx, -dy, dy]
-    q = [x0 - minx, maxx - x0, y0 - miny, maxy - y0]
-    u1, u2 = 0.0, 1.0
-    for pi, qi in zip(p, q):
-        if abs(pi) < 1e-12:
-            if qi < 0:
-                return False
-        else:
-            t = qi / pi
-            if pi < 0:
-                if t > u2:
-                    return False
-                if t > u1:
-                    u1 = t
-            else:
-                if t < u1:
-                    return False
-                if t < u2:
-                    u2 = t
-    return True
-
-
-def _pipe_hits_roof_runner(pipe, view):
-    curve = _pipe_curve(pipe)
-    if curve is None or view is None:
-        return False
-    try:
-        p0 = curve.GetEndPoint(0)
-        p1 = curve.GetEndPoint(1)
-    except Exception:
-        return False
-    for min_pt, max_pt in _roof_runner_bboxes(view):
-        if _segment_intersects_rect_xy(p0, p1, min_pt, max_pt):
-            return True
-    return False
 
 
 
@@ -263,7 +144,7 @@ def _pipe_curve(pipe):
     return loc.Curve
 
 
-def _process_label(num, max_decimals=3):
+def _process_label(num, max_decimals=2):
     s = str(num) if num is not None else ""
     letter = ""
     if s and s[-1].isalpha():
@@ -303,7 +184,7 @@ def _process_label(num, max_decimals=3):
     return inc_num, inc_digit
 
 
-def _normalize_label_for_process(label, max_decimals=3):
+def _normalize_label_for_process(label, max_decimals=2):
     s = str(label) if label is not None else ""
     if "." in s:
         if max_decimals is None:
@@ -1027,10 +908,26 @@ def _get_identity_mark(elem):
 def _get_system_first(elem):
     if elem is None:
         return None
-    try:
-        param = elem.LookupParameter("System First")
-    except Exception:
-        param = None
+    param = None
+    for name in ("System First", "SYSTEM FIRST"):
+        try:
+            param = elem.LookupParameter(name)
+        except Exception:
+            param = None
+        if param:
+            break
+    if not param:
+        try:
+            for p in elem.Parameters:
+                try:
+                    pname = p.Definition.Name
+                except Exception:
+                    pname = ""
+                if (pname or "").upper() == "SYSTEM FIRST":
+                    param = p
+                    break
+        except Exception:
+            param = None
     if not param or not param.HasValue:
         return None
     try:
@@ -1537,6 +1434,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
             return False
         curr = start_pipe
         back = prev_id
+        path_ids = []
         while curr is not None:
             cid = curr.Id.IntegerValue
             if cid in visited:
@@ -1546,8 +1444,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
             _record_fitting_connections(curr, fitting_map, fitting_objs)
             label_map[cid] = branch_label
             pipe_map[cid] = curr
-            if _pipe_hits_roof_runner(curr, view):
-                return True
+            path_ids.append(cid)
 
             is_leaf_marker = (
                 marker_pipe is not None
@@ -1585,6 +1482,10 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                         label_map[cid] = label
                         pipe_map[cid] = curr
                         suppress_label_ids.discard(cid)
+                        for pid in path_ids[:-1]:
+                            label_map.pop(pid, None)
+                            pipe_map.pop(pid, None)
+                            suppress_label_ids.add(pid)
                         logger.info(
                             "Leaf label: pipe {} -> {} (mech {})".format(
                                 cid,
@@ -1615,8 +1516,6 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                 suppress_label_ids.add(cid)
             label_map[cid] = label
             pipe_map[cid] = curr
-            if _pipe_hits_roof_runner(curr, view):
-                return
             neighbors = _pipe_neighbors(curr, prev_id)
             branch_groups = {}
             linear_neighbors = []
@@ -1756,6 +1655,13 @@ def main():
 
     start_pipes = _prompt_start_pipes()
 
+    suffix_letter = None
+    while not suffix_letter:
+        suffix_letter = forms.CommandSwitchWindow.show(
+            ["A", "B", "C", "D", "E"],
+            message="Select label suffix letter (A-E).",
+        )
+
     output_mode = None
     while not output_mode:
         output_mode = forms.CommandSwitchWindow.show(
@@ -1784,7 +1690,7 @@ def main():
         pid = start_pipe.Id.IntegerValue
         if pid in label_map:
             continue
-        start_label = "{}A".format(idx)
+        start_label = "{}{}".format(idx, suffix_letter)
         local_label_map = {}
         local_pipe_map = {}
         order_list, fitting_map, fitting_objs, local_suppress = _traverse_and_label(
