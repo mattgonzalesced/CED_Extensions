@@ -93,9 +93,13 @@ def _is_pipe_fitting(elem):
 BALL_VALVE_KEYWORDS = ("BALL VALVE", "BALLVALVE", "BALL-VALVE", "BALL_VALVE")
 BALL_VALVE_FAMILY = "GENERIC ANNOTATIONS"
 BALL_VALVE_TYPE = "BALL_VALVE"
-BALL_VALVE_MAX_OFFSET_FT = 1.0
+BALL_VALVE_MAX_OFFSET_FT = 2.0 / 12.0
 
 _MECH_EQUIP_VIEW_CACHE = {}
+_ROOF_RUNNER_BOXES = {}
+_MECH_EQUIP_BOXES = {}
+ROOF_RUNNER_FAMILY = "CED-R-ROOF RUNNER"
+ROOF_RUNNER_TYPE = "XXX"
 
 
 def _mechanical_equipment_ids_in_view(view):
@@ -127,6 +131,210 @@ def _mechanical_equipment_ids_in_view(view):
         pass
     _MECH_EQUIP_VIEW_CACHE[vid] = ids
     return ids
+
+
+def _mechanical_equipment_bboxes(view):
+    if view is None:
+        return []
+    try:
+        vid = view.Id.IntegerValue
+    except Exception:
+        return []
+    cached = _MECH_EQUIP_BOXES.get(vid)
+    if cached is not None:
+        return cached
+    boxes = []
+    try:
+        mec_cat = DB.BuiltInCategory.OST_MechanicalEquipment
+    except Exception:
+        return []
+    try:
+        collector = DB.FilteredElementCollector(doc, view.Id).OfCategory(mec_cat)
+    except Exception:
+        return []
+    for elem in collector.WhereElementIsNotElementType():
+        try:
+            sym = elem.Symbol
+        except Exception:
+            sym = None
+        try:
+            fam_name = sym.Family.Name if sym and sym.Family else ""
+        except Exception:
+            fam_name = ""
+        if ROOF_RUNNER_FAMILY.upper() in (fam_name or "").upper():
+            continue
+        bbox = None
+        try:
+            bbox = elem.get_BoundingBox(view)
+        except Exception:
+            bbox = None
+        if not bbox:
+            try:
+                bbox = elem.get_BoundingBox(None)
+            except Exception:
+                bbox = None
+        if not bbox:
+            continue
+        if bbox.Min is None or bbox.Max is None:
+            continue
+        try:
+            elem_id = elem.Id.IntegerValue
+        except Exception:
+            elem_id = None
+        boxes.append((elem_id, bbox.Min, bbox.Max, elem))
+    _MECH_EQUIP_BOXES[vid] = boxes
+    return boxes
+
+
+def _equipment_label_from_intersection(pipe, view):
+    if pipe is None or view is None:
+        return None, None
+    curve = _pipe_curve(pipe)
+    if curve is None:
+        return None, None
+    try:
+        p0 = curve.GetEndPoint(0)
+        p1 = curve.GetEndPoint(1)
+        mid = curve.Evaluate(0.5, True)
+    except Exception:
+        return None, None
+    best_label = None
+    best_id = None
+    best_dist = None
+    for elem_id, min_pt, max_pt, elem in _mechanical_equipment_bboxes(view):
+        if not _segment_intersects_rect_xy(p0, p1, min_pt, max_pt):
+            continue
+        label = _format_identity_mark(_get_leaf_identity_value(elem))
+        if not label:
+            label = "XXXX"
+        center = (min_pt + max_pt) * 0.5
+        try:
+            dist = mid.DistanceTo(center)
+        except Exception:
+            dist = 0.0
+        if best_dist is None or dist < best_dist:
+            best_dist = dist
+            best_label = label
+            best_id = elem_id
+    return best_label, best_id
+
+
+def _roof_runner_bboxes(view):
+    if view is None:
+        return []
+    try:
+        vid = view.Id.IntegerValue
+    except Exception:
+        return []
+    cached = _ROOF_RUNNER_BOXES.get(vid)
+    if cached is not None:
+        return cached
+    boxes = []
+    try:
+        mec_cat = DB.BuiltInCategory.OST_MechanicalEquipment
+    except Exception:
+        return []
+    try:
+        collector = DB.FilteredElementCollector(doc, view.Id).OfCategory(mec_cat)
+    except Exception:
+        return []
+    for elem in collector.WhereElementIsNotElementType():
+        try:
+            sym = elem.Symbol
+        except Exception:
+            sym = None
+        try:
+            fam_name = sym.Family.Name if sym and sym.Family else ""
+        except Exception:
+            fam_name = ""
+        try:
+            type_name = sym.Name if sym else ""
+        except Exception:
+            type_name = ""
+        try:
+            elem_name = elem.Name or ""
+        except Exception:
+            elem_name = ""
+        fam_upper = (fam_name or "").upper()
+        type_upper = (type_name or "").upper()
+        elem_upper = (elem_name or "").upper()
+        if ROOF_RUNNER_FAMILY.upper() not in fam_upper:
+            continue
+        if ROOF_RUNNER_TYPE.upper() not in type_upper and ROOF_RUNNER_TYPE.upper() not in elem_upper:
+            continue
+        bbox = None
+        try:
+            bbox = elem.get_BoundingBox(view)
+        except Exception:
+            bbox = None
+        if not bbox:
+            try:
+                bbox = elem.get_BoundingBox(None)
+            except Exception:
+                bbox = None
+        if not bbox:
+            continue
+        if bbox.Min is None or bbox.Max is None:
+            continue
+        boxes.append((bbox.Min, bbox.Max))
+    _ROOF_RUNNER_BOXES[vid] = boxes
+    if not boxes:
+        logger.info("Roof runner: no '{}' '{}' instances found in view {}".format(
+            ROOF_RUNNER_FAMILY,
+            ROOF_RUNNER_TYPE,
+            vid,
+        ))
+    return boxes
+
+
+def _segment_intersects_rect_xy(p0, p1, min_pt, max_pt):
+    if p0 is None or p1 is None or min_pt is None or max_pt is None:
+        return False
+    minx, maxx = min_pt.X, max_pt.X
+    miny, maxy = min_pt.Y, max_pt.Y
+    x0, y0 = p0.X, p0.Y
+    x1, y1 = p1.X, p1.Y
+
+    if (minx <= x0 <= maxx and miny <= y0 <= maxy) or (minx <= x1 <= maxx and miny <= y1 <= maxy):
+        return True
+
+    dx = x1 - x0
+    dy = y1 - y0
+    p = [-dx, dx, -dy, dy]
+    q = [x0 - minx, maxx - x0, y0 - miny, maxy - y0]
+    u1, u2 = 0.0, 1.0
+    for pi, qi in zip(p, q):
+        if abs(pi) < 1e-12:
+            if qi < 0:
+                return False
+        else:
+            t = qi / pi
+            if pi < 0:
+                if t > u2:
+                    return False
+                if t > u1:
+                    u1 = t
+            else:
+                if t < u1:
+                    return False
+                if t < u2:
+                    u2 = t
+    return True
+
+
+def _pipe_hits_roof_runner(pipe, view):
+    curve = _pipe_curve(pipe)
+    if curve is None or view is None:
+        return False
+    try:
+        p0 = curve.GetEndPoint(0)
+        p1 = curve.GetEndPoint(1)
+    except Exception:
+        return False
+    for min_pt, max_pt in _roof_runner_bboxes(view):
+        if _segment_intersects_rect_xy(p0, p1, min_pt, max_pt):
+            return True
+    return False
 
 
 
@@ -1341,9 +1549,9 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
     fitting_map = {}
     fitting_objs = {}
 
-    def _find_branch_valve(branch_pipe, prev_id):
+    def _find_branch_leaf_marker(branch_pipe, prev_id):
         if branch_pipe is None:
-            return None, None
+            return None, None, None
         curr = branch_pipe
         back = prev_id
         while curr is not None:
@@ -1358,15 +1566,18 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                 except Exception:
                     valve_id = None
                 if valve_id is None or valve_id not in used_valve_ids:
-                    return curr, found
+                    return curr, "valve", found
+            equip_label, equip_id = _equipment_label_from_intersection(curr, view)
+            if equip_label:
+                return curr, "equip", (equip_label, equip_id)
             neighbors = _pipe_neighbors(curr, back)
             if not neighbors or len(neighbors) != 1:
                 break
             back = curr.Id.IntegerValue
             curr = neighbors[0]["pipe"]
-        return None, None
+        return None, None, None
 
-    def _walk_leaf_branch(start_pipe, prev_id, branch_label, valve_pipe, valve_info):
+    def _walk_leaf_branch(start_pipe, prev_id, branch_label, marker_pipe, marker_type, marker_info):
         if start_pipe is None:
             return False
         curr = start_pipe
@@ -1380,8 +1591,24 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
             _record_fitting_connections(curr, fitting_map, fitting_objs)
             label_map[cid] = branch_label
             pipe_map[cid] = curr
+            if _pipe_hits_roof_runner(curr, view):
+                return True
 
-            if valve_pipe is not None and cid == valve_pipe.Id.IntegerValue and valve_info:
+            if marker_pipe is not None and cid == marker_pipe.Id.IntegerValue and marker_type == "equip":
+                equip_label, equip_id = marker_info
+                if equip_label:
+                    label_map[cid] = equip_label
+                    pipe_map[cid] = curr
+                    logger.info(
+                        "Leaf label: pipe {} -> {} (mech {})".format(
+                            cid,
+                            equip_label,
+                            equip_id if equip_id is not None else "None",
+                        )
+                    )
+                return True
+
+            if marker_pipe is not None and cid == marker_pipe.Id.IntegerValue and marker_type == "valve" and marker_info:
                 prev_pipe = None
                 if back is not None:
                     try:
@@ -1435,6 +1662,8 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
             _record_fitting_connections(curr, fitting_map, fitting_objs)
             label_map[cid] = label
             pipe_map[cid] = curr
+            if _pipe_hits_roof_runner(curr, view):
+                return
             neighbors = _pipe_neighbors(curr, prev_id)
             branch_groups = {}
             linear_neighbors = []
@@ -1453,10 +1682,10 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                 leaf_candidates = []
                 leaf_valves = {}
                 for n in branch_pipes:
-                    valve_pipe, valve_info = _find_branch_valve(n, cid)
-                    if valve_pipe is not None and valve_info:
+                    marker_pipe, marker_type, marker_info = _find_branch_leaf_marker(n, cid)
+                    if marker_pipe is not None and marker_info:
                         leaf_candidates.append(n)
-                        leaf_valves[n.Id.IntegerValue] = (valve_pipe, valve_info)
+                        leaf_valves[n.Id.IntegerValue] = (marker_pipe, marker_type, marker_info)
                     else:
                         trunk_candidates.append(n)
 
@@ -1476,15 +1705,15 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                         next_digit = _process_label(_normalize_label_for_process(next_digit))[0]
                     walk_trunk(trunk_branch, next_num, cid)
                     for leaf in sorted(leaf_candidates, key=lambda x: x.Id.IntegerValue):
-                        valve_pipe, valve_info = leaf_valves.get(leaf.Id.IntegerValue, (None, None))
-                        _walk_leaf_branch(leaf, cid, next_digit, valve_pipe, valve_info)
+                        marker_pipe, marker_type, marker_info = leaf_valves.get(leaf.Id.IntegerValue, (None, None, None))
+                        _walk_leaf_branch(leaf, cid, next_digit, marker_pipe, marker_type, marker_info)
                         next_digit = _process_label(_normalize_label_for_process(next_digit))[0]
                 elif len(trunk_candidates) == 1:
                     trunk_branch = trunk_candidates[0]
                     walk_trunk(trunk_branch, next_num, cid)
                     for leaf in sorted(leaf_candidates, key=lambda x: x.Id.IntegerValue):
-                        valve_pipe, valve_info = leaf_valves.get(leaf.Id.IntegerValue, (None, None))
-                        _walk_leaf_branch(leaf, cid, next_digit, valve_pipe, valve_info)
+                        marker_pipe, marker_type, marker_info = leaf_valves.get(leaf.Id.IntegerValue, (None, None, None))
+                        _walk_leaf_branch(leaf, cid, next_digit, marker_pipe, marker_type, marker_info)
                         next_digit = _process_label(_normalize_label_for_process(next_digit))[0]
                 else:
                     first_leaf = None
@@ -1494,8 +1723,8 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                             branch_label = next_num
                         else:
                             branch_label = next_digit
-                        valve_pipe, valve_info = leaf_valves.get(leaf.Id.IntegerValue, (None, None))
-                        _walk_leaf_branch(leaf, cid, branch_label, valve_pipe, valve_info)
+                        marker_pipe, marker_type, marker_info = leaf_valves.get(leaf.Id.IntegerValue, (None, None, None))
+                        _walk_leaf_branch(leaf, cid, branch_label, marker_pipe, marker_type, marker_info)
                         if first_leaf is not None and leaf.Id.IntegerValue != first_leaf.Id.IntegerValue:
                             next_digit = _process_label(_normalize_label_for_process(next_digit))[0]
                 for n in linear_neighbors:
@@ -1574,12 +1803,12 @@ def main():
 
     start_pipes = _prompt_start_pipes()
 
-    output_mode = forms.CommandSwitchWindow.show(
-        ["Tags", "Text Notes", "Both"],
-        message="Place labels as tags, text notes, or both?",
-    )
-    if not output_mode:
-        forms.alert("Cancelled.", exitscript=True)
+    output_mode = None
+    while not output_mode:
+        output_mode = forms.CommandSwitchWindow.show(
+            ["Tags", "Text Notes", "Both"],
+            message="Place labels as tags, text notes, or both?",
+        )
 
     tag_type = None
     text_type = None
