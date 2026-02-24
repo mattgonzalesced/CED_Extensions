@@ -718,6 +718,43 @@ def _fitting_connected_pipes(fitting):
     return _pipes_through_fitting(fitting)
 
 
+def _fitting_connected_pipes_any(fitting, max_depth=6):
+    pipes = {}
+    if fitting is None:
+        return []
+    visited = set()
+    stack = [(fitting, 0)]
+    while stack:
+        curr, depth = stack.pop()
+        if curr is None:
+            continue
+        fid = curr.Id.IntegerValue
+        if fid in visited:
+            continue
+        visited.add(fid)
+        for conn in _get_connectors(curr):
+            if conn is None:
+                continue
+            try:
+                refs = conn.AllRefs
+            except Exception:
+                refs = []
+            for ref in refs:
+                try:
+                    owner = ref.Owner
+                except Exception:
+                    owner = None
+                if owner is None:
+                    continue
+                if _is_pipe_like(owner):
+                    pipes[owner.Id.IntegerValue] = owner
+                elif _is_pipe_fitting(owner):
+                    if depth + 1 > max_depth:
+                        continue
+                    stack.append((owner, depth + 1))
+    return list(pipes.values())
+
+
 def _fittings_connecting(pipe, prev_id):
     if pipe is None or prev_id is None:
         return set()
@@ -844,7 +881,7 @@ def _open_end_points(pipe):
                 return False
             if _is_pipe_fitting(owner):
                 try:
-                    pipes = _fitting_connected_pipes(owner)
+                    pipes = _fitting_connected_pipes_any(owner)
                 except Exception:
                     pipes = []
                 for p in pipes:
@@ -1726,7 +1763,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
 def _prompt_start_pipes():
     try:
         forms.alert(
-            "Select the start pipes for this rack in order (2-5).",
+            "Select the start pipes for this rack in order (1-6).",
             title="Select Start Pipes",
             warn_icon=False,
         )
@@ -1735,7 +1772,7 @@ def _prompt_start_pipes():
     start_pipes = []
     selected_ids = []
     while True:
-        if len(start_pipes) >= 5:
+        if len(start_pipes) >= 6:
             break
         prompt = "Select start pipe #{} (ESC to finish)".format(len(start_pipes) + 1)
         try:
@@ -1763,9 +1800,9 @@ def _prompt_start_pipes():
         except Exception:
             pass
 
-    if len(start_pipes) < 2 or len(start_pipes) > 5:
+    if len(start_pipes) < 1 or len(start_pipes) > 6:
         forms.alert(
-            "Select 2 to 5 start pipes. Detected {} pipe(s).".format(len(start_pipes)),
+            "Select 1 to 6 start pipes. Detected {} pipe(s).".format(len(start_pipes)),
             exitscript=True,
         )
     return start_pipes
@@ -1781,9 +1818,10 @@ def main():
 
     suffix_letter = None
     while not suffix_letter:
+        letters = [chr(c) for c in range(ord("A"), ord("Z") + 1)]
         suffix_letter = forms.CommandSwitchWindow.show(
-            ["A", "B", "C", "D", "E"],
-            message="Select label suffix letter (A-E).",
+            letters,
+            message="Select label suffix letter (A-Z).",
         )
 
     output_mode = None
