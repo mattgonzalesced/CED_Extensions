@@ -1432,25 +1432,25 @@ def _place_text_notes(label_map, pipe_map, text_type, view, suppress_ids=None):
             curve = _pipe_curve(pipe)
             if curve is None:
                 continue
-            try:
-                pt = curve.Evaluate(0.5, True)
-            except Exception:
+            pts = _label_points_for_pipe(pipe)
+            if not pts:
                 continue
-            try:
-                opts = DB.TextNoteOptions()
-                opts.TypeId = text_type.Id
+            for pt in pts:
                 try:
-                    opts.HorizontalAlignment = DB.HorizontalTextAlignment.Center
+                    opts = DB.TextNoteOptions()
+                    opts.TypeId = text_type.Id
+                    try:
+                        opts.HorizontalAlignment = DB.HorizontalTextAlignment.Center
+                    except Exception:
+                        pass
+                    try:
+                        opts.VerticalAlignment = DB.VerticalTextAlignment.Middle
+                    except Exception:
+                        pass
+                    DB.TextNote.Create(doc, view.Id, pt, label, opts)
+                    count += 1
                 except Exception:
-                    pass
-                try:
-                    opts.VerticalAlignment = DB.VerticalTextAlignment.Middle
-                except Exception:
-                    pass
-                DB.TextNote.Create(doc, view.Id, pt, label, opts)
-                count += 1
-            except Exception:
-                continue
+                    continue
     return count
 
 
@@ -1490,6 +1490,27 @@ def _rotate_element_about_z(elem_id, origin, angle):
     DB.ElementTransformUtils.RotateElement(doc, elem_id, axis, angle)
 
 
+def _label_points_for_pipe(pipe):
+    curve = _pipe_curve(pipe)
+    if curve is None:
+        return []
+    try:
+        length = curve.Length
+    except Exception:
+        length = 0.0
+    if length > 100.0:
+        params = (1.0 / 3.0, 2.0 / 3.0)
+    else:
+        params = (0.5,)
+    points = []
+    for t in params:
+        try:
+            points.append(curve.Evaluate(t, True))
+        except Exception:
+            continue
+    return points
+
+
 
 def _place_pipe_tags(label_map, pipe_map, tag_type, view, suppress_ids=None):
     if not label_map:
@@ -1508,32 +1529,32 @@ def _place_pipe_tags(label_map, pipe_map, tag_type, view, suppress_ids=None):
             curve = _pipe_curve(pipe)
             if curve is None:
                 continue
-            try:
-                pt = curve.Evaluate(0.5, True)
-            except Exception:
+            pts = _label_points_for_pipe(pipe)
+            if not pts:
                 continue
-            try:
-                reference = DB.Reference(pipe)
-                tag = DB.IndependentTag.Create(
-                    doc,
-                    tag_type.Id,
-                    view.Id,
-                    reference,
-                    False,
-                    DB.TagOrientation.Horizontal,
-                    pt,
-                )
-                if tag:
-                    dir_xy = _pipe_direction_xy(pipe)
-                    if dir_xy is not None:
-                        angle = math.atan2(dir_xy.Y, dir_xy.X)
-                        try:
-                            _rotate_element_about_z(tag.Id, tag.TagHeadPosition, angle)
-                        except Exception:
-                            _rotate_element_about_z(tag.Id, pt, angle)
-                    count += 1
-            except Exception:
-                continue
+            for pt in pts:
+                try:
+                    reference = DB.Reference(pipe)
+                    tag = DB.IndependentTag.Create(
+                        doc,
+                        tag_type.Id,
+                        view.Id,
+                        reference,
+                        False,
+                        DB.TagOrientation.Horizontal,
+                        pt,
+                    )
+                    if tag:
+                        dir_xy = _pipe_direction_xy(pipe)
+                        if dir_xy is not None:
+                            angle = math.atan2(dir_xy.Y, dir_xy.X)
+                            try:
+                                _rotate_element_about_z(tag.Id, tag.TagHeadPosition, angle)
+                            except Exception:
+                                _rotate_element_about_z(tag.Id, pt, angle)
+                        count += 1
+                except Exception:
+                    continue
     return count
 
 
