@@ -1,0 +1,10 @@
+title: Create Independent Profile
+tooltip: |
+  Capture selected elements as a standalone profile in the active YAML.
+
+  Enter a new profile name, pick the elements to store, and the tool will
+  write a new independent equipment definition with absolute placements,
+  tags, keynotes, and text notes captured from the selection.
+
+  Reload placement tools after saving to see the new profile in lists.
+is_beta: false
