@@ -1735,7 +1735,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
             prev_pipe = None
         if prev_pipe is None:
             return False
-        return (_pipe_length(curr_pipe) + _pipe_length(prev_pipe)) < 30.0
+        return (_pipe_length(curr_pipe) + _pipe_length(prev_pipe)) < 20.0
 
     def _find_branch_leaf_marker(branch_pipe, prev_id):
         if branch_pipe is None:
