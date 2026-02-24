@@ -405,31 +405,6 @@ class ExtensibleStorage(object):
         if cls._undo_handler_registered:
             return
         handlers_registered = False
-        try:
-            uiapp = __revit__
-            app = getattr(uiapp, "Application", None)
-            if app is None:
-                cls._log("DocumentChanged handler unavailable; missing Application reference.")
-            else:
-                handler = EventHandler[DocumentChangedEventArgs](cls._on_document_changed)
-                app.DocumentChanged += handler
-                cls._doc_handler = handler
-                handlers_registered = True
-                cls._log("DocumentChanged handler registered.")
-        except Exception:
-            pass
-        if ApplicationUndoRedoEventArgs is not None:
-            try:
-                uiapp = __revit__
-                handler = System.EventHandler[ApplicationUndoRedoEventArgs](cls._on_undo_redo)
-                uiapp.UndoRedo += handler
-                cls._ui_handler = handler
-                handlers_registered = True
-                cls._log("UndoRedo handler registered.")
-            except Exception:
-                pass
-        else:
-            cls._log("UndoRedo handler unavailable; ApplicationUndoRedoEventArgs missing.")
         if DocumentSynchronizedWithCentralEventArgs is not None:
             try:
                 uiapp = __revit__
