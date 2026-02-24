@@ -821,6 +821,67 @@ def _get_connectors(elem):
         return []
 
 
+def _open_end_points(pipe):
+    points = []
+    if pipe is None:
+        return points
+
+    def _connector_is_open(conn):
+        try:
+            refs = conn.AllRefs
+        except Exception:
+            refs = []
+        if not refs:
+            return True
+        for ref in refs:
+            try:
+                owner = ref.Owner
+            except Exception:
+                owner = None
+            if owner is None:
+                continue
+            if _is_pipe_like(owner) and owner.Id != pipe.Id:
+                return False
+            if _is_pipe_fitting(owner):
+                try:
+                    pipes = _fitting_connected_pipes(owner)
+                except Exception:
+                    pipes = []
+                for p in pipes:
+                    if p is not None and p.Id != pipe.Id:
+                        return False
+        return True
+
+    for conn in _get_connectors(pipe):
+        if conn is None:
+            continue
+        if _connector_is_open(conn):
+            try:
+                points.append(conn.Origin)
+            except Exception:
+                continue
+    return points
+
+
+def _is_leaf_pipe(pipe):
+    return len(_open_end_points(pipe)) == 1
+
+
+def _leaf_label_from_open_end(pipe, view):
+    if pipe is None:
+        return None, None
+    points = _open_end_points(pipe)
+    if not points:
+        return None, None
+    pt = points[0]
+    label, mech_id = _equipment_label_from_valve_bbox_with_id(pt, view)
+    if not label:
+        label, mech_id = _equipment_label_near_point_with_id(pt, None, view)
+    if not label:
+        label, mech_id = _equipment_label_for_terminal_with_id(pipe, view)
+    return label, mech_id
+
+
 def _connected_pipes(pipe):
     neighbors = {}
     for conn in _get_connectors(pipe):
@@ -1365,6 +1426,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
     fitting_map = {}
     fitting_objs = {}
     suppress_label_ids = set()
+    leaf_label_ids = set()
 
     def _pipe_length(pipe):
         curve = _pipe_curve(pipe)
@@ -1410,24 +1472,72 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
         curr = branch_pipe
         back = prev_id
         while curr is not None:
-            found = _nearest_ball_valve_on_pipe(
-                curr,
-                valves,
-                BALL_VALVE_MAX_OFFSET_FT,
-            )
-            if found:
-                try:
-                    valve_id = found[0].Id.IntegerValue
-                except Exception:
-                    valve_id = None
-                if valve_id is None or valve_id not in used_valve_ids:
-                    return curr, "valve", found
             neighbors = _pipe_neighbors(curr, back)
-            if not neighbors or len(neighbors) != 1:
-                break
+            if neighbors and len(neighbors) != 1:
+                return None, None, None
+            is_terminal = not neighbors
+            if _is_leaf_pipe(curr) or is_terminal:
+                leaf_label, mech_id = _leaf_label_from_open_end(curr, view)
+                if leaf_label:
+                    return curr, "leaf", (leaf_label, mech_id)
+                return None, None, None
+            if not neighbors:
+                return None, None, None
             back = curr.Id.IntegerValue
             curr = neighbors[0]["pipe"]
         return None, None, None
+
+    def _collect_branch_leaves(start_pipe, prev_id):
+        leaves = []
+        if start_pipe is None:
+            return leaves
+        stack = [(start_pipe, prev_id)]
+        visited_local = set()
+        while stack:
+            curr, back = stack.pop()
+            if curr is None:
+                continue
+            cid = curr.Id.IntegerValue
+            if cid in visited_local:
+                continue
+            visited_local.add(cid)
+            neighbors = _pipe_neighbors(curr, back)
+            if _is_leaf_pipe(curr) or not neighbors:
+                label, mech_id = _leaf_label_from_open_end(curr, view)
+                if label:
+                    leaves.append((curr, label, mech_id))
+            if not neighbors:
+                continue
+            for n in neighbors:
+                stack.append((n["pipe"], cid))
+        return leaves
+
+    def _collect_branch_pipe_ids(start_pipe, prev_id):
+        ids = set()
+        if start_pipe is None:
+            return ids
+        stack = [(start_pipe, prev_id)]
+        while stack:
+            curr, back = stack.pop()
+            if curr is None:
+                continue
+            cid = curr.Id.IntegerValue
+            if cid in ids:
+                continue
+            ids.add(cid)
+            neighbors = _pipe_neighbors(curr, back)
+            if not neighbors:
+                continue
+            for n in neighbors:
+                stack.append((n["pipe"], cid))
+        return ids
+
+    def _strip_trailing_letter(label):
+        if not label:
+            return label
+        if label[-1].isalpha():
+            return label[:-1]
+        return label
 
     def _walk_leaf_branch(start_pipe, prev_id, branch_label, marker_pipe, marker_type, marker_info):
         if start_pipe is None:
@@ -1442,59 +1552,38 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
             visited.add(cid)
             order_list.append(cid)
             _record_fitting_connections(curr, fitting_map, fitting_objs)
-            label_map[cid] = branch_label
-            pipe_map[cid] = curr
+            if cid not in leaf_label_ids:
+                label_map[cid] = branch_label
+                pipe_map[cid] = curr
             path_ids.append(cid)
 
             is_leaf_marker = (
                 marker_pipe is not None
                 and cid == marker_pipe.Id.IntegerValue
-                and marker_type == "valve"
+                and marker_type == "leaf"
                 and marker_info
             )
             if not is_leaf_marker and _should_suppress_label(curr, back, branch_label):
                 suppress_label_ids.add(cid)
 
             if is_leaf_marker:
-                prev_pipe = None
-                if back is not None:
-                    try:
-                        prev_pipe = doc.GetElement(DB.ElementId(back))
-                    except Exception:
-                        prev_pipe = None
-                direction = _oriented_pipe_direction(curr, prev_pipe)
-                valve_elem, valve_point = marker_info
-                try:
-                    valve_id = valve_elem.Id.IntegerValue
-                except Exception:
-                    valve_id = None
-                if valve_id is None or valve_id not in used_valve_ids:
-                    label, mech_id = _equipment_label_from_valve_bbox_with_id(valve_point, view)
-                    if not label:
-                        label, mech_id = _equipment_label_near_point_with_id(
-                            valve_point,
-                            direction,
-                            view,
+                leaf_label, mech_id = marker_info
+                if leaf_label:
+                    label_map[cid] = leaf_label
+                    pipe_map[cid] = curr
+                    suppress_label_ids.discard(cid)
+                    leaf_label_ids.add(cid)
+                    for pid in path_ids[:-1]:
+                        label_map.pop(pid, None)
+                        pipe_map.pop(pid, None)
+                        suppress_label_ids.add(pid)
+                    logger.info(
+                        "Leaf label: pipe {} -> {} (mech {})".format(
+                            cid,
+                            leaf_label,
+                            mech_id if mech_id is not None else "None",
                         )
-                    if not label:
-                        label, mech_id = _equipment_label_for_terminal_with_id(curr, view)
-                    if label:
-                        label_map[cid] = label
-                        pipe_map[cid] = curr
-                        suppress_label_ids.discard(cid)
-                        for pid in path_ids[:-1]:
-                            label_map.pop(pid, None)
-                            pipe_map.pop(pid, None)
-                            suppress_label_ids.add(pid)
-                        logger.info(
-                            "Leaf label: pipe {} -> {} (mech {})".format(
-                                cid,
-                                label,
-                                mech_id if mech_id is not None else "None",
-                            )
-                        )
-                        if valve_id is not None:
-                            used_valve_ids.add(valve_id)
+                    )
                 return True
 
             neighbors = _pipe_neighbors(curr, back)
@@ -1514,8 +1603,9 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
             _record_fitting_connections(curr, fitting_map, fitting_objs)
             if _should_suppress_label(curr, prev_id, label):
                 suppress_label_ids.add(cid)
-            label_map[cid] = label
-            pipe_map[cid] = curr
+            if cid not in leaf_label_ids:
+                label_map[cid] = label
+                pipe_map[cid] = curr
             neighbors = _pipe_neighbors(curr, prev_id)
             branch_groups = {}
             linear_neighbors = []
@@ -1525,15 +1615,49 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                 else:
                     linear_neighbors.append(n["pipe"])
             if branch_groups:
-                group = None
+                branch_map = {}
                 for pipes in branch_groups.values():
-                    if group is None or len(pipes) > len(group):
-                        group = pipes
-                branch_pipes = group or []
+                    for p in pipes:
+                        branch_map[p.Id.IntegerValue] = p
+                branch_pipes = list(branch_map.values())
                 trunk_candidates = []
                 leaf_candidates = []
                 leaf_valves = {}
+                collapsed_branches = set()
                 for n in branch_pipes:
+                    leaves = _collect_branch_leaves(n, cid)
+                    if len(leaves) >= 2:
+                        base_labels = []
+                        for l in leaves:
+                            if not l[1]:
+                                continue
+                            base = _strip_trailing_letter(l[1])
+                            base = _format_identity_mark(base) or base
+                            base_labels.append(base)
+                        if base_labels and len(base_labels) == len(leaves) and len(set(base_labels)) == 1:
+                            collapse_label = base_labels[0]
+                            if n.Id.IntegerValue not in leaf_label_ids:
+                                label_map[n.Id.IntegerValue] = collapse_label
+                                pipe_map[n.Id.IntegerValue] = n
+                                suppress_label_ids.discard(n.Id.IntegerValue)
+                            # Remove labels downstream and prevent further labeling on this branch.
+                            branch_ids = _collect_branch_pipe_ids(n, cid)
+                            for pid in branch_ids:
+                                if pid == n.Id.IntegerValue:
+                                    continue
+                                label_map.pop(pid, None)
+                                pipe_map.pop(pid, None)
+                                suppress_label_ids.add(pid)
+                                visited.add(pid)
+                            collapsed_branches.add(n.Id.IntegerValue)
+                            logger.info(
+                                "Leaf collapse: branch pipe {} -> {} ({} leaves)".format(
+                                    n.Id.IntegerValue,
+                                    collapse_label,
+                                    len(leaves),
+                                )
+                            )
+                            continue
                     marker_pipe, marker_type, marker_info = _find_branch_leaf_marker(n, cid)
                     if marker_pipe is not None and marker_info:
                         leaf_candidates.append(n)
