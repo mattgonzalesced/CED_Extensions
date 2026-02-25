@@ -94,11 +94,8 @@ BALL_VALVE_KEYWORDS = ("BALL VALVE", "BALLVALVE", "BALL-VALVE", "BALL_VALVE")
 BALL_VALVE_FAMILY = "GENERIC ANNOTATIONS"
 BALL_VALVE_TYPE = "BALL_VALVE"
 BALL_VALVE_MAX_OFFSET_FT = 2.0 / 12.0
-ROOF_RUNNER_FAMILY = "CED-R-ROOF RUNNER"
-ROOF_RUNNER_TYPE = "XXX"
 
 _MECH_EQUIP_VIEW_CACHE = {}
-_ROOF_RUNNER_BBOX_CACHE = {}
 
 
 def _mechanical_equipment_ids_in_view(view):
@@ -132,129 +129,30 @@ def _mechanical_equipment_ids_in_view(view):
     return ids
 
 
-def _roof_runner_bboxes_in_view(view):
-    if view is None:
-        return []
+def _pipe_middle_elevation(pipe):
+    if pipe is None:
+        return None
+    param = None
     try:
-        vid = view.Id.IntegerValue
+        param = pipe.LookupParameter("Middle Elevation")
     except Exception:
-        return []
-    cached = _ROOF_RUNNER_BBOX_CACHE.get(vid)
-    if cached is not None:
-        return cached
-    bboxes = []
+        param = None
+    if not param:
+        return None
     try:
-        collector = DB.FilteredElementCollector(doc, view.Id)
+        return param.AsDouble()
     except Exception:
-        collector = DB.FilteredElementCollector(doc)
-    def _family_type_strings(elem):
-        def _norm(s):
-            return " ".join((s or "").strip().split())
-
-        fam_name = ""
-        type_name = ""
         try:
-            fam_name = elem.Symbol.Family.Name or ""
+            return float(param.AsValueString())
         except Exception:
-            fam_name = ""
-        try:
-            type_name = elem.Symbol.Name or ""
-        except Exception:
-            type_name = ""
-        if not fam_name or not type_name:
-            try:
-                et = doc.GetElement(elem.GetTypeId())
-            except Exception:
-                et = None
-            if et is not None:
-                try:
-                    type_name = type_name or (et.Name or "")
-                except Exception:
-                    pass
-                try:
-                    fam_name = fam_name or (et.FamilyName or "")
-                except Exception:
-                    pass
-        fam_norm = _norm(fam_name)
-        type_norm = _norm(type_name)
-        combined = "{} : {}".format(fam_norm, type_norm).strip()
-        if not combined.strip(" :"):
-            return None, None, None
-        return fam_norm, type_norm, combined
-
-    fam_expected = " ".join(ROOF_RUNNER_FAMILY.strip().split()).lower()
-    type_expected = " ".join(ROOF_RUNNER_TYPE.strip().split()).lower()
-    candidates = []
-
-    def _bbox_from_elem(elem, view_for_bbox):
-        bbox = None
-        try:
-            bbox = elem.get_BoundingBox(view_for_bbox)
-        except Exception:
-            bbox = None
-        if not bbox:
-            try:
-                bbox = elem.get_BoundingBox(None)
-            except Exception:
-                bbox = None
-        if not bbox:
             return None
-        if bbox.Min is None or bbox.Max is None:
-            return None
-        return bbox
 
-    def _transform_bbox(bbox, tf):
-        pts = []
-        min_pt = bbox.Min
-        max_pt = bbox.Max
-        for x in (min_pt.X, max_pt.X):
-            for y in (min_pt.Y, max_pt.Y):
-                for z in (min_pt.Z, max_pt.Z):
-                    try:
-                        pts.append(tf.OfPoint(DB.XYZ(x, y, z)))
-                    except Exception:
-                        continue
-        if not pts:
-            return None
-        min_x = min(p.X for p in pts)
-        min_y = min(p.Y for p in pts)
-        min_z = min(p.Z for p in pts)
-        max_x = max(p.X for p in pts)
-        max_y = max(p.Y for p in pts)
-        max_z = max(p.Z for p in pts)
-        return (DB.XYZ(min_x, min_y, min_z), DB.XYZ(max_x, max_y, max_z))
 
-    for elem in collector.WhereElementIsNotElementType():
-        fam_norm, type_norm, combined = _family_type_strings(elem)
-        lname = combined.strip().lower() if combined else ""
-        fam_l = (fam_norm or "").lower()
-        type_l = (type_norm or "").lower()
-        if fam_norm and fam_expected in fam_l:
-            pass
-        else:
-            if combined:
-                if ("ced-r-roof" in lname) and len(candidates) < 20:
-                    candidates.append(combined)
-            else:
-                try:
-                    ename = " ".join((elem.Name or "").strip().split())
-                except Exception:
-                    ename = ""
-                if ename:
-                    lname = ename.lower()
-                    if ("ced-r-roof" in lname) and len(candidates) < 20:
-                        candidates.append("NAME: {}".format(ename))
-            continue
-        bbox = _bbox_from_elem(elem, view)
-        if not bbox:
-            continue
-        bboxes.append((bbox.Min, bbox.Max))
-    _ROOF_RUNNER_BBOX_CACHE[vid] = bboxes
-    if not bboxes and candidates:
-        logger.info(
-            "Roof runner candidates in view (sample): {}".format(", ".join(candidates))
-        )
-    return bboxes
+def _is_underground_pipe(pipe):
+    elev = _pipe_middle_elevation(pipe)
+    if elev is None:
+        return False
+    return elev < 0.0
 
 
 
@@ -422,34 +320,8 @@ def _segment_intersects_rect_xy(p1, p2, min_pt, max_pt):
     )
 
 
-def _pipe_passes_through_roof_runner(pipe, view):
-    if pipe is None or view is None:
-        return False
-    bboxes = _roof_runner_bboxes_in_view(view)
-    if not bboxes:
-        return False
-    curve = _pipe_curve(pipe)
-    if curve is None:
-        return False
-    points = []
-    for t in (0.0, 0.25, 0.5, 0.75, 1.0):
-        try:
-            pt = curve.Evaluate(t, True)
-        except Exception:
-            pt = None
-        if pt is not None:
-            points.append(pt)
-    if len(points) < 2:
-        return False
-    for min_pt, max_pt in bboxes:
-        for i in range(len(points) - 1):
-            if _segment_intersects_rect_xy(points[i], points[i + 1], min_pt, max_pt):
-                return True
-    return False
-
-
-def _branch_hits_roof_runner(start_pipe, prev_id, view):
-    if start_pipe is None or view is None:
+def _branch_hits_underground(start_pipe, prev_id):
+    if start_pipe is None:
         return False
     stack = [(start_pipe, prev_id)]
     visited = set()
@@ -461,7 +333,7 @@ def _branch_hits_roof_runner(start_pipe, prev_id, view):
         if cid in visited:
             continue
         visited.add(cid)
-        if _pipe_passes_through_roof_runner(curr, view):
+        if _is_underground_pipe(curr):
             return True
         neighbors = _pipe_neighbors(curr, back)
         if not neighbors:
@@ -1139,8 +1011,6 @@ def _is_leaf_pipe(pipe):
 def _leaf_label_from_open_end(pipe, view):
     if pipe is None:
         return None, None
-    if _pipe_passes_through_roof_runner(pipe, view):
-        return None, None
     points = _open_end_points(pipe)
     if not points:
         return None, None
@@ -1797,6 +1667,13 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
             if _is_leaf_pipe(curr) or not neighbors:
                 label, mech_id = _leaf_label_from_open_end(curr, view)
                 if label:
+                    logger.info(
+                        "Open pipe candidate: pipe {} -> {} (mech {})".format(
+                            cid,
+                            label,
+                            mech_id if mech_id is not None else "None",
+                        )
+                    )
                     leaves.append((curr, label, mech_id))
             if not neighbors:
                 continue
@@ -1917,9 +1794,9 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                 leaf_valves = {}
                 collapsed_branches = set()
                 for n in branch_pipes:
-                    if _branch_hits_roof_runner(n, cid, view):
+                    if _branch_hits_underground(n, cid):
                         logger.info(
-                            "Roof runner branch: pipe {} from trunk {} forced to branch labeling".format(
+                            "Underground branch: pipe {} from trunk {} forced to branch labeling".format(
                                 n.Id.IntegerValue,
                                 cid,
                             )
@@ -2077,11 +1954,6 @@ def main():
     active_view = revit.active_view
     if active_view.IsTemplate:
         forms.alert("Active view is a template. Open a working view first.", exitscript=True)
-
-    roof_boxes = _roof_runner_bboxes_in_view(active_view)
-    logger.info(
-        "Roof runner detection: {} instance(s) in view".format(len(roof_boxes))
-    )
 
     start_pipes = _prompt_start_pipes()
 
