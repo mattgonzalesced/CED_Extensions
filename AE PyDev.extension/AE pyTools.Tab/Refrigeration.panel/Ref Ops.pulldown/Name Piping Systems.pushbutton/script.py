@@ -549,26 +549,27 @@ def _oriented_pipe_direction(pipe, prev_pipe):
 
 def _equipment_label_near_point_with_id(point, direction, view=None):
     if point is None:
-        return None, None
+        return None, None, False
     try:
         mec_cat = DB.BuiltInCategory.OST_MechanicalEquipment
     except Exception:
-        return None, None
+        return None, None, False
     try:
         if view is not None:
             collector = DB.FilteredElementCollector(doc, view.Id)
         else:
             collector = DB.FilteredElementCollector(doc)
     except Exception:
-        return None, None
+        return None, None, False
     best_label = None
     best_id = None
+    best_ff_removed = False
     best_metric = None
     for elem in collector.OfCategory(mec_cat).WhereElementIsNotElementType():
         label = _get_leaf_identity_value(elem)
         if not label:
             continue
-        label = _format_identity_mark(label)
+        label, ff_removed = _format_identity_mark_with_meta(label)
         if not label:
             continue
         pt = _element_point(elem, view)
@@ -586,37 +587,38 @@ def _equipment_label_near_point_with_id(point, direction, view=None):
         if best_metric is None or metric < best_metric:
             best_metric = metric
             best_label = label
+            best_ff_removed = ff_removed
             try:
                 best_id = elem.Id.IntegerValue
             except Exception:
                 best_id = None
-    return best_label, best_id
+    return best_label, best_id, best_ff_removed
 
 
 def _equipment_label_near_point(point, direction, view=None):
-    label, _ = _equipment_label_near_point_with_id(point, direction, view)
+    label, _, _ = _equipment_label_near_point_with_id(point, direction, view)
     return label
 
 
 def _equipment_label_from_valve_bbox_with_id(point, view=None):
     if point is None:
-        return None, None
+        return None, None, False
     try:
         mec_cat = DB.BuiltInCategory.OST_MechanicalEquipment
     except Exception:
-        return None, None
+        return None, None, False
     try:
         if view is not None:
             collector = DB.FilteredElementCollector(doc, view.Id)
         else:
             collector = DB.FilteredElementCollector(doc)
     except Exception:
-        return None, None
+        return None, None, False
     for elem in collector.OfCategory(mec_cat).WhereElementIsNotElementType():
         label = _get_leaf_identity_value(elem)
         if not label:
             continue
-        label = _format_identity_mark(label)
+        label, ff_removed = _format_identity_mark_with_meta(label)
         if not label:
             continue
         bbox = None
@@ -637,14 +639,14 @@ def _equipment_label_from_valve_bbox_with_id(point, view=None):
             continue
         if (min_pt.X <= point.X <= max_pt.X) and (min_pt.Y <= point.Y <= max_pt.Y):
             try:
-                return label, elem.Id.IntegerValue
+                return label, elem.Id.IntegerValue, ff_removed
             except Exception:
-                return label, None
-    return None, None
+                return label, None, ff_removed
+    return None, None, False
 
 
 def _equipment_label_from_valve_bbox(point, view=None):
-    label, _ = _equipment_label_from_valve_bbox_with_id(point, view)
+    label, _, _ = _equipment_label_from_valve_bbox_with_id(point, view)
     return label
 
 
@@ -692,10 +694,11 @@ def _element_center(elem, view=None):
 
 def _equipment_label_for_terminal_with_id(pipe, view=None):
     if pipe is None:
-        return None, None
+        return None, None, False
     mech_ids = _mechanical_equipment_ids_in_view(view) if view is not None else None
     best_label = None
     best_id = None
+    best_ff_removed = False
     best_dist = None
     for conn in _get_connectors(pipe):
         if conn is None:
@@ -733,7 +736,7 @@ def _equipment_label_for_terminal_with_id(pipe, view=None):
             mark = _get_leaf_identity_value(owner)
             if not mark:
                 continue
-            label = _format_identity_mark(mark)
+            label, ff_removed = _format_identity_mark_with_meta(mark)
             if not label:
                 continue
             try:
@@ -752,17 +755,18 @@ def _equipment_label_for_terminal_with_id(pipe, view=None):
             if best_dist is None or dist < best_dist:
                 best_dist = dist
                 best_label = label
+                best_ff_removed = ff_removed
                 try:
                     best_id = owner.Id.IntegerValue
                 except Exception:
                     best_id = None
     if best_label:
-        return best_label, best_id
+        return best_label, best_id, best_ff_removed
     return _equipment_label_for_pipe_with_id(pipe, view)
 
 
 def _equipment_label_for_terminal(pipe, view=None):
-    label, _ = _equipment_label_for_terminal_with_id(pipe, view)
+    label, _, _ = _equipment_label_for_terminal_with_id(pipe, view)
     return label
 
 
@@ -1010,17 +1014,17 @@ def _is_leaf_pipe(pipe):
 
 def _leaf_label_from_open_end(pipe, view):
     if pipe is None:
-        return None, None
+        return None, None, False
     points = _open_end_points(pipe)
     if not points:
-        return None, None
+        return None, None, False
     pt = points[0]
-    label, mech_id = _equipment_label_from_valve_bbox_with_id(pt, view)
+    label, mech_id, ff_removed = _equipment_label_from_valve_bbox_with_id(pt, view)
     if not label:
-        label, mech_id = _equipment_label_near_point_with_id(pt, None, view)
+        label, mech_id, ff_removed = _equipment_label_near_point_with_id(pt, None, view)
     if not label:
-        label, mech_id = _equipment_label_for_terminal_with_id(pipe, view)
-    return label, mech_id
+        label, mech_id, ff_removed = _equipment_label_for_terminal_with_id(pipe, view)
+    return label, mech_id, ff_removed
 
 
 def _connected_pipes(pipe):
@@ -1154,11 +1158,16 @@ def _get_leaf_identity_value(elem):
 
 
 def _format_identity_mark(mark):
+    formatted, _ = _format_identity_mark_with_meta(mark)
+    return formatted
+
+
+def _format_identity_mark_with_meta(mark):
     if not mark:
-        return None
+        return None, False
     cleaned = mark.strip()
     if not cleaned:
-        return None
+        return None, False
     if cleaned[-1].isalpha():
         cleaned = cleaned[:-1]
     idx = None
@@ -1167,14 +1176,18 @@ def _format_identity_mark(mark):
             idx = i
             break
     if idx is None:
-        return cleaned
+        return cleaned, False
     prefix = cleaned[:idx]
     digits = cleaned[idx:]
+    removed_ff = False
     if len(prefix) > 2:
+        removed_mid = prefix[-2:]
+        if (removed_mid or "").upper() == "FF":
+            removed_ff = True
         prefix = prefix[:-2]
         if not prefix:
             prefix = cleaned[:idx]
-    return prefix + digits
+    return prefix + digits, removed_ff
 
 
 def _equipment_label_for_pipe_with_id(pipe, view=None):
@@ -1203,15 +1216,16 @@ def _equipment_label_for_pipe_with_id(pipe, view=None):
                     continue
             mark = _get_leaf_identity_value(owner)
             if mark:
+                label, ff_removed = _format_identity_mark_with_meta(mark)
                 try:
-                    return _format_identity_mark(mark), owner.Id.IntegerValue
+                    return label, owner.Id.IntegerValue, ff_removed
                 except Exception:
-                    return _format_identity_mark(mark), None
-    return None, None
+                    return label, None, ff_removed
+    return None, None, False
 
 
 def _equipment_label_for_pipe(pipe, view=None):
-    label, _ = _equipment_label_for_pipe_with_id(pipe, view)
+    label, _, _ = _equipment_label_for_pipe_with_id(pipe, view)
     return label
 
 
@@ -1589,6 +1603,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
     fitting_objs = {}
     suppress_label_ids = set()
     leaf_label_ids = set()
+    ff_removed_label_ids = set()
 
     def _pipe_length(pipe):
         curve = _pipe_curve(pipe)
@@ -1639,9 +1654,9 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                 return None, None, None
             is_terminal = not neighbors
             if _is_leaf_pipe(curr) or is_terminal:
-                leaf_label, mech_id = _leaf_label_from_open_end(curr, view)
+                leaf_label, mech_id, ff_removed = _leaf_label_from_open_end(curr, view)
                 if leaf_label:
-                    return curr, "leaf", (leaf_label, mech_id)
+                    return curr, "leaf", (leaf_label, mech_id, ff_removed)
                 return None, None, None
             if not neighbors:
                 return None, None, None
@@ -1665,16 +1680,17 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
             visited_local.add(cid)
             neighbors = _pipe_neighbors(curr, back)
             if _is_leaf_pipe(curr) or not neighbors:
-                label, mech_id = _leaf_label_from_open_end(curr, view)
+                label, mech_id, ff_removed = _leaf_label_from_open_end(curr, view)
                 if label:
                     logger.info(
-                        "Open pipe candidate: pipe {} -> {} (mech {})".format(
+                        "Open pipe candidate: pipe {} -> {} (mech {}) ff_removed={}".format(
                             cid,
                             label,
                             mech_id if mech_id is not None else "None",
+                            ff_removed,
                         )
                     )
-                    leaves.append((curr, label, mech_id))
+                    leaves.append((curr, label, mech_id, ff_removed))
             if not neighbors:
                 continue
             for n in neighbors:
@@ -1736,21 +1752,25 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                 suppress_label_ids.add(cid)
 
             if is_leaf_marker:
-                leaf_label, mech_id = marker_info
+                leaf_label, mech_id, ff_removed = marker_info
                 if leaf_label:
                     label_map[cid] = leaf_label
                     pipe_map[cid] = curr
                     suppress_label_ids.discard(cid)
                     leaf_label_ids.add(cid)
+                    if ff_removed:
+                        ff_removed_label_ids.add(cid)
                     for pid in path_ids[:-1]:
                         label_map.pop(pid, None)
                         pipe_map.pop(pid, None)
                         suppress_label_ids.add(pid)
+                        ff_removed_label_ids.discard(pid)
                     logger.info(
-                        "Leaf label: pipe {} -> {} (mech {})".format(
+                        "Leaf label: pipe {} -> {} (mech {}) ff_removed={}".format(
                             cid,
                             leaf_label,
                             mech_id if mech_id is not None else "None",
+                            ff_removed,
                         )
                     )
                 return True
@@ -1818,6 +1838,8 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                                 label_map[n.Id.IntegerValue] = collapse_label
                                 pipe_map[n.Id.IntegerValue] = n
                                 suppress_label_ids.discard(n.Id.IntegerValue)
+                                if any(bool(l[3]) for l in leaves):
+                                    ff_removed_label_ids.add(n.Id.IntegerValue)
                             # Remove labels downstream and prevent further labeling on this branch.
                             branch_ids = _collect_branch_pipe_ids(n, cid)
                             for pid in branch_ids:
@@ -1827,6 +1849,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                                 pipe_map.pop(pid, None)
                                 suppress_label_ids.add(pid)
                                 visited.add(pid)
+                                ff_removed_label_ids.discard(pid)
                             collapsed_branches.add(n.Id.IntegerValue)
                             logger.info(
                                 "Leaf collapse: branch pipe {} -> {} ({} leaves)".format(
@@ -1897,7 +1920,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                 return
 
     walk_trunk(start_pipe, start_label, None)
-    return order_list, fitting_map, fitting_objs, suppress_label_ids
+    return order_list, fitting_map, fitting_objs, suppress_label_ids, ff_removed_label_ids
 
 
 
@@ -1989,6 +2012,7 @@ def main():
     pipe_map = {}
     used_valve_ids = set()
     suppress_label_ids = set()
+    ff_removed_label_ids = set()
     for idx, start_pipe in enumerate(start_pipes, 1):
         pid = start_pipe.Id.IntegerValue
         if pid in label_map:
@@ -1996,7 +2020,7 @@ def main():
         start_label = "{}{}".format(idx, suffix_letter)
         local_label_map = {}
         local_pipe_map = {}
-        order_list, fitting_map, fitting_objs, local_suppress = _traverse_and_label(
+        order_list, fitting_map, fitting_objs, local_suppress, local_ff_removed = _traverse_and_label(
             start_pipe,
             start_label,
             local_label_map,
@@ -2015,6 +2039,8 @@ def main():
         )
         if local_suppress:
             suppress_label_ids.update(local_suppress)
+        if local_ff_removed:
+            ff_removed_label_ids.update(local_ff_removed)
         for lpid, lbl in local_label_map.items():
             if lpid in label_map:
                 continue
@@ -2023,6 +2049,20 @@ def main():
 
     if not label_map:
         forms.alert("No pipes were labeled from the selected start pipes.", exitscript=True)
+
+    # Final cleanup: remove any labels that were created by stripping FF from identity data.
+    if ff_removed_label_ids:
+        removed_count = 0
+        for pid in list(ff_removed_label_ids):
+            if pid in label_map:
+                label_map.pop(pid, None)
+                pipe_map.pop(pid, None)
+                suppress_label_ids.add(pid)
+                removed_count += 1
+        logger.info("FF cleanup: removed {} label(s) created from FF-normalized values".format(removed_count))
+
+    if not label_map:
+        forms.alert("All candidate labels were removed by FF cleanup.", exitscript=True)
 
     marks_set = _set_identity_marks(label_map, pipe_map)
     tag_count = 0
