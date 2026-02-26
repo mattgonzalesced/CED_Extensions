@@ -1,5 +1,5 @@
 title:
-  en_us: Merge Circuits
+  en_us: "Merge Circuits"
 tooltip:
   en_us: >-
     Version = 1.0
@@ -17,7 +17,7 @@ tooltip:
       - Spares and spaces are excluded.
     ________________________________________________________________
 
-author: Anthony Evelina - CoolSys (2026)
+author: Reed Pinterich - CoolSys (2026)
 engine:
   persistent: false
   full_frame: false

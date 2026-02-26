@@ -129,6 +129,33 @@ def build_element_set(elements):
     return element_set
 
 
+def dedupe_circuits(circuits):
+    unique = []
+    seen_ids = set()
+    for ckt in circuits or []:
+        if not isinstance(ckt, DBE.ElectricalSystem):
+            continue
+        cid = ckt.Id.IntegerValue
+        if cid in seen_ids:
+            continue
+        unique.append(ckt)
+        seen_ids.add(cid)
+    return unique
+
+
+def get_selected_circuits():
+    selection = revit.get_selection().elements
+    if not selection:
+        return []
+
+    try:
+        selected_circuits = eu.get_circuits_from_selection(selection)
+    except Exception:
+        selected_circuits = []
+
+    return dedupe_circuits(selected_circuits)
+
+
 def main():
     all_circuits = DB.FilteredElementCollector(doc) \
         .OfClass(DBE.ElectricalSystem) \
@@ -141,7 +168,23 @@ def main():
     if not all_circuits:
         forms.alert("No circuits found in the model.", exitscript=True)
 
-    main_circuit = select_circuit(all_circuits, "Select Main Circuit", multiselect=False)[0]
+    all_circuit_ids = set([c.Id.IntegerValue for c in all_circuits])
+
+    selected_circuits = get_selected_circuits()
+    selected_circuits = [
+        c for c in selected_circuits
+        if c.Id.IntegerValue in all_circuit_ids
+        and c.CircuitType not in [DBE.CircuitType.Spare, DBE.CircuitType.Space]
+    ]
+
+    used_selection = bool(selected_circuits)
+
+    if used_selection and len(selected_circuits) == 1:
+        main_circuit = selected_circuits[0]
+    elif used_selection:
+        main_circuit = select_circuit(selected_circuits, "Select Main Circuit (from Selection)", multiselect=False)[0]
+    else:
+        main_circuit = select_circuit(all_circuits, "Select Main Circuit", multiselect=False)[0]
 
     if main_circuit.CircuitType in [DBE.CircuitType.Spare, DBE.CircuitType.Space]:
         forms.alert("Main circuit cannot be a spare or space.", exitscript=True)
@@ -165,11 +208,27 @@ def main():
     if not compatible_circuits:
         forms.alert("No compatible circuits found to merge into the main circuit.", exitscript=True)
 
-    circuits_to_merge = select_circuit(
-        compatible_circuits,
-        "Select Circuits to Merge Into Main",
-        multiselect=True
-    )
+    selected_candidates = []
+    selected_compat_to_merge = []
+    selected_incompat_count = 0
+
+    if used_selection:
+        selected_candidates = [c for c in selected_circuits if c.Id != main_circuit.Id]
+        for ckt in selected_candidates:
+            ok, _ = is_circuit_compatible(main_circuit, ckt, main_voltage, main_poles)
+            if ok:
+                selected_compat_to_merge.append(ckt)
+            else:
+                selected_incompat_count += 1
+
+    if selected_compat_to_merge:
+        circuits_to_merge = selected_compat_to_merge
+    else:
+        circuits_to_merge = select_circuit(
+            compatible_circuits,
+            "Select Circuits to Merge Into Main",
+            multiselect=True
+        )
 
     if not circuits_to_merge:
         script.exit()
@@ -232,6 +291,13 @@ def main():
     panel_name = main_circuit.BaseEquipment.Name if main_circuit.BaseEquipment else "No Panel"
     circuit_number = main_circuit.CircuitNumber or ""
     output.print_md("Main circuit: {} / {} ({})".format(panel_name, circuit_number, output.linkify(main_circuit.Id)))
+
+    if used_selection:
+        output.print_md("Selection mode: {} circuit(s) detected from current selection.".format(len(selected_circuits)))
+        if selected_compat_to_merge:
+            output.print_md("Merged {} compatible selected circuit(s) directly.".format(len(selected_compat_to_merge)))
+        if selected_incompat_count:
+            output.print_md("Ignored {} incompatible selected circuit(s).".format(selected_incompat_count))
 
     if incompat_count:
         output.print_md("Filtered out {} incompatible circuit(s).".format(incompat_count))
