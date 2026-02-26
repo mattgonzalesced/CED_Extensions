@@ -15,6 +15,7 @@ output = script.get_output()
 output.close_others()
 
 XAML_PATH = os.path.join(os.path.dirname(__file__), "ParameterSelectionWindow.xaml")
+NO_CHANGE_OPTION = "<No Change>"
 NO_PARAMETER_OPTION = "<No common text parameters available>"
 
 try:
@@ -352,7 +353,7 @@ class CircuitParameterSelectionWindow(forms.WPFWindow):
 
         header_text = self.FindName("HeaderText")
         if header_text is not None:
-            header_text.Text = "Select one text parameter for each circuit."
+            header_text.Text = "Select one text parameter for each circuit (default is No Change)."
 
         self._build_rows()
 
@@ -381,15 +382,14 @@ class CircuitParameterSelectionWindow(forms.WPFWindow):
 
             combo = ComboBox()
             combo.Width = 240
+            combo.Items.Add(NO_CHANGE_OPTION)
 
             if row["parameter_names"]:
                 for pname in row["parameter_names"]:
                     combo.Items.Add(pname)
                 combo.SelectedIndex = 0
             else:
-                combo.Items.Add(NO_PARAMETER_OPTION)
                 combo.SelectedIndex = 0
-                combo.IsEnabled = False
 
             self._combos[row["circuit_id"]] = combo
             panel.Children.Add(combo)
@@ -401,7 +401,7 @@ class CircuitParameterSelectionWindow(forms.WPFWindow):
         for row in self._row_data:
             circuit_id = row["circuit_id"]
             combo = self._combos.get(circuit_id)
-            if combo is None or (not combo.IsEnabled):
+            if combo is None:
                 selections[circuit_id] = None
                 continue
 
@@ -481,14 +481,14 @@ def main():
             selected_param = selected_parameters.get(circuit_id)
             previous_name = _safe_text(circuit.LoadName)
 
-            if not selected_param:
+            if (not selected_param) or selected_param == NO_CHANGE_OPTION:
                 skipped_count += 1
                 results.append([
                     _circuit_ref(circuit),
-                    "-",
+                    selected_param or NO_CHANGE_OPTION,
                     previous_name or "-",
                     "-",
-                    "Skipped: {}".format(NO_PARAMETER_OPTION)
+                    "No Change"
                 ])
                 continue
 
