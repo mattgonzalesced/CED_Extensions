@@ -1,0 +1,26 @@
+title:
+  en_us: "Rename Circuits by Device Parameter"
+tooltip:
+  en_us: >-
+    Version = 1.0
+
+    Date    = 02.26.2026
+    ________________________________________________________________
+    Description:
+
+    Uses the current selection to find connected circuits. For each
+    detected circuit, choose one text parameter from connected selected
+    devices, and the selected parameter value is used as the new
+    circuit name (Load Name).
+
+    Notes:
+      - Works from selected devices (or selected circuits).
+      - One text parameter is selected per circuit.
+      - If selected devices on the same circuit have multiple values for
+        the chosen parameter, that circuit is skipped.
+    ________________________________________________________________
+
+author: Reed Pinterich - CoolSys (2026)
+engine:
+  persistent: false
+  full_frame: false
