@@ -3,5 +3,6 @@ layout:
   - BatchSwapCircuits
   - MoveSelectedCircuits
   - Add Spares and Spaces
+  - MergeCircuits
   - -----
   - Load Electrical Parameters
