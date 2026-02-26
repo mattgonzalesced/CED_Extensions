@@ -7,6 +7,7 @@ import copy
 import io
 import json
 import os
+import re
 try:
     from collections.abc import Mapping
 except ImportError:
@@ -36,6 +37,7 @@ except Exception:  # pragma: no cover - IronPython fallback
 
 ELEMENT_LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
 ESCAPED_QUOTE_KEYS = ("label", "type_name")
+INLINE_LIST_KEY_RE = re.compile(r"^[A-Za-z0-9_ #\-\.\(\)\/]+$")
 
 
 class _ElementLinkerString(str):
@@ -215,7 +217,7 @@ def _parse_scalar(token):
         return {}
     if token in ("[]",):
         return []
-    if token.startswith('"') and token.endswith('"'):
+    if (token.startswith('"') and token.endswith('"')) or (token.startswith("'") and token.endswith("'")):
         return token[1:-1]
     lowered = token.lower()
     if lowered in ("true", "false"):
@@ -283,6 +285,178 @@ def _simple_yaml_parse(raw_text):
     if isinstance(parsed, dict):
         return parsed
     return {}
+
+
+def _next_meaningful_line(lines, start_idx):
+    idx = start_idx
+    while idx < len(lines):
+        line = lines[idx]
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            idx += 1
+            continue
+        indent = len(line) - len(line.lstrip(" "))
+        return idx, line, stripped, indent
+    return None
+
+
+def _child_block_indent(lines, current_idx, current_indent):
+    """
+    Determine nested block indent after 'key:'.
+    Some files place list items at the same indent as the key line:
+      equipment_definitions:
+      - ...
+    """
+    info = _next_meaningful_line(lines, current_idx + 1)
+    if not info:
+        return current_indent + 2
+    _, _, stripped, next_indent = info
+    if stripped.startswith("-") and next_indent == current_indent:
+        return current_indent
+    return current_indent + 2
+
+
+def _simple_yaml_parse_v2(raw_text):
+    """
+    Enhanced lightweight parser for inline list-item mappings:
+      - key: value
+      - key:
+          child: value
+    """
+    lines = (raw_text or "").splitlines()
+
+    def parse_block(start_idx, base_indent):
+        result = None
+        idx = start_idx
+
+        while idx < len(lines):
+            line = lines[idx]
+            stripped_line = line.strip()
+            if not stripped_line or stripped_line.startswith("#"):
+                idx += 1
+                continue
+
+            indent = len(line) - len(line.lstrip(" "))
+            if indent < base_indent:
+                break
+
+            if stripped_line.startswith("-"):
+                if result is None:
+                    result = []
+                elif not isinstance(result, list):
+                    break
+
+                remainder = stripped_line[1:].strip()
+                if not remainder:
+                    value, idx = parse_block(idx + 1, indent + 2)
+                    result.append(value)
+                    continue
+
+                if ":" in remainder:
+                    inline_key, _, inline_value = remainder.partition(":")
+                    inline_key = inline_key.strip().strip('"')
+                    if inline_key and INLINE_LIST_KEY_RE.match(inline_key):
+                        item = {}
+                        inline_value = inline_value.strip()
+                        idx += 1
+                        if inline_value:
+                            item[inline_key] = _parse_scalar(inline_value)
+                        else:
+                            child_indent = _child_block_indent(lines, idx - 1, indent)
+                            nested_value, idx = parse_block(idx, child_indent)
+                            item[inline_key] = nested_value
+
+                        item_indent = indent + 2
+                        while idx < len(lines):
+                            sibling_line = lines[idx]
+                            sibling_stripped = sibling_line.strip()
+                            if not sibling_stripped or sibling_stripped.startswith("#"):
+                                idx += 1
+                                continue
+                            sibling_indent = len(sibling_line) - len(sibling_line.lstrip(" "))
+                            if sibling_indent < item_indent:
+                                break
+                            if sibling_indent == item_indent and sibling_stripped.startswith("-"):
+                                break
+                            if sibling_indent != item_indent:
+                                break
+
+                            key, _, rem = sibling_stripped.partition(":")
+                            key = key.strip().strip('"')
+                            rem = rem.strip()
+                            if rem:
+                                item[key] = _parse_scalar(rem)
+                                idx += 1
+                            else:
+                                child_indent = _child_block_indent(lines, idx, sibling_indent)
+                                value, idx = parse_block(idx + 1, child_indent)
+                                item[key] = value
+
+                        result.append(item)
+                        continue
+
+                result.append(_parse_scalar(remainder))
+                idx += 1
+                continue
+
+            if result is None:
+                result = {}
+            elif isinstance(result, list):
+                break
+
+            key, _, remainder = stripped_line.partition(":")
+            key = key.strip().strip('"')
+            remainder = remainder.strip()
+            if remainder:
+                result[key] = _parse_scalar(remainder)
+                idx += 1
+            else:
+                child_indent = _child_block_indent(lines, idx, indent)
+                value, idx = parse_block(idx + 1, child_indent)
+                result[key] = value
+
+        if result is None:
+            result = {}
+        return result, idx
+
+    parsed, _ = parse_block(0, 0)
+    if isinstance(parsed, dict):
+        return parsed
+    return {}
+
+
+def _is_viable_fallback_data(data):
+    if not isinstance(data, Mapping):
+        return False
+    if not data:
+        return False
+    defs = data.get("equipment_definitions")
+    if isinstance(defs, list) and defs:
+        return True
+    if data.get("profiles"):
+        return True
+    if "schema_version" in data:
+        return True
+    # Keep non-empty dicts viable so legacy payloads still pass.
+    return bool(data)
+
+
+def _simple_yaml_parse_with_fallback(raw_text):
+    """
+    Prefer enhanced parser and keep current parser as fallback.
+    Returns (mapping_or_none, parser_name_or_none).
+    """
+    for parser_name, parser in (
+        ("simple_v2", _simple_yaml_parse_v2),
+        ("simple_legacy", _simple_yaml_parse),
+    ):
+        try:
+            parsed = parser(raw_text)
+        except Exception:
+            continue
+        if _is_viable_fallback_data(parsed):
+            return dict(parsed), parser_name
+    return None, None
 
 
 def _sanitize_hash_keys(raw_text):
@@ -360,17 +534,12 @@ def load_data_from_text(raw_text, source_label="<memory>"):
             data = dict(loaded)
 
     if data is None:
-        if yaml_error:
-            # Attempt fallback parser before surfacing error
-            try:
-                alt_data = _simple_yaml_parse(raw)
-                if isinstance(alt_data, Mapping):
-                    data = dict(alt_data)
-            except Exception:
-                pass
-            if data is None:
+        alt_data, _ = _simple_yaml_parse_with_fallback(raw)
+        if isinstance(alt_data, Mapping):
+            data = dict(alt_data)
+        if data is None:
+            if yaml_error:
                 raise yaml_error
-        else:
             raise ValueError("profile data could not be parsed as YAML and does not look like JSON.")
 
     data = _cleanup_empty_maps(_normalize_escaped_quotes(data))
@@ -382,11 +551,14 @@ def load_data_from_text(raw_text, source_label="<memory>"):
             return data
         diag_payload = {"error": None}
         try:
-            alt_data = _simple_yaml_parse(raw)
+            alt_data, parser_used = _simple_yaml_parse_with_fallback(raw)
+            if not isinstance(alt_data, Mapping):
+                alt_data = {}
             cleaned_defs = [
                 entry for entry in (alt_data.get("equipment_definitions") or []) if isinstance(entry, Mapping)
             ]
             alt_data["equipment_definitions"] = cleaned_defs
+            diag_payload["fallback_parser"] = parser_used
             diag_payload["fallback_equipment_defs_length"] = len(cleaned_defs)
             diag_payload["fallback_sample"] = cleaned_defs[:1]
             if cleaned_defs:

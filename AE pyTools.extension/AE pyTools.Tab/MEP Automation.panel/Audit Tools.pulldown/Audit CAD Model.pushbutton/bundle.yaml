@@ -1,0 +1,7 @@
+title: Audit CAD Model
+tooltip: |
+  Audit CAD block names from an Excel or CSV sheet against the active YAML profiles.
+  The tool fuzzy-matches block names using the same thresholds as Audit Linked Model.
+  Review suggested matches, then choose which missing names should become new profiles.
+  Selected items are cloned from their best source profiles and saved to Extensible Storage.
+is_beta: false
