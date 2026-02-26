@@ -1,10 +1,7 @@
 title: Combine YAML Files
 tooltip: |
-  Combine two equipment-definition YAML files into a new file.
-
-  The tool preserves all entries from the first YAML, then renumbers IDs
-  from the second YAML so they continue after the highest ID in the first.
-
-  The combined file can be loaded into Extensible Storage just like any
-  other dataset for placing or editing profiles.
+  Combine two equipment-definition YAML files into a single merged dataset.
+  Entries from the first file are preserved as-is and entries from the second are appended.
+  Imported IDs are renumbered to prevent collisions across definitions and linked sets.
+  The output can be imported directly for placement and profile editing in project storage.
 is_beta: false

@@ -1,7 +1,7 @@
 title: Edit/Create Profiles
 tooltip: |
-  Select a linked parent element and automatically load any existing profile
-  for that equipment. After adjusting or placing equipment, select the items
-  you want saved to the profile and finish to capture offsets, tags, and wire
-  connections relative to the linked element.
+  Select a linked parent element and load its profile context for editing.
+  Capture selected child elements to store updated offsets, tags, and wire-related metadata.
+  The result updates or creates profile content directly in active Extensible Storage.
+  Use this for iterative refinement when modeled assemblies evolve during design.
 is_beta: false

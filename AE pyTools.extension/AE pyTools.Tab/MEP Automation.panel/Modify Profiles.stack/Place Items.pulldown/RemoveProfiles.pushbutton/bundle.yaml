@@ -1,10 +1,7 @@
 title: Remove Profiles
 tooltip: |
-  Remove Profiles deletes elements placed by selected profile placements
-  in the active view. It uses the Element_Linker parameter to group
-  placed items by Parent ElementId so you can remove a specific parent
-  placement without touching other instances.
-
-  Run this from a plan view that shows the placed profiles you want to remove.
-  This does not modify the YAML; it only deletes placed elements in the model.
+  Remove placed elements in the active view by Parent ElementId placement grouping.
+  The command identifies related instances from Element_Linker payload data.
+  Associated profile placements can be deleted without editing the YAML definition itself.
+  Use this to clean specific placement batches while keeping source profiles intact.
 is_beta: false

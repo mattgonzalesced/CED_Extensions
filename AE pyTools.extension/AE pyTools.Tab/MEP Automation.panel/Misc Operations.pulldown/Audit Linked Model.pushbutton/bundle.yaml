@@ -1,4 +1,8 @@
 title: Audit Linked Model
-tooltip: Count placed linked elements (Element_Linker instances) and keep a searchable list open.
+tooltip: |
+  Scan linked model element names and compare them to equipment names in the active YAML.
+  The report highlights names that are missing from profiles and surfaces close-match candidates.
+  Use the results to clean naming drift and decide where new definitions should be added.
+  This helps reduce missed placements caused by small naming differences across linked sources.
 author: CED Automation
 is_beta: false

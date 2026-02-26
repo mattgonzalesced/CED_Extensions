@@ -1,10 +1,7 @@
 title: "Create\nIndependent\nProfile"
 tooltip: |
-  Capture selected elements as a standalone profile in the active YAML.
-
-  Enter a new profile name, pick the elements to store, and the tool will
-  write a new independent equipment definition with absolute placements,
-  tags, keynotes, and text notes captured from the selection.
-
-  Reload placement tools after saving to see the new profile in lists.
+  Capture selected elements as a new independent equipment definition in the active YAML.
+  The profile stores offsets, parameters, tags, and annotation data from your current selection.
+  This is useful when you need a standalone placement recipe that does not depend on parent grouping.
+  The new definition is saved to Extensible Storage and becomes available for placement workflows.
 is_beta: false

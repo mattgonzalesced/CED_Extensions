@@ -1,4 +1,7 @@
-﻿title: Place by Room
+title: Place by Room
 tooltip: |
-  Places profile types at room centers based on keyword rules.
+  Place selected profile types at room-center points using room-name keyword matching.
+  The command processes linked room data and maps each match to configured profile definitions.
+  Placements use active YAML content so profile behavior remains consistent with library settings.
+  Use this for repeatable room-based layouts where naming patterns drive element selection.
 is_beta: false

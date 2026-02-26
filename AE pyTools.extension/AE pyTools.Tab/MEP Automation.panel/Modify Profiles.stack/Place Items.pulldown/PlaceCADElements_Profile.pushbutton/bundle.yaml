@@ -1,21 +1,6 @@
 title: Place CAD Elements by Category & Profile
 tooltip: |
-  Use Place CAD Elements to populate the model with legacy CSV driven
-  arrangements, primarily when translating designs from older workflows into the
-  current YAML driven environment for validation and cleanup.
-
-  This version includes BOTH category filtering AND profile filtering, allowing you
-  to select which categories (e.g., Lighting Fixtures, Electrical Equipment) AND
-  which specific profiles (CAD names) you want to place.
-
-  Provide the CSV file exported from CAD, review the column mappings, and specify
-  the level or base plane; the engine reads each row, converts imperial offsets,
-  and instantiates the referenced family types automatically.
-
-  Because this process predates Extensible Storage, it does not consult the active
-  YAML; treat it as a bridge tool for finishing existing projects while the team
-  transitions to linked element definitions recorded through Add YAML Profiles.
-
-  After placement, consider converting the resulting assemblies into YAML
-  definitions so future iterations rely on the modern automation pipeline, then
-  archive the original CSV for documentation purposes only.
+  Place CSV-driven elements through active YAML definitions with profile-level filtering.
+  This version supports both category selection and explicit profile selection before placement.
+  Coordinate rows are processed only for definitions that pass the chosen filters.
+  Use this when you need fine-grained control over which profiles are instantiated.

@@ -1,1 +1,6 @@
+tooltip: |
+  Import spaces from a CSV file using Position X and Position Y coordinates.
+  The command creates unbounded spaces on a selected level and sets number and name fields.
+  It then attempts to add space tags in Construction / Permit floor and ceiling plan views.
+  Use this to seed large batches of spaces quickly while keeping naming from upstream data.
 is_beta: false

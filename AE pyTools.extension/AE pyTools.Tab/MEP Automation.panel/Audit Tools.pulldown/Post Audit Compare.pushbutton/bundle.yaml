@@ -1,5 +1,7 @@
-﻿title: Post Audit Compare
+title: Post Audit Compare
 tooltip: |
-  Compare two Post Audit output files and report moved, added, and removed
-  parent locations based on (Parent ElementId, Parent_location) pairs.
+  Compare a saved Post Audit output file with current model metadata.
+  The comparison is based on Parent ElementId and recorded parent locations.
+  Results highlight moved, added, and removed placements so changes are easy to spot.
+  Use the report to verify that placement updates stayed aligned with expected host positions.
 is_beta: false

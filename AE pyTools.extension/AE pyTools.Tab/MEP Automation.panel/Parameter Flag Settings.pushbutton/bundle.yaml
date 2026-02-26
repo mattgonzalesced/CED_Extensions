@@ -1,3 +1,7 @@
 title: "Parameter\nFlag\nSettings"
-tooltip: Configure and run after-sync parent-parameter conflict checks.
+tooltip: |
+  Configure parent-parameter conflict checks used during sync operations.
+  You can enable or disable automatic checking at the project level.
+  A manual run option is available to test current conditions immediately.
+  Use this to control how strictly parent parameter mismatches are surfaced.
 is_beta: false

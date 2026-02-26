@@ -1,1 +1,6 @@
+tooltip: |
+  Convert a legacy equipment-definition YAML file to the current schema format.
+  The conversion normalizes schema_version handling and reshapes known legacy fields.
+  Definitions are preserved while output is aligned to the structures expected by current tools.
+  Use the converted file as your new import source for active project datasets.
 is_beta: false

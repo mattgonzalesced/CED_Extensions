@@ -1,10 +1,7 @@
 title: Update Profiles
 tooltip: |
-  Update Profiles scans every element that contains Element_Linker metadata and
-  merges hosted tags, keynotes, and text notes back into the active YAML profile.
-  It also syncs parameter values so profile metadata reflects the current model.
-
-  Use it after adding annotations or adjusting parameter values. The tool
-  updates the YAML stored in Extensible Storage; rerun Place Linked Elements or
-  Place Annotations to apply the updated definitions in other views.
+  Sync placed Element_Linker data back into the active YAML profile definitions.
+  The update captures current offsets, parameters, tags, and text-note metadata from the model.
+  This keeps stored profiles aligned with field changes made after placement.
+  Save and export when needed so downstream projects can consume the refreshed definitions.
 is_beta: false

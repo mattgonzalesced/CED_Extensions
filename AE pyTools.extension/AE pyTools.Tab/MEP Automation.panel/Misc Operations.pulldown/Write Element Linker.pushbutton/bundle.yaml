@@ -1,9 +1,7 @@
 title: Write Element Linker
 tooltip: |
-  Writes Element_Linker metadata onto fixtures and model groups that are missing it.
-  Matching uses the active YAML profiles and chooses the best LED by parameter score,
-  without relying on element XYZ location for matching.
-
-  If there are multiple LEDs with the same label and no clear parameter winner,
-  the element is skipped to avoid incorrect assignments.
+  Write missing Element_Linker metadata to fixtures and model groups in the model.
+  Matching is performed against active YAML definitions using label and parameter scoring.
+  Ambiguous matches are skipped to avoid writing unreliable linkage data.
+  Use this to restore traceability when elements were placed or edited without linker payloads.
 is_beta: false
