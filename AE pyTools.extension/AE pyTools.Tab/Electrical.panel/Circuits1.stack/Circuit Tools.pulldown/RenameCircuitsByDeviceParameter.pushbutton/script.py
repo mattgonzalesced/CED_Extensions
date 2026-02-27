@@ -16,7 +16,7 @@ output.close_others()
 
 XAML_PATH = os.path.join(os.path.dirname(__file__), "ParameterSelectionWindow.xaml")
 NO_CHANGE_OPTION = "<No Change>"
-NO_PARAMETER_OPTION = "<No common text parameters available>"
+NO_APPLY_ALL_OPTION = "<Apply to all: No Override>"
 
 try:
     text_type = unicode
@@ -349,11 +349,15 @@ class CircuitParameterSelectionWindow(forms.WPFWindow):
         forms.WPFWindow.__init__(self, xaml_path)
         self._row_data = row_data
         self._combos = {}
+        self._apply_all_meta = {}
         self.selections = {}
 
         header_text = self.FindName("HeaderText")
         if header_text is not None:
-            header_text.Text = "Select one text parameter for each circuit (default is No Change)."
+            header_text.Text = (
+                "Select Prefix, Name, and Suffix parameters for each circuit "
+                "(defaults are No Change). Use Apply to all to set a column at once."
+            )
 
         self._build_rows()
 
@@ -369,6 +373,90 @@ class CircuitParameterSelectionWindow(forms.WPFWindow):
         if host is None:
             raise Exception("CircuitRowsPanel not found in XAML.")
 
+        all_param_names = set()
+        for row in self._row_data:
+            for pname in row.get("parameter_names", []):
+                if pname:
+                    all_param_names.add(pname)
+        all_param_names = sorted(list(all_param_names), key=lambda x: x.lower())
+
+        header = StackPanel()
+        header.Orientation = Orientation.Horizontal
+        header.Margin = Thickness(0, 0, 0, 8)
+
+        header_circuit = TextBlock()
+        header_circuit.Text = "Circuit"
+        header_circuit.Width = 420
+        header_circuit.Margin = Thickness(0, 0, 10, 0)
+        header.Children.Add(header_circuit)
+
+        header_prefix = TextBlock()
+        header_prefix.Text = "Prefix"
+        header_prefix.Width = 180
+        header_prefix.Margin = Thickness(0, 0, 10, 0)
+        header.Children.Add(header_prefix)
+
+        header_name = TextBlock()
+        header_name.Text = "Name"
+        header_name.Width = 180
+        header_name.Margin = Thickness(0, 0, 10, 0)
+        header.Children.Add(header_name)
+
+        header_suffix = TextBlock()
+        header_suffix.Text = "Suffix"
+        header_suffix.Width = 180
+        header.Children.Add(header_suffix)
+
+        host.Children.Add(header)
+
+        apply_all_row = StackPanel()
+        apply_all_row.Orientation = Orientation.Horizontal
+        apply_all_row.Margin = Thickness(0, 0, 0, 10)
+
+        apply_label = TextBlock()
+        apply_label.Text = "Apply to all rows"
+        apply_label.Width = 420
+        apply_label.Margin = Thickness(0, 0, 10, 0)
+        apply_all_row.Children.Add(apply_label)
+
+        apply_prefix_combo = ComboBox()
+        apply_prefix_combo.Width = 180
+        apply_prefix_combo.Margin = Thickness(0, 0, 10, 0)
+        apply_prefix_combo.Items.Add(NO_APPLY_ALL_OPTION)
+        apply_prefix_combo.Items.Add(NO_CHANGE_OPTION)
+
+        apply_name_combo = ComboBox()
+        apply_name_combo.Width = 180
+        apply_name_combo.Margin = Thickness(0, 0, 10, 0)
+        apply_name_combo.Items.Add(NO_APPLY_ALL_OPTION)
+        apply_name_combo.Items.Add(NO_CHANGE_OPTION)
+
+        apply_suffix_combo = ComboBox()
+        apply_suffix_combo.Width = 180
+        apply_suffix_combo.Items.Add(NO_APPLY_ALL_OPTION)
+        apply_suffix_combo.Items.Add(NO_CHANGE_OPTION)
+
+        for pname in all_param_names:
+            apply_prefix_combo.Items.Add(pname)
+            apply_name_combo.Items.Add(pname)
+            apply_suffix_combo.Items.Add(pname)
+
+        apply_prefix_combo.SelectedIndex = 0
+        apply_name_combo.SelectedIndex = 0
+        apply_suffix_combo.SelectedIndex = 0
+
+        apply_all_row.Children.Add(apply_prefix_combo)
+        apply_all_row.Children.Add(apply_name_combo)
+        apply_all_row.Children.Add(apply_suffix_combo)
+        host.Children.Add(apply_all_row)
+
+        self._apply_all_meta[apply_prefix_combo] = "prefix"
+        self._apply_all_meta[apply_name_combo] = "name"
+        self._apply_all_meta[apply_suffix_combo] = "suffix"
+        apply_prefix_combo.SelectionChanged += self._on_apply_all_changed
+        apply_name_combo.SelectionChanged += self._on_apply_all_changed
+        apply_suffix_combo.SelectionChanged += self._on_apply_all_changed
+
         for row in self._row_data:
             panel = StackPanel()
             panel.Orientation = Orientation.Horizontal
@@ -376,46 +464,97 @@ class CircuitParameterSelectionWindow(forms.WPFWindow):
 
             label = TextBlock()
             label.Text = row["circuit_label"]
-            label.Width = 440
+            label.Width = 420
             label.Margin = Thickness(0, 0, 10, 0)
             panel.Children.Add(label)
 
-            combo = ComboBox()
-            combo.Width = 240
-            combo.Items.Add(NO_CHANGE_OPTION)
+            prefix_combo = ComboBox()
+            prefix_combo.Width = 180
+            prefix_combo.Margin = Thickness(0, 0, 10, 0)
+            prefix_combo.Items.Add(NO_CHANGE_OPTION)
+
+            name_combo = ComboBox()
+            name_combo.Width = 180
+            name_combo.Margin = Thickness(0, 0, 10, 0)
+            name_combo.Items.Add(NO_CHANGE_OPTION)
+
+            suffix_combo = ComboBox()
+            suffix_combo.Width = 180
+            suffix_combo.Items.Add(NO_CHANGE_OPTION)
 
             if row["parameter_names"]:
                 for pname in row["parameter_names"]:
-                    combo.Items.Add(pname)
-                combo.SelectedIndex = 0
-            else:
-                combo.SelectedIndex = 0
+                    prefix_combo.Items.Add(pname)
+                    name_combo.Items.Add(pname)
+                    suffix_combo.Items.Add(pname)
 
-            self._combos[row["circuit_id"]] = combo
-            panel.Children.Add(combo)
+            prefix_combo.SelectedIndex = 0
+            name_combo.SelectedIndex = 0
+            suffix_combo.SelectedIndex = 0
+
+            self._combos[row["circuit_id"]] = {
+                "prefix": prefix_combo,
+                "name": name_combo,
+                "suffix": suffix_combo
+            }
+
+            panel.Children.Add(prefix_combo)
+            panel.Children.Add(name_combo)
+            panel.Children.Add(suffix_combo)
             host.Children.Add(panel)
+
+    def _set_combo_value_if_exists(self, combo, target_text):
+        if combo is None or not target_text:
+            return
+        for item in combo.Items:
+            if _safe_text(item) == target_text:
+                combo.SelectedItem = item
+                return
+
+    def _on_apply_all_changed(self, sender, args):
+        column_key = self._apply_all_meta.get(sender)
+        if not column_key:
+            return
+
+        selected = sender.SelectedItem
+        selected_text = _safe_text(selected)
+        if not selected_text or selected_text == NO_APPLY_ALL_OPTION:
+            return
+
+        for combo_group in self._combos.values():
+            combo = combo_group.get(column_key)
+            self._set_combo_value_if_exists(combo, selected_text)
 
     def _on_apply(self, sender, args):
         selections = {}
 
         for row in self._row_data:
             circuit_id = row["circuit_id"]
-            combo = self._combos.get(circuit_id)
-            if combo is None:
+            combo_group = self._combos.get(circuit_id)
+            if combo_group is None:
                 selections[circuit_id] = None
                 continue
 
-            selected = combo.SelectedItem
-            if selected is None:
+            prefix_selected = combo_group["prefix"].SelectedItem
+            name_selected = combo_group["name"].SelectedItem
+            suffix_selected = combo_group["suffix"].SelectedItem
+
+            if prefix_selected is None or name_selected is None or suffix_selected is None:
                 forms.alert("Select a parameter for every enabled circuit row.", exitscript=False)
                 return
 
-            selected_name = _safe_text(selected)
-            if not selected_name:
+            prefix_name = _safe_text(prefix_selected)
+            name_name = _safe_text(name_selected)
+            suffix_name = _safe_text(suffix_selected)
+            if (not prefix_name) or (not name_name) or (not suffix_name):
                 forms.alert("Select a parameter for every enabled circuit row.", exitscript=False)
                 return
 
-            selections[circuit_id] = selected_name
+            selections[circuit_id] = {
+                "prefix": prefix_name,
+                "name": name_name,
+                "suffix": suffix_name
+            }
 
         self.selections = selections
         self.DialogResult = True
@@ -473,34 +612,105 @@ def main():
     results = []
     renamed_count = 0
     skipped_count = 0
+    unchanged_count = 0
 
     with revit.Transaction("Rename Circuits by Device Parameter"):
         for row in row_data:
             circuit = row["circuit"]
             circuit_id = row["circuit_id"]
-            selected_param = selected_parameters.get(circuit_id)
+            selected_parts = selected_parameters.get(circuit_id) or {}
+            prefix_param = selected_parts.get("prefix", NO_CHANGE_OPTION)
+            name_param = selected_parts.get("name", NO_CHANGE_OPTION)
+            suffix_param = selected_parts.get("suffix", NO_CHANGE_OPTION)
             previous_name = _safe_text(circuit.LoadName)
 
-            if (not selected_param) or selected_param == NO_CHANGE_OPTION:
-                skipped_count += 1
+            if prefix_param == NO_CHANGE_OPTION and name_param == NO_CHANGE_OPTION and suffix_param == NO_CHANGE_OPTION:
+                unchanged_count += 1
                 results.append([
                     _circuit_ref(circuit),
-                    selected_param or NO_CHANGE_OPTION,
+                    prefix_param,
+                    name_param,
+                    suffix_param,
                     previous_name or "-",
                     "-",
                     "No Change"
                 ])
                 continue
 
-            new_name, resolve_error = _resolve_single_name(row["source_elements"], selected_param)
-            if resolve_error:
+            prefix_value = u""
+            suffix_value = u""
+
+            if prefix_param != NO_CHANGE_OPTION:
+                prefix_value, prefix_error = _resolve_single_name(row["source_elements"], prefix_param)
+                if prefix_error:
+                    skipped_count += 1
+                    results.append([
+                        _circuit_ref(circuit),
+                        prefix_param,
+                        name_param,
+                        suffix_param,
+                        previous_name or "-",
+                        "-",
+                        "Skipped: {}".format(prefix_error)
+                    ])
+                    continue
+
+            if suffix_param != NO_CHANGE_OPTION:
+                suffix_value, suffix_error = _resolve_single_name(row["source_elements"], suffix_param)
+                if suffix_error:
+                    skipped_count += 1
+                    results.append([
+                        _circuit_ref(circuit),
+                        prefix_param,
+                        name_param,
+                        suffix_param,
+                        previous_name or "-",
+                        "-",
+                        "Skipped: {}".format(suffix_error)
+                    ])
+                    continue
+
+            if name_param == NO_CHANGE_OPTION:
+                base_name = previous_name
+            else:
+                base_name, name_error = _resolve_single_name(row["source_elements"], name_param)
+                if name_error:
+                    skipped_count += 1
+                    results.append([
+                        _circuit_ref(circuit),
+                        prefix_param,
+                        name_param,
+                        suffix_param,
+                        previous_name or "-",
+                        "-",
+                        "Skipped: {}".format(name_error)
+                    ])
+                    continue
+
+            new_name = u"{}{}{}".format(prefix_value or u"", base_name or u"", suffix_value or u"").strip()
+            if not new_name:
                 skipped_count += 1
                 results.append([
                     _circuit_ref(circuit),
-                    selected_param,
+                    prefix_param,
+                    name_param,
+                    suffix_param,
                     previous_name or "-",
                     "-",
-                    "Skipped: {}".format(resolve_error)
+                    "Skipped: Resulting name is empty."
+                ])
+                continue
+
+            if new_name == previous_name:
+                unchanged_count += 1
+                results.append([
+                    _circuit_ref(circuit),
+                    prefix_param,
+                    name_param,
+                    suffix_param,
+                    previous_name or "-",
+                    new_name,
+                    "No Change"
                 ])
                 continue
 
@@ -509,7 +719,9 @@ def main():
                 skipped_count += 1
                 results.append([
                     _circuit_ref(circuit),
-                    selected_param,
+                    prefix_param,
+                    name_param,
+                    suffix_param,
                     previous_name or "-",
                     new_name,
                     "Skipped: {}".format(set_error)
@@ -519,18 +731,29 @@ def main():
             renamed_count += 1
             results.append([
                 _circuit_ref(circuit),
-                selected_param,
+                prefix_param,
+                name_param,
+                suffix_param,
                 previous_name or "-",
                 new_name,
                 "Renamed"
             ])
 
     output.print_md("### Rename Circuits by Device Parameter")
-    output.print_md("Processed {} circuit(s): {} renamed, {} skipped.".format(len(row_data), renamed_count, skipped_count))
-    output.print_table(results, ["Circuit", "Parameter", "Previous Name", "New Name", "Status"])
+    output.print_md(
+        "Processed {} circuit(s): {} renamed, {} skipped, {} unchanged.".format(
+            len(row_data), renamed_count, skipped_count, unchanged_count
+        )
+    )
+    output.print_table(
+        results,
+        ["Circuit", "Prefix Param", "Name Param", "Suffix Param", "Previous Name", "New Name", "Status"]
+    )
 
     forms.alert(
-        "Processed {} circuit(s).\nRenamed: {}\nSkipped: {}".format(len(row_data), renamed_count, skipped_count),
+        "Processed {} circuit(s).\nRenamed: {}\nSkipped: {}\nNo Change: {}".format(
+            len(row_data), renamed_count, skipped_count, unchanged_count
+        ),
         title="Rename Circuits by Device Parameter",
         exitscript=False
     )

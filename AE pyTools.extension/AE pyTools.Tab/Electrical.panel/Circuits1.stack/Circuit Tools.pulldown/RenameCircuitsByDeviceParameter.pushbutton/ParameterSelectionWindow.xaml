@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Rename Circuits by Device Parameter"
         Height="560"
-        Width="760"
+        Width="1020"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResizeWithGrip">
     <Grid Margin="12">
@@ -20,7 +20,7 @@
                    Margin="0,0,0,6"/>
 
         <TextBlock Grid.Row="1"
-                   Text="Only parameters common to connected selected devices are listed for each circuit."
+                   Text="Choose Prefix, Name, and Suffix from common text parameters per circuit. Leave as No Change to skip that part."
                    Margin="0,0,0,10"/>
 
         <Border Grid.Row="2"
@@ -28,7 +28,7 @@
                 BorderThickness="1"
                 Padding="8">
             <ScrollViewer VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled">
+                          HorizontalScrollBarVisibility="Auto">
                 <StackPanel x:Name="CircuitRowsPanel"/>
             </ScrollViewer>
         </Border>
