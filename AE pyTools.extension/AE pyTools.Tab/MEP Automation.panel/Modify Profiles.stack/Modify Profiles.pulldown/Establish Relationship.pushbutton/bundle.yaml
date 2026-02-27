@@ -1,0 +1,7 @@
+﻿title: Establish Relationship
+tooltip: |
+  Create one independent profile that captures a parent equipment element and selected child equipment together.
+  The tool writes Element_Linker metadata to every selected element so the relationship is traceable in-model and in YAML.
+  Child parameters can be marked as BYPARENT, BYSIBLING, or static through an interactive mapping flow.
+  Use this when you need parent-child parameter behavior without appending into an existing profile definition.
+is_beta: false

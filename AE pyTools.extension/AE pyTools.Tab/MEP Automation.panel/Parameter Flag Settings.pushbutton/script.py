@@ -59,7 +59,10 @@ def main():
         if doc is None:
             forms.alert("No active document detected.", title=TITLE)
             return
-        module.run_sync_check(doc)
+        try:
+            module.run_sync_check(doc, bypass_cooldown=True)
+        except TypeError:
+            module.run_sync_check(doc)
 
 
 if __name__ == "__main__":

@@ -115,7 +115,7 @@ def _doc_key(doc):
         return None
 
 
-def _should_open_ui(doc):
+def _should_open_ui(doc, bypass_cooldown=False):
     doc_key = _doc_key(doc)
     now = time.time()
     lock_payload = _read_lock_payload()
@@ -124,7 +124,7 @@ def _should_open_ui(doc):
     is_running = bool(lock_payload.get("running"))
     if is_running and last_key == doc_key and now - last_ts < LOCK_WINDOW_SECONDS:
         return False
-    if last_key == doc_key and now - last_ts < LOCK_WINDOW_SECONDS:
+    if (not bypass_cooldown) and last_key == doc_key and now - last_ts < LOCK_WINDOW_SECONDS:
         return False
     if str(_get_env(ENV_RUNNING_KEY, "0")).strip() == "1":
         return False
@@ -139,7 +139,7 @@ def _should_open_ui(doc):
         payload = {}
     last_key = payload.get("doc_key")
     last_ts = payload.get("timestamp") or 0.0
-    if last_key == doc_key and now - last_ts < 20.0:
+    if (not bypass_cooldown) and last_key == doc_key and now - last_ts < 20.0:
         return False
     payload = {"doc_key": doc_key, "timestamp": now}
     _set_env(ENV_LAST_RUN_KEY, json.dumps(payload))
@@ -1009,7 +1009,7 @@ def _load_ui_module():
         return None
 
 
-def run_sync_check(doc):
+def run_sync_check(doc, bypass_cooldown=False):
     if doc is None or getattr(doc, "IsFamilyDocument", False):
         return
     if not get_setting(default=True, doc=doc):
@@ -1021,7 +1021,7 @@ def run_sync_check(doc):
     conflicts = collect_conflicts(doc, data)
     if not conflicts:
         return
-    if not _should_open_ui(doc):
+    if not _should_open_ui(doc, bypass_cooldown=bypass_cooldown):
         return
     try:
         param_keys = sorted({item.get("param_key") for item in conflicts if item.get("param_key")})
