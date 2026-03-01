@@ -1,224 +1,321 @@
 # -*- coding: utf-8 -*-
 __title__ = "Wire Circuited Elements"
 
-from Autodesk.Revit.DB import (
-    FilteredElementCollector,
-    XYZ,
-    Transaction,
-    Electrical
+from Snippets.wireutils import (
+    wire_connected_unconnected_connectors,
+    is_homerun_wire,
+    get_element_connector_from_wire_connector,
+    get_wire_type_id,
+    are_points_coincident,
+    collect_selected_electrical_circuits,
+    resolve_wire_type_id,
+    find_previous_connector_for_homerun,
+    build_local_frame,
+    collect_active_view_wires_by_circuit,
+    delete_element_ids,
 )
-from pyrevit import script, DB
+from pyrevit import script, DB, forms
 
-# Get Revit document and selection
-doc = __revit__.ActiveUIDocument.Document
-uidoc = __revit__.ActiveUIDocument
-
-
-# Get selected elements
-selected_ids = uidoc.Selection.GetElementIds()
-home_run_length = 4
-
-
-# Initialize config to retrieve default wire type
-config = script.get_config("wire_type_config")
-
-#TODO need to adjust so that if the wire_type_config does not have an existing wire, then the config.py script runs, avoiding errors.
-
-# Retrieve all wire types in the document
-wire_types = FilteredElementCollector(doc).OfClass(Electrical.WireType).ToElements()
-wire_type_options = {wire_type.get_Parameter(DB.BuiltInParameter.ALL_MODEL_TYPE_NAME).AsString(): wire_type.Id
-                     for wire_type in wire_types}
-
-# Use default wire type from config, if available
-default_wire_type_name = config.get_option("default_wire_type", None)
-if default_wire_type_name and default_wire_type_name in wire_type_options:
-    wire_type_id = wire_type_options[default_wire_type_name]
-    script.get_logger().info("Using saved default wire type: " + default_wire_type_name)
-else:
-    script.get_logger().warning("No default wire type set or available.")
-    script.exit()
+logger = script.get_logger()
+HOME_RUN_LENGTH = 4.0
+GEOM_TOL = 1e-6
+WIRING_TYPE_NAMES = {
+    "Arc": DB.Electrical.WiringType.Arc,
+    "Chamfer": DB.Electrical.WiringType.Chamfer
+}
 
 
-# Helper function to get the first connector of a power circuit from an element
-def get_first_connector_of_power_circuit(element):
-    connector_manager = element.MEPModel.ConnectorManager
-    connector_set = connector_manager.Connectors
-    connector_iterator = connector_set.ForwardIterator()
-
-    while connector_iterator.MoveNext():
-        connector = connector_iterator.Current
-        if connector.ElectricalSystemType == Electrical.ElectricalSystemType.PowerCircuit:
-            return connector
-
-    return None
+def wiring_type_from_config(config_key, default_name, config):
+    configured = getattr(config, config_key, default_name)
+    return WIRING_TYPE_NAMES.get(configured, WIRING_TYPE_NAMES[default_name])
 
 
-# Nearest neighbor connection calculation based on element distances
-def find_nearest_neighbor(element, remaining_elements):
-    element_connector = get_first_connector_of_power_circuit(element)
-    element_location = element_connector.Origin if element_connector else None
-    nearest_element = None
-    shortest_distance = float('inf')
-
-    if element_location is not None:
-        for other_element in remaining_elements:
-            other_connector = get_first_connector_of_power_circuit(other_element)
-            other_location = other_connector.Origin if other_connector else None
-
-            if other_location:
-                # Calculate the distance between the element and other element's connectors
-                distance = element_location.DistanceTo(other_location)
-                if distance < shortest_distance:
-                    shortest_distance = distance
-                    nearest_element = other_element
-
-    return nearest_element
+def homerun_length_from_config(config):
+    value = getattr(config, "homerun_length", HOME_RUN_LENGTH)
+    try:
+        parsed = float(value)
+        if parsed > 0:
+            return parsed
+    except Exception:
+        pass
+    return HOME_RUN_LENGTH
 
 
-# Function to check for coincident points (same X and Y)
-def are_points_coincident(point1, point2):
-    return abs(point1.X - point2.X) < 0.001 and abs(point1.Y - point2.Y) < 0.001
+def xyz_text(point):
+    return "({:.3f}, {:.3f}, {:.3f})".format(point.X, point.Y, point.Z)
 
 
-# Function to create right-angled "chamfered" wires for connections
-def create_right_angle_wire(start_point, end_point):
-    # Determine the right-angle route (move along X first, then Y or vice versa)
-    if abs(start_point.X - end_point.X) > abs(start_point.Y - end_point.Y):
-        # Move along X-axis first, then Y
-        vertex = XYZ(end_point.X, start_point.Y, start_point.Z)
-    else:
-        # Move along Y-axis first, then X
-        vertex = XYZ(start_point.X, end_point.Y, start_point.Z)
+def remove_existing_wires_in_active_view(doc, view_id, circuits):
+    circuits_by_key = {c.Id.IntegerValue: c for c in circuits}
+    wire_map = collect_active_view_wires_by_circuit(doc, view_id)
+    delete_ids = []
+    by_circuit_count = {}
 
-    # Check for coincident points before returning
-    if are_points_coincident(start_point, vertex):
-        return [start_point, end_point]  # Skip vertex if coincident
-    elif are_points_coincident(vertex, end_point):
-        return [start_point, end_point]  # Skip vertex if coincident
-    else:
-        return [start_point, vertex, end_point]
+    for key in circuits_by_key.keys():
+        wires = wire_map.get(key, [])
+        if not wires:
+            continue
+        by_circuit_count[key] = len(wires)
+        for wire in wires:
+            delete_ids.append(wire.Id)
 
-
-# Function to create a right-angled home run of fixed length (3ft)
-def create_right_angle_home_run(start_connector, last_connector=None, length=4):
-    # Get the initial start point and determine the correct direction from the last connected wire
-    start_point = start_connector.Origin
-
-    if last_connector:
-        last_point = last_connector.Origin
-        # Calculate the direction vector of the last connected wire (last segment)
-        direction_vector = XYZ(last_point.X - start_point.X, last_point.Y - start_point.Y, 0).Normalize()
-    else:
-        # If no previous connector, default to an X direction
-        direction_vector = XYZ(0, 1, 0)  # Default to X direction if no last connector
-
-    # Find the perpendicular vector (rotate 90 degrees around the Z-axis)
-    if abs(direction_vector.X) > abs(direction_vector.Y):
-        # If the last connecting wire runs along the X direction
-        perp_vector = XYZ(0, 1, 0)  # Perpendicular in the Y direction
-    else:
-        # If the last connecting wire runs along the Y direction
-        perp_vector = XYZ(1, 0, 0)  # Perpendicular in the X direction
-
-    # Define the start -> vertex -> end right-angle points for the home run
-    vertex_point = XYZ(start_point.X + perp_vector.X * (length / 2), start_point.Y + perp_vector.Y * (length / 2),
-                       start_point.Z)
-    end_point = XYZ(vertex_point.X + direction_vector.X * (length / 2),
-                    vertex_point.Y + direction_vector.Y * (length / 2), vertex_point.Z)
-
-    # Ensure that none of the points are coincident
-    if are_points_coincident(start_point, vertex_point) or are_points_coincident(vertex_point, end_point):
-        vertex_point = XYZ(start_point.X + perp_vector.X * 1.0, start_point.Y + perp_vector.Y * 1.0, start_point.Z)
-        end_point = XYZ(vertex_point.X + direction_vector.X * 1.5, vertex_point.Y + direction_vector.Y * 1.5,
-                        vertex_point.Z)
-
-    return [start_point, vertex_point, end_point]
+    deleted_count = delete_element_ids(doc, delete_ids) if delete_ids else 0
+    return deleted_count, by_circuit_count
 
 
+def resolve_target_system_type(circuits):
+    types_present = {}
+    for c in circuits:
+        type_name = str(c.SystemType)
+        if type_name not in types_present:
+            types_present[type_name] = c.SystemType
+
+    if not types_present:
+        return None
+    if len(types_present) == 1:
+        return list(types_present.values())[0]
+
+    selected = forms.SelectFromList.show(
+        sorted(types_present.keys()),
+        title="Select Electrical System Type to Wire",
+        button_name="Use Type"
+    )
+    if not selected:
+        return None
+    return types_present[selected]
 
 
-# Dictionary to store elements by circuit
-elements_by_circuit = {}
+class WireGenerator(object):
+    def __init__(
+        self,
+        doc,
+        view,
+        wire_type_id,
+        branch_wiring_type,
+        homerun_wiring_type,
+        home_run_length=HOME_RUN_LENGTH
+    ):
+        self.doc = doc
+        self.view = view
+        self.wire_type_id = wire_type_id
+        self.branch_wiring_type = branch_wiring_type
+        self.homerun_wiring_type = homerun_wiring_type
+        self.home_run_length = home_run_length
 
-# Iterate through selected elements
-for sel_id in selected_ids:
-    element = doc.GetElement(sel_id)
+    def _clamp(self, value, low, high):
+        return max(low, min(high, value))
 
-    # Get electrical systems (circuits) for the element
-    if hasattr(element,'MEPModel') and element.MEPModel:
-        electrical_systems = element.MEPModel.GetElectricalSystems()
-        # Group elements by circuit
-        for system in electrical_systems:
-            if system.SystemType == Electrical.ElectricalSystemType.PowerCircuit:
-                circuit_id = system.Id
-                if circuit_id not in elements_by_circuit:
-                    elements_by_circuit[circuit_id] = []
-                elements_by_circuit[circuit_id].append(element)
+    def _vector_length(self, vec):
+        try:
+            return vec.GetLength()
+        except Exception:
+            return 0.0
 
-# List to store wiring operations to be created in the transaction
-wiring_operations = []
+    def _build_homerun_end(self, start, native_end, previous_connector):
+        native_vec = native_end.Subtract(start)
+        native_len = self._vector_length(native_vec)
 
+        previous = previous_connector.Origin if previous_connector else None
+        along, _ = build_local_frame(start, previous_point=previous, fallback_end_point=native_end)
 
-# Prepare wiring operations before the transaction
-for circuit_id, elements in elements_by_circuit.items():
-    remaining_elements = elements[:]  # Copy the list using slicing for IronPython
-
-    # For each element, find the nearest neighbor to connect to
-    while remaining_elements:
-        element_start = remaining_elements.pop(0)
-
-        # If no more elements, we will add the home run for the last one
-        if not remaining_elements:
-            connector = get_first_connector_of_power_circuit(element_start)
-
-            if connector:
-                # Find the last connector for the home run
-                if wiring_operations:
-                    last_connector = wiring_operations[-1][1]  # Get the last connector used
-                    points = create_right_angle_home_run(connector,
-                                                         last_connector,
-                                                         home_run_length)
-
-                    # Use WiringType.Arc for home run
-                    wiring_operations.append((points, connector, None, DB.Electrical.WiringType.Arc))
-                else:
-                    # If there's only one element, create a default right-angled home run
-                    start_point = connector.Origin
-                    points = create_right_angle_home_run(connector)  # No previous connector, so just use one
-                    wiring_operations.append((points, connector, None, DB.Electrical.WiringType.Arc))
+        if native_len > GEOM_TOL:
+            direction = native_vec.Normalize()
         else:
-            # Find the nearest neighbor element
-            nearest_element = find_nearest_neighbor(element_start, remaining_elements)
+            direction = along
 
-            # Get connectors for both start and end elements
-            start_connector = get_first_connector_of_power_circuit(element_start)
-            end_connector = get_first_connector_of_power_circuit(nearest_element)
+        target_len = native_len if native_len > GEOM_TOL else self.home_run_length
+        if target_len > self.home_run_length:
+            target_len = self.home_run_length
 
-            # Ensure both connectors are valid PowerCircuit connectors
-            if start_connector and end_connector:
-                # Create a right-angle chamfered wire between elements
-                points = create_right_angle_wire(start_connector.Origin, end_connector.Origin)
+        end = start.Add(direction.Multiply(target_len))
+        return end, direction, target_len, native_len
 
-                # Use WiringType.Chamfer for connecting wires
-                wiring_operations.append((points, start_connector, end_connector, DB.Electrical.WiringType.Chamfer))
+    def _build_homerun_vertex(self, start, end, direction, native_vertex, previous_connector):
+        segment = end.Subtract(start)
+        seg_len = self._vector_length(segment)
+        if seg_len <= GEOM_TOL:
+            seg_len = self.home_run_length
+            end = start.Add(direction.Multiply(seg_len))
 
-# Start transaction and execute all wiring operations
-t = Transaction(doc, "Create wires between circuit elements")
-try:
-    t.Start()
+        previous = previous_connector.Origin if previous_connector else None
+        _, fallback_perp = build_local_frame(start, previous_point=previous, fallback_end_point=end)
 
-    for points, start_connector, end_connector, wiring_type in wiring_operations:
-        # Create wires using the provided wire_type_id and the calculated points
-        DB.Electrical.Wire.Create(doc, wire_type_id, doc.ActiveView.Id, wiring_type, points, start_connector,
-                                  end_connector)
+        perp_dir = fallback_perp
+        perp_mag = max(seg_len * 0.2, 0.15)
+        if native_vertex:
+            v = native_vertex.Subtract(start)
+            along_dist = v.DotProduct(direction)
+            projected = direction.Multiply(along_dist)
+            perp_vec = v.Subtract(projected)
+            candidate_mag = self._vector_length(perp_vec)
+            if candidate_mag > GEOM_TOL:
+                perp_dir = perp_vec.Normalize()
+                perp_mag = candidate_mag
 
-    # Commit the transaction if everything is successful
-    t.Commit()
+        min_perp = max(seg_len * 0.08, 0.05)
+        max_perp = max(seg_len * 0.45, 0.15)
+        perp_mag = self._clamp(perp_mag, min_perp, max_perp)
 
-except Exception as e:
-    # If there is an error, roll back the transaction to avoid leaving it open
-    script.get_logger().error("An error occurred: {}".format(str(e)))
-    t.RollBack()
+        # Keep the vertex projection centered on the run.
+        base = start.Add(direction.Multiply(seg_len * 0.5))
+        vertex = base.Add(perp_dir.Multiply(perp_mag))
 
-# Notify the user
-script.get_logger().info("Wires and home runs created successfully.")
+        if are_points_coincident(start, vertex) or are_points_coincident(vertex, end):
+            base = start.Add(direction.Multiply(seg_len * 0.5))
+            vertex = base.Add(perp_dir.Multiply(min_perp))
+        return vertex
+
+    def _build_homerun_points(self, start, native_end, native_vertex, previous_connector):
+        end, direction, target_len, native_len = self._build_homerun_end(start, native_end, previous_connector)
+        vertex = self._build_homerun_vertex(start, end, direction, native_vertex, previous_connector)
+        logger.info(
+            "HomeRun shape | native_len={:.3f} target_len={:.3f} native_vertex={} start={} vertex={} end={}".format(
+                native_len,
+                target_len,
+                "yes" if native_vertex else "no",
+                xyz_text(start),
+                xyz_text(vertex),
+                xyz_text(end)
+            )
+        )
+        return [start, vertex, end]
+
+    def _replace_homerun(self, homerun_wire):
+        connected, unconnected = wire_connected_unconnected_connectors(homerun_wire)
+        if not connected or not unconnected:
+            return False
+
+        start_connector = get_element_connector_from_wire_connector(connected[0])
+        if not start_connector:
+            return False
+        start = start_connector.Origin
+        native_end = unconnected[0].Origin
+
+        previous_connector = find_previous_connector_for_homerun(
+            start_connector,
+            homerun_wire_id=homerun_wire.Id
+        )
+        native_vertex = None
+        try:
+            if getattr(homerun_wire, "NumberOfVertices", 0) > 0:
+                native_vertex = homerun_wire.GetVertex(0)
+        except Exception:
+            native_vertex = None
+
+        logger.info(
+            "HomeRun replace | start={} native_end={} previous={} native_vertex={}".format(
+                xyz_text(start),
+                xyz_text(native_end),
+                xyz_text(previous_connector.Origin) if previous_connector else "<none>"
+                ,
+                xyz_text(native_vertex) if native_vertex else "<none>"
+            )
+        )
+        homerun_points = self._build_homerun_points(start, native_end, native_vertex, previous_connector)
+        new_wire_type_id = get_wire_type_id(homerun_wire) or self.wire_type_id
+
+        # Always recreate so we reliably force an arc homerun with a control vertex
+        # even when native NewWires produced chamfer-style homerun geometry.
+        self.doc.Delete(homerun_wire.Id)
+        DB.Electrical.Wire.Create(
+            self.doc,
+            new_wire_type_id,
+            self.view.Id,
+            self.homerun_wiring_type,
+            homerun_points,
+            start_connector,
+            None
+        )
+        return True
+
+    def generate_for_circuit(self, circuit):
+        cnum_param = circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER)
+        cnum = cnum_param.AsString() if cnum_param else "<unknown>"
+        logger.info("Generating wires for circuit {}".format(cnum))
+        wire_set = circuit.NewWires(self.view, self.branch_wiring_type)
+        if not wire_set:
+            logger.info("No wires returned by NewWires for circuit {}.".format(cnum))
+            return 0, 0
+
+        wire_count = 0
+        homerun_wire = None
+        for wire in wire_set:
+            wire_count += 1
+            if not homerun_wire and is_homerun_wire(wire):
+                homerun_wire = wire
+
+        replaced = 0
+        if homerun_wire and self._replace_homerun(homerun_wire):
+            replaced = 1
+        else:
+            logger.info("No homerun replacement performed for circuit {}.".format(cnum))
+        return wire_count, replaced
+
+
+def run_generator_for_circuits(doc, circuits, generator):
+    transaction = DB.Transaction(doc, "Create wires with NewWires + custom homerun")
+    native_created = 0
+    homeruns_replaced = 0
+    removed_existing = 0
+    try:
+        transaction.Start()
+        removed_existing, removed_by_circuit = remove_existing_wires_in_active_view(doc, generator.view.Id, circuits)
+        if removed_existing:
+            logger.info("Removed {} existing wire(s) in active view before regeneration.".format(removed_existing))
+            for circuit_key, count in removed_by_circuit.items():
+                logger.info("  CircuitId {} -> removed {} wire(s)".format(circuit_key, count))
+        else:
+            logger.info("No existing active-view wires found for selected circuits.")
+
+        for circuit in circuits:
+            created_count, replaced_count = generator.generate_for_circuit(circuit)
+            native_created += created_count
+            homeruns_replaced += replaced_count
+        transaction.Commit()
+        logger.info(
+            "Wire generation complete. Removed existing: {} | Native wires: {} | Homeruns replaced: {}.".format(
+                removed_existing, native_created, homeruns_replaced
+            )
+        )
+    except Exception as ex:
+        logger.error("Wire generation failed: {}".format(str(ex)))
+        transaction.RollBack()
+
+
+def main():
+    doc = __revit__.ActiveUIDocument.Document
+    uidoc = __revit__.ActiveUIDocument
+    config = script.get_config("wire_type_config")
+
+    all_circuits = collect_selected_electrical_circuits(doc, uidoc, logger=logger)
+    if not all_circuits:
+        logger.warning("No electrical circuits found from selected elements.")
+        return
+
+    target_type = resolve_target_system_type(all_circuits)
+    if target_type is None:
+        logger.warning("No system type selected. Cancelled.")
+        return
+
+    circuits = [c for c in all_circuits if c.SystemType == target_type]
+    if not circuits:
+        logger.warning("No circuits matched selected system type.")
+        return
+
+    wire_type_id = resolve_wire_type_id(doc, config, logger=logger)
+    if not wire_type_id:
+        script.exit()
+
+    generator = WireGenerator(
+        doc=doc,
+        view=doc.ActiveView,
+        wire_type_id=wire_type_id,
+        branch_wiring_type=wiring_type_from_config("branch_wiring_type", "Chamfer", config),
+        homerun_wiring_type=wiring_type_from_config("homerun_wiring_type", "Arc", config),
+        home_run_length=homerun_length_from_config(config)
+    )
+    run_generator_for_circuits(doc, circuits, generator)
+
+
+if __name__ == "__main__":
+    main()
