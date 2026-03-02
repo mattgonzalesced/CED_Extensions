@@ -5,8 +5,6 @@ from collections import OrderedDict
 import Autodesk.Revit.DB.Electrical as DBE
 from pyrevit import revit, DB, forms, script
 from Snippets import _elecutils as eu
-from System.Windows import Thickness
-from System.Windows.Controls import StackPanel, Orientation, TextBlock, ComboBox
 
 
 doc = revit.doc
@@ -15,8 +13,12 @@ output = script.get_output()
 output.close_others()
 
 XAML_PATH = os.path.join(os.path.dirname(__file__), "ParameterSelectionWindow.xaml")
-NO_CHANGE_OPTION = "<No Change>"
-NO_APPLY_ALL_OPTION = "<Apply to all: No Override>"
+CONFIG_KEY = "rename_circuit_builder_config"
+
+TOKEN_PARAM = "param"
+TOKEN_SEPARATOR = "sep"
+TOKEN_CUSTOM = "custom"
+
 
 try:
     text_type = unicode
@@ -34,6 +36,26 @@ def _safe_text(value):
             return text_type(value).strip()
         except Exception:
             return u""
+
+
+def _raw_text(value):
+    if value is None:
+        return u""
+    try:
+        return text_type(value)
+    except Exception:
+        return u""
+
+
+def _clone_tokens(tokens):
+    cloned = []
+    for token in tokens or []:
+        ttype = _safe_text(token.get("type"))
+        tval = _raw_text(token.get("value"))
+        if not ttype:
+            continue
+        cloned.append({"type": ttype, "value": tval})
+    return cloned
 
 
 def _dedupe_elements(elements):
@@ -67,6 +89,7 @@ def _get_selected_elements():
     selected_ids = list(uidoc.Selection.GetElementIds())
     if not selected_ids:
         forms.alert("Select device(s) first, then run the tool.", exitscript=True)
+
     selected_elements = []
     for element_id in selected_ids:
         element = doc.GetElement(element_id)
@@ -75,6 +98,7 @@ def _get_selected_elements():
         if getattr(element, "ViewSpecific", False):
             continue
         selected_elements.append(element)
+
     if not selected_elements:
         forms.alert("No valid model elements found in the current selection.", exitscript=True)
     return selected_elements
@@ -123,10 +147,7 @@ def _build_circuit_map(selected_elements):
         for circuit in _get_element_circuits(element):
             cid = circuit.Id.IntegerValue
             if cid not in circuit_map:
-                circuit_map[cid] = {
-                    "circuit": circuit,
-                    "source_elements": []
-                }
+                circuit_map[cid] = {"circuit": circuit, "source_elements": []}
             if not isinstance(element, DBE.ElectricalSystem):
                 circuit_map[cid]["source_elements"].append(element)
 
@@ -252,26 +273,43 @@ def _get_parameter_value(element, param_name):
     return u""
 
 
-def _resolve_single_name(elements, param_name):
-    values = []
-    seen = set()
+def _resolve_preferred_param_value(elements, param_name):
+    non_empty_counts = {}
+    first_element_id_by_value = {}
+
+    sortable = []
     for element in elements or []:
+        try:
+            sortable.append((element.Id.IntegerValue, element))
+        except Exception:
+            continue
+    sortable.sort(key=lambda x: x[0])
+
+    for eid, element in sortable:
         value = _get_parameter_value(element, param_name)
         if not value:
             continue
-        if value in seen:
-            continue
-        seen.add(value)
-        values.append(value)
+        if value not in non_empty_counts:
+            non_empty_counts[value] = 0
+            first_element_id_by_value[value] = eid
+        non_empty_counts[value] += 1
+        if eid < first_element_id_by_value[value]:
+            first_element_id_by_value[value] = eid
 
-    if not values:
-        return None, "No non-empty value found for '{}' on connected selected devices.".format(param_name)
+    if not non_empty_counts:
+        return u""
 
-    if len(values) > 1:
-        preview = ", ".join(values[:3])
-        return None, "Multiple values found for '{}': {}".format(param_name, preview)
+    best_value = None
+    best_count = -1
+    best_first_id = 2147483647
+    for value, count in non_empty_counts.items():
+        first_id = first_element_id_by_value.get(value, 2147483647)
+        if count > best_count or (count == best_count and first_id < best_first_id):
+            best_value = value
+            best_count = count
+            best_first_id = first_id
 
-    return values[0], None
+    return best_value or u""
 
 
 def _get_circuit_start_slot(circuit):
@@ -344,227 +382,6 @@ def _set_circuit_name(circuit, new_name):
     return "Circuit name parameter is unavailable or read-only."
 
 
-class CircuitParameterSelectionWindow(forms.WPFWindow):
-    def __init__(self, xaml_path, row_data):
-        forms.WPFWindow.__init__(self, xaml_path)
-        self._row_data = row_data
-        self._combos = {}
-        self._apply_all_meta = {}
-        self.selections = {}
-
-        header_text = self.FindName("HeaderText")
-        if header_text is not None:
-            header_text.Text = (
-                "Select Prefix, Name, and Suffix parameters for each circuit "
-                "(defaults are No Change). Use Apply to all to set a column at once."
-            )
-
-        self._build_rows()
-
-        apply_btn = self.FindName("ApplyButton")
-        cancel_btn = self.FindName("CancelButton")
-        if apply_btn is not None:
-            apply_btn.Click += self._on_apply
-        if cancel_btn is not None:
-            cancel_btn.Click += self._on_cancel
-
-    def _build_rows(self):
-        host = self.FindName("CircuitRowsPanel")
-        if host is None:
-            raise Exception("CircuitRowsPanel not found in XAML.")
-
-        all_param_names = set()
-        for row in self._row_data:
-            for pname in row.get("parameter_names", []):
-                if pname:
-                    all_param_names.add(pname)
-        all_param_names = sorted(list(all_param_names), key=lambda x: x.lower())
-
-        header = StackPanel()
-        header.Orientation = Orientation.Horizontal
-        header.Margin = Thickness(0, 0, 0, 8)
-
-        header_circuit = TextBlock()
-        header_circuit.Text = "Circuit"
-        header_circuit.Width = 420
-        header_circuit.Margin = Thickness(0, 0, 10, 0)
-        header.Children.Add(header_circuit)
-
-        header_prefix = TextBlock()
-        header_prefix.Text = "Prefix"
-        header_prefix.Width = 180
-        header_prefix.Margin = Thickness(0, 0, 10, 0)
-        header.Children.Add(header_prefix)
-
-        header_name = TextBlock()
-        header_name.Text = "Name"
-        header_name.Width = 180
-        header_name.Margin = Thickness(0, 0, 10, 0)
-        header.Children.Add(header_name)
-
-        header_suffix = TextBlock()
-        header_suffix.Text = "Suffix"
-        header_suffix.Width = 180
-        header.Children.Add(header_suffix)
-
-        host.Children.Add(header)
-
-        apply_all_row = StackPanel()
-        apply_all_row.Orientation = Orientation.Horizontal
-        apply_all_row.Margin = Thickness(0, 0, 0, 10)
-
-        apply_label = TextBlock()
-        apply_label.Text = "Apply to all rows"
-        apply_label.Width = 420
-        apply_label.Margin = Thickness(0, 0, 10, 0)
-        apply_all_row.Children.Add(apply_label)
-
-        apply_prefix_combo = ComboBox()
-        apply_prefix_combo.Width = 180
-        apply_prefix_combo.Margin = Thickness(0, 0, 10, 0)
-        apply_prefix_combo.Items.Add(NO_APPLY_ALL_OPTION)
-        apply_prefix_combo.Items.Add(NO_CHANGE_OPTION)
-
-        apply_name_combo = ComboBox()
-        apply_name_combo.Width = 180
-        apply_name_combo.Margin = Thickness(0, 0, 10, 0)
-        apply_name_combo.Items.Add(NO_APPLY_ALL_OPTION)
-        apply_name_combo.Items.Add(NO_CHANGE_OPTION)
-
-        apply_suffix_combo = ComboBox()
-        apply_suffix_combo.Width = 180
-        apply_suffix_combo.Items.Add(NO_APPLY_ALL_OPTION)
-        apply_suffix_combo.Items.Add(NO_CHANGE_OPTION)
-
-        for pname in all_param_names:
-            apply_prefix_combo.Items.Add(pname)
-            apply_name_combo.Items.Add(pname)
-            apply_suffix_combo.Items.Add(pname)
-
-        apply_prefix_combo.SelectedIndex = 0
-        apply_name_combo.SelectedIndex = 0
-        apply_suffix_combo.SelectedIndex = 0
-
-        apply_all_row.Children.Add(apply_prefix_combo)
-        apply_all_row.Children.Add(apply_name_combo)
-        apply_all_row.Children.Add(apply_suffix_combo)
-        host.Children.Add(apply_all_row)
-
-        self._apply_all_meta[apply_prefix_combo] = "prefix"
-        self._apply_all_meta[apply_name_combo] = "name"
-        self._apply_all_meta[apply_suffix_combo] = "suffix"
-        apply_prefix_combo.SelectionChanged += self._on_apply_all_changed
-        apply_name_combo.SelectionChanged += self._on_apply_all_changed
-        apply_suffix_combo.SelectionChanged += self._on_apply_all_changed
-
-        for row in self._row_data:
-            panel = StackPanel()
-            panel.Orientation = Orientation.Horizontal
-            panel.Margin = Thickness(0, 0, 0, 6)
-
-            label = TextBlock()
-            label.Text = row["circuit_label"]
-            label.Width = 420
-            label.Margin = Thickness(0, 0, 10, 0)
-            panel.Children.Add(label)
-
-            prefix_combo = ComboBox()
-            prefix_combo.Width = 180
-            prefix_combo.Margin = Thickness(0, 0, 10, 0)
-            prefix_combo.Items.Add(NO_CHANGE_OPTION)
-
-            name_combo = ComboBox()
-            name_combo.Width = 180
-            name_combo.Margin = Thickness(0, 0, 10, 0)
-            name_combo.Items.Add(NO_CHANGE_OPTION)
-
-            suffix_combo = ComboBox()
-            suffix_combo.Width = 180
-            suffix_combo.Items.Add(NO_CHANGE_OPTION)
-
-            if row["parameter_names"]:
-                for pname in row["parameter_names"]:
-                    prefix_combo.Items.Add(pname)
-                    name_combo.Items.Add(pname)
-                    suffix_combo.Items.Add(pname)
-
-            prefix_combo.SelectedIndex = 0
-            name_combo.SelectedIndex = 0
-            suffix_combo.SelectedIndex = 0
-
-            self._combos[row["circuit_id"]] = {
-                "prefix": prefix_combo,
-                "name": name_combo,
-                "suffix": suffix_combo
-            }
-
-            panel.Children.Add(prefix_combo)
-            panel.Children.Add(name_combo)
-            panel.Children.Add(suffix_combo)
-            host.Children.Add(panel)
-
-    def _set_combo_value_if_exists(self, combo, target_text):
-        if combo is None or not target_text:
-            return
-        for item in combo.Items:
-            if _safe_text(item) == target_text:
-                combo.SelectedItem = item
-                return
-
-    def _on_apply_all_changed(self, sender, args):
-        column_key = self._apply_all_meta.get(sender)
-        if not column_key:
-            return
-
-        selected = sender.SelectedItem
-        selected_text = _safe_text(selected)
-        if not selected_text or selected_text == NO_APPLY_ALL_OPTION:
-            return
-
-        for combo_group in self._combos.values():
-            combo = combo_group.get(column_key)
-            self._set_combo_value_if_exists(combo, selected_text)
-
-    def _on_apply(self, sender, args):
-        selections = {}
-
-        for row in self._row_data:
-            circuit_id = row["circuit_id"]
-            combo_group = self._combos.get(circuit_id)
-            if combo_group is None:
-                selections[circuit_id] = None
-                continue
-
-            prefix_selected = combo_group["prefix"].SelectedItem
-            name_selected = combo_group["name"].SelectedItem
-            suffix_selected = combo_group["suffix"].SelectedItem
-
-            if prefix_selected is None or name_selected is None or suffix_selected is None:
-                forms.alert("Select a parameter for every enabled circuit row.", exitscript=False)
-                return
-
-            prefix_name = _safe_text(prefix_selected)
-            name_name = _safe_text(name_selected)
-            suffix_name = _safe_text(suffix_selected)
-            if (not prefix_name) or (not name_name) or (not suffix_name):
-                forms.alert("Select a parameter for every enabled circuit row.", exitscript=False)
-                return
-
-            selections[circuit_id] = {
-                "prefix": prefix_name,
-                "name": name_name,
-                "suffix": suffix_name
-            }
-
-        self.selections = selections
-        self.DialogResult = True
-        self.Close()
-
-    def _on_cancel(self, sender, args):
-        self.DialogResult = False
-        self.Close()
-
-
 def _build_row_data(circuit_map):
     sorted_circuits = sorted(circuit_map.values(), key=lambda x: _get_circuit_sort_key(x["circuit"]))
     row_data = []
@@ -572,15 +389,612 @@ def _build_row_data(circuit_map):
         circuit = data["circuit"]
         source_elements = data["source_elements"]
         parameter_names = _get_common_text_parameters(source_elements)
+        panel_name = "No Panel"
+        try:
+            if circuit.BaseEquipment:
+                panel_name = _safe_text(circuit.BaseEquipment.Name) or "No Panel"
+        except Exception:
+            panel_name = "No Panel"
+        circuit_number = _safe_text(circuit.CircuitNumber) or "<unnamed>"
+        current_load_name = _safe_text(circuit.LoadName) or "<unnamed>"
+        selector_name = "{} | {} | {}".format(panel_name, circuit_number, current_load_name)
+
+        resolved_values = {}
+        for pname in parameter_names:
+            resolved_values[pname] = _resolve_preferred_param_value(source_elements, pname)
 
         row_data.append({
             "circuit_id": circuit.Id.IntegerValue,
             "circuit": circuit,
             "circuit_label": _format_circuit_label(circuit),
+            "selector_name": selector_name,
+            "sort_key": _get_circuit_sort_key(circuit),
             "source_elements": source_elements,
-            "parameter_names": parameter_names
+            "parameter_names": parameter_names,
+            "resolved_values": resolved_values,
+            "existing_name": _safe_text(circuit.LoadName),
         })
     return row_data
+
+
+def _token_to_label(token):
+    ttype = _safe_text(token.get("type"))
+    tval = _raw_text(token.get("value"))
+    if ttype == TOKEN_PARAM:
+        return "[Param] {}".format(tval)
+    if ttype == TOKEN_SEPARATOR:
+        return "[Sep] {}".format(tval.replace(" ", "<space>"))
+    if ttype == TOKEN_CUSTOM:
+        return "[Text] {}".format(tval)
+    return "[?] {}".format(tval)
+
+
+class _CircuitItem(object):
+    def __init__(self, circuit_id, display):
+        self.CircuitId = circuit_id
+        self.Display = display
+
+    def __str__(self):
+        return self.Display
+
+    def __unicode__(self):
+        return self.Display
+
+
+class _CircuitPreviewItem(object):
+    def __init__(self, circuit_id, display):
+        self.CircuitId = circuit_id
+        self.Display = display
+
+    def __str__(self):
+        return self.Display
+
+    def __unicode__(self):
+        return self.Display
+
+
+class CircuitStringBuilderWindow(forms.WPFWindow):
+    def __init__(self, xaml_path, row_data):
+        forms.WPFWindow.__init__(self, xaml_path)
+        self._row_data = row_data or []
+        self._rows_by_id = {}
+        self._states = {}
+        self._active_circuit_id = None
+        self._is_programmatic_preview_update = False
+        self._is_programmatic_selection_update = False
+        self._is_programmatic_preview_selection_update = False
+
+        self._config = script.get_config(CONFIG_KEY)
+        self._templates = self._load_templates_from_config()
+
+        self.result_names = {}
+        self.result_target_ids = []
+
+        for row in self._row_data:
+            cid = row["circuit_id"]
+            self._rows_by_id[cid] = row
+            self._states[cid] = {
+                "tokens": [],
+                "preview_text": row.get("existing_name", u""),
+                "manual_override": True,
+            }
+
+        self._bind_static_controls()
+        self._populate_circuits()
+        self._populate_templates_combo()
+        self._populate_quick_add_defaults()
+        self._refresh_active_circuit_views()
+        self._refresh_selected_preview_list()
+
+    def _bind_static_controls(self):
+        self._circuit_list = self.FindName("CircuitList")
+        self._active_circuit_text = self.FindName("ActiveCircuitText")
+        self._available_params = self.FindName("AvailableParamsList")
+        self._string_parts = self.FindName("StringPartsList")
+        self._preview_textbox = self.FindName("PreviewTextBox")
+        self._selected_preview_list = self.FindName("SelectedPreviewList")
+        self._custom_field_combo = self.FindName("CustomFieldCombo")
+        self._separator_combo = self.FindName("SeparatorCombo")
+        self._saved_template_combo = self.FindName("SavedTemplateCombo")
+        self._template_name_text = self.FindName("TemplateNameText")
+        self._increment_checkbox = self.FindName("IncrementSelectedCheckBox")
+
+    def _load_templates_from_config(self):
+        templates = getattr(self._config, "saved_templates", {})
+        if not isinstance(templates, dict):
+            return {}
+        cleaned = {}
+        for name, tokens in templates.items():
+            template_name = _safe_text(name)
+            if not template_name:
+                continue
+            cleaned[template_name] = _clone_tokens(tokens)
+        return cleaned
+
+    def _save_templates_to_config(self):
+        self._config.saved_templates = self._templates
+        script.save_config()
+
+    def _populate_quick_add_defaults(self):
+        if self._separator_combo is not None:
+            for item in [" ", "-", "_", "/", ".", ":"]:
+                self._separator_combo.Items.Add(item)
+            self._separator_combo.Text = "-"
+
+        if self._custom_field_combo is not None:
+            for item in ["", "EXISTING", "NEW", "SPARE"]:
+                self._custom_field_combo.Items.Add(item)
+            self._custom_field_combo.Text = ""
+
+    def _populate_templates_combo(self):
+        if self._saved_template_combo is None:
+            return
+        self._saved_template_combo.Items.Clear()
+        for tname in sorted(self._templates.keys(), key=lambda x: x.lower()):
+            self._saved_template_combo.Items.Add(tname)
+        if self._saved_template_combo.Items.Count > 0:
+            self._saved_template_combo.SelectedIndex = 0
+
+    def _populate_circuits(self):
+        if self._circuit_list is None:
+            return
+
+        self._is_programmatic_selection_update = True
+        self._circuit_list.Items.Clear()
+
+        for row in self._row_data:
+            display = row.get("selector_name", "<unnamed>")
+            self._circuit_list.Items.Add(_CircuitItem(row["circuit_id"], display))
+
+        if self._circuit_list.Items.Count > 0:
+            first_item = self._circuit_list.Items[0]
+            self._circuit_list.SelectedItems.Add(first_item)
+            self._active_circuit_id = getattr(first_item, "CircuitId", None)
+
+        self._is_programmatic_selection_update = False
+
+    def _get_selected_circuit_ids(self):
+        selected_ids = []
+        if self._circuit_list is None:
+            return selected_ids
+        for item in self._circuit_list.SelectedItems:
+            cid = getattr(item, "CircuitId", None)
+            if cid is not None:
+                selected_ids.append(cid)
+        return selected_ids
+
+    def _get_active_row(self):
+        if self._active_circuit_id is None:
+            return None
+        return self._rows_by_id.get(self._active_circuit_id)
+
+    def _get_active_state(self):
+        if self._active_circuit_id is None:
+            return None
+        return self._states.get(self._active_circuit_id)
+
+    def _compute_preview_from_tokens(self, circuit_id, tokens):
+        row = self._rows_by_id.get(circuit_id)
+        if not row:
+            return u""
+        resolved_values = row.get("resolved_values", {})
+
+        parts = []
+        for token in tokens or []:
+            ttype = _safe_text(token.get("type"))
+            tval = _raw_text(token.get("value"))
+            if ttype == TOKEN_PARAM:
+                parts.append(_raw_text(resolved_values.get(tval, u"")))
+            elif ttype in (TOKEN_SEPARATOR, TOKEN_CUSTOM):
+                parts.append(tval)
+        return u"".join(parts)
+
+    def _get_preview_for_circuit(self, circuit_id):
+        state = self._states.get(circuit_id)
+        if not state:
+            return u""
+        if state.get("manual_override", False):
+            return _raw_text(state.get("preview_text", u""))
+        computed = self._compute_preview_from_tokens(circuit_id, state.get("tokens", []))
+        state["preview_text"] = computed
+        return computed
+
+    def _set_preview_textbox(self, text_value):
+        if self._preview_textbox is None:
+            return
+        self._is_programmatic_preview_update = True
+        self._preview_textbox.Text = _raw_text(text_value)
+        self._is_programmatic_preview_update = False
+
+    def _refresh_active_circuit_views(self):
+        row = self._get_active_row()
+        state = self._get_active_state()
+        if not row or not state:
+            if self._active_circuit_text is not None:
+                self._active_circuit_text.Text = "Active Circuit: (none)"
+            if self._available_params is not None:
+                self._available_params.Items.Clear()
+            if self._string_parts is not None:
+                self._string_parts.Items.Clear()
+            self._set_preview_textbox(u"")
+            return
+
+        if self._active_circuit_text is not None:
+            self._active_circuit_text.Text = "Active Circuit: {}".format(row["circuit_label"])
+
+        if self._available_params is not None:
+            self._available_params.Items.Clear()
+            for pname in row.get("parameter_names", []):
+                self._available_params.Items.Add(pname)
+
+        if self._string_parts is not None:
+            self._string_parts.Items.Clear()
+            for token in state.get("tokens", []):
+                self._string_parts.Items.Add(_token_to_label(token))
+
+        self._set_preview_textbox(self._get_preview_for_circuit(self._active_circuit_id))
+
+    def _refresh_selected_preview_list(self):
+        if self._selected_preview_list is None:
+            return
+        self._is_programmatic_preview_selection_update = True
+        self._selected_preview_list.Items.Clear()
+
+        selected_ids = self._get_selected_circuit_ids()
+        if not selected_ids and self._active_circuit_id is not None:
+            selected_ids = [self._active_circuit_id]
+
+        selected_rows = []
+        for cid in selected_ids:
+            row = self._rows_by_id.get(cid)
+            if row:
+                selected_rows.append(row)
+        selected_rows.sort(key=lambda r: r["sort_key"])
+
+        preview_names = {}
+        for row in selected_rows:
+            cid = row["circuit_id"]
+            preview_names[cid] = _safe_text(self._get_preview_for_circuit(cid))
+
+        if self._increment_checkbox is not None and bool(self._increment_checkbox.IsChecked):
+            preview_names = self._apply_increment_suffix(preview_names)
+
+        for row in selected_rows:
+            cid = row["circuit_id"]
+            preview_text = preview_names.get(cid, _safe_text(self._get_preview_for_circuit(cid)))
+            item = _CircuitPreviewItem(cid, "{} -> {}".format(row["circuit_label"], preview_text or ""))
+            self._selected_preview_list.Items.Add(item)
+            if self._active_circuit_id is not None and cid == self._active_circuit_id:
+                self._selected_preview_list.SelectedItem = item
+
+        self._is_programmatic_preview_selection_update = False
+
+    def _ensure_combo_has_value(self, combo, value):
+        if combo is None:
+            return
+        raw = _raw_text(value)
+        for item in combo.Items:
+            if _raw_text(item) == raw:
+                return
+        combo.Items.Add(raw)
+
+    def _append_token_to_active(self, token_type, token_value):
+        state = self._get_active_state()
+        if not state:
+            return
+
+        if token_type == TOKEN_PARAM:
+            value = _safe_text(token_value)
+            if not value:
+                return
+        else:
+            value = _raw_text(token_value)
+            if value == u"":
+                return
+
+        tokens = state.get("tokens", [])
+        tokens.append({"type": token_type, "value": value})
+        state["tokens"] = tokens
+        state["manual_override"] = False
+        state["preview_text"] = self._compute_preview_from_tokens(self._active_circuit_id, tokens)
+        self._refresh_active_circuit_views()
+        self._refresh_selected_preview_list()
+
+    def _apply_tokens_to_targets(self, target_ids):
+        state = self._get_active_state()
+        if not state:
+            return
+        source_tokens = _clone_tokens(state.get("tokens", []))
+        if not source_tokens:
+            forms.alert("Active circuit has no string parts to apply.", exitscript=False)
+            return
+
+        for cid in target_ids:
+            if cid not in self._states:
+                continue
+            target_state = self._states[cid]
+            target_state["tokens"] = _clone_tokens(source_tokens)
+            target_state["manual_override"] = False
+            target_state["preview_text"] = self._compute_preview_from_tokens(cid, source_tokens)
+
+        self._refresh_active_circuit_views()
+        self._refresh_selected_preview_list()
+
+    def _get_selected_string_part_indices(self):
+        indices = []
+        if self._string_parts is None:
+            return indices
+        for item in self._string_parts.SelectedItems:
+            try:
+                idx = self._string_parts.Items.IndexOf(item)
+            except Exception:
+                idx = -1
+            if idx >= 0:
+                indices.append(idx)
+        return sorted(indices)
+
+    def _apply_increment_suffix(self, names_by_circuit):
+        ordered_ids = sorted(names_by_circuit.keys(), key=lambda cid: self._rows_by_id[cid]["sort_key"])
+        grouped = OrderedDict()
+        for cid in ordered_ids:
+            base_name = _safe_text(names_by_circuit.get(cid))
+            if not base_name:
+                continue
+            if base_name not in grouped:
+                grouped[base_name] = []
+            grouped[base_name].append(cid)
+
+        result = dict(names_by_circuit)
+        for base_name, circuit_ids in grouped.items():
+            if len(circuit_ids) <= 1:
+                continue
+            index = 1
+            for cid in circuit_ids:
+                if index == 1:
+                    result[cid] = base_name
+                else:
+                    result[cid] = u"{} #{}".format(base_name, index)
+                index += 1
+        return result
+
+    # --- UI Event Handlers ---
+    def CircuitList_SelectionChanged(self, sender, args):
+        if self._is_programmatic_selection_update:
+            return
+
+        selected_ids = self._get_selected_circuit_ids()
+        if not selected_ids:
+            if self._circuit_list is not None and self._circuit_list.Items.Count > 0:
+                self._is_programmatic_selection_update = True
+                fallback = self._circuit_list.Items[0]
+                self._circuit_list.SelectedItems.Add(fallback)
+                self._is_programmatic_selection_update = False
+                fallback_id = getattr(fallback, "CircuitId", None)
+                selected_ids = [fallback_id] if fallback_id is not None else []
+
+        self._active_circuit_id = selected_ids[0] if selected_ids else None
+        self._refresh_active_circuit_views()
+        self._refresh_selected_preview_list()
+
+    def SelectedPreviewList_SelectionChanged(self, sender, args):
+        if self._is_programmatic_preview_selection_update:
+            return
+        if self._selected_preview_list is None:
+            return
+
+        selected_item = self._selected_preview_list.SelectedItem
+        selected_circuit_id = getattr(selected_item, "CircuitId", None)
+        if selected_circuit_id is None:
+            return
+        if selected_circuit_id == self._active_circuit_id:
+            return
+
+        self._active_circuit_id = selected_circuit_id
+        self._refresh_active_circuit_views()
+        self._refresh_selected_preview_list()
+
+    def IncrementSelectedCheckBox_Changed(self, sender, args):
+        self._refresh_selected_preview_list()
+
+    def AddToStringButton_Click(self, sender, args):
+        if self._available_params is None:
+            return
+        selected = self._available_params.SelectedItem
+        if selected is None:
+            forms.alert("Select a parameter first.", exitscript=False)
+            return
+        self._append_token_to_active(TOKEN_PARAM, selected)
+
+    def AddCustomFieldButton_Click(self, sender, args):
+        if self._custom_field_combo is None:
+            return
+        custom_value = _raw_text(self._custom_field_combo.Text)
+        if custom_value == u"":
+            forms.alert("Enter a custom field value first.", exitscript=False)
+            return
+        self._ensure_combo_has_value(self._custom_field_combo, custom_value)
+        self._append_token_to_active(TOKEN_CUSTOM, custom_value)
+
+    def AddSeparatorButton_Click(self, sender, args):
+        if self._separator_combo is None:
+            return
+        separator_value = _raw_text(self._separator_combo.Text)
+        if separator_value == u"":
+            forms.alert("Enter a separator first.", exitscript=False)
+            return
+        self._ensure_combo_has_value(self._separator_combo, separator_value)
+        self._append_token_to_active(TOKEN_SEPARATOR, separator_value)
+
+    def RemoveFromStringButton_Click(self, sender, args):
+        state = self._get_active_state()
+        if not state:
+            return
+        indices = self._get_selected_string_part_indices()
+        if not indices:
+            forms.alert("Select one or more string parts to remove.", exitscript=False)
+            return
+
+        tokens = state.get("tokens", [])
+        for idx in reversed(indices):
+            if 0 <= idx < len(tokens):
+                tokens.pop(idx)
+        state["tokens"] = tokens
+        state["manual_override"] = False
+        state["preview_text"] = self._compute_preview_from_tokens(self._active_circuit_id, tokens)
+        self._refresh_active_circuit_views()
+        self._refresh_selected_preview_list()
+
+    def MoveUpButton_Click(self, sender, args):
+        state = self._get_active_state()
+        if not state or self._string_parts is None:
+            return
+        selected_index = self._string_parts.SelectedIndex
+        if selected_index <= 0:
+            return
+
+        tokens = state.get("tokens", [])
+        tokens[selected_index - 1], tokens[selected_index] = tokens[selected_index], tokens[selected_index - 1]
+        state["tokens"] = tokens
+        state["manual_override"] = False
+        state["preview_text"] = self._compute_preview_from_tokens(self._active_circuit_id, tokens)
+        self._refresh_active_circuit_views()
+        self._string_parts.SelectedIndex = selected_index - 1
+        self._refresh_selected_preview_list()
+
+    def MoveDownButton_Click(self, sender, args):
+        state = self._get_active_state()
+        if not state or self._string_parts is None:
+            return
+        selected_index = self._string_parts.SelectedIndex
+        tokens = state.get("tokens", [])
+        if selected_index < 0 or selected_index >= len(tokens) - 1:
+            return
+
+        tokens[selected_index + 1], tokens[selected_index] = tokens[selected_index], tokens[selected_index + 1]
+        state["tokens"] = tokens
+        state["manual_override"] = False
+        state["preview_text"] = self._compute_preview_from_tokens(self._active_circuit_id, tokens)
+        self._refresh_active_circuit_views()
+        self._string_parts.SelectedIndex = selected_index + 1
+        self._refresh_selected_preview_list()
+
+    def ClearStringButton_Click(self, sender, args):
+        state = self._get_active_state()
+        if not state:
+            return
+        state["tokens"] = []
+        state["manual_override"] = False
+        state["preview_text"] = u""
+        self._refresh_active_circuit_views()
+        self._refresh_selected_preview_list()
+
+    def ApplyToSelectedButton_Click(self, sender, args):
+        selected_ids = self._get_selected_circuit_ids()
+        if not selected_ids:
+            forms.alert("Select one or more circuits first.", exitscript=False)
+            return
+        self._apply_tokens_to_targets(selected_ids)
+
+    def ApplyToAllButton_Click(self, sender, args):
+        self._apply_tokens_to_targets([row["circuit_id"] for row in self._row_data])
+
+    def SaveTemplateButton_Click(self, sender, args):
+        state = self._get_active_state()
+        if not state:
+            return
+        tokens = _clone_tokens(state.get("tokens", []))
+        if not tokens:
+            forms.alert("Active circuit has no string parts to save.", exitscript=False)
+            return
+
+        template_name = u""
+        if self._template_name_text is not None:
+            template_name = _safe_text(self._template_name_text.Text)
+        if not template_name and self._saved_template_combo is not None:
+            template_name = _safe_text(self._saved_template_combo.Text)
+
+        if not template_name:
+            forms.alert("Enter a template name first.", exitscript=False)
+            return
+
+        self._templates[template_name] = tokens
+        self._save_templates_to_config()
+        self._populate_templates_combo()
+        if self._saved_template_combo is not None:
+            self._saved_template_combo.SelectedItem = template_name
+        if self._template_name_text is not None:
+            self._template_name_text.Text = template_name
+
+    def LoadTemplateButton_Click(self, sender, args):
+        if self._saved_template_combo is None:
+            return
+        template_name = _safe_text(self._saved_template_combo.Text)
+        if not template_name:
+            forms.alert("Select a saved template first.", exitscript=False)
+            return
+        if template_name not in self._templates:
+            forms.alert("Template '{}' was not found.".format(template_name), exitscript=False)
+            return
+
+        state = self._get_active_state()
+        if not state:
+            return
+        tokens = _clone_tokens(self._templates.get(template_name, []))
+        state["tokens"] = tokens
+        state["manual_override"] = False
+        state["preview_text"] = self._compute_preview_from_tokens(self._active_circuit_id, tokens)
+        self._refresh_active_circuit_views()
+        self._refresh_selected_preview_list()
+        if self._template_name_text is not None:
+            self._template_name_text.Text = template_name
+
+    def DeleteTemplateButton_Click(self, sender, args):
+        if self._saved_template_combo is None:
+            return
+        template_name = _safe_text(self._saved_template_combo.Text)
+        if not template_name:
+            forms.alert("Select a saved template first.", exitscript=False)
+            return
+        if template_name not in self._templates:
+            forms.alert("Template '{}' was not found.".format(template_name), exitscript=False)
+            return
+
+        del self._templates[template_name]
+        self._save_templates_to_config()
+        self._populate_templates_combo()
+        if self._template_name_text is not None:
+            self._template_name_text.Text = ""
+
+    def PreviewTextBox_TextChanged(self, sender, args):
+        if self._is_programmatic_preview_update:
+            return
+        state = self._get_active_state()
+        if not state:
+            return
+        state["preview_text"] = _raw_text(self._preview_textbox.Text if self._preview_textbox else u"")
+        state["manual_override"] = True
+        self._refresh_selected_preview_list()
+
+    def RenameButton_Click(self, sender, args):
+        target_ids = self._get_selected_circuit_ids()
+        if not target_ids:
+            target_ids = [row["circuit_id"] for row in self._row_data]
+
+        names = {}
+        for cid in target_ids:
+            names[cid] = _safe_text(self._get_preview_for_circuit(cid))
+
+        if self._increment_checkbox is not None and bool(self._increment_checkbox.IsChecked):
+            names = self._apply_increment_suffix(names)
+
+        self.result_target_ids = target_ids
+        self.result_names = names
+        self.DialogResult = True
+        self.Close()
+
+    def CancelButton_Click(self, sender, args):
+        self.DialogResult = False
+        self.Close()
 
 
 def _circuit_ref(circuit):
@@ -602,12 +1016,16 @@ def main():
     if not row_data:
         forms.alert("No valid circuits found from the current selection.", exitscript=True)
 
-    ui_window = CircuitParameterSelectionWindow(XAML_PATH, row_data)
+    ui_window = CircuitStringBuilderWindow(XAML_PATH, row_data)
     result = ui_window.show_dialog()
     if not result:
         script.exit()
 
-    selected_parameters = ui_window.selections or {}
+    rows_by_id = dict((row["circuit_id"], row) for row in row_data)
+    target_ids = ui_window.result_target_ids or []
+    names_by_id = ui_window.result_names or {}
+    if not target_ids:
+        forms.alert("No circuits selected for rename.", exitscript=True)
 
     results = []
     renamed_count = 0
@@ -615,144 +1033,45 @@ def main():
     unchanged_count = 0
 
     with revit.Transaction("Rename Circuits by Device Parameter"):
-        for row in row_data:
-            circuit = row["circuit"]
-            circuit_id = row["circuit_id"]
-            selected_parts = selected_parameters.get(circuit_id) or {}
-            prefix_param = selected_parts.get("prefix", NO_CHANGE_OPTION)
-            name_param = selected_parts.get("name", NO_CHANGE_OPTION)
-            suffix_param = selected_parts.get("suffix", NO_CHANGE_OPTION)
-            previous_name = _safe_text(circuit.LoadName)
-
-            if prefix_param == NO_CHANGE_OPTION and name_param == NO_CHANGE_OPTION and suffix_param == NO_CHANGE_OPTION:
-                unchanged_count += 1
-                results.append([
-                    _circuit_ref(circuit),
-                    prefix_param,
-                    name_param,
-                    suffix_param,
-                    previous_name or "-",
-                    "-",
-                    "No Change"
-                ])
+        for cid in target_ids:
+            row = rows_by_id.get(cid)
+            if not row:
                 continue
 
-            prefix_value = u""
-            suffix_value = u""
+            circuit = row["circuit"]
+            previous_name = _safe_text(circuit.LoadName)
+            new_name = _safe_text(names_by_id.get(cid))
 
-            if prefix_param != NO_CHANGE_OPTION:
-                prefix_value, prefix_error = _resolve_single_name(row["source_elements"], prefix_param)
-                if prefix_error:
-                    skipped_count += 1
-                    results.append([
-                        _circuit_ref(circuit),
-                        prefix_param,
-                        name_param,
-                        suffix_param,
-                        previous_name or "-",
-                        "-",
-                        "Skipped: {}".format(prefix_error)
-                    ])
-                    continue
-
-            if suffix_param != NO_CHANGE_OPTION:
-                suffix_value, suffix_error = _resolve_single_name(row["source_elements"], suffix_param)
-                if suffix_error:
-                    skipped_count += 1
-                    results.append([
-                        _circuit_ref(circuit),
-                        prefix_param,
-                        name_param,
-                        suffix_param,
-                        previous_name or "-",
-                        "-",
-                        "Skipped: {}".format(suffix_error)
-                    ])
-                    continue
-
-            if name_param == NO_CHANGE_OPTION:
-                base_name = previous_name
-            else:
-                base_name, name_error = _resolve_single_name(row["source_elements"], name_param)
-                if name_error:
-                    skipped_count += 1
-                    results.append([
-                        _circuit_ref(circuit),
-                        prefix_param,
-                        name_param,
-                        suffix_param,
-                        previous_name or "-",
-                        "-",
-                        "Skipped: {}".format(name_error)
-                    ])
-                    continue
-
-            new_name = u"{}{}{}".format(prefix_value or u"", base_name or u"", suffix_value or u"").strip()
             if not new_name:
                 skipped_count += 1
-                results.append([
-                    _circuit_ref(circuit),
-                    prefix_param,
-                    name_param,
-                    suffix_param,
-                    previous_name or "-",
-                    "-",
-                    "Skipped: Resulting name is empty."
-                ])
+                results.append([_circuit_ref(circuit), previous_name or "-", "-", "Skipped: Resulting name is empty."])
                 continue
 
             if new_name == previous_name:
                 unchanged_count += 1
-                results.append([
-                    _circuit_ref(circuit),
-                    prefix_param,
-                    name_param,
-                    suffix_param,
-                    previous_name or "-",
-                    new_name,
-                    "No Change"
-                ])
+                results.append([_circuit_ref(circuit), previous_name or "-", new_name, "No Change"])
                 continue
 
             set_error = _set_circuit_name(circuit, new_name)
             if set_error:
                 skipped_count += 1
-                results.append([
-                    _circuit_ref(circuit),
-                    prefix_param,
-                    name_param,
-                    suffix_param,
-                    previous_name or "-",
-                    new_name,
-                    "Skipped: {}".format(set_error)
-                ])
+                results.append([_circuit_ref(circuit), previous_name or "-", new_name, "Skipped: {}".format(set_error)])
                 continue
 
             renamed_count += 1
-            results.append([
-                _circuit_ref(circuit),
-                prefix_param,
-                name_param,
-                suffix_param,
-                previous_name or "-",
-                new_name,
-                "Renamed"
-            ])
+            results.append([_circuit_ref(circuit), previous_name or "-", new_name, "Renamed"])
 
     output.print_md("### Rename Circuits by Device Parameter")
     output.print_md(
         "Processed {} circuit(s): {} renamed, {} skipped, {} unchanged.".format(
-            len(row_data), renamed_count, skipped_count, unchanged_count
+            len(target_ids), renamed_count, skipped_count, unchanged_count
         )
     )
-    output.print_table(
-        results,
-        ["Circuit", "Prefix Param", "Name Param", "Suffix Param", "Previous Name", "New Name", "Status"]
-    )
+    output.print_table(results, ["Circuit", "Previous Name", "New Name", "Status"])
 
     forms.alert(
         "Processed {} circuit(s).\nRenamed: {}\nSkipped: {}\nNo Change: {}".format(
-            len(row_data), renamed_count, skipped_count, unchanged_count
+            len(target_ids), renamed_count, skipped_count, unchanged_count
         ),
         title="Rename Circuits by Device Parameter",
         exitscript=False
@@ -761,4 +1080,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
