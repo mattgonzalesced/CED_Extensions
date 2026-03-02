@@ -84,7 +84,7 @@ def _load_checker():
 
 
 def _on_doc_sync(sender, args):
-    global _IS_RUNNING
+    global _IS_RUNNING, _MODULE
     doc = None
     try:
         doc = getattr(args, "Document", None)
@@ -107,7 +107,18 @@ def _on_doc_sync(sender, args):
     try:
         _IS_RUNNING = True
         _set_env(ENV_RUNNING_KEY, "1")
-        checker.run_sync_check(doc)
+        try:
+            checker.run_sync_check(doc, modeless=True)
+        except TypeError as exc:
+            logger = script.get_logger()
+            logger.warning(
+                "Parent conflict checker rejected modeless arg (%s); reloading module and retrying modeless.",
+                exc,
+            )
+            _MODULE = None
+            checker = _load_checker()
+            if checker is not None:
+                checker.run_sync_check(doc, modeless=True)
     except Exception as exc:
         logger = script.get_logger()
         logger.warning("Parent param conflict check failed: %s", exc)

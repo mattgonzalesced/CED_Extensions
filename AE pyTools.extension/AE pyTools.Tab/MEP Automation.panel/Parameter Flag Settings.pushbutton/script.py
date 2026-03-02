@@ -60,7 +60,7 @@ def main():
             forms.alert("No active document detected.", title=TITLE)
             return
         try:
-            module.run_sync_check(doc, bypass_cooldown=True)
+            module.run_sync_check(doc, bypass_cooldown=True, modeless=True)
         except TypeError:
             module.run_sync_check(doc)
 

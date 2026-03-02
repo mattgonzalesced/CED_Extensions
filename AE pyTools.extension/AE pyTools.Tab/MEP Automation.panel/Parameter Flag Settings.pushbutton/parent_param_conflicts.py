@@ -20,6 +20,7 @@ from Autodesk.Revit.DB import (
     StorageType,
     Transaction,
 )
+from System.Collections.Generic import List
 
 LIB_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "CEDLib.lib")
@@ -62,6 +63,7 @@ ENV_RUNNING_KEY = "ced_parent_param_conflict_running"
 ENV_LAST_RUN_KEY = "ced_parent_param_conflict_last_run"
 LOCK_WINDOW_SECONDS = 60.0
 LOCK_PAYLOAD_KEY = "parent_param_conflicts_lock"
+_MODELLESS_WINDOW = None
 
 def _get_doc(doc=None):
     if doc is not None:
@@ -1009,27 +1011,137 @@ def _load_ui_module():
         return None
 
 
-def run_sync_check(doc, bypass_cooldown=False):
-    if doc is None or getattr(doc, "IsFamilyDocument", False):
-        return
-    if not get_setting(default=True, doc=doc):
-        return
+def _build_conflict_payload(doc):
     try:
         _, data = load_active_yaml_data(doc)
     except Exception:
+        return [], []
+    conflicts = collect_conflicts(doc, data) or []
+    param_keys = sorted({item.get("param_key") for item in conflicts if item.get("param_key")})
+    return conflicts, param_keys
+
+
+def _apply_conflict_decisions(doc, conflicts, decisions):
+    if not conflicts or not decisions:
+        return {"updated_child": 0, "updated_parent": 0, "skipped": 0}
+    counts = resolve_conflicts(doc, conflicts, decisions)
+    summary = [
+        "Updated child parameters: {}".format(counts.get("updated_child", 0)),
+        "Updated parent parameters: {}".format(counts.get("updated_parent", 0)),
+        "Skipped: {}".format(counts.get("skipped", 0)),
+        "",
+        "Note: changes were applied after sync; sync again to publish updates.",
+    ]
+    forms.alert("\n".join(summary), title="Parent Parameter Conflicts")
+    return counts
+
+
+def _select_conflict_target(doc, conflict, target):
+    uidoc = getattr(revit, "uidoc", None)
+    if uidoc is None or conflict is None:
         return
-    conflicts = collect_conflicts(doc, data)
+    key = "parent_id" if target == "parent" else "child_id"
+    raw = conflict.get(key)
+    if raw in (None, ""):
+        return
+    try:
+        elem_id = ElementId(int(raw))
+    except Exception:
+        return
+    ids = List[ElementId]()
+    ids.Add(elem_id)
+    try:
+        uidoc.Selection.SetElementIds(ids)
+    except Exception:
+        return
+    try:
+        uidoc.ShowElements(ids)
+    except Exception:
+        pass
+
+
+def _on_modeless_window_closed():
+    global _MODELLESS_WINDOW
+    _MODELLESS_WINDOW = None
+    _release_ui_lock()
+
+
+def _show_modeless_window(ui_module, xaml_path, conflicts, param_keys):
+    global _MODELLESS_WINDOW
+    if _MODELLESS_WINDOW is not None:
+        try:
+            if bool(_MODELLESS_WINDOW.IsVisible):
+                _MODELLESS_WINDOW.request_refresh(force=True)
+                try:
+                    _MODELLESS_WINDOW.Activate()
+                except Exception:
+                    pass
+                return True
+        except Exception:
+            _MODELLESS_WINDOW = None
+
+    try:
+        window = ui_module.ParentParamConflictsWindow(
+            xaml_path,
+            conflicts,
+            param_keys,
+            modeless=True,
+            refresh_callback=_build_conflict_payload,
+            apply_callback=_apply_conflict_decisions,
+            select_callback=_select_conflict_target,
+            close_callback=_on_modeless_window_closed,
+        )
+    except Exception:
+        _MODELLESS_WINDOW = None
+        return False
+
+    _MODELLESS_WINDOW = window
+    try:
+        window.Show()
+    except Exception:
+        try:
+            window.show()
+        except Exception:
+            _MODELLESS_WINDOW = None
+            return False
+    return True
+
+
+def run_sync_check(doc, bypass_cooldown=False, modeless=True):
+    global _MODELLESS_WINDOW
+    if doc is None or getattr(doc, "IsFamilyDocument", False):
+        return
+    if modeless and _MODELLESS_WINDOW is not None:
+        try:
+            if bool(_MODELLESS_WINDOW.IsVisible):
+                _MODELLESS_WINDOW.request_refresh(force=True)
+                try:
+                    _MODELLESS_WINDOW.Activate()
+                except Exception:
+                    pass
+                return
+        except Exception:
+            _MODELLESS_WINDOW = None
+    if not get_setting(default=True, doc=doc):
+        return
+    conflicts, param_keys = _build_conflict_payload(doc)
     if not conflicts:
         return
     if not _should_open_ui(doc, bypass_cooldown=bypass_cooldown):
         return
+    ui_module = _load_ui_module()
+    if ui_module is None:
+        _release_ui_lock()
+        forms.alert("Parent parameter conflicts found, but UI failed to load.", title="Parent Parameter Conflicts")
+        return
+    xaml_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "ParentParamConflictsWindow.xaml"))
+    if modeless:
+        opened = _show_modeless_window(ui_module, xaml_path, conflicts, param_keys)
+        if not opened:
+            _release_ui_lock()
+            forms.alert("Parent parameter conflicts found, but modeless UI failed to open.", title="Parent Parameter Conflicts")
+        return
     try:
-        param_keys = sorted({item.get("param_key") for item in conflicts if item.get("param_key")})
-        ui_module = _load_ui_module()
-        if ui_module is None:
-            forms.alert("Parent parameter conflicts found, but UI failed to load.", title="Parent Parameter Conflicts")
-            return
-        xaml_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "ParentParamConflictsWindow.xaml"))
         window = ui_module.ParentParamConflictsWindow(xaml_path, conflicts, param_keys)
         result = window.show_dialog()
         if not result:
@@ -1037,15 +1149,7 @@ def run_sync_check(doc, bypass_cooldown=False):
         decisions = getattr(window, "decisions", {}) or {}
         if not decisions:
             return
-        counts = resolve_conflicts(doc, conflicts, decisions)
-        summary = [
-            "Updated child parameters: {}".format(counts.get("updated_child", 0)),
-            "Updated parent parameters: {}".format(counts.get("updated_parent", 0)),
-            "Skipped: {}".format(counts.get("skipped", 0)),
-            "",
-            "Note: changes were applied after sync; sync again to publish updates.",
-        ]
-        forms.alert("\n".join(summary), title="Parent Parameter Conflicts")
+        _apply_conflict_decisions(doc, conflicts, decisions)
     finally:
         _release_ui_lock()
 
