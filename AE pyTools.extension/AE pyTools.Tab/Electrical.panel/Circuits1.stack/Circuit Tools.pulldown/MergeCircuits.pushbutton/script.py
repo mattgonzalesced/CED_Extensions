@@ -205,7 +205,29 @@ def dedupe_circuits(circuits):
     return unique
 
 
-def get_selected_circuits():
+def get_selected_circuits(active_view=None):
+    selected_circuits = []
+    if active_view is None:
+        active_view = uidoc.ActiveView
+
+    # In panel schedule views, highlighted rows/cells resolve to circuit element ids.
+    if isinstance(active_view, DBE.PanelScheduleView):
+        try:
+            selected_ids = uidoc.Selection.GetElementIds()
+        except Exception:
+            selected_ids = []
+
+        for element_id in selected_ids:
+            try:
+                element = doc.GetElement(element_id)
+            except Exception:
+                element = None
+            if isinstance(element, DBE.ElectricalSystem):
+                selected_circuits.append(element)
+
+        if selected_circuits:
+            return dedupe_circuits(selected_circuits)
+
     selection = revit.get_selection().elements
     if not selection:
         return []
@@ -265,21 +287,22 @@ def main():
 
     all_circuit_ids = set([c.Id.IntegerValue for c in all_circuits])
 
-    selected_circuits = get_selected_circuits()
+    selected_circuits = get_selected_circuits(active_view=active_view)
     selected_circuits = [
         c for c in selected_circuits
         if c.Id.IntegerValue in all_circuit_ids
         and c.CircuitType not in [DBE.CircuitType.Spare, DBE.CircuitType.Space]
     ]
 
+    if not selected_circuits:
+        forms.alert(
+            "No selection found. Please select circuit(s) or circuited element(s), then run MergeCircuits again.",
+            exitscript=True
+        )
+
     used_selection = bool(selected_circuits)
 
-    if used_selection:
-        main_circuit = select_circuit(selected_circuits, "Select Main Circuit (from Selection)", multiselect=False)[0]
-    elif panel_schedule_mode:
-        main_circuit = select_circuit(all_circuits, "Select Main Circuit (from Panel Schedule)", multiselect=False)[0]
-    else:
-        main_circuit = select_circuit(all_circuits, "Select Main Circuit", multiselect=False)[0]
+    main_circuit = select_circuit(selected_circuits, "Select Main Circuit (from Selection)", multiselect=False)[0]
 
     if main_circuit.CircuitType in [DBE.CircuitType.Spare, DBE.CircuitType.Space]:
         forms.alert("Main circuit cannot be a spare or space.", exitscript=True)
@@ -303,8 +326,8 @@ def main():
     report_rows_by_id = None
     report_order_ids = []
 
-    if used_selection or panel_schedule_mode:
-        report_scope_circuits = selected_circuits if used_selection else all_circuits
+    if used_selection:
+        report_scope_circuits = selected_circuits
         report_rows_by_id = {}
         merge_candidates = []
         for ckt in report_scope_circuits:
@@ -338,17 +361,10 @@ def main():
                     output.linkify(ckt.Id)
                 )
         if not merge_candidates:
-            if used_selection:
-                forms.alert("No compatible selected circuits found to merge into the main circuit.", exitscript=True)
-            else:
-                forms.alert(
-                    "No compatible circuits found in the active panel schedule to merge into the main circuit.",
-                    exitscript=True
-                )
+            forms.alert("No compatible selected circuits found to merge into the main circuit.", exitscript=True)
         circuits_to_merge = select_circuit(
             merge_candidates,
-            "Select Circuits to Merge Into Main (from Selection)" if used_selection
-            else "Select Circuits to Merge Into Main (from Panel Schedule)",
+            "Select Circuits to Merge Into Main (from Selection)",
             multiselect=True
         )
     else:
@@ -472,8 +488,6 @@ def main():
 
     if used_selection:
         output.print_md("Selection mode: {} circuit(s) detected from current selection.".format(len(selected_circuits)))
-    elif panel_schedule_mode:
-        output.print_md("Panel schedule mode: {} circuit(s) detected in active panel schedule.".format(len(all_circuits)))
 
     if report_rows_by_id is not None:
         result_rows = [report_rows_by_id[cid] for cid in report_order_ids if cid in report_rows_by_id]
