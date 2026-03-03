@@ -44,6 +44,13 @@ def _normalize(text):
     return " ".join((text or "").strip().upper().split())
 
 
+def _strip_trailing_letter(value):
+    text = (value or "").strip()
+    if len(text) >= 2 and text[-1].isalpha():
+        return text[:-1].strip()
+    return text
+
+
 def _strip_case_power_prefix(load_name):
     text = (load_name or "").strip()
     if not text:
@@ -84,11 +91,12 @@ def _collect_case_marks(doc):
         raw_mark = (_identity_value(elem) or "").strip()
         if not raw_mark:
             continue
-        norm_mark = _normalize(raw_mark)
+        base_mark = _strip_trailing_letter(raw_mark)
+        norm_mark = _normalize(base_mark)
         if not norm_mark:
             continue
         if norm_mark not in marks:
-            marks[norm_mark] = raw_mark
+            marks[norm_mark] = base_mark
     return marks
 
 
