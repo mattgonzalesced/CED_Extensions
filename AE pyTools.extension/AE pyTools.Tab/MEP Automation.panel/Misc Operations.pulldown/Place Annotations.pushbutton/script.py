@@ -48,6 +48,26 @@ except NameError:
     basestring = str
 
 
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 def _build_repository(data):
     legacy_profiles = equipment_defs_to_legacy(data.get("equipment_definitions") or [])
     eq_defs = ProfileRepository._parse_profiles(legacy_profiles)
@@ -663,7 +683,7 @@ def _place_tag_entries(entries, engine, host_lookup, symbol_lookup, placed_tag_p
 
             tag_key = tag_key_from_dict(tag_def)
             for inst in hosts:
-                host_id = getattr(getattr(inst, "Id", None), "IntegerValue", None)
+                host_id = _element_id_value(getattr(inst, "Id", None), None)
                 host_key = (host_id, tag_key)
                 if host_key in placed_tag_pairs:
                     continue
@@ -702,7 +722,7 @@ def _place_text_note_entries(entries, engine, host_lookup, symbol_lookup, placed
 
             note_key = _text_note_instance_key(note_def)
             for inst in hosts:
-                host_id = getattr(getattr(inst, "Id", None), "IntegerValue", None)
+                host_id = _element_id_value(getattr(inst, "Id", None), None)
                 dedupe_key = (host_id, note_key) if note_key is not None else None
                 if dedupe_key and dedupe_key in placed_note_pairs:
                     continue
@@ -788,7 +808,7 @@ def main():
     tag_view_map = {}
     for entry in selected_tags + selected_keynotes:
         if entry.get("key"):
-            tag_view_map.setdefault(entry["key"], []).append(active_view.Id.IntegerValue)
+            tag_view_map.setdefault(entry["key"], []).append(_element_id_value(active_view.Id))
 
     engine = PlaceElementsEngine(doc, repo, tag_view_map=tag_view_map)
     total_tags = 0

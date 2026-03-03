@@ -55,6 +55,26 @@ except NameError:
 # --------------------------------------------------------------------------- #
 
 
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 def _get_point(elem):
     loc = getattr(elem, "Location", None)
     if loc is None:
@@ -382,7 +402,7 @@ def _collect_hosted_tag_elements(elem):
     except Exception:
         dep_ids = []
     results = []
-    host_id = getattr(getattr(elem, "Id", None), "IntegerValue", None)
+    host_id = _element_id_value(getattr(elem, "Id", None), None)
     for dep_id in dep_ids:
         try:
             tag = doc.GetElement(dep_id)
@@ -417,7 +437,7 @@ def _collect_hosted_tag_elements(elem):
             if host is None:
                 continue
             try:
-                tag_host_id = host.Id.IntegerValue
+                tag_host_id = _element_id_value(host.Id)
             except Exception:
                 tag_host_id = None
             if host_id is not None and tag_host_id != host_id:
@@ -933,10 +953,10 @@ def _collect_similar_elements(doc, led_id, original_elem):
     except Exception:
         return matches
 
-    original_id = getattr(getattr(original_elem, "Id", None), "IntegerValue", None)
+    original_id = _element_id_value(getattr(original_elem, "Id", None), None)
     for elem in collector:
         try:
-            if original_id and elem.Id.IntegerValue == original_id:
+            if original_id and _element_id_value(elem.Id) == original_id:
                 continue
         except Exception:
             pass
@@ -1008,8 +1028,8 @@ def _apply_offsets_to_similar(doc, elements, original_local_offset, original_rot
                 payload.get("set_id"),
                 target_point,
                 elem_rotation,
-                getattr(getattr(elem, "LevelId", None), "IntegerValue", None),
-                getattr(getattr(elem, "Id", None), "IntegerValue", None),
+                _element_id_value(getattr(elem, "LevelId", None), None),
+                _element_id_value(getattr(elem, "Id", None), None),
                 getattr(elem, "FacingOrientation", None),
                 base_rotation,
                 payload.get("parent_element_id"),
@@ -1379,8 +1399,8 @@ def main():
         payload.get("set_id"),
         elem_point,
         elem_rotation,
-        getattr(getattr(elem, "LevelId", None), "IntegerValue", None),
-        getattr(getattr(elem, "Id", None), "IntegerValue", None),
+        _element_id_value(getattr(elem, "LevelId", None), None),
+        _element_id_value(getattr(elem, "Id", None), None),
         getattr(elem, "FacingOrientation", None),
         base_rotation,
         payload.get("parent_element_id"),

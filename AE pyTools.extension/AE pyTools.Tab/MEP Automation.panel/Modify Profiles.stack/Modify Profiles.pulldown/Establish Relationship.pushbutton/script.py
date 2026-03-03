@@ -49,6 +49,26 @@ FLAG_BYSIBLING = "BYSIBLING"
 FLAG_STATIC = "static"
 
 
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 def _load_active_yaml_data_resilient(doc):
     path, _, raw_text = ExtensibleStorage.get_active_yaml(doc)
     if not path or raw_text is None:
@@ -197,8 +217,8 @@ def _level_relative_z_inches(elem, world_point):
 def _get_level_element_id(elem):
     try:
         lvl = getattr(elem, "LevelId", None)
-        if lvl and getattr(lvl, "IntegerValue", -1) > 0:
-            return lvl.IntegerValue
+        if lvl and _element_id_value(lvl, -1) > 0:
+            return _element_id_value(lvl)
     except Exception:
         pass
     for bip in _iter_level_bips():
@@ -210,8 +230,8 @@ def _get_level_element_id(elem):
             continue
         try:
             eid = param.AsElementId()
-            if eid and getattr(eid, "IntegerValue", -1) > 0:
-                return eid.IntegerValue
+            if eid and _element_id_value(eid, -1) > 0:
+                return _element_id_value(eid)
         except Exception:
             continue
     return None
@@ -248,7 +268,7 @@ def _build_element_linker_payload(
     rotation_deg = _get_rotation(elem) if rotation_override is None else rotation_override
     level_id = _get_level_element_id(elem)
     try:
-        elem_id = elem.Id.IntegerValue
+        elem_id = _element_id_value(elem.Id)
     except Exception:
         elem_id = ""
     facing = getattr(elem, "FacingOrientation", None)
@@ -517,7 +537,7 @@ def _dedupe_elements(elements):
         if elem is None:
             continue
         try:
-            elem_id = elem.Id.IntegerValue
+            elem_id = _element_id_value(elem.Id)
         except Exception:
             elem_id = None
         if elem_id is None:
@@ -841,12 +861,12 @@ def main():
     children = _dedupe_elements(children_raw)
     filtered_children = []
     try:
-        parent_id = parent_elem.Id.IntegerValue
+        parent_id = _element_id_value(parent_elem.Id)
     except Exception:
         parent_id = None
     for elem in children:
         try:
-            elem_id = elem.Id.IntegerValue
+            elem_id = _element_id_value(elem.Id)
         except Exception:
             elem_id = None
         if parent_id is not None and elem_id == parent_id:

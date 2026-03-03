@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Post Audit Compare
 ------------------
@@ -23,6 +23,26 @@ TITLE = "Post Audit Compare"
 PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
 
 
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 def _load_dict(path):
     with io.open(path, "r", encoding="utf-8") as handle:
         raw = handle.read()
@@ -164,7 +184,7 @@ def _collect_current_data(doc):
             continue
         parent_location = payload.get("parent_location", "Not found")
         results.setdefault(parent_id, set()).add(parent_location)
-        children.setdefault(parent_id, []).append(elem.Id.IntegerValue)
+        children.setdefault(parent_id, []).append(_element_id_value(elem.Id))
     return results, children
 
 
@@ -256,9 +276,8 @@ def main():
                 if abs(delta[0]) > 1e-9 or abs(delta[1]) > 1e-9 or abs(delta[2]) > 1e-9:
                     for child_id in child_map.get(pid, []):
                         move_candidates.append((child_id, delta, pid))
-
-    \1
-output.close_others()
+    output = script.get_output()
+    output.close_others()
     output.print_md("# Post Audit Compare")
     output.print_md("## Summary")
     output.print_md("- Moved IDs: **{}**".format(len(moved)))

@@ -50,6 +50,26 @@ PAYLOAD_PATTERN = re.compile(
 )
 
 
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 def _get_element_linker_payload(elem):
     if elem is None:
         return None
@@ -146,7 +166,7 @@ def _collect_profile_placements(doc, view):
         parent_loc = parsed.get("parent_location")
         host_name = parsed.get("host_name") or ""
         try:
-            elem_id_val = elem.Id.IntegerValue
+            elem_id_val = _element_id_value(elem.Id)
         except Exception:
             elem_id_val = None
         host_key = host_name.lower()
@@ -598,7 +618,7 @@ def _collect_annotation_ids(
                     if dist is None or dist > max_dist:
                         continue
                     try:
-                        collected.add(cand.Id.IntegerValue)
+                        collected.add(_element_id_value(cand.Id))
                     except Exception:
                         continue
 
@@ -645,7 +665,7 @@ def _collect_annotation_ids(
                         if _normalize_label(def_type) not in candidate_labels:
                             continue
                     try:
-                        collected.add(note.Id.IntegerValue)
+                        collected.add(_element_id_value(note.Id))
                         strict_hit = True
                     except Exception:
                         continue
@@ -670,7 +690,7 @@ def _collect_annotation_ids(
                         ):
                             continue
                         try:
-                            collected.add(note.Id.IntegerValue)
+                            collected.add(_element_id_value(note.Id))
                         except Exception:
                             continue
     if ultra_loose_text_notes and note_signatures:
@@ -685,7 +705,7 @@ def _collect_annotation_ids(
                 if sig_text and sig_text not in cand_text_norm and cand_text_norm not in sig_text:
                     continue
                 try:
-                    collected.add(note.Id.IntegerValue)
+                    collected.add(_element_id_value(note.Id))
                 except Exception:
                     pass
                 break

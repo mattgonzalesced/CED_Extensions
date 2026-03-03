@@ -33,6 +33,26 @@ except NameError:
     basestring = str
 
 
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 def _build_repository(data):
     legacy_profiles = equipment_defs_to_legacy(data.get("equipment_definitions") or [])
     eq_defs = ProfileRepository._parse_profiles(legacy_profiles)
@@ -353,7 +373,7 @@ def main():
     default_level_id = None
     if default_level is not None:
         try:
-            default_level_id = default_level.Id.IntegerValue
+            default_level_id = _element_id_value(default_level.Id)
         except Exception:
             default_level_id = None
 
@@ -366,7 +386,7 @@ def main():
     room_level_map = {}
     skipped_rooms = []
     for room in rooms:
-        room_id = getattr(room.Id, "IntegerValue", None)
+        room_id = _element_id_value(room.Id, None)
         center = _room_center(room)
         if center is None:
             skipped_rooms.append(_room_label(room))
@@ -387,7 +407,7 @@ def main():
                 level_key = _normalize_name(level_name)
                 host_level = level_lookup.get(level_key)
                 if host_level is not None:
-                    level_id = host_level.Id.IntegerValue
+                    level_id = _element_id_value(host_level.Id)
         except Exception:
             pass
         room_level_map[room_id] = level_id
@@ -401,7 +421,7 @@ def main():
             selection_map[row_name] = [label]
             rotation = _rotation_for_label(repo, profile_name, label)
             for room in rooms:
-                room_id = getattr(room.Id, "IntegerValue", None)
+                room_id = _element_id_value(room.Id, None)
                 point = room_centers.get(room_id)
                 if point is None:
                     continue

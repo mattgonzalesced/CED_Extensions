@@ -284,8 +284,8 @@ def main():
     placed_counts, led_type_counts = _collect_placed_counts(doc, led_map)
     target_map = normalized_map
 
-    \1
-output.close_others()
+    output = script.get_output()
+    output.close_others()
     output.print_md("### QA/QC Report - {}".format(yaml_label))
     total_found = 0
     total_placed = 0.0

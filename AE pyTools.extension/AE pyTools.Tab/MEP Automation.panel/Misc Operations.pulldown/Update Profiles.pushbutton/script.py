@@ -49,6 +49,26 @@ _UI_MODULE = None
 _LOG_VERSION = "2026-02-13f"
 
 
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 def _decode_bytes(data):
     if data is None:
         return u""
@@ -1046,7 +1066,7 @@ def _collect_candidate_elements(doc, elements=None):
             if not isinstance(elem, (FamilyInstance, Group)):
                 continue
             try:
-                elem_id = elem.Id.IntegerValue
+                elem_id = _element_id_value(elem.Id)
             except Exception:
                 elem_id = None
             if elem_id is None or elem_id in seen:
@@ -1062,7 +1082,7 @@ def _collect_candidate_elements(doc, elements=None):
             collector = FilteredElementCollector(doc).OfClass(cls).WhereElementIsNotElementType()
             for elem in collector:
                 try:
-                    elem_id = elem.Id.IntegerValue
+                    elem_id = _element_id_value(elem.Id)
                 except Exception:
                     elem_id = None
                 if elem_id is None or elem_id in seen:
@@ -1182,7 +1202,7 @@ def _select_host_for_note(note_elem, candidates, manage, kind):
         type_label = record.get("type_label") or record.get("led_id") or "Type"
         elem = record.get("element")
         elem_id = getattr(elem, "Id", None)
-        elem_id_val = getattr(elem_id, "IntegerValue", None) if elem_id else None
+        elem_id_val = _element_id_value(elem_id, None) if elem_id else None
         label = u"{} / {}".format(profile_name, type_label)
         if elem_id_val is not None:
             label = u"{} (Id: {})".format(label, elem_id_val)

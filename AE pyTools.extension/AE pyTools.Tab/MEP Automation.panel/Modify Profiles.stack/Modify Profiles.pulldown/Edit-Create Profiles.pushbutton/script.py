@@ -62,6 +62,26 @@ except NameError:
 # --------------------------------------------------------------------------- #
 
 
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 def _session_file():
     try:
         return script.get_appdata_file("edit_create_yaml_session.json")
@@ -701,7 +721,7 @@ def _collect_tag_parameters(tag_elem, include_read_only=True):
                 value = param.AsDouble()
             elif storage_str == "ElementId":
                 elem_id = param.AsElementId()
-                value = elem_id.IntegerValue if elem_id else None
+                value = _element_id_value(elem_id) if elem_id else None
                 if value is None:
                     try:
                         value = param.AsValueString()
@@ -1172,7 +1192,7 @@ def _assign_selected_tags(child_entries, tag_elems):
         if elem is None:
             continue
         try:
-            elem_id = elem.Id.IntegerValue
+            elem_id = _element_id_value(elem.Id)
         except Exception:
             elem_id = None
         if elem_id is not None and elem_id not in host_index:
@@ -1183,7 +1203,7 @@ def _assign_selected_tags(child_entries, tag_elems):
         host_id_val = None
         if host_id is not None:
             try:
-                host_id_val = host_id.IntegerValue
+                host_id_val = _element_id_value(host_id)
             except Exception:
                 try:
                     host_id_val = int(host_id)
@@ -1279,7 +1299,7 @@ def _collect_hosted_tags(elem, host_point, active_view_id=None):
             if not owner_view_id:
                 continue
             try:
-                if owner_view_id.IntegerValue != active_view_id:
+                if _element_id_value(owner_view_id) != active_view_id:
                     continue
             except Exception:
                 pass
@@ -1684,7 +1704,7 @@ def _cleanup_far_tags_by_type(doc, active_view_id, tag_type_keys, max_distance_f
         for tag in tags:
             if allowed_ids is not None:
                 try:
-                    tag_id_val = tag.Id.IntegerValue
+                    tag_id_val = _element_id_value(tag.Id)
                 except Exception:
                     tag_id_val = None
                 if tag_id_val not in allowed_ids:
@@ -1912,7 +1932,7 @@ def _cleanup_far_autoload_tags(doc, active_view_id, set_ids, max_distance_ft):
         if not set_id or set_id not in set_ids:
             continue
         try:
-            elem_id = elem.Id.IntegerValue
+            elem_id = _element_id_value(elem.Id)
         except Exception:
             continue
         host_lookup[elem_id] = elem
@@ -1932,7 +1952,7 @@ def _cleanup_far_autoload_tags(doc, active_view_id, set_ids, max_distance_ft):
             host_elem = None
             for host_id in _tag_host_element_ids(tag):
                 try:
-                    host_id_val = host_id.IntegerValue
+                    host_id_val = _element_id_value(host_id)
                 except Exception:
                     try:
                         host_id_val = int(host_id)
@@ -2128,7 +2148,7 @@ def _collect_tag_ids_in_view(doc, active_view_id):
     ids = set()
     for tag in tags:
         try:
-            ids.add(tag.Id.IntegerValue)
+            ids.add(_element_id_value(tag.Id))
         except Exception:
             continue
     return ids
@@ -2169,7 +2189,7 @@ def _collect_tag_ids_near_points(doc, active_view_id, points, radius_ft):
                     dist = None
             if dist is not None and dist <= limit:
                 try:
-                    ids.add(tag.Id.IntegerValue)
+                    ids.add(_element_id_value(tag.Id))
                 except Exception:
                     pass
                 break
@@ -2301,8 +2321,8 @@ def _place_existing_configuration(doc, data, cad_name, parent_point, parent_rota
 def _build_element_linker_payload(led_id, set_id, elem, host_point, rotation_override=None, parent_rotation=None, parent_elem_id=None):
     point = host_point or _get_point(elem)
     rot = rotation_override if rotation_override is not None else _get_rotation_degrees(elem)
-    level_id = getattr(getattr(elem, "LevelId", None), "IntegerValue", None)
-    elem_id = getattr(getattr(elem, "Id", None), "IntegerValue", None)
+    level_id = _element_id_value(getattr(elem, "LevelId", None), None)
+    elem_id = _element_id_value(getattr(elem, "Id", None), None)
     facing = getattr(elem, "FacingOrientation", None)
     lines = [
         "Linked Element Definition ID: {}".format(led_id or ""),
@@ -2396,7 +2416,7 @@ def _context_from_parent(parent_elem, cad_name, parent_point, parent_rotation):
         "parent_rotation": parent_rotation,
     }
     try:
-        context["parent_element_id"] = parent_elem.Id.IntegerValue
+        context["parent_element_id"] = _element_id_value(parent_elem.Id)
     except Exception:
         context["parent_element_id"] = None
     return context
@@ -2504,7 +2524,7 @@ def _run_selection_flow(doc, data, context, truth_groups, child_to_group, parent
     parent_elem_id = None
     if parent_elem is not None:
         try:
-            parent_elem_id = parent_elem.Id.IntegerValue
+            parent_elem_id = _element_id_value(parent_elem.Id)
         except Exception:
             parent_elem_id = None
     if parent_elem_id is None:
@@ -2539,7 +2559,7 @@ def _run_selection_flow(doc, data, context, truth_groups, child_to_group, parent
             host_candidates.append(elem)
 
         active_view = getattr(doc, "ActiveView", None)
-        active_view_id = getattr(getattr(active_view, "Id", None), "IntegerValue", None)
+        active_view_id = _element_id_value(getattr(active_view, "Id", None), None)
         child_entries = _gather_child_entries(
             host_candidates,
             parent_point,
@@ -2660,7 +2680,7 @@ def main():
         return
     if not created_new:
         active_view = getattr(doc, "ActiveView", None)
-        active_view_id = getattr(getattr(active_view, "Id", None), "IntegerValue", None)
+        active_view_id = _element_id_value(getattr(active_view, "Id", None), None)
         try:
             _place_existing_configuration(
                 doc,

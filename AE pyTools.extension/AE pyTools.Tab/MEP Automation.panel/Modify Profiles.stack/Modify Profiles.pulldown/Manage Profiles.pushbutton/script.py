@@ -47,6 +47,26 @@ from Autodesk.Revit.DB import (
 
 import sys
 
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 def _find_cedlib_root():
     current = os.path.abspath(os.path.dirname(__file__))
     while True:
@@ -461,7 +481,7 @@ def _collect_tag_parameters(tag_elem, include_read_only=True):
                 value = param.AsDouble()
             elif storage == "ElementId":
                 elem_id = param.AsElementId()
-                value = elem_id.IntegerValue if elem_id else None
+                value = _element_id_value(elem_id) if elem_id else None
                 if value is None:
                     try:
                         value = param.AsValueString()
@@ -989,7 +1009,7 @@ def _capture_text_note_leaders(note_elem, host_point):
             logger.info(
                 "[Manage YAML] Captured %s leader(s) for TextNote %s: %s",
                 len(leaders),
-                getattr(getattr(note_elem, "Id", None), "IntegerValue", getattr(note_elem, "Id", None)),
+                _element_id_value(getattr(note_elem, "Id", None), getattr(note_elem, "Id", None)),
                 [entry.get("type") or "<unspecified>" for entry in leaders],
             )
         except Exception:
@@ -1418,8 +1438,8 @@ def _instance_elevation_inches(elem):
 def _get_level_element_id(elem):
     try:
         level_id = getattr(elem, "LevelId", None)
-        if level_id and getattr(level_id, "IntegerValue", 0) > 0:
-            return level_id.IntegerValue
+        if level_id and _element_id_value(level_id, 0) > 0:
+            return _element_id_value(level_id)
     except Exception:
         pass
     fallback_params = (
@@ -1439,8 +1459,8 @@ def _get_level_element_id(elem):
             continue
         try:
             eid = param.AsElementId()
-            if eid and getattr(eid, "IntegerValue", 0) > 0:
-                return eid.IntegerValue
+            if eid and _element_id_value(eid, 0) > 0:
+                return _element_id_value(eid)
         except Exception:
             continue
     return None
@@ -1453,7 +1473,7 @@ def _build_element_linker_payload(led_id, set_id, elem, host_point):
     rotation_deg = _get_rotation_degrees(elem)
     level_id = _get_level_element_id(elem)
     try:
-        elem_id = elem.Id.IntegerValue
+        elem_id = _element_id_value(elem.Id)
     except Exception:
         elem_id = ""
     facing = getattr(elem, "FacingOrientation", None)

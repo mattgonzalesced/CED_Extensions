@@ -32,6 +32,26 @@ LABEL_SKIP = "Skip"
 LABEL_NO_OVERRIDE = "<no override>"
 
 
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 class _ExternalActionHandler(IExternalEventHandler):
     def __init__(self, owner, name, executor):
         self._owner = owner
@@ -217,7 +237,7 @@ class ParentParamConflictsWindow(forms.WPFWindow):
         values = []
         for eid in elem_ids:
             try:
-                values.append(int(eid.IntegerValue))
+                values.append(int(_element_id_value(eid)))
             except Exception:
                 continue
         values.sort()

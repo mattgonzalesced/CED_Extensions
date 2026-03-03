@@ -53,6 +53,26 @@ SIBLING_PARAMETER_PATTERN = re.compile(
 )
 
 
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 def _parse_linker_payload(payload_text):
     if not payload_text:
         return {}
@@ -291,7 +311,7 @@ class PlaceElementsEngine(object):
         dedup = {}
         for g in groups:
             try:
-                dedup[g.Id.IntegerValue] = g
+                dedup[_element_id_value(g.Id)] = g
             except Exception:
                 continue
         groups = list(dedup.values())
@@ -530,7 +550,7 @@ class PlaceElementsEngine(object):
             if elem is None:
                 return
             try:
-                key = elem.Id.IntegerValue
+                key = _element_id_value(elem.Id)
             except Exception:
                 key = None
             if key in seen or key is None:
@@ -1188,7 +1208,7 @@ class PlaceElementsEngine(object):
             if anchor is None:
                 continue
             try:
-                parent_id_val = anchor.Id.IntegerValue
+                parent_id_val = _element_id_value(anchor.Id)
             except Exception:
                 parent_id_val = None
             if parent_id_val in (None, ""):
@@ -1373,10 +1393,10 @@ class PlaceElementsEngine(object):
                 seen = set()
                 for did in detail_ids or []:
                     try:
-                        if did is None or did.IntegerValue in seen:
+                        if did is None or _element_id_value(did) in seen:
                             continue
                         instance.ShowAttachedDetailGroups(view, did)
-                        seen.add(did.IntegerValue)
+                        seen.add(_element_id_value(did))
                     except Exception:
                         continue
 
@@ -1496,7 +1516,7 @@ class PlaceElementsEngine(object):
         if not tags:
             return False
         try:
-            host_id_val = host_instance.Id.IntegerValue
+            host_id_val = _element_id_value(host_instance.Id)
         except Exception:
             host_id_val = None
         for tag in tags:
@@ -1509,7 +1529,7 @@ class PlaceElementsEngine(object):
                 continue
             for tagged_id in self._tagged_element_ids(tag):
                 try:
-                    tagged_val = tagged_id.IntegerValue
+                    tagged_val = _element_id_value(tagged_id)
                 except Exception:
                     try:
                         tagged_val = int(tagged_id)
@@ -2225,7 +2245,7 @@ class PlaceElementsEngine(object):
                 elem_id = None
             if elem_id is not None:
                 try:
-                    return str(elem_id.IntegerValue)
+                    return str(_element_id_value(elem_id))
                 except Exception:
                     return ""
             return ""
@@ -2274,7 +2294,7 @@ class PlaceElementsEngine(object):
             if not led_id:
                 continue
             try:
-                elem_id = elem.Id.IntegerValue
+                elem_id = _element_id_value(elem.Id)
             except Exception:
                 elem_id = None
             record = {"id": elem_id, "element": elem, "payload": payload}
@@ -2292,7 +2312,7 @@ class PlaceElementsEngine(object):
         if index is None:
             return
         try:
-            elem_id = element.Id.IntegerValue
+            elem_id = _element_id_value(element.Id)
         except Exception:
             elem_id = None
         records = index.setdefault(led_id, [])
@@ -2314,7 +2334,7 @@ class PlaceElementsEngine(object):
         if not child_element or not child_param_name or not sibling_led_id or not sibling_param_name:
             return
         try:
-            child_id = child_element.Id.IntegerValue
+            child_id = _element_id_value(child_element.Id)
         except Exception:
             return
         self._pending_sibling_updates.append({
@@ -2388,7 +2408,7 @@ class PlaceElementsEngine(object):
         exclude_id = None
         if exclude_element is not None:
             try:
-                exclude_id = exclude_element.Id.IntegerValue
+                exclude_id = _element_id_value(exclude_element.Id)
             except Exception:
                 exclude_id = None
 
@@ -2971,7 +2991,7 @@ class PlaceElementsEngine(object):
         current_parent_id = parent_element_id
         if current_parent_id in (None, "") and parent_element is not None:
             try:
-                current_parent_id = parent_element.Id.IntegerValue
+                current_parent_id = _element_id_value(parent_element.Id)
             except Exception:
                 current_parent_id = None
         current_set_id = None
@@ -3133,7 +3153,7 @@ class PlaceElementsEngine(object):
         if not cat:
             return False
         try:
-            cat_id = cat.Id.IntegerValue
+            cat_id = _element_id_value(cat.Id)
         except Exception:
             cat_id = None
         for bip in (BuiltInCategory.OST_PipeFitting, BuiltInCategory.OST_PipeAccessory):
@@ -3187,12 +3207,12 @@ class PlaceElementsEngine(object):
         level_ref = getattr(instance, "LevelId", None)
         if level_ref is not None:
             try:
-                level_id = level_ref.IntegerValue
+                level_id = _element_id_value(level_ref)
             except Exception:
                 level_id = None
         element_id = None
         try:
-            element_id = instance.Id.IntegerValue
+            element_id = _element_id_value(instance.Id)
         except Exception:
             element_id = None
         facing = getattr(instance, "FacingOrientation", None)

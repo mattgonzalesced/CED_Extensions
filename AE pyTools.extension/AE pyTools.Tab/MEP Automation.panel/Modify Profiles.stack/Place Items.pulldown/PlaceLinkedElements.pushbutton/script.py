@@ -36,6 +36,26 @@ PARENT_ID_KEYS = ("Parent ElementId", "Parent Element ID")
 LEGEND_LEVEL_RE = re.compile(r"\blegend\b", re.IGNORECASE)
 
 
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 def _build_repository(data):
     legacy_profiles = equipment_defs_to_legacy(data.get("equipment_definitions") or [])
     eq_defs = ProfileRepository._parse_profiles(legacy_profiles)
@@ -210,7 +230,7 @@ def _get_element_level(elem):
     level_id = getattr(elem, "LevelId", None)
     if level_id and doc:
         try:
-            if getattr(level_id, "IntegerValue", None) not in (None, -1):
+            if _element_id_value(level_id, None) not in (None, -1):
                 level = doc.GetElement(level_id)
                 if level is not None:
                     return level
@@ -777,7 +797,7 @@ def _collect_placeholders(doc, normalized_targets):
         level = _get_element_level(elem)
         level_name = getattr(level, "Name", None) if level else None
         try:
-            parent_element_id = elem.Id.IntegerValue
+            parent_element_id = _element_id_value(elem.Id)
         except Exception:
             parent_element_id = None
         for name in variants:
@@ -815,7 +835,7 @@ def _collect_placeholders(doc, normalized_targets):
                 link_level, host_level_by_name
             )
             try:
-                parent_element_id = inst.Id.IntegerValue
+                parent_element_id = _element_id_value(inst.Id)
             except Exception:
                 parent_element_id = None
             for name in variants:
@@ -847,7 +867,7 @@ def _build_level_choice_map(levels):
                 except Exception:
                     elev = 0.0
                 try:
-                    level_id = level.Id.IntegerValue
+                    level_id = _element_id_value(level.Id)
                 except Exception:
                     level_id = 0
                 label = "{} [id:{} elev:{:.3f}]".format(name, level_id, elev)
@@ -967,7 +987,7 @@ def main():
     default_level_id = None
     if default_level is not None:
         try:
-            default_level_id = default_level.Id.IntegerValue
+            default_level_id = _element_id_value(default_level.Id)
         except Exception:
             default_level_id = None
     try:
@@ -977,7 +997,7 @@ def main():
     host_level_names_by_id = {}
     for level in host_levels or []:
         try:
-            host_level_names_by_id[level.Id.IntegerValue] = getattr(level, "Name", None)
+            host_level_names_by_id[_element_id_value(level.Id)] = getattr(level, "Name", None)
         except Exception:
             continue
     level_map = {}
@@ -1024,7 +1044,7 @@ def main():
                 level = match.get("level")
                 if level is not None:
                     try:
-                        level_id_val = level.Id.IntegerValue
+                        level_id_val = _element_id_value(level.Id)
                     except Exception:
                         level_id_val = None
             level_name = match.get("level_name")
@@ -1038,7 +1058,7 @@ def main():
                 mapped_level = level_map.get(_normalize_level_name(level_name))
                 if mapped_level is not None:
                     try:
-                        level_id_val = mapped_level.Id.IntegerValue
+                        level_id_val = _element_id_value(mapped_level.Id)
                     except Exception:
                         level_id_val = None
             if level_id_val is None:
@@ -1050,7 +1070,7 @@ def main():
                     nearest = _find_closest_level(host_levels, point.Z if point else None)
                     if nearest is not None:
                         try:
-                            level_id_val = nearest.Id.IntegerValue
+                            level_id_val = _element_id_value(nearest.Id)
                         except Exception:
                             level_id_val = None
                         if level_id_val is not None:

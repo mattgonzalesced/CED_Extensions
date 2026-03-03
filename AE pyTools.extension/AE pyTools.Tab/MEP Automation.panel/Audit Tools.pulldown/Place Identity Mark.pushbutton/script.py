@@ -23,6 +23,26 @@ output = script.get_output()
 output.close_others()
 
 
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 def _normalize(text):
     return (text or "").strip().lower()
 
@@ -331,14 +351,14 @@ def _collect_cases(doc):
         system_first = _get_param_text(elem, "SYSTEM FIRST")
         if not (mark or "").strip() and not (system_first or "").strip():
             blank_cases.append({
-                "id": elem.Id.IntegerValue,
+                "id": _element_id_value(elem.Id),
                 "family": _controller_family(elem),
             })
         bbox = _get_bbox(elem)
         center = _bbox_center(bbox) if bbox else _get_point(elem)
         cases.append({
             "element": elem,
-            "id": elem.Id.IntegerValue,
+            "id": _element_id_value(elem.Id),
             "mark": mark,
             "system_first": system_first,
             "bbox": bbox,
@@ -430,7 +450,7 @@ def main():
             case = _match_case_for_controller(doc, controller, cases_by_id, cases_with_bbox)
             if not case:
                 stats["controllers_unmatched"] += 1
-                unmatched_ids.append(controller.Id.IntegerValue)
+                unmatched_ids.append(_element_id_value(controller.Id))
                 continue
 
             case_mark = (case.get("mark") or "").strip()
@@ -478,7 +498,7 @@ def main():
                 continue
 
             stats["controllers_updated"] += 1
-            updated_ids.append(controller.Id.IntegerValue)
+            updated_ids.append(_element_id_value(controller.Id))
 
         if active_view and unmatched_ids:
             ogs = _build_orange_overrides(doc)

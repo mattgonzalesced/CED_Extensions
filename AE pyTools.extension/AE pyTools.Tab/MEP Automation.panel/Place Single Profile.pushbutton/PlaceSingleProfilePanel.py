@@ -85,6 +85,26 @@ PANEL_ID = "8d3f8f2d-0e6f-4b2d-9e64-8d2a2b57d7b8"
 _PREVIEW_FAILED = object()
 
 
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 def _sanitize_equipment_definitions(equipment_defs):
     cleaned_defs = []
     for eq in equipment_defs or []:
@@ -1634,7 +1654,7 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
         except Exception:
             pass
         temp_dir = tempfile.gettempdir()
-        stamp = "{}_{}".format(view.Id.IntegerValue, int(time.time() * 1000))
+        stamp = "{}_{}".format(_element_id_value(view.Id), int(time.time() * 1000))
         export_root = os.path.join(temp_dir, "ced_preview_exports", stamp)
         try:
             if not os.path.exists(export_root):

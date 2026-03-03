@@ -42,6 +42,26 @@ LEVEL_PARAM_NAMES = (
 )
 
 
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 def _iter_level_bips():
     for name in LEVEL_PARAM_NAMES:
         try:
@@ -243,8 +263,8 @@ def _collect_params(elem):
 def _get_level_element_id(elem):
     try:
         lvl = getattr(elem, "LevelId", None)
-        if lvl and getattr(lvl, "IntegerValue", -1) > 0:
-            return lvl.IntegerValue
+        if lvl and _element_id_value(lvl, -1) > 0:
+            return _element_id_value(lvl)
     except Exception:
         pass
     for bip in _iter_level_bips():
@@ -256,8 +276,8 @@ def _get_level_element_id(elem):
             continue
         try:
             eid = param.AsElementId()
-            if eid and getattr(eid, "IntegerValue", -1) > 0:
-                return eid.IntegerValue
+            if eid and _element_id_value(eid, -1) > 0:
+                return _element_id_value(eid)
         except Exception:
             continue
     return None
@@ -286,7 +306,7 @@ def _build_element_linker_payload(led_id, set_id, elem, host_point, rotation_ove
     rotation_deg = _get_rotation(elem) if rotation_override is None else rotation_override
     level_id = _get_level_element_id(elem)
     try:
-        elem_id = elem.Id.IntegerValue
+        elem_id = _element_id_value(elem.Id)
     except Exception:
         elem_id = ""
     facing = getattr(elem, "FacingOrientation", None)
@@ -1010,7 +1030,7 @@ def _seed_parent_equipment_definition(parent_elem, data, link_transform=None):
         return None
     parent_rotation = _transform_rotation(_get_rotation(parent_elem), link_transform)
     try:
-        parent_elem_id = parent_elem.Id.IntegerValue
+        parent_elem_id = _element_id_value(parent_elem.Id)
     except Exception:
         parent_elem_id = None
     led_id = "{}-LED-000".format(set_id)
@@ -1200,7 +1220,7 @@ def main():
         parent_origin_point = parent_info.get("element_point") or parent_info.get("base_point")
         parent_rotation = parent_info.get("rotation_deg") or 0.0
         try:
-            parent_elem_id = parent_elem.Id.IntegerValue
+            parent_elem_id = _element_id_value(parent_elem.Id)
         except Exception:
             parent_elem_id = None
         if parent_origin_point is None:

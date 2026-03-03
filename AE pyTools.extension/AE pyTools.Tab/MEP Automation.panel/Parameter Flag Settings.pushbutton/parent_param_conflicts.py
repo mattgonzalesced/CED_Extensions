@@ -65,6 +65,26 @@ LOCK_WINDOW_SECONDS = 60.0
 LOCK_PAYLOAD_KEY = "parent_param_conflicts_lock"
 _MODELLESS_WINDOW = None
 
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 def _get_doc(doc=None):
     if doc is not None:
         return doc
@@ -332,7 +352,7 @@ def _read_param_text(param):
         if elem_id is None:
             return ""
         try:
-            return str(elem_id.IntegerValue)
+            return str(_element_id_value(elem_id))
         except Exception:
             return str(elem_id)
     if storage == StorageType.Double:
@@ -370,7 +390,7 @@ def _read_param_int(param):
         if elem_id is None:
             return None
         try:
-            return int(elem_id.IntegerValue)
+            return int(_element_id_value(elem_id))
         except Exception:
             return None
     if storage == StorageType.Double:
@@ -440,7 +460,7 @@ def _build_sibling_index(doc):
         if not led_id:
             continue
         try:
-            elem_id = elem.Id.IntegerValue
+            elem_id = _element_id_value(elem.Id)
         except Exception:
             elem_id = None
         record = {"id": elem_id, "element": elem, "payload": payload}
@@ -454,7 +474,7 @@ def _resolve_sibling_element(records, parent_element_id=None, set_id=None, exclu
     exclude_id = None
     if exclude_element is not None:
         try:
-            exclude_id = exclude_element.Id.IntegerValue
+            exclude_id = _element_id_value(exclude_element.Id)
         except Exception:
             exclude_id = None
 
@@ -490,7 +510,7 @@ def _collect_candidate_elements(doc):
             continue
         for elem in collector:
             try:
-                elem_id = elem.Id.IntegerValue
+                elem_id = _element_id_value(elem.Id)
             except Exception:
                 elem_id = None
             if elem_id is None or elem_id in seen:
@@ -519,7 +539,7 @@ def _element_label(elem):
     if not label:
         label = "<element>"
     try:
-        elem_id = elem.Id.IntegerValue
+        elem_id = _element_id_value(elem.Id)
     except Exception:
         elem_id = None
     if elem_id is not None:
@@ -628,7 +648,7 @@ def _param_info(param):
             info["has_value"] = False
         else:
             try:
-                int_val = elem_id.IntegerValue
+                int_val = _element_id_value(elem_id)
             except Exception:
                 int_val = None
             if int_val is None:
@@ -811,7 +831,7 @@ def collect_conflicts(doc, data):
                 if parent_elem is not None:
                     parent_label = _element_label(parent_elem)
                     for child_param_name, parent_param_name in parent_mappings:
-                        key = (elem.Id.IntegerValue, child_param_name, parent_param_name, "parent")
+                        key = (_element_id_value(elem.Id), child_param_name, parent_param_name, "parent")
                         if key in seen:
                             continue
                         seen.add(key)
@@ -848,10 +868,10 @@ def collect_conflicts(doc, data):
                             parent_param and not parent_param.IsReadOnly and not parent_is_type
                         )
                         conflicts.append({
-                            "id": "{}:{}:{}:parent".format(elem.Id.IntegerValue, child_param_name, parent_param_name),
+                            "id": "{}:{}:{}:parent".format(_element_id_value(elem.Id), child_param_name, parent_param_name),
                             "led_id": led_id,
                             "parent_id": parent_id,
-                            "child_id": elem.Id.IntegerValue,
+                            "child_id": _element_id_value(elem.Id),
                             "parent_label": parent_label,
                             "child_label": child_label,
                             "child_param": child_param_name,
@@ -869,7 +889,7 @@ def collect_conflicts(doc, data):
             parent_id = payload.get("parent_element_id")
             set_id = payload.get("set_id")
             for child_param_name, sibling_led_id, sibling_param_name in sibling_mappings:
-                key = (elem.Id.IntegerValue, child_param_name, sibling_led_id, sibling_param_name, "sibling")
+                key = (_element_id_value(elem.Id), child_param_name, sibling_led_id, sibling_param_name, "sibling")
                 if key in seen:
                     continue
                 seen.add(key)
@@ -917,11 +937,11 @@ def collect_conflicts(doc, data):
                 )
                 conflicts.append({
                     "id": "{}:{}:{}:{}:sibling".format(
-                        elem.Id.IntegerValue, child_param_name, sibling_led_id, sibling_param_name
+                        _element_id_value(elem.Id), child_param_name, sibling_led_id, sibling_param_name
                     ),
                     "led_id": led_id,
-                    "parent_id": sibling_elem.Id.IntegerValue,
-                    "child_id": elem.Id.IntegerValue,
+                    "parent_id": _element_id_value(sibling_elem.Id),
+                    "child_id": _element_id_value(elem.Id),
                     "parent_label": "Sibling: {}".format(sibling_label),
                     "child_label": child_label,
                     "child_param": child_param_name,

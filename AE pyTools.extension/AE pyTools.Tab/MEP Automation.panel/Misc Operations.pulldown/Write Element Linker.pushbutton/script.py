@@ -42,6 +42,26 @@ TITLE = "Write Element Linker"
 ELEMENT_LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
 
 
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 def _normalize_label(value):
     if not value:
         return ""
@@ -141,8 +161,8 @@ def _get_rotation_degrees(elem):
 def _get_level_element_id(elem):
     try:
         lvl = getattr(elem, "LevelId", None)
-        if lvl and getattr(lvl, "IntegerValue", -1) > 0:
-            return lvl.IntegerValue
+        if lvl and _element_id_value(lvl, -1) > 0:
+            return _element_id_value(lvl)
     except Exception:
         pass
     level_params = (
@@ -160,8 +180,8 @@ def _get_level_element_id(elem):
             continue
         try:
             eid = param.AsElementId()
-            if eid and getattr(eid, "IntegerValue", -1) > 0:
-                return eid.IntegerValue
+            if eid and _element_id_value(eid, -1) > 0:
+                return _element_id_value(eid)
         except Exception:
             continue
     return None
@@ -180,7 +200,7 @@ def _build_element_linker_payload(led_id, set_id, elem, host_point, parent_eleme
     rotation_deg = _get_rotation_degrees(elem)
     level_id = _get_level_element_id(elem)
     try:
-        elem_id = elem.Id.IntegerValue
+        elem_id = _element_id_value(elem.Id)
     except Exception:
         elem_id = ""
     facing = getattr(elem, "FacingOrientation", None)
