@@ -20,14 +20,12 @@ if LIB_ROOT not in sys.path:
 
 from LogicClasses.linked_equipment import compute_offsets_from_points  # noqa: E402
 from LogicClasses.profile_schema import (  # noqa: E402
-    dump_data_to_string,
     ensure_equipment_definition,
     get_type_set,
-    load_data_from_text,
     next_led_id,
 )
 from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
-from ExtensibleStorage import ExtensibleStorage  # noqa: E402
+from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data  # noqa: E402
 
 try:
     basestring
@@ -70,22 +68,16 @@ def _element_id_value(elem_id, default=None):
                 continue
     return default
 def _load_active_yaml_data_resilient(doc):
-    path, _, raw_text = ExtensibleStorage.get_active_yaml(doc)
-    if not path or raw_text is None:
-        raise RuntimeError("Select YAML first so the profile data is loaded into the project.")
-    data = load_data_from_text(raw_text or "", path)
-    return path, data
+    try:
+        return load_active_yaml_data(doc)
+    except Exception as exc:
+        raise RuntimeError(
+            "Could not load active YAML from project Extensible Storage.\n\n{}".format(exc)
+        )
 
 
 def _save_active_yaml_data_resilient(doc, data, action, description):
-    path, _, old_text = ExtensibleStorage.get_active_yaml(doc)
-    if not path:
-        raise RuntimeError("No active YAML is selected.")
-    new_text = dump_data_to_string(data)
-    if new_text == old_text:
-        return
-    ExtensibleStorage.update_active_yaml(doc, path, old_text, new_text, action, description)
-    ExtensibleStorage.update_active_text_only(doc, path, new_text)
+    save_active_yaml_data(doc, data, action, description)
 
 
 def _iter_level_bips():

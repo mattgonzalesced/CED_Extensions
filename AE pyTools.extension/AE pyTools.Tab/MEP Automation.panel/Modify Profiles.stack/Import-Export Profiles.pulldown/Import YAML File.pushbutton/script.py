@@ -23,7 +23,7 @@ from ExtensibleStorage.yaml_store import seed_active_yaml  # noqa: E402
 
 DEFAULT_DATA_PATH = os.path.join(LIB_ROOT, "profileData.yaml")
 SAFE_HASH = u"\uff03"
-REQUIRED_SCHEMA_VERSION = 3
+SUPPORTED_SCHEMA_VERSIONS = [3, 4]
 
 
 def _sanitize_hash_keys(raw_text):
@@ -88,8 +88,8 @@ def main():
     raw_versions = _collect_schema_versions(data)
     if not raw_versions and not is_blank:
         forms.alert(
-            "Selected YAML is missing schema_version. Expected schema_version: {}.\n"
-            "Import blocked.".format(REQUIRED_SCHEMA_VERSION),
+            "Selected YAML is missing schema_version. Supported versions: {}.\n"
+            "Import blocked.".format(", ".join([str(v) for v in SUPPORTED_SCHEMA_VERSIONS])),
             title="Select YAML",
         )
         return
@@ -117,21 +117,21 @@ def main():
     if invalid_versions:
         forms.alert(
             "Selected YAML has invalid schema_version values: {}.\n"
-            "Expected schema_version: {}.\n"
+            "Supported versions: {}.\n"
             "Import blocked.".format(
                 ", ".join([str(v) for v in invalid_versions]),
-                REQUIRED_SCHEMA_VERSION,
+                ", ".join([str(v) for v in SUPPORTED_SCHEMA_VERSIONS]),
             ),
             title="Select YAML",
         )
         return
     distinct_versions = sorted(set(normalized_versions))
-    if distinct_versions != [REQUIRED_SCHEMA_VERSION]:
+    if any(v not in SUPPORTED_SCHEMA_VERSIONS for v in distinct_versions):
         forms.alert(
-            "Selected YAML schema_version mismatch. Found: {}. Expected: {}.\n"
+            "Selected YAML schema_version mismatch. Found: {}. Supported: {}.\n"
             "Import blocked.".format(
                 ", ".join([str(v) for v in distinct_versions]),
-                REQUIRED_SCHEMA_VERSION,
+                ", ".join([str(v) for v in SUPPORTED_SCHEMA_VERSIONS]),
             ),
             title="Select YAML",
         )

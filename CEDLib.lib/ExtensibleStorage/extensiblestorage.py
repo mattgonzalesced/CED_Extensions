@@ -3,6 +3,7 @@
 Active YAML storage and user settings stored via Revit Extensible Storage.
 """
 
+import base64
 import json
 import os
 from datetime import datetime
@@ -41,7 +42,7 @@ if DataStorage is None:
     except Exception:
         DataStorage = None
 from Autodesk.Revit.DB.ExtensibleStorage import Entity, Schema, SchemaBuilder
-from System import Guid, String, Array  # noqa: E402
+from System import Guid, String, Array, Boolean, Int32, Int64, Double  # noqa: E402
 
 try:
     from Autodesk.Revit.UI.Events import DocumentSynchronizedWithCentralEventArgs
@@ -55,6 +56,11 @@ try:
 except Exception:
     _logger = None
 
+try:
+    basestring
+except NameError:  # pragma: no cover
+    basestring = str
+
 
 class ExtensibleStorage(object):
     """
@@ -66,11 +72,22 @@ class ExtensibleStorage(object):
     META_FIELD_NAME = "MetadataJson"
     HISTORY_CHUNKS_FIELD_NAME = "HistoryJsonChunks"
     META_CHUNKS_FIELD_NAME = "MetadataJsonChunks"
-    SCHEMA_VERSION = 3
+    SCHEMA_VERSION = 4
     MAX_ES_STRING = 16 * 1024 * 1024
     CHUNK_SIZE = 8 * 1024 * 1024
 
     USER_SETTINGS_KEY = "user_settings"
+    STRING_MAP_FIELD_NAME = "StringMap"
+    BOOL_MAP_FIELD_NAME = "BoolMap"
+    INT_MAP_FIELD_NAME = "IntMap"
+    DOUBLE_MAP_FIELD_NAME = "DoubleMap"
+
+    PAYLOAD_HISTORY_MAP_KEY = "__ced.payload.history_json"
+    PAYLOAD_META_MAP_KEY = "__ced.payload.meta_json"
+    MAP_CHUNK_COUNT_SUFFIX = ".__chunk_count"
+    MAP_CHUNK_KEY_PREFIX = ".__chunk__"
+    USER_SETTING_MAP_PREFIX = "__ced.user_setting__::"
+    DOUBLE_STRING_FALLBACK_PREFIX = "__ced.double__::"
 
     _schema_cache = {}
     _undo_handler_registered = False
@@ -268,16 +285,31 @@ class ExtensibleStorage(object):
     def _schema_and_fields_versioned(cls, doc, prefer_chunked=False, force_version=None):
         doc_key = getattr(doc, "Title", "unknown")
         cache = cls._schema_cache.get(doc_key, {})
+        needed_guid = cls._normalize_guid(doc)
+
+        if force_version == 4 and cache.get("v4"):
+            return cache["v4"]
         if force_version == 3 and cache.get("v3"):
             return cache["v3"]
-        if not force_version:
-            if not prefer_chunked and cache.get("default"):
-                return cache["default"]
-            if prefer_chunked:
-                if cache.get("v3"):
-                    return cache["v3"]
-                if cache.get("v2"):
-                    return cache["v2"]
+        if not force_version and cache.get("default"):
+            cached_default = cache.get("default")
+            try:
+                cached_schema = cached_default[0]
+                cached_doc_field = cached_default[5]
+                if cls._find_data_storage(doc, cached_schema, cached_doc_field, needed_guid) is not None:
+                    return cached_default
+            except Exception:
+                pass
+
+        if force_version == 4:
+            schema_v4 = Schema.Lookup(_make_doc_guid(doc, version=4))
+            if schema_v4 is None:
+                schema_v4 = cls._build_schema_v4(doc)
+            packed = cls._pack_schema(schema_v4, version=4)
+            cache["v4"] = packed
+            cache["default"] = packed
+            cls._schema_cache[doc_key] = cache
+            return packed
 
         if force_version == 3:
             schema_v3 = Schema.Lookup(_make_doc_guid(doc, version=3))
@@ -289,33 +321,35 @@ class ExtensibleStorage(object):
             cls._schema_cache[doc_key] = cache
             return packed
 
+        packed_v4 = None
+        schema_v4 = Schema.Lookup(_make_doc_guid(doc, version=4))
+        if schema_v4 is not None:
+            packed_v4 = cls._pack_schema(schema_v4, version=4)
+            cache["v4"] = packed_v4
+            if cls._find_data_storage(doc, schema_v4, packed_v4[5], needed_guid) is not None:
+                cache["default"] = packed_v4
+                cls._schema_cache[doc_key] = cache
+                return packed_v4
+
+        packed_v3 = None
         schema_v3 = Schema.Lookup(_make_doc_guid(doc, version=3))
         if schema_v3 is not None:
-            packed = cls._pack_schema(schema_v3, version=3)
-            cache["v3"] = packed
-            cache["default"] = packed
-            cls._schema_cache[doc_key] = cache
-            return packed
+            packed_v3 = cls._pack_schema(schema_v3, version=3)
+            cache["v3"] = packed_v3
+            if cls._find_data_storage(doc, schema_v3, packed_v3[5], needed_guid) is not None:
+                cache["default"] = packed_v3
+                cls._schema_cache[doc_key] = cache
+                return packed_v3
 
-        schema_v2 = Schema.Lookup(_make_doc_guid(doc, version=2))
-        if schema_v2 is not None and not prefer_chunked:
-            packed = cls._pack_schema(schema_v2, version=2)
-            cache["v2"] = packed
-            cache["default"] = packed
+        # No existing data for this document; prefer v4 for new writes.
+        if packed_v4 is not None:
+            cache["default"] = packed_v4
             cls._schema_cache[doc_key] = cache
-            return packed
+            return packed_v4
 
-        schema_v1 = Schema.Lookup(_make_doc_guid(doc, version=1))
-        if schema_v1 is not None and not prefer_chunked:
-            packed = cls._pack_schema(schema_v1, version=1)
-            cache["v1"] = packed
-            cache["default"] = packed
-            cls._schema_cache[doc_key] = cache
-            return packed
-
-        schema_v3 = cls._build_schema_v3(doc)
-        packed = cls._pack_schema(schema_v3, version=3)
-        cache["v3"] = packed
+        schema_v4 = cls._build_schema_v4(doc)
+        packed = cls._pack_schema(schema_v4, version=4)
+        cache["v4"] = packed
         cache["default"] = packed
         cls._schema_cache[doc_key] = cache
         return packed
@@ -353,16 +387,84 @@ class ExtensibleStorage(object):
         return builder.Finish()
 
     @classmethod
+    def _build_schema_v4(cls, doc):
+        builder = SchemaBuilder(_make_doc_guid(doc, version=4))
+        builder.SetSchemaName("{}_v4".format(cls.SCHEMA_NAME))
+        builder.SetDocumentation("Stores active YAML payload and metadata in typed map fields.")
+        builder.AddMapField(cls.STRING_MAP_FIELD_NAME, String, String)
+        builder.AddMapField(cls.BOOL_MAP_FIELD_NAME, String, Boolean)
+        cls._add_int_map_field(builder)
+        double_map_builder = builder.AddMapField(cls.DOUBLE_MAP_FIELD_NAME, String, Double)
+        cls._set_double_field_units(double_map_builder)
+        builder.AddSimpleField("DocGuid", String)
+        return builder.Finish()
+
+    @classmethod
+    def _add_int_map_field(cls, schema_builder):
+        try:
+            return schema_builder.AddMapField(cls.INT_MAP_FIELD_NAME, String, Int32)
+        except Exception:
+            return schema_builder.AddMapField(cls.INT_MAP_FIELD_NAME, String, Int64)
+
+    @classmethod
+    def _set_double_field_units(cls, field_builder):
+        if field_builder is None:
+            return
+        # Revit requires a measurable spec for Double fields in Extensible Storage.
+        try:
+            spec_id = getattr(getattr(DB, "SpecTypeId", None), "Number", None)
+            if spec_id is not None and hasattr(field_builder, "SetSpec"):
+                field_builder.SetSpec(spec_id)
+                return
+        except Exception:
+            pass
+        try:
+            unit_type = getattr(getattr(DB, "UnitType", None), "UT_Number", None)
+            if unit_type is not None and hasattr(field_builder, "SetUnitType"):
+                field_builder.SetUnitType(unit_type)
+                return
+        except Exception:
+            pass
+        try:
+            unit_type = getattr(getattr(DB, "UnitType", None), "UT_Custom", None)
+            if unit_type is not None and hasattr(field_builder, "SetUnitType"):
+                field_builder.SetUnitType(unit_type)
+        except Exception:
+            pass
+
+    @classmethod
+    def _safe_get_field(cls, schema, field_name):
+        if schema is None or not field_name:
+            return None
+        try:
+            return schema.GetField(field_name)
+        except Exception:
+            return None
+
+    @classmethod
     def _pack_schema(cls, schema, version):
-        history_field = schema.GetField(cls.HISTORY_FIELD_NAME)
-        meta_field = schema.GetField(cls.META_FIELD_NAME)
-        history_chunks_field = None
-        meta_chunks_field = None
-        if version >= 2:
-            history_chunks_field = schema.GetField(cls.HISTORY_CHUNKS_FIELD_NAME)
-            meta_chunks_field = schema.GetField(cls.META_CHUNKS_FIELD_NAME)
-        doc_field = schema.GetField("DocGuid")
-        return (schema, history_field, meta_field, history_chunks_field, meta_chunks_field, doc_field, version)
+        history_field = cls._safe_get_field(schema, cls.HISTORY_FIELD_NAME)
+        meta_field = cls._safe_get_field(schema, cls.META_FIELD_NAME)
+        history_chunks_field = cls._safe_get_field(schema, cls.HISTORY_CHUNKS_FIELD_NAME)
+        meta_chunks_field = cls._safe_get_field(schema, cls.META_CHUNKS_FIELD_NAME)
+        doc_field = cls._safe_get_field(schema, "DocGuid")
+        string_map_field = cls._safe_get_field(schema, cls.STRING_MAP_FIELD_NAME)
+        bool_map_field = cls._safe_get_field(schema, cls.BOOL_MAP_FIELD_NAME)
+        int_map_field = cls._safe_get_field(schema, cls.INT_MAP_FIELD_NAME)
+        double_map_field = cls._safe_get_field(schema, cls.DOUBLE_MAP_FIELD_NAME)
+        return (
+            schema,
+            history_field,
+            meta_field,
+            history_chunks_field,
+            meta_chunks_field,
+            doc_field,
+            string_map_field,
+            bool_map_field,
+            int_map_field,
+            double_map_field,
+            version,
+        )
 
     @classmethod
     def _read_chunked_field(cls, entity, base_field, chunks_field):
@@ -457,8 +559,323 @@ class ExtensibleStorage(object):
                 pass
 
     @classmethod
+    def _read_map_field(cls, entity, map_field, value_type):
+        if not map_field:
+            return {}
+        try:
+            from System.Collections.Generic import IDictionary, Dictionary
+        except Exception:
+            IDictionary = None
+            Dictionary = None
+
+        iface_type = None
+        dict_type = None
+        try:
+            if value_type == String:
+                iface_type = IDictionary[String, String] if IDictionary else None
+                dict_type = Dictionary[String, String] if Dictionary else None
+            elif value_type == Boolean:
+                iface_type = IDictionary[String, Boolean] if IDictionary else None
+                dict_type = Dictionary[String, Boolean] if Dictionary else None
+            elif value_type == Int32:
+                iface_type = IDictionary[String, Int32] if IDictionary else None
+                dict_type = Dictionary[String, Int32] if Dictionary else None
+            elif value_type == Int64:
+                iface_type = IDictionary[String, Int64] if IDictionary else None
+                dict_type = Dictionary[String, Int64] if Dictionary else None
+            elif value_type == Double:
+                iface_type = IDictionary[String, Double] if IDictionary else None
+                dict_type = Dictionary[String, Double] if Dictionary else None
+        except Exception:
+            iface_type = None
+            dict_type = None
+
+        if iface_type is None and dict_type is None:
+            return {}
+
+        map_data = None
+        if iface_type is not None:
+            try:
+                map_data = entity.Get[iface_type](map_field)
+            except Exception:
+                map_data = None
+        if map_data is None and dict_type is not None:
+            try:
+                map_data = entity.Get[dict_type](map_field)
+            except Exception:
+                map_data = None
+        if map_data is None:
+            return {}
+
+        result = {}
+        try:
+            for key in map_data.Keys:
+                result[str(key)] = map_data[key]
+            return result
+        except Exception:
+            pass
+        try:
+            for pair in map_data:
+                result[str(pair.Key)] = pair.Value
+        except Exception:
+            return {}
+        return result
+
+    @classmethod
+    def _write_map_field(cls, entity, map_field, value_type, values):
+        if not map_field:
+            return
+        values = values or {}
+        try:
+            from System.Collections.Generic import IDictionary, Dictionary
+        except Exception:
+            IDictionary = None
+            Dictionary = None
+        iface_type = None
+        dict_type = None
+        if value_type == String:
+            iface_type = IDictionary[String, String] if IDictionary else None
+            dict_type = Dictionary[String, String] if Dictionary else None
+        elif value_type == Boolean:
+            iface_type = IDictionary[String, Boolean] if IDictionary else None
+            dict_type = Dictionary[String, Boolean] if Dictionary else None
+        elif value_type == Int32:
+            iface_type = IDictionary[String, Int32] if IDictionary else None
+            dict_type = Dictionary[String, Int32] if Dictionary else None
+        elif value_type == Int64:
+            iface_type = IDictionary[String, Int64] if IDictionary else None
+            dict_type = Dictionary[String, Int64] if Dictionary else None
+        elif value_type == Double:
+            iface_type = IDictionary[String, Double] if IDictionary else None
+            dict_type = Dictionary[String, Double] if Dictionary else None
+        if dict_type is None:
+            raise RuntimeError("Map write type is unavailable for value type: {}".format(value_type))
+
+        map_obj = dict_type()
+        for key, value in values.items():
+            if key is None:
+                continue
+            typed_key = str(key)
+            if value_type == String:
+                map_obj[typed_key] = str(value or "")
+            elif value_type == Boolean:
+                map_obj[typed_key] = bool(value)
+            elif value_type == Int32:
+                map_obj[typed_key] = Int32(int(value))
+            elif value_type == Int64:
+                map_obj[typed_key] = Int64(int(value))
+            elif value_type == Double:
+                map_obj[typed_key] = float(value)
+            else:
+                map_obj[typed_key] = value
+
+        set_error_1 = None
+        set_error_2 = None
+        if iface_type is not None:
+            try:
+                entity.Set[iface_type](map_field, map_obj)
+                return
+            except Exception as ex1:
+                set_error_1 = ex1
+        try:
+            entity.Set[dict_type](map_field, map_obj)
+            return
+        except Exception as ex2:
+            set_error_2 = ex2
+        raise RuntimeError(
+            "Failed to write map field '{}'. Errors: {} | {}".format(
+                map_field.FieldName,
+                set_error_1,
+                set_error_2,
+            )
+        )
+
+    @classmethod
+    def _read_int_map_field(cls, entity, map_field):
+        int_map = cls._read_map_field(entity, map_field, Int32)
+        if int_map:
+            return int_map
+        return cls._read_map_field(entity, map_field, Int64)
+
+    @classmethod
+    def _write_int_map_field(cls, entity, map_field, values):
+        errors = []
+        try:
+            cls._write_map_field(entity, map_field, Int32, values)
+            return
+        except Exception as ex32:
+            errors.append(ex32)
+        try:
+            cls._write_map_field(entity, map_field, Int64, values)
+            return
+        except Exception as ex64:
+            errors.append(ex64)
+        raise RuntimeError(
+            "Failed to write int map field '{}': {}".format(
+                map_field.FieldName if map_field else "<unknown>",
+                " | ".join([str(err) for err in errors]),
+            )
+        )
+
+    @classmethod
+    def _map_chunk_count_key(cls, base_key):
+        return "{}{}".format(base_key, cls.MAP_CHUNK_COUNT_SUFFIX)
+
+    @classmethod
+    def _map_chunk_key(cls, base_key, index):
+        return "{}{}{}".format(base_key, cls.MAP_CHUNK_KEY_PREFIX, int(index))
+
+    @classmethod
+    def _clear_chunked_map_value(cls, string_map, int_map, base_key):
+        string_map.pop(base_key, None)
+        count_key = cls._map_chunk_count_key(base_key)
+        count = int_map.pop(count_key, None)
+        try:
+            count = int(count or 0)
+        except Exception:
+            count = 0
+        for idx in range(max(0, count)):
+            string_map.pop(cls._map_chunk_key(base_key, idx), None)
+
+    @classmethod
+    def _write_payload_json_to_maps(cls, string_map, int_map, base_key, value):
+        value = value or ""
+        cls._clear_chunked_map_value(string_map, int_map, base_key)
+        if len(value) <= cls.MAX_ES_STRING:
+            string_map[base_key] = value
+            return
+        chunks = cls._split_chunks(value, cls.CHUNK_SIZE)
+        int_map[cls._map_chunk_count_key(base_key)] = int(len(chunks))
+        for idx, chunk in enumerate(chunks):
+            string_map[cls._map_chunk_key(base_key, idx)] = chunk
+
+    @classmethod
+    def _read_payload_json_from_maps(cls, string_map, int_map, base_key):
+        count = int_map.get(cls._map_chunk_count_key(base_key))
+        try:
+            count = int(count or 0)
+        except Exception:
+            count = 0
+        if count > 0:
+            parts = []
+            for idx in range(count):
+                parts.append(string_map.get(cls._map_chunk_key(base_key, idx), ""))
+            return "".join(parts)
+        return string_map.get(base_key, "")
+
+    @classmethod
+    def _encode_setting_storage_key(cls, setting_key, user):
+        payload = json.dumps([setting_key or "", user or ""], separators=(",", ":"))
+        encoded = base64.b64encode(payload.encode("utf-8")).decode("ascii")
+        return "{}{}".format(cls.USER_SETTING_MAP_PREFIX, encoded)
+
+    @classmethod
+    def _encode_double_fallback(cls, value):
+        try:
+            return "{}{}".format(cls.DOUBLE_STRING_FALLBACK_PREFIX, repr(float(value)))
+        except Exception:
+            return "{}0.0".format(cls.DOUBLE_STRING_FALLBACK_PREFIX)
+
+    @classmethod
+    def _decode_double_fallback(cls, value):
+        if not isinstance(value, basestring):
+            return None
+        if not value.startswith(cls.DOUBLE_STRING_FALLBACK_PREFIX):
+            return None
+        raw = value[len(cls.DOUBLE_STRING_FALLBACK_PREFIX):]
+        try:
+            return float(raw)
+        except Exception:
+            return None
+
+    @classmethod
+    def _decode_setting_storage_key(cls, encoded_key):
+        if not encoded_key or not encoded_key.startswith(cls.USER_SETTING_MAP_PREFIX):
+            return None, None
+        suffix = encoded_key[len(cls.USER_SETTING_MAP_PREFIX):]
+        try:
+            decoded = base64.b64decode(suffix.encode("ascii"))
+            payload = json.loads(decoded.decode("utf-8"))
+            if isinstance(payload, list) and len(payload) == 2:
+                return str(payload[0]), str(payload[1])
+        except Exception:
+            pass
+        return None, None
+
+    @classmethod
+    def _typed_user_settings_maps_from_meta(cls, meta):
+        settings = {}
+        if isinstance(meta, dict):
+            settings = meta.get(cls.USER_SETTINGS_KEY) or {}
+        if not isinstance(settings, dict):
+            settings = {}
+
+        str_map = {}
+        bool_map = {}
+        int_map = {}
+        dbl_map = {}
+        for setting_key, setting_map in settings.items():
+            if not isinstance(setting_map, dict):
+                continue
+            for user, value in setting_map.items():
+                map_key = cls._encode_setting_storage_key(setting_key, user)
+                if isinstance(value, bool):
+                    bool_map[map_key] = bool(value)
+                elif isinstance(value, int):
+                    int_map[map_key] = int(value)
+                elif isinstance(value, float):
+                    dbl_map[map_key] = float(value)
+                elif value is None:
+                    continue
+                else:
+                    str_map[map_key] = str(value)
+        return str_map, bool_map, int_map, dbl_map
+
+    @classmethod
+    def _overlay_user_settings_from_maps(cls, meta, str_map, bool_map, int_map, dbl_map):
+        if not isinstance(meta, dict):
+            return
+        settings = meta.get(cls.USER_SETTINGS_KEY) or {}
+        if not isinstance(settings, dict):
+            settings = {}
+
+        def _apply(raw_map, decode_doubles=False):
+            for key, value in (raw_map or {}).items():
+                setting_key, user = cls._decode_setting_storage_key(key)
+                if not setting_key or not user:
+                    continue
+                if decode_doubles:
+                    decoded = cls._decode_double_fallback(value)
+                    if decoded is not None:
+                        value = decoded
+                setting_map = settings.get(setting_key)
+                if not isinstance(setting_map, dict):
+                    setting_map = {}
+                    settings[setting_key] = setting_map
+                setting_map[user] = value
+
+        _apply(str_map, decode_doubles=True)
+        _apply(bool_map)
+        _apply(int_map)
+        _apply(dbl_map)
+        if settings:
+            meta[cls.USER_SETTINGS_KEY] = settings
+
+    @classmethod
     def _read_storage(cls, doc):
-        schema, history_field, meta_field, history_chunks_field, meta_chunks_field, doc_field, version = cls._schema_and_fields(doc)
+        (
+            schema,
+            history_field,
+            meta_field,
+            history_chunks_field,
+            meta_chunks_field,
+            doc_field,
+            string_map_field,
+            bool_map_field,
+            int_map_field,
+            double_map_field,
+            version,
+        ) = cls._schema_and_fields(doc)
         payload = {"entries": [], "meta": {}}
         needed_guid = cls._normalize_guid(doc)
         storage_elem = cls._find_data_storage(doc, schema, doc_field, needed_guid)
@@ -470,8 +887,22 @@ class ExtensibleStorage(object):
         doc_guid = entity.Get[str](doc_field) if doc_field else None
         if doc_guid and doc_guid != needed_guid:
             return payload
-        history_json = cls._read_chunked_field(entity, history_field, history_chunks_field)
-        meta_json = cls._read_chunked_field(entity, meta_field, meta_chunks_field)
+
+        str_map = {}
+        bool_map = {}
+        int_map = {}
+        dbl_map = {}
+        if version >= 4:
+            str_map = cls._read_map_field(entity, string_map_field, String)
+            bool_map = cls._read_map_field(entity, bool_map_field, Boolean)
+            int_map = cls._read_int_map_field(entity, int_map_field)
+            dbl_map = cls._read_map_field(entity, double_map_field, Double)
+            history_json = cls._read_payload_json_from_maps(str_map, int_map, cls.PAYLOAD_HISTORY_MAP_KEY)
+            meta_json = cls._read_payload_json_from_maps(str_map, int_map, cls.PAYLOAD_META_MAP_KEY)
+        else:
+            history_json = cls._read_chunked_field(entity, history_field, history_chunks_field)
+            meta_json = cls._read_chunked_field(entity, meta_field, meta_chunks_field)
+
         if history_json:
             try:
                 payload["entries"] = json.loads(history_json)
@@ -484,6 +915,8 @@ class ExtensibleStorage(object):
                 pass
         if "meta" not in payload:
             payload["meta"] = {}
+        if version >= 4:
+            cls._overlay_user_settings_from_maps(payload["meta"], str_map, bool_map, int_map, dbl_map)
         return payload
 
     @classmethod
@@ -494,10 +927,22 @@ class ExtensibleStorage(object):
             len(history_json or "") > cls.MAX_ES_STRING
             or len(meta_json or "") > cls.MAX_ES_STRING
         )
-        schema, history_field, meta_field, history_chunks_field, meta_chunks_field, doc_field, version = cls._schema_and_fields_versioned(
+        (
+            schema,
+            history_field,
+            meta_field,
+            history_chunks_field,
+            meta_chunks_field,
+            doc_field,
+            string_map_field,
+            bool_map_field,
+            int_map_field,
+            double_map_field,
+            version,
+        ) = cls._schema_and_fields_versioned(
             doc,
             prefer_chunked=needs_chunking,
-            force_version=3,
+            force_version=4,
         )
         if cls._resolve_datastorage_type() is None:
             version = None
@@ -523,8 +968,44 @@ class ExtensibleStorage(object):
             entity = target_elem.GetEntity(schema)
             if not entity or not entity.IsValid():
                 entity = Entity(schema)
-            cls._write_chunked_field(entity, history_field, history_chunks_field, history_json)
-            cls._write_chunked_field(entity, meta_field, meta_chunks_field, meta_json)
+
+            if version >= 4:
+                string_map = {}
+                bool_map = {}
+                int_map = {}
+                dbl_map = {}
+
+                cls._write_payload_json_to_maps(string_map, int_map, cls.PAYLOAD_HISTORY_MAP_KEY, history_json)
+                cls._write_payload_json_to_maps(string_map, int_map, cls.PAYLOAD_META_MAP_KEY, meta_json)
+
+                setting_str_map, setting_bool_map, setting_int_map, setting_dbl_map = cls._typed_user_settings_maps_from_meta(
+                    payload.get("meta", {})
+                )
+                string_map.update(setting_str_map)
+                bool_map.update(setting_bool_map)
+                int_map.update(setting_int_map)
+                dbl_map.update(setting_dbl_map)
+
+                if dbl_map:
+                    try:
+                        cls._write_map_field(entity, double_map_field, Double, dbl_map)
+                    except Exception as ex:
+                        for key, value in dbl_map.items():
+                            string_map[key] = cls._encode_double_fallback(value)
+                        cls._log(
+                            "DoubleMap write failed; storing {} value(s) in StringMap fallback. Error: {}".format(
+                                len(dbl_map),
+                                ex,
+                            )
+                        )
+
+                cls._write_map_field(entity, string_map_field, String, string_map)
+                cls._write_map_field(entity, bool_map_field, Boolean, bool_map)
+                cls._write_int_map_field(entity, int_map_field, int_map)
+            else:
+                cls._write_chunked_field(entity, history_field, history_chunks_field, history_json)
+                cls._write_chunked_field(entity, meta_field, meta_chunks_field, meta_json)
+
             if doc_field:
                 entity.Set[str](doc_field, cls._normalize_guid(doc))
             target_elem.SetEntity(entity)
@@ -732,6 +1213,8 @@ def _make_doc_guid(doc, version=1):
 def _make_doc_guid_versioned(doc, version):
     import hashlib
     import uuid
+    if version == 4:
+        return Guid("2f3a4aa6-5f43-4f89-a16f-0b9f7c68da82")
     if version == 3:
         return Guid("4a2f6b98-2b5e-4d1b-9e7e-0c92fd18b6d4")
     title = getattr(doc, "Title", "unknown")
