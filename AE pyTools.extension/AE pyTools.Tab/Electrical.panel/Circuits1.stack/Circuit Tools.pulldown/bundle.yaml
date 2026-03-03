@@ -4,5 +4,6 @@ layout:
   - MoveSelectedCircuits
   - Add Spares and Spaces
   - MergeCircuits
+  - RenameCircuitsByDeviceParameter
   - -----
   - Load Electrical Parameters
