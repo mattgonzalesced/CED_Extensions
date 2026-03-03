@@ -20,6 +20,8 @@ from pyrevit import DB, forms, revit, script
 TITLE = "Flag CC Circuits"
 TARGET_PANELS = set(["RA", "RB", "RC", "RD"])
 CASE_POWER_PREFIX = "CASE POWER -"
+TARGET_CONTROLLER_FAMILY = "RCD-U_General Refrigeration Device_CED"
+XY_TOLERANCE_FT = 0.1
 
 
 def _param_text(param):
@@ -78,7 +80,81 @@ def _identity_value(elem):
     return _param_text(param)
 
 
-def _collect_case_marks(doc):
+def _controller_family(elem):
+    if elem is None:
+        return ""
+    try:
+        symbol = getattr(elem, "Symbol", None)
+        family = getattr(symbol, "Family", None) if symbol else None
+        fam_name = getattr(family, "Name", None) if family else None
+        return (fam_name or "").strip()
+    except Exception:
+        return ""
+
+
+def _get_bbox(elem):
+    if elem is None:
+        return None
+    try:
+        return elem.get_BoundingBox(None)
+    except Exception:
+        return None
+
+
+def _bbox_center(bbox):
+    if bbox is None:
+        return None
+    try:
+        return (bbox.Min + bbox.Max) * 0.5
+    except Exception:
+        return None
+
+
+def _get_point(elem):
+    if elem is None:
+        return None
+    location = getattr(elem, "Location", None)
+    if location is not None:
+        point = getattr(location, "Point", None)
+        if point:
+            return point
+        curve = getattr(location, "Curve", None)
+        if curve:
+            try:
+                return curve.Evaluate(0.5, True)
+            except Exception:
+                pass
+    return _bbox_center(_get_bbox(elem))
+
+
+def _point_in_bbox_xy(point, bbox, xy_tol=0.0):
+    if point is None or bbox is None:
+        return False
+    return (
+        (bbox.Min.X - xy_tol) <= point.X <= (bbox.Max.X + xy_tol)
+        and (bbox.Min.Y - xy_tol) <= point.Y <= (bbox.Max.Y + xy_tol)
+    )
+
+
+def _collect_controller_points(doc):
+    points = []
+    option_filter = DB.ElementDesignOptionFilter(DB.ElementId.InvalidElementId)
+    collector = (
+        DB.FilteredElementCollector(doc)
+        .OfCategory(DB.BuiltInCategory.OST_MechanicalControlDevices)
+        .WhereElementIsNotElementType()
+        .WherePasses(option_filter)
+    )
+    for elem in collector:
+        if _controller_family(elem) != TARGET_CONTROLLER_FAMILY:
+            continue
+        point = _get_point(elem)
+        if point:
+            points.append(point)
+    return points
+
+
+def _collect_case_marks(doc, controller_points):
     marks = {}
     option_filter = DB.ElementDesignOptionFilter(DB.ElementId.InvalidElementId)
     collector = (
@@ -88,6 +164,13 @@ def _collect_case_marks(doc):
         .WherePasses(option_filter)
     )
     for elem in collector:
+        bbox = _get_bbox(elem)
+        if bbox is None:
+            continue
+        has_controller = any(_point_in_bbox_xy(pt, bbox, XY_TOLERANCE_FT) for pt in controller_points)
+        if not has_controller:
+            continue
+
         raw_mark = (_identity_value(elem) or "").strip()
         if not raw_mark:
             continue
@@ -150,7 +233,18 @@ def _format_value_lines(values):
 
 
 def run_check(doc):
-    case_marks = _collect_case_marks(doc)
+    controller_points = _collect_controller_points(doc)
+    if not controller_points:
+        forms.alert(
+            "No refrigeration case controllers were found for family:\n{}\n\n"
+            "The check uses case equipment only when a controller point is inside the case XY bounds.".format(
+                TARGET_CONTROLLER_FAMILY
+            ),
+            title=TITLE,
+        )
+        return [], []
+
+    case_marks = _collect_case_marks(doc, controller_points)
     panel_loads = _collect_panel_load_names(doc)
 
     case_keys = set(case_marks.keys())
@@ -161,6 +255,11 @@ def run_check(doc):
 
     output = script.get_output()
     output.print_md("# Flag CC Circuits")
+    output.print_md(
+        "Refrigeration controllers found (family `{}`): `{}`".format(
+            TARGET_CONTROLLER_FAMILY, len(controller_points)
+        )
+    )
     output.print_md("Case Identity Marks found: `{}`".format(len(case_marks)))
     output.print_md("RA/RB/RC/RD load names found: `{}`".format(len(panel_loads)))
 
