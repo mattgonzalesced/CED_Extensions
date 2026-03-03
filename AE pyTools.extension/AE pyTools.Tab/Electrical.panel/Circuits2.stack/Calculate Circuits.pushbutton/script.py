@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from pyrevit import DB, forms, revit, script
+from pyrevit import forms
 
-from CEDElectrical.Model.CircuitBranch import *
 from CEDElectrical.Domain import settings_manager
+from CEDElectrical.Model.CircuitBranch import *
 from Snippets import _elecutils as eu
 
 app = __revit__.Application
@@ -331,7 +331,7 @@ def main():
     # Perform all calculations first
     for circuit in test_circuits:
         branch = CircuitBranch(circuit, settings=settings)
-        if not branch.is_power_circuit:
+        if not branch.is_power_circuit or branch.is_space or branch.is_spare:
             continue
 
         branch.calculate_hot_wire_size()

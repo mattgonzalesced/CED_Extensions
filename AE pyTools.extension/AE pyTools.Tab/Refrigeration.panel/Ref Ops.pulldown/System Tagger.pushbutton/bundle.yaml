@@ -1,0 +1,10 @@
+title: System Tagger
+
+tooltip: >-
+  Reads System IDs from the first column of an Excel sheet ("System ID") and
+  lets you click refrigerated cases for each ID. Click again to unselect,
+  press ESC to finish picking, then click Done to move on. Places a text note
+  on each case; if multiple are selected, appends A/B/C... to the System ID.
+
+author: >-
+  CED

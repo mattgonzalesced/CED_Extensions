@@ -1,0 +1,18 @@
+title:
+  en_us: Refr Tag TJ-SATX.pushbutton
+
+tooltip: 
+  en_us: >-
+    Version = 1.0
+    
+    Date    = 04.10.2025
+    ________________________________________________________________
+    Description:
+    
+    Refr tag button to input information for Jboxes to list refrigerated/frozen case circuits.    
+    ________________________________________________________________
+
+context:
+  not_any:
+    - active-legend
+    - active-schedule

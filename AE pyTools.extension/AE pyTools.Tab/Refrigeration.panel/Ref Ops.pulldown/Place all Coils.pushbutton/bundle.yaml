@@ -1,0 +1,10 @@
+title: Place all Coils
+
+tooltip: >-
+  Place coil family instances in Spaces/Rooms from Excel (Description,
+  Coil Count, Model #). Matches Description to Space names, selects the
+  closest Mechanical Equipment family type to Model #, and offsets coils
+  2' vertically.
+
+author: >-
+  CED
