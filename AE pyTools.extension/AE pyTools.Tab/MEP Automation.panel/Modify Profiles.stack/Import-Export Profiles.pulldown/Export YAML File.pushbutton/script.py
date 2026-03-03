@@ -26,6 +26,7 @@ BOOL_KEYS = {
 }
 FLOAT_PATTERN = re.compile(r"^-?\d+\.\d+$")
 NUMERIC_LIST_PATTERN = re.compile(r"^-?\d+(?:\.\d+)?(?:,-?\d+(?:\.\d+)?)+$")
+YAML_SCHEMA_VERSION = 4
 
 
 def _strip_control_chars(text):
@@ -69,6 +70,22 @@ def _coerce_bool_strings(value, key=None):
         if lowered == "false":
             return False
     return value
+
+
+def _with_schema_version(data):
+    root = {"equipment_definitions": []}
+    defs = []
+    if isinstance(data, dict):
+        defs = data.get("equipment_definitions") or []
+    normalized_defs = []
+    for entry in defs:
+        if not isinstance(entry, dict):
+            continue
+        updated = dict(entry)
+        updated["schema_version"] = YAML_SCHEMA_VERSION
+        normalized_defs.append(updated)
+    root["equipment_definitions"] = normalized_defs
+    return root
 
 
 try:
@@ -171,7 +188,7 @@ def _dump_yaml_lines(value, indent=0):
 
 
 def _dump_yaml_text(data):
-    root = {"equipment_definitions": data.get("equipment_definitions") or []}
+    root = _with_schema_version(data)
     return "\n".join(_dump_yaml_lines(root)) + "\n"
 
 

@@ -38,6 +38,7 @@ except Exception:  # pragma: no cover - IronPython fallback
 ELEMENT_LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
 ESCAPED_QUOTE_KEYS = ("label", "type_name")
 INLINE_LIST_KEY_RE = re.compile(r"^[A-Za-z0-9_ #\-\.\(\)\/]+$")
+YAML_SCHEMA_VERSION = 4
 
 
 class _ElementLinkerString(str):
@@ -114,6 +115,20 @@ def _prepare_dump_payload(payload):
     normalized = _normalize_escaped_quotes(payload)
     cleaned = _cleanup_empty_maps(normalized)
     return _wrap_element_linker_strings(cleaned)
+
+
+def _copy_with_schema_version(data, target_version=YAML_SCHEMA_VERSION):
+    defs = []
+    if isinstance(data, Mapping):
+        defs = data.get("equipment_definitions") or []
+    normalized_defs = []
+    for entry in defs:
+        if not isinstance(entry, Mapping):
+            continue
+        updated = copy.deepcopy(entry)
+        updated["schema_version"] = int(target_version)
+        normalized_defs.append(updated)
+    return {"equipment_definitions": normalized_defs}
 
 
 def _build_element_linker_dumper():
@@ -583,14 +598,14 @@ def load_data_from_text(raw_text, source_label="<memory>"):
 
 
 def save_data(path, data):
-    payload = {"equipment_definitions": data.get("equipment_definitions", [])}
+    payload = _copy_with_schema_version(data)
     if not _yaml_dump_to_path(path, payload):
         with io.open(path, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2)
 
 
 def dump_data_to_string(data):
-    payload = {"equipment_definitions": data.get("equipment_definitions", [])}
+    payload = _copy_with_schema_version(data)
     if yaml:
         dumper = getattr(yaml, "safe_dump", None) or getattr(yaml, "dump", None)
         if dumper:
@@ -875,7 +890,7 @@ def _create_equipment_stub(cad_name, types, seq):
         "id": eq_id,
         "name": cad_name,
         "version": 1,
-        "schema_version": 1,
+        "schema_version": YAML_SCHEMA_VERSION,
         "allow_parentless": True,
         "allow_unmatched_parents": True,
         "prompt_on_parent_mismatch": False,
