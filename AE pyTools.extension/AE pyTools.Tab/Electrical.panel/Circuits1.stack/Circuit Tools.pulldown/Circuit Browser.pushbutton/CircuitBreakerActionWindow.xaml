@@ -1,0 +1,78 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        Title="Auto Size Breaker"
+        Height="560"
+        Width="1300"
+        MinHeight="420"
+        MinWidth="980"
+        WindowStartupLocation="CenterOwner"
+        Background="#F2F3F5">
+  <Grid Margin="10">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <TextBlock Grid.Row="0" Text="Auto Size Breaker / Frame" FontSize="16" FontWeight="Bold" Margin="0,0,0,8"/>
+
+    <Border Grid.Row="1" BorderBrush="#AAB4C0" BorderThickness="1" Background="#FFFFFF">
+      <DataGrid Name="CircuitGrid" AutoGenerateColumns="False" SelectionMode="Extended" CanUserAddRows="False" HeadersVisibility="Column">
+        <DataGrid.RowStyle>
+          <Style TargetType="DataGridRow">
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding is_enabled}" Value="False">
+                <Setter Property="Opacity" Value="0.45"/>
+              </DataTrigger>
+              <DataTrigger Binding="{Binding is_changed}" Value="True">
+                <Setter Property="Background" Value="#FFF8D6"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </DataGrid.RowStyle>
+        <DataGrid.Columns>
+          <DataGridTemplateColumn Header="" Width="34">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <CheckBox IsChecked="{Binding is_checked, Mode=TwoWay}" IsEnabled="{Binding is_enabled}" Checked="item_checked" Unchecked="item_unchecked"/>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTextColumn Header="Panel" Width="100" Binding="{Binding panel}" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Ckt" Width="70" Binding="{Binding circuit_number}" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Load Name" Width="170" Binding="{Binding load_name}" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Load Current" Width="90" Binding="{Binding current_load_current}" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Current Rating" Width="90" Binding="{Binding current_rating}" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Current Frame" Width="90" Binding="{Binding current_frame}" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Autosized Rating" Width="100" Binding="{Binding autosized_rating}" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Autosized Frame" Width="100" Binding="{Binding autosized_frame}" IsReadOnly="True"/>
+          <DataGridTextColumn Header="New Rating" Width="90" Binding="{Binding new_rating}" IsReadOnly="True"/>
+          <DataGridTextColumn Header="New Frame" Width="90" Binding="{Binding new_frame}" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Blocked Reason" Width="220" Binding="{Binding reason}" IsReadOnly="True"/>
+        </DataGrid.Columns>
+      </DataGrid>
+    </Border>
+
+    <Grid Grid.Row="2" Margin="0,8,0,0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+
+      <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+        <Button Content="Check All" Width="76" Height="24" Click="check_all_clicked"/>
+        <Button Content="Uncheck All" Width="84" Height="24" Margin="6,0,0,0" Click="uncheck_all_clicked"/>
+        <CheckBox Name="AutoBreakerCheck" Content="Autosize Breakers" IsChecked="True" Margin="12,0,0,0" VerticalAlignment="Center"/>
+        <CheckBox Name="AutoFrameCheck" Content="Autosize Frames" IsChecked="True" Margin="10,0,0,0" VerticalAlignment="Center"/>
+        <Button Content="Apply Autosized Preview" Width="150" Height="24" Margin="10,0,0,0" Click="apply_autosized_clicked"/>
+        <TextBlock Name="ChangedStatusText" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="#3A4754" Text="0 of 0 circuits to be modified."/>
+      </StackPanel>
+
+      <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+        <Button Content="Cancel" Width="80" Height="24" Click="cancel_clicked"/>
+        <Button Content="Apply" Width="80" Height="24" Margin="6,0,0,0" Click="apply_clicked" Background="#DFF2D8" BorderBrush="#4E8A4A"/>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>

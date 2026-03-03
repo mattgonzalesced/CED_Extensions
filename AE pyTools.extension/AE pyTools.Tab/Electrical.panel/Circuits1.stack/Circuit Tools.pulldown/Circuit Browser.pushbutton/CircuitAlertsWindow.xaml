@@ -1,0 +1,75 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        Title="Circuit Alerts"
+        Height="520"
+        Width="980"
+        MinHeight="360"
+        MinWidth="760"
+        WindowStartupLocation="CenterOwner"
+        Background="#F2F3F5">
+  <Grid Margin="10">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <TextBlock Grid.Row="0" Text="Circuit Alerts" FontSize="16" FontWeight="Bold" Margin="0,0,0,4"/>
+    <StackPanel Grid.Row="1" Orientation="Vertical" Margin="0,0,0,8">
+      <TextBlock Name="CircuitText" Text="-" Foreground="#2E3A46" FontWeight="SemiBold"/>
+      <TextBlock Name="CountText" Text="Alerts: 0" Foreground="#4A5866"/>
+    </StackPanel>
+
+    <TabControl Grid.Row="2" Name="AlertsTabs">
+      <TabItem Header="Active">
+        <Border BorderBrush="#AAB4C0" BorderThickness="1" Background="#FFFFFF" Margin="4">
+          <ListView Name="ActiveAlertsList">
+            <ListView.View>
+              <GridView>
+                <GridViewColumn Header="Severity" Width="90" DisplayMemberBinding="{Binding severity}"/>
+                <GridViewColumn Header="Group" Width="120" DisplayMemberBinding="{Binding group}"/>
+                <GridViewColumn Header="Alert ID" Width="230" DisplayMemberBinding="{Binding definition_id}"/>
+                <GridViewColumn Header="Message" Width="460">
+                  <GridViewColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding message}" TextWrapping="Wrap" MaxWidth="450"/>
+                    </DataTemplate>
+                  </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+              </GridView>
+            </ListView.View>
+          </ListView>
+        </Border>
+      </TabItem>
+      <TabItem Header="Hidden">
+        <Border BorderBrush="#AAB4C0" BorderThickness="1" Background="#FFFFFF" Margin="4">
+          <ListView Name="HiddenAlertsList">
+            <ListView.View>
+              <GridView>
+                <GridViewColumn Header="Severity" Width="90" DisplayMemberBinding="{Binding severity}"/>
+                <GridViewColumn Header="Group" Width="120" DisplayMemberBinding="{Binding group}"/>
+                <GridViewColumn Header="Alert ID" Width="230" DisplayMemberBinding="{Binding definition_id}"/>
+                <GridViewColumn Header="Message" Width="460">
+                  <GridViewColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding message}" TextWrapping="Wrap" MaxWidth="450"/>
+                    </DataTemplate>
+                  </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+              </GridView>
+            </ListView.View>
+          </ListView>
+        </Border>
+      </TabItem>
+    </TabControl>
+
+    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+      <Grid Width="92" Height="24">
+        <Button Name="HideTypeButton" Content="Hide Type" Width="92" Height="24" Click="hide_type_clicked"/>
+        <Button Name="UnhideTypeButton" Content="Unhide Type" Width="92" Height="24" Click="unhide_type_clicked"/>
+      </Grid>
+      <Button Content="Apply" Width="80" Height="24" Margin="12,0,0,0" Click="apply_clicked"/>
+      <Button Content="Close" Width="80" Height="24" Margin="6,0,0,0" Click="close_clicked"/>
+    </StackPanel>
+  </Grid>
+</Window>

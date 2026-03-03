@@ -1,0 +1,82 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        Title="Circuit Action"
+        Height="560"
+        Width="1200"
+        MinHeight="420"
+        MinWidth="900"
+        WindowStartupLocation="CenterOwner"
+        Background="#F2F3F5">
+  <Grid Margin="10">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <TextBlock Name="TitleText" Grid.Row="0" Text="Action" FontSize="16" FontWeight="Bold" Margin="0,0,0,8"/>
+
+    <Border Grid.Row="1" BorderBrush="#AAB4C0" BorderThickness="1" Background="#FFFFFF">
+      <DataGrid Name="CircuitGrid" AutoGenerateColumns="False" SelectionMode="Extended" CanUserAddRows="False" HeadersVisibility="Column">
+        <DataGrid.RowStyle>
+          <Style TargetType="DataGridRow">
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding is_enabled}" Value="False">
+                <Setter Property="Opacity" Value="0.45"/>
+              </DataTrigger>
+              <DataTrigger Binding="{Binding is_changed}" Value="True">
+                <Setter Property="Background" Value="#FFF8D6"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </DataGrid.RowStyle>
+        <DataGrid.Columns>
+          <DataGridTemplateColumn Header="" Width="34">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <CheckBox IsChecked="{Binding is_checked, Mode=TwoWay}" IsEnabled="{Binding is_enabled}" Checked="item_checked" Unchecked="item_unchecked"/>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTextColumn Header="Panel" Width="100" Binding="{Binding panel}" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Ckt" Width="70" Binding="{Binding circuit_number}" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Load Name" Width="180" Binding="{Binding load_name}" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Current Qty" Width="80" Binding="{Binding current_qty}" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Current Size" Width="100" Binding="{Binding current_size}" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Current Wire" Width="220" Binding="{Binding current_wire}" IsReadOnly="True"/>
+          <DataGridTextColumn Header="New Qty" Width="70" Binding="{Binding new_qty}" IsReadOnly="True"/>
+          <DataGridTextColumn Header="New Size" Width="100" Binding="{Binding new_size}" IsReadOnly="True"/>
+          <DataGridTemplateColumn Header="New Wire" Width="220">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding new_wire}" FontStyle="{Binding new_wire_font_style}" TextWrapping="Wrap"/>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTextColumn Header="Blocked Reason" Width="200" Binding="{Binding reason}" IsReadOnly="True"/>
+        </DataGrid.Columns>
+      </DataGrid>
+    </Border>
+
+    <Grid Grid.Row="2" Margin="0,8,0,0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+
+      <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+        <Button Content="Check All" Width="76" Height="24" Click="check_all_clicked"/>
+        <Button Content="Uncheck All" Width="84" Height="24" Margin="6,0,0,0" Click="uncheck_all_clicked"/>
+        <TextBlock Name="ChangedStatusText" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="#3A4754" Text="0 of 0 circuits to be modified."/>
+      </StackPanel>
+
+      <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+        <Button Content="Add" Width="72" Height="24" Click="add_clicked"/>
+        <Button Content="Remove" Width="72" Height="24" Margin="6,0,0,0" Click="remove_clicked"/>
+        <Button Content="Cancel" Width="80" Height="24" Margin="12,0,0,0" Click="cancel_clicked"/>
+        <Button Content="Apply" Width="80" Height="24" Margin="6,0,0,0" Click="apply_clicked" Background="#DFF2D8" BorderBrush="#4E8A4A"/>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>

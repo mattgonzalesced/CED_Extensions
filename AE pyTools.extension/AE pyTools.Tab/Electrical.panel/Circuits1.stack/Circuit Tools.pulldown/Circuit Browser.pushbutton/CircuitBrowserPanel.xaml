@@ -1,0 +1,198 @@
+﻿<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Background="#F2F3F5">
+  <Page.Resources>
+    <DataTemplate x:Key="CompactTemplate">
+      <Border BorderBrush="{Binding card_border_brush}" BorderThickness="{Binding card_border_thickness}" CornerRadius="3" Margin="0,0,0,4" Padding="4" Background="#FFFFFF">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+
+          <CheckBox Grid.Column="0"
+                    IsChecked="{Binding is_checked, Mode=TwoWay}"
+                    VerticalAlignment="Center"
+                    Checked="item_checked"
+                    Unchecked="item_unchecked"
+                    Margin="0,0,6,0"/>
+
+          <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+            <Border Background="{Binding type_tag_bg}" BorderBrush="{Binding type_tag_fg}" BorderThickness="1" CornerRadius="2" Padding="4,0" Margin="0,0,6,0">
+              <TextBlock Text="{Binding type_tag_text}" Foreground="{Binding type_tag_fg}" FontWeight="Bold" FontSize="10"/>
+            </Border>
+            <TextBlock Text="{Binding panel}" FontWeight="Bold"/>
+            <TextBlock Text=" / "/>
+            <TextBlock Text="{Binding circuit_number}" FontWeight="Bold"/>
+            <TextBlock Text="   "/>
+            <TextBlock Text="{Binding load_name}"/>
+          </StackPanel>
+
+          <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8,0,0,0">
+            <TextBlock Text="{Binding rating_poles}" FontWeight="Bold" VerticalAlignment="Center"/>
+            <Border Background="#E8F1FF" BorderBrush="#2B62A8" BorderThickness="1" CornerRadius="2" Padding="3,0" Margin="6,0,0,0" Visibility="{Binding neutral_badge_visibility}">
+              <TextBlock Text="N" Foreground="#1E4B86" FontWeight="Bold" FontSize="10"/>
+            </Border>
+            <Border Background="#FFF1E8" BorderBrush="#9A5D2E" BorderThickness="1" CornerRadius="2" Padding="3,0" Margin="4,0,0,0" Visibility="{Binding ig_badge_visibility}">
+              <TextBlock Text="IG" Foreground="#7A451D" FontWeight="Bold" FontSize="10"/>
+            </Border>
+          </StackPanel>
+
+          <Button Grid.Column="3"
+                  Background="{Binding alert_bg}"
+                  BorderBrush="{Binding alert_border}"
+                  BorderThickness="1"
+                  Padding="4,0"
+                  Margin="6,0,0,0"
+                  Visibility="{Binding alert_visibility}"
+                  ToolTip="{Binding alert_summary}"
+                  Click="alert_tag_clicked"
+                  MinWidth="20"
+                  Height="18">
+            <TextBlock Text="!" FontWeight="Bold" Foreground="{Binding alert_text_color}"/>
+          </Button>
+        </Grid>
+      </Border>
+    </DataTemplate>
+
+    <DataTemplate x:Key="CardTemplate">
+      <Border BorderBrush="{Binding card_border_brush}" BorderThickness="{Binding card_border_thickness}" CornerRadius="4" Margin="0,0,0,6" Padding="6" Background="#FFFFFF">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+
+          <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <CheckBox Grid.Column="0"
+                      IsChecked="{Binding is_checked, Mode=TwoWay}"
+                      VerticalAlignment="Top"
+                      Checked="item_checked"
+                      Unchecked="item_unchecked"
+                      Margin="0,1,6,0"/>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+              <TextBlock Text="{Binding panel}" FontWeight="Bold"/>
+              <TextBlock Text=" / "/>
+              <TextBlock Text="{Binding circuit_number}" FontWeight="Bold"/>
+              <TextBlock Text="   "/>
+              <TextBlock Text="{Binding load_name}"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8,0,0,0">
+              <TextBlock Text="{Binding rating_poles}" FontWeight="Bold" VerticalAlignment="Top"/>
+              <Border Background="#E8F1FF" BorderBrush="#2B62A8" BorderThickness="1" CornerRadius="2" Padding="3,0" Margin="6,0,0,0" Visibility="{Binding neutral_badge_visibility}">
+                <TextBlock Text="N" Foreground="#1E4B86" FontWeight="Bold" FontSize="10"/>
+              </Border>
+              <Border Background="#FFF1E8" BorderBrush="#9A5D2E" BorderThickness="1" CornerRadius="2" Padding="3,0" Margin="4,0,0,0" Visibility="{Binding ig_badge_visibility}">
+                <TextBlock Text="IG" Foreground="#7A451D" FontWeight="Bold" FontSize="10"/>
+              </Border>
+            </StackPanel>
+
+            <Button Grid.Column="3"
+                    Background="{Binding alert_bg}"
+                    BorderBrush="{Binding alert_border}"
+                    BorderThickness="1"
+                    Padding="4,0"
+                    Margin="6,0,0,0"
+                    Visibility="{Binding alert_visibility}"
+                    ToolTip="{Binding alert_summary}"
+                    VerticalAlignment="Top"
+                    Click="alert_tag_clicked"
+                    MinWidth="20"
+                    Height="18">
+              <TextBlock Text="!" FontWeight="Bold" Foreground="{Binding alert_text_color}"/>
+            </Button>
+          </Grid>
+
+          <Grid Grid.Row="1" Margin="22,4,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0">
+              <StackPanel Orientation="Horizontal">
+                <Border Background="{Binding type_tag_bg}" BorderBrush="{Binding type_tag_fg}" BorderThickness="1" CornerRadius="2" Padding="4,0">
+                  <TextBlock Text="{Binding type_tag_text}" Foreground="{Binding type_tag_fg}" FontWeight="Bold" FontSize="10"/>
+                </Border>
+              </StackPanel>
+              <TextBlock Text="{Binding wire_line}" Foreground="#384450"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+              <TextBlock Text="{Binding load_line}" Foreground="{Binding load_line_color}"/>
+              <TextBlock Text="{Binding device_line}" Foreground="#384450"/>
+            </StackPanel>
+          </Grid>
+        </Grid>
+      </Border>
+    </DataTemplate>
+  </Page.Resources>
+
+  <Grid Margin="8">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <TextBlock Grid.Row="0" Text="Circuit Browser" FontSize="14" FontWeight="Bold" Margin="0,0,0,6"/>
+    <TextBlock Grid.Row="1" Name="DocumentNameText" Text="Document: -" Foreground="#4A5866" Margin="0,0,0,6"/>
+
+    <Grid Grid.Row="2" Margin="0,0,0,6">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+      <TextBox Name="SearchBox" Grid.Column="0" Height="24" VerticalContentAlignment="Center" Margin="0,0,6,0" TextChanged="search_changed"/>
+      <Button Name="FilterButton" Grid.Column="1" Content="Filter" Width="60" Height="24" Margin="0,0,6,0" Click="filter_button_clicked" Background="#E6E9EE" Foreground="#1F2E3D"/>
+      <Button Name="ActionsButton" Grid.Column="2" Content="Actions" Width="64" Height="24" Margin="0,0,6,0" Click="actions_button_clicked"/>
+      <Button Name="RefreshButton" Grid.Column="3" Content="Refresh" Width="66" Height="24" Margin="0,0,6,0" Click="refresh_clicked"/>
+      <Button Name="ToggleViewButton" Grid.Column="4" Content="Card" Width="66" Height="24" Click="toggle_view_clicked"/>
+    </Grid>
+
+    <Border Grid.Row="3" BorderBrush="#9CA9B6" BorderThickness="1" Background="#EEF1F4">
+      <ListView Name="CircuitList" SelectionMode="Extended" ItemTemplate="{StaticResource CompactTemplate}" HorizontalContentAlignment="Stretch" SelectionChanged="selection_changed"/>
+    </Border>
+
+    <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,6,0,0">
+      <Button Name="CheckAllButton" Content="Check All" Width="76" Height="22" Click="check_all_clicked"/>
+      <Button Name="UncheckAllButton" Content="Uncheck All" Width="82" Height="22" Margin="6,0,0,0" Click="uncheck_all_clicked"/>
+    </StackPanel>
+
+    <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="0,6,0,0">
+      <TextBlock Text="Select in Model:" FontWeight="Bold" VerticalAlignment="Center"/>
+      <Button Name="SelectEquipmentButton" Content="E" Width="26" Height="22" Margin="6,0,3,0" Click="select_equipment_clicked" ToolTip="Select supplying equipment for checked/selected circuits."/>
+      <Button Name="SelectCircuitsButton" Content="C" Width="26" Height="22" Margin="0,0,3,0" Click="select_circuits_clicked" ToolTip="Select the circuit elements for checked/selected rows."/>
+      <Button Name="SelectDownstreamButton" Content="D" Width="26" Height="22" Margin="0,0,6,0" Click="select_downstream_clicked" ToolTip="Select downstream devices on checked/selected circuits."/>
+      <Button Name="ClearSelectionButton" Content="Clear" Width="52" Height="22" Click="clear_revit_selection_clicked"/>
+    </StackPanel>
+
+    <StackPanel Grid.Row="6" Orientation="Horizontal" Margin="0,6,0,0">
+      <TextBlock Text="Calculate:" FontWeight="Bold" VerticalAlignment="Center"/>
+      <Button Name="CalcSelectedButton" Content="Selected" Height="22" Margin="6,0,3,0" Click="calculate_selected_clicked"/>
+      <Button Name="CalcAllButton" Content="All" Width="40" Height="22" Click="calculate_all_clicked"/>
+      <Button Name="CalcSettingsButton" Content="Settings" Width="62" Height="22" Margin="6,0,0,0" Click="calculate_settings_clicked" ToolTip="Open Calculate Circuits project settings."/>
+    </StackPanel>
+
+    <TextBlock Grid.Row="7" Name="StatusText" Margin="0,8,0,0" Foreground="#3A4754" Text="Ready"/>
+  </Grid>
+</Page>
