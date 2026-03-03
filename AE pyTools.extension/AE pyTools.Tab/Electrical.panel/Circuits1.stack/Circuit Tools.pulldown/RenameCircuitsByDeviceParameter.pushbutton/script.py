@@ -408,6 +408,9 @@ def _build_row_data(circuit_map):
             "circuit": circuit,
             "circuit_label": _format_circuit_label(circuit),
             "selector_name": selector_name,
+            "panel_name": panel_name,
+            "circuit_number": circuit_number,
+            "current_load_name": current_load_name,
             "sort_key": _get_circuit_sort_key(circuit),
             "source_elements": source_elements,
             "parameter_names": parameter_names,
@@ -442,15 +445,13 @@ class _CircuitItem(object):
 
 
 class _CircuitPreviewItem(object):
-    def __init__(self, circuit_id, display):
+    def __init__(self, circuit_id, element_id, panel_name, circuit_number, current_load_name, new_load_name):
         self.CircuitId = circuit_id
-        self.Display = display
-
-    def __str__(self):
-        return self.Display
-
-    def __unicode__(self):
-        return self.Display
+        self.ElementId = element_id
+        self.PanelName = panel_name
+        self.CircuitNumber = circuit_number
+        self.CurrentLoadName = current_load_name
+        self.NewLoadName = new_load_name
 
 
 class CircuitStringBuilderWindow(forms.WPFWindow):
@@ -493,11 +494,11 @@ class CircuitStringBuilderWindow(forms.WPFWindow):
         self._string_parts = self.FindName("StringPartsList")
         self._preview_textbox = self.FindName("PreviewTextBox")
         self._selected_preview_list = self.FindName("SelectedPreviewList")
-        self._custom_field_combo = self.FindName("CustomFieldCombo")
-        self._separator_combo = self.FindName("SeparatorCombo")
+        self._custom_add_combo = self.FindName("CustomAddCombo")
         self._saved_template_combo = self.FindName("SavedTemplateCombo")
         self._template_name_text = self.FindName("TemplateNameText")
         self._increment_checkbox = self.FindName("IncrementSelectedCheckBox")
+        self._all_caps_checkbox = self.FindName("AllCapsCheckBox")
 
     def _load_templates_from_config(self):
         templates = getattr(self._config, "saved_templates", {})
@@ -516,15 +517,11 @@ class CircuitStringBuilderWindow(forms.WPFWindow):
         script.save_config()
 
     def _populate_quick_add_defaults(self):
-        if self._separator_combo is not None:
-            for item in [" ", "-", "_", "/", ".", ":"]:
-                self._separator_combo.Items.Add(item)
-            self._separator_combo.Text = "-"
-
-        if self._custom_field_combo is not None:
-            for item in ["", "EXISTING", "NEW", "SPARE"]:
-                self._custom_field_combo.Items.Add(item)
-            self._custom_field_combo.Text = ""
+        if self._custom_add_combo is not None:
+            defaults = ["", " ", "-", "_", "/", ".", ":", "EXISTING", "NEW", "SPARE"]
+            for item in defaults:
+                self._custom_add_combo.Items.Add(item)
+            self._custom_add_combo.Text = "-"
 
     def _populate_templates_combo(self):
         if self._saved_template_combo is None:
@@ -656,13 +653,24 @@ class CircuitStringBuilderWindow(forms.WPFWindow):
             cid = row["circuit_id"]
             preview_names[cid] = _safe_text(self._get_preview_for_circuit(cid))
 
+        if self._all_caps_checkbox is not None and bool(self._all_caps_checkbox.IsChecked):
+            for cid in list(preview_names.keys()):
+                preview_names[cid] = _safe_text(preview_names.get(cid)).upper()
+
         if self._increment_checkbox is not None and bool(self._increment_checkbox.IsChecked):
             preview_names = self._apply_increment_suffix(preview_names)
 
         for row in selected_rows:
             cid = row["circuit_id"]
             preview_text = preview_names.get(cid, _safe_text(self._get_preview_for_circuit(cid)))
-            item = _CircuitPreviewItem(cid, "{} -> {}".format(row["circuit_label"], preview_text or ""))
+            item = _CircuitPreviewItem(
+                cid,
+                str(cid),
+                row.get("panel_name", "No Panel"),
+                row.get("circuit_number", "<unnamed>"),
+                row.get("current_load_name", "<unnamed>"),
+                preview_text or ""
+            )
             self._selected_preview_list.Items.Add(item)
             if self._active_circuit_id is not None and cid == self._active_circuit_id:
                 self._selected_preview_list.SelectedItem = item
@@ -750,10 +758,7 @@ class CircuitStringBuilderWindow(forms.WPFWindow):
                 continue
             index = 1
             for cid in circuit_ids:
-                if index == 1:
-                    result[cid] = base_name
-                else:
-                    result[cid] = u"{} #{}".format(base_name, index)
+                result[cid] = u"{} #{}".format(base_name, index)
                 index += 1
         return result
 
@@ -796,6 +801,9 @@ class CircuitStringBuilderWindow(forms.WPFWindow):
     def IncrementSelectedCheckBox_Changed(self, sender, args):
         self._refresh_selected_preview_list()
 
+    def AllCapsCheckBox_Changed(self, sender, args):
+        self._refresh_selected_preview_list()
+
     def AddToStringButton_Click(self, sender, args):
         if self._available_params is None:
             return
@@ -805,25 +813,16 @@ class CircuitStringBuilderWindow(forms.WPFWindow):
             return
         self._append_token_to_active(TOKEN_PARAM, selected)
 
-    def AddCustomFieldButton_Click(self, sender, args):
-        if self._custom_field_combo is None:
+    def AddCustomFieldSeparatorButton_Click(self, sender, args):
+        if self._custom_add_combo is None:
             return
-        custom_value = _raw_text(self._custom_field_combo.Text)
+        custom_value = _raw_text(self._custom_add_combo.Text)
         if custom_value == u"":
-            forms.alert("Enter a custom field value first.", exitscript=False)
+            forms.alert("Enter a custom field or separator first.", exitscript=False)
             return
-        self._ensure_combo_has_value(self._custom_field_combo, custom_value)
-        self._append_token_to_active(TOKEN_CUSTOM, custom_value)
-
-    def AddSeparatorButton_Click(self, sender, args):
-        if self._separator_combo is None:
-            return
-        separator_value = _raw_text(self._separator_combo.Text)
-        if separator_value == u"":
-            forms.alert("Enter a separator first.", exitscript=False)
-            return
-        self._ensure_combo_has_value(self._separator_combo, separator_value)
-        self._append_token_to_active(TOKEN_SEPARATOR, separator_value)
+        self._ensure_combo_has_value(self._custom_add_combo, custom_value)
+        token_type = TOKEN_SEPARATOR if custom_value in [" ", "-", "_", "/", ".", ":"] else TOKEN_CUSTOM
+        self._append_token_to_active(token_type, custom_value)
 
     def RemoveFromStringButton_Click(self, sender, args):
         state = self._get_active_state()
@@ -983,6 +982,10 @@ class CircuitStringBuilderWindow(forms.WPFWindow):
         names = {}
         for cid in target_ids:
             names[cid] = _safe_text(self._get_preview_for_circuit(cid))
+
+        if self._all_caps_checkbox is not None and bool(self._all_caps_checkbox.IsChecked):
+            for cid in list(names.keys()):
+                names[cid] = _safe_text(names.get(cid)).upper()
 
         if self._increment_checkbox is not None and bool(self._increment_checkbox.IsChecked):
             names = self._apply_increment_suffix(names)
