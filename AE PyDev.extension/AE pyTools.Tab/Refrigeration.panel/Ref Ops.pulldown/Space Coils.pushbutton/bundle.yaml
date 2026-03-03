@@ -1,0 +1,9 @@
+title: Space Coils
+
+tooltip: >-
+  Evenly spaces selected coil families along the chosen wall direction.
+  Coils are set 15" off the wall, face opposite the wall direction, and
+  are distributed with equal gaps to the left and right walls.
+
+author: >-
+  CED
