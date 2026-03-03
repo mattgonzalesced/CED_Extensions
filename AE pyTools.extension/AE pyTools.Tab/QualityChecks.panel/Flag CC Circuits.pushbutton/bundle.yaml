@@ -3,4 +3,4 @@ tooltip: |
   Compare refrigerated case Identity Mark values (Mechanical Equipment)
   against load names on panels RA/RB/RC/RD after removing the "CASE POWER -" prefix.
   Flags mismatches in both directions.
-is_beta: true
+is_beta: false
