@@ -1,0 +1,6 @@
+title: FamilyGridLayout
+tooltip: >-
+  Place a selected Family : Type on a grid inside one selected Space/Room.
+  Inputs include X and Y spacing (feet) and offset below ceiling/roof (inches).
+author: >-
+  CED
