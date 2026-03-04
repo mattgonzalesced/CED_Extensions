@@ -33,6 +33,24 @@ def _get_doc(doc=None):
         return None
 
 
+def _coerce_bool(value, default=False):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return bool(default)
+    if isinstance(value, (int, float)):
+        return value != 0
+    try:
+        text = str(value).strip().lower()
+    except Exception:
+        return bool(default)
+    if text in ("1", "true", "yes", "y", "on", "enabled"):
+        return True
+    if text in ("0", "false", "no", "n", "off", "disabled", ""):
+        return False
+    return bool(default)
+
+
 def get_setting(default=True, doc=None):
     doc = _get_doc(doc)
     if doc is None:
@@ -40,14 +58,14 @@ def get_setting(default=True, doc=None):
     value = ExtensibleStorage.get_user_setting(doc, SETTING_KEY, default=None)
     if value is None:
         return bool(default)
-    return bool(value)
+    return _coerce_bool(value, default=default)
 
 
 def set_setting(value, doc=None):
     doc = _get_doc(doc)
     if doc is None:
         return False
-    return ExtensibleStorage.set_user_setting(doc, SETTING_KEY, bool(value))
+    return ExtensibleStorage.set_user_setting(doc, SETTING_KEY, _coerce_bool(value, default=False))
 
 
 def _family_type_label(elem):
