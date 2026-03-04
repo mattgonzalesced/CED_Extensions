@@ -296,6 +296,20 @@ class ExtensibleStorage(object):
             try:
                 cached_schema = cached_default[0]
                 cached_doc_field = cached_default[5]
+                cached_version = cached_default[10] if len(cached_default) > 10 else None
+                # If we previously cached v3, but v4 data now exists, promote reads to v4.
+                if cached_version != 4:
+                    packed_v4 = cache.get("v4")
+                    if packed_v4 is None:
+                        schema_v4 = Schema.Lookup(_make_doc_guid(doc, version=4))
+                        if schema_v4 is not None:
+                            packed_v4 = cls._pack_schema(schema_v4, version=4)
+                            cache["v4"] = packed_v4
+                    if packed_v4 is not None:
+                        if cls._find_data_storage(doc, packed_v4[0], packed_v4[5], needed_guid) is not None:
+                            cache["default"] = packed_v4
+                            cls._schema_cache[doc_key] = cache
+                            return packed_v4
                 if cls._find_data_storage(doc, cached_schema, cached_doc_field, needed_guid) is not None:
                     return cached_default
             except Exception:
