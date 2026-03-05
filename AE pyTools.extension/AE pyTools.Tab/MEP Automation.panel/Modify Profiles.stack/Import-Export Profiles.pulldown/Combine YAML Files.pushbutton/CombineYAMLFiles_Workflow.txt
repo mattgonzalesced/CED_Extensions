@@ -4,5 +4,13 @@ second YAML to append.
 
 The tool parses both equipment_definitions lists, finds the highest numeric ID
 in the first file, and renumbers IDs from the second file to continue that
-sequence (preserving prefix and padding). The combined output is written to a
-new YAML file without modifying the originals.
+sequence (preserving prefix and padding). It also renumbers linked set/linked
+element IDs and rewrites Element_Linker text payloads from the second file so
+the appended entries stay independent.
+
+Truth-source IDs in the second file are remapped to the new profile IDs so
+appended profiles do not auto-merge into existing source groups from the first
+file.
+
+The combined output is written to a new YAML file without modifying the
+originals.

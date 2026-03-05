@@ -3,5 +3,6 @@ tooltip: |
   Combine two equipment-definition YAML files into a single merged dataset.
   Entries from the first file are preserved as-is and entries from the second are appended.
   Imported IDs are renumbered to prevent collisions across definitions and linked sets.
+  Truth-source IDs from the second file are remapped so appended profiles stay unmerged.
   The output can be imported directly for placement and profile editing in project storage.
 is_beta: false
