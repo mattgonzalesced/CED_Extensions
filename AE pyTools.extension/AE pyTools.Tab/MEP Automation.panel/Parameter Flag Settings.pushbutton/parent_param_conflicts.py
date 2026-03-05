@@ -1127,7 +1127,7 @@ def _show_modeless_window(ui_module, xaml_path, conflicts, param_keys):
     return True
 
 
-def run_sync_check(doc, bypass_cooldown=False, modeless=True):
+def run_sync_check(doc, bypass_cooldown=False, modeless=True, force_run=False, show_no_conflicts=False):
     global _MODELLESS_WINDOW
     if doc is None or getattr(doc, "IsFamilyDocument", False):
         return
@@ -1142,10 +1142,12 @@ def run_sync_check(doc, bypass_cooldown=False, modeless=True):
                 return
         except Exception:
             _MODELLESS_WINDOW = None
-    if not get_setting(default=True, doc=doc):
+    if (not force_run) and (not get_setting(default=True, doc=doc)):
         return
     conflicts, param_keys = _build_conflict_payload(doc)
     if not conflicts:
+        if show_no_conflicts:
+            forms.alert("No parent-parameter conflicts were found.", title="Parent Parameter Conflicts")
         return
     if not _should_open_ui(doc, bypass_cooldown=bypass_cooldown):
         return

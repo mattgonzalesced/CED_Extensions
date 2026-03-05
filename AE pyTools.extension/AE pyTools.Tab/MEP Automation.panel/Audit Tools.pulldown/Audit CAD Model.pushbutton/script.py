@@ -38,11 +38,15 @@ LOG = script.get_logger()
 DIRECTION_TOKENS = {
     "left", "right", "lh", "rh", "l", "r", "lhs", "rhs", "left-hand", "right-hand",
 }
-VERSION_TOKEN_RE = re.compile(r"^v\\d+$", re.IGNORECASE)
+VERSION_TOKEN_RE = re.compile(r"^v\d+$", re.IGNORECASE)
+HAS_DIGIT_TOKEN_RE = re.compile(r".*\d")
 SEPARATORS_RE = re.compile(r"[_/\\\\-]+")
 NON_ALNUM_RE = re.compile(r"[^a-zA-Z0-9 ]+")
+MATCH_STOP_TOKENS = {"name"}
 MIN_PARTIAL_SCORE = 80.0
-MIN_COMMON_TOKENS = 2
+MIN_COMMON_TOKENS = 1
+MIN_LARGER_TOKEN_COVERAGE = 0.75
+TOKEN_LENGTH_GAP_PENALTY = 12.0
 
 
 try:
@@ -52,7 +56,7 @@ except NameError:
 
 
 class _MissingChoice(object):
-    def __init__(self, label, data, checked=True):
+    def __init__(self, label, data=None, checked=True):
         self.label = label
         self.data = data
         self.checked = checked
@@ -78,39 +82,64 @@ def _normalize_full_name(value):
     return " ".join(text.lower().split())
 
 
+def _truncate_text(value, max_len):
+    text = str(value or "")
+    if max_len <= 3 or len(text) <= max_len:
+        return text
+    return text[: max_len - 3] + "..."
+
+
 def _tokenize_name(value):
     normalized = _normalize_full_name(value)
     return [token for token in normalized.split() if token]
-
-
-def _strip_trailing_id_tokens(tokens):
-    while tokens:
-        tail = tokens[-1]
-        if tail.isdigit() or VERSION_TOKEN_RE.match(tail):
-            tokens = tokens[:-1]
-            continue
-        break
-    return tokens
-
-
-def _strip_numeric_prefix(tokens):
-    while tokens and tokens[0].isdigit() and len(tokens[0]) <= 3:
-        tokens = tokens[1:]
-    return tokens
 
 
 def _strip_direction_tokens(tokens):
     return [token for token in tokens if token not in DIRECTION_TOKENS]
 
 
+def _strip_non_descriptor_tokens(tokens):
+    filtered = []
+    for token in tokens or []:
+        if not token:
+            continue
+        if token in MATCH_STOP_TOKENS:
+            continue
+        if VERSION_TOKEN_RE.match(token):
+            continue
+        if HAS_DIGIT_TOKEN_RE.match(token):
+            continue
+        filtered.append(token)
+    return filtered
+
+
+def _collapse_acronym_tokens(tokens):
+    collapsed = []
+    letters = []
+    for token in tokens or []:
+        if len(token) == 1 and token.isalpha():
+            letters.append(token)
+            continue
+        if letters:
+            if len(letters) > 1:
+                collapsed.append("".join(letters))
+            else:
+                collapsed.extend(letters)
+            letters = []
+        collapsed.append(token)
+    if letters:
+        if len(letters) > 1:
+            collapsed.append("".join(letters))
+        else:
+            collapsed.extend(letters)
+    return collapsed
+
+
 def _base_key(value):
     if not value:
         return ""
-    tokens = _tokenize_name(value)
-    tokens = _strip_numeric_prefix(tokens)
-    tokens = _strip_trailing_id_tokens(tokens)
-    tokens = _strip_direction_tokens(tokens)
-    base = " ".join(tokens)
+    tokens = _match_tokens(value)
+    base = " ".join(sorted(set(tokens)))
     return base or _normalize_full_name(value)
 
 
@@ -132,26 +161,47 @@ def _match_tokens(value):
     if not value:
         return []
     tokens = _tokenize_name(value)
-    tokens = _strip_numeric_prefix(tokens)
-    tokens = _strip_trailing_id_tokens(tokens)
     tokens = _strip_direction_tokens(tokens)
+    tokens = _strip_non_descriptor_tokens(tokens)
+    tokens = _collapse_acronym_tokens(tokens)
     return tokens
 
 
-def _token_overlap_count(left, right):
+def _match_key(value):
+    tokens = _match_tokens(value)
+    if tokens:
+        return " ".join(sorted(set(tokens)))
+    return _normalize_full_name(value)
+
+
+def _token_overlap_metrics(left, right):
     left_tokens = set(_match_tokens(left))
     right_tokens = set(_match_tokens(right))
     if not left_tokens or not right_tokens:
-        return 0
-    return len(left_tokens & right_tokens)
+        return 0, 0.0, 0.0
+    common = left_tokens & right_tokens
+    common_count = len(common)
+    if common_count == 0:
+        return 0, 0.0, 0.0
+    small = float(min(len(left_tokens), len(right_tokens)))
+    large = float(max(len(left_tokens), len(right_tokens)))
+    return common_count, (common_count / small), (common_count / large)
 
 
 def _best_match_name(target, candidates):
-    target_norm = _normalize_full_name(target)
+    target_norm = _match_key(target)
+    target_tokens = set(_match_tokens(target))
+    target_len = len(target_tokens)
     best = None
     best_score = -1.0
     for name in candidates:
-        score = token_set_ratio(target_norm, _normalize_full_name(name))
+        candidate_key = _match_key(name)
+        score = token_set_ratio(target_norm, candidate_key)
+        candidate_tokens = set(_match_tokens(name))
+        candidate_len = len(candidate_tokens)
+        if target_len and candidate_len:
+            length_gap = abs(target_len - candidate_len)
+            score -= (TOKEN_LENGTH_GAP_PENALTY * float(length_gap))
         if score > best_score:
             best_score = score
             best = name
@@ -634,7 +684,10 @@ def main():
             continue
         if score < MIN_PARTIAL_SCORE:
             continue
-        if _token_overlap_count(cad_name, best) < MIN_COMMON_TOKENS:
+        overlap_count, _small_cov, large_cov = _token_overlap_metrics(cad_name, best)
+        if overlap_count < MIN_COMMON_TOKENS:
+            continue
+        if large_cov < MIN_LARGER_TOKEN_COVERAGE:
             continue
         missing.append((cad_name, best, count))
 
@@ -644,11 +697,43 @@ def main():
 
     missing.sort(key=lambda row: row[0].lower())
     items = []
+    cad_header = "CAD Block Name"
+    profile_header = "YAML Profile"
+    count_header = "Count"
+    cad_width = max(
+        len(cad_header),
+        max([len(str(row[0] or "")) for row in missing] or [0]),
+    )
+    profile_width = max(
+        len(profile_header),
+        max([len(str(row[1] or "")) for row in missing] or [0]),
+    )
+    cad_width = min(cad_width, 64)
+    profile_width = min(profile_width, 64)
+    header_label = "{:<{w1}} | {:<{w2}} | {:>5}".format(
+        cad_header,
+        profile_header,
+        count_header,
+        w1=cad_width,
+        w2=profile_width,
+    )
+    divider_label = "{}-+-{}-+-{}".format("-" * cad_width, "-" * profile_width, "-" * 5)
+    items.append(_MissingChoice(header_label, data=None, checked=False))
+    items.append(_MissingChoice(divider_label, data=None, checked=False))
     for cad_name, best, count in missing:
+        cad_cell = _truncate_text(cad_name, cad_width)
+        profile_cell = _truncate_text(best, profile_width)
         if count > 1:
-            label = "{} (x{}) -> {}".format(cad_name, count, best)
+            count_cell = "x{}".format(count)
         else:
-            label = "{} -> {}".format(cad_name, best)
+            count_cell = ""
+        label = "{:<{w1}} | {:<{w2}} | {:>5}".format(
+            cad_cell,
+            profile_cell,
+            count_cell,
+            w1=cad_width,
+            w2=profile_width,
+        )
         items.append(_MissingChoice(label, (cad_name, best, count), checked=True))
 
     selected = forms.SelectFromList.show(
@@ -656,12 +741,18 @@ def main():
         title=TITLE,
         multiselect=True,
         button_name="Create Selected",
-        width=900,
+        width=1150,
         height=600,
     )
     if not selected:
         return
-    missing = [item.data for item in selected]
+    missing = [
+        item.data
+        for item in selected
+        if isinstance(item, _MissingChoice) and item.data
+    ]
+    if not missing:
+        return
 
     equipment_defs = data.get("equipment_definitions") or []
     existing_norms = {
