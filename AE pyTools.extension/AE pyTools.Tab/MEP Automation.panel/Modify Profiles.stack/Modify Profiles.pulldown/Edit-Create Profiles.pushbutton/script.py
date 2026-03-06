@@ -8,7 +8,6 @@ active YAML definition.
 """
 
 import copy
-import json
 import math
 import os
 import sys
@@ -39,6 +38,7 @@ if LIB_ROOT not in sys.path:
 from LogicClasses.PlaceElementsLogic import PlaceElementsEngine, ProfileRepository  # noqa: E402
 from LogicClasses.linked_equipment import compute_offsets_from_points  # noqa: E402
 from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
+from ExtensibleStorage import ExtensibleStorage  # noqa: E402
 from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data  # noqa: E402
 from LogicClasses.profile_schema import ensure_equipment_definition, get_type_set, next_led_id, equipment_defs_to_legacy  # noqa: E402
 
@@ -82,53 +82,29 @@ def _element_id_value(elem_id, default=None):
             except Exception:
                 continue
     return default
-def _session_file():
-    try:
-        return script.get_appdata_file("edit_create_yaml_session.json")
-    except Exception:
-        return os.path.join(os.path.expanduser("~"), "edit_create_yaml_session.json")
-
-
-def _session_storage():
-    path = _session_file()
-    if os.path.exists(path):
-        try:
-            with open(path, "r") as handle:
-                data = json.load(handle)
-                if isinstance(data, dict):
-                    return data
-        except Exception:
-            return {}
-    return {}
-
-
-def _doc_session_key(doc):
-    path = getattr(doc, "PathName", "") or ""
-    if path:
-        return path.lower()
-    title = getattr(doc, "Title", "") or ""
-    return title.lower()
 
 
 def _load_session(doc):
-    key = _doc_session_key(doc)
-    store = _session_storage()
-    return store.get(key)
+    if doc is None:
+        return None
+    try:
+        session = ExtensibleStorage.get_user_setting(doc, SESSION_KEY, default=None)
+    except Exception:
+        return None
+    return session if isinstance(session, dict) else None
 
 
 def _save_session(doc, session):
-    key = _doc_session_key(doc)
-    store = _session_storage()
-    if session:
-        store[key] = session
-    elif key in store:
-        store.pop(key, None)
+    if doc is None:
+        return
+    transaction_name = "EDIT_CREATE_SESSION_SAVE" if session else "EDIT_CREATE_SESSION_CLEAR"
     try:
-        directory = os.path.dirname(_session_file())
-        if directory and not os.path.exists(directory):
-            os.makedirs(directory)
-        with open(_session_file(), "w") as handle:
-            json.dump(store, handle)
+        ExtensibleStorage.set_user_setting(
+            doc,
+            SESSION_KEY,
+            session if isinstance(session, dict) else None,
+            transaction_name=transaction_name,
+        )
     except Exception:
         pass
 
