@@ -31,6 +31,8 @@ class SetIncludeAndRecalculateOperation(object):
 
         target_ids = []
         locked_rows = []
+        tg = DB.TransactionGroup(doc, '{} + Calculate Circuits'.format(self._mode_name))
+        tg.Start()
         tx = DB.Transaction(doc, 'Update Circuit Include Flags ({})'.format(self._mode_name))
         tx.Start()
         try:
@@ -68,9 +70,17 @@ class SetIncludeAndRecalculateOperation(object):
             tx.Commit()
         except Exception:
             tx.RollBack()
+            try:
+                tg.RollBack()
+            except Exception:
+                pass
             raise
 
         if not target_ids:
+            try:
+                tg.RollBack()
+            except Exception:
+                pass
             return {
                 'status': 'cancelled',
                 'reason': 'no_changes',
@@ -82,9 +92,20 @@ class SetIncludeAndRecalculateOperation(object):
             operation_key='calculate_circuits',
             circuit_ids=target_ids,
             source=request.source,
-            options={'show_output': bool(request.options.get('show_output', False))},
+            options={
+                'show_output': bool(request.options.get('show_output', False)),
+                'use_existing_transaction_group': True,
+            },
         )
-        calc_result = self._calculate_operation.execute(calc_request, doc) or {}
+        try:
+            calc_result = self._calculate_operation.execute(calc_request, doc) or {}
+            tg.Assimilate()
+        except Exception:
+            try:
+                tg.RollBack()
+            except Exception:
+                pass
+            raise
         if locked_rows:
             existing = list(calc_result.get('locked_rows') or [])
             calc_result['locked_rows'] = existing + locked_rows

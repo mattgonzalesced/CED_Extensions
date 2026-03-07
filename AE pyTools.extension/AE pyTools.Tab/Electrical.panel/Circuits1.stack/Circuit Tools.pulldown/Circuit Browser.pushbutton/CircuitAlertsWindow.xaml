@@ -5,7 +5,13 @@
         MinHeight="360"
         MinWidth="760"
         WindowStartupLocation="CenterOwner"
-        Background="#F2F3F5">
+        Background="#F2F3F5"
+        PreviewMouseDown="window_preview_mouse_down">
+  <Window.Resources>
+    <ResourceDictionary>
+      
+    </ResourceDictionary>
+  </Window.Resources>
   <Grid Margin="10">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
@@ -23,7 +29,7 @@
     <TabControl Grid.Row="2" Name="AlertsTabs">
       <TabItem Header="Active">
         <Border BorderBrush="#AAB4C0" BorderThickness="1" Background="#FFFFFF" Margin="4">
-          <ListView Name="ActiveAlertsList">
+          <ListView Name="ActiveAlertsList" PreviewMouseDown="alerts_list_preview_mouse_down">
             <ListView.View>
               <GridView>
                 <GridViewColumn Header="Severity" Width="90" DisplayMemberBinding="{Binding severity}"/>
@@ -43,7 +49,7 @@
       </TabItem>
       <TabItem Header="Hidden">
         <Border BorderBrush="#AAB4C0" BorderThickness="1" Background="#FFFFFF" Margin="4">
-          <ListView Name="HiddenAlertsList">
+          <ListView Name="HiddenAlertsList" PreviewMouseDown="alerts_list_preview_mouse_down">
             <ListView.View>
               <GridView>
                 <GridViewColumn Header="Severity" Width="90" DisplayMemberBinding="{Binding severity}"/>
@@ -63,13 +69,16 @@
       </TabItem>
     </TabControl>
 
-    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-      <Grid Width="92" Height="24">
-        <Button Name="HideTypeButton" Content="Hide Type" Width="92" Height="24" Click="hide_type_clicked"/>
-        <Button Name="UnhideTypeButton" Content="Unhide Type" Width="92" Height="24" Click="unhide_type_clicked"/>
+    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,8,0,0">
+      <Grid Width="96" Height="28" VerticalAlignment="Center">
+        <Button Name="HideTypeButton" Content="Hide Type" Width="96" Height="28" VerticalAlignment="Center" Click="hide_type_clicked"/>
+        <Button Name="UnhideTypeButton" Content="Unhide Type" Width="96" Height="28" VerticalAlignment="Center" Click="unhide_type_clicked"/>
       </Grid>
-      <Button Content="Apply" Width="80" Height="24" Margin="12,0,0,0" Click="apply_clicked"/>
-      <Button Content="Close" Width="80" Height="24" Margin="6,0,0,0" Click="close_clicked"/>
+      <Button Content="Apply" Width="80" Height="28" Margin="12,0,0,0" VerticalAlignment="Center" Click="apply_clicked"/>
+      <Button Content="Close" Width="80" Height="28" Margin="6,0,0,0" VerticalAlignment="Center" Click="close_clicked"/>
     </StackPanel>
   </Grid>
 </Window>
+
+
+

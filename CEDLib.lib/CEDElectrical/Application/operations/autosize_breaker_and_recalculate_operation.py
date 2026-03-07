@@ -45,6 +45,8 @@ class AutosizeBreakerAndRecalculateOperation(object):
 
         changed_ids = []
         locked_rows = []
+        tg = DB.TransactionGroup(doc, 'Auto Size Breaker/Frame + Calculate Circuits')
+        tg.Start()
         tx = DB.Transaction(doc, 'Auto Size Breaker/Frame')
         tx.Start()
         try:
@@ -72,9 +74,17 @@ class AutosizeBreakerAndRecalculateOperation(object):
             tx.Commit()
         except Exception:
             tx.RollBack()
+            try:
+                tg.RollBack()
+            except Exception:
+                pass
             raise
 
         if not changed_ids:
+            try:
+                tg.RollBack()
+            except Exception:
+                pass
             return {
                 'status': 'cancelled',
                 'reason': 'no_changes',
@@ -86,9 +96,20 @@ class AutosizeBreakerAndRecalculateOperation(object):
             operation_key='calculate_circuits',
             circuit_ids=changed_ids,
             source=request.source,
-            options={'show_output': bool(request.options.get('show_output', False))},
+            options={
+                'show_output': bool(request.options.get('show_output', False)),
+                'use_existing_transaction_group': True,
+            },
         )
-        calc_result = self._calculate_operation.execute(calc_request, doc) or {}
+        try:
+            calc_result = self._calculate_operation.execute(calc_request, doc) or {}
+            tg.Assimilate()
+        except Exception:
+            try:
+                tg.RollBack()
+            except Exception:
+                pass
+            raise
         if locked_rows:
             existing = list(calc_result.get('locked_rows') or [])
             calc_result['locked_rows'] = existing + locked_rows

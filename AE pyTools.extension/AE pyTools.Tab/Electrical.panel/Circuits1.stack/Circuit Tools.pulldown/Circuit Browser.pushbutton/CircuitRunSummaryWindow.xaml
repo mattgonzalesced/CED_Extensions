@@ -5,7 +5,13 @@
         MinHeight="360"
         MinWidth="760"
         WindowStartupLocation="CenterOwner"
-        Background="#F2F3F5">
+        Background="#F2F3F5"
+        PreviewMouseDown="window_preview_mouse_down">
+  <Window.Resources>
+    <ResourceDictionary>
+      
+    </ResourceDictionary>
+  </Window.Resources>
   <Grid Margin="10">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
@@ -24,7 +30,7 @@
       </Grid.RowDefinitions>
       <TextBlock Grid.Row="0" Name="RuntimeCountText" Text="Runtime-only alerts: 0" FontWeight="SemiBold" Margin="0,0,0,6"/>
       <Border Grid.Row="1" BorderBrush="#AAB4C0" BorderThickness="1" Background="#FFFFFF">
-        <ListView Name="RuntimeList">
+        <ListView Name="RuntimeList" PreviewMouseDown="summary_list_preview_mouse_down">
           <ListView.View>
             <GridView>
               <GridViewColumn Header="Panel" Width="120" DisplayMemberBinding="{Binding panel}"/>
@@ -51,7 +57,7 @@
       </Grid.RowDefinitions>
       <TextBlock Grid.Row="0" Name="LockedCountText" Text="Locked items: 0" FontWeight="SemiBold" Margin="0,0,0,6"/>
       <Border Grid.Row="1" BorderBrush="#AAB4C0" BorderThickness="1" Background="#FFFFFF">
-        <ListView Name="LockedList">
+        <ListView Name="LockedList" PreviewMouseDown="summary_list_preview_mouse_down">
           <ListView.View>
             <GridView>
               <GridViewColumn Header="Panel" Width="120" DisplayMemberBinding="{Binding panel}"/>
@@ -70,3 +76,6 @@
     </StackPanel>
   </Grid>
 </Window>
+
+
+

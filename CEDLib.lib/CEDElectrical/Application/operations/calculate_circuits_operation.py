@@ -81,8 +81,11 @@ class CalculateCircuitsOperation(object):
         total_fixtures = 0
         total_equipment = 0
 
-        tg = DB.TransactionGroup(doc, 'Calculate Circuits')
-        tg.Start()
+        use_existing_group = bool(request.options.get('use_existing_transaction_group', False))
+        tg = None
+        if not use_existing_group:
+            tg = DB.TransactionGroup(doc, 'Calculate Circuits')
+            tg.Start()
         tx = DB.Transaction(doc, 'Write Shared Parameters')
 
         try:
@@ -101,14 +104,16 @@ class CalculateCircuitsOperation(object):
                     self.alert_store.write_alert_payload(branch.circuit, alert_payload)
 
             tx.Commit()
-            tg.Assimilate()
+            if tg is not None:
+                tg.Assimilate()
         except Exception as ex:
             try:
                 tx.RollBack()
             except Exception:
                 pass
             try:
-                tg.RollBack()
+                if tg is not None:
+                    tg.RollBack()
             except Exception:
                 pass
             self.logger.error('CalculateCircuitsOperation failed: {}'.format(ex))
