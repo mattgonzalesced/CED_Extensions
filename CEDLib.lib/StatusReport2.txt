@@ -1,0 +1,255 @@
+﻿STATUS REPORT 2
+Generated: March 6, 2026
+Comparison Baseline: CEDLib.lib/StatusReport.txt (February 2, 2026)
+
+Overview
+This report compares the February 2 status narrative against the current
+implemented functionality in four panels:
+- MEP Automation
+- Refrigeration
+- Mechanical
+- QualityChecks
+
+The February report accurately captured the core YAML-centric automation
+pipeline at that time. The current codebase now includes broader panel
+coverage, expanded audit/recovery workflows, stronger schema controls, and
+multiple quality checks that can run both manually and after sync.
+
+Executive Delta Summary
+1) Scope is now much broader than the February report.
+The prior report focused mostly on MEP Automation profile workflows. Current
+implementation includes substantial production logic in Refrigeration,
+Mechanical, and QualityChecks panels that was not documented in that report.
+
+2) MEP Automation has moved from only placement/profile editing into a full
+lifecycle toolset.
+Current MEP tools cover import/convert/export, profile authoring, bulk
+placement, single-profile dockable placement, linker repair, post-audit
+comparison with optional movement correction, identity propagation to controls,
+and electrical circuit workflows.
+
+3) Multiple quality checks are now wired for after-sync operation.
+Startup hooks register checks for:
+- parent parameter conflict detection
+- proximity check (lights vs CED-R-KRACK coils)
+- refrigeration schedule sheet change detection
+These checks can also be run manually through panel buttons.
+
+4) Several future/WIP items from the February report are now partially or fully
+implemented.
+- Dedicated external button for independent profile creation exists.
+- Dockable single-profile placement exists and supports repeated placement
+  workflows, including multi-point placement.
+- Parent/sibling parameter mapping and conflict checks are implemented through
+  Establish Relationship + Parameter Flag Settings/parent_param_conflicts.
+
+5) Some gaps still remain.
+- Place by Room is currently center-point based per room/profile label, not a
+  full spacing/count optimizer. <---- This is still very beta testing ish
+- Some buttons remain marked beta (for example Add YAML Profiles,
+  Delete YAML Profiles, Select Parent Element, Ref Sched Change). 
+  ^--- These listed in parenthesis gonna just be deleted anyway
+- Refrigeration Tag still contains placeholder connector-type logic comments.
+
+Current Functionality by Panel
+
+A) MEP Automation Panel (43 tools)
+
+A1) Data import/export and schema controls
+- Import YAML File: imports selected YAML into project Extensible Storage,
+  sanitizes hash-key issues, and enforces schema_version support (v3/v4).
+- Export YAML File: exports the active in-model dataset to disk with
+  schema_version stamping and serialization cleanup.
+- Combine YAML Files: merges two equipment-definition datasets, renumbers
+  IDs/set IDs/LED IDs from the appended file, and rewrites linker payload
+  references.
+- Convert Schema: converts legacy YAML to current schema shape using
+  template-driven normalization and boolean/schema coercion.
+- SchemaViewer: the bound script is currently a hash-sanitization diagnostic.
+  Richer history viewer logic exists in scriptSchema.py but is not the bound
+  entrypoint.
+
+A2) Profile authoring and maintenance
+- Edit-Create Profiles: builds/edits parent-child profile definitions from
+  selected model/linked elements with offsets/rotation and annotation capture.
+- Add Equipment to Profiles: appends selected equipment into existing profile
+  context using parent-relative placement metadata.
+- Select Parent Element: attaches selected children to a chosen parent
+  definition and writes Element_Linker metadata.
+- Add YAML Profiles: appends selected types into existing/new definitions,
+  including tags/parameters/linker payloads.
+- Delete YAML Profiles: removes selected linked element definitions, cascades
+  child cleanup, and prunes orphaned structures.
+- Manage Profiles: full profile metadata editor/UI for equipment_definitions.
+- Create Independent Profile: external shortcut for direct independent profile
+  creation.
+- Establish Relationship: creates independent parent/child relationship
+  profiles with BYPARENT/BYSIBLING/static mapping.
+- Merge Profiles: propagates one truth definition behavior into selected
+  variants while preserving target name/id.
+- Unmerge Profiles: detaches member from truth-source grouping metadata.
+
+A3) Placement tools
+- PlaceLinkedElements: bulk host/link name-matched placement from active YAML
+  with Element_Linker writing.
+- PlaceLinkedElements (Category Filter): same engine constrained by categories.
+- PlaceLinkedElements (Profile Filter): same engine constrained by profile
+  groups.
+- PlaceByRoom: selects linked model rooms and places selected profile labels
+  at transformed room-center points (simpler than an advanced spacing engine).
+- PlaceCADElements: YAML-driven CSV placement with mapping UI.
+- PlaceCADElements_category: same flow with category filtering.
+- PlaceCADElements_Profile: category + selected profile filtering and optional
+  Plan View parameter filtering.
+- Place Single Profile: dockable pane; supports independent-only filtering,
+  truth-source grouped choices, single-point or multi-point placement, and
+  placement on selected reference elements.
+- RemoveProfiles: removes placements by linker Parent ElementId grouping and
+  can target related annotations.
+- Place Annotations: places saved tags/keynotes/text notes from profile
+  metadata onto matched placed instances.
+
+A4) Update, audit, and recovery tools
+- Update Profiles: syncs modified annotations/params back into YAML.
+  ^--- This tool also needs to be tested thoroughly before we use it on large projects like HEB.
+
+- Update Vector: recalculates stored offsets/rotation from current model
+  positions and writes updates to active YAML.
+    ^---Unused, outdated, scheduled for retirement
+
+- Write Element Linker: backfills missing linker payloads by matching model
+  elements to LED definitions via labels/params.
+      ^Needs testing
+      
+- Audit Linked Model: finds missing profile names vs linked model names and
+  proposes/creates matched clones.
+- Audit CAD Model: same concept for CAD/Excel/CSV source names with token/
+  fuzzy matching and clone creation.
+- QAQC: compares expected vs placed coverage using linker metadata and host
+  matching.
+- Post Audit Compare: save/compare parent location snapshots; reports
+  moved/added/removed IDs and can move child elements by parent deltas.
+- Place Identity Mark: copies identity/system data from cases to target
+  refrigeration control devices and writes circuit-related parameters.
+- Where da stuff: traces selected element linker Parent ElementId back to
+  linked element and zooms/selects it.
+- Place Spaces CSV: creates spaces from CSV coordinates, sets number/name, and
+  tags in Construction/Permit floor/ceiling plan views.
+
+A5) Electrical automation tools inside MEP Automation panel
+- SuperCircuitV3: client-specific (Planet Fitness/HEB) circuit creation flow
+  with grouping and data application.
+- SuperCircuitV4: expanded collectors (including mechanical control devices),
+  panel-choice parsing, BA/DA diagnostics, and enhanced sorting/grouping.
+- CircuitBySpace: space/room-based grouping and circuit naming behavior with
+  optional client helper logic.
+- Arrange Lights in Space: redistributes selected lights into calculated/manual
+  grids within space boundaries.
+- Color fixture by dev group: generates/updates filters and view overrides by
+  dev-Group ID with legend generation.
+- Color fixture by Host Name: parses Element_Linker host names, builds
+  host-based filters/overrides, and produces legend output.
+- Refrigeration Tag: writes Tag_Text for refrigeration-plan fixtures from
+  electrical systems (primary/secondary style output).
+
+A6) Quality settings in this panel
+- Parameter Flag Settings: toggles and manually runs parent/sibling conflict
+  checks using parent_param_conflicts module.
+
+B) Refrigeration Panel (4 tools)
+- Name Piping Systems: connected-pipe traversal and labeling workflow with
+  text/tag placement, identity mark writing, branch/terminal handling,
+  fitting awareness, and valve-based logic.
+- Place all Coils: reads Excel schedule data, matches spaces/descriptions/
+  models/manufacturer filters, resolves symbols, and places coils with level
+  handling.
+- Space Coils: redistributes selected coils by wall distribution or center
+  distribution, with wall offset and orientation handling.
+- System Tagger: step-through assignment of system IDs to selected cases,
+  optional suffixing (A/B/C), identity/tag placement, visual highlighting,
+  and resume state persistence in Extensible Storage schema.
+
+C) Mechanical Panel (7 tools)
+- ConnectTo: connector-aware move/rotate/connect operation between selected
+  MEP elements.
+- DisConnect: disconnects selected segments from network boundaries, divides
+  systems where needed, and cleans orphaned endpoints.
+- Transition: creates transition fittings between selected open connectors.
+- Make Parallel (XY): rotates target element to align XY direction with
+  reference element.
+- Element3DRotation: interactive 3D rotation utility (axis/self) via
+  persistent WPF/event model.
+- QuickDimension: fast dimension creation across selected linear elements/
+  family references with lead-direction control.
+- SetPipeSystem: advanced system reassignment for piping/duct networks,
+  including boundary disconnect/reconnect, divide-system operations,
+  undefined-system seeding, parameter/type enforcement, and naming.
+
+D) QualityChecks Panel (4 tools)
+- Flag CC Circuits: compares refrigerated case Identity Mark values against
+  RA/RB/RC/RD circuit load names (with CASE POWER prefix normalization).
+- General Proximity Check: user-configurable two-group proximity analysis
+  across category/family-type selectors with 3D or XY distance modes.
+- Proximity Check Lights-Coils: targeted check for lighting fixtures within
+  18 inches of CED-R-KRACK coils; supports after-sync enable/disable and
+  on-demand run.
+- Ref Sched Change: detects refrigeration schedule sheet changes using sync
+  args and snapshot fallback; supports after-sync enable/disable and
+  on-demand run.
+
+Differences vs February 2 Report
+1) New panel coverage not previously documented.
+The February report did not describe Mechanical, Refrigeration, and
+QualityChecks toolsets in depth. Current functionality in those panels is
+significant and production-relevant.
+
+2) MEP tool inventory is much larger than previously documented.
+The February report mainly covered import/export/merge, profile editing,
+linked/CAD placement, annotations, update/audit basics, and limited WIP notes.
+Current panel includes many additional tools: Create Independent Profile,
+Add/Delete YAML Profiles, Select Parent Element, Establish Relationship,
+RemoveProfiles, Convert Schema, SchemaViewer diagnostic, Write Element Linker,
+Place Spaces CSV, Audit CAD Model, Post Audit Compare, Place Identity Mark,
+Where da stuff, and a full Electrical sub-pulldown.
+
+3) Parent/sibling parameter workflows are now implemented beyond conceptual WIP.
+The prior report described parent/sibling parameter features as tuning work.
+Current code includes explicit mapping logic and conflict detection/resolution
+runtime with setting control and sync hooks.
+
+4) Place Single Profile has progressed.
+The prior report listed dockable-pane persistence as a future item. Current
+implementation is dockable and supports repeated workflows, multi-point
+placement, and reference-element-based placement.
+
+5) Independent profile workflow externalization implemented.
+The prior report listed externalizing Create Independent Profile from
+Manage Profiles as future. A dedicated button now exists.
+
+6) Place by Room status differs from prior WIP narrative.
+Prior text described advanced spacing/orientation tuning and per-room counts.
+Current script behavior is center-point placement per selected room/profile
+label. This is functional but does not yet reflect a full spacing optimizer.
+
+7) Documentation drift exists in a few tools.
+- Some workflow text still describes older/legacy behavior while scripts now
+  run YAML-driven flows (for example CAD placement variants).
+- SchemaViewer button entrypoint currently runs hash-sanitization diagnostics;
+  the richer Extensible Storage history viewer logic exists in an adjacent
+  script file.
+
+Risk and Maturity Notes
+- Beta-flagged tools currently include Add YAML Profiles, Delete YAML Profiles,
+  Select Parent Element, and Ref Sched Change.
+- Refrigeration Tag connector-type classification includes placeholder logic
+  comments and should be hardened to a deterministic connector API strategy.
+- After-sync checks are now powerful but can generate user friction if
+  thresholds/cooldowns are not tuned per project.
+
+Conclusion
+Compared to the February 2, 2026 report, the toolset has materially expanded
+and matured across all requested panels. The largest gains are in panel
+breadth, lifecycle completeness (author, place, audit, repair), and automated
+quality checks. Main follow-up needs are to align documentation with current
+scripts, finalize advanced room-placement behavior, and continue hardening
+beta/placeholder logic areas.

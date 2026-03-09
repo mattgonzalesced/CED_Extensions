@@ -33,8 +33,8 @@
     </StackPanel>
 
     <StackPanel Grid.Row="3" Margin="0,0,0,6">
-      <TextBlock Text="Profile Types:" Margin="0,0,0,4"/>
-      <Border BorderBrush="#B0B0B0" BorderThickness="1" Height="80">
+      <TextBlock Text="Profile Types (tags, text notes, keynotes):" Margin="0,0,0,4"/>
+      <Border BorderBrush="#B0B0B0" BorderThickness="1" Height="140">
         <ListBox Name="ProfileTypesList"/>
       </Border>
     </StackPanel>

@@ -45,6 +45,188 @@ from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
 
 TITLE = "Place Single Profile"
 PANEL_ID = "8d3f8f2d-0e6f-4b2d-9e64-8d2a2b57d7b8"
+
+
+def _mapping_list(value):
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, Mapping)]
+
+
+def _clean_display_text(value):
+    if value in (None, ""):
+        return ""
+    try:
+        text = str(value)
+    except Exception:
+        return ""
+    return " ".join(text.split())
+
+
+def _trim_text(value, max_len=48):
+    text = _clean_display_text(value)
+    if not text:
+        return ""
+    if len(text) <= max_len:
+        return text
+    return "{}...".format(text[: max_len - 3].rstrip())
+
+
+def _extract_keynote_value(entry):
+    if not isinstance(entry, Mapping):
+        return ""
+    key_value = entry.get("key_value")
+    if key_value not in (None, ""):
+        return _clean_display_text(key_value)
+    params = entry.get("parameters")
+    if not isinstance(params, Mapping):
+        return ""
+    for key, value in params.items():
+        if (key or "").strip().lower() in ("keynote value", "key value", "keynote"):
+            return _clean_display_text(value)
+    return ""
+
+
+def _tag_preview_name(tag_data):
+    if not isinstance(tag_data, Mapping):
+        return ""
+    family = _clean_display_text(tag_data.get("family_name") or tag_data.get("family"))
+    type_name = _clean_display_text(tag_data.get("type_name") or tag_data.get("type"))
+    if family and type_name:
+        return "{} : {}".format(family, type_name)
+    if type_name:
+        return type_name
+    if family:
+        return family
+    category = _clean_display_text(tag_data.get("category_name") or tag_data.get("category"))
+    return category
+
+
+def _text_note_preview_name(note_data):
+    if not isinstance(note_data, Mapping):
+        return ""
+    note_text = _trim_text(note_data.get("text"), max_len=36)
+    note_type = _clean_display_text(note_data.get("type_name"))
+    if note_text and note_type:
+        return '"{}" ({})'.format(note_text, note_type)
+    if note_text:
+        return '"{}"'.format(note_text)
+    if note_type:
+        return note_type
+    return ""
+
+
+def _keynote_preview_name(keynote_data):
+    if not isinstance(keynote_data, Mapping):
+        return ""
+    key_value = _extract_keynote_value(keynote_data)
+    type_name = _clean_display_text(keynote_data.get("type_name") or keynote_data.get("type"))
+    family = _clean_display_text(keynote_data.get("family_name") or keynote_data.get("family"))
+    if key_value and type_name:
+        return "{} ({})".format(key_value, type_name)
+    if key_value:
+        return key_value
+    if type_name and family:
+        return "{} : {}".format(family, type_name)
+    if type_name:
+        return type_name
+    if family:
+        return family
+    return ""
+
+
+def _preview_list(items, name_getter, empty_text="None", max_items=2):
+    names = []
+    seen = set()
+    for item in items or []:
+        name = name_getter(item)
+        if not name or name in seen:
+            continue
+        names.append(name)
+        seen.add(name)
+    if not names:
+        return empty_text
+    if len(names) <= max_items:
+        return ", ".join(names)
+    return "{}, {} (+{} more)".format(names[0], names[1], len(names) - 2)
+
+
+def _cleaned_profiles_from_raw(raw_data):
+    cleaned_defs = _sanitize_equipment_definitions(raw_data.get("equipment_definitions") or [])
+    legacy_profiles = equipment_defs_to_legacy(cleaned_defs)
+    return _sanitize_profiles(legacy_profiles)
+
+
+def _build_profile_type_assets(cleaned_profiles):
+    """
+    Build per-CAD lookup keyed by the same unique labels emitted by ProfileRepository.
+    """
+    assets_by_cad = {}
+    for profile in cleaned_profiles or []:
+        if not isinstance(profile, Mapping):
+            continue
+        cad_name = (profile.get("cad_name") or profile.get("equipment_def_id") or "").strip()
+        if not cad_name:
+            continue
+        label_assets = {}
+        for type_entry in profile.get("types") or []:
+            if not isinstance(type_entry, Mapping):
+                continue
+            label = (type_entry.get("label") or "").strip()
+            if not label:
+                continue
+            inst_cfg = type_entry.get("instance_config")
+            if not isinstance(inst_cfg, Mapping):
+                inst_cfg = {}
+            offsets = inst_cfg.get("offsets")
+            if not isinstance(offsets, list) or not offsets:
+                offsets = [{}]
+            shared_assets = {
+                "tags": _mapping_list(inst_cfg.get("tags")),
+                "keynotes": _mapping_list(inst_cfg.get("keynotes")),
+                "text_notes": _mapping_list(inst_cfg.get("text_notes")),
+            }
+            for idx in range(len(offsets)):
+                base_label = label if idx == 0 else u"{} #{}".format(label, idx + 1)
+                unique_label = base_label
+                suffix = 2
+                while unique_label in label_assets:
+                    unique_label = u"{} #{}".format(base_label, suffix)
+                    suffix += 1
+                label_assets[unique_label] = shared_assets
+        assets_by_cad[cad_name] = label_assets
+    return assets_by_cad
+
+
+def _build_repository_from_profiles(cleaned_profiles):
+    eq_defs = ProfileRepository._parse_profiles(cleaned_profiles)
+    return ProfileRepository(eq_defs)
+
+
+def _format_profile_type_item(label, assets):
+    assets = assets or {}
+    tags = assets.get("tags") or []
+    text_notes = assets.get("text_notes") or []
+    keynotes = assets.get("keynotes") or []
+    tag_preview = _preview_list(tags, _tag_preview_name)
+    note_preview = _preview_list(text_notes, _text_note_preview_name)
+    keynote_preview = _preview_list(keynotes, _keynote_preview_name)
+    return (
+        u"{label}\n"
+        u"  Tags ({tag_count}): {tag_preview}\n"
+        u"  Text Notes ({note_count}): {note_preview}\n"
+        u"  Keynotes ({keynote_count}): {keynote_preview}"
+    ).format(
+        label=label,
+        tag_count=len(tags),
+        tag_preview=tag_preview,
+        note_count=len(text_notes),
+        note_preview=note_preview,
+        keynote_count=len(keynotes),
+        keynote_preview=keynote_preview,
+    )
+
+
 def _sanitize_equipment_definitions(equipment_defs):
     cleaned_defs = []
     for eq in equipment_defs or []:
@@ -200,11 +382,8 @@ def _normalize_key(value):
 
 
 def _build_repository(raw_data):
-    cleaned_defs = _sanitize_equipment_definitions(raw_data.get("equipment_definitions") or [])
-    legacy_profiles = equipment_defs_to_legacy(cleaned_defs)
-    cleaned_profiles = _sanitize_profiles(legacy_profiles)
-    eq_defs = ProfileRepository._parse_profiles(cleaned_profiles)
-    return ProfileRepository(eq_defs)
+    cleaned_profiles = _cleaned_profiles_from_raw(raw_data)
+    return _build_repository_from_profiles(cleaned_profiles)
 
 
 def _gather_child_requests(parent_def, base_point, base_rotation, repo, data):
@@ -472,6 +651,7 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
         self._raw_data = {}
         self._repo = None
         self._choice_map = {}
+        self._profile_type_assets = {}
         self._symbol_cache = {}
         self._symbol_lookup = None
         self._symbol_lookup_info = {}
@@ -637,6 +817,7 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
             self._raw_data = {}
             self._repo = None
             self._choice_map = {}
+            self._profile_type_assets = {}
             self._data_doc_identity = None
             self._set_status("Failed to load active YAML: {}".format(exc))
             if self._profile_combo is not None:
@@ -646,7 +827,9 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
 
         self._raw_data = data
         self._data_doc_identity = current_doc_identity
-        self._repo = _build_repository(data)
+        cleaned_profiles = _cleaned_profiles_from_raw(data)
+        self._repo = _build_repository_from_profiles(cleaned_profiles)
+        self._profile_type_assets = _build_profile_type_assets(cleaned_profiles)
         self._symbol_cache = {}
         self._symbol_lookup = None
         self._symbol_lookup_info = {}
@@ -679,7 +862,7 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
                 labels = list(self._repo.labels_for_cad(cad_choice) or [])
             except Exception:
                 labels = []
-        self._update_profile_type_list(labels)
+        self._update_profile_type_list(labels, cad_choice=cad_choice)
 
     def _selected_profile(self):
         if self._profile_combo is None:
@@ -691,7 +874,7 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
             return None
         return self._choice_map.get(label, label)
 
-    def _update_profile_type_list(self, labels):
+    def _update_profile_type_list(self, labels, cad_choice=None):
         if self._profile_types_list is None:
             return
         if not labels:
@@ -700,7 +883,14 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
             except Exception:
                 pass
             return
-        items = [label for label in labels if label]
+        assets_by_label = {}
+        if cad_choice:
+            assets_by_label = self._profile_type_assets.get(cad_choice) or {}
+        items = []
+        for label in labels:
+            if not label:
+                continue
+            items.append(_format_profile_type_item(label, assets_by_label.get(label)))
         try:
             self._profile_types_list.ItemsSource = items
         except Exception:
