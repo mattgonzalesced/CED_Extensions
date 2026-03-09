@@ -1,0 +1,130 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        Title="Auto Size Breaker"
+        Height="560"
+        Width="1300"
+        MinHeight="420"
+        MinWidth="980"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource CED.Brush.WindowBackground}"
+        PreviewMouseDown="window_preview_mouse_down">
+  <Window.Resources>
+    <ResourceDictionary>
+</ResourceDictionary>
+  </Window.Resources>
+
+  <Grid Margin="{DynamicResource CED.Thickness.ContentMargin}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <Grid Grid.Row="0" Margin="0,0,0,8">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+      <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+        <TextBlock Text="Auto Size Breaker / Frame" Style="{DynamicResource CED.Text.SectionHeader}" VerticalAlignment="Center"/>
+        <CheckBox Name="ShowChangedOnlyToggle"
+                  Content="Show Changed Only"
+                  Style="{DynamicResource CED.Input.CheckBox}"
+                  Margin="14,0,0,0"
+                  Checked="row_filter_toggled"
+                  Unchecked="row_filter_toggled"/>
+      </StackPanel>
+      <CheckBox Name="ShowUnsupportedToggle"
+                Grid.Column="1"
+                Content="Show Unsupported Circuits"
+                Style="{DynamicResource CED.Input.CheckBox}"
+                Checked="show_unsupported_toggled"
+                Unchecked="show_unsupported_toggled"/>
+    </Grid>
+
+    <Border Grid.Row="1" BorderBrush="{DynamicResource CED.Brush.DataGridBorder}" BorderThickness="1" Background="{DynamicResource CED.Brush.SearchBackground}">
+      <DataGrid Name="CircuitGrid"
+                Style="{DynamicResource CED.DataGrid.Base}"
+                AutoGenerateColumns="False"
+                SelectionMode="Extended"
+                SelectionUnit="FullRow"
+                CanUserAddRows="False"
+                CanUserResizeRows="False"
+                CanUserResizeColumns="False"
+                HeadersVisibility="Column"
+                RowHeaderWidth="0"
+                GridLinesVisibility="Horizontal"
+                AlternatingRowBackground="{DynamicResource CED.Brush.DataGridAltRow}"
+                EnableRowVirtualization="True"
+                EnableColumnVirtualization="True"
+                VirtualizingPanel.IsVirtualizing="True"
+                VirtualizingPanel.VirtualizationMode="Recycling"
+                ScrollViewer.CanContentScroll="True"
+                CellEditEnding="breaker_cell_edit_ending"
+                ColumnHeaderStyle="{DynamicResource HeaderWrapCenterTall}"
+                RowStyle="{DynamicResource CED.DataGrid.RowDisabledAware}"
+                SelectionChanged="grid_selection_changed"
+                PreviewMouseDown="grid_preview_mouse_down">
+        <DataGrid.Columns>
+          <DataGridTemplateColumn Header="" Width="34" IsReadOnly="True" CellStyle="{DynamicResource ReadonlyCell}">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <CheckBox IsChecked="{Binding is_checked, Mode=OneWay}" IsEnabled="{Binding is_enabled}" Click="item_checkbox_clicked"/>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="Circuit" Width="260" IsReadOnly="True" SortMemberPath="panel_ckt_text" CellStyle="{DynamicResource ReadonlyCell}">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <StackPanel Margin="4,2,4,2">
+                  <TextBlock Text="{Binding panel_ckt_text}" FontWeight="Bold" Foreground="{DynamicResource CED.Brush.DataGridRowForeground}"/>
+                  <TextBlock Text="{Binding load_name}" Foreground="{DynamicResource CED.Brush.SecondaryText}" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTextColumn Header="Type" Width="78" Binding="{Binding branch_type}" IsReadOnly="True" CellStyle="{DynamicResource ReadonlyCell}" ElementStyle="{DynamicResource CenterTextCell}"/>
+          <DataGridTextColumn Header="Load&#10;Current" Width="92" Binding="{Binding current_load_current}" IsReadOnly="True" SortMemberPath="current_load_current" ElementStyle="{DynamicResource CenterTextCell}" CellStyle="{DynamicResource DividerThickReadonlyCell}"/>
+          <DataGridTextColumn Header="Current&#10;Rating" Width="86" Binding="{Binding current_rating}" IsReadOnly="True" SortMemberPath="current_rating" ElementStyle="{DynamicResource CenterTextCell}" CellStyle="{DynamicResource ReadonlyCell}"/>
+          <DataGridTextColumn Header="Current&#10;Frame" Width="86" Binding="{Binding current_frame}" IsReadOnly="True" SortMemberPath="current_frame" ElementStyle="{DynamicResource CenterTextCell}" CellStyle="{DynamicResource DividerThickReadonlyCell}"/>
+          <DataGridTextColumn Header="New&#10;Rating" Width="90" Binding="{Binding new_rating, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" IsReadOnly="False" SortMemberPath="new_rating" ElementStyle="{DynamicResource CenterTextCell}" EditingElementStyle="{DynamicResource CenterTextEdit}" CellStyle="{DynamicResource NewValueCell}"/>
+          <DataGridTextColumn Header="New&#10;Frame" Width="86" Binding="{Binding new_frame, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" IsReadOnly="False" SortMemberPath="new_frame" ElementStyle="{DynamicResource CenterTextCell}" EditingElementStyle="{DynamicResource CenterTextEdit}" CellStyle="{DynamicResource NewFrameCell}"/>
+          <DataGridTextColumn Header="Remarks" Width="*" Binding="{Binding remarks}" IsReadOnly="True" CellStyle="{DynamicResource ReadonlyCell}" ElementStyle="{DynamicResource RemarksTextCell}"/>
+        </DataGrid.Columns>
+      </DataGrid>
+    </Border>
+
+    <Grid Grid.Row="2" Margin="0,8,0,0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+
+      <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+        <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
+          <StackPanel Orientation="Horizontal">
+            <Button Style="{DynamicResource CED.Button.Base}" Content="Check All" Width="86" Height="28" Click="check_all_clicked"/>
+            <Button Style="{DynamicResource CED.Button.Base}" Content="Uncheck All" Width="94" Height="28" Margin="6,0,0,0" Click="uncheck_all_clicked"/>
+          </StackPanel>
+          <TextBlock Name="CheckedStatusText" Margin="2,4,0,0" Style="{DynamicResource CED.Text.Secondary}" Text="0 of 0 checked"/>
+        </StackPanel>
+        <Border Margin="12,0,0,0" Padding="8,4,10,4" BorderBrush="{DynamicResource CED.Brush.InfoPanelBorder}" BorderThickness="1" CornerRadius="4" Background="{DynamicResource CED.Brush.InfoPanelBackground}" VerticalAlignment="Top">
+          <StackPanel>
+            <CheckBox Name="AutoBreakerCheck" Content="Autosize Breakers" IsChecked="True" Style="{DynamicResource CED.Input.CheckBox}"/>
+            <CheckBox Name="UpsizeOnlyToggle" Content="Upsize Only" IsChecked="False" Style="{DynamicResource CED.Input.CheckBox}" Margin="18,2,0,0"/>
+            <CheckBox Name="AutoFrameCheck" Content="Autosize Frames" IsChecked="True" Style="{DynamicResource CED.Input.CheckBox}" Margin="0,4,0,0"/>
+            <CheckBox Name="Allow15AToggle" Content="Use 15A Breakers" IsChecked="False" Style="{DynamicResource CED.Input.CheckBox}" Margin="0,2,0,0"/>
+          </StackPanel>
+        </Border>
+        <Button Name="AutosizePreviewButton" Style="{DynamicResource CED.Button.Apply}" Content="Autosize Preview" Width="120" Height="28" Margin="12,0,0,0" Click="apply_autosized_clicked"/>
+        <Button Name="ResetButton" Style="{DynamicResource CED.Button.Base}" Content="Reset Selected" Width="106" Height="28" Margin="6,0,0,0" Click="reset_clicked"/>
+      </StackPanel>
+
+      <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+        <TextBlock Name="ChangedStatusText" Margin="0,0,12,0" VerticalAlignment="Center" Style="{DynamicResource CED.Text.Secondary}" Text="0 of 0 circuits to be modified"/>
+        <Button Style="{DynamicResource CED.Button.Base}" Content="Cancel" Width="80" Height="28" Click="cancel_clicked"/>
+        <Button Name="ApplyButton" Style="{DynamicResource CED.Button.Apply}" Content="Apply" Width="80" Height="28" Margin="6,0,0,0" Click="apply_clicked"/>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>
+

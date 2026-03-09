@@ -5,6 +5,9 @@ from CEDElectrical.Application.operations.autosize_breaker_and_recalculate_opera
     AutosizeBreakerAndRecalculateOperation,
 )
 from CEDElectrical.Application.operations.calculate_circuits_operation import CalculateCircuitsOperation
+from CEDElectrical.Application.operations.mark_existing_and_recalculate_operation import (
+    MarkExistingAndRecalculateOperation,
+)
 from CEDElectrical.Application.operations.set_hidden_alert_types_operation import SetHiddenAlertTypesOperation
 from CEDElectrical.Application.operations.set_include_and_recalculate_operation import SetIncludeAndRecalculateOperation
 from CEDElectrical.Application.services.operation_registry import OperationRegistry
@@ -57,4 +60,5 @@ def build_default_runner(alert_parameter_name='Circuit Data_CED'):
         )
     )
     registry.register(AutosizeBreakerAndRecalculateOperation(calculate_operation=calc_operation))
+    registry.register(MarkExistingAndRecalculateOperation(calculate_operation=calc_operation))
     return OperationRunner(registry)

@@ -1,0 +1,195 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style x:Key="CED.ListView.Virtualized" TargetType="ListView">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.ListBackground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.ListBorder}"/>
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.NeutralDark}"/>
+    <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True"/>
+    <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
+    <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+  </Style>
+
+  <Style x:Key="CED.ListViewItem.Base" TargetType="ListViewItem">
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.NeutralDark}"/>
+  </Style>
+
+  <Style x:Key="CED.ListViewItem.SurfaceBehavior" TargetType="ListViewItem" BasedOn="{StaticResource CED.ListViewItem.Base}">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ListViewItem">
+          <Border Background="Transparent" SnapsToDevicePixels="True">
+            <ContentPresenter/>
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="CED.DataGrid.Base" TargetType="DataGrid">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.SearchBackground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridBorder}"/>
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridRowForeground}"/>
+    <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+  </Style>
+
+  <Style x:Key="CED.GridView.Header" TargetType="GridViewColumnHeader">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridHeaderBackground}"/>
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridHeaderForeground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridHeaderBorder}"/>
+    <Setter Property="BorderThickness" Value="0,0,1,1"/>
+    <Setter Property="Padding" Value="8,4"/>
+    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="GridViewColumnHeader">
+          <Border x:Name="Root"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}">
+            <ContentPresenter Margin="{TemplateBinding Padding}"
+                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                              Content="{TemplateBinding Content}"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Root" Property="Background" Value="{DynamicResource CED.Brush.DataGridHeaderHoverBackground}"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+              <Setter TargetName="Root" Property="Background" Value="{DynamicResource CED.Brush.DataGridHeaderPressedBackground}"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="CED.ListView.Alerts" TargetType="ListView" BasedOn="{StaticResource CED.ListView.Virtualized}">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.ListBackground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridBorder}"/>
+    <Setter Property="ItemContainerStyle" Value="{DynamicResource CED.ListViewItem.Alerts}"/>
+  </Style>
+
+  <Style x:Key="CED.ListView.AlertsGrid" TargetType="ListView" BasedOn="{StaticResource CED.ListView.Virtualized}">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.ListBackground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridBorder}"/>
+    <Setter Property="ItemContainerStyle" Value="{DynamicResource CED.ListViewItem.AlertsGrid}"/>
+  </Style>
+
+  <Style x:Key="CED.ListViewItem.Alerts" TargetType="ListViewItem">
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.SearchBackground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridCellBorder}"/>
+    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+    <Setter Property="Padding" Value="2,1"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Style.Triggers>
+      <Trigger Property="IsMouseOver" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.CircuitItemHoverBackground}"/>
+      </Trigger>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+      </Trigger>
+      <Trigger Property="IsEnabled" Value="False">
+        <Setter Property="Opacity" Value="0.55"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="CED.ListViewItem.AlertsGrid" TargetType="ListViewItem">
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.SearchBackground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridCellBorder}"/>
+    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+    <Setter Property="Padding" Value="2,1"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Style.Triggers>
+      <Trigger Property="IsMouseOver" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.CircuitItemHoverBackground}"/>
+      </Trigger>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+      </Trigger>
+      <Trigger Property="IsEnabled" Value="False">
+        <Setter Property="Opacity" Value="0.55"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="CED.TabItem.Base" TargetType="TabItem">
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridHeaderForeground}"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridHeaderBackground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridHeaderBorder}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Padding" Value="10,4"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="TabItem">
+          <Border x:Name="HeaderBorder"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="1,1,1,0"
+                  CornerRadius="4,4,0,0"
+                  Margin="0,0,3,0">
+            <ContentPresenter ContentSource="Header"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Margin="{TemplateBinding Padding}"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource CED.Brush.DataGridHeaderHoverBackground}"/>
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+              <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource CED.Brush.SearchBackground}"/>
+              <Setter TargetName="HeaderBorder" Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridBorder}"/>
+              <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+              <Setter Property="Panel.ZIndex" Value="10"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter TargetName="HeaderBorder" Property="Opacity" Value="0.6"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="CED.TabControl.Base" TargetType="TabControl">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.ListBackground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridBorder}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="TabControl">
+          <Grid ClipToBounds="True">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <TabPanel Grid.Row="0"
+                      IsItemsHost="True"
+                      Margin="0,0,0,-1"
+                      Panel.ZIndex="1"
+                      Background="Transparent"/>
+            <Border Grid.Row="1"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}">
+              <ContentPresenter x:Name="PART_SelectedContentHost"
+                                ContentSource="SelectedContent"
+                                Margin="0"/>
+            </Border>
+          </Grid>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+    <Setter Property="ItemContainerStyle" Value="{DynamicResource CED.TabItem.Base}"/>
+  </Style>
+</ResourceDictionary>

@@ -275,8 +275,7 @@ def _circuit_browser_panel_path():
             os.path.dirname(__file__),
             "AE pyTools.Tab",
             "Electrical.panel",
-            "Circuits1.stack",
-            "Circuit Tools.pulldown",
+            "Circuit Manager.splitpushbutton",
             "Circuit Browser.pushbutton",
             "CircuitBrowserPanel.py",
         )

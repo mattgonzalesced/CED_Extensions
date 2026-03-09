@@ -1,0 +1,227 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <DataTemplate x:Key="CED.DataGrid.Header.WrapTemplate">
+    <TextBlock Text="{Binding}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center"/>
+  </DataTemplate>
+
+  <Style x:Key="CED.DataGrid.Header.Wrap" TargetType="DataGridColumnHeader">
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Height" Value="34"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridHeaderBackground}"/>
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridHeaderForeground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridHeaderBorder}"/>
+    <Setter Property="BorderThickness" Value="0,0,1,1"/>
+    <Setter Property="ContentTemplate" Value="{StaticResource CED.DataGrid.Header.WrapTemplate}"/>
+    <Style.Triggers>
+      <Trigger Property="IsMouseOver" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridHeaderHoverBackground}"/>
+      </Trigger>
+      <Trigger Property="IsPressed" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridHeaderPressedBackground}"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="CED.DataGrid.Header.WrapTall" TargetType="DataGridColumnHeader" BasedOn="{StaticResource CED.DataGrid.Header.Wrap}">
+    <Setter Property="Height" Value="42"/>
+  </Style>
+
+  <Style x:Key="HeaderWrapCenter" TargetType="DataGridColumnHeader" BasedOn="{StaticResource CED.DataGrid.Header.Wrap}"/>
+  <Style x:Key="HeaderWrapCenterTall" TargetType="DataGridColumnHeader" BasedOn="{StaticResource CED.DataGrid.Header.WrapTall}"/>
+
+  <Style x:Key="CED.DataGrid.Text.Center" TargetType="TextBlock">
+    <Setter Property="TextAlignment" Value="Center"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+  </Style>
+  <Style x:Key="CenterTextCell" TargetType="TextBlock" BasedOn="{StaticResource CED.DataGrid.Text.Center}"/>
+
+  <Style x:Key="CED.DataGrid.Text.EditCenter" TargetType="TextBox">
+    <Setter Property="TextAlignment" Value="Center"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+  </Style>
+  <Style x:Key="CenterTextEdit" TargetType="TextBox" BasedOn="{StaticResource CED.DataGrid.Text.EditCenter}"/>
+
+  <Style x:Key="CED.DataGrid.Text.Remarks" TargetType="TextBlock">
+    <Setter Property="TextWrapping" Value="Wrap"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="Margin" Value="2,0,2,0"/>
+  </Style>
+  <Style x:Key="RemarksTextCell" TargetType="TextBlock" BasedOn="{StaticResource CED.DataGrid.Text.Remarks}"/>
+
+  <Style x:Key="BaseCell" TargetType="DataGridCell">
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridCellBorder}"/>
+    <Setter Property="BorderThickness" Value="0,0,1,0"/>
+    <Style.Triggers>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="ReadonlyCell" TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridReadOnlyBackground}"/>
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridReadOnlyForeground}"/>
+    <Style.Triggers>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="DividerThickReadonlyCell" TargetType="DataGridCell" BasedOn="{StaticResource ReadonlyCell}">
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridDividerStrong}"/>
+    <Setter Property="BorderThickness" Value="0,0,2,0"/>
+  </Style>
+
+  <Style x:Key="DividerThinCell" TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
+
+  <Style x:Key="DividerThickCell" TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}">
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridDividerStrong}"/>
+    <Setter Property="BorderThickness" Value="0,0,2,0"/>
+  </Style>
+
+  <Style x:Key="NewQtyCell" TargetType="DataGridCell" BasedOn="{StaticResource ReadonlyCell}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding new_qty_changed}" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridChangedBackground}"/>
+      </DataTrigger>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="NewSizeCell" TargetType="DataGridCell" BasedOn="{StaticResource ReadonlyCell}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding new_size_changed}" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridChangedBackground}"/>
+      </DataTrigger>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="NewWireCell" TargetType="DataGridCell" BasedOn="{StaticResource DividerThickReadonlyCell}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding new_wire_changed}" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridChangedBackground}"/>
+      </DataTrigger>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="NewNotesCell" TargetType="DataGridCell" BasedOn="{StaticResource ReadonlyCell}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding new_notes_changed}" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridChangedBackground}"/>
+      </DataTrigger>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="NewWireSizeCell" TargetType="DataGridCell" BasedOn="{StaticResource ReadonlyCell}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding new_wire_size_changed}" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridChangedBackground}"/>
+      </DataTrigger>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="NewConduitSizeCell" TargetType="DataGridCell" BasedOn="{StaticResource DividerThickReadonlyCell}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding new_conduit_size_changed}" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridChangedBackground}"/>
+      </DataTrigger>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="NewWireStringCell" TargetType="DataGridCell" BasedOn="{StaticResource ReadonlyCell}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding new_wire_changed}" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridChangedBackground}"/>
+      </DataTrigger>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="NewValueCell" TargetType="DataGridCell" BasedOn="{StaticResource DividerThinCell}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding is_enabled}" Value="False">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridDisabledBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridDisabledForeground}"/>
+      </DataTrigger>
+      <DataTrigger Binding="{Binding new_rating_changed}" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridChangedBackground}"/>
+      </DataTrigger>
+      <DataTrigger Binding="{Binding rating_warning_level}" Value="1">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridWarningBackground}"/>
+      </DataTrigger>
+      <DataTrigger Binding="{Binding rating_warning_level}" Value="2">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridErrorBackground}"/>
+      </DataTrigger>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="NewFrameCell" TargetType="DataGridCell" BasedOn="{StaticResource DividerThickCell}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding is_enabled}" Value="False">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridDisabledBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridDisabledForeground}"/>
+      </DataTrigger>
+      <DataTrigger Binding="{Binding new_frame_changed}" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridChangedBackground}"/>
+      </DataTrigger>
+      <DataTrigger Binding="{Binding new_frame_warning}" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridWarningBackground}"/>
+      </DataTrigger>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="CED.DataGrid.RowDisabledAware" TargetType="DataGridRow">
+    <Setter Property="Opacity" Value="1"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.SearchBackground}"/>
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridRowForeground}"/>
+    <Style.Triggers>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+      </Trigger>
+      <DataTrigger Binding="{Binding is_enabled}" Value="False">
+        <Setter Property="Opacity" Value="0.45"/>
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+</ResourceDictionary>

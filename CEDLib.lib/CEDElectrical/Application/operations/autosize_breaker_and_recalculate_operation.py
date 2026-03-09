@@ -190,6 +190,7 @@ class AutosizeBreakerAndRecalculateOperation(object):
             owner = ''
         return {
             'circuit': '{}-{}'.format(panel, number),
+            'load_name': getattr(circuit, 'LoadName', '') or '',
             'circuit_owner': owner,
             'device_owner': '',
         }

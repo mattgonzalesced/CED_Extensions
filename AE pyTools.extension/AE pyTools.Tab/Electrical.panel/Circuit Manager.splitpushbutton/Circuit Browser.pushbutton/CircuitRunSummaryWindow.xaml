@@ -1,0 +1,97 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        Title="Calculation Summary"
+        Height="520"
+        Width="960"
+        MinHeight="360"
+        MinWidth="760"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource CED.Brush.WindowBackground}"
+        PreviewMouseDown="window_preview_mouse_down">
+  <Window.Resources>
+    <ResourceDictionary>
+</ResourceDictionary>
+  </Window.Resources>
+
+  <Grid Margin="{DynamicResource CED.Thickness.ContentMargin}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="8"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <TextBlock Grid.Row="0" Text="Calculation Summary" Style="{DynamicResource CED.Text.SectionHeader}" Margin="0,0,0,8"/>
+
+    <Grid Grid.Row="1">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+      </Grid.RowDefinitions>
+      <TextBlock Grid.Row="0" Name="RuntimeCountText" Text="Runtime-only alerts: 0" Style="{DynamicResource CED.Text.Primary}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+      <Border Grid.Row="1" BorderBrush="{DynamicResource CED.Brush.DataGridBorder}" BorderThickness="1" Background="{DynamicResource CED.Brush.ListBackground}">
+        <DataGrid Name="RuntimeList"
+                  Style="{DynamicResource CED.DataGrid.Base}"
+                  ColumnHeaderStyle="{DynamicResource HeaderWrapCenter}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  CanUserResizeRows="False"
+                  CanUserReorderColumns="False"
+                  SelectionMode="Single"
+                  SelectionUnit="FullRow"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  HorizontalScrollBarVisibility="Disabled"
+                  PreviewMouseDown="summary_list_preview_mouse_down">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Circuit" Width="2*" Binding="{Binding circuit}"/>
+            <DataGridTextColumn Header="Load Name" Width="3*" Binding="{Binding load_name}"/>
+          </DataGrid.Columns>
+        </DataGrid>
+      </Border>
+    </Grid>
+
+    <Grid Grid.Row="3">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+      </Grid.RowDefinitions>
+      <TextBlock Grid.Row="0" Name="LockedCountText" Text="Locked items: 0" Style="{DynamicResource CED.Text.Primary}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+      <TextBlock Grid.Row="1"
+                 Text="These circuits were not calculated due to ownership/checkout constraints. Recalculate after ownership is available."
+                 TextWrapping="Wrap"
+                 Style="{DynamicResource CED.Text.Secondary}"
+                 Margin="0,0,0,6"/>
+      <Border Grid.Row="2" BorderBrush="{DynamicResource CED.Brush.DataGridBorder}" BorderThickness="1" Background="{DynamicResource CED.Brush.ListBackground}">
+        <DataGrid Name="LockedList"
+                  Style="{DynamicResource CED.DataGrid.Base}"
+                  ColumnHeaderStyle="{DynamicResource HeaderWrapCenter}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  CanUserResizeRows="False"
+                  CanUserReorderColumns="False"
+                  SelectionMode="Single"
+                  SelectionUnit="FullRow"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  HorizontalScrollBarVisibility="Disabled"
+                  PreviewMouseDown="summary_list_preview_mouse_down">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Circuit" Width="2*" Binding="{Binding circuit}"/>
+            <DataGridTextColumn Header="Load Name" Width="3*" Binding="{Binding load_name}"/>
+          </DataGrid.Columns>
+        </DataGrid>
+      </Border>
+    </Grid>
+
+    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+      <Button Style="{DynamicResource CED.Button.Base}" Content="Close" Width="80" Height="24" Click="close_clicked"/>
+    </StackPanel>
+  </Grid>
+</Window>
+

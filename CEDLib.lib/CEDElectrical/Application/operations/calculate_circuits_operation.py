@@ -281,6 +281,7 @@ class CalculateCircuitsOperation(object):
                 rows.append({
                     'panel': branch.panel or '',
                     'number': branch.circuit_number or '',
+                    'load_name': branch.load_name or '',
                     'severity': severity or 'NONE',
                     'group': group or 'Other',
                     'message': message or '',

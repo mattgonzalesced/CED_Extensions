@@ -19,23 +19,49 @@ from System.Collections.Generic import List
 from System.Collections.ObjectModel import ObservableCollection
 from System.Windows import ResourceDictionary
 from System.Windows import Visibility
-from System.Windows.Controls import ContextMenu, MenuItem, Separator, DataGridRow, ListViewItem, Button
-from System.Windows.Markup import XamlReader
+from System.Windows.Controls import (
+    ContextMenu,
+    MenuItem,
+    Separator,
+    DataGridRow,
+    ListViewItem,
+    Button,
+    DataGridTextColumn,
+)
 from System.Windows.Media import BrushConverter, VisualTreeHelper
 from pyrevit import forms, revit, DB, script
 
-LIB_ROOT = os.path.abspath(
-    os.path.join(
-        os.path.dirname(__file__),
-        "..",
-        "..",
-        "..",
-        "..",
-        "..",
-        "..",
-        "CEDLib.lib",
-    )
-)
+_THIS_DIR = os.path.abspath(os.path.dirname(__file__))
+
+
+def _find_workspace_root(start_dir):
+    current = os.path.abspath(start_dir)
+    while True:
+        if os.path.isdir(os.path.join(current, "CEDLib.lib")):
+            return current
+        parent = os.path.dirname(current)
+        if not parent or parent == current:
+            return None
+        current = parent
+
+
+def _find_named_ancestor(start_dir, folder_name):
+    current = os.path.abspath(start_dir)
+    target = (folder_name or "").strip().lower()
+    while True:
+        if os.path.basename(current).lower() == target:
+            return current
+        parent = os.path.dirname(current)
+        if not parent or parent == current:
+            return None
+        current = parent
+
+
+_WORKSPACE_ROOT = _find_workspace_root(_THIS_DIR)
+if _WORKSPACE_ROOT:
+    LIB_ROOT = os.path.abspath(os.path.join(_WORKSPACE_ROOT, "CEDLib.lib"))
+else:
+    LIB_ROOT = os.path.abspath(os.path.join(_THIS_DIR, "..", "..", "..", "..", "..", "CEDLib.lib"))
 if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
@@ -46,17 +72,18 @@ from CEDElectrical.refdata.standard_ocp_table import BREAKER_FRAME_SWITCH_TABLE
 from CEDElectrical.Infrastructure.Revit.external_events.circuit_operation_event import (
     CircuitOperationExternalEventGateway,
 )
+from UIClasses.revit_theme_bridge import DOCK_PANE_FRAME_DARK, DOCK_PANE_FRAME_LIGHT, RevitThemeBridge
 
 
 TITLE = "Circuit Browser"
 PANEL_ID = "36c3fd8d-98c4-4cf4-92a4-4ac7f3f8c4f2"
 ALERT_DATA_PARAM = "Circuit Data_CED"
+_ELECTRICAL_PANEL_ROOT = _find_named_ancestor(_THIS_DIR, "Electrical.panel") or os.path.abspath(
+    os.path.join(_THIS_DIR, "..", "..")
+)
 CALC_SETTINGS_PATH = os.path.abspath(
     os.path.join(
-        os.path.dirname(__file__),
-        "..",
-        "..",
-        "..",
+        _ELECTRICAL_PANEL_ROOT,
         "Circuits2.stack",
         "Calculate Circuits.pushbutton",
         "config.py",
@@ -64,46 +91,47 @@ CALC_SETTINGS_PATH = os.path.abspath(
 )
 CALC_SETTINGS_XAML_PATH = os.path.abspath(
     os.path.join(
-        os.path.dirname(__file__),
-        "..",
-        "..",
-        "..",
+        _ELECTRICAL_PANEL_ROOT,
         "Circuits2.stack",
         "Calculate Circuits.pushbutton",
         "settings.xaml",
     )
 )
-THEME_LOCAL_LIGHT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "CEDTheme.xaml"))
-THEME_LOCAL_DARK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "CEDTheme.Dark.xaml"))
-THEME_SHARED_LIGHT_PATH = os.path.abspath(
+THEME_LIGHT_PATH = os.path.abspath(
     os.path.join(
-        os.path.dirname(__file__),
-        "..",
-        "..",
-        "..",
-        "..",
-        "..",
-        "..",
+        LIB_ROOT,
+        "UIClasses",
         "Resources",
-        "UI",
         "Themes",
-        "CEDTheme.xaml",
+        "CEDTheme.Light.xaml",
     )
 )
-THEME_SHARED_DARK_PATH = os.path.abspath(
+THEME_DARK_PATH = os.path.abspath(
     os.path.join(
-        os.path.dirname(__file__),
-        "..",
-        "..",
-        "..",
-        "..",
-        "..",
-        "..",
+        LIB_ROOT,
+        "UIClasses",
         "Resources",
-        "UI",
         "Themes",
         "CEDTheme.Dark.xaml",
     )
+)
+CURRENT_THEME_MODE = "light"
+CURRENT_ACCENT_MODE = "blue"
+BASE_RESOURCE_PATHS = (
+    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Themes", "CED.Sizes.xaml")),
+    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Themes", "CED.Colors.xaml")),
+    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Themes", "CED.Brushes.xaml")),
+    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Styles", "ButtonStyles.xaml")),
+    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Styles", "TextStyles.xaml")),
+    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Styles", "InputStyles.xaml")),
+    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Styles", "ListStyles.xaml")),
+    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Styles", "BadgeStyles.xaml")),
+    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Icons", "Icons.xaml")),
+    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Templates", "ListItems.xaml")),
+    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Templates", "Cards.xaml")),
+    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Templates", "Badges.xaml")),
+    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Templates", "DataGrids.xaml")),
+    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Controls", "SearchBox.xaml")),
 )
 HIDABLE_ALERT_IDS = {
     "Design.NonStandardOCPRating",
@@ -115,15 +143,21 @@ HIDABLE_ALERT_IDS = {
 BLOCKED_BRANCH_TYPES = set(['N/A', 'SPACE', 'SPARE', 'CONDUIT ONLY'])
 IG_BREAKER_ALLOWED_TYPES = set(['BRANCH', 'FEEDER', 'XFMR PRI', 'XFMR SEC'])
 
+ACCENT_BRUSH_MAP = {
+    "blue": {"light": "#0459A4", "dark": "#3B8ED8"},
+    "red": {"light": "#BE202F", "dark": "#D15762"},
+    "green": {"light": "#43A047", "dark": "#58B95E"},
+    "neutral": {"light": "#5F6F82", "dark": "#9DB1C8"},
+}
 CIRCUIT_TYPE_TAG_STYLES = {
-    "BRANCH": ("#DDEBFF", "#234A84"),
-    "FEEDER": ("#D5F1E0", "#155C38"),
-    "SPARE": ("#EAEAEA", "#444444"),
-    "SPACE": ("#ECEFF3", "#52606D"),
-    "XFMR PRI": ("#FFE6CC", "#8A4B08"),
-    "XFMR SEC": ("#F7DEFF", "#6F2D86"),
-    "CONDUIT ONLY": ("#E6F8FA", "#0E5966"),
-    "N/A": ("#F0F0F0", "#666666"),
+    "BRANCH": ("CED.Brush.BadgeStd01Background", "CED.Brush.BadgeStd01Text"),
+    "FEEDER": ("CED.Brush.BadgeStd02Background", "CED.Brush.BadgeStd02Text"),
+    "SPARE": ("CED.Brush.BadgeStd03Background", "CED.Brush.BadgeStd03Text"),
+    "SPACE": ("CED.Brush.BadgeStd04Background", "CED.Brush.BadgeStd04Text"),
+    "XFMR PRI": ("CED.Brush.BadgeStd05Background", "CED.Brush.BadgeStd05Text"),
+    "XFMR SEC": ("CED.Brush.BadgeStd06Background", "CED.Brush.BadgeStd06Text"),
+    "CONDUIT ONLY": ("CED.Brush.BadgeStd07Background", "CED.Brush.BadgeStd07Text"),
+    "N/A": ("CED.Brush.BadgeStd08Background", "CED.Brush.BadgeStd08Text"),
 }
 OCP_TABLE_KEYS = sorted([int(k) for k in BREAKER_FRAME_SWITCH_TABLE.keys()])
 _DOC_SENTINEL = object()
@@ -198,34 +232,122 @@ def _is_descendant_of_control(start, control):
     return False
 
 
+def _normalize_path(path):
+    try:
+        return os.path.abspath(path).replace("\\", "/").lower()
+    except Exception:
+        try:
+            return str(path).replace("\\", "/").lower()
+        except Exception:
+            return ""
+
+
+def _resource_source_path(dictionary):
+    source = getattr(dictionary, "Source", None)
+    if source is None:
+        return ""
+    try:
+        local_path = source.LocalPath
+        if local_path:
+            return _normalize_path(local_path)
+    except Exception:
+        pass
+    try:
+        return _normalize_path(str(source))
+    except Exception:
+        return ""
+
+
+def _load_resource_dictionary(path):
+    if not path or not os.path.exists(path):
+        return None
+    try:
+        dictionary = ResourceDictionary()
+        dictionary.Source = Uri(path)
+        return dictionary
+    except Exception:
+        return None
+
+
+def _ensure_base_resources(owner):
+    try:
+        resources = getattr(owner, "Resources", None)
+        if resources is None:
+            return False
+        merged = resources.MergedDictionaries
+        existing = set()
+        for dictionary in list(merged):
+            source_path = _resource_source_path(dictionary)
+            if source_path:
+                existing.add(source_path)
+        added = False
+        for path in BASE_RESOURCE_PATHS:
+            normalized = _normalize_path(path)
+            if not normalized or normalized in existing:
+                continue
+            dictionary = _load_resource_dictionary(path)
+            if dictionary is None:
+                continue
+            merged.Add(dictionary)
+            existing.add(normalized)
+            added = True
+        return added
+    except Exception:
+        return False
+
+
 def _load_theme_dictionary(theme_mode="light"):
     mode = (theme_mode or "light").strip().lower()
-    if mode == "dark":
-        candidates = (THEME_LOCAL_DARK_PATH, THEME_SHARED_DARK_PATH, THEME_LOCAL_LIGHT_PATH, THEME_SHARED_LIGHT_PATH)
-    else:
-        candidates = (THEME_LOCAL_LIGHT_PATH, THEME_SHARED_LIGHT_PATH)
-    for candidate in candidates:
-        try:
-            if not os.path.exists(candidate):
-                continue
-            # Match EF-Tools pattern first: absolute path URI on ResourceDictionary.Source.
-            try:
-                rd = ResourceDictionary()
-                rd.Source = Uri(candidate)
-                return rd
-            except Exception:
-                pass
-            with open(candidate, "r") as fp:
-                xaml_text = fp.read()
-            if xaml_text and xaml_text.strip():
-                return XamlReader.Parse(xaml_text)
-        except Exception:
-            continue
+    candidates = (THEME_DARK_PATH, THEME_LIGHT_PATH) if mode == "dark" else (THEME_LIGHT_PATH,)
+    for path in candidates:
+        dictionary = _load_resource_dictionary(path)
+        if dictionary is not None:
+            return dictionary
     return None
+
+
+def _is_theme_resource_dictionary(dictionary):
+    try:
+        source_text = str(getattr(dictionary, "Source", "") or "").replace("\\", "/").lower()
+    except Exception:
+        source_text = ""
+    return source_text.endswith("/cedtheme.light.xaml") or source_text.endswith("/cedtheme.dark.xaml")
+
+
+def _to_brush(value, fallback=None):
+    converter = BrushConverter()
+    try:
+        return converter.ConvertFrom(value)
+    except Exception:
+        if fallback is None:
+            return None
+        try:
+            return converter.ConvertFrom(fallback)
+        except Exception:
+            return None
+
+
+def _try_apply_accent(owner):
+    try:
+        resources = getattr(owner, "Resources", None)
+        if resources is None:
+            return False
+        theme_mode = str(getattr(owner, "_theme_mode", "light") or "light").lower()
+        accent_mode = str(getattr(owner, "_accent_mode", "blue") or "blue").lower()
+        palette = ACCENT_BRUSH_MAP.get(accent_mode) or ACCENT_BRUSH_MAP.get("blue") or {}
+        accent_hex = palette.get("dark") if theme_mode == "dark" else palette.get("light")
+        accent_brush = _to_brush(accent_hex, "#0459A4")
+        if accent_brush is None:
+            return False
+        resources["CED.Brush.Accent"] = accent_brush
+        return True
+    except Exception:
+        return False
 
 
 def _try_apply_theme(owner):
     try:
+        _ensure_base_resources(owner)
         theme_mode = getattr(owner, "_theme_mode", "light")
         dictionary = _load_theme_dictionary(theme_mode)
         if dictionary is None:
@@ -233,17 +355,149 @@ def _try_apply_theme(owner):
         resources = getattr(owner, "Resources", None)
         if resources is None:
             return False
+        merged = resources.MergedDictionaries
         previous = getattr(owner, "_ced_theme_dictionary", None)
         try:
-            if previous is not None and previous in resources.MergedDictionaries:
-                resources.MergedDictionaries.Remove(previous)
+            if previous is not None and previous in merged:
+                merged.Remove(previous)
         except Exception:
             pass
-        resources.MergedDictionaries.Add(dictionary)
+        try:
+            for existing in list(merged):
+                if _is_theme_resource_dictionary(existing):
+                    merged.Remove(existing)
+        except Exception:
+            pass
+        try:
+            merged.Add(dictionary)
+        except Exception:
+            merged.Add(dictionary)
         owner._ced_theme_dictionary = dictionary
+        _try_apply_accent(owner)
         return True
     except Exception:
         return False
+
+
+def _try_find_resource(owner, key):
+    if owner is None or not key:
+        return None
+    try:
+        resource = owner.TryFindResource(key)
+        if resource is not None:
+            return resource
+    except Exception:
+        pass
+    try:
+        return owner.FindResource(key)
+    except Exception:
+        return None
+
+
+def _set_if_resource(owner, target, property_name, key):
+    if target is None:
+        return
+    resource = _try_find_resource(owner, key)
+    if resource is None:
+        return
+    try:
+        setattr(target, property_name, resource)
+    except Exception:
+        pass
+
+
+def _column_at(grid, index):
+    try:
+        if grid is None:
+            return None
+        columns = grid.Columns
+        if columns is None or index < 0 or index >= columns.Count:
+            return None
+        return columns[index]
+    except Exception:
+        return None
+
+
+def _apply_grid_styles_neutral_ig(owner, grid):
+    if grid is None:
+        return
+    _set_if_resource(owner, grid, "Style", "CED.DataGrid.Base")
+    _set_if_resource(owner, grid, "ColumnHeaderStyle", "HeaderWrapCenter")
+    _set_if_resource(owner, grid, "RowStyle", "CED.DataGrid.RowDisabledAware")
+
+    _set_if_resource(owner, _column_at(grid, 0), "CellStyle", "ReadonlyCell")
+    _set_if_resource(owner, _column_at(grid, 1), "CellStyle", "ReadonlyCell")
+    _set_if_resource(owner, _column_at(grid, 2), "CellStyle", "DividerThickReadonlyCell")
+    _set_if_resource(owner, _column_at(grid, 3), "CellStyle", "ReadonlyCell")
+    _set_if_resource(owner, _column_at(grid, 4), "CellStyle", "ReadonlyCell")
+    _set_if_resource(owner, _column_at(grid, 5), "CellStyle", "DividerThickReadonlyCell")
+    _set_if_resource(owner, _column_at(grid, 6), "CellStyle", "NewQtyCell")
+    _set_if_resource(owner, _column_at(grid, 7), "CellStyle", "NewSizeCell")
+    _set_if_resource(owner, _column_at(grid, 8), "CellStyle", "NewWireCell")
+    _set_if_resource(owner, _column_at(grid, 9), "CellStyle", "ReadonlyCell")
+
+    for index in (2, 3, 4, 6, 7):
+        column = _column_at(grid, index)
+        if isinstance(column, DataGridTextColumn):
+            _set_if_resource(owner, column, "ElementStyle", "CenterTextCell")
+    remarks_column = _column_at(grid, 9)
+    if isinstance(remarks_column, DataGridTextColumn):
+        _set_if_resource(owner, remarks_column, "ElementStyle", "RemarksTextCell")
+
+
+def _apply_grid_styles_breaker(owner, grid):
+    if grid is None:
+        return
+    _set_if_resource(owner, grid, "Style", "CED.DataGrid.Base")
+    _set_if_resource(owner, grid, "ColumnHeaderStyle", "HeaderWrapCenterTall")
+    _set_if_resource(owner, grid, "RowStyle", "CED.DataGrid.RowDisabledAware")
+
+    _set_if_resource(owner, _column_at(grid, 0), "CellStyle", "ReadonlyCell")
+    _set_if_resource(owner, _column_at(grid, 1), "CellStyle", "ReadonlyCell")
+    _set_if_resource(owner, _column_at(grid, 2), "CellStyle", "ReadonlyCell")
+    _set_if_resource(owner, _column_at(grid, 3), "CellStyle", "DividerThickReadonlyCell")
+    _set_if_resource(owner, _column_at(grid, 4), "CellStyle", "ReadonlyCell")
+    _set_if_resource(owner, _column_at(grid, 5), "CellStyle", "DividerThickReadonlyCell")
+    _set_if_resource(owner, _column_at(grid, 6), "CellStyle", "NewValueCell")
+    _set_if_resource(owner, _column_at(grid, 7), "CellStyle", "NewFrameCell")
+    _set_if_resource(owner, _column_at(grid, 8), "CellStyle", "ReadonlyCell")
+
+    for index in (2, 3, 4, 5, 6, 7):
+        column = _column_at(grid, index)
+        if isinstance(column, DataGridTextColumn):
+            _set_if_resource(owner, column, "ElementStyle", "CenterTextCell")
+    for index in (6, 7):
+        column = _column_at(grid, index)
+        if isinstance(column, DataGridTextColumn):
+            _set_if_resource(owner, column, "EditingElementStyle", "CenterTextEdit")
+    remarks_column = _column_at(grid, 8)
+    if isinstance(remarks_column, DataGridTextColumn):
+        _set_if_resource(owner, remarks_column, "ElementStyle", "RemarksTextCell")
+
+
+def _apply_grid_styles_mark_existing(owner, grid):
+    if grid is None:
+        return
+    _set_if_resource(owner, grid, "Style", "CED.DataGrid.Base")
+    _set_if_resource(owner, grid, "ColumnHeaderStyle", "HeaderWrapCenterTall")
+    _set_if_resource(owner, grid, "RowStyle", "CED.DataGrid.RowDisabledAware")
+
+    _set_if_resource(owner, _column_at(grid, 0), "CellStyle", "ReadonlyCell")
+    _set_if_resource(owner, _column_at(grid, 1), "CellStyle", "ReadonlyCell")
+    _set_if_resource(owner, _column_at(grid, 2), "CellStyle", "DividerThickReadonlyCell")
+    _set_if_resource(owner, _column_at(grid, 3), "CellStyle", "ReadonlyCell")
+    _set_if_resource(owner, _column_at(grid, 4), "CellStyle", "DividerThickReadonlyCell")
+    _set_if_resource(owner, _column_at(grid, 5), "CellStyle", "NewNotesCell")
+    _set_if_resource(owner, _column_at(grid, 6), "CellStyle", "NewWireStringCell")
+    _set_if_resource(owner, _column_at(grid, 7), "CellStyle", "ReadonlyCell")
+
+    for index in (2, 3, 5):
+        column = _column_at(grid, index)
+        if isinstance(column, DataGridTextColumn):
+            _set_if_resource(owner, column, "ElementStyle", "CenterTextCell")
+    remarks_column = _column_at(grid, 7)
+    if isinstance(remarks_column, DataGridTextColumn):
+        _set_if_resource(owner, remarks_column, "ElementStyle", "RemarksTextCell")
 
 
 def _lookup_param_value(element, name):
@@ -276,6 +530,24 @@ def _lookup_param_text(element, name):
         return value
     except Exception:
         return None
+
+
+def _lookup_schedule_notes_text(circuit):
+    try:
+        param = circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NOTES_PARAM)
+    except Exception:
+        param = None
+    if param is not None:
+        try:
+            value = param.AsString()
+            if value is None:
+                value = param.AsValueString()
+            if value:
+                return value
+        except Exception:
+            pass
+    fallback = _lookup_param_text(circuit, "CKT_Schedule Notes_CEDT")
+    return fallback or ""
 
 
 def _read_alert_payload(circuit):
@@ -313,12 +585,18 @@ def _alert_rows_from_payload(payload):
         if not isinstance(item, dict):
             continue
         definition_id = item.get("definition_id") or item.get("id")
-        severity = (item.get("severity") or "NONE").upper()
-        group = item.get("group") or "Other"
+        severity = str(item.get("severity") or "NONE").upper()
+        group = str(item.get("group") or "Other")
         definition = get_alert_definition(definition_id) if definition_id else None
         message_value = item.get("message")
         if message_value:
-            text = str(message_value)
+            if isinstance(message_value, (dict, list)):
+                try:
+                    text = json.dumps(message_value, ensure_ascii=False)
+                except Exception:
+                    text = str(message_value)
+            else:
+                text = str(message_value)
         elif definition:
             text = definition.GetDescriptionText()
         elif definition_id:
@@ -429,8 +707,13 @@ class CircuitListItem(object):
             conduit_wire = "-"
         self.wire_line = "Conduit/Wire: {}".format(conduit_wire)
 
-        tag_bg, tag_fg = CIRCUIT_TYPE_TAG_STYLES.get(self.branch_type, ("#E8EDF3", "#2F4356"))
+        tag_bg, tag_fg = CIRCUIT_TYPE_TAG_STYLES.get(
+            self.branch_type,
+            ("CED.Brush.BadgeStd04Background", "CED.Brush.BadgeStd04Text"),
+        )
         self.type_tag_text = self.branch_type
+        self.type_tag_bg_key = tag_bg
+        self.type_tag_fg_key = tag_fg
         self.type_tag_bg = tag_bg
         self.type_tag_fg = tag_fg
         self.show_type_tag = True
@@ -473,17 +756,19 @@ class CircuitListItem(object):
 
 class AlertRow(object):
     def __init__(self, severity, group, definition_id, message, is_hidden=False, can_hide=True):
-        self.severity = severity
-        self.group = group
-        self.definition_id = definition_id
-        self.message = message
+        self.severity = str(severity or "NONE")
+        self.group = str(group or "Other")
+        self.definition_id = str(definition_id or "-")
+        self.message = str(message or "")
         self.is_hidden = bool(is_hidden)
         self.can_hide = bool(can_hide)
 
 
 class CircuitAlertsWindow(forms.WPFWindow):
-    def __init__(self, circuit_label, rows):
-        xaml = os.path.abspath(os.path.join(os.path.dirname(__file__), "CircuitAlertsWindow.xaml"))
+    def __init__(self, circuit_label, rows, theme_mode="light", accent_mode="blue"):
+        xaml = os.path.abspath(os.path.join(_THIS_DIR, "CircuitAlertsWindow.xaml"))
+        self._theme_mode = theme_mode or "light"
+        self._accent_mode = accent_mode or "blue"
         forms.WPFWindow.__init__(self, xaml)
         _try_apply_theme(self)
         self._rows = list(rows or [])
@@ -610,48 +895,47 @@ class CircuitAlertsWindow(forms.WPFWindow):
 
 
 class LockedRow(object):
-    def __init__(self, circuit, circuit_owner, device_owner):
-        self.circuit = circuit
-        panel = ""
-        number = ""
-        try:
-            text = str(circuit or "")
-            if "-" in text:
-                panel, number = text.split("-", 1)
-        except Exception:
-            panel = ""
-            number = ""
-        self.panel = panel
-        self.number = number
-        self.circuit_owner = circuit_owner
-        self.device_owner = device_owner
+    def __init__(self, circuit, load_name):
+        self.circuit = str(circuit or "-")
+        self.load_name = str(load_name or "-")
 
 
 class RuntimeAlertRow(object):
-    def __init__(self, panel, number, severity, group, message):
-        self.panel = panel
-        self.number = number
-        self.severity = severity
-        self.group = group
-        self.message = message
+    def __init__(self, circuit, load_name):
+        self.circuit = str(circuit or "-")
+        self.load_name = str(load_name or "-")
 
 
 class CircuitRunSummaryWindow(forms.WPFWindow):
-    def __init__(self, locked_rows, runtime_rows):
-        xaml = os.path.abspath(os.path.join(os.path.dirname(__file__), "CircuitRunSummaryWindow.xaml"))
+    def __init__(self, locked_rows, runtime_rows, theme_mode="light", accent_mode="blue"):
+        xaml = os.path.abspath(os.path.join(_THIS_DIR, "CircuitRunSummaryWindow.xaml"))
+        self._theme_mode = theme_mode or "light"
+        self._accent_mode = accent_mode or "blue"
         forms.WPFWindow.__init__(self, xaml)
         _try_apply_theme(self)
         locked = [
-            LockedRow(x.get("circuit", ""), x.get("circuit_owner", "") or "-", x.get("device_owner", "") or "-")
+            LockedRow(
+                x.get("circuit", "") or "-",
+                x.get("load_name", "") or "-",
+            )
             for x in list(locked_rows or [])
         ]
+
+        def _runtime_circuit_text(raw):
+            panel = str(raw.get("panel", "") or "").strip()
+            number = str(raw.get("number", "") or "").strip()
+            if panel and number:
+                return "{}-{}".format(panel, number)
+            if panel:
+                return panel
+            if number:
+                return number
+            return "-"
+
         runtime = [
             RuntimeAlertRow(
-                x.get("panel", "") or "",
-                x.get("number", "") or "",
-                x.get("severity", "") or "",
-                x.get("group", "") or "",
-                x.get("message", "") or "",
+                _runtime_circuit_text(x),
+                x.get("load_name", "") or "-",
             )
             for x in list(runtime_rows or [])
         ]
@@ -699,6 +983,8 @@ class CircuitRunSummaryWindow(forms.WPFWindow):
             return
         if _find_visual_ancestor(source, ListViewItem) is not None:
             return
+        if _find_visual_ancestor(source, DataGridRow) is not None:
+            return
         try:
             sender.SelectedItem = None
         except Exception:
@@ -745,8 +1031,10 @@ class NeutralIGActionRow(object):
 
 
 class NeutralIGActionWindow(forms.WPFWindow):
-    def __init__(self, title, rows, preview_callback, apply_callback):
-        xaml = os.path.abspath(os.path.join(os.path.dirname(__file__), "CircuitNeutralIGActionWindow.xaml"))
+    def __init__(self, title, rows, preview_callback, apply_callback, theme_mode="light", accent_mode="blue"):
+        xaml = os.path.abspath(os.path.join(_THIS_DIR, "CircuitNeutralIGActionWindow.xaml"))
+        self._theme_mode = theme_mode or "light"
+        self._accent_mode = accent_mode or "blue"
         forms.WPFWindow.__init__(self, xaml)
         _try_apply_theme(self)
         self._rows = list(rows or [])
@@ -764,8 +1052,11 @@ class NeutralIGActionWindow(forms.WPFWindow):
             title_tb.Text = title
 
         self._grid = self.FindName("CircuitGrid")
+        _apply_grid_styles_neutral_ig(self, self._grid)
         self._status = self.FindName("ChangedStatusText")
         self._checked_status = self.FindName("CheckedStatusText")
+        self._add_btn = self.FindName("AddButton")
+        self._remove_btn = self.FindName("RemoveButton")
         self._show_unsupported_cb = self.FindName("ShowUnsupportedToggle")
         if self._show_unsupported_cb is not None:
             self._show_unsupported_cb.IsChecked = True
@@ -777,6 +1068,7 @@ class NeutralIGActionWindow(forms.WPFWindow):
 
     def window_loaded(self, sender, args):
         self._is_ready = True
+        self._sync_action_buttons()
 
     def _apply_visibility_filter(self):
         if self._grid is None:
@@ -809,6 +1101,14 @@ class NeutralIGActionWindow(forms.WPFWindow):
             checkable_total = len([x for x in self._rows if bool(getattr(x, "is_enabled", False))])
             checked = len([x for x in self._rows if x.is_enabled and x.is_checked])
             self._checked_status.Text = "{} of {} checked".format(checked, checkable_total)
+        self._sync_action_buttons()
+
+    def _sync_action_buttons(self):
+        checked_count = len([x for x in self._rows if x.is_enabled and x.is_checked])
+        if self._add_btn is not None:
+            self._add_btn.IsEnabled = checked_count > 0
+        if self._remove_btn is not None:
+            self._remove_btn.IsEnabled = checked_count > 0
 
     def _apply_checkbox_to_selected(self, sender, state):
         if not self._is_ready or self._is_syncing_checks or self._suppress_check_events:
@@ -1027,8 +1327,10 @@ class BreakerActionRow(object):
 
 
 class BreakerActionWindow(forms.WPFWindow):
-    def __init__(self, rows, preview_apply_callback, apply_callback):
-        xaml = os.path.abspath(os.path.join(os.path.dirname(__file__), "CircuitBreakerActionWindow.xaml"))
+    def __init__(self, rows, preview_apply_callback, apply_callback, theme_mode="light", accent_mode="blue"):
+        xaml = os.path.abspath(os.path.join(_THIS_DIR, "CircuitBreakerActionWindow.xaml"))
+        self._theme_mode = theme_mode or "light"
+        self._accent_mode = accent_mode or "blue"
         forms.WPFWindow.__init__(self, xaml)
         _try_apply_theme(self)
         self._rows = list(rows or [])
@@ -1041,6 +1343,7 @@ class BreakerActionWindow(forms.WPFWindow):
         self._last_selected_rows = []
 
         self._grid = self.FindName("CircuitGrid")
+        _apply_grid_styles_breaker(self, self._grid)
         self._status = self.FindName("ChangedStatusText")
         self._checked_status = self.FindName("CheckedStatusText")
         self._set_breaker_cb = self.FindName("AutoBreakerCheck")
@@ -1060,13 +1363,14 @@ class BreakerActionWindow(forms.WPFWindow):
             self._show_changed_only_cb.IsChecked = False
         for row in self._rows:
             row.is_checked = False
-        self._apply_visibility_filter()
         self.Loaded += self.window_loaded
         self._refresh_status()
         self._sync_button_states()
 
     def window_loaded(self, sender, args):
         self._is_ready = True
+        self._apply_visibility_filter()
+        self._refresh_status()
         self._sync_button_states()
 
     def _apply_visibility_filter(self):
@@ -1302,6 +1606,269 @@ class BreakerActionWindow(forms.WPFWindow):
             self._sync_button_states()
 
 
+class MarkExistingActionRow(object):
+    def __init__(self, item, is_enabled, reason, current_notes, current_wire):
+        self.item = item
+        self.circuit = item.circuit
+        self.circuit_id = item.circuit.Id.IntegerValue
+        self.panel = item.panel
+        self.circuit_number = item.circuit_number
+        self.load_name = item.load_name
+        self.panel_ckt_text = "{} / {}".format(item.panel or "-", item.circuit_number or "-")
+        self.branch_type = item.branch_type
+        self.is_enabled = bool(is_enabled)
+        self.is_checked = False
+        self.reason = reason or ""
+
+        self.current_notes = current_notes or ""
+        self.current_wire = current_wire or "-"
+
+        self.new_notes = self.current_notes
+        self.new_wire = self.current_wire
+        self.new_notes_changed = False
+        self.new_wire_changed = False
+        self.is_changed = False
+        self.remarks = ""
+        self.recompute_state()
+
+    def recompute_state(self):
+        self.new_notes_changed = str(self.new_notes or "") != str(self.current_notes or "")
+        self.new_wire_changed = str(self.new_wire or "") != str(self.current_wire or "")
+        self.is_changed = bool(self.new_notes_changed or self.new_wire_changed)
+        if not self.is_enabled:
+            self.remarks = "Blocked - {}".format(self.reason or "Unsupported")
+        elif self.is_changed:
+            self.remarks = "Will be modified"
+        else:
+            self.remarks = "No change"
+
+
+class MarkExistingActionWindow(forms.WPFWindow):
+    def __init__(self, rows, preview_callback, apply_callback, theme_mode="light", accent_mode="blue"):
+        xaml = os.path.abspath(os.path.join(_THIS_DIR, "CircuitMarkExistingActionWindow.xaml"))
+        self._theme_mode = theme_mode or "light"
+        self._accent_mode = accent_mode or "blue"
+        forms.WPFWindow.__init__(self, xaml)
+        _try_apply_theme(self)
+        self._rows = list(rows or [])
+        self._preview_callback = preview_callback
+        self._apply_callback = apply_callback
+        self._is_syncing_checks = False
+        self._suppress_check_events = False
+        self._is_ready = False
+        self._show_unsupported = True
+        self._last_selected_rows = []
+
+        self._grid = self.FindName("CircuitGrid")
+        _apply_grid_styles_mark_existing(self, self._grid)
+        self._status = self.FindName("ChangedStatusText")
+        self._checked_status = self.FindName("CheckedStatusText")
+        self._show_unsupported_cb = self.FindName("ShowUnsupportedToggle")
+        self._set_notes_cb = self.FindName("SetNotesCheck")
+        self._clear_wire_cb = self.FindName("ClearWireCheck")
+        self._clear_conduit_cb = self.FindName("ClearConduitCheck")
+        self._set_existing_btn = self.FindName("SetExistingButton")
+        self._set_new_btn = self.FindName("SetNewButton")
+        self._apply_btn = self.FindName("ApplyButton")
+        self._last_mode = "existing"
+
+        if self._show_unsupported_cb is not None:
+            self._show_unsupported_cb.IsChecked = True
+        if self._set_notes_cb is not None:
+            self._set_notes_cb.IsChecked = True
+        if self._clear_wire_cb is not None:
+            self._clear_wire_cb.IsChecked = False
+        if self._clear_conduit_cb is not None:
+            self._clear_conduit_cb.IsChecked = False
+
+        for row in self._rows:
+            row.is_checked = False
+
+        self._apply_visibility_filter()
+        self._sync_option_controls()
+        self.Loaded += self.window_loaded
+        self._refresh_grid(refresh_items=False)
+
+    def window_loaded(self, sender, args):
+        self._is_ready = True
+        self._sync_button_states()
+
+    def _apply_visibility_filter(self):
+        if self._grid is None:
+            return
+        if self._show_unsupported:
+            items = list(self._rows)
+        else:
+            items = [x for x in self._rows if bool(getattr(x, "is_enabled", False))]
+        self._grid.ItemsSource = items
+
+    def _refresh_grid(self, refresh_items=False):
+        if refresh_items:
+            self._apply_visibility_filter()
+        elif self._grid is not None:
+            try:
+                self._grid.Items.Refresh()
+            except Exception:
+                pass
+        self._refresh_status()
+
+    def _refresh_status(self):
+        changed = len([x for x in self._rows if x.is_enabled and x.is_checked and x.is_changed])
+        total = len([x for x in self._rows if bool(getattr(x, "is_enabled", False))]) if not self._show_unsupported else len(self._rows)
+        if self._status is not None:
+            self._status.Text = "{} of {} circuits to be modified".format(changed, total)
+        if self._checked_status is not None:
+            checkable_total = len([x for x in self._rows if bool(getattr(x, "is_enabled", False))])
+            checked = len([x for x in self._rows if x.is_enabled and x.is_checked])
+            self._checked_status.Text = "{} of {} checked".format(checked, checkable_total)
+        self._sync_button_states()
+
+    def _sync_option_controls(self):
+        pass
+
+    def _sync_button_states(self):
+        checked_count = len([x for x in self._rows if x.is_enabled and x.is_checked])
+        changed_count = len([x for x in self._rows if x.is_enabled and x.is_checked and x.is_changed])
+        if self._set_existing_btn is not None:
+            self._set_existing_btn.IsEnabled = checked_count > 0
+        if self._set_new_btn is not None:
+            self._set_new_btn.IsEnabled = checked_count > 0
+        if self._apply_btn is not None:
+            self._apply_btn.IsEnabled = changed_count > 0
+
+    def _apply_checkbox_to_selected(self, sender, state):
+        if not self._is_ready or self._is_syncing_checks or self._suppress_check_events:
+            return
+        row = getattr(sender, "DataContext", None)
+        if row is None:
+            return
+        targets = [row]
+        selected = []
+        try:
+            selected = list(self._grid.SelectedItems or [])
+        except Exception:
+            selected = []
+        if len(selected) > 1 and row in selected:
+            targets = selected
+        self._is_syncing_checks = True
+        try:
+            for item in targets:
+                if not getattr(item, "is_enabled", False):
+                    item.is_checked = False
+                else:
+                    if bool(getattr(item, "is_checked", False)) != bool(state):
+                        item.is_checked = bool(state)
+        finally:
+            self._is_syncing_checks = False
+        self._suppress_check_events = True
+        try:
+            self._refresh_grid(refresh_items=False)
+        finally:
+            self._suppress_check_events = False
+
+    def _option_values(self):
+        set_notes = bool(getattr(self._set_notes_cb, "IsChecked", True))
+        clear_wire = bool(getattr(self._clear_wire_cb, "IsChecked", False))
+        clear_conduit = bool(getattr(self._clear_conduit_cb, "IsChecked", False))
+        return set_notes, clear_wire, clear_conduit
+
+    def options_changed(self, sender, args):
+        self._sync_option_controls()
+        self._sync_button_states()
+
+    def item_checked(self, sender, args):
+        self._apply_checkbox_to_selected(sender, True)
+
+    def item_unchecked(self, sender, args):
+        self._apply_checkbox_to_selected(sender, False)
+
+    def item_checkbox_clicked(self, sender, args):
+        self._apply_checkbox_to_selected(sender, bool(getattr(sender, "IsChecked", False)))
+
+    def check_all_clicked(self, sender, args):
+        self._is_syncing_checks = True
+        self._suppress_check_events = True
+        try:
+            for row in self._rows:
+                row.is_checked = bool(row.is_enabled)
+        finally:
+            self._is_syncing_checks = False
+        try:
+            self._refresh_grid(refresh_items=False)
+        finally:
+            self._suppress_check_events = False
+
+    def uncheck_all_clicked(self, sender, args):
+        self._is_syncing_checks = True
+        self._suppress_check_events = True
+        try:
+            for row in self._rows:
+                row.is_checked = False
+        finally:
+            self._is_syncing_checks = False
+        try:
+            self._refresh_grid(refresh_items=False)
+        finally:
+            self._suppress_check_events = False
+
+    def set_existing_clicked(self, sender, args):
+        set_notes, clear_wire, clear_conduit = self._option_values()
+        self._last_mode = "existing"
+        self._preview_callback(self._rows, "existing", set_notes, clear_wire, clear_conduit)
+        self._refresh_grid(refresh_items=False)
+
+    def set_new_clicked(self, sender, args):
+        set_notes, clear_wire, clear_conduit = self._option_values()
+        self._last_mode = "new"
+        self._preview_callback(self._rows, "new", set_notes, clear_wire, clear_conduit)
+        self._refresh_grid(refresh_items=False)
+
+    def apply_clicked(self, sender, args):
+        set_notes, clear_wire, clear_conduit = self._option_values()
+        if self._apply_callback(self._rows, self._last_mode, set_notes, clear_wire, clear_conduit):
+            self.Close()
+
+    def cancel_clicked(self, sender, args):
+        self.Close()
+
+    def show_unsupported_toggled(self, sender, args):
+        self._show_unsupported = bool(getattr(sender, "IsChecked", False))
+        self._refresh_grid(refresh_items=True)
+
+    def grid_selection_changed(self, sender, args):
+        try:
+            selected = list(self._grid.SelectedItems or [])
+        except Exception:
+            selected = []
+        if selected:
+            self._last_selected_rows = selected
+
+    def _clear_grid_selection(self):
+        if self._grid is None:
+            return
+        try:
+            self._grid.UnselectAll()
+        except Exception:
+            pass
+
+    def window_preview_mouse_down(self, sender, args):
+        source = getattr(args, "OriginalSource", None)
+        if self._grid is None or source is None:
+            return
+        if _find_visual_ancestor(source, Button) is not None:
+            return
+        if not _is_descendant_of_control(source, self._grid):
+            self._clear_grid_selection()
+
+    def grid_preview_mouse_down(self, sender, args):
+        source = getattr(args, "OriginalSource", None)
+        if source is None:
+            return
+        if _find_visual_ancestor(source, DataGridRow) is None:
+            self._clear_grid_selection()
+            self._sync_button_states()
+
+
 class CalculateSettingsExternalEventGateway(object):
     """Opens Calculate Circuits settings inside valid Revit API context."""
 
@@ -1376,17 +1943,20 @@ class _CalculateSettingsHandler(IExternalEventHandler):
 class CircuitBrowserPanel(forms.WPFPanel):
     panel_id = PANEL_ID
     panel_title = TITLE
-    panel_source = os.path.abspath(os.path.join(os.path.dirname(__file__), "CircuitBrowserPanel.xaml"))
+    panel_source = os.path.abspath(os.path.join(_THIS_DIR, "CircuitBrowserPanel.xaml"))
 
     _instance = None
     _operation_gateway = None
 
     def __init__(self):
         forms.WPFPanel.__init__(self)
-        self._theme_mode = "light"
+        self._theme_mode = CURRENT_THEME_MODE
+        self._accent_mode = CURRENT_ACCENT_MODE
         _try_apply_theme(self)
         CircuitBrowserPanel._instance = self
         self._logger = script.get_logger()
+        self._theme_bridge = None
+        self._dock_frame_host = None
         self._all_items = []
         self._is_card_view = False
         self._type_options = []
@@ -1398,6 +1968,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         self._actions_menu = None
         self._browser_options_menu = None
         self._compact_show_type_badges = True
+        self._use_surface_item_states = True
         self._last_selected_items = []
         self._operation_gateway = self._get_operation_gateway()
         self._settings_gateway = CalculateSettingsExternalEventGateway(logger=self._logger)
@@ -1414,6 +1985,10 @@ class CircuitBrowserPanel(forms.WPFPanel):
         self._filter_active_mark = self.FindName("FilterActiveMark")
         self._toggle_list_icon = self.FindName("ToggleListIcon")
         self._toggle_card_icon = self.FindName("ToggleCardIcon")
+        self._dock_frame_host = self.FindName("DockFrameHost")
+        self._apply_revit_frame_background(is_dark=False)
+        self._surface_item_style = _try_find_resource(self, "CED.ListViewItem.SurfaceBehavior")
+        self._apply_list_interaction_mode()
         self._update_search_chrome()
         self._update_toggle_button_visual()
 
@@ -1450,6 +2025,35 @@ class CircuitBrowserPanel(forms.WPFPanel):
         if self._status is not None:
             self._status.Text = text
 
+    def _apply_revit_frame_background(self, is_dark):
+        color_hex = DOCK_PANE_FRAME_DARK if bool(is_dark) else DOCK_PANE_FRAME_LIGHT
+        brush = _to_brush(color_hex, DOCK_PANE_FRAME_LIGHT)
+        if brush is None:
+            return
+        try:
+            self.Background = brush
+        except Exception:
+            pass
+        try:
+            if self._dock_frame_host is not None:
+                self._dock_frame_host.Background = brush
+        except Exception:
+            pass
+
+    def _ensure_theme_bridge(self):
+        if self._theme_bridge is None:
+            self._theme_bridge = RevitThemeBridge(
+                uiapp=__revit__,
+                on_theme_changed=self._apply_revit_frame_background,
+                logger=self._logger,
+            )
+        self._theme_bridge.attach()
+
+    def _detach_theme_bridge(self):
+        if self._theme_bridge is None:
+            return
+        self._theme_bridge.detach()
+
     def _on_operation_complete(self, status, request, result, error):
         if status == "error":
             self._set_status("Operation failed")
@@ -1463,12 +2067,16 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
         if result.get("status") == "ok":
             self._set_status("Calculated {} circuits".format(result.get("updated_circuits", 0)))
-            self._show_run_summary_if_needed(result)
+            try:
+                self._show_run_summary_if_needed(result)
+            except Exception as ex:
+                self._logger.warning("Run summary window failed: %s", ex)
             self._safe_load_items()
             return
 
         reason = result.get("reason", "unknown")
         self._set_status("Operation cancelled ({})".format(reason))
+        self._safe_load_items()
 
     def _on_alert_visibility_saved(self, status, request, result, error):
         if status == "error":
@@ -1486,7 +2094,12 @@ class CircuitBrowserPanel(forms.WPFPanel):
         runtime_rows = list(result.get("runtime_alert_rows") or [])
         if not locked_rows and not runtime_rows:
             return
-        window = CircuitRunSummaryWindow(locked_rows, runtime_rows)
+        window = CircuitRunSummaryWindow(
+            locked_rows,
+            runtime_rows,
+            theme_mode=self._theme_mode,
+            accent_mode=self._accent_mode,
+        )
         window.ShowDialog()
 
     def _has_active_doc(self):
@@ -1539,20 +2152,40 @@ class CircuitBrowserPanel(forms.WPFPanel):
             return False
 
     def _attach_document_lifecycle_handlers(self):
+        app = None
         try:
-            if self._doc_opening_handler is None:
-                self._doc_opening_handler = EventHandler[DocumentOpeningEventArgs](self._on_document_opening)
-                __revit__.DocumentOpening += self._doc_opening_handler
-            if self._doc_opened_handler is None:
-                self._doc_opened_handler = EventHandler[DocumentOpenedEventArgs](self._on_document_opened)
-                __revit__.DocumentOpened += self._doc_opened_handler
-            if self._doc_closing_handler is None:
-                self._doc_closing_handler = EventHandler[DocumentClosingEventArgs](self._on_document_closing)
-                __revit__.DocumentClosing += self._doc_closing_handler
+            app = getattr(__revit__, "Application", None)
         except Exception:
-            self._doc_opening_handler = None
-            self._doc_opened_handler = None
-            self._doc_closing_handler = None
+            app = None
+        if app is None:
+            return
+
+        if self._doc_opening_handler is None:
+            try:
+                handler = EventHandler[DocumentOpeningEventArgs](self._on_document_opening)
+                app.DocumentOpening += handler
+                self._doc_opening_handler = handler
+            except Exception as ex:
+                self._logger.warning("Circuit Browser failed to attach DocumentOpening handler: %s", ex)
+                self._doc_opening_handler = None
+
+        if self._doc_opened_handler is None:
+            try:
+                handler = EventHandler[DocumentOpenedEventArgs](self._on_document_opened)
+                app.DocumentOpened += handler
+                self._doc_opened_handler = handler
+            except Exception as ex:
+                self._logger.warning("Circuit Browser failed to attach DocumentOpened handler: %s", ex)
+                self._doc_opened_handler = None
+
+        if self._doc_closing_handler is None:
+            try:
+                handler = EventHandler[DocumentClosingEventArgs](self._on_document_closing)
+                app.DocumentClosing += handler
+                self._doc_closing_handler = handler
+            except Exception as ex:
+                self._logger.warning("Circuit Browser failed to attach DocumentClosing handler: %s", ex)
+                self._doc_closing_handler = None
 
     def _attach_view_activated_handler(self):
         if self._view_activated_handler is not None:
@@ -1560,10 +2193,17 @@ class CircuitBrowserPanel(forms.WPFPanel):
         try:
             self._view_activated_handler = EventHandler[ViewActivatedEventArgs](self._on_view_activated)
             __revit__.ViewActivated += self._view_activated_handler
-        except Exception:
+        except Exception as ex:
+            self._logger.warning("Circuit Browser failed to attach ViewActivated handler: %s", ex)
             self._view_activated_handler = None
 
     def _detach_event_handlers(self):
+        app = None
+        try:
+            app = getattr(__revit__, "Application", None)
+        except Exception:
+            app = None
+
         try:
             if self._view_activated_handler is not None:
                 __revit__.ViewActivated -= self._view_activated_handler
@@ -1572,22 +2212,22 @@ class CircuitBrowserPanel(forms.WPFPanel):
         self._view_activated_handler = None
 
         try:
-            if self._doc_opening_handler is not None:
-                __revit__.DocumentOpening -= self._doc_opening_handler
+            if app is not None and self._doc_opening_handler is not None:
+                app.DocumentOpening -= self._doc_opening_handler
         except Exception:
             pass
         self._doc_opening_handler = None
 
         try:
-            if self._doc_opened_handler is not None:
-                __revit__.DocumentOpened -= self._doc_opened_handler
+            if app is not None and self._doc_opened_handler is not None:
+                app.DocumentOpened -= self._doc_opened_handler
         except Exception:
             pass
         self._doc_opened_handler = None
 
         try:
-            if self._doc_closing_handler is not None:
-                __revit__.DocumentClosing -= self._doc_closing_handler
+            if app is not None and self._doc_closing_handler is not None:
+                app.DocumentClosing -= self._doc_closing_handler
         except Exception:
             pass
         self._doc_closing_handler = None
@@ -1661,6 +2301,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         self._loaded_doc_key = self._active_doc_key
 
     def refresh_on_open(self):
+        self._ensure_theme_bridge()
         if self._doc_is_opening:
             return
         doc = self._get_active_doc()
@@ -1692,23 +2333,29 @@ class CircuitBrowserPanel(forms.WPFPanel):
     def _update_filter_button_style(self):
         if self._filter_button is None:
             return
-
-        converter = BrushConverter()
         is_filtered = (
             self._warnings_only
             or self._overrides_only
             or self._checked_only
             or (set(self._type_options) != set(self._active_type_filters))
         )
-        is_dark = (self._theme_mode == "dark")
+        primary = _try_find_resource(self, "CED.Brush.Accent")
+        button_bg = _try_find_resource(self, "CED.Brush.ButtonDefaultBackground")
+        foreground_on_accent = _try_find_resource(self, "CED.Brush.ButtonForegroundOnAccent")
         if is_filtered:
-            self._filter_button.Background = converter.ConvertFrom("#2D7DD2" if is_dark else "#1F6FB2")
-            self._filter_button.Foreground = converter.ConvertFrom("#FFFFFF")
+            if primary is not None:
+                self._filter_button.Background = primary
+                self._filter_button.BorderBrush = primary
+            if foreground_on_accent is not None:
+                self._filter_button.Foreground = foreground_on_accent
             if self._filter_active_mark is not None:
                 self._filter_active_mark.Visibility = Visibility.Visible
         else:
-            self._filter_button.Background = converter.ConvertFrom("#2A2F36" if is_dark else "#FFFFFF")
-            self._filter_button.Foreground = converter.ConvertFrom("#DCE6F2" if is_dark else "#1F2E3D")
+            if button_bg is not None:
+                self._filter_button.Background = button_bg
+            if primary is not None:
+                self._filter_button.BorderBrush = primary
+                self._filter_button.Foreground = primary
             if self._filter_active_mark is not None:
                 self._filter_active_mark.Visibility = Visibility.Collapsed
 
@@ -1744,6 +2391,30 @@ class CircuitBrowserPanel(forms.WPFPanel):
             if self._toggle_card_icon is not None:
                 self._toggle_card_icon.Visibility = Visibility.Collapsed
             self._toggle.ToolTip = "Switch to card display"
+
+    def _apply_list_interaction_mode(self):
+        if self._list is None:
+            return
+        if self._use_surface_item_states:
+            self._list.Tag = "surface"
+            if self._surface_item_style is not None:
+                self._list.ItemContainerStyle = self._surface_item_style
+        else:
+            self._list.Tag = None
+            self._list.ItemContainerStyle = None
+        try:
+            self._list.Items.Refresh()
+        except Exception:
+            pass
+
+    def _apply_type_tag_brushes(self):
+        for item in list(self._all_items or []):
+            bg_key = getattr(item, "type_tag_bg_key", None)
+            fg_key = getattr(item, "type_tag_fg_key", None)
+            bg_resource = _try_find_resource(self, bg_key) if bg_key else None
+            fg_resource = _try_find_resource(self, fg_key) if fg_key else None
+            item.type_tag_bg = bg_resource if bg_resource is not None else "#ECEFF3"
+            item.type_tag_fg = fg_resource if fg_resource is not None else "#52606D"
 
     def _refresh_list(self):
         query = ""
@@ -1787,6 +2458,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         ))
 
         self._all_items = [CircuitListItem(c) for c in circuits]
+        self._apply_type_tag_brushes()
         self._rebuild_filter_options()
         self._refresh_list()
 
@@ -1801,6 +2473,79 @@ class CircuitBrowserPanel(forms.WPFPanel):
         except Exception:
             selected = []
         return selected
+
+    def _validate_circuit_item(self, item, doc):
+        circuit = getattr(item, "circuit", None)
+        if circuit is None or doc is None:
+            return False
+        try:
+            if hasattr(circuit, "IsValidObject") and not circuit.IsValidObject:
+                return False
+        except Exception:
+            return False
+        try:
+            element_id = circuit.Id
+        except Exception:
+            return False
+        if element_id is None:
+            return False
+        try:
+            live = doc.GetElement(element_id)
+        except Exception:
+            return False
+        if live is None:
+            return False
+        if not isinstance(live, DBE.ElectricalSystem):
+            return False
+        try:
+            item.circuit = live
+        except Exception:
+            pass
+        return True
+
+    def _prune_stale_items(self, target_items=None):
+        doc = self._get_active_doc()
+        if doc is None:
+            return [], 0
+
+        target_ids = None
+        if target_items is not None:
+            target_ids = set()
+            for item in list(target_items or []):
+                try:
+                    cid = item.circuit.Id.IntegerValue
+                except Exception:
+                    cid = None
+                if cid is not None:
+                    target_ids.add(cid)
+
+        valid_all = []
+        valid_targets = []
+        removed_count = 0
+        for item in list(self._all_items or []):
+            if not self._validate_circuit_item(item, doc):
+                removed_count += 1
+                continue
+            valid_all.append(item)
+            if target_ids is None:
+                continue
+            try:
+                cid = item.circuit.Id.IntegerValue
+            except Exception:
+                cid = None
+            if cid in target_ids:
+                valid_targets.append(item)
+
+        if removed_count:
+            self._all_items = valid_all
+            self._rebuild_filter_options()
+            self._refresh_list()
+            self.selection_changed(None, None)
+            self._logger.debug("Circuit Browser pruned %s stale rows.", removed_count)
+
+        if target_ids is None:
+            return list(valid_all), removed_count
+        return valid_targets, removed_count
 
     def _set_revit_selection(self, elements):
         uidoc = revit.uidoc
@@ -1874,17 +2619,10 @@ class CircuitBrowserPanel(forms.WPFPanel):
         menu.Items.Add(checked_item)
         menu.Items.Add(Separator())
 
-        all_item = MenuItem()
-        all_item.Header = "Select All"
-        all_item.Click += self.filter_select_all_clicked
-        all_item.IsEnabled = not self._warnings_only and not self._overrides_only
-        menu.Items.Add(all_item)
-
-        none_item = MenuItem()
-        none_item.Header = "Clear All"
-        none_item.Click += self.filter_clear_all_clicked
-        none_item.IsEnabled = not self._warnings_only and not self._overrides_only
-        menu.Items.Add(none_item)
+        reset_item = MenuItem()
+        reset_item.Header = "Reset Filters"
+        reset_item.Click += self.filter_reset_clicked
+        menu.Items.Add(reset_item)
 
         menu.Items.Add(Separator())
 
@@ -1905,6 +2643,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
             self._filter_button.ContextMenu = menu
 
     def panel_loaded(self, sender, args):
+        self._ensure_theme_bridge()
         if self._view_activated_handler is None or self._doc_opening_handler is None:
             self._attach_document_lifecycle_handlers()
             self._attach_view_activated_handler()
@@ -1919,11 +2658,16 @@ class CircuitBrowserPanel(forms.WPFPanel):
             self._set_doc_banner(doc)
 
     def panel_unloaded(self, sender, args):
+        self._detach_theme_bridge()
         self._detach_event_handlers()
 
     def panel_visibility_changed(self, sender, args):
-        if not self._is_pane_visible() or self._doc_is_opening:
+        if not self._is_pane_visible():
+            self._detach_theme_bridge()
             return
+        if self._doc_is_opening:
+            return
+        self._ensure_theme_bridge()
         if self._view_activated_handler is None or self._doc_opening_handler is None:
             self._attach_document_lifecycle_handlers()
             self._attach_view_activated_handler()
@@ -1982,6 +2726,11 @@ class CircuitBrowserPanel(forms.WPFPanel):
         breaker_item.Click += self.action_breaker_clicked
         menu.Items.Add(breaker_item)
 
+        mark_existing_item = MenuItem()
+        mark_existing_item.Header = "Mark as New/Existing"
+        mark_existing_item.Click += self.action_mark_existing_clicked
+        menu.Items.Add(mark_existing_item)
+
         self._actions_menu = menu
 
     def actions_button_clicked(self, sender, args):
@@ -2011,6 +2760,23 @@ class CircuitBrowserPanel(forms.WPFPanel):
         theme_menu.Items.Add(dark_item)
         menu.Items.Add(theme_menu)
 
+        accent_menu = MenuItem()
+        accent_menu.Header = "Accent Color"
+        for accent_mode, accent_label in (
+            ("blue", "Blue"),
+            ("red", "Red"),
+            ("green", "Green"),
+            ("neutral", "Neutral"),
+        ):
+            item = MenuItem()
+            item.Header = accent_label
+            item.IsCheckable = True
+            item.IsChecked = (self._accent_mode == accent_mode)
+            item.Tag = accent_mode
+            item.Click += self.browser_accent_clicked
+            accent_menu.Items.Add(item)
+        menu.Items.Add(accent_menu)
+
         display_menu = MenuItem()
         display_menu.Header = "Display Mode"
         compact_item = MenuItem()
@@ -2030,7 +2796,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         menu.Items.Add(display_menu)
 
         compact_menu = MenuItem()
-        compact_menu.Header = "Compact View"
+        compact_menu.Header = "List View"
         badges_item = MenuItem()
         badges_item.Header = "Show Circuit Type Badges"
         badges_item.IsCheckable = True
@@ -2048,16 +2814,36 @@ class CircuitBrowserPanel(forms.WPFPanel):
             self._browser_options_menu.IsOpen = True
 
     def browser_theme_clicked(self, sender, args):
+        global CURRENT_THEME_MODE
         mode = str(getattr(sender, "Tag", "light")).lower()
         if mode not in ("light", "dark"):
             return
         if self._theme_mode == mode:
             return
         self._theme_mode = mode
+        CURRENT_THEME_MODE = mode
         _try_apply_theme(self)
+        self._surface_item_style = _try_find_resource(self, "CED.ListViewItem.SurfaceBehavior")
+        self._apply_type_tag_brushes()
+        self._apply_list_interaction_mode()
         self._update_filter_button_style()
         self._update_search_chrome()
         self._update_toggle_button_visual()
+        self._refresh_list()
+
+    def browser_accent_clicked(self, sender, args):
+        global CURRENT_ACCENT_MODE
+        mode = str(getattr(sender, "Tag", "blue")).lower()
+        if mode not in ACCENT_BRUSH_MAP:
+            return
+        if self._accent_mode == mode:
+            return
+        self._accent_mode = mode
+        CURRENT_ACCENT_MODE = mode
+        _try_apply_theme(self)
+        self._apply_type_tag_brushes()
+        self._update_filter_button_style()
+        self._refresh_list()
 
     def browser_display_mode_clicked(self, sender, args):
         mode = str(getattr(sender, "Tag", "")).lower()
@@ -2072,8 +2858,9 @@ class CircuitBrowserPanel(forms.WPFPanel):
         # selection/checkbox ambiguity for users.
         return [x for x in self._all_items if getattr(x, "is_checked", False)]
 
-    def _is_locked_circuit(self, circuit):
-        doc = self._get_active_doc()
+    def _is_locked_circuit(self, circuit, doc=None):
+        if doc is None:
+            doc = self._get_active_doc()
         if doc is None or not getattr(doc, "IsWorkshared", False):
             return False, ""
         try:
@@ -2106,6 +2893,29 @@ class CircuitBrowserPanel(forms.WPFPanel):
         if text:
             return text
         return self._param_text(circuit, "CKT_Wire Size_CEDT", "")
+
+    def _wire_hot_size_string(self, circuit):
+        text = self._param_text(circuit, "CKT_Wire Hot Size_CEDT", "")
+        if text:
+            return text
+        text = self._param_text(circuit, "Wire Hot Size_CEDT", "")
+        if text:
+            return text
+        return self._wire_size_string(circuit) or "-"
+
+    def _conduit_size_string(self, circuit):
+        text = self._param_text(circuit, "Conduit Size_CEDT", "")
+        return text or "-"
+
+    def _conduit_wire_size_string(self, circuit):
+        text = self._param_text(circuit, "Conduit and Wire Size_CEDT", "")
+        if text:
+            return text
+        conduit = self._conduit_size_string(circuit)
+        wire = self._wire_hot_size_string(circuit)
+        if conduit == "-" and wire == "-":
+            return "-"
+        return "{} / {}".format(conduit, wire)
 
     def _simulate_branch(self, circuit, include_neutral=None, include_ig=None):
         settings = settings_manager.load_circuit_settings(circuit.Document)
@@ -2336,6 +3146,8 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
     def _build_breaker_rows(self, targets):
         rows = []
+        doc = self._get_active_doc()
+        is_workshared = bool(getattr(doc, "IsWorkshared", False)) if doc is not None else False
         for item in targets:
             circuit = item.circuit
             btype = (item.branch_type or "").upper()
@@ -2349,7 +3161,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
                 reason = "Breaker action supports BRANCH/FEEDER/XFMR circuits."
                 is_enabled = False
 
-            locked, owner = self._is_locked_circuit(circuit)
+            locked, owner = self._is_locked_circuit(circuit, doc=doc) if is_workshared else (False, "")
             if locked:
                 reason = "Locked by {}".format(owner or "another user")
                 is_enabled = False
@@ -2368,16 +3180,10 @@ class CircuitBrowserPanel(forms.WPFPanel):
                 except Exception:
                     cur_frame = None
 
-            load_value = _safe_float(load_current)
-            auto_rating = self._next_ocp_size((load_value * 1.25) if load_value is not None else None, min_ocp=20)
-            if auto_rating is None:
-                auto_rating = self._next_ocp_size(cur_rating, min_ocp=20)
-            auto_frame_current = self._frame_for_rating(cur_rating, min_ocp=20)
-            auto_frame_auto = self._frame_for_rating(auto_rating, min_ocp=20)
-
-            row = BreakerActionRow(item, is_enabled, reason, load_current, cur_rating, cur_frame, auto_rating, auto_frame_current)
-            row.set_auto_frames(auto_frame_current, auto_frame_auto)
-            row.autosized_frame = _fmt_amp(auto_frame_auto, 0)
+            # Defer autosize calculations to preview/apply so the window can open faster.
+            row = BreakerActionRow(item, is_enabled, reason, load_current, cur_rating, cur_frame, None, None)
+            row.set_auto_frames(None, None)
+            row.autosized_frame = "-"
             if not is_enabled:
                 row.is_checked = False
             rows.append(row)
@@ -2452,6 +3258,98 @@ class CircuitBrowserPanel(forms.WPFPanel):
             {"updates": updates, "show_output": False},
         )
 
+    def _build_mark_existing_rows(self, targets):
+        rows = []
+        doc = self._get_active_doc()
+        is_workshared = bool(getattr(doc, "IsWorkshared", False)) if doc is not None else False
+        for item in targets:
+            circuit = item.circuit
+            reason = ""
+            is_enabled = True
+            locked, owner = self._is_locked_circuit(circuit, doc=doc) if is_workshared else (False, "")
+            if locked:
+                reason = "Locked by {}".format(owner or "another user")
+                is_enabled = False
+
+            current_notes = _lookup_schedule_notes_text(circuit)
+            current_wire = self._conduit_wire_size_string(circuit)
+            row = MarkExistingActionRow(
+                item,
+                is_enabled,
+                reason,
+                current_notes,
+                current_wire,
+            )
+            if not is_enabled:
+                row.is_checked = False
+            rows.append(row)
+        return rows
+
+    def _preview_mark_existing_rows(self, rows, mode, set_notes, clear_wire, clear_conduit):
+        mode_text = str(mode or "existing").lower()
+        is_new_mode = mode_text == "new"
+        for row in rows:
+            row.new_notes = row.current_notes
+            row.new_wire = row.current_wire
+            if not row.is_enabled:
+                row.is_checked = False
+                row.recompute_state()
+                continue
+            if not row.is_checked:
+                row.recompute_state()
+                continue
+            if set_notes:
+                row.new_notes = "" if is_new_mode else "EX"
+            if is_new_mode:
+                row.new_wire = "Auto Calculated"
+            else:
+                row.new_wire = "Auto Calculated" if (clear_wire or clear_conduit) else row.current_wire
+            row.recompute_state()
+
+    def _apply_mark_existing_rows(self, rows, mode, set_notes, clear_wire, clear_conduit):
+        changed_ids = [x.circuit_id for x in rows if x.is_enabled and x.is_checked and x.is_changed]
+        if not changed_ids:
+            forms.alert("No circuits are marked for modification.", title=TITLE)
+            return False
+        mode_text = str(mode or "existing").lower()
+        return self._raise_action_operation(
+            "mark_existing_and_recalculate",
+            changed_ids,
+            {
+                "mode": mode_text if mode_text in ("existing", "new") else "existing",
+                "set_notes": bool(set_notes),
+                "clear_wire": bool(clear_wire),
+                "clear_conduit": bool(clear_conduit),
+                "show_output": False,
+            },
+        )
+
+    def action_mark_existing_clicked(self, sender, args):
+        targets = self._collect_action_targets()
+        if not targets:
+            forms.alert("Check one or more circuits first.", title=TITLE)
+            return
+        if len(targets) > 300:
+            choice = forms.alert(
+                "{} circuits will be loaded for this action.\n\nContinue?".format(len(targets)),
+                title="Large Action Selection",
+                options=["Continue", "Cancel"],
+            )
+            if choice != "Continue":
+                return
+        try:
+            rows = self._build_mark_existing_rows(targets)
+            window = MarkExistingActionWindow(
+                rows,
+                preview_callback=self._preview_mark_existing_rows,
+                apply_callback=self._apply_mark_existing_rows,
+                theme_mode=self._theme_mode,
+                accent_mode=self._accent_mode,
+            )
+            window.ShowDialog()
+        except Exception as ex:
+            forms.alert("Failed to open Mark as New/Existing window:\n\n{}".format(ex), title=TITLE)
+
     def action_neutral_clicked(self, sender, args):
         targets = self._collect_action_targets()
         if not targets:
@@ -2471,6 +3369,8 @@ class CircuitBrowserPanel(forms.WPFPanel):
             rows,
             preview_callback=self._preview_neutral_rows,
             apply_callback=self._apply_neutral_rows,
+            theme_mode=self._theme_mode,
+            accent_mode=self._accent_mode,
         )
         window.ShowDialog()
 
@@ -2493,6 +3393,8 @@ class CircuitBrowserPanel(forms.WPFPanel):
             rows,
             preview_callback=self._preview_ig_rows,
             apply_callback=self._apply_ig_rows,
+            theme_mode=self._theme_mode,
+            accent_mode=self._accent_mode,
         )
         window.ShowDialog()
 
@@ -2515,10 +3417,24 @@ class CircuitBrowserPanel(forms.WPFPanel):
                 rows,
                 preview_apply_callback=self._preview_breaker_rows,
                 apply_callback=self._apply_breaker_rows,
+                theme_mode=self._theme_mode,
+                accent_mode=self._accent_mode,
             )
             window.ShowDialog()
         except Exception as ex:
             forms.alert("Failed to open breaker autosize window:\n\n{}".format(ex), title=TITLE)
+
+    def _reset_filters(self):
+        self._active_type_filters = set(self._type_options)
+        self._warnings_only = False
+        self._overrides_only = False
+        self._checked_only = False
+        self._update_filter_button_style()
+        self._refresh_list()
+        self._build_filter_menu()
+
+    def filter_reset_clicked(self, sender, args):
+        self._reset_filters()
 
     def filter_select_all_clicked(self, sender, args):
         self._active_type_filters = set(self._type_options)
@@ -2591,6 +3507,8 @@ class CircuitBrowserPanel(forms.WPFPanel):
     def list_preview_mouse_down(self, sender, args):
         source = getattr(args, "OriginalSource", None)
         if source is None:
+            return
+        if _find_visual_ancestor(source, Button) is not None:
             return
         if _find_visual_ancestor(source, ListViewItem) is None:
             self._clear_list_selection()
@@ -2703,6 +3621,9 @@ class CircuitBrowserPanel(forms.WPFPanel):
             forms.alert("Open a model document first.", title=TITLE)
             return
         items = self._target_items()
+        items, removed_count = self._prune_stale_items(items)
+        if removed_count:
+            self._set_status("Removed {} deleted circuits from list.".format(removed_count))
         circuit_ids = [x.circuit.Id.IntegerValue for x in items if getattr(x, "circuit", None)]
         if not circuit_ids:
             forms.alert("No circuits selected.", title=TITLE)
@@ -2725,7 +3646,10 @@ class CircuitBrowserPanel(forms.WPFPanel):
         if not self._has_active_doc():
             forms.alert("Open a model document first.", title=TITLE)
             return
-        circuit_ids = [x.circuit.Id.IntegerValue for x in self._all_items if getattr(x, "circuit", None)]
+        items, removed_count = self._prune_stale_items()
+        if removed_count:
+            self._set_status("Removed {} deleted circuits from list.".format(removed_count))
+        circuit_ids = [x.circuit.Id.IntegerValue for x in items if getattr(x, "circuit", None)]
         if not circuit_ids:
             forms.alert("No circuits available.", title=TITLE)
             return
@@ -2762,7 +3686,23 @@ class CircuitBrowserPanel(forms.WPFPanel):
             return
         self._set_status("Closed Calculate Circuits settings")
 
+    def _set_alert_hover_state(self, sender, is_hovered):
+        item_container = _find_visual_ancestor(sender, ListViewItem)
+        if item_container is None:
+            return
+        try:
+            item_container.Tag = "alert-hover" if is_hovered else None
+        except Exception:
+            pass
+
+    def alert_button_mouse_enter(self, sender, args):
+        self._set_alert_hover_state(sender, True)
+
+    def alert_button_mouse_leave(self, sender, args):
+        self._set_alert_hover_state(sender, False)
+
     def alert_tag_clicked(self, sender, args):
+        self._set_alert_hover_state(sender, False)
         item = None
         try:
             item = sender.DataContext
@@ -2778,7 +3718,12 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
         header = "{} / {} - {}".format(item.panel, item.circuit_number, item.load_name)
         try:
-            window = CircuitAlertsWindow(header, rows)
+            window = CircuitAlertsWindow(
+                header,
+                rows,
+                theme_mode=self._theme_mode,
+                accent_mode=self._accent_mode,
+            )
             try:
                 window.ShowDialog()
             except Exception:

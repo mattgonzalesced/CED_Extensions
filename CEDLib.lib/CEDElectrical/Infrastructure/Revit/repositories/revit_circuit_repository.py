@@ -62,6 +62,7 @@ class RevitCircuitRepository(object):
             if key not in locked_records:
                 locked_records[key] = {
                     'circuit': _circuit_label(circuit),
+                    'load_name': getattr(circuit, 'LoadName', '') or '',
                     'circuit_owner': _owner_name(circuit.Id),
                     'device_owners': set(),
                 }
@@ -112,6 +113,7 @@ class RevitCircuitRepository(object):
         for rec in locked_records.values():
             locked_rows.append({
                 'circuit': rec['circuit'],
+                'load_name': rec.get('load_name') or '',
                 'circuit_owner': rec.get('circuit_owner') or '',
                 'device_owner': ', '.join(sorted(rec['device_owners'])) if rec['device_owners'] else '',
             })
