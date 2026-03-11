@@ -1,0 +1,6 @@
+title: "Proximity Check\nLights-Sprinklers"
+tooltip: |
+  Checks for lighting fixtures located within a specified distance (default 18 inches) of sprinklers.
+  Reports each light/sprinkler pair with clickable IDs and the separation distance in inches.
+is_beta: false
+

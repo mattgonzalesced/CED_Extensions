@@ -1,0 +1,10 @@
+title: "Run All\nProximity Checks"
+tooltip: |
+  Runs all configured proximity and clearance checks in the AI_QC group:
+    - Lights vs CED-R-KRACK coils
+    - Lights vs sprinklers
+    - Sprinkler obstruction clearance
+    - Equipment access clearance
+  Shows a full report for each check and a summary table of pass/fail and hit counts.
+is_beta: false
+

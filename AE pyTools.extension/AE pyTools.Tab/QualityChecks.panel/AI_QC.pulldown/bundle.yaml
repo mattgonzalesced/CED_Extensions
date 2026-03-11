@@ -1,0 +1,6 @@
+title: "AI_QC"
+tooltip: |
+  Collection of AI-planned quality checks described in CEDLib.lib/AI_Agents/QualityCheck_Coding_Plan.md.
+  Contains proximity and clearance checks for lights, sprinklers, and equipment, plus a runner to execute them together.
+is_beta: false
+

@@ -1,0 +1,6 @@
+title: "Equipment Access\nClearance"
+tooltip: |
+  Checks mechanical and electrical equipment for required access clearance to nearby walls, structure, duct, pipe, and cable tray.
+  Flags equipment/obstruction pairs closer than the configured clearance (default 36 inches), with clickable IDs and distances.
+is_beta: false
+
