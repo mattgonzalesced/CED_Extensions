@@ -1,0 +1,127 @@
+COLD SYSTEM INSULATION QUALITY CHECK
+====================================
+
+Overview
+--------
+The Cold System Insulation tool verifies that duct and pipe
+systems identified as "cold" have sufficient insulation
+thickness. It focuses on chilled water and refrigeration
+systems where condensation and energy loss are concerns.
+
+The tool inspects both duct and pipe elements, determines
+whether each belongs to a cold system based on its MEP system
+name, and then reads insulation thickness parameters. Elements
+with missing insulation data or thickness below the configured
+minimums are reported as hits.
+
+Cold system identification
+--------------------------
+System classification is driven by MCP_Answers.md, which
+defines name-based patterns and an optional override:
+
+- Cold duct systems:
+  - System names containing CHW
+  - CHILLED WATER
+  - COLD AIR
+  - REFRIG
+- Cold pipe systems:
+  - System names containing CHW
+  - CHILLED WATER
+  - REFRIG
+  - SUCTION
+  - LIQUID LINE
+
+These patterns are evaluated using the MEPSystem.Name property
+when available. A future enhancement can add a shared parameter
+override such as CED_IsColdSystem = 1, but the current tool
+relies on the name-based rules, which align with MCP guidance.
+
+Insulation parameters and thresholds
+------------------------------------
+The tool searches for numeric insulation thickness on each
+element. Because projects can store this in different places,
+it checks several candidate parameter names:
+
+- CED_InsulationThickness
+- Insulation Thickness
+- Thickness
+
+When a parameter is found and has a valid double value, it is
+interpreted as a length in Revit internal units (feet) and
+converted to inches.
+
+Minimum required thickness defaults, derived from MCP_Answers,
+are:
+
+- Chilled water duct and pipe: 1.0 inch
+- Refrigeration suction and liquid lines: 1.5 inches
+
+For pipe systems, the tool distinguishes refrigeration lines
+from general chilled water by looking for REFRIG, SUCTION, or
+LIQUID LINE in the system name. Refrigeration lines use the
+1.5 inch minimum; other cold systems use the 1.0 inch minimum.
+
+Hit detection rules
+-------------------
+An element is reported as a hit in two main situations:
+
+1. The element is on a cold system and no recognized insulation
+   thickness parameter is found.
+2. The element is on a cold system and the measured thickness
+   is less than the required threshold for that system type.
+
+Each hit dictionary produced by collect_hits includes:
+
+- a_id: element id
+- a_label: short text like "Pipe (insul 0.75\")" or
+  "Duct (no insulation param)"
+- b_id, b_label: reserved for future use, currently None
+- distance_ft: unused for this scalar rule, left as None
+- min_required_in: required thickness in inches
+- actual_in: measured thickness in inches, or None
+
+Reporting behavior
+------------------
+The run_check wrapper composes a human readable report without
+using the generic proximity table format, because this rule
+does not involve distances between two elements.
+
+In the pyRevit output panel it prints:
+
+- A markdown header "Cold System Insulation Check"
+- A summary line describing the minimums for chilled and
+  refrigeration systems
+- One bullet per hit, showing:
+  - A link to the element by id
+  - The required minimum thickness
+  - The actual thickness, or "missing" when no value exists
+
+An alert dialog is shown when hits are present, summarizing the
+number of issues and directing the reviewer to the output.
+
+References and design sources
+-----------------------------
+This tool uses:
+
+- QualityCheck_Coding_Plan.md, section 4.2 Mechanical, which
+  calls for insulation checks on cold duct, chilled water, and
+  refrigeration.
+- MCP_Answers.md, section 1.3 and 4.2, which defines:
+  - How to detect cold systems based on system names
+  - The default minimum insulation thickness for chilled water
+    and refrigeration lines
+  - Candidate parameter names for insulation thickness
+
+The implementation follows the same layered architecture as
+other checks: a core library rule (mech_cold_insulation) that
+returns structured hits, and an AI_QC panel button that invokes
+run_check with appropriate UI behavior.
+
+Code compliance note
+--------------------
+All insulation thresholds and cold system classifications in
+this tool come from the project planning documents and common
+practice. They do not represent a direct translation of NFPA,
+ASHRAE, energy, or plumbing code text, and formal code reviews
+remain required for compliance.
+

@@ -1,0 +1,143 @@
+REFRIGERATION COILS PROXIMITY QUALITY CHECK
+===========================================
+
+Overview
+--------
+The Refrigeration Coils Proximity tool checks refrigeration
+equipment such as coils, condensers, evaporators, and racks for
+adequate clearance to nearby heat sources and sprinklers.
+
+It implements the refrigeration proximity cluster from section
+4.5 of QualityCheck_Coding_Plan.md, with details taken from
+MCP_Answers.md about which families and systems should be
+included, and what distances are acceptable.
+
+Rule thresholds
+---------------
+MCP_Answers (R4.1.3) specifies two distances:
+
+- Coils vs heat sources: 24 inches
+- Coils vs sprinklers: 18 inches
+
+The tool flags any coil whose 3D bounding box is closer than or
+equal to these distances to a qualifying neighbor.
+
+Element scope
+-------------
+Coils and refrigeration equipment are identified as:
+
+- Category:
+  - OST_MechanicalEquipment
+  - OST_SpecialityEquipment
+- Family names containing any of:
+  - CED-R-KRACK
+  - KRACK
+  - COIL
+  - EVAPORATOR
+  - CONDENSER
+  - REFRIG
+  - RACK
+
+Heat sources include:
+
+- Mechanical equipment with family names containing:
+  - UNIT HEATER
+  - UH
+  - HW COIL
+  - HEATING COIL
+- Pipe systems whose MEPSystem name contains:
+  - HW
+  - HEATING
+  - STEAM
+
+Sprinklers are collected from OST_Sprinklers using their
+bounding boxes.
+
+Geometry and distance calculation
+---------------------------------
+For every coil:
+
+- Compute its bounding box in model coordinates using
+  get_BoundingBox(None)
+- Compare against every heat source bounding box
+- Compare against every sprinkler bounding box
+
+Distance is computed using the standard three-axis gap method:
+
+- Compute the non-overlap distance along X, Y, and Z
+- If boxes overlap along an axis, that axis contributes zero
+- Combine the components into a true 3D distance
+
+This approach is consistent with the other proximity tools
+implemented under QualityChecks and works well for a variety of
+orientations without explicit centerline geometry.
+
+Hit detection
+-------------
+Two types of hits are recorded:
+
+1. Coils too close to heat sources:
+   - Distance <= 24 inches
+2. Coils too close to sprinklers:
+   - Distance <= 18 inches
+
+Each hit includes:
+
+- a_id, a_label: coil id and descriptive label
+- b_id, b_label: neighbor id and label (heat source or
+  sprinkler)
+- distance_ft: separation distance in feet
+
+The reporting layer can distinguish between the two cases by
+how the neighbor was collected, although the first version uses
+a common table for both.
+
+Reporting behavior
+------------------
+The run_check wrapper converts hits into the standard
+proximity format and passes them to
+QualityChecks.quality_check_core.report_proximity_hits.
+
+The pyRevit output shows:
+
+- Title: "Refrigeration Coils Proximity"
+- Subtitle describing the 24 inch and 18 inch thresholds
+- A table with:
+  - Coil ID
+  - Coil
+  - Other ID
+  - Other
+  - Distance (in)
+
+Element ids in the table are clickable, allowing quick
+navigation to problem locations. An alert is raised when hits
+exist, summarizing the number of issues and pointing to the
+output panel for detail.
+
+References and design sources
+-----------------------------
+The design of this tool is grounded in:
+
+- QualityCheck_Coding_Plan.md, section 4.5 Refrigeration, which
+  lists coils vs heat sources and coils vs sprinklers as
+  required checks.
+- MCP_Answers.md, section 4.1, which defines:
+  - How to identify refrigeration coils, condensers, and
+    evaporators by category and family name
+  - Which families and pipe systems count as heat sources
+  - The 24 inch and 18 inch threshold values
+
+The implementation also follows the same three-layer
+architecture as other quality tools: a reusable rule module
+refrig_coils_proximity in CEDLib.lib/QualityChecks, an AI_QC
+panel button that imports and runs that rule, and a common
+reporting function that produces consistent tables and alerts.
+
+Code compliance note
+--------------------
+The 24 inch and 18 inch distances for coil clearances used
+here are based on the MCP answers and common industry
+expectations. They are not a direct transcription of NFPA 13
+or other codes, and formal fire protection design must still
+be checked against the governing standards.
+

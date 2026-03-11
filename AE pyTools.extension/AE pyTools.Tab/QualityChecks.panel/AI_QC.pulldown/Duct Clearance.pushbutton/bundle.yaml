@@ -1,0 +1,5 @@
+title: "Duct\nClearance"
+tooltip: |
+  Mechanical: Duct clearances vs structure (2"), other duct (1.5"), pipe (1.5"), and cable tray (1.5").
+  Uses 3D bounding-box minimum distance. Reports each pair with clickable IDs and distance in inches.
+is_beta: false

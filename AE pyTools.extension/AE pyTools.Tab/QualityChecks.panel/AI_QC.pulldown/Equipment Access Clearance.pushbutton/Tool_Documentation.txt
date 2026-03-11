@@ -1,0 +1,139 @@
+EQUIPMENT ACCESS CLEARANCE QUALITY CHECK
+=======================================
+
+Overview
+--------
+The Equipment Access Clearance tool checks mechanical and
+electrical equipment for adequate clear space around them,
+particularly in front of service sides. It implements the
+equipment access cluster from sections 4.2 Mechanical and 4.3
+Electrical of QualityCheck_Coding_Plan.md, using thresholds and
+categories provided in MCP_Answers.md.
+
+The initial implementation treats access as a symmetric bubble
+around equipment rather than a purely directional zone. This
+keeps the rule simple and robust while still catching many
+practical access issues.
+
+Rule thresholds
+---------------
+MCP_Answers (M1.2.2 and E2.1.3) defines:
+
+- Mechanical equipment front access: 36 inches
+- Electrical equipment front access: 42 inches
+
+The current rule uses a single conservative default of
+36 inches for all equipment access clearance checks, and uses
+42 inches explicitly for panel-specific rules implemented in
+other modules.
+
+Element scope
+-------------
+The tool inspects both mechanical and electrical equipment:
+
+- OST_MechanicalEquipment
+- OST_ElectricalEquipment
+
+Obstructions are collected from:
+
+- OST_Walls
+- OST_StructuralFraming
+- OST_DuctCurves and OST_FlexDuctCurves
+- OST_PipeCurves and OST_FlexPipeCurves
+- OST_CableTray
+- OST_MechanicalEquipment
+- OST_ElectricalEquipment
+- OST_SpecialityEquipment
+
+Doors and openings are intentionally not treated as
+obstructions for the initial implementation, following
+MCP_Answers (M1.2.3).
+
+Distance calculation
+--------------------
+Each equipment element and obstruction is assigned a bounding
+box via get_BoundingBox(None). Elements that cannot provide a
+bounding box are skipped.
+
+The tool uses the standard 3D bounding-box distance algorithm
+shared with other proximity checks:
+
+- For each axis, compute zero if ranges overlap, otherwise the
+  gap between the ranges
+- Combine the axis gaps using the Euclidean norm to obtain a
+  single 3D separation distance in feet
+
+This effectively treats equipment access as a volumetric bubble
+around the equipment, which is a reasonable approximation for
+the first release.
+
+Hit detection
+-------------
+For each equipment item and each obstruction:
+
+- Calculate distance between bounding boxes
+- If distance is less than or equal to the configured threshold
+  (36 inches converted to feet), record a hit
+
+Each hit dictionary contains:
+
+- equipment_id, equipment_label: id and label of the equipment
+- obstruction_id, obstruction_label: id and label of the
+  blocking element
+- distance_ft: separation distance in feet
+
+The run_check wrapper maps these to the standard proximity
+schema:
+
+- a_id, a_label: equipment_id, equipment_label
+- b_id, b_label: obstruction_id, obstruction_label
+- distance_ft: passed through unchanged
+
+Reporting behavior
+------------------
+The AI_QC "Equipment Access Clearance" button calls the
+QualityChecks.clearance_equipment_access.run_check function,
+which:
+
+- Evaluates the rule over the current document
+- Converts hits into the shared proximity format
+- Calls report_proximity_hits with:
+  - Title "Equipment Access Clearance"
+  - Subtitle describing the 36 inch threshold
+  - Columns:
+    - Equipment ID
+    - Equipment Family : Type
+    - Obstruction ID
+    - Obstruction Family : Type
+    - Distance (in)
+
+The pyRevit output panel shows a table with one row per
+violation and linkified element ids. An alert appears when hits
+exist, indicating the number of equipment items with blocked
+access.
+
+References and design sources
+-----------------------------
+This tool is designed around:
+
+- QualityCheck_Coding_Plan.md, sections 4.2 and 4.3, which call
+  for equipment placement and access clearance checks in both
+  mechanical and electrical systems.
+- MCP_Answers.md, sections 1.2 and 2.1, which define:
+  - Categories and name patterns for in-scope equipment
+  - The 36 inch and 42 inch access distances
+  - The list of obstructions and the decision not to treat
+    doors as obstructions initially.
+
+By following the shared architecture for collection, distance
+calculation, and reporting, this tool integrates cleanly with
+the rest of the AI_QC proximity and clearance suite.
+
+Code compliance note
+--------------------
+The 36 inch and 42 inch access distances applied here come
+from project planning documents and common practice. They do
+not claim to fully encode NEC, NFPA, or mechanical access
+requirements, and formal code analysis is still required for
+final design approval.
+

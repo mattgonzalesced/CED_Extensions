@@ -1,0 +1,123 @@
+LIGHTS VS SPRINKLERS PROXIMITY QUALITY CHECK
+============================================
+
+Overview
+--------
+The Lights vs Sprinklers tool checks for lighting fixtures that
+are located too close to sprinklers. It implements one of the
+proximity rules from section 4.1 and 4.6 of
+QualityCheck_Coding_Plan.md, ensuring that luminaires do not
+obstruct or interfere with sprinkler coverage.
+
+Rule thresholds
+---------------
+The default threshold, based on MCP_Answers and aligned with
+the Lights vs Coils patterns, is:
+
+- Lighting fixtures within 18 inches of sprinklers
+
+Any pair of a light and a sprinkler with a bounding-box
+distance less than or equal to 18 inches is recorded as a hit.
+
+Element scope
+-------------
+The tool inspects:
+
+- Lights:
+  - OST_LightingFixtures, non-type instances
+- Sprinklers:
+  - OST_Sprinklers, non-type instances
+
+Both sets are filtered through ElementDesignOptionFilter so
+only elements from the primary design option are considered in
+the default configuration.
+
+Geometry and distance calculation
+---------------------------------
+For each element, the rule module
+QualityChecks.proximity_lights_sprinklers:
+
+- Calls get_BoundingBox(None) to obtain a model-space bounding
+  box
+- Skips elements that cannot provide a bounding box
+
+For each light and sprinkler pair, it computes the minimum 3D
+distance between bounding boxes using the same algorithm as the
+Lights vs Coils reference implementation:
+
+- On each axis, derive a gap:
+  - If the ranges overlap, the axis gap is zero
+  - If they do not overlap, the axis gap is the distance
+    between the ranges
+- Combine axis gaps using the Euclidean norm to get a 3D
+  separation distance in feet
+
+Hit detection and data contract
+-------------------------------
+If the calculated distance is less than or equal to the
+configured threshold, the tool produces a hit dictionary with:
+
+- light_id, light_label: id and label for the light
+- sprinkler_id, sprinkler_label: id and label for the
+  sprinkler
+- distance_ft: separation in feet
+
+The run_check wrapper maps these fields into the standard
+proximity schema expected by QualityChecks.quality_check_core:
+
+- a_id, a_label: light_id, light_label
+- b_id, b_label: sprinkler_id, sprinkler_label
+- distance_ft: copied through unchanged
+
+Reporting behavior
+------------------
+The AI_QC "Lights-Sprinklers" button calls the library
+run_check with show_ui=True and show_empty=True. That wrapper:
+
+- Calls collect_hits to perform the analysis
+- Passes results to report_proximity_hits with:
+  - Title "Proximity Check: Lights-Sprinklers"
+  - Subtitle describing the 18 inch threshold
+  - Columns:
+    - Lighting ID
+    - Lighting Family : Type
+    - Sprinkler ID
+    - Sprinkler Family : Type
+    - Distance (in)
+
+The pyRevit output panel displays a markdown table with one row
+per violating pair. Element ids are linkified to allow quick
+navigation, and distances are shown in inches with two decimal
+places.
+
+When hits exist, a pyRevit alert is also presented summarizing
+the number of fixtures found within the threshold and telling
+the user to see the output panel for details. If no hits are
+found and show_empty is True, the report displays a short
+"No issues found" message instead of a table.
+
+References and design sources
+-----------------------------
+This tool is built on:
+
+- QualityCheck_Coding_Plan.md, section 4.1 Proximity / Clearance
+  and section 4.6 Fire Protection, where lights vs sprinklers is
+  identified as a key clearance rule.
+- MCP_Answers.md, which sets:
+  - The default 18 inch distance
+  - The categories used for lights and sprinklers
+  - The expectation that checks use the same 3D bounding-box
+    distance primitive as other proximity rules.
+
+It also follows the same architectural pattern as the existing
+Lights vs Coils check, giving users familiar behavior in both
+UI and report structure.
+
+Code compliance note
+--------------------
+The 18 inch clearance used here is based on project guidance
+and typical coordination practice, and is not a verbatim
+encoding of NFPA or local fire codes. Sprinkler layouts and
+lighting interference still need to be evaluated against the
+adopted fire protection standards.
+

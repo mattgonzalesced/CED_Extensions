@@ -1,0 +1,4 @@
+title: "Refrig Coils\nProximity"
+tooltip: |
+  Refrigeration: Coils/condensers/evaporators vs heat sources (24") and vs sprinklers (18"). Heat sources: unit heaters, HW coil, hot/steam pipe systems. Coils identified by family name (CED-R-KRACK, COIL, EVAPORATOR, etc.). 3D bbox distance.
+is_beta: false

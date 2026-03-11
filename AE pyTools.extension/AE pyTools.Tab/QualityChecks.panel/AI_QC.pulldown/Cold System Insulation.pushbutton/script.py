@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-__title__ = "Proximity Check\nLights-Sprinklers"
-__doc__ = "Check lighting fixtures within a threshold distance of sprinklers."
+__title__ = "Cold System\nInsulation"
+__doc__ = "Insulation on cold duct and chilled/refrigeration pipe."
 
 import os
 import sys
@@ -16,11 +16,10 @@ def main():
     if doc is None or getattr(doc, "IsFamilyDocument", False):
         forms.alert("Open a project model before running this check.", title=__title__)
         return
-    lib = _lib_root()
-    if lib not in sys.path:
-        sys.path.insert(0, lib)
-    from QualityChecks import proximity_lights_sprinklers
-    proximity_lights_sprinklers.run_check(doc, show_ui=True, show_empty=True, options=None)
+    if _lib_root() not in sys.path:
+        sys.path.insert(0, _lib_root())
+    from QualityChecks import mech_cold_insulation
+    mech_cold_insulation.run_check(doc, show_ui=True, show_empty=True, options=None)
 
 if __name__ == "__main__":
     main()

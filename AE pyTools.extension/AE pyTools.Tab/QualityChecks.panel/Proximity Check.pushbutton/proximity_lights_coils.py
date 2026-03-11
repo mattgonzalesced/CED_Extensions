@@ -17,6 +17,7 @@ if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
 from ExtensibleStorage import ExtensibleStorage  # noqa: E402
+from QualityChecks.quality_check_core import report_proximity_hits  # noqa: E402
 
 SETTING_KEY = "proximity_lights_coils_check"
 FAMILY_PREFIX = "CED-R-KRACK"
@@ -200,27 +201,22 @@ def collect_hits(doc):
 
 
 def _report_results(results, show_empty=False):
-    output = script.get_output()
-    output.set_width(1000)
-    if not results:
-        if show_empty:
-            output.print_md("# Proximity Check: Lights-Coils")
-            output.print_md("### No issues found.")
-            forms.alert("No lighting fixtures found within 18 inches of CED-R-KRACK coils.")
-        return
-    output.print_md("# Proximity Check: Lights-Coils")
-    table = []
-    for item in results:
-        dist_in = (item.get("distance_ft") or 0.0) * 12.0
-        table.append([
-            output.linkify(item.get("light_id")),
-            item.get("light_label") or "<unknown>",
-            output.linkify(item.get("coil_id")),
-            item.get("coil_label") or "<unknown>",
-            "{:.2f}".format(dist_in),
-        ])
-    output.print_table(
-        table,
+    hits = [
+        {
+            "a_id": item.get("light_id"),
+            "a_label": item.get("light_label"),
+            "b_id": item.get("coil_id"),
+            "b_label": item.get("coil_label"),
+            "distance_ft": item.get("distance_ft"),
+        }
+        for item in results or []
+    ]
+    report_proximity_hits(
+        title="Proximity Check: Lights-Coils",
+        subtitle="Lighting fixtures within {:.0f} inches of CED-R-KRACK coils".format(
+            THRESHOLD_INCHES
+        ),
+        hits=hits,
         columns=[
             "Lighting ID",
             "Lighting Family : Type",
@@ -228,13 +224,14 @@ def _report_results(results, show_empty=False):
             "Coil Family : Type",
             "Distance (in)",
         ],
+        show_empty=show_empty,
     )
-    forms.alert(
-        "Found {} lighting fixture(s) within 18 inches of CED-R-KRACK coils.\n\nSee the output panel for details.".format(
-            len(results)
-        ),
-        title="Proximity Check: Lights-Coils",
-    )
+    if hits:
+        forms.alert(
+            "Found {} lighting fixture(s) within {:.0f} inches of CED-R-KRACK coils.\n\n"
+            "See the output panel for details.".format(len(hits), THRESHOLD_INCHES),
+            title="Proximity Check: Lights-Coils",
+        )
 
 
 def run_check(doc=None, show_ui=True, show_empty=False):

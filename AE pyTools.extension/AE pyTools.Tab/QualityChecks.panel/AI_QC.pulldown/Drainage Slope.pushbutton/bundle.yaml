@@ -1,0 +1,4 @@
+title: "Drainage\nSlope"
+tooltip: |
+  Mechanical/Plumbing: Drainage slope and traps. Drain systems (sanitary, waste, condensate) require minimum 1/4" per foot slope (RBS_PIPE_SLOPE_PARAM). Traps within 5 ft (logic stubbed). Identifies drain systems by name.
+is_beta: false

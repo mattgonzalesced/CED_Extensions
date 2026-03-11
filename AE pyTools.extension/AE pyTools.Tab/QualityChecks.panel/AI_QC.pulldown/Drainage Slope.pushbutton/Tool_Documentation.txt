@@ -1,0 +1,122 @@
+DRAINAGE SLOPE AND TRAPS QUALITY CHECK
+======================================
+
+Overview
+--------
+The Drainage Slope tool inspects drain piping systems for
+correct slope and basic trap coverage. It is intended as a
+first-pass quality check for sanitary, waste, and condensate
+systems and is driven by the rules defined in MCP_Answers.md
+and the QualityCheck_Coding_Plan.md plumbing and mechanical
+sections.
+
+The current implementation focuses on:
+
+- Verifying that pipe segments in drain systems meet a minimum
+  slope requirement
+- Laying groundwork for trap coverage checks by identifying
+  trap families, with a note that full path tracing is not yet
+  implemented
+
+Drain system identification
+---------------------------
+The tool treats a pipe as part of a drain system when its
+MEPSystem name contains any of the following keywords
+(case-insensitive):
+
+- SANITARY
+- WASTE
+- CONDENSATE
+- DRAIN
+
+These patterns come directly from MCP_Answers (M1.4.1 and
+P3.2.1). A future enhancement can honor a CED_IsDrain shared
+parameter, but the library rule currently uses name-based
+classification only.
+
+Slope rule and parameters
+-------------------------
+The minimum slope requirement is:
+
+- 1/4 inch per foot, expressed as a unitless ratio of
+  approximately 1.0 / 48.0 in Revit internal units
+
+Slope is read from the built-in parameter
+RBS_PIPE_SLOPE_PARAM where available. If the parameter is
+missing or has no value, the tool does not infer slope from
+geometry; instead it skips slope checking for that segment.
+
+Hit detection for slope
+-----------------------
+For each pipe segment in a drain system, the tool:
+
+- Reads RBS_PIPE_SLOPE_PARAM as a double
+- Compares it to the minimum value MIN_SLOPE_FT_PER_FT
+- Flags the segment as a hit when:
+  - Slope is defined and
+  - Slope is less than the minimum
+
+Each hit dictionary contains:
+
+- a_id: pipe element id
+- a_label: text like "Pipe slope 0.0100 (min 0.0208)"
+- b_id, b_label: currently unused
+- distance_ft: not used for this scalar rule
+- slope_ft_per_ft: actual slope value
+- min_slope: required minimum
+
+Trap identification (stub)
+--------------------------
+The tool also identifies trap families, which is the first step
+toward implementing full trap coverage logic:
+
+- Searches OST_PlumbingFixtures and OST_GenericModel elements
+- Treats a family as a trap when the family name contains
+  TRAP, P-TRAP, or CONDENSATE TRAP
+
+The current implementation does not yet trace along the system
+to confirm that each drain run finds a trap within 5 feet
+downstream, as described in MCP_Answers. That work is noted in
+the code as a future enhancement, keeping the current behavior
+safe and predictable.
+
+Reporting behavior
+------------------
+The run_check wrapper writes a focused report to the pyRevit
+output panel:
+
+- Header "Drainage Slope Check"
+- A summary line indicating the 1/4 inch per foot requirement
+- One bullet per hit with:
+  - A linkified element id
+  - The descriptive slope label
+
+If no issues are found and show_empty is True, the tool prints
+"No slope issues found". When hits exist, it also raises an
+alert summarizing the count and pointing the user to the
+output.
+
+References and design sources
+-----------------------------
+This tool is based on:
+
+- QualityCheck_Coding_Plan.md, sections 4.2 and 4.4, which
+  call for drainage checks on traps, slope, and backflow.
+- MCP_Answers.md, sections 1.4 and 3.2, which specify:
+  - Drain system name patterns
+  - The minimum slope of 1/4 inch per foot
+  - The concept of traps within 5 feet and trap family naming
+
+The implementation intentionally keeps the slope rule simple
+and explicit, leaving more advanced path-based trap coverage
+to future revisions once the slope behavior has been validated
+in live models via the MCP reviewer workflow.
+
+Code compliance note
+--------------------
+Slope values and drain classifications implemented by this
+check reflect internal standards and typical practice as
+captured in the MCP answers. They are not a substitute for
+verifying slope, trap, and venting requirements against the
+adopted plumbing and building codes.
+

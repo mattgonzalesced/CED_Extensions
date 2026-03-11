@@ -1,0 +1,4 @@
+title: "Pipe\nClearance"
+tooltip: |
+  Plumbing: Pipe vs structure (2"), vs duct (1.5"), vs electrical (3"). Excludes fire protection. Uses 3D bounding-box distance.
+is_beta: false

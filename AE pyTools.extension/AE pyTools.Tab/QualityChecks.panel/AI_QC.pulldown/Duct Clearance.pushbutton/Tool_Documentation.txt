@@ -1,0 +1,126 @@
+DUCT CLEARANCE (MECHANICAL) QUALITY CHECK
+========================================
+
+Overview
+--------
+The Duct Clearance tool checks mechanical ductwork for adequate
+clearance to nearby elements in the model. It focuses on four
+pairings defined in the QualityCheck_Coding_Plan.md and refined
+by MCP_Answers.md:
+
+- Duct vs structural elements
+- Duct vs other duct runs
+- Duct vs pipe
+- Duct vs cable tray and tray fittings
+
+The rule is implemented as a 3D proximity check using bounding
+boxes. For each duct element, the tool measures the minimum
+distance to candidate neighbors and flags cases that violate the
+configured thresholds.
+
+Rule thresholds and pairs
+-------------------------
+Per MCP_Answers.md, the current default minimum clearances are:
+
+- Duct vs structure: 2.0 inches
+- Duct vs duct: 1.5 inches
+- Duct vs pipe: 1.5 inches
+- Duct vs cable tray: 1.5 inches
+
+These thresholds are expressed in code as inches, converted to
+feet when comparing raw Revit geometry. The tool treats any
+distance less than or equal to the threshold as a violation.
+
+Element scope
+-------------
+The tool looks at the following Revit categories:
+
+- Ducts:
+  - OST_DuctCurves
+  - OST_FlexDuctCurves
+- Structure:
+  - OST_StructuralFraming
+  - OST_StructuralColumns
+  - OST_StructuralFoundation
+- Pipe:
+  - OST_PipeCurves
+  - OST_FlexPipeCurves
+- Cable tray:
+  - OST_CableTray
+  - OST_CableTrayFitting
+
+All elements are collected with a design option filter that
+excludes elements in non-primary options, matching the existing
+patterns in other proximity checks.
+
+Geometry and distance calculation
+---------------------------------
+For each element the tool obtains a model-space bounding box via
+Revit's get_BoundingBox(None) call. When a bounding box is not
+available, the element is skipped to avoid unstable geometry.
+
+Distance is computed axis-by-axis:
+
+- If boxes are separated along X, use the gap between their
+  projections on that axis.
+- If they overlap on X, contribution on that axis is zero.
+- The same logic is applied on Y and Z.
+
+The final distance is the Euclidean norm of the three axis
+components. This is the same pattern used by the existing
+Lights vs Coils proximity check and the General Proximity
+Check script, so behavior is consistent across tools.
+
+Output and reporting
+--------------------
+The library function mech_duct_clearance.collect_hits returns a
+list of hit dictionaries. Each hit contains:
+
+- a_id, a_label: the duct element id and a descriptive label
+- b_id, b_label: the neighbor element id and label
+- distance_ft: the separation distance in feet
+- pair_type: a short description like "Duct vs Structure"
+
+The run_check wrapper converts these into the generic proximity
+hit format and calls QualityChecks.quality_check_core.
+report_proximity_hits. The AI_QC "Duct Clearance" button
+invokes run_check with show_ui=True and show_empty=True.
+
+The report displays a table with the following columns:
+
+- Duct ID
+- Duct
+- Other ID
+- Other
+- Distance (in)
+
+Distances are formatted in inches with two decimal places.
+Elements are linkified so users can click to zoom to problem
+locations.
+
+References and design sources
+-----------------------------
+The thresholds and categories used in this tool come from:
+
+- QualityCheck_Coding_Plan.md, section 4.2 Mechanical, which
+  calls for duct clearance vs structure, duct, pipe, and tray.
+- MCP_Answers.md, section 1.1, which specifies the exact
+  categories and default distances in inches.
+- Existing proximity implementation for Lights vs Coils and
+  General Proximity Check, which defined the standard
+  collect / evaluate / report flow and the bounding box
+  distance algorithm.
+
+These sources ensure the duct clearance behavior is aligned
+with the documented quality strategy and consistent with other
+quality tools in the AI_QC set.
+
+Code compliance note
+--------------------
+All thresholds and categories in this tool come from internal
+planning documents (QualityCheck_Coding_Plan.md and
+MCP_Answers.md) and typical industry practice. They are not a
+codified representation of NFPA, ASHRAE, NEC, plumbing, or
+building codes and must not be treated as a substitute for
+formal code compliance review.
+

@@ -1,0 +1,120 @@
+SPRINKLER TO CEILING CLEARANCE QUALITY CHECK
+============================================
+
+Overview
+--------
+The Sprinkler Ceiling tool evaluates the vertical position of
+sprinkler deflectors relative to nearby ceilings or soffits. It
+implements the clearance rule from section 4.6 Fire Protection
+of QualityCheck_Coding_Plan.md, refined by MCP_Answers.md to a
+specific acceptable range.
+
+Rule thresholds
+---------------
+MCP_Answers (F5.3.1) defines the acceptable range for the
+vertical distance between a sprinkler deflector and the
+ceiling:
+
+- Minimum: 1 inch below ceiling
+- Maximum: 12 inches below ceiling
+
+If a sprinkler deflector is closer than 1 inch to the ceiling,
+or more than 12 inches below it, the tool records a violation.
+
+Element scope
+-------------
+The tool inspects:
+
+- Sprinklers:
+  - OST_Sprinklers instances
+- Ceilings:
+  - OST_Ceilings instances
+
+All elements are filtered using
+ElementDesignOptionFilter(ElementId.InvalidElementId) to ignore
+elements in alternate design options by default.
+
+Deflector and ceiling height approximations
+-------------------------------------------
+The current implementation uses simple bounding box heuristics
+to approximate the relevant Z-values:
+
+- For each sprinkler, get_BoundingBox(None) is called and the
+  minimum Z value of the box is treated as the deflector height
+  (deflector_z). This is a practical proxy in many typical
+  models where the deflector is at the lowest part of the
+  sprinkler assembly.
+
+- For each ceiling, get_BoundingBox(None) is called and the
+  average of Min.Z and Max.Z is used as the representative
+  ceiling height (ceiling_z). This approximates the finished
+  ceiling plane for flat ceilings.
+
+The tool then computes below_ft = ceiling_z - deflector_z for
+each sprinkler and compares it to the min and max thresholds.
+
+Hit detection
+-------------
+For each sprinkler:
+
+- If a valid ceiling_z is found and the computed below_ft is:
+  - Less than the minimum threshold, a hit is recorded with
+    issue text "too close (min 1\" below)".
+  - Greater than the maximum threshold, a hit is recorded with
+    issue text "too far (max 12\" below)".
+
+Each hit dictionary includes:
+
+- a_id: sprinkler element id
+- a_label: family and type label
+- b_id, b_label: currently None and "Ceiling"
+- distance_ft: vertical distance in feet
+- issue: description of the violation
+
+Reporting behavior
+------------------
+The run_check function writes a dedicated report to the pyRevit
+output panel instead of using the generic proximity table,
+because this rule is 1D vertical rather than a general 3D
+proximity check.
+
+The report includes:
+
+- Header: "Sprinkler Clearance to Ceiling"
+- A summary line stating the 1\"–12\" requirement
+- One bullet per violation, with:
+  - A link to the sprinkler element
+  - The measured distance in inches
+  - A description such as "too close" or "too far"
+
+If show_empty is True and there are no hits, the report
+contains "No issues found." An alert is displayed when issues
+exist, indicating how many sprinklers are out of range and
+directing the user to the detailed list.
+
+References and design sources
+-----------------------------
+This tool is based on:
+
+- QualityCheck_Coding_Plan.md, section 4.6 Fire Protection,
+  which calls for sprinkler clearance to ceiling and soffit as
+  a key check.
+- MCP_Answers.md, section 5.3, which sets:
+  - The minimum and maximum allowable distances between
+    deflector and ceiling
+  - The high level intent of ensuring sprinklers are neither
+    too tight to the surface nor too low in the space.
+
+The implementation keeps the geometry heuristic simple and
+transparent so that the reviewer can easily validate the
+behavior in a model and refine the approach if more accurate
+deflector and ceiling references are required in the future.
+
+Code compliance note
+--------------------
+The 1 inch to 12 inch clearance band enforced by this tool is
+derived from project guidance and typical NFPA 13 style
+expectations, but it is not a formal encoding of any specific
+edition of NFPA 13 or local amendments. Designers must still
+verify sprinkler elevations against the applicable fire codes.
+

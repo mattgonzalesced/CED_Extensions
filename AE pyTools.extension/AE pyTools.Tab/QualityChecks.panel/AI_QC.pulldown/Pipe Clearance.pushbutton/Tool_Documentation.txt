@@ -1,0 +1,136 @@
+PIPE CLEARANCE (PLUMBING) QUALITY CHECK
+=======================================
+
+Overview
+--------
+The Pipe Clearance tool verifies that plumbing pipe runs have
+adequate spatial separation from nearby structural, mechanical,
+and electrical elements. It implements the plumbing clearance
+cluster from section 4.4 of the QualityCheck_Coding_Plan.md,
+with distances and categories defined in MCP_Answers.md.
+
+The rule is structurally similar to the duct clearance and
+conduit clearance checks, using 3D bounding boxes and fixed
+thresholds for each pair type.
+
+Rule thresholds
+---------------
+Default minimum clearances from MCP_Answers (P3.1.2) are:
+
+- Pipe vs structure: 2.0 inches
+- Pipe vs duct: 1.5 inches
+- Pipe vs electrical: 3.0 inches
+
+The tool considers a pair to be in violation when the 3D
+distance between their bounding boxes is less than or equal to
+the corresponding threshold.
+
+Element scope
+-------------
+The tool inspects the following categories:
+
+- Pipes:
+  - OST_PipeCurves
+  - OST_FlexPipeCurves
+  - The implementation excludes explicit fire protection
+    systems as directed by the plan, focusing on plumbing.
+- Structure:
+  - OST_StructuralFraming
+  - OST_StructuralColumns
+- Duct:
+  - OST_DuctCurves
+  - OST_FlexDuctCurves
+- Electrical:
+  - OST_ElectricalEquipment
+  - OST_Conduit
+  - OST_CableTray
+  - OST_CableTrayFitting
+
+All elements are filtered with ElementDesignOptionFilter so
+only the main design option is considered by default.
+
+Distance computation
+--------------------
+For each element, a bounding box is requested via
+get_BoundingBox(None). Elements that do not provide a bounding
+box are skipped gracefully.
+
+Distance between two bounding boxes is defined by:
+
+- Computing the gap along X, Y, and Z:
+  - Zero if the projections overlap on that axis
+  - Otherwise, the distance between the ranges
+- Taking the Euclidean norm of the three axis gaps to produce
+  a single 3D distance in Revit internal units (feet).
+
+This follows the same algorithm used by Lights vs Coils and
+the General Proximity Check tool, giving consistent behavior
+across disciplines.
+
+Hit detection and classification
+--------------------------------
+For each pipe, the tool compares it to:
+
+- All structural elements using the 2 inch threshold
+- All duct elements using the 1.5 inch threshold
+- All electrical elements using the 3 inch threshold
+
+When a violation is detected, a hit dictionary is recorded
+with:
+
+- a_id, a_label: the pipe element id and label
+- b_id, b_label: the nearby element id and label
+- distance_ft: the separation distance in feet
+
+The pair type (structure, duct, or electrical) is implicit in
+which group the neighbor was collected from. The reporting
+layer can be extended in the future to display that type in a
+separate column if desired.
+
+Reporting behavior
+------------------
+The run_check wrapper converts these hits into the standard
+proximity format and calls
+QualityChecks.quality_check_core.report_proximity_hits.
+
+The output shows:
+
+- Title: "Pipe Clearance (Plumbing)"
+- Subtitle summarizing the three thresholds
+- A table with columns:
+  - Pipe ID
+  - Pipe
+  - Other ID
+  - Other
+  - Distance (in)
+
+All ids in the table are linkified using pyRevit so reviewers
+can jump directly to the offending elements. An alert is shown
+when hits are present, with a count and pointer to the detailed
+output.
+
+References and design sources
+-----------------------------
+The Pipe Clearance tool is based on:
+
+- QualityCheck_Coding_Plan.md, section 4.4 Plumbing, which
+  lists pipe vs structure, electrical, and duct clearance as a
+  check type.
+- MCP_Answers.md, section 3.1, which specifies:
+  - Target categories for pipe and each neighbor class
+  - Minimum separations of 2.0, 1.5, and 3.0 inches
+  - The focus on plumbing systems rather than fire protection.
+
+The implementation reuses the same collection, distance, and
+reporting patterns as other proximity tools in the AI_QC
+family, so behavior is familiar and predictable for users who
+have already used the duct and conduit clearance checkers.
+
+Code compliance note
+--------------------
+The pipe clearance distances used in this tool come from
+project documents and typical coordination practice, not from
+directly encoded plumbing or electrical code clauses.
+Designers must still confirm compliance with the adopted
+codes and any discipline-specific standards.
+

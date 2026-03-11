@@ -1,0 +1,4 @@
+title: "Conduit vs\nPipe"
+tooltip: |
+  Electrical: Conduit vs hot pipe systems (6") and vs cold/chilled/refrigeration pipe (3"). Uses 3D bounding-box distance. Hot/cold identified by system name (HW, STEAM, CHW, REFRIG, etc.).
+is_beta: false

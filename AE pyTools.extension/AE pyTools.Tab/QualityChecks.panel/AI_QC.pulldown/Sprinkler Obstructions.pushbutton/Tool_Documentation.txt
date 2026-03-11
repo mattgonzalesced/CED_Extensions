@@ -1,0 +1,128 @@
+SPRINKLER OBSTRUCTION CLEARANCE QUALITY CHECK
+============================================
+
+Overview
+--------
+The Sprinkler Obstruction Check tool identifies sprinklers that
+are too close to nearby obstructions such as beams, ductwork,
+lighting fixtures, and cable trays. It implements a key fire
+protection rule from section 4.6 of
+QualityCheck_Coding_Plan.md, supported by the obstruction list
+and threshold in MCP_Answers.md.
+
+The goal is to highlight potential interference with sprinkler
+spray patterns before coordination issues reach the field.
+
+Rule thresholds
+---------------
+From MCP_Answers (F5.1.2), the default clearance is:
+
+- Sprinklers within 18 inches of listed obstruction categories
+
+Any sprinkler whose bounding box is closer than or equal to
+this threshold to a qualifying obstruction is flagged as a hit.
+
+Element scope
+-------------
+Sprinklers are collected from:
+
+- OST_Sprinklers, excluding types
+
+Obstructions are collected from the categories defined in
+MCP_Answers (F5.1.1):
+
+- OST_StructuralFraming
+- OST_StructuralColumns
+- OST_DuctCurves and OST_FlexDuctCurves
+- OST_CableTray and OST_CableTrayFitting
+- OST_LightingFixtures
+- OST_GenericModel
+- OST_SpecialityEquipment
+
+All collections use ElementDesignOptionFilter with an invalid
+design option id to avoid crossing design options.
+
+Distance computation
+--------------------
+For every sprinkler the rule module
+QualityChecks.clearance_sprinkler_obstructions:
+
+- Obtains a bounding box via get_BoundingBox(None)
+- Skips sprinklers with no bounding box
+- Iterates through each obstruction with a valid bounding box
+
+The tool computes the 3D distance between sprinkler and
+obstruction bounding boxes using the standard algorithm shared
+with other proximity checks:
+
+- Compute per-axis gaps where boxes do not overlap on X, Y, Z
+- Treat overlapping axes as zero distance
+- Combine gaps with the Euclidean norm to get a 3D distance in
+  feet
+
+Hit detection and data contract
+-------------------------------
+If the 3D distance is less than or equal to the 18 inch (in
+feet) threshold, a hit dictionary is recorded:
+
+- sprinkler_id, sprinkler_label: id and descriptive label for
+  the sprinkler
+- obstruction_id, obstruction_label: id and label for the
+  obstruction element
+- distance_ft: distance in feet
+
+The run_check wrapper converts this into the generic proximity
+schema expected by quality_check_core:
+
+- a_id, a_label: sprinkler_id, sprinkler_label
+- b_id, b_label: obstruction_id, obstruction_label
+- distance_ft: passed through unchanged
+
+Reporting behavior
+------------------
+The AI_QC "Sprinkler Obstruction Check" button calls the library
+run_check with show_ui=True and show_empty=True. The wrapper
+then:
+
+- Calls collect_hits to build the list of violations
+- Passes mapped hits to report_proximity_hits with:
+  - Title "Sprinkler Obstruction Clearance"
+  - Subtitle summarizing the 18 inch threshold and obstruction
+    categories
+  - Columns:
+    - Sprinkler ID
+    - Sprinkler Family : Type
+    - Obstruction ID
+    - Obstruction Family : Type
+    - Distance (in)
+
+The output panel shows a table with one row per violating pair,
+and all ids are linkified for rapid navigation. A summary alert
+is displayed when hits exist, indicating how many sprinklers
+are affected and directing the user to the detailed results.
+
+References and design sources
+-----------------------------
+This tool is grounded in:
+
+- QualityCheck_Coding_Plan.md, section 4.6 Fire Protection,
+  which calls for sprinkler vs obstruction checks as a key
+  category of rules.
+- MCP_Answers.md, section 5.1, which defines:
+  - The set of categories that count as obstructions
+  - The single default threshold of 18 inches
+  - The expectation that deflector-to-obstruction clearance be
+    evaluated in a simple, repeatable way.
+
+The implementation also mirrors the structure and algorithms
+used by other AI_QC proximity tools, so users see consistent
+behavior and reporting across fire protection and MEP checks.
+
+Code compliance note
+--------------------
+The 18 inch obstruction distance and obstruction categories
+implemented here are taken from project documentation and
+typical practice. They are not intended to be a complete or
+authoritative implementation of NFPA 13 or local amendments,
+and must be supplemented by formal fire protection code review.
+

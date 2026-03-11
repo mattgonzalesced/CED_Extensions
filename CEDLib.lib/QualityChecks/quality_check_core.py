@@ -1,14 +1,9 @@
 import math
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from pyrevit import script
 
 
-Hit = Dict[str, Any]
-CheckFunc = Callable[[Any, Optional[Dict[str, Any]]], Sequence[Hit]]
-
-
-def _coerce_hits(value: Any) -> List[Hit]:
+def _coerce_hits(value):
     if value is None:
         return []
     if isinstance(value, dict):
@@ -19,10 +14,7 @@ def _coerce_hits(value: Any) -> List[Hit]:
         return []
 
 
-def run_checks(
-    doc: Any,
-    checks: Iterable[Tuple[str, CheckFunc, Optional[Dict[str, Any]]]],
-) -> List[Dict[str, Any]]:
+def run_checks(doc, checks):
     """Run multiple quality checks and aggregate results.
 
     Each item in ``checks`` is a tuple of:
@@ -32,7 +24,7 @@ def run_checks(
         - accept (doc, options) and
         - return an iterable of hit dictionaries.
     """
-    results: List[Dict[str, Any]] = []
+    results = []
     for name, func, options in checks:
         if func is None:
             continue
@@ -40,7 +32,7 @@ def run_checks(
             hits = _coerce_hits(func(doc, options))
         except TypeError:
             # Fallback for check functions that do not accept options yet.
-            hits = _coerce_hits(func(doc))  # type: ignore[arg-type]
+            hits = _coerce_hits(func(doc))
         result = {
             "check_name": name,
             "hits": hits,
@@ -50,7 +42,7 @@ def run_checks(
     return results
 
 
-def summarize_results(results: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+def summarize_results(results):
     total_checks = len(results)
     failing = [r for r in results if not r.get("pass", False)]
     total_hits = sum(len(r.get("hits") or []) for r in results)
@@ -61,19 +53,13 @@ def summarize_results(results: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
-def _format_distance_inches(value_ft: Optional[float]) -> str:
+def _format_distance_inches(value_ft):
     if value_ft is None:
         return ""
     return "{:.2f}".format((value_ft or 0.0) * 12.0)
 
 
-def report_proximity_hits(
-    title: str,
-    subtitle: str,
-    hits: Sequence[Hit],
-    columns: Optional[Sequence[str]] = None,
-    show_empty: bool = False,
-) -> None:
+def report_proximity_hits(title, subtitle, hits, columns=None, show_empty=False):
     """Standard pyRevit reporting for proximity-style checks.
 
     Expects each hit to contain:

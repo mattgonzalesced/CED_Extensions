@@ -1,0 +1,4 @@
+title: "Sprinkler\nCeiling"
+tooltip: |
+  Fire Protection: Sprinkler deflector clearance to ceiling. Deflector must be at least 1" and at most 12" below ceiling. Reports sprinklers outside that range.
+is_beta: false

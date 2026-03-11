@@ -1,0 +1,146 @@
+CONDUIT VS PIPE CLEARANCE QUALITY CHECK
+=======================================
+
+Overview
+--------
+The Conduit vs Pipe tool checks electrical conduit for adequate
+clearance from nearby hot and cold piping systems. It enforces
+different minimum distances depending on whether a pipe carries
+hot media (such as hot water or steam) or cold/chilled media
+(such as chilled water or refrigeration).
+
+The intent is to reduce thermal interaction and safety issues
+between electrical raceways and piping, following the guidance
+in sections 4.3 Electrical of the QualityCheck_Coding_Plan.md
+and MCP_Answers.md.
+
+Rule thresholds
+---------------
+From MCP_Answers (E2.2.2) the default minimum clearances are:
+
+- Conduit vs hot systems: 6.0 inches
+- Conduit vs cold / chilled / refrigeration systems: 3.0 inches
+
+These are global defaults, with the possibility of per-project
+overrides via options in the future. Distances are stored in
+inches in configuration and converted to feet for numeric
+comparison against Revit geometry.
+
+Element scope
+-------------
+The rule operates on the following Revit categories:
+
+- Conduit:
+  - OST_Conduit
+  - OST_ConduitFitting
+- Piping:
+  - OST_PipeCurves
+  - OST_FlexPipeCurves
+
+All elements are filtered through ElementDesignOptionFilter to
+keep behavior consistent with other quality tools that ignore
+elements in alternate design options by default.
+
+Hot vs cold pipe classification
+-------------------------------
+Pipe segments are classified by the name of their MEP system:
+
+- Hot pipes:
+  - System names containing HW, HOT WATER, STEAM, HEATING, GAS
+- Cold pipes:
+  - System names containing CHW, CHILLED, REFRIG, COLD WATER
+
+These patterns come from MCP_Answers (E2.2.1) and allow a
+project to follow familiar naming while still getting useful
+checks. A future extension can also look at explicit system
+class or shared parameters, but this first version keeps to
+the documented naming rules.
+
+Distance calculation
+--------------------
+For each conduit instance the tool obtains a bounding box using
+get_BoundingBox(None). For each hot or cold pipe segment it
+does the same. If a bounding box cannot be obtained for an
+element, that element is skipped.
+
+The minimum 3D distance between two bounding boxes is computed
+by:
+
+- Measuring the gap along each axis:
+  - If the ranges overlap on an axis, that axis component is
+    zero.
+  - If they do not overlap, that axis component is the gap
+    between the two ranges.
+- Taking the square root of the sum of squared components,
+  which yields a true 3D separation distance consistent with
+  other proximity tools in this library.
+
+Hit detection
+-------------
+For each conduit and hot pipe pair:
+
+- Compute distance in feet
+- Compare to the hot threshold (6 inches in feet)
+- If distance is less than or equal to the threshold, record a
+  hit
+
+For each conduit and cold pipe pair:
+
+- Use the cold threshold (3 inches in feet)
+- Record hits the same way
+
+Each hit dictionary contains:
+
+- a_id, a_label: the conduit element id and label
+- b_id, b_label: the pipe element id and label
+- distance_ft: the separation distance in feet
+
+Reporting behavior
+------------------
+The run_check function converts these hit dictionaries into the
+standard proximity format and passes them to
+QualityChecks.quality_check_core.report_proximity_hits.
+
+The output panel shows:
+
+- Title: "Conduit vs Pipe Clearance (Electrical)"
+- Subtitle describing the hot (6 inch) and cold (3 inch)
+  thresholds
+- A table with columns:
+  - Conduit ID
+  - Conduit
+  - Pipe ID
+  - Pipe
+  - Distance (in)
+
+An alert is raised when hits exist, summarizing the number of
+issues and directing the user to the detailed table. Distances
+are shown in inches with two decimal places, and all element
+ids in the table are linkified so reviewers can quickly
+navigate to problem locations.
+
+References and design sources
+-----------------------------
+This tool is based on:
+
+- QualityCheck_Coding_Plan.md, section 4.3 Electrical, which
+  includes conduit vs hot/cold pipe clearance as a rule type.
+- MCP_Answers.md, section 2.2, which specifies:
+  - The categories for conduit and pipe
+  - The exact hot and cold system name patterns
+  - The 6 inch and 3 inch threshold values
+- Existing distance computation patterns from Lights vs Coils
+  and General Proximity Check, ensuring consistent behavior
+  across quality tools.
+
+Together these references define both the rule logic and the
+data contract used by the Conduit vs Pipe clearance checker.
+
+Code compliance note
+--------------------
+The 6 inch and 3 inch separations enforced here are project
+standards derived from MCP_Answers.md and common practice.
+They are not guaranteed to match NEC, NFPA, or local codes and
+should be treated as a design aid, not as a replacement for a
+formal electrical or mechanical code check.
+

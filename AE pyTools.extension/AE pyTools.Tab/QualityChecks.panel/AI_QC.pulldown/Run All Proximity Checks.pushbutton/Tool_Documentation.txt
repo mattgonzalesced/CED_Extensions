@@ -1,0 +1,142 @@
+RUN ALL PROXIMITY CHECKS TOOL
+=============================
+
+Overview
+--------
+The Run All Proximity Checks tool is an orchestrator for the
+AI_QC proximity and clearance rules. Instead of running each
+check individually, this tool executes all configured
+proximity-style quality checks in sequence and produces:
+
+- A full report for each individual check
+- A summary table that aggregates pass or fail status and hit
+  counts across all checks
+
+This makes it easy for reviewers to run a broad sweep of
+mechanical, electrical, plumbing, and refrigeration clearance
+rules in one operation.
+
+Checks included
+---------------
+At the time of this implementation, the runner includes:
+
+- Lights vs CED-R-KRACK coils (existing panel script)
+- Lights vs sprinklers (QualityChecks.proximity_lights_sprinklers)
+- Sprinkler obstruction clearance
+  (QualityChecks.clearance_sprinkler_obstructions)
+- Equipment access clearance
+  (QualityChecks.clearance_equipment_access)
+- Duct clearance (mechanical)
+  (QualityChecks.mech_duct_clearance)
+- Conduit vs pipe (electrical)
+  (QualityChecks.elec_conduit_pipe_clearance)
+- Pipe clearance (plumbing)
+  (QualityChecks.plumb_pipe_clearance)
+- Refrigeration coils proximity
+  (QualityChecks.refrig_coils_proximity)
+
+Each of these modules follows the common contract described in
+QualityCheck_Coding_Plan.md: they accept a document and options
+and return a list of hit dictionaries with a standard shape.
+
+How checks are loaded
+---------------------
+The runner lives in the AI_QC.pulldown Run All Proximity
+Checks.pushbutton folder. Its script:
+
+- Resolves CEDLib.lib and adds it to sys.path
+- Imports report_proximity_hits and summarize_results from
+  QualityChecks.quality_check_core
+- Dynamically imports each rule module from the QualityChecks
+  package
+- For the legacy Lights vs Coils check, it locates and imports
+  the existing proximity_lights_coils.py script from the
+  Proximity Check pushbutton folder
+
+Each check is represented as a configuration dictionary with:
+
+- name: display name for summary
+- collector: a function that accepts a document and returns
+  raw hit dictionaries from the rule module
+- title, subtitle: heading text for the per-check report
+- columns: columns passed to report_proximity_hits
+- keys: how to map rule-specific keys into the generic
+  proximity schema
+
+Mapping hit schemas
+-------------------
+Most QualityChecks modules already return hits where the element
+ids and labels are stored under:
+
+- a_id, a_label
+- b_id, b_label
+- distance_ft
+
+For those, the runner uses the keys tuple ("a_id", "a_label",
+"b_id", "b_label") and simply copies values into the standard
+schema.
+
+For older or specialized checks that return fields like
+light_id, coil_id, sprinkler_id, or obstruction_id, the runner
+uses a custom keys tuple to map those into a_id and b_id. This
+keeps each rule free to use descriptive internal keys while
+still allowing a uniform reporting contract.
+
+Per-check reporting
+-------------------
+For each configured check:
+
+- The runner calls its collector to obtain raw hits
+- Transforms hits into the standard proximity schema using the
+  configured keys
+- Calls report_proximity_hits with the configured title,
+  subtitle, columns, and the mapped hits
+
+This produces the same style of table and alert that a user
+would see when running the individual button, ensuring
+consistency across manual and batch usage.
+
+Summary aggregation
+-------------------
+After running all checks, the runner uses
+QualityChecks.quality_check_core.summarize_results to compute:
+
+- Total number of checks run
+- Number of failing checks (those with at least one hit)
+- Total number of hits across all checks
+
+It then builds a summary table where each row shows:
+
+- Check name
+- Pass or Fail status
+- Hit count
+
+This table is printed at the end of the report, and a final
+alert summarizes the overall result.
+
+References and design sources
+-----------------------------
+The runner is built on:
+
+- QualityCheck_Coding_Plan.md, section 3, which defines a
+  layered architecture with reusable check definitions and
+  orchestrators.
+- The QualityChecks.quality_check_core module, which provides
+  the run_checks pattern, the summarize_results helper, and
+  the standard proximity reporting function.
+- MCP_Answers.md, which specifies the list of checks to include
+  and their thresholds, and which checks are appropriate to run
+  automatically versus on demand.
+
+By centralizing execution and summary while respecting each
+rule module's own logic and reporting, this tool provides a
+coherent "run everything" experience for the AI_QC set.
+
+Code compliance note
+--------------------
+The Run All tool aggregates project-defined proximity and
+clearance checks; it does not perform a comprehensive code
+compliance analysis. All thresholds originate from internal
+planning documents and industry norms, not directly from
+NFPA, ASHRAE, NEC, or other codes. Use it as a design aid in
+conjunction with, not instead of, formal code review.

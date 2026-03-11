@@ -1,0 +1,5 @@
+title: "Cold System\nInsulation"
+tooltip: |
+  Mechanical: Insulation on cold duct and chilled/refrigeration pipe systems.
+  Flags missing insulation or thickness below 1.0" (CHW) or 1.5" (refrigeration). Identifies cold systems by name (CHW, REFRIG, SUCTION, LIQUID LINE, etc.).
+is_beta: false
