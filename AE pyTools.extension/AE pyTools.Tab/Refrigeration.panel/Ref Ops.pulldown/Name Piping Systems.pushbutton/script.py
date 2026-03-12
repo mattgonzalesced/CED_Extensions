@@ -3,9 +3,27 @@ __title__ = "Name Piping Systems"
 __doc__ = "Place tags/text notes on pipes based on connected pipe traversal."
 
 import math
+import clr
 
 from Autodesk.Revit.UI.Selection import ObjectType, ISelectionFilter
 from System.Collections.Generic import List
+clr.AddReference("System.Windows.Forms")
+clr.AddReference("System.Drawing")
+from System.Windows.Forms import (
+    Form,
+    Label,
+    ComboBox,
+    CheckBox,
+    TextBox,
+    Button,
+    ComboBoxStyle,
+    FormBorderStyle,
+    FormStartPosition,
+    DialogResult,
+    AnchorStyles,
+    HorizontalAlignment,
+)
+from System.Drawing import Point, Size
 from pyrevit import revit, DB, forms, script
 
 
@@ -94,6 +112,7 @@ BALL_VALVE_KEYWORDS = ("BALL VALVE", "BALLVALVE", "BALL-VALVE", "BALL_VALVE")
 BALL_VALVE_FAMILY = "GENERIC ANNOTATIONS"
 BALL_VALVE_TYPE = "BALL_VALVE"
 BALL_VALVE_MAX_OFFSET_FT = 2.0 / 12.0
+IDENTICAL_LABEL_ELBOW_SUPPRESS_THRESHOLD_FT = 20.0
 
 _MECH_EQUIP_VIEW_CACHE = {}
 
@@ -1302,7 +1321,7 @@ def _pick_pipe_tag_type():
 
 
 
-def _place_text_notes(label_map, pipe_map, text_type, view, suppress_ids=None):
+def _place_text_notes(label_map, pipe_map, text_type, view, label_positions=None, suppress_ids=None):
     if not label_map:
         return 0
     count = 0
@@ -1316,7 +1335,7 @@ def _place_text_notes(label_map, pipe_map, text_type, view, suppress_ids=None):
             curve = _pipe_curve(pipe)
             if curve is None:
                 continue
-            pts = _label_points_for_pipe(pipe)
+            pts = _label_points_for_pipe(pipe, label_positions)
             if not pts:
                 continue
             for pt in pts:
@@ -1374,20 +1393,23 @@ def _rotate_element_about_z(elem_id, origin, angle):
     DB.ElementTransformUtils.RotateElement(doc, elem_id, axis, angle)
 
 
-def _label_points_for_pipe(pipe):
+def _label_points_for_pipe(pipe, label_positions=None):
     curve = _pipe_curve(pipe)
     if curve is None:
         return []
-    try:
-        length = curve.Length
-    except Exception:
-        length = 0.0
-    if length > 100.0:
-        params = (1.0 / 3.0, 2.0 / 3.0)
-    else:
-        params = (0.5,)
+    positions = list(label_positions or [])
+    if not positions:
+        positions = ["middle"]
+    param_map = {
+        "beginning": 0.1,
+        "middle": 0.5,
+        "end": 0.9,
+    }
     points = []
-    for t in params:
+    for pos in positions:
+        t = param_map.get((pos or "").lower())
+        if t is None:
+            continue
         try:
             points.append(curve.Evaluate(t, True))
         except Exception:
@@ -1396,7 +1418,7 @@ def _label_points_for_pipe(pipe):
 
 
 
-def _place_pipe_tags(label_map, pipe_map, tag_type, view, suppress_ids=None):
+def _place_pipe_tags(label_map, pipe_map, tag_type, view, label_positions=None, target_pipe_ids=None, suppress_ids=None):
     if not label_map:
         return 0
     count = 0
@@ -1405,6 +1427,8 @@ def _place_pipe_tags(label_map, pipe_map, tag_type, view, suppress_ids=None):
             tag_type.Activate()
             doc.Regenerate()
         for pid in label_map.keys():
+            if target_pipe_ids is not None and pid not in target_pipe_ids:
+                continue
             if suppress_ids and pid in suppress_ids:
                 continue
             pipe = pipe_map.get(pid)
@@ -1413,7 +1437,7 @@ def _place_pipe_tags(label_map, pipe_map, tag_type, view, suppress_ids=None):
             curve = _pipe_curve(pipe)
             if curve is None:
                 continue
-            pts = _label_points_for_pipe(pipe)
+            pts = _label_points_for_pipe(pipe, label_positions)
             if not pts:
                 continue
             for pt in pts:
@@ -1442,7 +1466,7 @@ def _place_pipe_tags(label_map, pipe_map, tag_type, view, suppress_ids=None):
     return count
 
 
-def _set_identity_marks(label_map, pipe_map):
+def _set_identity_marks(label_map, pipe_map, overwrite_existing=True):
     if not label_map:
         return 0
     count = 0
@@ -1456,6 +1480,8 @@ def _set_identity_marks(label_map, pipe_map):
             except Exception:
                 param = None
             if not param or param.IsReadOnly:
+                continue
+            if not overwrite_existing and _get_identity_mark(pipe):
                 continue
             try:
                 param.Set(label)
@@ -1641,7 +1667,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
             prev_pipe = None
         if prev_pipe is None:
             return False
-        return (_pipe_length(curr_pipe) + _pipe_length(prev_pipe)) < 20.0
+        return (_pipe_length(curr_pipe) + _pipe_length(prev_pipe)) < IDENTICAL_LABEL_ELBOW_SUPPRESS_THRESHOLD_FT
 
     def _find_branch_leaf_marker(branch_pipe, prev_id):
         if branch_pipe is None:
@@ -1924,21 +1950,277 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
 
 
 
-def _prompt_start_pipes():
+def _collect_pipe_tree(root_pipe):
+    tree_pipe_map = {}
+    if root_pipe is None:
+        return tree_pipe_map
+    stack = [root_pipe]
+    while stack:
+        pipe = stack.pop()
+        if pipe is None:
+            continue
+        try:
+            pid = pipe.Id.IntegerValue
+        except Exception:
+            continue
+        if pid in tree_pipe_map:
+            continue
+        tree_pipe_map[pid] = pipe
+        for nbr in _connected_pipes(pipe):
+            if nbr is None:
+                continue
+            try:
+                nid = nbr.Id.IntegerValue
+            except Exception:
+                continue
+            if nid not in tree_pipe_map:
+                stack.append(nbr)
+    return tree_pipe_map
+
+
+def _tagged_pipe_ids(tag):
+    pipe_ids = set()
+    if tag is None:
+        return pipe_ids
+    local_ids = None
     try:
-        forms.alert(
-            "Select the start pipes for this rack in order (1-6).",
-            title="Select Start Pipes",
-            warn_icon=False,
-        )
+        local_ids = tag.GetTaggedLocalElementIds()
     except Exception:
-        pass
-    start_pipes = []
-    selected_ids = []
+        local_ids = None
+    if local_ids:
+        for eid in local_ids:
+            try:
+                elem = doc.GetElement(eid)
+            except Exception:
+                elem = None
+            if not _is_pipe_like(elem):
+                continue
+            try:
+                pipe_ids.add(elem.Id.IntegerValue)
+            except Exception:
+                continue
+    if pipe_ids:
+        return pipe_ids
+    try:
+        eid = tag.TaggedLocalElementId
+    except Exception:
+        eid = None
+    if eid and getattr(eid, "IntegerValue", -1) > 0:
+        try:
+            elem = doc.GetElement(eid)
+        except Exception:
+            elem = None
+        if _is_pipe_like(elem):
+            try:
+                pipe_ids.add(elem.Id.IntegerValue)
+            except Exception:
+                pass
+    return pipe_ids
+
+
+def _collect_tagged_pipe_ids_in_view(view):
+    pipe_ids = set()
+    tag_collector = DB.FilteredElementCollector(doc, view.Id).OfClass(DB.IndependentTag).WhereElementIsNotElementType()
+    for tag in tag_collector:
+        pipe_ids.update(_tagged_pipe_ids(tag))
+    return pipe_ids
+
+
+def _delete_pipe_tags_for_pipe_tree(root_pipe, view):
+    tree_pipe_ids = set(_collect_pipe_tree(root_pipe).keys())
+    if not tree_pipe_ids:
+        return 0
+
+    delete_ids = []
+    queued = set()
+    tag_collector = DB.FilteredElementCollector(doc, view.Id).OfClass(DB.IndependentTag).WhereElementIsNotElementType()
+    for tag in tag_collector:
+        tagged_pipe_ids = _tagged_pipe_ids(tag)
+        if not tagged_pipe_ids:
+            continue
+        if not tree_pipe_ids.intersection(tagged_pipe_ids):
+            continue
+        try:
+            iid = tag.Id.IntegerValue
+        except Exception:
+            continue
+        if iid in queued:
+            continue
+        queued.add(iid)
+        delete_ids.append(tag.Id)
+
+    if delete_ids:
+        with revit.Transaction("Name Piping Systems - Delete Existing Tree Tags"):
+            doc.Delete(List[DB.ElementId](delete_ids))
+    return len(delete_ids)
+
+
+def _prompt_naming_options():
+    apply_modes = ["Redo Tags + Identity Marks", "Add New Tags Only"]
+    tag_types = _pipe_tag_types()
+    if not tag_types:
+        forms.alert("No pipe tag types found in this project.", exitscript=True)
+    tag_type_labels = [_tag_type_label(t) for t in tag_types]
+
+    form = Form()
+    form.Text = "Name Piping Systems"
+    form.Width = 760
+    form.Height = 420
+    form.StartPosition = FormStartPosition.CenterScreen
+    form.FormBorderStyle = FormBorderStyle.Sizable
+    form.MaximizeBox = True
+    form.MinimizeBox = True
+    form.MinimumSize = Size(620, 420)
+
+    lbl_apply_mode = Label()
+    lbl_apply_mode.Text = "Tag Update Mode:"
+    lbl_apply_mode.Location = Point(15, 18)
+    lbl_apply_mode.Size = Size(150, 20)
+    form.Controls.Add(lbl_apply_mode)
+
+    cmb_apply_mode = ComboBox()
+    cmb_apply_mode.DropDownStyle = ComboBoxStyle.DropDownList
+    cmb_apply_mode.Location = Point(180, 15)
+    cmb_apply_mode.Size = Size(560, 22)
+    cmb_apply_mode.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+    for item in apply_modes:
+        cmb_apply_mode.Items.Add(item)
+    cmb_apply_mode.SelectedIndex = 0
+    form.Controls.Add(cmb_apply_mode)
+
+    lbl_tag_type = Label()
+    lbl_tag_type.Text = "Tag Family Type:"
+    lbl_tag_type.Location = Point(15, 53)
+    lbl_tag_type.Size = Size(150, 20)
+    form.Controls.Add(lbl_tag_type)
+
+    cmb_tag_type = ComboBox()
+    cmb_tag_type.DropDownStyle = ComboBoxStyle.DropDownList
+    cmb_tag_type.Location = Point(180, 50)
+    cmb_tag_type.Size = Size(560, 22)
+    cmb_tag_type.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+    cmb_tag_type.DropDownWidth = 1000
+    for item in tag_type_labels:
+        cmb_tag_type.Items.Add(item)
+    cmb_tag_type.SelectedIndex = 0
+    form.Controls.Add(cmb_tag_type)
+
+    lbl_number = Label()
+    lbl_number.Text = "Pipe Number:"
+    lbl_number.Location = Point(15, 88)
+    lbl_number.Size = Size(150, 20)
+    form.Controls.Add(lbl_number)
+
+    txt_number = TextBox()
+    txt_number.Location = Point(180, 85)
+    txt_number.Size = Size(560, 22)
+    txt_number.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+    txt_number.Text = "1"
+    txt_number.TextAlign = HorizontalAlignment.Center
+    form.Controls.Add(txt_number)
+
+    lbl_letter = Label()
+    lbl_letter.Text = "Suffix Letter:"
+    lbl_letter.Location = Point(15, 123)
+    lbl_letter.Size = Size(150, 20)
+    form.Controls.Add(lbl_letter)
+
+    txt_letter = TextBox()
+    txt_letter.Location = Point(180, 120)
+    txt_letter.Size = Size(560, 22)
+    txt_letter.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+    txt_letter.Text = "A"
+    txt_letter.TextAlign = HorizontalAlignment.Center
+    form.Controls.Add(txt_letter)
+
+    lbl_positions = Label()
+    lbl_positions.Text = "Label Placement (Toggle):"
+    lbl_positions.Location = Point(15, 161)
+    lbl_positions.Size = Size(200, 20)
+    form.Controls.Add(lbl_positions)
+
+    chk_beginning = CheckBox()
+    chk_beginning.Text = "Beginning"
+    chk_beginning.Location = Point(35, 186)
+    chk_beginning.Size = Size(110, 24)
+    chk_beginning.Checked = False
+    form.Controls.Add(chk_beginning)
+
+    chk_middle = CheckBox()
+    chk_middle.Text = "Middle"
+    chk_middle.Location = Point(35, 211)
+    chk_middle.Size = Size(110, 24)
+    chk_middle.Checked = True
+    form.Controls.Add(chk_middle)
+
+    chk_end = CheckBox()
+    chk_end.Text = "End"
+    chk_end.Location = Point(35, 236)
+    chk_end.Size = Size(110, 24)
+    chk_end.Checked = False
+    form.Controls.Add(chk_end)
+
+    ok_btn = Button()
+    ok_btn.Text = "OK"
+    ok_btn.DialogResult = DialogResult.OK
+    ok_btn.Location = Point(575, 335)
+    ok_btn.Size = Size(75, 28)
+    ok_btn.Anchor = AnchorStyles.Bottom | AnchorStyles.Right
+    form.Controls.Add(ok_btn)
+
+    cancel_btn = Button()
+    cancel_btn.Text = "Cancel"
+    cancel_btn.DialogResult = DialogResult.Cancel
+    cancel_btn.Location = Point(665, 335)
+    cancel_btn.Size = Size(75, 28)
+    cancel_btn.Anchor = AnchorStyles.Bottom | AnchorStyles.Right
+    form.Controls.Add(cancel_btn)
+
+    form.AcceptButton = ok_btn
+    form.CancelButton = cancel_btn
+
+    result = form.ShowDialog()
+    if result != DialogResult.OK:
+        return None
+
+    apply_mode = str(cmb_apply_mode.SelectedItem)
+    suffix_letter = (txt_letter.Text or "").strip().upper()
+    if len(suffix_letter) != 1 or not suffix_letter.isalpha():
+        forms.alert("Suffix Letter must be exactly one letter (A-Z).", exitscript=True)
+
+    pipe_number_text = (txt_number.Text or "").strip()
+    try:
+        pipe_number = int(pipe_number_text)
+    except Exception:
+        forms.alert("Pipe Number must be a whole number.", exitscript=True)
+    if pipe_number < 1:
+        forms.alert("Pipe Number must be greater than 0.", exitscript=True)
+
+    positions = []
+    if chk_beginning.Checked:
+        positions.append("beginning")
+    if chk_middle.Checked:
+        positions.append("middle")
+    if chk_end.Checked:
+        positions.append("end")
+    if not positions:
+        forms.alert("Select at least one label placement option.", exitscript=True)
+    tag_type_idx = cmb_tag_type.SelectedIndex
+    if tag_type_idx < 0 or tag_type_idx >= len(tag_types):
+        forms.alert("Select a tag family type.", exitscript=True)
+
+    return {
+        "apply_mode": apply_mode,
+        "tag_type": tag_types[tag_type_idx],
+        "suffix_letter": suffix_letter,
+        "pipe_number": pipe_number,
+        "label_positions": positions,
+    }
+
+
+def _prompt_root_pipe():
     while True:
-        if len(start_pipes) >= 6:
-            break
-        prompt = "Select start pipe #{} (ESC to finish)".format(len(start_pipes) + 1)
+        prompt = "Select the root pipe for this pipe tree."
         try:
             with forms.WarningBar(title=prompt):
                 ref = uidoc.Selection.PickObject(
@@ -1947,29 +2229,26 @@ def _prompt_start_pipes():
                     prompt,
                 )
         except Exception:
-            break
+            return None
         try:
             elem = doc.GetElement(ref.ElementId)
         except Exception:
             elem = None
         if not _is_pipe_like(elem):
             continue
-        elem_id = elem.Id.IntegerValue
-        if elem_id in selected_ids:
-            continue
-        start_pipes.append(elem)
-        selected_ids.append(elem_id)
         try:
-            uidoc.Selection.SetElementIds(List[DB.ElementId]([p.Id for p in start_pipes]))
+            uidoc.Selection.SetElementIds(List[DB.ElementId]([elem.Id]))
         except Exception:
             pass
-
-    if len(start_pipes) < 1 or len(start_pipes) > 6:
-        forms.alert(
-            "Select 1 to 6 start pipes. Detected {} pipe(s).".format(len(start_pipes)),
-            exitscript=True,
+        confirmed = forms.alert(
+            "Use pipe ID {} as the root pipe?".format(elem.Id.IntegerValue),
+            title="Confirm Root Pipe",
+            ok=False,
+            yes=True,
+            no=True,
         )
-    return start_pipes
+        if confirmed:
+            return elem
 
 
 
@@ -1978,33 +2257,19 @@ def main():
     if active_view.IsTemplate:
         forms.alert("Active view is a template. Open a working view first.", exitscript=True)
 
-    start_pipes = _prompt_start_pipes()
+    options = _prompt_naming_options()
+    if options is None:
+        forms.alert("Operation canceled.", exitscript=True)
 
-    suffix_letter = None
-    while not suffix_letter:
-        letters = [chr(c) for c in range(ord("A"), ord("Z") + 1)]
-        suffix_letter = forms.CommandSwitchWindow.show(
-            letters,
-            message="Select label suffix letter (A-Z).",
-        )
+    root_pipe = _prompt_root_pipe()
+    if root_pipe is None:
+        forms.alert("No root pipe selected.", exitscript=True)
 
-    output_mode = None
-    while not output_mode:
-        output_mode = forms.CommandSwitchWindow.show(
-            ["Tags", "Text Notes", "Both"],
-            message="Place labels as tags, text notes, or both?",
-        )
-
-    tag_type = None
-    text_type = None
-    if output_mode in ("Tags", "Both"):
-        tag_type = _pick_pipe_tag_type()
-        if tag_type is None:
-            forms.alert("No pipe tag types found in this project.", exitscript=True)
-    if output_mode in ("Text Notes", "Both"):
-        text_type = _pick_text_type()
-        if text_type is None:
-            forms.alert("No text note types found in this project.", exitscript=True)
+    apply_mode = options["apply_mode"]
+    tag_type = options["tag_type"]
+    suffix_letter = options["suffix_letter"]
+    pipe_number = options["pipe_number"]
+    label_positions = options["label_positions"]
 
     valves = _ball_valve_annotations(active_view)
 
@@ -2013,42 +2278,31 @@ def main():
     used_valve_ids = set()
     suppress_label_ids = set()
     ff_removed_label_ids = set()
-    for idx, start_pipe in enumerate(start_pipes, 1):
-        pid = start_pipe.Id.IntegerValue
-        if pid in label_map:
-            continue
-        start_label = "{}{}".format(idx, suffix_letter)
-        local_label_map = {}
-        local_pipe_map = {}
-        order_list, fitting_map, fitting_objs, local_suppress, local_ff_removed = _traverse_and_label(
-            start_pipe,
-            start_label,
-            local_label_map,
-            local_pipe_map,
-            valves,
-            active_view,
-            used_valve_ids,
-        )
-        _log_traversal(
-            start_label,
-            order_list,
-            local_label_map,
-            local_pipe_map,
-            fitting_map,
-            fitting_objs,
-        )
-        if local_suppress:
-            suppress_label_ids.update(local_suppress)
-        if local_ff_removed:
-            ff_removed_label_ids.update(local_ff_removed)
-        for lpid, lbl in local_label_map.items():
-            if lpid in label_map:
-                continue
-            label_map[lpid] = lbl
-            pipe_map[lpid] = local_pipe_map.get(lpid)
+    start_label = "{}{}".format(pipe_number, suffix_letter)
+    order_list, fitting_map, fitting_objs, local_suppress, local_ff_removed = _traverse_and_label(
+        root_pipe,
+        start_label,
+        label_map,
+        pipe_map,
+        valves,
+        active_view,
+        used_valve_ids,
+    )
+    _log_traversal(
+        start_label,
+        order_list,
+        label_map,
+        pipe_map,
+        fitting_map,
+        fitting_objs,
+    )
+    if local_suppress:
+        suppress_label_ids.update(local_suppress)
+    if local_ff_removed:
+        ff_removed_label_ids.update(local_ff_removed)
 
     if not label_map:
-        forms.alert("No pipes were labeled from the selected start pipes.", exitscript=True)
+        forms.alert("No pipes were labeled from the selected root pipe.", exitscript=True)
 
     # Final cleanup: remove any labels that were created by stripping FF from identity data.
     if ff_removed_label_ids:
@@ -2064,19 +2318,32 @@ def main():
     if not label_map:
         forms.alert("All candidate labels were removed by FF cleanup.", exitscript=True)
 
-    marks_set = _set_identity_marks(label_map, pipe_map)
-    tag_count = 0
-    text_count = 0
-    if output_mode in ("Tags", "Both"):
-        tag_count = _place_pipe_tags(label_map, pipe_map, tag_type, active_view, suppress_label_ids)
-    if output_mode in ("Text Notes", "Both"):
-        text_count = _place_text_notes(label_map, pipe_map, text_type, active_view, suppress_label_ids)
+    deleted_existing_tags = 0
+    tag_target_ids = None
+    if apply_mode == "Redo Tags + Identity Marks":
+        deleted_existing_tags = _delete_pipe_tags_for_pipe_tree(root_pipe, active_view)
+        marks_set = _set_identity_marks(label_map, pipe_map, overwrite_existing=True)
+    else:
+        marks_set = _set_identity_marks(label_map, pipe_map, overwrite_existing=False)
+        existing_tagged_ids = _collect_tagged_pipe_ids_in_view(active_view)
+        tag_target_ids = set(label_map.keys()) - existing_tagged_ids
+
+    tag_count = _place_pipe_tags(
+        label_map,
+        pipe_map,
+        tag_type,
+        active_view,
+        label_positions=label_positions,
+        target_pipe_ids=tag_target_ids,
+        suppress_ids=suppress_label_ids,
+    )
 
     forms.alert(
-        "Applied {} label(s). Tags: {}. Text notes: {}.".format(
+        "Applied {} identity mark(s). Placed {} tag(s). Existing tags removed: {}. Mode: {}.".format(
             marks_set,
             tag_count,
-            text_count,
+            deleted_existing_tags,
+            apply_mode,
         )
     )
 

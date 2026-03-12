@@ -39,6 +39,7 @@ MODEL_MATCH_THRESHOLD = 0.45
 SHEET_NAME = "Circuit Schedule"
 HEADER_SCAN_ROWS = 60
 REQUIRED_MANUFACTURER = "KRACK"
+SKIP_SPACE_LABEL = "<Do not place in any space>"
 
 DESC_KEYS = ("description", "desc", "space", "spacename")
 COUNT_KEYS = ("coilcount", "coils", "coil", "count")
@@ -435,7 +436,7 @@ def _prompt_space_mapping(descriptions, spaces):
             label = "{} ({})".format(label, space.get("key"))
         label_map[label] = space
         labels.append(label)
-    labels = sorted(labels, key=lambda s: s.lower())
+    labels = [SKIP_SPACE_LABEL] + sorted(labels, key=lambda s: s.lower())
 
     form = Form()
     form.Text = "Map Descriptions to Spaces"
@@ -460,24 +461,10 @@ def _prompt_space_mapping(descriptions, spaces):
     col_space.DataSource = labels
     grid.Columns.Add(col_space)
 
-    scored = []
     for desc in descriptions:
-        best_label = None
-        best_score = 0.0
-        for space in spaces:
-            score = 0.0
-            for key in _space_keys(space):
-                score = max(score, _text_similarity(desc, key))
-            if score > best_score:
-                best_score = score
-                best_label = _space_display(space)
-        scored.append((desc, best_label))
-
-    for desc, best_label in scored:
         idx = grid.Rows.Add()
         grid.Rows[idx].Cells[0].Value = desc
-        if best_label in label_map:
-            grid.Rows[idx].Cells[1].Value = best_label
+        grid.Rows[idx].Cells[1].Value = SKIP_SPACE_LABEL
 
     ok_btn = Button()
     ok_btn.Text = "OK"
@@ -511,6 +498,9 @@ def _prompt_space_mapping(descriptions, spaces):
             mapping[desc_text] = None
             continue
         space_label = str(space_val)
+        if space_label == SKIP_SPACE_LABEL:
+            mapping[desc_text] = None
+            continue
         mapping[desc_text] = label_map.get(space_label)
 
     return mapping
