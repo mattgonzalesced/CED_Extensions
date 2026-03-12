@@ -2,6 +2,8 @@
 
 Reference for all tools exposed by the **user-Revit MCP Server**. Use this so the AI (or other consumers) knows what is available and how to call it.
 
+if you need to add mcpserver to claude 
+claude mcp add revit-mcp-server -- python "C:\Users\m.gonzales\AppData\Roaming\pyRevit\Extensions\revit-mcp-python-master.extension\main.py"
 ---
 
 ## Model & status
@@ -183,6 +185,48 @@ Reference for all tools exposed by the **user-Revit MCP Server**. Use this so th
 | script_code | string | Yes      | Full IronPython 2.7–compatible script content            |
 
 **Returns:** Result string (e.g. success message and path to `script.py`).
+
+---
+
+## How to see circuit loads (no dedicated tool)
+
+There is no dedicated “list circuits” or “evaluate circuits” tool. Use **execute_revit_code** with the Revit API below.
+
+### Correct Revit API for electrical circuits
+
+- **Connected elements:** Use **`circuit.Elements`** — the collection of terminal elements (fixtures, receptacles, etc.) on the circuit. Count with `len(list(circuit.Elements))`. Do **not** use `NumConnections`; it does not reflect connected loads and can be 0 even when loads exist.
+- **Load:** Use **`circuit.ApparentLoad`** (in Revit internal units, typically VA). Do **not** rely on a property named `Load` for this.
+- **Other useful properties:** `circuit.LoadName`, `circuit.CircuitNumber`, `circuit.BaseEquipment` (panel), `circuit.PanelName`, `circuit.IsEmpty`.
+
+### Example: list all circuits with element count and load
+
+Pass this (or adapt it) as the `code` argument to **execute_revit_code**:
+
+```python
+import clr
+clr.AddReference('RevitAPI')
+from Autodesk.Revit.DB import FilteredElementCollector, BuiltInCategory, BuiltInParameter
+from Autodesk.Revit.DB.Electrical import ElectricalSystem
+
+doc = __revit__.ActiveUIDocument.Document
+all_circuits = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_ElectricalCircuit).WhereElementIsNotElementType().ToElements()
+
+for circ in all_circuits:
+    if not circ: continue
+    panel_name = 'N/A'
+    if circ.BaseEquipment:
+        p = circ.BaseEquipment.get_Parameter(BuiltInParameter.RBS_ELEC_PANEL_NAME)
+        if p: panel_name = p.AsString() or 'N/A'
+    elem_count = len(list(circ.Elements)) if circ.Elements else 0
+    load = getattr(circ, 'ApparentLoad', 0)
+    load_name = getattr(circ, 'LoadName', '') or ''
+    print('{} | Panel: {} | Elements: {} | ApparentLoad: {} | LoadName: {}'.format(
+        circ.Name, panel_name, elem_count, load, load_name))
+```
+
+### When to add a dedicated tool
+
+If you often need circuit summaries or load checks, consider adding a **get_circuit_summary** (or **evaluate_circuits**) tool to the Revit MCP server that runs this logic and returns structured JSON. Until then, the snippet above and **execute_revit_code** are sufficient.
 
 ---
 
