@@ -655,60 +655,72 @@ def _apply_mapping_results(mapping_rows, mapping_results):
         if not child_led_id:
             continue
         row_by_child[child_led_id] = row
+    decisions_by_child = {}
     for decision in mapping_results or []:
         child_led_id = decision.get("child_led_id")
-        row = row_by_child.get(child_led_id)
-        if not row:
+        if not child_led_id or child_led_id not in row_by_child:
             continue
-        mode = decision.get("mode") or FLAG_STATIC
-        target = decision.get("target") or ""
-        param_name = decision.get("param_name") or ""
+        decisions_by_child.setdefault(child_led_id, []).append(decision)
+
+    for child_led_id, row in row_by_child.items():
         params = row.get("params") or {}
         current_values = row.get("current_values") or {}
-        if not param_name:
-            continue
-        if param_name not in params:
+
+        # Treat selected rows as the full tracked set; preserve special metadata parameters.
+        preserved = {}
+        for key in list(params.keys()):
+            if key in ELEMENT_LINKER_PARAM_NAMES:
+                preserved[key] = params.get(key)
+        params.clear()
+        params.update(preserved)
+
+        for decision in decisions_by_child.get(child_led_id, []):
+            mode = decision.get("mode") or FLAG_STATIC
+            target = decision.get("target") or ""
+            param_name = decision.get("param_name") or ""
+            if not param_name:
+                continue
+            if mode == FLAG_BYPARENT:
+                params[param_name] = 'parent_parameter: "{}"'.format(_escape_quotes(target))
+                continue
+            if mode == FLAG_BYSIBLING:
+                sibling_led_id, sibling_param = (row.get("sibling_lookup") or {}).get(target, (None, None))
+                if sibling_led_id and sibling_param:
+                    params[param_name] = 'sibling_parameter: {}: "{}"'.format(
+                        sibling_led_id,
+                        _escape_quotes(sibling_param),
+                    )
+                continue
             params[param_name] = current_values.get(param_name, "")
-        if mode == FLAG_BYPARENT:
-            params[param_name] = 'parent_parameter: "{}"'.format(_escape_quotes(target))
-            continue
-        if mode == FLAG_BYSIBLING:
-            sibling_led_id, sibling_param = (row.get("sibling_lookup") or {}).get(target, (None, None))
-            if sibling_led_id and sibling_param:
-                params[param_name] = 'sibling_parameter: {}: "{}"'.format(
-                    sibling_led_id,
-                    _escape_quotes(sibling_param),
-                )
-            continue
-        params[param_name] = current_values.get(param_name, params.get(param_name, ""))
 
 
 def _prompt_child_parameter_flags(children_contexts, parent_param_names):
     mapping_rows = _build_mapping_rows(children_contexts, parent_param_names)
     if not mapping_rows:
-        return
+        return True
     ui_module = _load_mapping_ui_module()
     if ui_module is None:
-        return
+        return False
     xaml_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "EstablishRelationshipMappingWindow.xaml")
     )
     if not os.path.exists(xaml_path):
         forms.alert("Mapping UI XAML not found:\n{}".format(xaml_path), title=TITLE)
-        return
+        return False
     try:
         window = ui_module.RelationshipMappingWindow(xaml_path, mapping_rows, TITLE)
     except Exception as exc:
         forms.alert("Failed to create mapping UI:\n\n{}".format(exc), title=TITLE)
-        return
+        return False
     try:
         applied = bool(window.ShowDialog())
     except Exception as exc:
         forms.alert("Failed to display mapping UI:\n\n{}".format(exc), title=TITLE)
-        return
+        return False
     if not applied:
-        return
+        return False
     _apply_mapping_results(mapping_rows, window.results or [])
+    return True
 
 
 def _create_parent_led_entry(
@@ -837,9 +849,6 @@ def main():
 
     parent_rotation = _get_rotation(parent_elem)
     parent_param_names = _collect_all_parameter_names(parent_elem)
-    for key in sorted((_collect_profile_params(parent_elem) or {}).keys()):
-        if key not in parent_param_names:
-            parent_param_names.append(key)
 
     forms.alert("Select one or more child equipment elements.", title=TITLE)
     try:
@@ -944,7 +953,9 @@ def main():
             forms.alert("No valid child entries were captured.", title=TITLE)
             return
 
-        _prompt_child_parameter_flags(children_contexts, parent_param_names)
+        mappings_applied = _prompt_child_parameter_flags(children_contexts, parent_param_names)
+        if not mappings_applied:
+            return
 
         if metadata_updates:
             txn_name = "Establish Relationship: Store Element Linker metadata ({})".format(len(metadata_updates))

@@ -20,6 +20,7 @@ class RelationshipMappingWindow(forms.WPFWindow):
         self._line_items = []
         self._line_index = 1
         self._plus_meta = {}
+        self._minus_meta = {}
         self._param_meta = {}
         self._mode_meta = {}
         self._target_meta = {}
@@ -29,7 +30,7 @@ class RelationshipMappingWindow(forms.WPFWindow):
         if header is not None:
             header.Text = (
                 "Configure parameter mappings for all selected children. "
-                "Use + to add more tracked parameters per child."
+                "Use + / - to add or remove tracked parameters per child."
             )
 
         for child_row in self._child_rows:
@@ -86,12 +87,8 @@ class RelationshipMappingWindow(forms.WPFWindow):
     def _ordered_parent_options(self, line):
         child_row = line.get("child_row") or {}
         parent_param_names = list(child_row.get("parent_param_names") or [])
-        selected_param = line.get("param_name") or ""
         options = []
         seen = set()
-        if selected_param:
-            options.append(selected_param)
-            seen.add(selected_param.lower())
         for pname in parent_param_names:
             key = (pname or "").lower()
             if not key or key in seen:
@@ -146,6 +143,16 @@ class RelationshipMappingWindow(forms.WPFWindow):
         self._line_items.insert(index + 1, new_line)
         self._render_grid()
 
+    def _on_remove_line(self, sender, args):
+        line = self._minus_meta.get(sender)
+        if not line:
+            return
+        try:
+            self._line_items.remove(line)
+        except Exception:
+            return
+        self._render_grid()
+
     def _on_param_changed(self, sender, args):
         line = self._param_meta.get(sender)
         if not line:
@@ -177,11 +184,13 @@ class RelationshipMappingWindow(forms.WPFWindow):
         grid.RowDefinitions.Clear()
         grid.ColumnDefinitions.Clear()
         self._plus_meta = {}
+        self._minus_meta = {}
         self._param_meta = {}
         self._mode_meta = {}
         self._target_meta = {}
 
         columns = [
+            "",
             "",
             "Child",
             "LED ID",
@@ -190,7 +199,7 @@ class RelationshipMappingWindow(forms.WPFWindow):
             "Mode",
             "Source",
         ]
-        widths = [36, 280, 220, 280, 260, 140, 360]
+        widths = [36, 36, 280, 220, 280, 260, 140, 360]
 
         for index, _ in enumerate(columns):
             col_def = ColumnDefinition()
@@ -228,18 +237,29 @@ class RelationshipMappingWindow(forms.WPFWindow):
             Grid.SetColumn(add_btn, 0)
             grid.Children.Add(add_btn)
 
+            remove_btn = Button()
+            remove_btn.Content = "-"
+            remove_btn.Width = 24
+            remove_btn.Height = 22
+            remove_btn.Margin = Thickness(0, 0, 6, 2)
+            remove_btn.Click += self._on_remove_line
+            self._minus_meta[remove_btn] = line
+            Grid.SetRow(remove_btn, row_idx)
+            Grid.SetColumn(remove_btn, 1)
+            grid.Children.Add(remove_btn)
+
             child_cell = TextBlock()
             child_cell.Text = child_row.get("child_label") or ""
             child_cell.Margin = Thickness(0, 0, 6, 2)
             Grid.SetRow(child_cell, row_idx)
-            Grid.SetColumn(child_cell, 1)
+            Grid.SetColumn(child_cell, 2)
             grid.Children.Add(child_cell)
 
             led_cell = TextBlock()
             led_cell.Text = child_row.get("child_led_id") or ""
             led_cell.Margin = Thickness(0, 0, 6, 2)
             Grid.SetRow(led_cell, row_idx)
-            Grid.SetColumn(led_cell, 2)
+            Grid.SetColumn(led_cell, 3)
             grid.Children.Add(led_cell)
 
             param_combo = ComboBox()
@@ -254,14 +274,14 @@ class RelationshipMappingWindow(forms.WPFWindow):
             param_combo.SelectionChanged += self._on_param_changed
             self._param_meta[param_combo] = line
             Grid.SetRow(param_combo, row_idx)
-            Grid.SetColumn(param_combo, 3)
+            Grid.SetColumn(param_combo, 4)
             grid.Children.Add(param_combo)
 
             value_cell = TextBlock()
             value_cell.Text = self._current_value_text(line)
             value_cell.Margin = Thickness(0, 0, 6, 2)
             Grid.SetRow(value_cell, row_idx)
-            Grid.SetColumn(value_cell, 4)
+            Grid.SetColumn(value_cell, 5)
             grid.Children.Add(value_cell)
 
             mode_combo = ComboBox()
@@ -276,7 +296,7 @@ class RelationshipMappingWindow(forms.WPFWindow):
             mode_combo.SelectionChanged += self._on_mode_changed
             self._mode_meta[mode_combo] = line
             Grid.SetRow(mode_combo, row_idx)
-            Grid.SetColumn(mode_combo, 5)
+            Grid.SetColumn(mode_combo, 6)
             grid.Children.Add(mode_combo)
 
             source_combo = ComboBox()
@@ -294,7 +314,7 @@ class RelationshipMappingWindow(forms.WPFWindow):
             source_combo.SelectionChanged += self._on_target_changed
             self._target_meta[source_combo] = line
             Grid.SetRow(source_combo, row_idx)
-            Grid.SetColumn(source_combo, 6)
+            Grid.SetColumn(source_combo, 7)
             grid.Children.Add(source_combo)
 
             row_idx += 1
