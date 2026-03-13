@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # class LoadDevice(object):
 #     def __int__(self):
 #

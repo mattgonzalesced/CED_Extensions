@@ -1,14 +1,28 @@
 # -*- coding: utf-8 -*-
 import Autodesk.Revit.DB.Electrical as DBE
 from pyrevit import revit, DB, forms, script
-from Snippets import _elecutils as eu
+from pyrevit.compat import get_elementid_value_func, get_elementid_from_value_func
 
+from Snippets import _elecutils as eu
 
 doc = revit.doc
 uidoc = revit.uidoc
 logger = script.get_logger()
 output = script.get_output()
 output.close_others()
+_get_elid_value = get_elementid_value_func()
+_get_elid_from_value = get_elementid_from_value_func()
+
+
+def _idval(item):
+    try:
+        return int(_get_elid_value(item))
+    except Exception:
+        return int(getattr(item, "IntegerValue", 0))
+
+
+def _idfrom(value):
+    return _get_elid_from_value(int(value))
 
 
 def get_circuit_voltage_poles(circuit):
@@ -28,7 +42,7 @@ def get_start_slot(circuit):
 
 
 def format_circuit_label(circuit):
-    ckt_id = circuit.Id.IntegerValue
+    ckt_id = _idval(circuit.Id)
     panel_name = circuit.BaseEquipment.Name if circuit.BaseEquipment else "No Panel"
     circuit_number = circuit.CircuitNumber or ""
     load_name = (circuit.LoadName or "").strip()
@@ -135,7 +149,7 @@ def dedupe_circuits(circuits):
     for ckt in circuits or []:
         if not isinstance(ckt, DBE.ElectricalSystem):
             continue
-        cid = ckt.Id.IntegerValue
+        cid = _idval(ckt.Id)
         if cid in seen_ids:
             continue
         unique.append(ckt)
@@ -168,12 +182,12 @@ def main():
     if not all_circuits:
         forms.alert("No circuits found in the model.", exitscript=True)
 
-    all_circuit_ids = set([c.Id.IntegerValue for c in all_circuits])
+    all_circuit_ids = set([_idval(c.Id) for c in all_circuits])
 
     selected_circuits = get_selected_circuits()
     selected_circuits = [
         c for c in selected_circuits
-        if c.Id.IntegerValue in all_circuit_ids
+        if _idval(c.Id) in all_circuit_ids
         and c.CircuitType not in [DBE.CircuitType.Spare, DBE.CircuitType.Space]
     ]
 
@@ -233,7 +247,7 @@ def main():
     if not circuits_to_merge:
         script.exit()
 
-    main_elements = set([el.Id.IntegerValue for el in get_circuit_elements(main_circuit)])
+    main_elements = set([_idval(el.Id) for el in get_circuit_elements(main_circuit)])
 
     merged_rows = []
     skipped_rows = []
@@ -244,11 +258,11 @@ def main():
 
     try:
         for src in circuits_to_merge:
-            src_id_int = src.Id.IntegerValue
-            src_id = DB.ElementId(src_id_int)
+            src_id_int = _idval(src.Id)
+            src_id = _idfrom(src_id_int)
             src_link = output.linkify(src_id)
 
-            src_elements = [el for el in get_circuit_elements(src) if el.Id.IntegerValue not in main_elements]
+            src_elements = [el for el in get_circuit_elements(src) if _idval(el.Id) not in main_elements]
 
             if not src_elements:
                 skipped_rows.append([src_link, 0, "No elements to move"])
@@ -264,7 +278,7 @@ def main():
                     doc.Regenerate()
 
                     for el in src_elements:
-                        main_elements.add(el.Id.IntegerValue)
+                        main_elements.add(_idval(el.Id))
 
                     if not src.IsValidObject:
                         merged_rows.append([src_link, len(src_elements), "Merged (source invalid/deleted)"])

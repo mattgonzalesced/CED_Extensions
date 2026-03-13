@@ -2,6 +2,10 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <SolidColorBrush x:Key="CED.Brush.PrimaryBlue" Color="{DynamicResource CED.Color.PrimaryBlue}"/>
   <SolidColorBrush x:Key="CED.Brush.Accent" Color="{DynamicResource CED.Color.Accent}"/>
+  <SolidColorBrush x:Key="CED.Brush.AccentBlue" Color="{DynamicResource CED.Color.AccentBlue}"/>
+  <SolidColorBrush x:Key="CED.Brush.AccentRed" Color="{DynamicResource CED.Color.AccentRed}"/>
+  <SolidColorBrush x:Key="CED.Brush.AccentGreen" Color="{DynamicResource CED.Color.AccentGreen}"/>
+  <SolidColorBrush x:Key="CED.Brush.AccentNeutral" Color="{DynamicResource CED.Color.AccentNeutral}"/>
   <SolidColorBrush x:Key="CED.Brush.SecondaryRed" Color="{DynamicResource CED.Color.SecondaryRed}"/>
   <SolidColorBrush x:Key="CED.Brush.TertiaryGreen" Color="{DynamicResource CED.Color.TertiaryGreen}"/>
   <SolidColorBrush x:Key="CED.Brush.NeutralDark" Color="{DynamicResource CED.Color.NeutralDark}"/>
@@ -19,6 +23,7 @@
   <SolidColorBrush x:Key="CED.Brush.SearchBackground" Color="{DynamicResource CED.Color.SearchBackground}"/>
   <SolidColorBrush x:Key="CED.Brush.IconMuted" Color="{DynamicResource CED.Color.IconMuted}"/>
   <SolidColorBrush x:Key="CED.Brush.PlaceholderText" Color="{DynamicResource CED.Color.PlaceholderText}"/>
+  <SolidColorBrush x:Key="CED.Brush.ListItemBackground" Color="{DynamicResource CED.Color.ListItemBackground}"/>
 
   <SolidColorBrush x:Key="CED.Brush.ListBorder" Color="{DynamicResource CED.Color.ListBorder}"/>
   <SolidColorBrush x:Key="CED.Brush.ListBackground" Color="{DynamicResource CED.Color.ListBackground}"/>
@@ -63,6 +68,7 @@
   <SolidColorBrush x:Key="CED.Brush.BadgeStd08Text" Color="{DynamicResource CED.Color.BadgeStd08Text}"/>
 
   <SolidColorBrush x:Key="CED.Brush.DataGridBorder" Color="{DynamicResource CED.Color.DataGridBorder}"/>
+  <SolidColorBrush x:Key="CED.Brush.DataGridBackground" Color="{DynamicResource CED.Color.DataGridBackground}"/>
   <SolidColorBrush x:Key="CED.Brush.DataGridHeaderBackground" Color="{DynamicResource CED.Color.DataGridHeaderBackground}"/>
   <SolidColorBrush x:Key="CED.Brush.DataGridHeaderForeground" Color="{DynamicResource CED.Color.DataGridHeaderForeground}"/>
   <SolidColorBrush x:Key="CED.Brush.DataGridHeaderBorder" Color="{DynamicResource CED.Color.DataGridHeaderBorder}"/>
@@ -89,6 +95,11 @@
   <SolidColorBrush x:Key="CED.Brush.SectionDivider" Color="{DynamicResource CED.Color.SectionDivider}"/>
   <SolidColorBrush x:Key="CED.Brush.CircuitItemHoverBackground" Color="{DynamicResource CED.Color.CircuitItemHoverBackground}"/>
   <SolidColorBrush x:Key="CED.Brush.CircuitItemSelectedBackground" Color="{DynamicResource CED.Color.CircuitItemSelectedBackground}"/>
+  <SolidColorBrush x:Key="CED.Brush.TabActiveBackground" Color="{DynamicResource CED.Color.TabActiveBackground}"/>
+  <SolidColorBrush x:Key="CED.Brush.TabInactiveBackground" Color="{DynamicResource CED.Color.TabInactiveBackground}"/>
+  <SolidColorBrush x:Key="CED.Brush.TabHoverBackground" Color="{DynamicResource CED.Color.TabHoverBackground}"/>
+  <SolidColorBrush x:Key="CED.Brush.TabActiveForeground" Color="{DynamicResource CED.Color.TabActiveForeground}"/>
+  <SolidColorBrush x:Key="CED.Brush.TabInactiveForeground" Color="{DynamicResource CED.Color.TabInactiveForeground}"/>
   <SolidColorBrush x:Key="CED.Brush.ApplyBackground" Color="{DynamicResource CED.Color.ApplyBackground}"/>
   <SolidColorBrush x:Key="CED.Brush.ApplyBorder" Color="{DynamicResource CED.Color.ApplyBorder}"/>
 </ResourceDictionary>

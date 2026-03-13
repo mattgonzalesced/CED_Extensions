@@ -5,9 +5,24 @@
 from datetime import datetime
 
 from pyrevit import DB, forms, script
+from pyrevit.compat import get_elementid_value_func, get_elementid_from_value_func
 
 from CEDElectrical.Domain import settings_manager
 from CEDElectrical.Model.CircuitBranch import CircuitBranch
+
+_get_elid_value = get_elementid_value_func()
+_get_elid_from_value = get_elementid_from_value_func()
+
+
+def _elid_value(item):
+    try:
+        return int(_get_elid_value(item))
+    except Exception:
+        return int(getattr(item, 'IntegerValue', 0))
+
+
+def _elid_from_value(value):
+    return _get_elid_from_value(int(value))
 
 
 class CalculateCircuitsOperation(object):
@@ -102,6 +117,8 @@ class CalculateCircuitsOperation(object):
                     self.alert_store.clear_alert_payload(branch.circuit)
                 else:
                     self.alert_store.write_alert_payload(branch.circuit, alert_payload)
+
+            self._write_locked_sync_payloads(doc, locked_rows)
 
             tx.Commit()
             if tg is not None:
@@ -205,7 +222,7 @@ class CalculateCircuitsOperation(object):
             'version': 1,
             'generated_utc': datetime.utcnow().isoformat() + 'Z',
             'circuit': {
-                'id': branch.circuit.Id.IntegerValue,
+                'id': _elid_value(branch.circuit.Id),
                 'name': branch.name,
                 'panel': branch.panel,
                 'number': branch.circuit_number,
@@ -278,12 +295,46 @@ class CalculateCircuitsOperation(object):
             for definition, severity, group, message in notices.items:
                 if definition is not None and getattr(definition, 'persistent', True):
                     continue
+                definition_id = ''
+                try:
+                    definition_id = definition.GetId() if definition else ''
+                except Exception:
+                    definition_id = ''
                 rows.append({
                     'panel': branch.panel or '',
                     'number': branch.circuit_number or '',
                     'load_name': branch.load_name or '',
-                    'severity': severity or 'NONE',
                     'group': group or 'Other',
+                    'definition_id': definition_id or '-',
                     'message': message or '',
                 })
         return rows
+
+    def _write_locked_sync_payloads(self, doc, locked_rows):
+        for row in list(locked_rows or []):
+            try:
+                if not bool(row.get('sync_writeback', False)):
+                    continue
+                circuit_id = int(row.get('circuit_id') or 0)
+                if circuit_id <= 0:
+                    continue
+                circuit = doc.GetElement(_elid_from_value(circuit_id))
+                if circuit is None:
+                    continue
+                payload = self.alert_store.read_alert_payload(circuit) or {}
+                if not isinstance(payload, dict):
+                    payload = {}
+                alerts = payload.get('alerts')
+                payload['alerts'] = alerts if isinstance(alerts, list) else []
+                hidden = payload.get('hidden_definition_ids')
+                payload['hidden_definition_ids'] = hidden if isinstance(hidden, list) else []
+                payload['version'] = payload.get('version') or 1
+                payload['sync_lock'] = {
+                    'blocked': True,
+                    'generated_utc': datetime.utcnow().isoformat() + 'Z',
+                    'circuit_owner': row.get('circuit_owner') or '',
+                    'device_owner': row.get('device_owner') or '',
+                }
+                self.alert_store.write_alert_payload(circuit, payload)
+            except Exception:
+                continue

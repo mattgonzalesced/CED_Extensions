@@ -1826,7 +1826,7 @@ class CircuitBranch(object):
         # WARNINGS ONLY (NO FAILURES)
         # -------------------------------------------------
 
-        if hit_lug_size_limit:
+        if max_size and self._is_wire_larger_than_limit(self.cable.hot_size, max_size):
             self.log_warning(
                 Alerts.BreakerLugSizeLimitCalc(self.cable.hot_size, rating)
             )

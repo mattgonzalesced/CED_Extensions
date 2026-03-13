@@ -2,6 +2,10 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <Color x:Key="CED.Color.PrimaryBlue">#3B8ED8</Color>
   <Color x:Key="CED.Color.Accent">#3B8ED8</Color>
+  <Color x:Key="CED.Color.AccentBlue">#3B8ED8</Color>
+  <Color x:Key="CED.Color.AccentRed">#D15762</Color>
+  <Color x:Key="CED.Color.AccentGreen">#58B95E</Color>
+  <Color x:Key="CED.Color.AccentNeutral">#9DB1C8</Color>
   <Color x:Key="CED.Color.SecondaryRed">#D15762</Color>
   <Color x:Key="CED.Color.TertiaryGreen">#58B95E</Color>
   <Color x:Key="CED.Color.NeutralDark">#E6E6E6</Color>
@@ -19,6 +23,7 @@
   <Color x:Key="CED.Color.SearchBackground">#1F252C</Color>
   <Color x:Key="CED.Color.IconMuted">#A8B6C6</Color>
   <Color x:Key="CED.Color.PlaceholderText">#7E8C9A</Color>
+  <Color x:Key="CED.Color.ListItemBackground">#1F252C</Color>
 
   <Color x:Key="CED.Color.ListBorder">#252C34</Color>
   <Color x:Key="CED.Color.ListBackground">#171C22</Color>
@@ -38,6 +43,7 @@
   <Color x:Key="CED.Color.BadgeWarningText">#F7E2CF</Color>
 
   <Color x:Key="CED.Color.DataGridBorder">#3A434F</Color>
+  <Color x:Key="CED.Color.DataGridBackground">#171C22</Color>
   <Color x:Key="CED.Color.DataGridHeaderBackground">#2B333D</Color>
   <Color x:Key="CED.Color.DataGridHeaderForeground">#DDE6F2</Color>
   <Color x:Key="CED.Color.DataGridHeaderBorder">#4A5666</Color>
@@ -45,7 +51,7 @@
   <Color x:Key="CED.Color.DataGridHeaderPressedBackground">#415062</Color>
   <Color x:Key="CED.Color.DataGridAltRow">#232A32</Color>
   <Color x:Key="CED.Color.DataGridRowForeground">#D7E0EB</Color>
-  <Color x:Key="CED.Color.DataGridReadOnlyBackground">#2A333D</Color>
+  <Color x:Key="CED.Color.DataGridReadOnlyBackground">#232C35</Color>
   <Color x:Key="CED.Color.DataGridReadOnlyForeground">#C7D1DD</Color>
   <Color x:Key="CED.Color.DataGridCellBorder">#36404B</Color>
   <Color x:Key="CED.Color.DataGridDividerStrong">#586575</Color>
@@ -64,6 +70,11 @@
   <Color x:Key="CED.Color.SectionDivider">#435160</Color>
   <Color x:Key="CED.Color.CircuitItemHoverBackground">#292F36</Color>
   <Color x:Key="CED.Color.CircuitItemSelectedBackground">#3B4147</Color>
+  <Color x:Key="CED.Color.TabActiveBackground">#171C22</Color>
+  <Color x:Key="CED.Color.TabInactiveBackground">#2B333D</Color>
+  <Color x:Key="CED.Color.TabHoverBackground">#354150</Color>
+  <Color x:Key="CED.Color.TabActiveForeground">#E5EDF9</Color>
+  <Color x:Key="CED.Color.TabInactiveForeground">#9EACBD</Color>
 
   <Color x:Key="CED.Color.BadgeStd01Background">#2B456A</Color>
   <Color x:Key="CED.Color.BadgeStd01Border">#D5E7FF</Color>

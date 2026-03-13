@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 
 # Define the base path you provided

@@ -1,8 +1,20 @@
+# -*- coding: utf-8 -*-
 import Autodesk.Revit.DB.Electrical as DBE
 from Autodesk.Revit.DB import FilteredElementCollector, Electrical, Transaction, BuiltInCategory, BuiltInParameter
 from pyrevit import script, forms, DB
+from pyrevit.compat import get_elementid_value_func
 
 logger = script.get_logger()
+_get_elid_value = get_elementid_value_func()
+
+
+def _elid_value(item):
+    try:
+        return int(_get_elid_value(item))
+    except Exception:
+        return int(getattr(item, "IntegerValue", 0))
+
+
 #design option filter
 option_filter = DB.ElementDesignOptionFilter(DB.ElementId.InvalidElementId)
 def get_all_panels(doc, el_id=False):
@@ -245,7 +257,7 @@ def get_circuits_from_panel(panel, doc, sort_method=0, include_spares=True):
 
             # Store data in a list of dictionaries
             circuits.append({
-                'element_id': circuit.Id.IntegerValue,
+                'element_id': _elid_value(circuit.Id),
                 'circuit_number': circuit_number,
                 'load_name': load_name,
                 'start_slot': start_slot,
@@ -293,7 +305,7 @@ def pick_circuits_from_list(doc, select_multiple=False, include_spares_and_space
             rating = "N/A"
             pole = "?"
 
-        ckt_id = ckt.Id.IntegerValue
+        ckt_id = _elid_value(ckt.Id)
         base_equipment = ckt.BaseEquipment
         panel_name = getattr(base_equipment, 'Name', None) if base_equipment else None
         panel_name = panel_name or " No Panel"

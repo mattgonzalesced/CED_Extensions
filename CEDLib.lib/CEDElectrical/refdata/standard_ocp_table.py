@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 BREAKER_FRAME_SWITCH_TABLE = {
     15: {'frame': 30, 'switch': 30},
     20: {'frame': 30, 'switch': 30},

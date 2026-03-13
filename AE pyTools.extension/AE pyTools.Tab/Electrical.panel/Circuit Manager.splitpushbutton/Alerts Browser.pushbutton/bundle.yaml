@@ -1,7 +1,8 @@
 title: "Alerts Browser"
 
 tooltip: >-
-  Browse all circuits with alerts and inspect alert records for one circuit at a time.
+  Modeless alerts triage window. Select a circuit, inspect active or hidden alerts, select panel/circuit/device in model,
+  and recalculate the selected circuit when ownership allows.
 
 author: >-
   AEvelina

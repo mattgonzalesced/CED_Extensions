@@ -1,4 +1,4 @@
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         Title="Auto Size Breaker"
         Height="560"
         Width="1300"
@@ -9,7 +9,7 @@
         PreviewMouseDown="window_preview_mouse_down">
   <Window.Resources>
     <ResourceDictionary>
-</ResourceDictionary>
+    </ResourceDictionary>
   </Window.Resources>
 
   <Grid Margin="{DynamicResource CED.Thickness.ContentMargin}">
@@ -127,4 +127,5 @@
     </Grid>
   </Grid>
 </Window>
+
 

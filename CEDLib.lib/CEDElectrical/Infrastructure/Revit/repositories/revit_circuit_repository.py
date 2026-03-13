@@ -3,6 +3,22 @@
 
 import Autodesk.Revit.DB.Electrical as DBE
 from pyrevit import DB
+from pyrevit.compat import get_elementid_value_func, get_elementid_from_value_func
+
+
+_get_elid_value = get_elementid_value_func()
+_get_elid_from_value = get_elementid_from_value_func()
+
+
+def _elid_value(item):
+    try:
+        return int(_get_elid_value(item))
+    except Exception:
+        return int(getattr(item, "IntegerValue", 0))
+
+
+def _elid_from_value(value):
+    return _get_elid_from_value(int(value))
 
 
 class RevitCircuitRepository(object):
@@ -15,7 +31,7 @@ class RevitCircuitRepository(object):
             circuits = []
             for raw_id in circuit_ids:
                 try:
-                    el = doc.GetElement(DB.ElementId(int(raw_id)))
+                    el = doc.GetElement(_elid_from_value(raw_id))
                 except Exception:
                     el = None
                 if isinstance(el, DBE.ElectricalSystem):
@@ -29,7 +45,7 @@ class RevitCircuitRepository(object):
             .ToElements()
         )
 
-    def partition_locked_elements(self, doc, circuits, settings):
+    def partition_locked_elements(self, doc, circuits, settings, collect_all_device_owners=True):
         """Split circuits into editable and locked subsets."""
         if not getattr(doc, 'IsWorkshared', False):
             return circuits, set(), []
@@ -58,12 +74,14 @@ class RevitCircuitRepository(object):
             return '{}-{}'.format(panel, number)
 
         def _ensure_record(circuit):
-            key = circuit.Id.IntegerValue
+            key = _elid_value(circuit.Id)
             if key not in locked_records:
                 locked_records[key] = {
+                    'circuit_id': key,
                     'circuit': _circuit_label(circuit),
                     'load_name': getattr(circuit, 'LoadName', '') or '',
-                    'circuit_owner': _owner_name(circuit.Id),
+                    'circuit_owner': '',
+                    'circuit_locked': False,
                     'device_owners': set(),
                 }
             return locked_records[key]
@@ -75,7 +93,9 @@ class RevitCircuitRepository(object):
             locked_for_writeback = False
             if _is_locked(circuit.Id):
                 locked_ids.add(circuit.Id)
-                _ensure_record(circuit)
+                record = _ensure_record(circuit)
+                record['circuit_locked'] = True
+                record['circuit_owner'] = _owner_name(circuit.Id) or ''
                 continue
 
             if write_equipment or write_fixtures:
@@ -101,6 +121,8 @@ class RevitCircuitRepository(object):
                         if owner:
                             rec['device_owners'].add(owner)
                         locked_for_writeback = True
+                        if not collect_all_device_owners:
+                            break
 
             if locked_for_writeback:
                 locked_ids.add(circuit.Id)
@@ -112,10 +134,13 @@ class RevitCircuitRepository(object):
         locked_rows = []
         for rec in locked_records.values():
             locked_rows.append({
+                'circuit_id': rec.get('circuit_id') or 0,
                 'circuit': rec['circuit'],
                 'load_name': rec.get('load_name') or '',
                 'circuit_owner': rec.get('circuit_owner') or '',
                 'device_owner': ', '.join(sorted(rec['device_owners'])) if rec['device_owners'] else '',
+                'circuit_locked': bool(rec.get('circuit_locked', False)),
+                'sync_writeback': not bool(rec.get('circuit_locked', False)),
             })
 
         return unlocked_circuits, locked_ids, locked_rows

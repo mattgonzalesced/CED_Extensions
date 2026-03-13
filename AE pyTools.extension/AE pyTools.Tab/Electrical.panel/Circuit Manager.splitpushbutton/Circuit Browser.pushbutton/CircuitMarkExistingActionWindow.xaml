@@ -1,5 +1,4 @@
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         Title="Mark as New/Existing"
         Height="580"
         Width="1420"
@@ -10,7 +9,7 @@
         PreviewMouseDown="window_preview_mouse_down">
   <Window.Resources>
     <ResourceDictionary>
-</ResourceDictionary>
+    </ResourceDictionary>
   </Window.Resources>
 
   <Grid Margin="{DynamicResource CED.Thickness.ContentMargin}">
@@ -156,3 +155,4 @@
     </Grid>
   </Grid>
 </Window>
+

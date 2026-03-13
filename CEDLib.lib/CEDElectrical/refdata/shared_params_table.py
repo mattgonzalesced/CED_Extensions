@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 SHARED_PARAMS = {
     'CKT_Circuit Type_CEDT': {
         'GUID': '1db6a2b3-7448-4f0e-8fe7-16a0b39cf2ed', 'Discipline': 'Common',

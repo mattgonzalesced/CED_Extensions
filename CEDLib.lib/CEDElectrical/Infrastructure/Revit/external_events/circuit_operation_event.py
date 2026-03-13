@@ -18,11 +18,21 @@ class CircuitOperationExternalEventGateway(object):
         self._event = ExternalEvent.Create(self._handler)
 
     def is_busy(self):
-        return self._pending is not None
+        if self._pending is not None:
+            return True
+        try:
+            return bool(self._event.IsPending)
+        except Exception:
+            return False
 
     def raise_operation(self, operation_key, circuit_ids, source='pane', options=None, callback=None):
         if self._pending is not None:
             return False
+        try:
+            if bool(self._event.IsPending):
+                return False
+        except Exception:
+            pass
 
         request = OperationRequest(
             operation_key=operation_key,
@@ -34,8 +44,14 @@ class CircuitOperationExternalEventGateway(object):
             'request': request,
             'callback': callback,
         }
-        self._event.Raise()
-        return True
+        try:
+            self._event.Raise()
+            return True
+        except Exception as ex:
+            self._pending = None
+            if self.logger:
+                self.logger.warning('External operation raise failed: %s', ex)
+            return False
 
     def _consume_pending(self):
         pending = self._pending
