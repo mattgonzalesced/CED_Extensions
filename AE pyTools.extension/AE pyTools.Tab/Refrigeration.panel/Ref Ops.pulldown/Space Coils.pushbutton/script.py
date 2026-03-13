@@ -13,6 +13,7 @@ doc = revit.doc
 DEFAULT_WALL_OFFSET_IN = 15.0
 STYLE_WALL = "Wall distribution"
 STYLE_CENTER = "Center distribution"
+SIDE_SPAN_COORD_TOL_FT = 1.0 / 96.0
 
 
 def _is_zero_xy(vec, tol=1e-9):
@@ -155,6 +156,34 @@ def _primary_boundary_loop(loops):
     return loops[0]
 
 
+def _full_collinear_span(candidates, chosen, axis):
+    if not candidates or not chosen:
+        return None, None, None
+
+    if axis == "X":
+        target_coord = (chosen["p0"].Y + chosen["p1"].Y) * 0.5
+        peers = [
+            c for c in candidates
+            if abs(((c["p0"].Y + c["p1"].Y) * 0.5) - target_coord) <= SIDE_SPAN_COORD_TOL_FT
+        ]
+        if not peers:
+            peers = [chosen]
+        left = min(min(c["p0"].X, c["p1"].X) for c in peers)
+        right = max(max(c["p0"].X, c["p1"].X) for c in peers)
+        return left, right, target_coord
+
+    target_coord = (chosen["p0"].X + chosen["p1"].X) * 0.5
+    peers = [
+        c for c in candidates
+        if abs(((c["p0"].X + c["p1"].X) * 0.5) - target_coord) <= SIDE_SPAN_COORD_TOL_FT
+    ]
+    if not peers:
+        peers = [chosen]
+    left = min(min(c["p0"].Y, c["p1"].Y) for c in peers)
+    right = max(max(c["p0"].Y, c["p1"].Y) for c in peers)
+    return left, right, target_coord
+
+
 def _find_spatial_for_coils(coils):
     for coil in coils:
         point = _get_location_point(coil)
@@ -284,9 +313,9 @@ def _bounds_from_spatial(spatial, direction):
             if not horiz:
                 return None
         chosen = max(horiz, key=lambda c: c["line"].Length)
-        left = min(chosen["p0"].X, chosen["p1"].X)
-        right = max(chosen["p0"].X, chosen["p1"].X)
-        wall_coord = (chosen["p0"].Y + chosen["p1"].Y) * 0.5
+        left, right, wall_coord = _full_collinear_span(horiz, chosen, axis="X")
+        if left is None or right is None or wall_coord is None:
+            return None
         return {
             "axis": "X",
             "perp": "Y",
@@ -308,9 +337,9 @@ def _bounds_from_spatial(spatial, direction):
             return None
 
     chosen = max(vert, key=lambda c: c["line"].Length)
-    left = min(chosen["p0"].Y, chosen["p1"].Y)
-    right = max(chosen["p0"].Y, chosen["p1"].Y)
-    wall_coord = (chosen["p0"].X + chosen["p1"].X) * 0.5
+    left, right, wall_coord = _full_collinear_span(vert, chosen, axis="Y")
+    if left is None or right is None or wall_coord is None:
+        return None
     return {
         "axis": "Y",
         "perp": "X",
