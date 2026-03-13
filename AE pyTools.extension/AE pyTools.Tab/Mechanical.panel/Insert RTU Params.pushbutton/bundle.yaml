@@ -1,0 +1,5 @@
+title: Insert RTU Params
+tooltip: |
+  Load an RTU schedule from Excel and write mapped values to Revit families
+  by matching Unit Tags (for example, RTU-1 to RTU-1).
+author: CED Tools Team
