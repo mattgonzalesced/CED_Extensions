@@ -267,7 +267,7 @@ def get_circuits_from_panel_schedule_view(panel_schedule_view):
                 circuit_id = panel_schedule_view.GetCircuitIdByCell(row, col)
                 if not circuit_id or circuit_id == DB.ElementId.InvalidElementId:
                     continue
-                cid = circuit_id.IntegerValue
+                cid = _idval(circuit_id)
                 if cid in circuits_by_id:
                     continue
                 circuit = doc.GetElement(circuit_id)
@@ -345,7 +345,7 @@ def main():
         report_rows_by_id = {}
         merge_candidates = []
         for ckt in report_scope_circuits:
-            cid = ckt.Id.IntegerValue
+            cid = _idval(ckt.Id)
             report_order_ids.append(cid)
             if ckt.Id == main_circuit.Id:
                 report_rows_by_id[cid] = make_result_row(
@@ -406,7 +406,6 @@ def main():
             src_panel_circuit = format_panel_circuit(src)
             src_load_name = (src.LoadName or "").strip() or "N/A"
             src_voltage_pole = format_voltage_pole(src)
-
 
             src_elements = [el for el in get_circuit_elements(src) if _idval(el.Id) not in main_elements]
 
