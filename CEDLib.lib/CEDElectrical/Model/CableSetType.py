@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 class CableSetType(object):
     def __init__(self, material, insulation, temperature, conduit_type):
         self.material = material              # 'Copper' or 'Aluminum'

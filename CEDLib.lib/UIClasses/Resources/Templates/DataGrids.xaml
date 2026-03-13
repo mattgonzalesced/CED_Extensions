@@ -73,6 +73,55 @@
     </Style.Triggers>
   </Style>
 
+  <Style x:Key="CED.DataGrid.Display" TargetType="DataGrid">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridBackground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridBorder}"/>
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridRowForeground}"/>
+    <Setter Property="RowBackground" Value="{DynamicResource CED.Brush.DataGridBackground}"/>
+    <Setter Property="AlternatingRowBackground" Value="{DynamicResource CED.Brush.DataGridBackground}"/>
+    <Setter Property="SelectionUnit" Value="FullRow"/>
+    <Setter Property="SelectionMode" Value="Single"/>
+    <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+    <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource CED.Brush.DataGridCellBorder}"/>
+    <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource CED.Brush.DataGridCellBorder}"/>
+    <Setter Property="Focusable" Value="False"/>
+    <Setter Property="IsTabStop" Value="False"/>
+  </Style>
+
+  <Style x:Key="CED.DataGrid.Row.Display" TargetType="DataGridRow">
+    <Setter Property="Opacity" Value="1"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.ListItemBackground}"/>
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridRowForeground}"/>
+    <Setter Property="Focusable" Value="False"/>
+    <Setter Property="IsTabStop" Value="False"/>
+    <Style.Triggers>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+      </Trigger>
+      <DataTrigger Binding="{Binding is_enabled}" Value="False">
+        <Setter Property="Opacity" Value="0.45"/>
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="CED.DataGrid.Cell.DisplayReadonly" TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.ListItemBackground}"/>
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridRowForeground}"/>
+    <Setter Property="Focusable" Value="False"/>
+    <Setter Property="IsTabStop" Value="False"/>
+    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+    <Style.Triggers>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+      </Trigger>
+      <Trigger Property="IsKeyboardFocusWithin" Value="True">
+        <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridCellBorder}"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
   <Style x:Key="DividerThickReadonlyCell" TargetType="DataGridCell" BasedOn="{StaticResource ReadonlyCell}">
     <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridDividerStrong}"/>
     <Setter Property="BorderThickness" Value="0,0,2,0"/>
@@ -212,7 +261,7 @@
 
   <Style x:Key="CED.DataGrid.RowDisabledAware" TargetType="DataGridRow">
     <Setter Property="Opacity" Value="1"/>
-    <Setter Property="Background" Value="{DynamicResource CED.Brush.SearchBackground}"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridBackground}"/>
     <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridRowForeground}"/>
     <Style.Triggers>
       <Trigger Property="IsSelected" Value="True">

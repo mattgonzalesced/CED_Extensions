@@ -7,4 +7,12 @@
           Height="10"
           Stretch="Uniform"/>
   </DataTemplate>
+
+  <DataTemplate x:Key="CED.Template.Badge.SyncBlockedIcon">
+    <Path Data="{DynamicResource CED.Icon.SyncAlert}"
+          Fill="{DynamicResource CED.Brush.SecondaryRed}"
+          Width="10"
+          Height="10"
+          Stretch="Uniform"/>
+  </DataTemplate>
 </ResourceDictionary>

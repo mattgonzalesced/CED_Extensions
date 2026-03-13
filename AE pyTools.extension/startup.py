@@ -314,4 +314,5 @@ def _register_circuit_browser_panel():
 
 _register_sync_handler()
 _register_circuit_browser_panel()
-_register_place_single_profile_panel()
+# Temporarily disabled to prevent startup-time dockable panel activity.
+# _register_place_single_profile_panel()

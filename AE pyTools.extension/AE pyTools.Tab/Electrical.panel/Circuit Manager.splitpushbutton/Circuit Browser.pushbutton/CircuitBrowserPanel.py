@@ -7,17 +7,14 @@ import sys
 
 import Autodesk.Revit.DB.Electrical as DBE
 from Autodesk.Revit.DB.Events import (
-    DocumentOpeningEventArgs,
     DocumentOpenedEventArgs,
-    DocumentClosingEventArgs,
+    DocumentClosedEventArgs,
 )
 from Autodesk.Revit.UI import ExternalEvent, IExternalEventHandler
 from Autodesk.Revit.UI.Events import ViewActivatedEventArgs
-from System import EventHandler
-from System import Uri
+from System import EventHandler, Action
 from System.Collections.Generic import List
 from System.Collections.ObjectModel import ObservableCollection
-from System.Windows import ResourceDictionary
 from System.Windows import Visibility
 from System.Windows.Controls import (
     ContextMenu,
@@ -28,42 +25,34 @@ from System.Windows.Controls import (
     Button,
     DataGridTextColumn,
 )
-from System.Windows.Media import BrushConverter, VisualTreeHelper
-from pyrevit import forms, revit, DB, script
+from System.Windows.Media import BrushConverter, Stretch, VisualTreeHelper
+from System.Windows.Shapes import Path as ShapePath
+from pyrevit import forms, revit, DB, script, HOST_APP
+from pyrevit.compat import get_elementid_value_func, get_elementid_from_value_func
 
 _THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
-def _find_workspace_root(start_dir):
+def _bootstrap_lib_root(start_dir):
     current = os.path.abspath(start_dir)
     while True:
-        if os.path.isdir(os.path.join(current, "CEDLib.lib")):
-            return current
+        candidate = os.path.join(current, "CEDLib.lib")
+        if os.path.isdir(candidate):
+            lib_root = os.path.abspath(candidate)
+            if lib_root not in sys.path:
+                sys.path.append(lib_root)
+            return lib_root
         parent = os.path.dirname(current)
         if not parent or parent == current:
-            return None
+            break
         current = parent
+    fallback = os.path.abspath(os.path.join(start_dir, "..", "..", "..", "..", "..", "CEDLib.lib"))
+    if os.path.isdir(fallback) and fallback not in sys.path:
+        sys.path.append(fallback)
+    return fallback
 
 
-def _find_named_ancestor(start_dir, folder_name):
-    current = os.path.abspath(start_dir)
-    target = (folder_name or "").strip().lower()
-    while True:
-        if os.path.basename(current).lower() == target:
-            return current
-        parent = os.path.dirname(current)
-        if not parent or parent == current:
-            return None
-        current = parent
-
-
-_WORKSPACE_ROOT = _find_workspace_root(_THIS_DIR)
-if _WORKSPACE_ROOT:
-    LIB_ROOT = os.path.abspath(os.path.join(_WORKSPACE_ROOT, "CEDLib.lib"))
-else:
-    LIB_ROOT = os.path.abspath(os.path.join(_THIS_DIR, "..", "..", "..", "..", "..", "CEDLib.lib"))
-if LIB_ROOT not in sys.path:
-    sys.path.append(LIB_ROOT)
+LIB_ROOT = _bootstrap_lib_root(_THIS_DIR)
 
 from CEDElectrical.Model.alerts import get_alert_definition
 from CEDElectrical.Model.CircuitBranch import CircuitBranch
@@ -72,13 +61,28 @@ from CEDElectrical.refdata.standard_ocp_table import BREAKER_FRAME_SWITCH_TABLE
 from CEDElectrical.Infrastructure.Revit.external_events.circuit_operation_event import (
     CircuitOperationExternalEventGateway,
 )
+from CEDElectrical.Infrastructure.Revit.repositories.revit_circuit_repository import RevitCircuitRepository
+from Snippets.circuit_ui_actions import (
+    clear_revit_selection,
+    collect_circuit_targets,
+    format_writeback_lock_reason,
+    set_revit_selection,
+)
+from UIClasses import Resources as UIResources
+from UIClasses import pathing as ui_pathing
+from UIClasses import resource_loader
 from UIClasses.revit_theme_bridge import DOCK_PANE_FRAME_DARK, DOCK_PANE_FRAME_LIGHT, RevitThemeBridge
 
 
 TITLE = "Circuit Browser"
 PANEL_ID = "36c3fd8d-98c4-4cf4-92a4-4ac7f3f8c4f2"
 ALERT_DATA_PARAM = "Circuit Data_CED"
-_ELECTRICAL_PANEL_ROOT = _find_named_ancestor(_THIS_DIR, "Electrical.panel") or os.path.abspath(
+UI_RESOURCES_ROOT = (
+    UIResources.get_resources_root()
+    or ui_pathing.resolve_ui_resources_root(LIB_ROOT)
+    or os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources"))
+)
+_ELECTRICAL_PANEL_ROOT = ui_pathing.find_named_ancestor(_THIS_DIR, "Electrical.panel") or os.path.abspath(
     os.path.join(_THIS_DIR, "..", "..")
 )
 CALC_SETTINGS_PATH = os.path.abspath(
@@ -97,42 +101,11 @@ CALC_SETTINGS_XAML_PATH = os.path.abspath(
         "settings.xaml",
     )
 )
-THEME_LIGHT_PATH = os.path.abspath(
-    os.path.join(
-        LIB_ROOT,
-        "UIClasses",
-        "Resources",
-        "Themes",
-        "CEDTheme.Light.xaml",
-    )
-)
-THEME_DARK_PATH = os.path.abspath(
-    os.path.join(
-        LIB_ROOT,
-        "UIClasses",
-        "Resources",
-        "Themes",
-        "CEDTheme.Dark.xaml",
-    )
-)
 CURRENT_THEME_MODE = "light"
 CURRENT_ACCENT_MODE = "blue"
-BASE_RESOURCE_PATHS = (
-    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Themes", "CED.Sizes.xaml")),
-    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Themes", "CED.Colors.xaml")),
-    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Themes", "CED.Brushes.xaml")),
-    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Styles", "ButtonStyles.xaml")),
-    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Styles", "TextStyles.xaml")),
-    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Styles", "InputStyles.xaml")),
-    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Styles", "ListStyles.xaml")),
-    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Styles", "BadgeStyles.xaml")),
-    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Icons", "Icons.xaml")),
-    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Templates", "ListItems.xaml")),
-    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Templates", "Cards.xaml")),
-    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Templates", "Badges.xaml")),
-    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Templates", "DataGrids.xaml")),
-    os.path.abspath(os.path.join(LIB_ROOT, "UIClasses", "Resources", "Controls", "SearchBox.xaml")),
-)
+THEME_CONFIG_SECTION = "AE-pyTools-Theme"
+THEME_CONFIG_THEME_KEY = "theme_mode"
+THEME_CONFIG_ACCENT_KEY = "accent_mode"
 HIDABLE_ALERT_IDS = {
     "Design.NonStandardOCPRating",
     "Design.BreakerLugSizeLimitOverride",
@@ -143,12 +116,9 @@ HIDABLE_ALERT_IDS = {
 BLOCKED_BRANCH_TYPES = set(['N/A', 'SPACE', 'SPARE', 'CONDUIT ONLY'])
 IG_BREAKER_ALLOWED_TYPES = set(['BRANCH', 'FEEDER', 'XFMR PRI', 'XFMR SEC'])
 
-ACCENT_BRUSH_MAP = {
-    "blue": {"light": "#0459A4", "dark": "#3B8ED8"},
-    "red": {"light": "#BE202F", "dark": "#D15762"},
-    "green": {"light": "#43A047", "dark": "#58B95E"},
-    "neutral": {"light": "#5F6F82", "dark": "#9DB1C8"},
-}
+ACCENT_BRUSH_KEY_MAP = dict(resource_loader.ACCENT_BRUSH_KEY_MAP)
+VALID_THEME_MODES = ("light", "dark", "dark_alt")
+VALID_ACCENT_MODES = ("blue", "red", "green", "neutral")
 CIRCUIT_TYPE_TAG_STYLES = {
     "BRANCH": ("CED.Brush.BadgeStd01Background", "CED.Brush.BadgeStd01Text"),
     "FEEDER": ("CED.Brush.BadgeStd02Background", "CED.Brush.BadgeStd02Text"),
@@ -161,6 +131,61 @@ CIRCUIT_TYPE_TAG_STYLES = {
 }
 OCP_TABLE_KEYS = sorted([int(k) for k in BREAKER_FRAME_SWITCH_TABLE.keys()])
 _DOC_SENTINEL = object()
+_get_elid_value = get_elementid_value_func()
+_get_elid_from_value = get_elementid_from_value_func()
+
+
+def _normalize_theme_mode(value, fallback="light"):
+    mode = str(value or fallback).strip().lower()
+    return mode if mode in VALID_THEME_MODES else fallback
+
+
+def _elid_value(item):
+    try:
+        return int(_get_elid_value(item))
+    except Exception:
+        return int(getattr(item, "IntegerValue", 0))
+
+
+def _elid_from_value(value):
+    return _get_elid_from_value(int(value))
+
+
+def _normalize_accent_mode(value, fallback="blue"):
+    mode = str(value or fallback).strip().lower()
+    return mode if mode in VALID_ACCENT_MODES else fallback
+
+
+def _load_theme_state_from_config(default_theme="light", default_accent="blue"):
+    theme_mode = _normalize_theme_mode(default_theme, "light")
+    accent_mode = _normalize_accent_mode(default_accent, "blue")
+    try:
+        cfg = script.get_config(THEME_CONFIG_SECTION)
+        if cfg is None:
+            return theme_mode, accent_mode
+        theme_mode = _normalize_theme_mode(cfg.get_option(THEME_CONFIG_THEME_KEY, theme_mode), theme_mode)
+        accent_mode = _normalize_accent_mode(cfg.get_option(THEME_CONFIG_ACCENT_KEY, accent_mode), accent_mode)
+    except Exception:
+        pass
+    return theme_mode, accent_mode
+
+
+def _save_theme_state_to_config(theme_mode, accent_mode):
+    try:
+        cfg = script.get_config(THEME_CONFIG_SECTION)
+        if cfg is None:
+            return
+        cfg.set_option(THEME_CONFIG_THEME_KEY, _normalize_theme_mode(theme_mode, "light"))
+        cfg.set_option(THEME_CONFIG_ACCENT_KEY, _normalize_accent_mode(accent_mode, "blue"))
+        script.save_config()
+    except Exception:
+        pass
+
+
+CURRENT_THEME_MODE, CURRENT_ACCENT_MODE = _load_theme_state_from_config(
+    CURRENT_THEME_MODE,
+    CURRENT_ACCENT_MODE,
+)
 
 
 def _fmt_number(value, digits=1):
@@ -232,88 +257,6 @@ def _is_descendant_of_control(start, control):
     return False
 
 
-def _normalize_path(path):
-    try:
-        return os.path.abspath(path).replace("\\", "/").lower()
-    except Exception:
-        try:
-            return str(path).replace("\\", "/").lower()
-        except Exception:
-            return ""
-
-
-def _resource_source_path(dictionary):
-    source = getattr(dictionary, "Source", None)
-    if source is None:
-        return ""
-    try:
-        local_path = source.LocalPath
-        if local_path:
-            return _normalize_path(local_path)
-    except Exception:
-        pass
-    try:
-        return _normalize_path(str(source))
-    except Exception:
-        return ""
-
-
-def _load_resource_dictionary(path):
-    if not path or not os.path.exists(path):
-        return None
-    try:
-        dictionary = ResourceDictionary()
-        dictionary.Source = Uri(path)
-        return dictionary
-    except Exception:
-        return None
-
-
-def _ensure_base_resources(owner):
-    try:
-        resources = getattr(owner, "Resources", None)
-        if resources is None:
-            return False
-        merged = resources.MergedDictionaries
-        existing = set()
-        for dictionary in list(merged):
-            source_path = _resource_source_path(dictionary)
-            if source_path:
-                existing.add(source_path)
-        added = False
-        for path in BASE_RESOURCE_PATHS:
-            normalized = _normalize_path(path)
-            if not normalized or normalized in existing:
-                continue
-            dictionary = _load_resource_dictionary(path)
-            if dictionary is None:
-                continue
-            merged.Add(dictionary)
-            existing.add(normalized)
-            added = True
-        return added
-    except Exception:
-        return False
-
-
-def _load_theme_dictionary(theme_mode="light"):
-    mode = (theme_mode or "light").strip().lower()
-    candidates = (THEME_DARK_PATH, THEME_LIGHT_PATH) if mode == "dark" else (THEME_LIGHT_PATH,)
-    for path in candidates:
-        dictionary = _load_resource_dictionary(path)
-        if dictionary is not None:
-            return dictionary
-    return None
-
-
-def _is_theme_resource_dictionary(dictionary):
-    try:
-        source_text = str(getattr(dictionary, "Source", "") or "").replace("\\", "/").lower()
-    except Exception:
-        source_text = ""
-    return source_text.endswith("/cedtheme.light.xaml") or source_text.endswith("/cedtheme.dark.xaml")
-
-
 def _to_brush(value, fallback=None):
     converter = BrushConverter()
     try:
@@ -327,54 +270,16 @@ def _to_brush(value, fallback=None):
             return None
 
 
-def _try_apply_accent(owner):
-    try:
-        resources = getattr(owner, "Resources", None)
-        if resources is None:
-            return False
-        theme_mode = str(getattr(owner, "_theme_mode", "light") or "light").lower()
-        accent_mode = str(getattr(owner, "_accent_mode", "blue") or "blue").lower()
-        palette = ACCENT_BRUSH_MAP.get(accent_mode) or ACCENT_BRUSH_MAP.get("blue") or {}
-        accent_hex = palette.get("dark") if theme_mode == "dark" else palette.get("light")
-        accent_brush = _to_brush(accent_hex, "#0459A4")
-        if accent_brush is None:
-            return False
-        resources["CED.Brush.Accent"] = accent_brush
-        return True
-    except Exception:
-        return False
-
-
 def _try_apply_theme(owner):
     try:
-        _ensure_base_resources(owner)
-        theme_mode = getattr(owner, "_theme_mode", "light")
-        dictionary = _load_theme_dictionary(theme_mode)
-        if dictionary is None:
-            return False
-        resources = getattr(owner, "Resources", None)
-        if resources is None:
-            return False
-        merged = resources.MergedDictionaries
-        previous = getattr(owner, "_ced_theme_dictionary", None)
-        try:
-            if previous is not None and previous in merged:
-                merged.Remove(previous)
-        except Exception:
-            pass
-        try:
-            for existing in list(merged):
-                if _is_theme_resource_dictionary(existing):
-                    merged.Remove(existing)
-        except Exception:
-            pass
-        try:
-            merged.Add(dictionary)
-        except Exception:
-            merged.Add(dictionary)
-        owner._ced_theme_dictionary = dictionary
-        _try_apply_accent(owner)
-        return True
+        return bool(
+            resource_loader.apply_theme(
+                owner,
+                resources_root=UI_RESOURCES_ROOT,
+                theme_mode=getattr(owner, "_theme_mode", "light"),
+                accent_mode=getattr(owner, "_accent_mode", "blue"),
+            )
+        )
     except Exception:
         return False
 
@@ -404,6 +309,40 @@ def _set_if_resource(owner, target, property_name, key):
         setattr(target, property_name, resource)
     except Exception:
         pass
+
+
+def _menu_icon(owner, geometry_key, size=12):
+    geometry = _try_find_resource(owner, geometry_key)
+    if geometry is None:
+        return None
+    fill = _try_find_resource(owner, "CED.Brush.PrimaryText")
+    if fill is None:
+        fill = _try_find_resource(owner, "CED.Brush.NeutralDark")
+    icon = ShapePath()
+    icon.Data = geometry
+    icon.Width = size
+    icon.Height = size
+    icon.Stretch = Stretch.Uniform
+    if fill is not None:
+        icon.Fill = fill
+    return icon
+
+
+def _invoke_later(owner, callback):
+    if callback is None:
+        return False
+    try:
+        dispatcher = getattr(owner, "Dispatcher", None)
+        if dispatcher is not None:
+            dispatcher.BeginInvoke(Action(callback))
+            return True
+    except Exception:
+        pass
+    try:
+        callback()
+        return True
+    except Exception:
+        return False
 
 
 def _column_at(grid, index):
@@ -630,6 +569,50 @@ def _alert_tooltip_from_payload(payload):
     return "Alert Count: {} | Hidden Count: {}".format(total, hidden_count), "Visible", total, hidden_count
 
 
+def _build_sync_lock_tooltip(circuit_owner, device_owner):
+    lines = [
+        "Calculation blocked by ownership constraints. Try again later.",
+    ]
+    owner_lines = []
+    circuit_text = str(circuit_owner or "").strip()
+    device_text = str(device_owner or "").strip()
+    if circuit_text:
+        owner_lines.append("Circuit Owner: {}".format(circuit_text))
+    if device_text:
+        owner_lines.append("Device Owner(s): {}".format(device_text))
+    if owner_lines:
+        lines.append("")
+        lines.extend(owner_lines)
+    return "\n".join(lines)
+
+
+def _sync_lock_state_from_payload(payload):
+    if not isinstance(payload, dict):
+        return False, ""
+    sync_lock = payload.get("sync_lock")
+    if not isinstance(sync_lock, dict):
+        return False, ""
+    if not bool(sync_lock.get("blocked", False)):
+        return False, ""
+    tooltip = _build_sync_lock_tooltip(
+        sync_lock.get("circuit_owner"),
+        sync_lock.get("device_owner"),
+    )
+    return True, tooltip
+
+
+def _sync_lock_state_from_row(row):
+    if not isinstance(row, dict):
+        return False, ""
+    if not bool(row.get("blocked", False)):
+        return False, ""
+    tooltip = _build_sync_lock_tooltip(
+        row.get("circuit_owner"),
+        row.get("device_owner"),
+    )
+    return True, tooltip
+
+
 def _derive_branch_type(circuit):
     if circuit.CircuitType == DBE.CircuitType.Space:
         return "SPACE"
@@ -646,8 +629,9 @@ def _is_yes(value):
 
 
 class CircuitListItem(object):
-    def __init__(self, circuit):
+    def __init__(self, circuit, session_sync_state=None):
         self.circuit = circuit
+        self.circuit_id = _elid_value(circuit.Id)
         self.is_checked = False
 
         self.panel = "No Panel"
@@ -743,6 +727,13 @@ class CircuitListItem(object):
             self.alert_bg = "#00FFFFFF"
             self.alert_border = "#8F7300"
             self.alert_text_color = "#6F5700"
+
+        sync_blocked, sync_tooltip = _sync_lock_state_from_payload(payload)
+        if not sync_blocked:
+            sync_blocked, sync_tooltip = _sync_lock_state_from_row(session_sync_state)
+        self.sync_blocked = bool(sync_blocked)
+        self.sync_lock_badge_visibility = "Visible" if sync_blocked else "Collapsed"
+        self.sync_lock_tooltip = sync_tooltip
 
         self.search_name = "{} {} {} {} {} {}".format(
             self.panel,
@@ -840,6 +831,8 @@ class CircuitAlertsWindow(forms.WPFWindow):
             return
         if _find_visual_ancestor(source, ListViewItem) is not None:
             return
+        if _find_visual_ancestor(source, DataGridRow) is not None:
+            return
         try:
             sender.SelectedItem = None
         except Exception:
@@ -895,15 +888,20 @@ class CircuitAlertsWindow(forms.WPFWindow):
 
 
 class LockedRow(object):
-    def __init__(self, circuit, load_name):
+    def __init__(self, circuit, load_name, circuit_owner, device_owner):
         self.circuit = str(circuit or "-")
         self.load_name = str(load_name or "-")
+        self.circuit_owner = str(circuit_owner or "-")
+        self.device_owner = str(device_owner or "-")
 
 
 class RuntimeAlertRow(object):
-    def __init__(self, circuit, load_name):
+    def __init__(self, circuit, load_name, group, definition_id, message):
         self.circuit = str(circuit or "-")
         self.load_name = str(load_name or "-")
+        self.group = str(group or "Other")
+        self.definition_id = str(definition_id or "-")
+        self.message = str(message or "")
 
 
 class CircuitRunSummaryWindow(forms.WPFWindow):
@@ -917,6 +915,8 @@ class CircuitRunSummaryWindow(forms.WPFWindow):
             LockedRow(
                 x.get("circuit", "") or "-",
                 x.get("load_name", "") or "-",
+                x.get("circuit_owner", "") or "-",
+                x.get("device_owner", "") or "-",
             )
             for x in list(locked_rows or [])
         ]
@@ -936,6 +936,9 @@ class CircuitRunSummaryWindow(forms.WPFWindow):
             RuntimeAlertRow(
                 _runtime_circuit_text(x),
                 x.get("load_name", "") or "-",
+                x.get("group", "") or "Other",
+                x.get("definition_id", "") or "-",
+                x.get("message", "") or "",
             )
             for x in list(runtime_rows or [])
         ]
@@ -990,12 +993,18 @@ class CircuitRunSummaryWindow(forms.WPFWindow):
         except Exception:
             pass
 
+    def readonly_grid_selection_changed(self, sender, args):
+        try:
+            sender.SelectedItem = None
+        except Exception:
+            pass
+
 
 class NeutralIGActionRow(object):
     def __init__(self, item, is_enabled, reason, current_qty, current_size, current_wire):
         self.item = item
         self.circuit = item.circuit
-        self.circuit_id = item.circuit.Id.IntegerValue
+        self.circuit_id = _elid_value(item.circuit.Id)
         self.panel = item.panel
         self.circuit_number = item.circuit_number
         self.load_name = item.load_name
@@ -1233,7 +1242,7 @@ class BreakerActionRow(object):
     def __init__(self, item, is_enabled, reason, load_current, cur_rating, cur_frame, auto_rating, auto_frame_from_cur):
         self.item = item
         self.circuit = item.circuit
-        self.circuit_id = item.circuit.Id.IntegerValue
+        self.circuit_id = _elid_value(item.circuit.Id)
         self.panel = item.panel
         self.circuit_number = item.circuit_number
         self.load_name = item.load_name
@@ -1610,7 +1619,7 @@ class MarkExistingActionRow(object):
     def __init__(self, item, is_enabled, reason, current_notes, current_wire):
         self.item = item
         self.circuit = item.circuit
-        self.circuit_id = item.circuit.Id.IntegerValue
+        self.circuit_id = _elid_value(item.circuit.Id)
         self.panel = item.panel
         self.circuit_number = item.circuit_number
         self.load_name = item.load_name
@@ -1879,14 +1888,30 @@ class CalculateSettingsExternalEventGateway(object):
         self._event = ExternalEvent.Create(self._handler)
 
     def is_busy(self):
-        return self._pending is not None
+        if self._pending is not None:
+            return True
+        try:
+            return bool(self._event.IsPending)
+        except Exception:
+            return False
 
     def raise_open(self, callback=None):
         if self._pending is not None:
             return False
+        try:
+            if bool(self._event.IsPending):
+                return False
+        except Exception:
+            pass
         self._pending = {"callback": callback}
-        self._event.Raise()
-        return True
+        try:
+            self._event.Raise()
+            return True
+        except Exception as ex:
+            self._pending = None
+            if self.logger:
+                self.logger.warning("Failed to raise Calculate Settings ExternalEvent: %s", ex)
+            return False
 
     def _consume_pending(self):
         pending = self._pending
@@ -1958,20 +1983,32 @@ class CircuitBrowserPanel(forms.WPFPanel):
         self._theme_bridge = None
         self._dock_frame_host = None
         self._all_items = []
+        self._session_sync_lock_map = {}
         self._is_card_view = False
         self._type_options = []
         self._active_type_filters = set()
         self._filter_menu = None
+        self._filter_type_menu_items = {}
+        self._filter_warn_item = None
+        self._filter_overrides_item = None
+        self._filter_syncblocked_item = None
+        self._filter_checked_item = None
+        self._suppress_filter_toggle_events = False
         self._warnings_only = False
         self._overrides_only = False
+        self._syncblocked_only = False
         self._checked_only = False
         self._actions_menu = None
         self._browser_options_menu = None
+        self._browser_theme_items = {}
+        self._browser_accent_items = {}
+        self._browser_display_items = {}
         self._compact_show_type_badges = True
         self._use_surface_item_states = True
         self._last_selected_items = []
         self._operation_gateway = self._get_operation_gateway()
         self._settings_gateway = CalculateSettingsExternalEventGateway(logger=self._logger)
+        self._lock_repository = RevitCircuitRepository()
 
         self._list = self.FindName("CircuitList")
         self._search = self.FindName("SearchBox")
@@ -1996,17 +2033,15 @@ class CircuitBrowserPanel(forms.WPFPanel):
         self._card_template = self.FindResource("CardTemplate")
         self._active_doc_key = None
         self._loaded_doc_key = None
-        self._doc_is_opening = False
+        self._events_attached = False
         self._view_activated_handler = None
-        self._doc_opening_handler = None
         self._doc_opened_handler = None
-        self._doc_closing_handler = None
+        self._doc_closed_handler = None
 
         self.Loaded += self.panel_loaded
         self.Unloaded += self.panel_unloaded
         self.IsVisibleChanged += self.panel_visibility_changed
-        self._attach_document_lifecycle_handlers()
-        self._attach_view_activated_handler()
+        self._ensure_theme_bridge()
 
     @classmethod
     def get_instance(cls):
@@ -2042,8 +2077,9 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
     def _ensure_theme_bridge(self):
         if self._theme_bridge is None:
+            uiapp = self._get_uiapp()
             self._theme_bridge = RevitThemeBridge(
-                uiapp=__revit__,
+                uiapp=uiapp,
                 on_theme_changed=self._apply_revit_frame_background,
                 logger=self._logger,
             )
@@ -2061,9 +2097,12 @@ class CircuitBrowserPanel(forms.WPFPanel):
             return
 
         if not result:
+            self._session_sync_lock_map = {}
             self._set_status("Operation finished")
             self._safe_load_items()
             return
+
+        self._update_session_sync_lock_map(result)
 
         if result.get("status") == "ok":
             self._set_status("Calculated {} circuits".format(result.get("updated_circuits", 0)))
@@ -2077,6 +2116,23 @@ class CircuitBrowserPanel(forms.WPFPanel):
         reason = result.get("reason", "unknown")
         self._set_status("Operation cancelled ({})".format(reason))
         self._safe_load_items()
+
+    def _update_session_sync_lock_map(self, result):
+        rows = list((result or {}).get("locked_rows") or [])
+        mapping = {}
+        for row in rows:
+            try:
+                circuit_id = int((row or {}).get("circuit_id") or 0)
+            except Exception:
+                circuit_id = 0
+            if circuit_id <= 0:
+                continue
+            mapping[circuit_id] = {
+                "blocked": True,
+                "circuit_owner": (row or {}).get("circuit_owner") or "",
+                "device_owner": (row or {}).get("device_owner") or "",
+            }
+        self._session_sync_lock_map = mapping
 
     def _on_alert_visibility_saved(self, status, request, result, error):
         if status == "error":
@@ -2151,72 +2207,69 @@ class CircuitBrowserPanel(forms.WPFPanel):
         except Exception:
             return False
 
-    def _attach_document_lifecycle_handlers(self):
-        app = None
+    def _get_uiapp(self):
         try:
-            app = getattr(__revit__, "Application", None)
+            uiapp = getattr(HOST_APP, "uiapp", None)
+            if uiapp is not None:
+                return uiapp
         except Exception:
-            app = None
-        if app is None:
-            return
-
-        if self._doc_opening_handler is None:
-            try:
-                handler = EventHandler[DocumentOpeningEventArgs](self._on_document_opening)
-                app.DocumentOpening += handler
-                self._doc_opening_handler = handler
-            except Exception as ex:
-                self._logger.warning("Circuit Browser failed to attach DocumentOpening handler: %s", ex)
-                self._doc_opening_handler = None
-
-        if self._doc_opened_handler is None:
-            try:
-                handler = EventHandler[DocumentOpenedEventArgs](self._on_document_opened)
-                app.DocumentOpened += handler
-                self._doc_opened_handler = handler
-            except Exception as ex:
-                self._logger.warning("Circuit Browser failed to attach DocumentOpened handler: %s", ex)
-                self._doc_opened_handler = None
-
-        if self._doc_closing_handler is None:
-            try:
-                handler = EventHandler[DocumentClosingEventArgs](self._on_document_closing)
-                app.DocumentClosing += handler
-                self._doc_closing_handler = handler
-            except Exception as ex:
-                self._logger.warning("Circuit Browser failed to attach DocumentClosing handler: %s", ex)
-                self._doc_closing_handler = None
-
-    def _attach_view_activated_handler(self):
-        if self._view_activated_handler is not None:
-            return
+            pass
         try:
-            self._view_activated_handler = EventHandler[ViewActivatedEventArgs](self._on_view_activated)
-            __revit__.ViewActivated += self._view_activated_handler
+            return __revit__
+        except Exception:
+            return None
+
+    def _get_revit_app(self):
+        uiapp = self._get_uiapp()
+        if uiapp is None:
+            return None
+        try:
+            return getattr(uiapp, "Application", None)
+        except Exception:
+            return None
+
+    def _has_api_context(self):
+        try:
+            return bool(HOST_APP.has_api_context)
+        except Exception:
+            return True
+
+    def _attach_event_handlers(self):
+        if self._events_attached:
+            return True
+        if not self._has_api_context():
+            return False
+        uiapp = self._get_uiapp()
+        app = self._get_revit_app()
+        if uiapp is None or app is None:
+            return False
+        try:
+            if self._doc_opened_handler is None:
+                self._doc_opened_handler = EventHandler[DocumentOpenedEventArgs](self._on_document_opened)
+                app.DocumentOpened += self._doc_opened_handler
+            if self._doc_closed_handler is None:
+                self._doc_closed_handler = EventHandler[DocumentClosedEventArgs](self._on_document_closed)
+                app.DocumentClosed += self._doc_closed_handler
+            if self._view_activated_handler is None:
+                self._view_activated_handler = EventHandler[ViewActivatedEventArgs](self._on_view_activated)
+                uiapp.ViewActivated += self._view_activated_handler
+            self._events_attached = True
+            return True
         except Exception as ex:
-            self._logger.warning("Circuit Browser failed to attach ViewActivated handler: %s", ex)
-            self._view_activated_handler = None
+            self._logger.warning("Circuit Browser failed to attach lifecycle handlers: %s", ex)
+            self._detach_event_handlers()
+            return False
 
     def _detach_event_handlers(self):
-        app = None
-        try:
-            app = getattr(__revit__, "Application", None)
-        except Exception:
-            app = None
+        uiapp = self._get_uiapp()
+        app = self._get_revit_app()
 
         try:
-            if self._view_activated_handler is not None:
-                __revit__.ViewActivated -= self._view_activated_handler
+            if uiapp is not None and self._view_activated_handler is not None:
+                uiapp.ViewActivated -= self._view_activated_handler
         except Exception:
             pass
         self._view_activated_handler = None
-
-        try:
-            if app is not None and self._doc_opening_handler is not None:
-                app.DocumentOpening -= self._doc_opening_handler
-        except Exception:
-            pass
-        self._doc_opening_handler = None
 
         try:
             if app is not None and self._doc_opened_handler is not None:
@@ -2226,17 +2279,14 @@ class CircuitBrowserPanel(forms.WPFPanel):
         self._doc_opened_handler = None
 
         try:
-            if app is not None and self._doc_closing_handler is not None:
-                app.DocumentClosing -= self._doc_closing_handler
+            if app is not None and self._doc_closed_handler is not None:
+                app.DocumentClosed -= self._doc_closed_handler
         except Exception:
             pass
-        self._doc_closing_handler = None
-
-    def _on_document_opening(self, sender, args):
-        self._doc_is_opening = True
+        self._doc_closed_handler = None
+        self._events_attached = False
 
     def _on_document_opened(self, sender, args):
-        self._doc_is_opening = False
         doc = None
         try:
             doc = getattr(args, "Document", None)
@@ -2251,19 +2301,13 @@ class CircuitBrowserPanel(forms.WPFPanel):
         else:
             self._set_doc_banner(doc)
 
-    def _on_document_closing(self, sender, args):
-        doc = None
-        try:
-            doc = getattr(args, "Document", None)
-        except Exception:
-            doc = None
-        key = self._doc_key(doc)
-        if key is None:
+    def _on_document_closed(self, sender, args):
+        self._loaded_doc_key = None
+        doc = self._get_active_doc()
+        self._active_doc_key = self._doc_key(doc)
+        if not self._is_pane_visible():
             return
-        if key == self._active_doc_key:
-            self._active_doc_key = None
-        if key == self._loaded_doc_key:
-            self._loaded_doc_key = None
+        self._safe_load_items(doc_override=doc)
 
     def _on_view_activated(self, sender, args):
         if not self._is_pane_visible():
@@ -2274,7 +2318,6 @@ class CircuitBrowserPanel(forms.WPFPanel):
             doc = None
         if doc is None:
             return
-        self._doc_is_opening = False
 
         key = self._doc_key(doc)
         if key != self._active_doc_key:
@@ -2286,8 +2329,6 @@ class CircuitBrowserPanel(forms.WPFPanel):
         self._set_doc_banner(doc)
 
     def _safe_load_items(self, doc_override=_DOC_SENTINEL):
-        if self._doc_is_opening:
-            return
         doc = self._get_active_doc() if doc_override is _DOC_SENTINEL else doc_override
         self._active_doc_key = self._doc_key(doc)
         self._set_doc_banner(doc)
@@ -2301,9 +2342,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         self._loaded_doc_key = self._active_doc_key
 
     def refresh_on_open(self):
-        self._ensure_theme_bridge()
-        if self._doc_is_opening:
-            return
+        self._attach_event_handlers()
         doc = self._get_active_doc()
         key = self._doc_key(doc)
         self._active_doc_key = key
@@ -2336,6 +2375,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         is_filtered = (
             self._warnings_only
             or self._overrides_only
+            or self._syncblocked_only
             or self._checked_only
             or (set(self._type_options) != set(self._active_type_filters))
         )
@@ -2416,6 +2456,15 @@ class CircuitBrowserPanel(forms.WPFPanel):
             item.type_tag_bg = bg_resource if bg_resource is not None else "#ECEFF3"
             item.type_tag_fg = fg_resource if fg_resource is not None else "#52606D"
 
+    def _refresh_visible_items(self):
+        try:
+            if self._list is not None:
+                self._list.Items.Refresh()
+                return
+        except Exception:
+            pass
+        self._refresh_list()
+
     def _refresh_list(self):
         query = ""
         try:
@@ -2428,10 +2477,12 @@ class CircuitBrowserPanel(forms.WPFPanel):
             items = [x for x in items if int(getattr(x, "alert_count", 0) or 0) > 0]
         elif self._overrides_only:
             items = [x for x in items if bool(getattr(x, "has_override", False))]
+        elif self._syncblocked_only:
+            items = [x for x in items if bool(getattr(x, "sync_blocked", False))]
+        elif self._checked_only:
+            items = [x for x in items if bool(getattr(x, "is_checked", False))]
         else:
             items = [x for x in items if x.branch_type in self._active_type_filters]
-        if self._checked_only:
-            items = [x for x in items if bool(getattr(x, "is_checked", False))]
         if query:
             items = [x for x in items if query in x.search_name]
         for item in items:
@@ -2457,7 +2508,13 @@ class CircuitBrowserPanel(forms.WPFPanel):
             (getattr(c, "LoadName", "") or "")
         ))
 
-        self._all_items = [CircuitListItem(c) for c in circuits]
+        def _session_state_for(circuit):
+            try:
+                return self._session_sync_lock_map.get(_elid_value(circuit.Id))
+            except Exception:
+                return None
+
+        self._all_items = [CircuitListItem(c, session_sync_state=_session_state_for(c)) for c in circuits]
         self._apply_type_tag_brushes()
         self._rebuild_filter_options()
         self._refresh_list()
@@ -2513,7 +2570,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
             target_ids = set()
             for item in list(target_items or []):
                 try:
-                    cid = item.circuit.Id.IntegerValue
+                    cid = _elid_value(item.circuit.Id)
                 except Exception:
                     cid = None
                 if cid is not None:
@@ -2530,7 +2587,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
             if target_ids is None:
                 continue
             try:
-                cid = item.circuit.Id.IntegerValue
+                cid = _elid_value(item.circuit.Id)
             except Exception:
                 cid = None
             if cid in target_ids:
@@ -2548,15 +2605,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         return valid_targets, removed_count
 
     def _set_revit_selection(self, elements):
-        uidoc = revit.uidoc
-        ids = List[DB.ElementId]()
-        for el in elements:
-            try:
-                if el is not None and hasattr(el, "Id"):
-                    ids.Add(el.Id)
-            except Exception:
-                continue
-        uidoc.Selection.SetElementIds(ids)
+        set_revit_selection(elements, uidoc=revit.uidoc)
 
     def _apply_check_state(self, sender, state):
         clicked_item = None
@@ -2590,65 +2639,147 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
     def _build_filter_menu(self):
         menu = ContextMenu()
+        _set_if_resource(self, menu, "Style", "CED.ContextMenu.Base")
+        self._filter_type_menu_items = {}
+        self._filter_warn_item = None
+        self._filter_overrides_item = None
+        self._filter_syncblocked_item = None
+        self._filter_checked_item = None
 
         warn_item = MenuItem()
+        _set_if_resource(self, warn_item, "Style", "CED.MenuItem.Base")
         warn_item.Header = "Circuits With Alerts"
+        warn_item.Icon = _menu_icon(self, "CED.Icon.AlertBoxOutline")
         warn_item.IsCheckable = True
         warn_item.IsChecked = self._warnings_only
         warn_item.StaysOpenOnClick = True
         warn_item.Checked += self.filter_warnings_toggled
         warn_item.Unchecked += self.filter_warnings_toggled
         menu.Items.Add(warn_item)
+        self._filter_warn_item = warn_item
 
         overrides_item = MenuItem()
+        _set_if_resource(self, overrides_item, "Style", "CED.MenuItem.Base")
         overrides_item.Header = "User Overrides"
+        overrides_item.Icon = _menu_icon(self, "CED.Icon.Account")
         overrides_item.IsCheckable = True
         overrides_item.IsChecked = self._overrides_only
         overrides_item.StaysOpenOnClick = True
         overrides_item.Checked += self.filter_overrides_toggled
         overrides_item.Unchecked += self.filter_overrides_toggled
         menu.Items.Add(overrides_item)
+        self._filter_overrides_item = overrides_item
+
+        syncblocked_item = MenuItem()
+        _set_if_resource(self, syncblocked_item, "Style", "CED.MenuItem.Base")
+        syncblocked_item.Header = "Failed Calculations"
+        syncblocked_item.Icon = _menu_icon(self, "CED.Icon.SyncAlert")
+        syncblocked_item.IsCheckable = True
+        syncblocked_item.IsChecked = self._syncblocked_only
+        syncblocked_item.StaysOpenOnClick = True
+        syncblocked_item.Checked += self.filter_sync_blocked_toggled
+        syncblocked_item.Unchecked += self.filter_sync_blocked_toggled
+        menu.Items.Add(syncblocked_item)
+        self._filter_syncblocked_item = syncblocked_item
 
         checked_item = MenuItem()
+        _set_if_resource(self, checked_item, "Style", "CED.MenuItem.Base")
         checked_item.Header = "Checked Circuits Only"
+        checked_item.Icon = _menu_icon(self, "CED.Icon.CheckCircleOutline")
         checked_item.IsCheckable = True
         checked_item.IsChecked = self._checked_only
         checked_item.StaysOpenOnClick = True
         checked_item.Checked += self.filter_checked_toggled
         checked_item.Unchecked += self.filter_checked_toggled
         menu.Items.Add(checked_item)
-        menu.Items.Add(Separator())
+        self._filter_checked_item = checked_item
+        sep_top = Separator()
+        _set_if_resource(self, sep_top, "Style", "CED.Separator.Menu")
+        menu.Items.Add(sep_top)
 
         reset_item = MenuItem()
+        _set_if_resource(self, reset_item, "Style", "CED.MenuItem.Base")
         reset_item.Header = "Reset Filters"
+        reset_item.StaysOpenOnClick = False
         reset_item.Click += self.filter_reset_clicked
         menu.Items.Add(reset_item)
 
-        menu.Items.Add(Separator())
+        sep_mid = Separator()
+        _set_if_resource(self, sep_mid, "Style", "CED.Separator.Menu")
+        menu.Items.Add(sep_mid)
 
         for ctype in self._type_options:
             mi = MenuItem()
+            _set_if_resource(self, mi, "Style", "CED.MenuItem.Base")
             mi.Header = ctype
             mi.IsCheckable = True
             mi.IsChecked = ctype in self._active_type_filters
             mi.StaysOpenOnClick = True
             mi.Tag = ctype
-            mi.IsEnabled = not self._warnings_only and not self._overrides_only
+            mi.IsEnabled = not (
+                self._warnings_only
+                or self._overrides_only
+                or self._syncblocked_only
+                or self._checked_only
+            )
             mi.Checked += self.filter_type_toggled
             mi.Unchecked += self.filter_type_toggled
             menu.Items.Add(mi)
+            self._filter_type_menu_items[ctype] = mi
 
         self._filter_menu = menu
         if self._filter_button is not None:
             self._filter_button.ContextMenu = menu
+        self._sync_filter_menu_state()
+
+    def _sync_filter_menu_state(self):
+        self._suppress_filter_toggle_events = True
+        try:
+            if self._filter_warn_item is not None:
+                self._filter_warn_item.IsChecked = bool(self._warnings_only)
+            if self._filter_overrides_item is not None:
+                self._filter_overrides_item.IsChecked = bool(self._overrides_only)
+            if self._filter_syncblocked_item is not None:
+                self._filter_syncblocked_item.IsChecked = bool(self._syncblocked_only)
+            if self._filter_checked_item is not None:
+                self._filter_checked_item.IsChecked = bool(self._checked_only)
+
+            disable_types = bool(
+                self._warnings_only
+                or self._overrides_only
+                or self._syncblocked_only
+                or self._checked_only
+            )
+            for ctype, item in (self._filter_type_menu_items or {}).items():
+                if item is None:
+                    continue
+                item.IsEnabled = not disable_types
+                item.IsChecked = ctype in self._active_type_filters
+        finally:
+            self._suppress_filter_toggle_events = False
+
+    def _set_exclusive_filter(self, mode_name, is_checked):
+        checked = bool(is_checked)
+        if checked:
+            self._warnings_only = mode_name == "warnings"
+            self._overrides_only = mode_name == "overrides"
+            self._syncblocked_only = mode_name == "syncblocked"
+            self._checked_only = mode_name == "checked"
+            self._active_type_filters = set(self._type_options)
+            return
+        if mode_name == "warnings":
+            self._warnings_only = False
+        elif mode_name == "overrides":
+            self._overrides_only = False
+        elif mode_name == "syncblocked":
+            self._syncblocked_only = False
+        elif mode_name == "checked":
+            self._checked_only = False
 
     def panel_loaded(self, sender, args):
-        self._ensure_theme_bridge()
-        if self._view_activated_handler is None or self._doc_opening_handler is None:
-            self._attach_document_lifecycle_handlers()
-            self._attach_view_activated_handler()
-        if not self._is_pane_visible() or self._doc_is_opening:
+        if not self._is_pane_visible():
             return
+        self._attach_event_handlers()
         doc = self._get_active_doc()
         key = self._doc_key(doc)
         self._active_doc_key = key
@@ -2658,19 +2789,13 @@ class CircuitBrowserPanel(forms.WPFPanel):
             self._set_doc_banner(doc)
 
     def panel_unloaded(self, sender, args):
-        self._detach_theme_bridge()
         self._detach_event_handlers()
 
     def panel_visibility_changed(self, sender, args):
         if not self._is_pane_visible():
-            self._detach_theme_bridge()
+            self._detach_event_handlers()
             return
-        if self._doc_is_opening:
-            return
-        self._ensure_theme_bridge()
-        if self._view_activated_handler is None or self._doc_opening_handler is None:
-            self._attach_document_lifecycle_handlers()
-            self._attach_view_activated_handler()
+        self._attach_event_handlers()
         doc = self._get_active_doc()
         key = self._doc_key(doc)
         self._active_doc_key = key
@@ -2710,23 +2835,28 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
     def _build_actions_menu(self):
         menu = ContextMenu()
+        _set_if_resource(self, menu, "Style", "CED.ContextMenu.Base")
 
         neutral_item = MenuItem()
+        _set_if_resource(self, neutral_item, "Style", "CED.MenuItem.Base")
         neutral_item.Header = "Add/Remove Neutral"
         neutral_item.Click += self.action_neutral_clicked
         menu.Items.Add(neutral_item)
 
         ig_item = MenuItem()
+        _set_if_resource(self, ig_item, "Style", "CED.MenuItem.Base")
         ig_item.Header = "Add/Remove IG"
         ig_item.Click += self.action_ig_clicked
         menu.Items.Add(ig_item)
 
         breaker_item = MenuItem()
+        _set_if_resource(self, breaker_item, "Style", "CED.MenuItem.Base")
         breaker_item.Header = "Auto Size Breaker"
         breaker_item.Click += self.action_breaker_clicked
         menu.Items.Add(breaker_item)
 
         mark_existing_item = MenuItem()
+        _set_if_resource(self, mark_existing_item, "Style", "CED.MenuItem.Base")
         mark_existing_item.Header = "Mark as New/Existing"
         mark_existing_item.Click += self.action_mark_existing_clicked
         menu.Items.Add(mark_existing_item)
@@ -2741,26 +2871,49 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
     def _build_browser_options_menu(self):
         menu = ContextMenu()
+        menu.StaysOpen = True
+        _set_if_resource(self, menu, "Style", "CED.ContextMenu.Base")
+        self._browser_theme_items = {}
+        self._browser_accent_items = {}
+        self._browser_display_items = {}
 
         theme_menu = MenuItem()
+        _set_if_resource(self, theme_menu, "Style", "CED.MenuItem.Base")
         theme_menu.Header = "Theme"
         light_item = MenuItem()
+        _set_if_resource(self, light_item, "Style", "CED.MenuItem.Base")
         light_item.Header = "Light"
         light_item.IsCheckable = True
-        light_item.IsChecked = (self._theme_mode != "dark")
+        light_item.IsChecked = (self._theme_mode == "light")
+        light_item.StaysOpenOnClick = True
         light_item.Tag = "light"
         light_item.Click += self.browser_theme_clicked
         theme_menu.Items.Add(light_item)
+        self._browser_theme_items["light"] = light_item
         dark_item = MenuItem()
+        _set_if_resource(self, dark_item, "Style", "CED.MenuItem.Base")
         dark_item.Header = "Dark"
         dark_item.IsCheckable = True
         dark_item.IsChecked = (self._theme_mode == "dark")
+        dark_item.StaysOpenOnClick = True
         dark_item.Tag = "dark"
         dark_item.Click += self.browser_theme_clicked
         theme_menu.Items.Add(dark_item)
+        self._browser_theme_items["dark"] = dark_item
+        dark_alt_item = MenuItem()
+        _set_if_resource(self, dark_alt_item, "Style", "CED.MenuItem.Base")
+        dark_alt_item.Header = "Dark Alt"
+        dark_alt_item.IsCheckable = True
+        dark_alt_item.IsChecked = (self._theme_mode == "dark_alt")
+        dark_alt_item.StaysOpenOnClick = True
+        dark_alt_item.Tag = "dark_alt"
+        dark_alt_item.Click += self.browser_theme_clicked
+        theme_menu.Items.Add(dark_alt_item)
+        self._browser_theme_items["dark_alt"] = dark_alt_item
         menu.Items.Add(theme_menu)
 
         accent_menu = MenuItem()
+        _set_if_resource(self, accent_menu, "Style", "CED.MenuItem.Base")
         accent_menu.Header = "Accent Color"
         for accent_mode, accent_label in (
             ("blue", "Blue"),
@@ -2769,43 +2922,69 @@ class CircuitBrowserPanel(forms.WPFPanel):
             ("neutral", "Neutral"),
         ):
             item = MenuItem()
+            _set_if_resource(self, item, "Style", "CED.MenuItem.Base")
             item.Header = accent_label
             item.IsCheckable = True
             item.IsChecked = (self._accent_mode == accent_mode)
+            item.StaysOpenOnClick = True
             item.Tag = accent_mode
             item.Click += self.browser_accent_clicked
             accent_menu.Items.Add(item)
+            self._browser_accent_items[accent_mode] = item
         menu.Items.Add(accent_menu)
 
         display_menu = MenuItem()
+        _set_if_resource(self, display_menu, "Style", "CED.MenuItem.Base")
         display_menu.Header = "Display Mode"
         compact_item = MenuItem()
+        _set_if_resource(self, compact_item, "Style", "CED.MenuItem.Base")
         compact_item.Header = "Compact"
         compact_item.IsCheckable = True
         compact_item.IsChecked = not self._is_card_view
+        compact_item.StaysOpenOnClick = True
         compact_item.Tag = "compact"
         compact_item.Click += self.browser_display_mode_clicked
         display_menu.Items.Add(compact_item)
+        self._browser_display_items["compact"] = compact_item
         card_item = MenuItem()
+        _set_if_resource(self, card_item, "Style", "CED.MenuItem.Base")
         card_item.Header = "Card"
         card_item.IsCheckable = True
         card_item.IsChecked = self._is_card_view
+        card_item.StaysOpenOnClick = True
         card_item.Tag = "card"
         card_item.Click += self.browser_display_mode_clicked
         display_menu.Items.Add(card_item)
+        self._browser_display_items["card"] = card_item
         menu.Items.Add(display_menu)
 
         compact_menu = MenuItem()
+        _set_if_resource(self, compact_menu, "Style", "CED.MenuItem.Base")
         compact_menu.Header = "List View"
         badges_item = MenuItem()
+        _set_if_resource(self, badges_item, "Style", "CED.MenuItem.Base")
         badges_item.Header = "Show Circuit Type Badges"
         badges_item.IsCheckable = True
         badges_item.IsChecked = bool(self._compact_show_type_badges)
+        badges_item.StaysOpenOnClick = True
         badges_item.Click += self.toggle_compact_badges_clicked
         compact_menu.Items.Add(badges_item)
         menu.Items.Add(compact_menu)
 
         self._browser_options_menu = menu
+        self._sync_browser_options_menu_state()
+
+    def _sync_browser_options_menu_state(self):
+        selected_display = "card" if self._is_card_view else "compact"
+        for mode, item in (self._browser_theme_items or {}).items():
+            if item is not None:
+                item.IsChecked = (mode == self._theme_mode)
+        for mode, item in (self._browser_accent_items or {}).items():
+            if item is not None:
+                item.IsChecked = (mode == self._accent_mode)
+        for mode, item in (self._browser_display_items or {}).items():
+            if item is not None:
+                item.IsChecked = (mode == selected_display)
 
     def browser_options_clicked(self, sender, args):
         self._build_browser_options_menu()
@@ -2816,42 +2995,56 @@ class CircuitBrowserPanel(forms.WPFPanel):
     def browser_theme_clicked(self, sender, args):
         global CURRENT_THEME_MODE
         mode = str(getattr(sender, "Tag", "light")).lower()
-        if mode not in ("light", "dark"):
+        if mode not in VALID_THEME_MODES:
             return
         if self._theme_mode == mode:
+            self._sync_browser_options_menu_state()
             return
         self._theme_mode = mode
         CURRENT_THEME_MODE = mode
-        _try_apply_theme(self)
-        self._surface_item_style = _try_find_resource(self, "CED.ListViewItem.SurfaceBehavior")
-        self._apply_type_tag_brushes()
-        self._apply_list_interaction_mode()
-        self._update_filter_button_style()
-        self._update_search_chrome()
-        self._update_toggle_button_visual()
-        self._refresh_list()
+        _save_theme_state_to_config(self._theme_mode, self._accent_mode)
+        self._sync_browser_options_menu_state()
+        def _apply_theme_change():
+            _try_apply_theme(self)
+            self._surface_item_style = _try_find_resource(self, "CED.ListViewItem.SurfaceBehavior")
+            self._apply_type_tag_brushes()
+            self._apply_list_interaction_mode()
+            self._update_filter_button_style()
+            self._update_search_chrome()
+            self._update_toggle_button_visual()
+            self._refresh_visible_items()
+            self._sync_browser_options_menu_state()
+        _invoke_later(self, _apply_theme_change)
 
     def browser_accent_clicked(self, sender, args):
         global CURRENT_ACCENT_MODE
         mode = str(getattr(sender, "Tag", "blue")).lower()
-        if mode not in ACCENT_BRUSH_MAP:
+        if mode not in ACCENT_BRUSH_KEY_MAP:
             return
         if self._accent_mode == mode:
+            self._sync_browser_options_menu_state()
             return
         self._accent_mode = mode
         CURRENT_ACCENT_MODE = mode
-        _try_apply_theme(self)
-        self._apply_type_tag_brushes()
-        self._update_filter_button_style()
-        self._refresh_list()
+        _save_theme_state_to_config(self._theme_mode, self._accent_mode)
+        self._sync_browser_options_menu_state()
+        def _apply_accent_change():
+            _try_apply_theme(self)
+            self._apply_type_tag_brushes()
+            self._update_filter_button_style()
+            self._refresh_visible_items()
+            self._sync_browser_options_menu_state()
+        _invoke_later(self, _apply_accent_change)
 
     def browser_display_mode_clicked(self, sender, args):
         mode = str(getattr(sender, "Tag", "")).lower()
         if mode == "compact":
             self._set_card_view(False)
+            self._sync_browser_options_menu_state()
             return
         if mode == "card":
             self._set_card_view(True)
+            self._sync_browser_options_menu_state()
 
     def _collect_action_targets(self):
         # Actions run only on explicitly checked circuits to avoid
@@ -2871,6 +3064,44 @@ class CircuitBrowserPanel(forms.WPFPanel):
             return True, owner
         except Exception:
             return False, ""
+
+    def _format_writeback_lock_reason(self, row):
+        return format_writeback_lock_reason(row)
+
+    def _build_writeback_lock_map(self, circuits, doc=None, settings=None):
+        if doc is None:
+            doc = self._get_active_doc()
+        if doc is None or not getattr(doc, "IsWorkshared", False):
+            return {}
+        circuit_list = [c for c in list(circuits or []) if c is not None]
+        if not circuit_list:
+            return {}
+        if settings is None:
+            try:
+                settings = settings_manager.load_circuit_settings(doc)
+            except Exception:
+                settings = None
+        if settings is None:
+            return {}
+        try:
+            _, _, locked_rows = self._lock_repository.partition_locked_elements(
+                doc,
+                circuit_list,
+                settings,
+                collect_all_device_owners=False,
+            )
+        except Exception:
+            return {}
+        lock_map = {}
+        for row in list(locked_rows or []):
+            try:
+                cid = int((row or {}).get("circuit_id") or 0)
+            except Exception:
+                cid = 0
+            if cid <= 0:
+                continue
+            lock_map[cid] = row
+        return lock_map
 
     def _param_int(self, element, name, default=0):
         value = _lookup_param_value(element, name)
@@ -2970,6 +3201,14 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
     def _build_neutral_rows(self, targets):
         rows = []
+        doc = self._get_active_doc()
+        settings = None
+        if doc is not None:
+            try:
+                settings = settings_manager.load_circuit_settings(doc)
+            except Exception:
+                settings = None
+        lock_map = self._build_writeback_lock_map([getattr(x, "circuit", None) for x in list(targets or [])], doc=doc, settings=settings)
         for item in targets:
             circuit = item.circuit
             btype = (item.branch_type or "").upper()
@@ -2992,9 +3231,9 @@ class CircuitBrowserPanel(forms.WPFPanel):
                     reason = "Blocked: 1-pole circuits require neutral."
                     is_enabled = False
 
-            locked, owner = self._is_locked_circuit(circuit)
-            if locked:
-                reason = "Locked by {}".format(owner or "another user")
+            lock_row = lock_map.get(_elid_value(circuit.Id))
+            if lock_row is not None:
+                reason = self._format_writeback_lock_reason(lock_row)
                 is_enabled = False
 
             current_qty = self._param_int(circuit, "CKT_Wire Neutral Quantity_CED", 0)
@@ -3059,6 +3298,14 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
     def _build_ig_rows(self, targets):
         rows = []
+        doc = self._get_active_doc()
+        settings = None
+        if doc is not None:
+            try:
+                settings = settings_manager.load_circuit_settings(doc)
+            except Exception:
+                settings = None
+        lock_map = self._build_writeback_lock_map([getattr(x, "circuit", None) for x in list(targets or [])], doc=doc, settings=settings)
         for item in targets:
             circuit = item.circuit
             btype = (item.branch_type or "").upper()
@@ -3079,9 +3326,9 @@ class CircuitBrowserPanel(forms.WPFPanel):
                     reason = "Blocked: user override with cleared ground size."
                     is_enabled = False
 
-            locked, owner = self._is_locked_circuit(circuit)
-            if locked:
-                reason = "Locked by {}".format(owner or "another user")
+            lock_row = lock_map.get(_elid_value(circuit.Id))
+            if lock_row is not None:
+                reason = self._format_writeback_lock_reason(lock_row)
                 is_enabled = False
 
             current_qty = self._param_int(circuit, "CKT_Wire Isolated Ground Quantity_CED", 0)
@@ -3148,6 +3395,23 @@ class CircuitBrowserPanel(forms.WPFPanel):
         rows = []
         doc = self._get_active_doc()
         is_workshared = bool(getattr(doc, "IsWorkshared", False)) if doc is not None else False
+        lock_candidate_circuits = []
+        for item in list(targets or []):
+            btype = (getattr(item, "branch_type", "") or "").upper()
+            if btype in BLOCKED_BRANCH_TYPES:
+                continue
+            if btype not in IG_BREAKER_ALLOWED_TYPES:
+                continue
+            circuit = getattr(item, "circuit", None)
+            if circuit is not None:
+                lock_candidate_circuits.append(circuit)
+        settings = None
+        if doc is not None:
+            try:
+                settings = settings_manager.load_circuit_settings(doc)
+            except Exception:
+                settings = None
+        lock_map = self._build_writeback_lock_map(lock_candidate_circuits, doc=doc, settings=settings)
         for item in targets:
             circuit = item.circuit
             btype = (item.branch_type or "").upper()
@@ -3161,20 +3425,19 @@ class CircuitBrowserPanel(forms.WPFPanel):
                 reason = "Breaker action supports BRANCH/FEEDER/XFMR circuits."
                 is_enabled = False
 
-            locked, owner = self._is_locked_circuit(circuit, doc=doc) if is_workshared else (False, "")
-            if locked:
-                reason = "Locked by {}".format(owner or "another user")
+            lock_row = lock_map.get(_elid_value(circuit.Id)) if is_workshared else None
+            if lock_row is not None:
+                reason = self._format_writeback_lock_reason(lock_row)
                 is_enabled = False
 
             load_current = _lookup_param_value(circuit, "Circuit Load Current_CED")
-            cur_rating = _lookup_param_value(circuit, "CKT_Rating_CED")
-            if cur_rating is None:
+            cur_rating = None
+            cur_frame = None
+            if btype != "SPACE":
                 try:
                     cur_rating = circuit.Rating
                 except Exception:
                     cur_rating = None
-            cur_frame = _lookup_param_value(circuit, "CKT_Frame_CED")
-            if cur_frame is None:
                 try:
                     cur_frame = circuit.Frame
                 except Exception:
@@ -3262,13 +3525,20 @@ class CircuitBrowserPanel(forms.WPFPanel):
         rows = []
         doc = self._get_active_doc()
         is_workshared = bool(getattr(doc, "IsWorkshared", False)) if doc is not None else False
+        settings = None
+        if doc is not None:
+            try:
+                settings = settings_manager.load_circuit_settings(doc)
+            except Exception:
+                settings = None
+        lock_map = self._build_writeback_lock_map([getattr(x, "circuit", None) for x in list(targets or [])], doc=doc, settings=settings)
         for item in targets:
             circuit = item.circuit
             reason = ""
             is_enabled = True
-            locked, owner = self._is_locked_circuit(circuit, doc=doc) if is_workshared else (False, "")
-            if locked:
-                reason = "Locked by {}".format(owner or "another user")
+            lock_row = lock_map.get(_elid_value(circuit.Id)) if is_workshared else None
+            if lock_row is not None:
+                reason = self._format_writeback_lock_reason(lock_row)
                 is_enabled = False
 
             current_notes = _lookup_schedule_notes_text(circuit)
@@ -3303,7 +3573,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
             if is_new_mode:
                 row.new_wire = "Auto Calculated"
             else:
-                row.new_wire = "Auto Calculated" if (clear_wire or clear_conduit) else row.current_wire
+                row.new_wire = "-" if (clear_wire or clear_conduit) else row.current_wire
             row.recompute_state()
 
     def _apply_mark_existing_rows(self, rows, mode, set_notes, clear_wire, clear_conduit):
@@ -3428,27 +3698,35 @@ class CircuitBrowserPanel(forms.WPFPanel):
         self._active_type_filters = set(self._type_options)
         self._warnings_only = False
         self._overrides_only = False
+        self._syncblocked_only = False
         self._checked_only = False
         self._update_filter_button_style()
         self._refresh_list()
-        self._build_filter_menu()
+        self._sync_filter_menu_state()
 
     def filter_reset_clicked(self, sender, args):
         self._reset_filters()
+        try:
+            if self._filter_menu is not None:
+                self._filter_menu.IsOpen = False
+        except Exception:
+            pass
 
     def filter_select_all_clicked(self, sender, args):
         self._active_type_filters = set(self._type_options)
         self._update_filter_button_style()
         self._refresh_list()
-        self._build_filter_menu()
+        self._sync_filter_menu_state()
 
     def filter_clear_all_clicked(self, sender, args):
         self._active_type_filters = set()
         self._update_filter_button_style()
         self._refresh_list()
-        self._build_filter_menu()
+        self._sync_filter_menu_state()
 
     def filter_type_toggled(self, sender, args):
+        if self._suppress_filter_toggle_events:
+            return
         ctype = getattr(sender, "Tag", None)
         if not ctype:
             return
@@ -3461,28 +3739,39 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
         self._update_filter_button_style()
         self._refresh_list()
+        self._sync_filter_menu_state()
 
     def filter_warnings_toggled(self, sender, args):
-        self._warnings_only = bool(getattr(sender, "IsChecked", False))
-        if self._warnings_only:
-            self._overrides_only = False
+        if self._suppress_filter_toggle_events:
+            return
+        self._set_exclusive_filter("warnings", bool(getattr(sender, "IsChecked", False)))
         self._update_filter_button_style()
         self._refresh_list()
-        self._build_filter_menu()
+        self._sync_filter_menu_state()
+
+    def filter_sync_blocked_toggled(self, sender, args):
+        if self._suppress_filter_toggle_events:
+            return
+        self._set_exclusive_filter("syncblocked", bool(getattr(sender, "IsChecked", False)))
+        self._update_filter_button_style()
+        self._refresh_list()
+        self._sync_filter_menu_state()
 
     def filter_overrides_toggled(self, sender, args):
-        self._overrides_only = bool(getattr(sender, "IsChecked", False))
-        if self._overrides_only:
-            self._warnings_only = False
+        if self._suppress_filter_toggle_events:
+            return
+        self._set_exclusive_filter("overrides", bool(getattr(sender, "IsChecked", False)))
         self._update_filter_button_style()
         self._refresh_list()
-        self._build_filter_menu()
+        self._sync_filter_menu_state()
 
     def filter_checked_toggled(self, sender, args):
-        self._checked_only = bool(getattr(sender, "IsChecked", False))
+        if self._suppress_filter_toggle_events:
+            return
+        self._set_exclusive_filter("checked", bool(getattr(sender, "IsChecked", False)))
         self._update_filter_button_style()
         self._refresh_list()
-        self._build_filter_menu()
+        self._sync_filter_menu_state()
 
     def _set_card_view(self, is_card_view):
         self._is_card_view = bool(is_card_view)
@@ -3491,6 +3780,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         else:
             self._list.ItemTemplate = self._compact_template
         self._update_toggle_button_visual()
+        self._sync_browser_options_menu_state()
 
     def toggle_view_clicked(self, sender, args):
         self._set_card_view(not self._is_card_view)
@@ -3520,7 +3810,9 @@ class CircuitBrowserPanel(forms.WPFPanel):
         if source is None:
             return
         menu = ContextMenu()
+        _set_if_resource(self, menu, "Style", "CED.ContextMenu.Base")
         toggle = MenuItem()
+        _set_if_resource(self, toggle, "Style", "CED.MenuItem.Base")
         toggle.Header = "Show Circuit Type Badges"
         toggle.IsCheckable = True
         toggle.IsChecked = bool(self._compact_show_type_badges)
@@ -3570,28 +3862,28 @@ class CircuitBrowserPanel(forms.WPFPanel):
         targets = []
         for item in self._target_items():
             try:
-                base_eq = item.circuit.BaseEquipment
-                if base_eq:
-                    targets.append(base_eq)
+                targets.extend(collect_circuit_targets(item.circuit, "panel"))
             except Exception:
                 continue
         self._set_revit_selection(targets)
 
     def select_circuits_clicked(self, sender, args):
-        self._set_revit_selection([x.circuit for x in self._target_items()])
+        targets = []
+        for item in self._target_items():
+            targets.extend(collect_circuit_targets(item.circuit, "circuit"))
+        self._set_revit_selection(targets)
 
     def select_downstream_clicked(self, sender, args):
         targets = []
         for item in self._target_items():
             try:
-                for el in item.circuit.Elements:
-                    targets.append(el)
+                targets.extend(collect_circuit_targets(item.circuit, "device"))
             except Exception:
                 continue
         self._set_revit_selection(targets)
 
     def clear_revit_selection_clicked(self, sender, args):
-        revit.uidoc.Selection.SetElementIds(List[DB.ElementId]())
+        clear_revit_selection(uidoc=revit.uidoc)
 
     def check_all_clicked(self, sender, args):
         try:
@@ -3624,7 +3916,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         items, removed_count = self._prune_stale_items(items)
         if removed_count:
             self._set_status("Removed {} deleted circuits from list.".format(removed_count))
-        circuit_ids = [x.circuit.Id.IntegerValue for x in items if getattr(x, "circuit", None)]
+        circuit_ids = [_elid_value(x.circuit.Id) for x in items if getattr(x, "circuit", None)]
         if not circuit_ids:
             forms.alert("No circuits selected.", title=TITLE)
             return
@@ -3649,7 +3941,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         items, removed_count = self._prune_stale_items()
         if removed_count:
             self._set_status("Removed {} deleted circuits from list.".format(removed_count))
-        circuit_ids = [x.circuit.Id.IntegerValue for x in items if getattr(x, "circuit", None)]
+        circuit_ids = [_elid_value(x.circuit.Id) for x in items if getattr(x, "circuit", None)]
         if not circuit_ids:
             forms.alert("No circuits available.", title=TITLE)
             return
@@ -3745,7 +4037,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         self._set_status("Updating alert visibility...")
         self._operation_gateway.raise_operation(
             operation_key="set_hidden_alert_types",
-            circuit_ids=[item.circuit.Id.IntegerValue],
+            circuit_ids=[_elid_value(item.circuit.Id)],
             source="pane",
             options={"hidden_definition_ids": list(hidden_ids)},
             callback=self._on_alert_visibility_saved,

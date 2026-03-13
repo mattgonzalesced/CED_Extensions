@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from pyrevit import script, forms, DB
 from pyrevit.framework import Color, SolidColorBrush
 

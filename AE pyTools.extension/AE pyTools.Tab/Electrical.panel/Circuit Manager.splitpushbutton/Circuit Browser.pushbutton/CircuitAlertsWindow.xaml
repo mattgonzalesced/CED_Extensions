@@ -1,4 +1,4 @@
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         Title="Circuit Alerts"
         Height="520"
         Width="980"
@@ -9,7 +9,7 @@
         PreviewMouseDown="window_preview_mouse_down">
   <Window.Resources>
     <ResourceDictionary>
-</ResourceDictionary>
+    </ResourceDictionary>
   </Window.Resources>
 
   <Grid Margin="{DynamicResource CED.Thickness.ContentMargin}">
@@ -29,52 +29,76 @@
     <TabControl Grid.Row="2" Name="AlertsTabs" Style="{DynamicResource CED.TabControl.Base}">
       <TabItem Header="Active">
         <Border BorderBrush="{DynamicResource CED.Brush.DataGridBorder}" BorderThickness="1" Background="{DynamicResource CED.Brush.ListBackground}" Margin="4">
-          <ListView Name="ActiveAlertsList"
-                    Style="{DynamicResource CED.ListView.AlertsGrid}"
+          <DataGrid Name="ActiveAlertsList"
+                    Style="{DynamicResource CED.DataGrid.Display}"
+                    ColumnHeaderStyle="{DynamicResource HeaderWrapCenter}"
+                    RowStyle="{DynamicResource CED.DataGrid.Row.Display}"
+                    AutoGenerateColumns="False"
+                    IsReadOnly="True"
+                    CanUserAddRows="False"
+                    CanUserDeleteRows="False"
+                    CanUserResizeRows="False"
+                    CanUserReorderColumns="False"
+                    CanUserSortColumns="False"
+                    SelectionMode="Single"
+                    SelectionUnit="FullRow"
+                    HeadersVisibility="Column"
+                    GridLinesVisibility="Horizontal"
+                    HorizontalScrollBarVisibility="Disabled"
                     VirtualizingPanel.IsVirtualizing="True"
                     VirtualizingPanel.VirtualizationMode="Recycling"
                     ScrollViewer.CanContentScroll="True"
                     PreviewMouseDown="alerts_list_preview_mouse_down">
-            <ListView.View>
-              <GridView ColumnHeaderContainerStyle="{DynamicResource CED.GridView.Header}">
-                <GridViewColumn Header="Severity" Width="90" DisplayMemberBinding="{Binding severity}"/>
-                <GridViewColumn Header="Group" Width="120" DisplayMemberBinding="{Binding group}"/>
-                <GridViewColumn Header="Alert ID" Width="230" DisplayMemberBinding="{Binding definition_id}"/>
-                <GridViewColumn Header="Message" Width="460">
-                  <GridViewColumn.CellTemplate>
-                    <DataTemplate>
-                      <TextBlock Text="{Binding message}" TextWrapping="Wrap" MaxWidth="450"/>
-                    </DataTemplate>
-                  </GridViewColumn.CellTemplate>
-                </GridViewColumn>
-              </GridView>
-            </ListView.View>
-          </ListView>
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Severity" Width="0.9*" Binding="{Binding severity}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly}" ElementStyle="{DynamicResource CenterTextCell}"/>
+              <DataGridTextColumn Header="Group" Width="1.1*" Binding="{Binding group}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly}" ElementStyle="{DynamicResource CenterTextCell}"/>
+              <DataGridTextColumn Header="Alert ID" Width="1.9*" Binding="{Binding definition_id}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly}"/>
+              <DataGridTemplateColumn Header="Message" Width="3*" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly}">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding message}" TextWrapping="Wrap" Style="{DynamicResource RemarksTextCell}"/>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </DataGrid>
         </Border>
       </TabItem>
       <TabItem Header="Hidden">
         <Border BorderBrush="{DynamicResource CED.Brush.DataGridBorder}" BorderThickness="1" Background="{DynamicResource CED.Brush.ListBackground}" Margin="4">
-          <ListView Name="HiddenAlertsList"
-                    Style="{DynamicResource CED.ListView.AlertsGrid}"
+          <DataGrid Name="HiddenAlertsList"
+                    Style="{DynamicResource CED.DataGrid.Display}"
+                    ColumnHeaderStyle="{DynamicResource HeaderWrapCenter}"
+                    RowStyle="{DynamicResource CED.DataGrid.Row.Display}"
+                    AutoGenerateColumns="False"
+                    IsReadOnly="True"
+                    CanUserAddRows="False"
+                    CanUserDeleteRows="False"
+                    CanUserResizeRows="False"
+                    CanUserReorderColumns="False"
+                    CanUserSortColumns="False"
+                    SelectionMode="Single"
+                    SelectionUnit="FullRow"
+                    HeadersVisibility="Column"
+                    GridLinesVisibility="Horizontal"
+                    HorizontalScrollBarVisibility="Disabled"
                     VirtualizingPanel.IsVirtualizing="True"
                     VirtualizingPanel.VirtualizationMode="Recycling"
                     ScrollViewer.CanContentScroll="True"
                     PreviewMouseDown="alerts_list_preview_mouse_down">
-            <ListView.View>
-              <GridView ColumnHeaderContainerStyle="{DynamicResource CED.GridView.Header}">
-                <GridViewColumn Header="Severity" Width="90" DisplayMemberBinding="{Binding severity}"/>
-                <GridViewColumn Header="Group" Width="120" DisplayMemberBinding="{Binding group}"/>
-                <GridViewColumn Header="Alert ID" Width="230" DisplayMemberBinding="{Binding definition_id}"/>
-                <GridViewColumn Header="Message" Width="460">
-                  <GridViewColumn.CellTemplate>
-                    <DataTemplate>
-                      <TextBlock Text="{Binding message}" TextWrapping="Wrap" MaxWidth="450"/>
-                    </DataTemplate>
-                  </GridViewColumn.CellTemplate>
-                </GridViewColumn>
-              </GridView>
-            </ListView.View>
-          </ListView>
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Severity" Width="0.9*" Binding="{Binding severity}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly}" ElementStyle="{DynamicResource CenterTextCell}"/>
+              <DataGridTextColumn Header="Group" Width="1.1*" Binding="{Binding group}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly}" ElementStyle="{DynamicResource CenterTextCell}"/>
+              <DataGridTextColumn Header="Alert ID" Width="1.9*" Binding="{Binding definition_id}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly}"/>
+              <DataGridTemplateColumn Header="Message" Width="3*" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly}">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding message}" TextWrapping="Wrap" Style="{DynamicResource RemarksTextCell}"/>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </DataGrid>
         </Border>
       </TabItem>
     </TabControl>
@@ -84,9 +108,10 @@
         <Button Name="HideTypeButton" Style="{DynamicResource CED.Button.Base}" Content="Hide Type" Width="96" Height="28" VerticalAlignment="Center" Click="hide_type_clicked"/>
         <Button Name="UnhideTypeButton" Style="{DynamicResource CED.Button.Base}" Content="Unhide Type" Width="96" Height="28" VerticalAlignment="Center" Click="unhide_type_clicked"/>
       </Grid>
-      <Button Style="{DynamicResource CED.Button.Apply}" Content="Apply" Width="80" Height="28" Margin="12,0,0,0" VerticalAlignment="Center" Click="apply_clicked"/>
-      <Button Style="{DynamicResource CED.Button.Base}" Content="Close" Width="80" Height="28" Margin="6,0,0,0" VerticalAlignment="Center" Click="close_clicked"/>
+      <Button Style="{DynamicResource CED.Button.Base}" Content="Close" Width="80" Height="28" Margin="12,0,0,0" VerticalAlignment="Center" Click="close_clicked"/>
+      <Button Style="{DynamicResource CED.Button.Apply}" Content="Apply" Width="80" Height="28" Margin="6,0,0,0" VerticalAlignment="Center" Click="apply_clicked"/>
     </StackPanel>
   </Grid>
 </Window>
+
 

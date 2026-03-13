@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 CONDUCTOR_AREA_TABLE = {
     '14': {'cmil': 4110, 'area': {'THHN': 0.0097, 'THWN': 0.0097, 'THWN-2': 0.0097, 'RHW': 0.0293, 'XHHW': 0.0139, 'XHHW-2': 0.0139, 'XHH': 0.0139}},
     '12': {'cmil': 6530, 'area': {'THHN': 0.0133, 'THWN': 0.0133, 'THWN-2': 0.0133, 'RHW': 0.0353, 'XHHW': 0.0181, 'XHHW-2': 0.0181, 'XHH': 0.0181}},

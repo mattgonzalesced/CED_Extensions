@@ -7,10 +7,19 @@
 
 from System.Collections.Generic import List
 from pyrevit import revit, DB, forms, script
+from pyrevit.compat import get_elementid_value_func
 
 logger = script.get_logger()
 output = script.get_output()
 doc = revit.doc
+_get_elid_value = get_elementid_value_func()
+
+
+def _idval(item):
+    try:
+        return int(_get_elid_value(item))
+    except Exception:
+        return int(getattr(item, "IntegerValue", 0))
 
 # -----------------------------------------------------------------------------
 # 0) Constants
@@ -157,7 +166,7 @@ def get_all_panel_names(doc):
                 pn = p.AsString()
         except Exception as ex:
             logger.debug("Could not read Panel Name on equipment id {0}: {1}"
-                         .format(eq.Id.IntegerValue, ex))
+                         .format(_idval(eq.Id), ex))
         if pn:
             names.append(pn.strip())
     return _as_sorted_unique(names)

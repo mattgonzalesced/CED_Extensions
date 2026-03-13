@@ -3,10 +3,25 @@
 
 import Autodesk.Revit.DB.Electrical as DBE
 from pyrevit import DB
+from pyrevit.compat import get_elementid_value_func, get_elementid_from_value_func
 
 from CEDElectrical.Application.dto.operation_request import OperationRequest
 from CEDElectrical.Domain import settings_manager
 from CEDElectrical.Model.CircuitBranch import CircuitBranch
+
+_get_elid_value = get_elementid_value_func()
+_get_elid_from_value = get_elementid_from_value_func()
+
+
+def _elid_value(item):
+    try:
+        return int(_get_elid_value(item))
+    except Exception:
+        return int(getattr(item, 'IntegerValue', 0))
+
+
+def _elid_from_value(value):
+    return _get_elid_from_value(int(value))
 
 
 class AutosizeBreakerAndRecalculateOperation(object):
@@ -35,7 +50,7 @@ class AutosizeBreakerAndRecalculateOperation(object):
         circuits = []
         for cid in by_id.keys():
             try:
-                el = doc.GetElement(DB.ElementId(cid))
+                el = doc.GetElement(_elid_from_value(cid))
             except Exception:
                 el = None
             if isinstance(el, DBE.ElectricalSystem):
@@ -58,7 +73,7 @@ class AutosizeBreakerAndRecalculateOperation(object):
                     locked_rows.append(self._locked_row(circuit, doc))
                     continue
 
-                spec = by_id.get(circuit.Id.IntegerValue) or {}
+                spec = by_id.get(_elid_value(circuit.Id)) or {}
                 set_rating = bool(spec.get('set_rating', True))
                 set_frame = bool(spec.get('set_frame', True))
                 if not (set_rating or set_frame):
@@ -70,7 +85,7 @@ class AutosizeBreakerAndRecalculateOperation(object):
                 if set_frame:
                     did_change = self._set_numeric(circuit, 'Frame', 'RBS_ELEC_CIRCUIT_FRAME_PARAM', spec.get('frame')) or did_change
                 if did_change:
-                    changed_ids.append(circuit.Id.IntegerValue)
+                    changed_ids.append(_elid_value(circuit.Id))
             tx.Commit()
         except Exception:
             tx.RollBack()
@@ -189,8 +204,11 @@ class AutosizeBreakerAndRecalculateOperation(object):
         except Exception:
             owner = ''
         return {
+            'circuit_id': _elid_value(circuit.Id),
             'circuit': '{}-{}'.format(panel, number),
             'load_name': getattr(circuit, 'LoadName', '') or '',
             'circuit_owner': owner,
             'device_owner': '',
+            'sync_writeback': False,
         }
+

@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 __title__ = "Wire Circuited Elements"
 
+from pyrevit import script, DB, forms
+from pyrevit.compat import get_elementid_value_func
+
 from Snippets.wireutils import (
     wire_connected_unconnected_connectors,
     is_homerun_wire,
@@ -14,11 +17,19 @@ from Snippets.wireutils import (
     collect_active_view_wires_by_circuit,
     delete_element_ids,
 )
-from pyrevit import script, DB, forms
 
 logger = script.get_logger()
 HOME_RUN_LENGTH = 4.0
 GEOM_TOL = 1e-6
+_get_elid_value = get_elementid_value_func()
+
+
+def _idval(item):
+    try:
+        return int(_get_elid_value(item))
+    except Exception:
+        return int(getattr(item, "IntegerValue", 0))
+
 WIRING_TYPE_NAMES = {
     "Arc": DB.Electrical.WiringType.Arc,
     "Chamfer": DB.Electrical.WiringType.Chamfer
@@ -46,7 +57,7 @@ def xyz_text(point):
 
 
 def remove_existing_wires_in_active_view(doc, view_id, circuits):
-    circuits_by_key = {c.Id.IntegerValue: c for c in circuits}
+    circuits_by_key = {_idval(c.Id): c for c in circuits}
     wire_map = collect_active_view_wires_by_circuit(doc, view_id)
     delete_ids = []
     by_circuit_count = {}

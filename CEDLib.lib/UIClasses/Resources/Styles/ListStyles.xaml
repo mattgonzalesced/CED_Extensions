@@ -1,5 +1,263 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style x:Key="CED.ScrollBar.Menu.Thumb" TargetType="Thumb">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.IconMuted}"/>
+    <Setter Property="MinHeight" Value="16"/>
+    <Setter Property="MinWidth" Value="7"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Thumb">
+          <Border x:Name="Pill"
+                  Background="{TemplateBinding Background}"
+                  CornerRadius="3.5"
+                  Margin="0.5,0.5,0.5,0.5"/>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Pill" Property="Opacity" Value="0.95"/>
+            </Trigger>
+            <Trigger Property="IsDragging" Value="True">
+              <Setter TargetName="Pill" Property="Opacity" Value="1"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="CED.ScrollBar.Menu.Button" TargetType="RepeatButton">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="RepeatButton">
+          <Border x:Name="Root" Background="{TemplateBinding Background}" CornerRadius="4">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Root" Property="Background" Value="{DynamicResource CED.Brush.ButtonStateOverlayHover}"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+              <Setter TargetName="Root" Property="Background" Value="{DynamicResource CED.Brush.ButtonStateOverlayPressed}"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="CED.ScrollBar.Menu" TargetType="ScrollBar">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.ListBackground}"/>
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.IconMuted}"/>
+    <Setter Property="Width" Value="8"/>
+    <Setter Property="MinWidth" Value="8"/>
+    <Setter Property="MinHeight" Value="5"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ScrollBar">
+          <Grid x:Name="Root" Background="{TemplateBinding Background}">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="*"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <RepeatButton x:Name="LineUpButton"
+                          Grid.Row="0"
+                          Style="{StaticResource CED.ScrollBar.Menu.Button}"
+                          Height="12"
+                          Command="ScrollBar.LineUpCommand">
+              <Path Data="M 0 4 L 4 0 L 8 4 Z"
+                    Fill="{DynamicResource CED.Brush.IconMuted}"
+                    Width="8"
+                    Height="4"
+                    Stretch="Fill"/>
+            </RepeatButton>
+            <Track x:Name="PART_Track" Grid.Row="1" IsDirectionReversed="True">
+              <Track.Thumb>
+                <Thumb Style="{StaticResource CED.ScrollBar.Menu.Thumb}"/>
+              </Track.Thumb>
+            </Track>
+            <RepeatButton x:Name="LineDownButton"
+                          Grid.Row="2"
+                          Style="{StaticResource CED.ScrollBar.Menu.Button}"
+                          Height="12"
+                          Command="ScrollBar.LineDownCommand">
+              <Path Data="M 0 0 L 8 0 L 4 4 Z"
+                    Fill="{DynamicResource CED.Brush.IconMuted}"
+                    Width="8"
+                    Height="4"
+                    Stretch="Fill"/>
+            </RepeatButton>
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+              <Setter TargetName="Root" Property="LayoutTransform">
+                <Setter.Value>
+                  <RotateTransform Angle="-90"/>
+                </Setter.Value>
+              </Setter>
+              <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style TargetType="ScrollBar" BasedOn="{StaticResource CED.ScrollBar.Menu}"/>
+
+  <Style x:Key="CED.ContextMenu.Base" TargetType="ContextMenu">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.ListItemBackground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.CardBorder}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+    <Setter Property="Padding" Value="4"/>
+    <Setter Property="HasDropShadow" Value="False"/>
+    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="ItemContainerStyle" Value="{DynamicResource CED.MenuItem.Base}"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ContextMenu">
+          <Border Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="{DynamicResource CED.CornerRadius.Control}"
+                  Padding="{TemplateBinding Padding}">
+            <ScrollViewer CanContentScroll="True"
+                          HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+              <ScrollViewer.Resources>
+                <Style TargetType="ScrollBar" BasedOn="{StaticResource CED.ScrollBar.Menu}"/>
+              </ScrollViewer.Resources>
+              <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+            </ScrollViewer>
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="CED.Separator.Menu" TargetType="Separator">
+    <Setter Property="Margin" Value="8,4"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Separator">
+          <Border Height="1" Background="{DynamicResource CED.Brush.DataGridCellBorder}"/>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="CED.MenuItem.Base" TargetType="MenuItem">
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Padding" Value="8,4"/>
+    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+    <Setter Property="OverridesDefaultStyle" Value="True"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="MenuItem">
+          <Border x:Name="ItemBorder"
+                  Background="{TemplateBinding Background}"
+                  CornerRadius="4"
+                  Margin="0,1,2,1">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="IconCol" Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition x:Name="CheckCol" Width="0"/>
+                <ColumnDefinition x:Name="SubmenuCol" Width="0"/>
+              </Grid.ColumnDefinitions>
+              <ContentPresenter x:Name="IconPresenter"
+                                Grid.Column="0"
+                                ContentSource="Icon"
+                                VerticalAlignment="Center"
+                                Margin="4,0,6,0"/>
+              <ContentPresenter x:Name="HeaderPresenter"
+                                Grid.Column="1"
+                                ContentSource="Header"
+                                RecognizesAccessKey="True"
+                                VerticalAlignment="Center"
+                                Margin="{TemplateBinding Padding}"/>
+              <Path x:Name="CheckGlyph"
+                    Grid.Column="2"
+                    Width="10"
+                    Height="10"
+                    Margin="6,0,8,0"
+                    Data="{DynamicResource CED.Icon.Check}"
+                    Fill="{TemplateBinding Foreground}"
+                    Stretch="Uniform"
+                    Visibility="Collapsed"/>
+              <Path x:Name="SubmenuGlyph"
+                    Grid.Column="3"
+                    Width="8"
+                    Height="8"
+                    Margin="6,0,8,0"
+                    Data="M0,0 L0,8 L5,4 Z"
+                    Fill="{TemplateBinding Foreground}"
+                    Stretch="Fill"
+                    Visibility="Collapsed"/>
+              <Popup x:Name="SubmenuPopup"
+                     Placement="Right"
+                     AllowsTransparency="True"
+                     Focusable="False"
+                     IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}">
+                <Border Background="{DynamicResource CED.Brush.ListItemBackground}"
+                        BorderBrush="{DynamicResource CED.Brush.CardBorder}"
+                        BorderThickness="1"
+                        CornerRadius="{DynamicResource CED.CornerRadius.Control}"
+                        Padding="4">
+                  <ScrollViewer CanContentScroll="True"
+                                HorizontalScrollBarVisibility="Disabled"
+                                VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer.Resources>
+                      <Style TargetType="ScrollBar" BasedOn="{StaticResource CED.ScrollBar.Menu}"/>
+                    </ScrollViewer.Resources>
+                    <StackPanel IsItemsHost="True"/>
+                  </ScrollViewer>
+                </Border>
+              </Popup>
+            </Grid>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="Icon" Value="{x:Null}">
+              <Setter TargetName="IconCol" Property="Width" Value="0"/>
+              <Setter TargetName="IconPresenter" Property="Visibility" Value="Collapsed"/>
+            </Trigger>
+            <Trigger Property="IsCheckable" Value="True">
+              <Setter TargetName="CheckCol" Property="Width" Value="Auto"/>
+            </Trigger>
+            <MultiTrigger>
+              <MultiTrigger.Conditions>
+                <Condition Property="IsCheckable" Value="True"/>
+                <Condition Property="IsChecked" Value="True"/>
+              </MultiTrigger.Conditions>
+              <Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible"/>
+            </MultiTrigger>
+            <Trigger Property="HasItems" Value="True">
+              <Setter TargetName="SubmenuCol" Property="Width" Value="Auto"/>
+              <Setter TargetName="SubmenuGlyph" Property="Visibility" Value="Visible"/>
+            </Trigger>
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource CED.Brush.CircuitItemSelectedBackground}"/>
+            </Trigger>
+            <Trigger Property="IsHighlighted" Value="True">
+              <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource CED.Brush.ButtonStateOverlayHover}"/>
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource CED.Brush.ButtonStateOverlayPressed}"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter TargetName="ItemBorder" Property="Opacity" Value="0.55"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <Style x:Key="CED.ListView.Virtualized" TargetType="ListView">
     <Setter Property="Background" Value="{DynamicResource CED.Brush.ListBackground}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.ListBorder}"/>
@@ -29,10 +287,14 @@
   </Style>
 
   <Style x:Key="CED.DataGrid.Base" TargetType="DataGrid">
-    <Setter Property="Background" Value="{DynamicResource CED.Brush.SearchBackground}"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridBackground}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridBorder}"/>
     <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridRowForeground}"/>
+    <Setter Property="RowBackground" Value="{DynamicResource CED.Brush.DataGridBackground}"/>
+    <Setter Property="AlternatingRowBackground" Value="{DynamicResource CED.Brush.DataGridBackground}"/>
     <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+    <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource CED.Brush.DataGridCellBorder}"/>
+    <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource CED.Brush.DataGridCellBorder}"/>
   </Style>
 
   <Style x:Key="CED.GridView.Header" TargetType="GridViewColumnHeader">
@@ -82,7 +344,7 @@
 
   <Style x:Key="CED.ListViewItem.Alerts" TargetType="ListViewItem">
     <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
-    <Setter Property="Background" Value="{DynamicResource CED.Brush.SearchBackground}"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.ListItemBackground}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridCellBorder}"/>
     <Setter Property="BorderThickness" Value="0,0,0,1"/>
     <Setter Property="Padding" Value="2,1"/>
@@ -92,8 +354,8 @@
         <Setter Property="Background" Value="{DynamicResource CED.Brush.CircuitItemHoverBackground}"/>
       </Trigger>
       <Trigger Property="IsSelected" Value="True">
-        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
-        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.CircuitItemSelectedBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
       </Trigger>
       <Trigger Property="IsEnabled" Value="False">
         <Setter Property="Opacity" Value="0.55"/>
@@ -103,7 +365,7 @@
 
   <Style x:Key="CED.ListViewItem.AlertsGrid" TargetType="ListViewItem">
     <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
-    <Setter Property="Background" Value="{DynamicResource CED.Brush.SearchBackground}"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.ListItemBackground}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridCellBorder}"/>
     <Setter Property="BorderThickness" Value="0,0,0,1"/>
     <Setter Property="Padding" Value="2,1"/>
@@ -113,8 +375,8 @@
         <Setter Property="Background" Value="{DynamicResource CED.Brush.CircuitItemHoverBackground}"/>
       </Trigger>
       <Trigger Property="IsSelected" Value="True">
-        <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
-        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridSelectionForeground}"/>
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.CircuitItemSelectedBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
       </Trigger>
       <Trigger Property="IsEnabled" Value="False">
         <Setter Property="Opacity" Value="0.55"/>
@@ -123,8 +385,8 @@
   </Style>
 
   <Style x:Key="CED.TabItem.Base" TargetType="TabItem">
-    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridHeaderForeground}"/>
-    <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridHeaderBackground}"/>
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.TabInactiveForeground}"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.TabInactiveBackground}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridHeaderBorder}"/>
     <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="Padding" Value="10,4"/>
@@ -144,16 +406,17 @@
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource CED.Brush.DataGridHeaderHoverBackground}"/>
+              <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource CED.Brush.TabHoverBackground}"/>
             </Trigger>
             <Trigger Property="IsSelected" Value="True">
-              <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource CED.Brush.SearchBackground}"/>
+              <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource CED.Brush.TabActiveBackground}"/>
               <Setter TargetName="HeaderBorder" Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridBorder}"/>
-              <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+              <Setter Property="Foreground" Value="{DynamicResource CED.Brush.TabActiveForeground}"/>
               <Setter Property="Panel.ZIndex" Value="10"/>
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
               <Setter TargetName="HeaderBorder" Property="Opacity" Value="0.6"/>
+              <Setter Property="Foreground" Value="{DynamicResource CED.Brush.SecondaryText}"/>
             </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>

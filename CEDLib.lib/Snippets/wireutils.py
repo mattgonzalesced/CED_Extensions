@@ -1,4 +1,15 @@
+# -*- coding: utf-8 -*-
 from pyrevit import DB
+from pyrevit.compat import get_elementid_value_func
+
+_get_elid_value = get_elementid_value_func()
+
+
+def _elid_value(item):
+    try:
+        return int(_get_elid_value(item))
+    except Exception:
+        return int(getattr(item, "IntegerValue", 0))
 
 
 def wire_connected_unconnected_connectors(wire):
@@ -76,7 +87,7 @@ def collect_selected_electrical_circuits(doc, uidoc, logger=None):
         systems = mep_model.GetElectricalSystems() or []
         for system in systems:
             # Keep all electrical system types; caller can filter.
-            circuits_by_id[system.Id.IntegerValue] = system
+            circuits_by_id[_elid_value(system.Id)] = system
     return list(circuits_by_id.values())
 
 
@@ -194,7 +205,7 @@ def collect_active_view_wires_by_circuit(doc, view_id):
         circuit_id = get_wire_circuit_id(wire)
         if not circuit_id:
             continue
-        key = circuit_id.IntegerValue
+        key = _elid_value(circuit_id)
         if key not in wire_map:
             wire_map[key] = []
         wire_map[key].append(wire)
