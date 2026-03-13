@@ -19,9 +19,7 @@ except Exception:
     StructuralType = None
 from Autodesk.Revit.UI import ExternalEvent, IExternalEventHandler
 from Autodesk.Revit.UI.Selection import ObjectSnapTypes, ObjectType
-from System import TimeSpan
 from System.Windows import Visibility
-from System.Windows.Threading import DispatcherTimer
 
 LIB_ROOT = os.path.abspath(
     os.path.join(
@@ -657,7 +655,6 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
         self._symbol_lookup_info = {}
         self._active_doc_identity = None
         self._data_doc_identity = None
-        self._doc_watch_timer = None
 
         self._profile_combo = self.FindName("ProfileCombo")
         self._active_doc_text = self.FindName("ActiveDocText")
@@ -687,7 +684,6 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
             self._place_on_reference_button.Click += self._on_place_on_reference
         if self._refresh_button is not None:
             self._refresh_button.Click += self._on_refresh
-        self._setup_doc_watch_timer()
         self._sync_active_document(force=True)
 
     @classmethod
@@ -779,24 +775,6 @@ class PlaceSingleProfilePanel(forms.WPFPanel):
 
     def _on_profile_loaded(self, sender, args):
         self._update_profile_type_list_for_selection()
-
-    def _setup_doc_watch_timer(self):
-        if self._doc_watch_timer is not None:
-            return
-        try:
-            timer = DispatcherTimer()
-            timer.Interval = TimeSpan.FromMilliseconds(500)
-            timer.Tick += self._on_doc_watch_timer_tick
-            timer.Start()
-            self._doc_watch_timer = timer
-        except Exception:
-            self._doc_watch_timer = None
-
-    def _on_doc_watch_timer_tick(self, sender, args):
-        try:
-            self._sync_active_document(force=False)
-        except Exception:
-            pass
 
     def _refresh_data(self, doc=None, doc_switched=False):
         if doc is None:

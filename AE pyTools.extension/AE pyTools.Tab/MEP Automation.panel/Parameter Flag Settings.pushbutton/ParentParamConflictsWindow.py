@@ -5,7 +5,6 @@ Supports modal and modeless usage.
 """
 
 from pyrevit import forms, revit
-from System import TimeSpan
 from System.Windows import Thickness, GridLength, GridUnitType, FontWeights, Visibility
 from System.Windows.Controls import (
     Grid,
@@ -17,7 +16,6 @@ from System.Windows.Controls import (
     Orientation,
     Button,
 )
-from System.Windows.Threading import DispatcherTimer
 from System.Collections.Generic import List
 from Autodesk.Revit.DB import ElementId
 from Autodesk.Revit.UI import ExternalEvent, IExternalEventHandler
@@ -109,7 +107,6 @@ class ParentParamConflictsWindow(forms.WPFWindow):
         self._selection_signature = None
         self._conflict_signature = self._build_conflict_signature(self._conflicts)
         self._external_busy = False
-        self._refresh_timer = None
 
         self._refresh_handler = None
         self._refresh_event = None
@@ -120,7 +117,6 @@ class ParentParamConflictsWindow(forms.WPFWindow):
 
         if self._modeless:
             self._setup_external_events()
-            self._setup_refresh_timer()
             self.Closed += self._on_window_closed
 
         header = self.FindName("HeaderText")
@@ -128,7 +124,7 @@ class ParentParamConflictsWindow(forms.WPFWindow):
             if self._modeless:
                 header.Text = (
                     "Modeless conflict checker. Use Select to jump to elements. "
-                    "The grid refreshes when selection changes and model data differs."
+                    "Use Refresh to reload conflicts for the current selection and model state."
                 )
             else:
                 header.Text = "Resolve parent/sibling parameter discrepancies detected after sync."
@@ -158,34 +154,13 @@ class ParentParamConflictsWindow(forms.WPFWindow):
         self._select_handler = _ExternalActionHandler(self, "ParentConflictsSelect", self._execute_select)
         self._select_event = ExternalEvent.Create(self._select_handler)
 
-    def _setup_refresh_timer(self):
-        try:
-            timer = DispatcherTimer()
-            timer.Interval = TimeSpan.FromMilliseconds(800)
-            timer.Tick += self._on_refresh_timer_tick
-            timer.Start()
-            self._refresh_timer = timer
-        except Exception:
-            self._refresh_timer = None
-
     def _on_window_closed(self, sender, args):
-        try:
-            if self._refresh_timer is not None:
-                self._refresh_timer.Stop()
-        except Exception:
-            pass
-        self._refresh_timer = None
         callback = self._close_callback
         if callback:
             try:
                 callback()
             except Exception:
                 pass
-
-    def _on_refresh_timer_tick(self, sender, args):
-        if not self._modeless:
-            return
-        self._request_refresh(force=False)
 
     def _raise_external(self, event_obj, handler, payload):
         if not self._modeless:
