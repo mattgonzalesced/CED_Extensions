@@ -1,0 +1,28 @@
+title:
+  en_us: "Rename Circuits by Device Parameter"
+tooltip:
+  en_us: >-
+    Version = 2.0
+
+    Date    = 03.02.2026
+    ________________________________________________________________
+    Description:
+
+    Uses the current selection to find connected circuits and provides
+    a per-circuit string builder UI.
+
+    Notes:
+      - Works from selected devices (or selected circuits).
+      - Build names using parameter tokens, custom text, and separators.
+      - Apply active builder to selected circuits or all circuits.
+      - Preview is editable per circuit and persists while switching.
+      - Save and load builder templates from per-user pyRevit config.
+      - Optional duplicate increment appends " #2", " #3", etc.
+      - For multi-value parameter ties on a circuit, most common value wins;
+        ties use lowest Element Id.
+    ________________________________________________________________
+
+author: Reed Pinterich - CoolSys (2026)
+engine:
+  persistent: false
+  full_frame: false

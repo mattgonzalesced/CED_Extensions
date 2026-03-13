@@ -211,6 +211,67 @@ def read_csv_spaces(csv_path):
     return spaces
 
 
+def get_construction_permit_views(doc, level):
+    """
+    Get all views with 'Construction' or 'Permit' in their view class parameter.
+
+    Args:
+        doc: Revit document
+        level: Level to filter views by
+
+    Returns:
+        List of views
+    """
+    from Autodesk.Revit.DB import View, ViewPlan
+
+    views = []
+    all_views = FilteredElementCollector(doc).OfClass(View).WhereElementIsNotElementType().ToElements()
+
+    plan_views_on_level = 0
+    views_with_param = 0
+
+    for view in all_views:
+        try:
+            # Skip templates
+            if view.IsTemplate:
+                continue
+
+            # Only check plan views that match the level
+            if isinstance(view, ViewPlan):
+                if hasattr(view, 'GenLevel') and view.GenLevel:
+                    if view.GenLevel.Id == level.Id:
+                        plan_views_on_level += 1
+                        LOG.info("Checking plan view on level: '{}'".format(view.Name))
+                    else:
+                        continue
+                else:
+                    continue
+            else:
+                # Skip non-plan views
+                continue
+
+            # Look for View Classification parameter
+            view_class_param = view.LookupParameter("View Classification")
+
+            if view_class_param:
+                views_with_param += 1
+                view_class = view_class_param.AsString()
+                LOG.debug("View '{}' has View Classification = '{}'".format(view.Name, view_class))
+                # Check for "Construction / Permit" (exact match)
+                if view_class and view_class.strip() == "Construction / Permit":
+                    views.append(view)
+                    LOG.info(">>> MATCHED: Found Construction/Permit view: {}".format(view.Name))
+            else:
+                LOG.debug("View '{}' has NO View Classification parameter".format(view.Name))
+        except Exception as e:
+            LOG.error("Error checking view {}: {}".format(view.Name if hasattr(view, 'Name') else "Unknown", e))
+            continue
+
+    LOG.info("Summary: {} plan views on level, {} with PR_View_Class param, {} matched".format(
+        plan_views_on_level, views_with_param, len(views)))
+    return views
+
+
 def get_space_tag_type(doc):
     """Get the first available space tag type, preferring PR_Space Tag_CED."""
     # Collect all Space Tag FamilySymbols
@@ -260,7 +321,7 @@ def get_space_tag_type(doc):
     return result
 
 
-def create_spaces(doc, level, spaces, active_view, add_tags=True):
+def create_spaces(doc, level, spaces, views_to_tag, add_tags=True):
     """
     Create spaces in Revit.
 
@@ -268,7 +329,7 @@ def create_spaces(doc, level, spaces, active_view, add_tags=True):
         doc: Revit document
         level: Level to place spaces on
         spaces: List of space dicts
-        active_view: Active view for tagging
+        views_to_tag: List of views to create tags in
         add_tags: Whether to add tags
 
     Returns:
@@ -277,6 +338,7 @@ def create_spaces(doc, level, spaces, active_view, add_tags=True):
     placed = 0
     failed = 0
     tagged = 0
+    tagged_views = set()
     errors = []
 
     # Get space tag type if tagging is enabled
@@ -316,22 +378,22 @@ def create_spaces(doc, level, spaces, active_view, add_tags=True):
                         space_data['y']
                     ))
 
-                    # Tag the space if enabled and in a valid view
-                    if add_tags and tag_type and active_view:
-                        try:
-                            # Get space location point
-                            location = space.Location
-                            if location:
-                                point = location.Point
+                    # Tag the space in all Construction/Permit views
+                    if add_tags and tag_type and views_to_tag:
+                        for view in views_to_tag:
+                            try:
                                 # Create tag at space location
-                                tag = doc.Create.NewSpaceTag(space, uv, active_view)
+                                tag = doc.Create.NewSpaceTag(space, uv, view)
                                 if tag:
                                     tagged += 1
-                                    LOG.debug("Tagged space: {}".format(space_data['number']))
-                        except Exception as tag_error:
-                            LOG.warning("Failed to tag space {}: {}".format(
-                                space_data['number'], tag_error
-                            ))
+                                    tagged_views.add(view.Id.IntegerValue)
+                                    LOG.debug("Tagged space {} in view {}".format(
+                                        space_data['number'], view.Name
+                                    ))
+                            except Exception as tag_error:
+                                LOG.warning("Failed to tag space {} in view {}: {}".format(
+                                    space_data['number'], view.Name, tag_error
+                                ))
 
                 except Exception as e:
                     failed += 1
@@ -354,6 +416,7 @@ def create_spaces(doc, level, spaces, active_view, add_tags=True):
         'placed': placed,
         'failed': failed,
         'tagged': tagged,
+        'tagged_views': len(tagged_views),
         'errors': errors
     }
 
@@ -389,28 +452,40 @@ def main():
     if not level:
         forms.alert("No level selected.", title=TITLE, exitscript=True)
 
-    # Step 4: Confirm
-    message = "Ready to create {} spaces on level '{}'.\n\nContinue?".format(
-        len(spaces),
-        level.Name
-    )
+    # Step 4: Get Construction/Permit views
+    views_to_tag = get_construction_permit_views(doc, level)
+    if not views_to_tag:
+        LOG.warning("No Construction/Permit views found on level {}".format(level.Name))
+        if not forms.alert(
+            "No Construction or Permit views found on level '{}'.\n\nSpaces will be created but not tagged.\n\nContinue?".format(level.Name),
+            title=TITLE, yes=True, no=True
+        ):
+            script.exit()
+
+    # Step 5: Confirm
+    message = "Ready to create {} spaces on level '{}'".format(len(spaces), level.Name)
+    if views_to_tag:
+        message += "\n\nTags will be placed in {} Construction/Permit views.".format(len(views_to_tag))
+    message += "\n\nContinue?"
+
     if not forms.alert(message, title=TITLE, yes=True, no=True):
         script.exit()
 
-    # Step 5: Create spaces
+    # Step 6: Create spaces
     LOG.info("Creating spaces...")
-    active_view = doc.ActiveView
     try:
-        results = create_spaces(doc, level, spaces, active_view, add_tags=True)
+        results = create_spaces(doc, level, spaces, views_to_tag, add_tags=True)
     except Exception as e:
         forms.alert("Error creating spaces:\n{}".format(e), title=TITLE, exitscript=True)
 
-    # Step 6: Report results
+    # Step 7: Report results
     summary = []
     summary.append("Spaces Created: {}".format(results['placed']))
-    summary.append("Spaces Tagged: {}".format(results['tagged']))
+    summary.append("Space Tags Created: {}".format(results['tagged']))
+    summary.append("Views Tagged: {}".format(results['tagged_views']))
 
     if results['failed']:
+        summary.append("")
         summary.append("Failed: {}".format(results['failed']))
         summary.append("")
         summary.append("Errors:")
@@ -420,8 +495,8 @@ def main():
             summary.append("  ... and {} more".format(len(results['errors']) - 10))
 
     forms.alert("\n".join(summary), title=TITLE)
-    LOG.info("Complete: {} placed, {} tagged, {} failed".format(
-        results['placed'], results['tagged'], results['failed']
+    LOG.info("Complete: {} placed, {} tags in {} views, {} failed".format(
+        results['placed'], results['tagged'], results['tagged_views'], results['failed']
     ))
 
 
