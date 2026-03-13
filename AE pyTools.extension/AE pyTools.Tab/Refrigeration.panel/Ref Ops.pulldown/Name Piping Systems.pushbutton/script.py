@@ -1300,6 +1300,38 @@ def _tag_type_label(tag_type):
     return "[{}] {} : {}".format(cat_name, fam_name or "?", type_name or "?")
 
 
+def _identity_tag_type_index(tag_types):
+    if not tag_types:
+        return 0
+    best_idx = 0
+    best_score = -1
+    for idx, tag_type in enumerate(tag_types):
+        try:
+            fam_name = tag_type.get_Parameter(DB.BuiltInParameter.SYMBOL_FAMILY_NAME_PARAM).AsString() or ""
+        except Exception:
+            fam_name = ""
+        try:
+            type_name = tag_type.get_Parameter(DB.BuiltInParameter.SYMBOL_NAME_PARAM).AsString() or ""
+        except Exception:
+            type_name = ""
+        try:
+            cat_name = tag_type.Category.Name if tag_type.Category else ""
+        except Exception:
+            cat_name = ""
+        hay = "{} {} {}".format(fam_name, type_name, cat_name).upper()
+        score = 0
+        if "IDENTITY" in hay:
+            score += 100
+        if "PIPE" in hay:
+            score += 10
+        if "TAG" in hay:
+            score += 1
+        if score > best_score:
+            best_score = score
+            best_idx = idx
+    return best_idx if best_score > 0 else 0
+
+
 
 def _pick_pipe_tag_type():
     tag_types = _pipe_tag_types()
@@ -1630,6 +1662,18 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
     suppress_label_ids = set()
     leaf_label_ids = set()
     ff_removed_label_ids = set()
+    identity_label_map = {}
+    identity_pipe_map = {}
+
+    def _set_identity_for_pipe(pipe, label):
+        if pipe is None or not label:
+            return
+        try:
+            cid = pipe.Id.IntegerValue
+        except Exception:
+            return
+        identity_label_map[cid] = label
+        identity_pipe_map[cid] = pipe
 
     def _pipe_length(pipe):
         curve = _pipe_curve(pipe)
@@ -1763,6 +1807,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
             visited.add(cid)
             order_list.append(cid)
             _record_fitting_connections(curr, fitting_map, fitting_objs)
+            _set_identity_for_pipe(curr, branch_label)
             if cid not in leaf_label_ids:
                 label_map[cid] = branch_label
                 pipe_map[cid] = curr
@@ -1784,6 +1829,13 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                     pipe_map[cid] = curr
                     suppress_label_ids.discard(cid)
                     leaf_label_ids.add(cid)
+                    for pid in path_ids:
+                        try:
+                            p = doc.GetElement(DB.ElementId(pid))
+                        except Exception:
+                            p = None
+                        if p is not None:
+                            _set_identity_for_pipe(p, leaf_label)
                     if ff_removed:
                         ff_removed_label_ids.add(cid)
                     for pid in path_ids[:-1]:
@@ -1818,6 +1870,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
             _record_fitting_connections(curr, fitting_map, fitting_objs)
             if _should_suppress_label(curr, prev_id, label):
                 suppress_label_ids.add(cid)
+            _set_identity_for_pipe(curr, label)
             if cid not in leaf_label_ids:
                 label_map[cid] = label
                 pipe_map[cid] = curr
@@ -1866,9 +1919,16 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                                 suppress_label_ids.discard(n.Id.IntegerValue)
                                 if any(bool(l[3]) for l in leaves):
                                     ff_removed_label_ids.add(n.Id.IntegerValue)
+                            _set_identity_for_pipe(n, collapse_label)
                             # Remove labels downstream and prevent further labeling on this branch.
                             branch_ids = _collect_branch_pipe_ids(n, cid)
                             for pid in branch_ids:
+                                try:
+                                    p = doc.GetElement(DB.ElementId(pid))
+                                except Exception:
+                                    p = None
+                                if p is not None:
+                                    _set_identity_for_pipe(p, collapse_label)
                                 if pid == n.Id.IntegerValue:
                                     continue
                                 label_map.pop(pid, None)
@@ -1946,7 +2006,15 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                 return
 
     walk_trunk(start_pipe, start_label, None)
-    return order_list, fitting_map, fitting_objs, suppress_label_ids, ff_removed_label_ids
+    return (
+        order_list,
+        fitting_map,
+        fitting_objs,
+        suppress_label_ids,
+        ff_removed_label_ids,
+        identity_label_map,
+        identity_pipe_map,
+    )
 
 
 
@@ -2102,7 +2170,7 @@ def _prompt_naming_options():
     cmb_tag_type.DropDownWidth = 1000
     for item in tag_type_labels:
         cmb_tag_type.Items.Add(item)
-    cmb_tag_type.SelectedIndex = 0
+    cmb_tag_type.SelectedIndex = _identity_tag_type_index(tag_types)
     form.Controls.Add(cmb_tag_type)
 
     lbl_number = Label()
@@ -2279,7 +2347,15 @@ def main():
     suppress_label_ids = set()
     ff_removed_label_ids = set()
     start_label = "{}{}".format(pipe_number, suffix_letter)
-    order_list, fitting_map, fitting_objs, local_suppress, local_ff_removed = _traverse_and_label(
+    (
+        order_list,
+        fitting_map,
+        fitting_objs,
+        local_suppress,
+        local_ff_removed,
+        identity_label_map,
+        identity_pipe_map,
+    ) = _traverse_and_label(
         root_pipe,
         start_label,
         label_map,
@@ -2322,9 +2398,9 @@ def main():
     tag_target_ids = None
     if apply_mode == "Redo Tags + Identity Marks":
         deleted_existing_tags = _delete_pipe_tags_for_pipe_tree(root_pipe, active_view)
-        marks_set = _set_identity_marks(label_map, pipe_map, overwrite_existing=True)
+        marks_set = _set_identity_marks(identity_label_map, identity_pipe_map, overwrite_existing=True)
     else:
-        marks_set = _set_identity_marks(label_map, pipe_map, overwrite_existing=False)
+        marks_set = _set_identity_marks(identity_label_map, identity_pipe_map, overwrite_existing=False)
         existing_tagged_ids = _collect_tagged_pipe_ids_in_view(active_view)
         tag_target_ids = set(label_map.keys()) - existing_tagged_ids
 
