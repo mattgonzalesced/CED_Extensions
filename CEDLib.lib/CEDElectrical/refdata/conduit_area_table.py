@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 CONDUIT_AREA_TABLE = {
     'Non-Magnetic': {
         'PVC': {

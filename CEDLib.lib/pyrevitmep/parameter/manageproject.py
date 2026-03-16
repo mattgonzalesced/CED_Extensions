@@ -13,10 +13,16 @@ from pyrevit import script, revit, HOST_APP, forms
 from pyrevitmep.parameter import ProjectParameter, BoundAllowedCategory, BipGroup
 from pyrevitmep.parameter.manageshared import ManageSharedParameter
 
-app = HOST_APP.app  # type: Application
-doc = revit.doc  # type: Document
-uidoc = revit.uidoc
 logger = script.get_logger()
+
+
+def _active_doc():
+    # Resolve document at use time for Rocket mode safety.
+    return revit.doc  # type: Document
+
+
+def _active_app():
+    return HOST_APP.app  # type: Application
 
 
 class ManageProjectParameter(forms.WPFWindow):
@@ -138,9 +144,13 @@ class ManageProjectParameter(forms.WPFWindow):
 
     # noinspection PyUnusedLocal
     def save_click(self, sender, e):
+        active_doc = _active_doc()
+        if active_doc is None:
+            forms.alert("No active document found.")
+            return
         with revit.Transaction("Save project parameters"):
             for projectparam in self.project_parameters_datagrid_content:  # type: ProjectParameter
-                bindingmap = doc.ParameterBindings  # type: BindingMap
+                bindingmap = active_doc.ParameterBindings  # type: BindingMap
                 try:
                     projectparam.save_to_revit_doc()
                 except Exceptions.ArgumentException:
@@ -148,9 +158,13 @@ class ManageProjectParameter(forms.WPFWindow):
 
     # noinspection PyUnusedLocal
     def delete_click(self, sender, e):
+        active_doc = _active_doc()
+        if active_doc is None:
+            forms.alert("No active document found.")
+            return
         with revit.Transaction("Delete project parameters"):
             for projectparam in list(self.datagrid.SelectedItems):  # type: ProjectParameter
-                doc.ParameterBindings.Remove(projectparam.definition)
+                active_doc.ParameterBindings.Remove(projectparam.definition)
                 self.project_parameters_datagrid_content.Remove(projectparam)
 
     # noinspection PyUnusedLocal
@@ -183,6 +197,10 @@ class ManageProjectParameter(forms.WPFWindow):
         self.category_datagrid.Items.Refresh()
 
     def bind_shared_parameters(self, instance=True):
+        app = _active_app()
+        if app is None:
+            forms.alert("No active Revit application found.")
+            return
         if instance:
             binding = app.Create.NewInstanceBinding()  # type: ElementBinding
         else:
@@ -218,7 +236,13 @@ class ManageProjectParameter(forms.WPFWindow):
 
     @classmethod
     def show_dialog(cls):
-        if doc.IsFamilyDocument:
+        active_doc = _active_doc()
+        if active_doc is None:
+            forms.alert("No active document found.")
+            import sys
+
+            sys.exit()
+        if active_doc.IsFamilyDocument:
             forms.alert("This tool works with project documents only. Not family documents.")
             import sys
 

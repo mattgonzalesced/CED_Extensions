@@ -1,0 +1,38 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style x:Key="CED.SearchBox.Chrome" TargetType="Border">
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.SearchBorder}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.SearchBackground}"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource CED.CornerRadius.Search}"/>
+  </Style>
+
+  <Style x:Key="CED.SearchBox.Input" TargetType="TextBox">
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.NeutralDark}"/>
+    <Setter Property="Padding" Value="6,3"/>
+    <Setter Property="Height" Value="22"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Background" Value="Transparent"/>
+  </Style>
+
+  <Style x:Key="CED.SearchBox.Placeholder" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PlaceholderText}"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="IsHitTestVisible" Value="False"/>
+  </Style>
+
+  <Style x:Key="CED.SearchBox.ClearButton" TargetType="Button">
+    <Setter Property="Width" Value="{DynamicResource CED.Size.IconButtonSmall}"/>
+    <Setter Property="Height" Value="{DynamicResource CED.Size.IconButtonSmall}"/>
+    <Setter Property="MinWidth" Value="0"/>
+    <Setter Property="MinHeight" Value="0"/>
+    <Setter Property="Padding" Value="{DynamicResource CED.Thickness.IconButtonPadding}"/>
+    <Setter Property="Focusable" Value="False"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Margin" Value="2,0,2,0"/>
+  </Style>
+</ResourceDictionary>

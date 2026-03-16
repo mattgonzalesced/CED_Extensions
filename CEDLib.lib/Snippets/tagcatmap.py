@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from pyrevit import DB
 
 TAG_CAT_MAP = {

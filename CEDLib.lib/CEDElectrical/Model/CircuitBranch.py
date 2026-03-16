@@ -3,6 +3,7 @@
 import Autodesk.Revit.DB.Electrical as DBE
 from System import Guid
 from pyrevit import DB, script, revit
+from pyrevit.compat import get_elementid_value_func
 
 from CEDElectrical.Model.alerts import Alerts, NoticeCollector
 from CEDElectrical.Model.circuit_settings import (
@@ -25,7 +26,7 @@ from CEDElectrical.refdata.standard_ocp_table import BREAKER_FRAME_SWITCH_TABLE
 console = script.get_output()
 logger = script.get_logger()
 DEV_LOGGING = False
-
+get_elementid = get_elementid_value_func()
 PART_TYPE_MAP = {
     14: "Panelboard",
     15: "Transformer",
@@ -241,7 +242,7 @@ class CircuitBranch(object):
         self.circuit = circuit
         self.settings = settings if settings else CircuitSettings()
 
-        self.circuit_id = circuit.Id.Value
+        self.circuit_id = get_elementid(circuit.Id)
         self.panel = getattr(circuit.BaseEquipment, "Name", None) if circuit.BaseEquipment else ""
         self.circuit_number = circuit.CircuitNumber
         self.name = "{}-{}".format(self.panel, self.circuit_number)
@@ -1825,7 +1826,7 @@ class CircuitBranch(object):
         # WARNINGS ONLY (NO FAILURES)
         # -------------------------------------------------
 
-        if hit_lug_size_limit:
+        if max_size and self._is_wire_larger_than_limit(self.cable.hot_size, max_size):
             self.log_warning(
                 Alerts.BreakerLugSizeLimitCalc(self.cable.hot_size, rating)
             )

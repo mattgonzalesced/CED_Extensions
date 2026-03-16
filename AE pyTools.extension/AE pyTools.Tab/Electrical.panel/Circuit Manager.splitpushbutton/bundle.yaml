@@ -1,0 +1,5 @@
+title: "Circuit Manager"
+
+layout:
+  - Circuit Browser
+  - Alerts Browser

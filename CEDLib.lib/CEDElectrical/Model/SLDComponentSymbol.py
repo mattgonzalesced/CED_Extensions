@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from pyrevit import DB, script, revit
-
-app = __revit__.Application
-uidoc = __revit__.ActiveUIDocument
-doc = revit.doc
+from pyrevit import DB, script
 
 console = script.get_output()
 logger = script.get_logger()

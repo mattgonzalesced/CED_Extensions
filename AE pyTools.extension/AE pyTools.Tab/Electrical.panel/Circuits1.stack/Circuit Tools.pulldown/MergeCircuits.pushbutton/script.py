@@ -1,14 +1,28 @@
 # -*- coding: utf-8 -*-
 import Autodesk.Revit.DB.Electrical as DBE
 from pyrevit import revit, DB, forms, script
-from Snippets import _elecutils as eu
+from pyrevit.compat import get_elementid_value_func, get_elementid_from_value_func
 
+from Snippets import _elecutils as eu
 
 doc = revit.doc
 uidoc = revit.uidoc
 logger = script.get_logger()
 output = script.get_output()
 output.close_others()
+_get_elid_value = get_elementid_value_func()
+_get_elid_from_value = get_elementid_from_value_func()
+
+
+def _idval(item):
+    try:
+        return int(_get_elid_value(item))
+    except Exception:
+        return int(getattr(item, "IntegerValue", 0))
+
+
+def _idfrom(value):
+    return _get_elid_from_value(int(value))
 
 
 class SwallowMergeFailures(DB.IFailuresPreprocessor):
@@ -49,7 +63,7 @@ def get_start_slot(circuit):
 
 
 def format_circuit_label(circuit):
-    ckt_id = circuit.Id.IntegerValue
+    ckt_id = _idval(circuit.Id)
     panel_name = circuit.BaseEquipment.Name if circuit.BaseEquipment else "No Panel"
     circuit_number = circuit.CircuitNumber or ""
     load_name = (circuit.LoadName or "").strip()
@@ -197,7 +211,7 @@ def dedupe_circuits(circuits):
     for ckt in circuits or []:
         if not isinstance(ckt, DBE.ElectricalSystem):
             continue
-        cid = ckt.Id.IntegerValue
+        cid = _idval(ckt.Id)
         if cid in seen_ids:
             continue
         unique.append(ckt)
@@ -253,7 +267,7 @@ def get_circuits_from_panel_schedule_view(panel_schedule_view):
                 circuit_id = panel_schedule_view.GetCircuitIdByCell(row, col)
                 if not circuit_id or circuit_id == DB.ElementId.InvalidElementId:
                     continue
-                cid = circuit_id.IntegerValue
+                cid = _idval(circuit_id)
                 if cid in circuits_by_id:
                     continue
                 circuit = doc.GetElement(circuit_id)
@@ -285,12 +299,12 @@ def main():
         else:
             forms.alert("No circuits found in the model.", exitscript=True)
 
-    all_circuit_ids = set([c.Id.IntegerValue for c in all_circuits])
+    all_circuit_ids = set([_idval(c.Id) for c in all_circuits])
 
     selected_circuits = get_selected_circuits(active_view=active_view)
     selected_circuits = [
         c for c in selected_circuits
-        if c.Id.IntegerValue in all_circuit_ids
+        if _idval(c.Id) in all_circuit_ids
         and c.CircuitType not in [DBE.CircuitType.Spare, DBE.CircuitType.Space]
     ]
 
@@ -331,7 +345,7 @@ def main():
         report_rows_by_id = {}
         merge_candidates = []
         for ckt in report_scope_circuits:
-            cid = ckt.Id.IntegerValue
+            cid = _idval(ckt.Id)
             report_order_ids.append(cid)
             if ckt.Id == main_circuit.Id:
                 report_rows_by_id[cid] = make_result_row(
@@ -377,7 +391,7 @@ def main():
     if not circuits_to_merge:
         script.exit()
 
-    main_elements = set([el.Id.IntegerValue for el in get_circuit_elements(main_circuit)])
+    main_elements = set([_idval(el.Id) for el in get_circuit_elements(main_circuit)])
 
     result_rows = []
     merged_count = 0
@@ -387,13 +401,13 @@ def main():
 
     try:
         for src in circuits_to_merge:
-            src_id_int = src.Id.IntegerValue
-            src_id = DB.ElementId(src_id_int)
+            src_id_int = _idval(src.Id)
+            src_id = _idfrom(src_id_int)
             src_panel_circuit = format_panel_circuit(src)
             src_load_name = (src.LoadName or "").strip() or "N/A"
             src_voltage_pole = format_voltage_pole(src)
 
-            src_elements = [el for el in get_circuit_elements(src) if el.Id.IntegerValue not in main_elements]
+            src_elements = [el for el in get_circuit_elements(src) if _idval(el.Id) not in main_elements]
 
             if not src_elements:
                 row = make_result_row_values(
@@ -435,7 +449,7 @@ def main():
                     doc.Regenerate()
 
                     for el in src_elements:
-                        main_elements.add(el.Id.IntegerValue)
+                        main_elements.add(_idval(el.Id))
 
                     pending_row = make_result_row_values(
                         src_panel_circuit,

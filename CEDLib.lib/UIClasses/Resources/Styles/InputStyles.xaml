@@ -1,0 +1,15 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style x:Key="CED.Input.TextBox" TargetType="TextBox">
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.NeutralDark}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.Border}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Padding" Value="6,3"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.SearchBackground}"/>
+  </Style>
+
+  <Style x:Key="CED.Input.CheckBox" TargetType="CheckBox">
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+</ResourceDictionary>

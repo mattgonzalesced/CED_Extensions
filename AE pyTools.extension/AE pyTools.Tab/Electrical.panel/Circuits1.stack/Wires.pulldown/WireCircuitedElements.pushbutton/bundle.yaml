@@ -14,14 +14,20 @@ tooltip:
 
     SHIFT+Click:
     
-    Select the default Wire Type to be used by the tool. 
+    Configure:
+    - Default Wire Type
+    - Branch Wiring Type (Arc/Chamfer)
+    - Home Run Wiring Type (Arc/Chamfer)
+    - Reference Home Run shape from selected home run wire
+    - Reset reference shape to auto home run generator
     
     
     Notes:
     
     - If Wire Type used by the tool is not available in the active document, SHIFT+Click to pick a new wire type.
     
-    - Currently the tool uses Chamfered wiring to connect elements, and Arc wiring for the homeruns.
+    - Branch wires are created with ElectricalSystem.NewWires().
+    - Home runs are replaced with tool-configured logic and style.
     ________________________________________________________________
 
 author: Anthony Evelina - CoolSys (2025)
