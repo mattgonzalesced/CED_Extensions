@@ -374,7 +374,10 @@ def _collect_params(elem):
     capture_power = cat_lower in power_categories
     capture_circuits = cat_lower in circuit_categories
 
-    base_targets = {"dev-Group ID": ["dev-Group ID", "dev_Group ID"]}
+    base_targets = {
+        "dev-Group ID": ["dev-Group ID", "dev_Group ID"],
+        "Comments": ["Comments", "Comment", "Comments_CED", "Comments_CEDT"],
+    }
     power_targets = {
         "Number of Poles_CED": ["Number of Poles_CED", "Number of Poles_CEDT"],
         "Apparent Load Input_CED": ["Apparent Load Input_CED", "Apparent Load Input_CEDT"],

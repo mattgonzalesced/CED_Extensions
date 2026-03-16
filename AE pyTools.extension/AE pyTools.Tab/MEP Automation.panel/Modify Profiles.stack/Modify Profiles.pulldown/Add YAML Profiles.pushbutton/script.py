@@ -245,6 +245,7 @@ def _collect_params(elem):
 
     base_targets = {
         "dev-Group ID": ["dev-Group ID", "dev_Group ID"],
+        "Comments": ["Comments", "Comment", "Comments_CED", "Comments_CEDT"],
         "Number of Poles_CED": ["Number of Poles_CED", "Number of Poles_CEDT"],
         "Apparent Load Input_CED": ["Apparent Load Input_CED", "Apparent Load Input_CEDT"],
         "Voltage_CED": ["Voltage_CED", "Voltage_CEDT"],
