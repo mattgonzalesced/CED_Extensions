@@ -1,0 +1,10 @@
+title: Audit CAD model 2.0 (batman)
+tooltip: |
+  Process a CSV file containing CAD block names to create or merge equipment profiles.
+
+  For each name in the CSV:
+  - If profile exists: Skip it
+  - If profile doesn't exist: Prompt to create new empty profile, merge into existing, skip, or ignore permanently
+
+  Maintains an ignore list for CAD blocks that should always be skipped.
+is_beta: false
