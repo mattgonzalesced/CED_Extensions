@@ -24,4 +24,4 @@ if csv_file:
     
     # Save back to the same file (or change path for new file)
     df.to_csv(csv_file, index=False)
-    print(f"Updated {csv_file}")
+    print(f"Updated: CSV HAS BEEN UPDATED YOU CAN CONTINUE {csv_file}")
