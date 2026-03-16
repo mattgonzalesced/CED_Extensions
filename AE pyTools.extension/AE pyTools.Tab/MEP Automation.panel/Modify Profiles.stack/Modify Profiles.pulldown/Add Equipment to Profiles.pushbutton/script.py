@@ -505,6 +505,190 @@ def _find_equipment_definition_by_name(data, eq_name):
     return None
 
 
+def _tag_signature(name):
+    return " ".join((name or "").strip().split()).lower()
+
+
+def _is_tag_like(elem):
+    if isinstance(elem, IndependentTag):
+        return True
+    try:
+        _ = elem.TagHeadPosition
+    except Exception:
+        return False
+    return True
+
+
+def _tag_host_element_id(tag):
+    if tag is None:
+        return None
+    try:
+        getter = getattr(tag, "GetTaggedLocalElementIds", None)
+        if callable(getter):
+            ids = list(getter() or [])
+            if ids:
+                return ids[0]
+    except Exception:
+        pass
+    for attr in ("TaggedLocalElementId", "TaggedElementId"):
+        try:
+            value = getattr(tag, attr, None)
+        except Exception:
+            value = None
+        if value:
+            return value
+    return None
+
+
+def _tag_entry_key(tag_entry):
+    if not tag_entry:
+        return None
+    if isinstance(tag_entry, dict):
+        family = tag_entry.get("family_name") or tag_entry.get("family") or ""
+        type_name = tag_entry.get("type_name") or tag_entry.get("type") or ""
+        category = tag_entry.get("category_name") or tag_entry.get("category") or ""
+    else:
+        family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
+        type_name = getattr(tag_entry, "type_name", None) or getattr(tag_entry, "type", None) or ""
+        category = getattr(tag_entry, "category_name", None) or getattr(tag_entry, "category", None) or ""
+    return (_tag_signature(family), _tag_signature(type_name), _tag_signature(category))
+
+
+def _tag_offsets_near(tag_a, tag_b, pos_tol=0.05, rot_tol=0.5):
+    def _extract(entry):
+        offsets = {}
+        if isinstance(entry, dict):
+            offsets = entry.get("offsets") or {}
+        else:
+            offsets = getattr(entry, "offsets", None) or {}
+        try:
+            x_val = float(offsets.get("x_inches", 0.0) or 0.0)
+        except Exception:
+            x_val = 0.0
+        try:
+            y_val = float(offsets.get("y_inches", 0.0) or 0.0)
+        except Exception:
+            y_val = 0.0
+        try:
+            z_val = float(offsets.get("z_inches", 0.0) or 0.0)
+        except Exception:
+            z_val = 0.0
+        try:
+            rot_val = float(offsets.get("rotation_deg", 0.0) or 0.0)
+        except Exception:
+            rot_val = 0.0
+        return (x_val, y_val, z_val, rot_val)
+
+    ax, ay, az, ar = _extract(tag_a)
+    bx, by, bz, br = _extract(tag_b)
+    return (
+        abs(ax - bx) <= pos_tol
+        and abs(ay - by) <= pos_tol
+        and abs(az - bz) <= pos_tol
+        and abs(ar - br) <= rot_tol
+    )
+
+
+def _point_offsets_dict(point, origin):
+    if point is None or origin is None:
+        return None
+    return {
+        "x_inches": _feet_to_inches(point.X - origin.X),
+        "y_inches": _feet_to_inches(point.Y - origin.Y),
+        "z_inches": _feet_to_inches(point.Z - origin.Z),
+    }
+
+
+def _build_independent_tag_entry(tag, host_point):
+    if tag is None or host_point is None:
+        return None
+    try:
+        tag_point = tag.TagHeadPosition
+    except Exception:
+        tag_point = None
+    if tag_point is None:
+        return None
+    doc = getattr(tag, "Document", None)
+    tag_symbol = None
+    if doc is not None:
+        try:
+            tag_symbol = doc.GetElement(tag.GetTypeId())
+        except Exception:
+            tag_symbol = None
+    fam_name = None
+    type_name = None
+    category_name = None
+    if tag_symbol:
+        try:
+            fam = getattr(tag_symbol, "Family", None)
+            fam_name = getattr(fam, "Name", None) if fam else getattr(tag_symbol, "FamilyName", None)
+        except Exception:
+            fam_name = None
+        try:
+            type_name = getattr(tag_symbol, "Name", None)
+            if not type_name and hasattr(tag_symbol, "get_Parameter"):
+                sparam = tag_symbol.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
+                if sparam:
+                    type_name = sparam.AsString()
+        except Exception:
+            type_name = None
+        try:
+            cat = getattr(tag_symbol, "Category", None)
+            category_name = getattr(cat, "Name", None) if cat else None
+        except Exception:
+            category_name = None
+    if not fam_name:
+        try:
+            sym = getattr(tag, "Symbol", None)
+            fam = getattr(sym, "Family", None) if sym else None
+            fam_name = getattr(fam, "Name", None) if fam else fam_name
+        except Exception:
+            pass
+    if not type_name:
+        try:
+            tag_type = getattr(tag, "TagType", None)
+            type_name = getattr(tag_type, "Name", None)
+        except Exception:
+            type_name = None
+    if not category_name:
+        try:
+            cat = getattr(tag, "Category", None)
+            category_name = getattr(cat, "Name", None) if cat else None
+        except Exception:
+            category_name = None
+    if not (fam_name and type_name):
+        return None
+    offsets = {
+        "x_inches": _feet_to_inches((tag_point.X - host_point.X)),
+        "y_inches": _feet_to_inches((tag_point.Y - host_point.Y)),
+        "z_inches": _feet_to_inches((tag_point.Z - host_point.Z)),
+        "rotation_deg": 0.0,
+    }
+    leader_elbow = None
+    leader_end = None
+    try:
+        elbow_point = getattr(tag, "LeaderElbow", None)
+    except Exception:
+        elbow_point = None
+    if elbow_point:
+        leader_elbow = _point_offsets_dict(elbow_point, host_point)
+    try:
+        end_point = getattr(tag, "LeaderEnd", None)
+    except Exception:
+        end_point = None
+    if end_point:
+        leader_end = _point_offsets_dict(end_point, host_point)
+    return {
+        "family_name": fam_name,
+        "type_name": type_name,
+        "category_name": category_name,
+        "parameters": {},
+        "offsets": offsets,
+        "leader_elbow": leader_elbow,
+        "leader_end": leader_end,
+    }
+
+
 def _collect_hosted_tags(elem, host_point):
     doc = getattr(elem, "Document", None)
     if doc is None or host_point is None:
@@ -519,80 +703,98 @@ def _collect_hosted_tags(elem, host_point):
             tag = doc.GetElement(dep_id)
         except Exception:
             tag = None
-        if not tag or not isinstance(tag, IndependentTag):
+        if tag is None or not _is_tag_like(tag):
             continue
-        try:
-            tag_pt = tag.TagHeadPosition
-        except Exception:
-            tag_pt = None
-        tag_symbol = None
-        try:
-            tag_symbol = doc.GetElement(tag.GetTypeId())
-        except Exception:
-            tag_symbol = None
-        fam_name = None
-        type_name = None
-        category_name = None
-        if tag_symbol:
-            try:
-                fam_name = getattr(tag_symbol, "FamilyName", None)
-                if not fam_name:
-                    fam = getattr(tag_symbol, "Family", None)
-                    fam_name = getattr(fam, "Name", None) if fam else None
-            except Exception:
-                fam_name = None
-            try:
-                type_name = getattr(tag_symbol, "Name", None)
-                if not type_name and hasattr(tag_symbol, "get_Parameter"):
-                    sparam = tag_symbol.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
-                    if sparam:
-                        type_name = sparam.AsString()
-            except Exception:
-                type_name = None
-            try:
-                cat = getattr(tag_symbol, "Category", None)
-                category_name = getattr(cat, "Name", None) if cat else None
-            except Exception:
-                category_name = None
-        if not category_name:
-            try:
-                cat = getattr(tag, "Category", None)
-                category_name = getattr(cat, "Name", None) if cat else None
-            except Exception:
-                category_name = None
-        if not fam_name:
-            try:
-                sym = getattr(tag, "Symbol", None)
-                fam = getattr(sym, "Family", None) if sym else None
-                fam_name = getattr(fam, "Name", None) if fam else fam_name
-            except Exception:
-                pass
-        if not type_name:
-            try:
-                tag_type = getattr(tag, "TagType", None)
-                type_name = getattr(tag_type, "Name", None)
-            except Exception:
-                pass
-        if not fam_name or not type_name:
-            continue
-        offsets = {
-            "x_inches": 0.0,
-            "y_inches": 0.0,
-            "z_inches": 0.0,
-            "rotation_deg": 0.0,
-        }
-        if tag_pt:
-            delta = tag_pt - host_point
-            offsets["x_inches"] = _feet_to_inches(delta.X)
-            offsets["y_inches"] = _feet_to_inches(delta.Y)
-        tags.append({
-            "family_name": fam_name,
-            "type_name": type_name,
-            "category_name": category_name,
-            "parameters": {},
-            "offsets": offsets,
-        })
+        entry = _build_independent_tag_entry(tag, host_point)
+        if entry:
+            tags.append(entry)
     return tags
+
+
+def _find_closest_entry_by_point(entries, point):
+    if not entries or point is None:
+        return None
+    closest_idx = None
+    closest_dist = None
+    for idx, entry in enumerate(entries):
+        host_point = entry.get("point")
+        if host_point is None:
+            continue
+        try:
+            dist = host_point.DistanceTo(point)
+        except Exception:
+            try:
+                dx = host_point.X - point.X
+                dy = host_point.Y - point.Y
+                dz = host_point.Z - point.Z
+                dist = math.sqrt(dx * dx + dy * dy + dz * dz)
+            except Exception:
+                continue
+        if closest_idx is None or dist < closest_dist:
+            closest_idx = idx
+            closest_dist = dist
+    return closest_idx
+
+
+def _assign_selected_tags(child_entries, tag_elems):
+    if not child_entries or not tag_elems:
+        return
+    host_index = {}
+    for idx, entry in enumerate(child_entries):
+        elem = entry.get("element")
+        if elem is None:
+            continue
+        try:
+            elem_id = _element_id_value(elem.Id)
+        except Exception:
+            elem_id = None
+        if elem_id is not None and elem_id not in host_index:
+            host_index[elem_id] = idx
+    for tag in tag_elems:
+        target_idx = None
+        host_id = _tag_host_element_id(tag)
+        host_id_val = None
+        if host_id is not None:
+            try:
+                host_id_val = _element_id_value(host_id)
+            except Exception:
+                try:
+                    host_id_val = int(host_id)
+                except Exception:
+                    host_id_val = None
+            if host_id_val is not None:
+                target_idx = host_index.get(host_id_val)
+                if target_idx is None:
+                    continue
+        if target_idx is None:
+            try:
+                tag_point = tag.TagHeadPosition
+            except Exception:
+                tag_point = None
+            if tag_point is None:
+                continue
+            target_idx = _find_closest_entry_by_point(child_entries, tag_point)
+        if target_idx is None:
+            continue
+        host_point = child_entries[target_idx].get("point")
+        if host_point is None:
+            continue
+        entry = _build_independent_tag_entry(tag, host_point)
+        if not entry:
+            continue
+        tags = child_entries[target_idx].setdefault("tags", [])
+        entry_key = _tag_entry_key(entry)
+        if entry_key:
+            existing = False
+            for existing_tag in tags:
+                if _tag_entry_key(existing_tag) != entry_key:
+                    continue
+                if _tag_offsets_near(existing_tag, entry):
+                    existing = True
+                    break
+            if existing:
+                continue
+        tags.append(entry)
 
 
 def _get_category_name(elem):
@@ -1236,19 +1438,33 @@ def main():
         forms.alert("Could not determine the parent element's location.", title=TITLE)
         return
 
-    forms.alert("Select the elements to add to the profile.", title=TITLE)
+    forms.alert("Select the elements to add to the profile.\nYou can also select tags to capture with those elements.", title=TITLE)
     try:
-        selection = list(revit.pick_elements(message="Select equipment to add to '{}'".format(parent_name)))
+        selection = list(revit.pick_elements(message="Select equipment and tags to add to '{}'".format(parent_name)))
     except Exception:
         selection = []
     if not selection:
-        forms.alert("No equipment elements were selected.", title=TITLE)
+        forms.alert("No elements were selected.", title=TITLE)
         return
 
-    child_entries = _build_child_entries(selection)
+    tag_elems = []
+    equipment_selection = []
+    for elem in selection:
+        if elem is None:
+            continue
+        if _is_tag_like(elem):
+            tag_elems.append(elem)
+        else:
+            equipment_selection.append(elem)
+    if not equipment_selection:
+        forms.alert("Select at least one equipment element. Tags are optional.", title=TITLE)
+        return
+
+    child_entries = _build_child_entries(equipment_selection)
     if not child_entries:
         forms.alert("Selected elements could not be processed.", title=TITLE)
         return
+    _assign_selected_tags(child_entries, tag_elems)
 
     parent_doc = getattr(parent_elem, "Document", None)
     parent_transform = parent_info.get("link_transform")
