@@ -642,10 +642,7 @@ def main():
 
     starter_doc.Close(False)
 
-max_depth = 3
 
-visited_count = 0
-match_count = 0
 # === Entry Point ===
 if __name__ == '__main__':
     main()
