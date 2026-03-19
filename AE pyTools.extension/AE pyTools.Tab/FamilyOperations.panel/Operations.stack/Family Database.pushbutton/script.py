@@ -84,6 +84,7 @@ class FamilyDatabaseWindow(forms.WPFWindow):
         )
         self._all_entries = []
         self._filtered_entries = []
+        self._staged_entries = []
 
         self._category_combo = self.FindName('CategoryCombo')
         self._family_filter_box = self.FindName('FamilyFilterBox')
@@ -93,6 +94,10 @@ class FamilyDatabaseWindow(forms.WPFWindow):
         self._type_rows_list = self.FindName('TypeRowsList')
         self._selected_file_text = self.FindName('SelectedFileText')
         self._status_text = self.FindName('StatusText')
+        self._staging_summary_text = self.FindName('StagingSummaryText')
+        self._staging_list = self.FindName('StagingList')
+        self._stage_add_button = self.FindName('StageAddButton')
+        self._stage_remove_button = self.FindName('StageRemoveButton')
         self._import_button = self.FindName('ImportButton')
         self._export_button = self.FindName('ExportButton')
         self._refresh_button = self.FindName('RefreshButton')
@@ -112,6 +117,10 @@ class FamilyDatabaseWindow(forms.WPFWindow):
             self._project_filter_box.TextChanged += self._on_filter_changed
         if self._family_files_list:
             self._family_files_list.SelectionChanged += self._on_family_selected
+        if self._stage_add_button:
+            self._stage_add_button.Click += self._on_stage_add_clicked
+        if self._stage_remove_button:
+            self._stage_remove_button.Click += self._on_stage_remove_clicked
         if self._import_button:
             self._import_button.Click += self._on_import_clicked
         if self._export_button:
@@ -146,7 +155,81 @@ class FamilyDatabaseWindow(forms.WPFWindow):
         selected_item = self._family_files_list.SelectedItem
         if selected_item is None:
             return None
+        if isinstance(selected_item, dict):
+            return selected_item.get('entry')
         return selected_item
+
+    def _find_selected_staged_entry(self):
+        if not self._staging_list:
+            return None
+        selected_item = self._staging_list.SelectedItem
+        if selected_item is None:
+            return None
+        return selected_item
+
+    def _entry_key(self, entry):
+        return _clean_text(getattr(entry, 'key', '')).lower()
+
+    def _infer_category_from_file_name(self, file_name):
+        name = _clean_text(file_name)
+        if not name:
+            return ''
+        stem = os.path.splitext(os.path.basename(name))[0]
+        if not stem:
+            return ''
+
+        token = _clean_text(stem.split('_', 1)[0])
+        if not token:
+            token = _clean_text(stem.split('-', 1)[0])
+        if not token:
+            return ''
+
+        return _clean_text(token.split('-', 1)[0]) or token
+
+    def _sync_staging_with_entries(self):
+        if not self._staged_entries:
+            return
+        all_by_key = {}
+        for entry in self._all_entries:
+            all_by_key[self._entry_key(entry)] = entry
+        refreshed = []
+        for staged in self._staged_entries:
+            staged_key = self._entry_key(staged)
+            if staged_key in all_by_key:
+                refreshed.append(all_by_key[staged_key])
+        self._staged_entries = refreshed
+
+    def _refresh_staging_list(self, selected_key_hint=None):
+        if self._staging_list is not None:
+            rows = []
+            for entry in self._staged_entries:
+                rows.append({
+                    'entry': entry,
+                    'family_name': entry.family_name,
+                    'client_name': entry.client_name,
+                    'project_number': entry.project_number,
+                })
+            self._staging_list.ItemsSource = rows
+            if rows:
+                target_row = None
+                if selected_key_hint:
+                    selected_key = _clean_text(selected_key_hint).lower()
+                    for row in rows:
+                        row_key = _clean_text(row['entry'].key).lower()
+                        if row_key == selected_key:
+                            target_row = row
+                            break
+                if target_row is None:
+                    current = self._staging_list.SelectedItem
+                    if current in rows:
+                        target_row = current
+                if target_row is None:
+                    target_row = rows[0]
+                self._staging_list.SelectedItem = target_row
+            else:
+                self._staging_list.SelectedItem = None
+        if self._staging_summary_text is not None:
+            self._staging_summary_text.Text = '{} families staged'.format(len(self._staged_entries))
 
     def _load_index(self):
         prior_selected = self._find_selected_entry()
@@ -164,10 +247,26 @@ class FamilyDatabaseWindow(forms.WPFWindow):
             )
             self._all_entries = []
 
-        categories = sorted(
-            set([entry.category for entry in self._all_entries]),
-            key=lambda c: c.lower()
-        )
+        self._sync_staging_with_entries()
+        self._refresh_staging_list()
+
+        normalized_categories = []
+        for entry in self._all_entries:
+            category_value = _clean_text(getattr(entry, 'category', ''))
+            if not category_value or category_value.lower() == 'uncategorized':
+                inferred = self._infer_category_from_file_name(getattr(entry, 'file_name', ''))
+                if inferred:
+                    try:
+                        entry.category = inferred
+                    except Exception:
+                        pass
+                    category_value = inferred
+
+            if not category_value:
+                category_value = 'Uncategorized'
+            normalized_categories.append(category_value)
+
+        categories = sorted(set(normalized_categories), key=lambda c: c.lower())
 
         category_items = ['All Categories'] + categories
         if self._category_combo is not None:
@@ -196,8 +295,22 @@ class FamilyDatabaseWindow(forms.WPFWindow):
                 filtered.append(entry)
         self._filtered_entries = filtered
 
+        filtered_rows = []
+        for entry in filtered:
+            display_name = _clean_text(getattr(entry, 'display_name', ''))
+            if not display_name:
+                display_name = _clean_text(getattr(entry, 'label', ''))
+            if not display_name:
+                display_name = _clean_text(getattr(entry, 'family_name', ''))
+            if not display_name:
+                display_name = _clean_text(getattr(entry, 'file_name', ''))
+            filtered_rows.append({
+                'entry': entry,
+                'display_name': display_name,
+            })
+
         if self._family_files_list is not None:
-            self._family_files_list.ItemsSource = filtered
+            self._family_files_list.ItemsSource = filtered_rows
 
         if not filtered:
             if self._family_files_list is not None:
@@ -205,28 +318,34 @@ class FamilyDatabaseWindow(forms.WPFWindow):
             self._type_rows_list.ItemsSource = []
             self._set_selected_file_text('No family file selected.')
             self._set_status(
-                '{} | 0 files found'.format(self._provider.backend_summary())
+                '{} | 0 files found | {} staged'.format(
+                    self._provider.backend_summary(),
+                    len(self._staged_entries)
+                )
             )
             return
 
-        selected_entry = None
+        selected_row = None
         if selected_key_hint:
-            for entry in filtered:
-                if _clean_text(entry.key).lower() == _clean_text(selected_key_hint).lower():
-                    selected_entry = entry
+            selected_key = _clean_text(selected_key_hint).lower()
+            for row in filtered_rows:
+                row_entry = row.get('entry')
+                if _clean_text(getattr(row_entry, 'key', '')).lower() == selected_key:
+                    selected_row = row
                     break
 
-        if selected_entry is None and self._family_files_list is not None:
+        if selected_row is None and self._family_files_list is not None:
             current = self._family_files_list.SelectedItem
-            if current in filtered:
-                selected_entry = current
+            if current in filtered_rows:
+                selected_row = current
 
-        if selected_entry is None:
-            selected_entry = filtered[0]
+        if selected_row is None:
+            selected_row = filtered_rows[0]
 
         if self._family_files_list is not None:
-            self._family_files_list.SelectedItem = selected_entry
+            self._family_files_list.SelectedItem = selected_row
 
+        selected_entry = selected_row.get('entry') if isinstance(selected_row, dict) else selected_row
         self._load_type_rows(selected_entry)
 
     def _load_type_rows(self, entry):
@@ -249,10 +368,11 @@ class FamilyDatabaseWindow(forms.WPFWindow):
 
         self._type_rows_list.ItemsSource = type_rows
         self._set_status(
-            '{} | {} files shown | {} types in selected file'.format(
+            '{} | {} files shown | {} types in selected file | {} staged'.format(
                 self._provider.backend_summary(),
                 len(self._filtered_entries),
-                len(type_rows)
+                len(type_rows),
+                len(self._staged_entries)
             )
         )
 
@@ -299,6 +419,22 @@ class FamilyDatabaseWindow(forms.WPFWindow):
         self._load_type_rows(selected)
 
     def _on_import_clicked(self, sender, args):
+        staged_target = self._find_selected_staged_entry()
+        staged_entry = None
+        if staged_target and isinstance(staged_target, dict):
+            staged_entry = staged_target.get('entry')
+        if staged_entry is None and self._staged_entries:
+            staged_entry = self._staged_entries[0]
+
+        if staged_entry is not None:
+            forms.alert(
+                'Importing staged family:\n{}\n\n'
+                'In the next Import dialog, select the matching family/RFA and types.'.format(
+                    staged_entry.family_name
+                ),
+                title='Family Database'
+            )
+
         self._run_existing_command(IMPORT_COMMAND_SCRIPT, 'Import Family')
 
     def _on_export_clicked(self, sender, args):
@@ -309,6 +445,58 @@ class FamilyDatabaseWindow(forms.WPFWindow):
 
     def _on_close_clicked(self, sender, args):
         self.Close()
+
+    def _on_stage_add_clicked(self, sender, args):
+        entry = self._find_selected_entry()
+        if entry is None:
+            forms.alert(
+                'Select a family file on the left before staging.',
+                title='Family Database',
+                warn_icon=True
+            )
+            return
+
+        target_key = self._entry_key(entry)
+        existing_keys = set([self._entry_key(x) for x in self._staged_entries])
+        if target_key in existing_keys:
+            self._set_status(
+                'Already staged: {} | {} staged'.format(
+                    entry.family_name,
+                    len(self._staged_entries)
+                )
+            )
+            return
+
+        self._staged_entries.append(entry)
+        self._refresh_staging_list(selected_key_hint=entry.key)
+        self._set_status(
+            'Staged family: {} | {} staged'.format(
+                entry.family_name,
+                len(self._staged_entries)
+            )
+        )
+
+    def _on_stage_remove_clicked(self, sender, args):
+        selected = self._find_selected_staged_entry()
+        if selected is None:
+            if self._staged_entries:
+                self._staged_entries.pop()
+                self._refresh_staging_list()
+            else:
+                self._set_status('No staged family selected.')
+            return
+
+        selected_entry = selected.get('entry') if isinstance(selected, dict) else None
+        if selected_entry is None:
+            return
+
+        selected_key = self._entry_key(selected_entry)
+        self._staged_entries = [
+            entry for entry in self._staged_entries
+            if self._entry_key(entry) != selected_key
+        ]
+        self._refresh_staging_list()
+        self._set_status('{} staged'.format(len(self._staged_entries)))
 
 
 if __name__ == '__main__':

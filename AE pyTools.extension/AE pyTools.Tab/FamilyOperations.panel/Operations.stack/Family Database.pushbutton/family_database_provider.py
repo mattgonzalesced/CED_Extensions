@@ -69,6 +69,7 @@ class FamilyDatabaseEntry(object):
             self.label = '{} ({})'.format(self.family_name, suffix)
         else:
             self.label = self.family_name
+        self.display_name = self.label
 
     def matches(self, family_filter, client_filter, project_filter, selected_category):
         if selected_category and selected_category != 'All Categories':
@@ -95,6 +96,13 @@ class FamilyDatabaseEntry(object):
     def __str__(self):
         return self.label
 
+    def __repr__(self):
+        return self.label
+
+    def ToString(self):
+        # WPF ListBox falls back to .NET ToString() for plain item display.
+        return self.label
+
 
 class FamilyDatabaseProviderBase(object):
     backend_name = 'base'
@@ -115,6 +123,7 @@ class YamlFamilyDatabaseProvider(FamilyDatabaseProviderBase):
     def __init__(self, source_dir, map_file_name='map.yaml'):
         self._source_dir = source_dir
         self._map_file_name = (map_file_name or 'map.yaml').lower()
+        self._map_categories_by_file = None
 
     def _parse_filename_tokens(self, yaml_path):
         stem = os.path.splitext(os.path.basename(yaml_path))[0]
@@ -122,6 +131,117 @@ class YamlFamilyDatabaseProvider(FamilyDatabaseProviderBase):
         if len(parts) == 3:
             return parts[0], parts[1], parts[2]
         return stem, '', ''
+
+    def _get_map_file_candidates(self):
+        candidates = []
+        source_root = _clean_text(self._source_dir)
+        if source_root:
+            candidates.append(os.path.join(source_root, self._map_file_name))
+            source_parent = os.path.dirname(source_root)
+            if source_parent:
+                candidates.append(os.path.join(source_parent, self._map_file_name))
+        unique_candidates = []
+        for candidate in candidates:
+            norm_candidate = os.path.normpath(candidate)
+            if norm_candidate not in unique_candidates:
+                unique_candidates.append(norm_candidate)
+        return unique_candidates
+
+    def _infer_category_from_map_key(self, map_key, map_value=None):
+        if isinstance(map_value, dict):
+            for category_key in ['category', 'family_category', 'discipline', 'group']:
+                candidate = _clean_text(map_value.get(category_key))
+                if candidate:
+                    return candidate
+
+        key_text = _clean_text(map_key)
+        if not key_text:
+            return ''
+
+        normalized_key = key_text.replace('/', os.sep).replace('\\', os.sep)
+        key_dir = os.path.dirname(normalized_key)
+        if key_dir and key_dir not in ['.', os.sep]:
+            top_dir = _clean_text(key_dir.split(os.sep)[0])
+            if top_dir:
+                return top_dir
+
+        stem = os.path.splitext(os.path.basename(normalized_key))[0]
+        if not stem:
+            return ''
+
+        token = _clean_text(stem.split('_', 1)[0])
+        if not token:
+            token = _clean_text(stem.split('-', 1)[0])
+        if not token:
+            return ''
+
+        # Keep broader family "kind" for values like EF-U -> EF.
+        return _clean_text(token.split('-', 1)[0]) or token
+
+    def _infer_category_from_filename(self, file_name):
+        name = _clean_text(file_name)
+        if not name:
+            return ''
+
+        stem = os.path.splitext(os.path.basename(name))[0]
+        if not stem:
+            return ''
+
+        token = _clean_text(stem.split('_', 1)[0])
+        if not token:
+            token = _clean_text(stem.split('-', 1)[0])
+        if not token:
+            return ''
+
+        # Keep broader family "kind" for values like EF-U -> EF.
+        return _clean_text(token.split('-', 1)[0]) or token
+
+    def _load_map_categories(self):
+        if self._map_categories_by_file is not None:
+            return self._map_categories_by_file
+
+        categories_by_file = {}
+        for map_path in self._get_map_file_candidates():
+            if not os.path.isfile(map_path):
+                continue
+            map_payload = self._load_yaml_dict(map_path)
+            if not isinstance(map_payload, dict):
+                continue
+
+            for map_key, map_value in map_payload.items():
+                key_name = os.path.basename(_clean_text(map_key))
+                if not key_name:
+                    continue
+                if not key_name.lower().endswith('.yaml'):
+                    continue
+                map_category = self._infer_category_from_map_key(map_key, map_value)
+                if not map_category:
+                    continue
+                categories_by_file[key_name.lower()] = map_category
+
+            if categories_by_file:
+                break
+
+        self._map_categories_by_file = categories_by_file
+        return categories_by_file
+
+    def _load_yaml_dict(self, yaml_path):
+        try:
+            loaded = yaml.load_as_dict(yaml_path)
+        except Exception:
+            loaded = None
+        if isinstance(loaded, dict):
+            return loaded
+        return {}
+
+    def _read_first_nonempty(self, payload, keys):
+        if not isinstance(payload, dict):
+            return ''
+        for key in keys:
+            value = _clean_text(payload.get(key))
+            if value:
+                return value
+        return ''
 
     def _category_for_path(self, yaml_path):
         try:
@@ -151,6 +271,8 @@ class YamlFamilyDatabaseProvider(FamilyDatabaseProviderBase):
         if not os.path.isdir(self._source_dir):
             return []
 
+        self._map_categories_by_file = None
+        map_categories = self._load_map_categories()
         entries = []
         for walk_root, _, files in os.walk(self._source_dir):
             for file_name in files:
@@ -161,8 +283,28 @@ class YamlFamilyDatabaseProvider(FamilyDatabaseProviderBase):
                     continue
 
                 yaml_path = os.path.join(walk_root, file_name)
+                loaded_yaml = self._load_yaml_dict(yaml_path)
                 family_token, client_name, project_number = self._parse_filename_tokens(yaml_path)
-                family_name = family_token.replace('_', ' ').strip() or family_token
+                family_name = self._read_first_nonempty(loaded_yaml, ['family', 'family_name'])
+                if not family_name:
+                    family_name = family_token.replace('_', ' ').strip() or family_token
+
+                yaml_client = self._read_first_nonempty(
+                    loaded_yaml,
+                    ['client', 'client_name', 'project_client', 'project_client_name']
+                )
+                yaml_project_number = self._read_first_nonempty(
+                    loaded_yaml,
+                    ['project_number', 'project', 'project_no', 'project_num']
+                )
+                if yaml_client:
+                    client_name = yaml_client
+                if yaml_project_number:
+                    project_number = yaml_project_number
+
+                map_category = map_categories.get(file_name.lower(), '')
+                inferred_category = self._infer_category_from_filename(file_name)
+                resolved_category = map_category or inferred_category or self._category_for_path(yaml_path)
 
                 entries.append(
                     FamilyDatabaseEntry(
@@ -170,7 +312,7 @@ class YamlFamilyDatabaseProvider(FamilyDatabaseProviderBase):
                         family_name=family_name,
                         client_name=client_name,
                         project_number=project_number,
-                        category=self._category_for_path(yaml_path),
+                        category=resolved_category,
                         source_label=yaml_path,
                         file_name=file_name,
                     )
@@ -189,7 +331,7 @@ class YamlFamilyDatabaseProvider(FamilyDatabaseProviderBase):
         return entries
 
     def get_type_rows(self, entry):
-        loaded = yaml.load_as_dict(entry.key)
+        loaded = self._load_yaml_dict(entry.key)
         if not isinstance(loaded, dict):
             return []
 

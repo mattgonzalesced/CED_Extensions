@@ -82,9 +82,12 @@
 
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="340" />
+                <ColumnDefinition Width="320" />
                 <ColumnDefinition Width="12" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="70" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="340" />
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" BorderBrush="#D0D0D0" BorderThickness="1" Padding="8">
@@ -100,7 +103,14 @@
                                Margin="0,0,0,6" />
                     <ListBox x:Name="FamilyFilesList"
                              Grid.Row="1"
-                             HorizontalContentAlignment="Stretch" />
+                             HorizontalContentAlignment="Stretch">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding [display_name]}"
+                                           TextTrimming="CharacterEllipsis" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </Grid>
             </Border>
 
@@ -148,6 +158,71 @@
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
                                 <GridViewColumn Header="Project #" Width="150">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding [project_number]}" TextTrimming="CharacterEllipsis" />
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
+            </Border>
+
+            <StackPanel Grid.Column="3"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Center">
+                <Button x:Name="StageAddButton"
+                        Content="&gt;"
+                        Width="44"
+                        Height="32"
+                        Margin="0,0,0,8"
+                        ToolTip="Add selected family file to staging." />
+                <Button x:Name="StageRemoveButton"
+                        Content="&lt;"
+                        Width="44"
+                        Height="32"
+                        ToolTip="Remove selected family from staging." />
+            </StackPanel>
+
+            <Border Grid.Column="5" BorderBrush="#D0D0D0" BorderThickness="1" Padding="8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Import Staging"
+                               FontSize="14"
+                               FontWeight="Bold" />
+                    <TextBlock x:Name="StagingSummaryText"
+                               Grid.Row="1"
+                               Margin="0,2,0,6"
+                               Foreground="#555"
+                               Text="0 families staged" />
+
+                    <ListView x:Name="StagingList"
+                              Grid.Row="2"
+                              HorizontalContentAlignment="Stretch">
+                        <ListView.View>
+                            <GridView AllowsColumnReorder="False">
+                                <GridViewColumn Header="Family" Width="165">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding [family_name]}" TextTrimming="CharacterEllipsis" />
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="Client" Width="95">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding [client_name]}" TextTrimming="CharacterEllipsis" />
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="Project #" Width="78">
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBlock Text="{Binding [project_number]}" TextTrimming="CharacterEllipsis" />
