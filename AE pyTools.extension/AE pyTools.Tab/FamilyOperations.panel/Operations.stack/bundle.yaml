@@ -1,5 +1,6 @@
 layout:
   - Import-Export
+  - Family Database
   - PlaceElements
   - ScheduleOperations
 
