@@ -1,0 +1,10 @@
+Run Audit Linked Model 2.0 to scan linked documents for equipment names that do
+not exist in the active YAML but appear to match existing profiles. The tool
+uses the improved CAD-style matching algorithm with token filtering, acronym
+collapse, overlap coverage checks, and length-gap score penalties.
+
+You can select which missing names to create. For each selection, the tool
+shows clear column headers and a divider in the checkbox list so it is obvious
+which names are new linked entries and which profiles are existing sources.
+It then clones the selected source profile, assigns a new EQ/SET ID, and writes
+the new definitions back into Extensible Storage.

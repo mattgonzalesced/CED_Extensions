@@ -1,9 +1,24 @@
 from collections import defaultdict
 
 try:
+    from pyrevit import DB
+except Exception:  # pragma: no cover
+    DB = None
+
+try:
     basestring
 except NameError:  # pragma: no cover
     basestring = str
+
+TVTRUSS_KEYWORD = "TVTRUSS"
+TVTRUSS_MAX_NEIGHBOR_DISTANCE_FT = 10.0
+
+try:
+    ELECTRICAL_FIXTURE_CATEGORY_ID = (
+        DB.ElementId(DB.BuiltInCategory.OST_ElectricalFixtures).IntegerValue if DB else None
+    )
+except Exception:
+    ELECTRICAL_FIXTURE_CATEGORY_ID = None
 
 
 def _normalize(value):
@@ -100,7 +115,7 @@ _LOAD_PRIORITY = {
 }
 
 _POSITION_RULES = [
-    {"keyword": "TVTRUSS", "group_size": 3},
+    {"keyword": TVTRUSS_KEYWORD, "group_size": 3},
 ]
 
 _POSITION_RULES_SORTED = sorted(_POSITION_RULES, key=lambda r: -len(r.get("keyword") or ""))
@@ -131,6 +146,93 @@ def _position_sort_key(item):
     if not point:
         return (1e9, 1e9, 1e9)
     return (point.X, point.Y, point.Z)
+
+
+def _distance_between_points(point_a, point_b):
+    if point_a is None or point_b is None:
+        return None
+    try:
+        return point_a.DistanceTo(point_b)
+    except Exception:
+        try:
+            dx = point_a.X - point_b.X
+            dy = point_a.Y - point_b.Y
+            dz = point_a.Z - point_b.Z
+            return (dx * dx + dy * dy + dz * dz) ** 0.5
+        except Exception:
+            return None
+
+
+def _is_electrical_fixture_item(item):
+    element = item.get("element")
+    if not element:
+        return False
+    category = getattr(element, "Category", None)
+    if not category:
+        return False
+    category_id = getattr(getattr(category, "Id", None), "IntegerValue", None)
+    if ELECTRICAL_FIXTURE_CATEGORY_ID is not None and category_id is not None:
+        return category_id == ELECTRICAL_FIXTURE_CATEGORY_ID
+    return _normalize(getattr(category, "Name", "")) == "ELECTRICAL FIXTURES"
+
+
+def _item_id_text(item):
+    element = item.get("element")
+    element_id = getattr(getattr(element, "Id", None), "IntegerValue", None)
+    return str(element_id) if element_id is not None else "unknown"
+
+
+def _filter_tvtruss_fixture_outliers(grouped_items, logger=None):
+    tvtruss_items = []
+    for item in grouped_items:
+        rule = item.get("_pf_position_rule") or {}
+        if _normalize(rule.get("keyword")) == TVTRUSS_KEYWORD:
+            tvtruss_items.append(item)
+
+    fixture_items = [item for item in tvtruss_items if _is_electrical_fixture_item(item)]
+    if not fixture_items:
+        return grouped_items
+
+    keep_ids = set()
+    skipped = []
+    for item in fixture_items:
+        point = item.get("location")
+        nearest_distance = None
+        for other in fixture_items:
+            if other is item:
+                continue
+            distance = _distance_between_points(point, other.get("location"))
+            if distance is None:
+                continue
+            if nearest_distance is None or distance < nearest_distance:
+                nearest_distance = distance
+            if distance <= TVTRUSS_MAX_NEIGHBOR_DISTANCE_FT:
+                keep_ids.add(id(item))
+                break
+        if id(item) not in keep_ids:
+            skipped.append((item, nearest_distance))
+
+    if not skipped:
+        return grouped_items
+
+    skipped_item_ids = set(id(item) for item, _ in skipped)
+    filtered = [item for item in grouped_items if id(item) not in skipped_item_ids]
+
+    if logger:
+        logger.info(
+            "TVTRUSS proximity filter skipped {} electrical fixture(s) with no TVTRUSS fixture within {:.1f} ft.".format(
+                len(skipped), TVTRUSS_MAX_NEIGHBOR_DISTANCE_FT
+            )
+        )
+        for item, nearest in skipped:
+            logger.info(
+                "  Skipped element {} (nearest TVTRUSS fixture distance: {}).".format(
+                    _item_id_text(item),
+                    "{:.2f} ft".format(nearest) if nearest is not None else "unknown",
+                )
+            )
+
+    return filtered
 
 
 def _cluster_by_nearest(items, group_size):
@@ -190,6 +292,10 @@ def create_position_groups(items, make_group, logger=None):
         else:
             remaining.append(item)
 
+    if not grouped_items:
+        return [], remaining
+
+    grouped_items = _filter_tvtruss_fixture_outliers(grouped_items, logger=logger)
     if not grouped_items:
         return [], remaining
 

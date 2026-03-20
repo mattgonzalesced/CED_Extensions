@@ -1,0 +1,8 @@
+title: Audit Linked Model 2.0
+tooltip: |
+  Scan linked model element names and compare them to equipment names in the active YAML.
+  Uses the improved Audit CAD matcher (token coverage + score penalties) to select better source profiles.
+  The selection dialog includes explicit column headers and a divider so new linked names and source profiles are clearly separated.
+  Create only the checked rows to clone source profiles into new linked-model profiles.
+author: CED Automation
+is_beta: false
