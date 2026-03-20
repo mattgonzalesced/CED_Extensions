@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 WIRE_IMPEDANCE_TABLE = {
     '12': {
         'X': {'Non-Magnetic': 0.054, 'Magnetic': 0.068},

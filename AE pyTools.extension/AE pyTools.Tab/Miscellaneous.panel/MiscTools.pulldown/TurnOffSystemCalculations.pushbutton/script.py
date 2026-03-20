@@ -40,6 +40,7 @@ transaction.Start()
 try:
     # Collect all MechanicalSystemType elements
     mechanical_system_types = FilteredElementCollector(doc).OfClass(MechanicalSystemType)
+    piping_system_types = FilteredElementCollector(doc).OfClass(PipingSystemType)
 
     # Update calculation levels for MechanicalSystemType
     for system_type in mechanical_system_types:
@@ -47,13 +48,13 @@ try:
         system_name = get_element_name_from_parameter(system_type)
 
         # Set the CalculationLevel parameter to None (0)
-        if set_calculation_level(system_type, BuiltInParameter.RBS_DUCT_SYSTEM_CALCULATION_PARAM, 0):
+        if set_calculation_level(system_type, BuiltInParameter.RBS_DUCT_SYSTEM_CALCULATION_PARAM, 4):
             print("Set Calculation Level to None for Mechanical System Type: {}".format(system_name))
         else:
             print("Failed to set Calculation Level for Mechanical System Type: {}".format(system_name))
 
     # Collect all PipingSystemType elements
-    piping_system_types = FilteredElementCollector(doc).OfClass(PipingSystemType)
+
 
     # Update calculation levels for PipingSystemType
     for system_type in piping_system_types:
@@ -61,7 +62,7 @@ try:
         system_name = get_element_name_from_parameter(system_type)
 
         # Set the CalculationLevel parameter to None (0)
-        if set_calculation_level(system_type, BuiltInParameter.RBS_PIPE_SYSTEM_CALCULATION_PARAM, 0):
+        if set_calculation_level(system_type, BuiltInParameter.RBS_PIPE_SYSTEM_CALCULATION_PARAM, 4):
             print("Set Calculation Level to None for Piping System Type: {}".format(system_name))
         else:
             print("Failed to set Calculation Level for Piping System Type: {}".format(system_name))

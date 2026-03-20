@@ -1,4 +1,11 @@
 /.idea/
 /AE PyDev.extension/AE pyTools.Tab/Test Buttons.Panel/Test2.stack/General.pulldown/User Quick Links.pushbutton/
 /CEDLib.lib/LetThereBeYAML.settings.json
+<<<<<<< HEAD
 /CEDLib.lib/parent_param_conflicts.lock.json
+=======
+
+# Windows reserved device name - cannot be committed
+/nul
+nul
+>>>>>>> origin/develop

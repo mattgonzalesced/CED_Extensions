@@ -1,0 +1,8 @@
+title: "Alerts Browser"
+
+tooltip: >-
+  Modeless alerts triage window. Select a circuit, inspect active or hidden alerts, select panel/circuit/device in model,
+  and recalculate the selected circuit when ownership allows.
+
+author: >-
+  AEvelina

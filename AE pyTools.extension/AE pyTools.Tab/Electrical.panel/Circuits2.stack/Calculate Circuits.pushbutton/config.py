@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import os
+
 import clr
+
 clr.AddReference("WindowsBase")
 clr.AddReference("PresentationCore")
 clr.AddReference("PresentationFramework")
@@ -22,6 +25,8 @@ from CEDElectrical.Model.circuit_settings import (
 )
 
 XAML_PATH = script.get_bundle_file('settings.xaml')
+if not XAML_PATH:
+    XAML_PATH = os.path.join(os.path.dirname(__file__), 'settings.xaml')
 logger = script.get_logger()
 
 
@@ -29,6 +34,14 @@ class CircuitSettingsWindow(forms.WPFWindow):
     def __init__(self):
         forms.WPFWindow.__init__(self, XAML_PATH)
         self.doc = revit.doc
+        if self.doc is None:
+            try:
+                uidoc = __revit__.ActiveUIDocument
+                self.doc = uidoc.Document if uidoc is not None else None
+            except Exception:
+                self.doc = None
+        if self.doc is None:
+            raise Exception("No active document is available.")
         self.defaults = CircuitSettings()
         self.settings = settings_manager.load_circuit_settings(self.doc)
         self._previous_equipment_write = bool(self.settings.write_equipment_results)
@@ -501,7 +514,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self._is_normalizing = True
         try:
             textbox.Text = self._percent_string(decimal_value)
-            textbox.CaretIndex = len(textbox.Text)
+            textbox.CaretIndex = len(textbox.Text or "")
         finally:
             self._is_normalizing = False
 

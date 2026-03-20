@@ -1,8 +1,22 @@
 # -*- coding: utf-8 -*-
 # IRONPYTHON 2.7 COMPATIBLE (no f-strings, no .format usage)
 from pyrevit import revit, DB, script, forms
+from pyrevit.compat import get_elementid_value_func, get_elementid_from_value_func
 
 logger = script.get_logger()
+_get_elid_value = get_elementid_value_func()
+_get_elid_from_value = get_elementid_from_value_func()
+
+
+def _idval(item):
+    try:
+        return int(_get_elid_value(item))
+    except Exception:
+        return int(getattr(item, "IntegerValue", 0))
+
+
+def _idfrom(value):
+    return _get_elid_from_value(int(value))
 
 # ----------------------------------------------------------------------
 # SOURCE: The circuit/panel data is read from Revit elements:
@@ -203,7 +217,7 @@ def _linkify_id(output, id_value, link_text=None):
     if not id_value:
         return ""
     try:
-        return output.linkify(DB.ElementId(int(id_value)), link_text)
+        return output.linkify(_idfrom(id_value), link_text)
     except Exception:
         return ""
 
@@ -216,7 +230,7 @@ def _linkify_ids(output, id_values):
         return ""
     if len(unique_ids) == 1:
         return _linkify_id(output, unique_ids[0], unique_ids[0])
-    element_ids = [DB.ElementId(int(val)) for val in unique_ids]
+    element_ids = [_idfrom(val) for val in unique_ids]
     return output.linkify(element_ids, "Select")
 
 
@@ -252,7 +266,7 @@ def collect_all_circuits(doc, option_filter):
             "panel_name": str(panel_name),
             "ckt_number": str(cnum),
             "element": ckt,
-            "id": str(ckt.Id.IntegerValue)
+            "id": str(_idval(ckt.Id))
         })
 
     return circuits
@@ -283,7 +297,7 @@ def build_circuits_by_panel(resolved_panels, circuits):
             for dp, bip in CIRCUIT_VALUE_MAP.items():
                 cdata[dp] = get_model_param_value(sys, bip)
 
-            cdata["circuit_id"] = str(sys.Id.IntegerValue)
+            cdata["circuit_id"] = str(_idval(sys.Id))
             result[pid][str(cnum)] = cdata
 
     return result
@@ -310,7 +324,7 @@ def _collect_circuits(doc, option_filter):
             cdata = {}
             for detail_param_name, bip in CIRCUIT_VALUE_MAP.items():
                 cdata[detail_param_name] = get_model_param_value(ckt, bip)
-            cdata["circuit_id"] = str(ckt.Id.IntegerValue)
+            cdata["circuit_id"] = str(_idval(ckt.Id))
             circuit_map[key] = cdata
 
     return ckt_collector, circuit_map, circuited_panel_names
@@ -432,7 +446,7 @@ def _collect_panels(doc, option_filter):
         for detail_param_name, bip in PANEL_VALUE_MAP.items():
             pdata[detail_param_name] = get_model_param_value(pnl, bip)
 
-        pdata["panel_id"] = str(pnl.Id.IntegerValue)
+        pdata["panel_id"] = str(_idval(pnl.Id))
         pdata["_element"] = pnl  # keep element for sorting/debug
 
         key = str(pname)
@@ -507,7 +521,7 @@ def _get_supplied_panel_id_from_circuit(circuit):
         for el in elems:
             try:
                 if el and el.Category and el.Category.Id == DB.ElementId(DB.BuiltInCategory.OST_ElectricalEquipment):
-                    supplied_ids.append(str(el.Id.IntegerValue))
+                    supplied_ids.append(str(_idval(el.Id)))
             except:
                 continue
     except:
@@ -572,7 +586,7 @@ def reconcile_panel_identity_from_circuit(
         return False
 
     try:
-        circuit_elem = revit.doc.GetElement(DB.ElementId(int(cid)))
+        circuit_elem = revit.doc.GetElement(_idfrom(cid))
     except:
         return False
 
@@ -625,7 +639,7 @@ def reconcile_panel_identity_from_circuit(
     auto_panel_updates.setdefault(
         "The following Equipment Symbols were updated automatically based on new supply circuit number.",
         set()
-    ).add(str(ditem.Id.IntegerValue))
+    ).add(str(_idval(ditem.Id)))
 
     return True
 
@@ -668,7 +682,7 @@ def _build_output_summary(detail_items, circuit_map, panel_map, panel_map_by_id,
     mapped_panel_names = set()
 
     for ditem in detail_items:
-        detail_id = str(ditem.Id.IntegerValue)
+        detail_id = str(_idval(ditem.Id))
 
         pname_val = get_detail_param_value(ditem, DETAIL_PARAM_PANEL_NAME)
         cpanel_val = get_detail_param_value(ditem, DETAIL_PARAM_CKT_PANEL)

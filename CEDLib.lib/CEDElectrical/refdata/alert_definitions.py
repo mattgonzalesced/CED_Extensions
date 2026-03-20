@@ -10,30 +10,35 @@ ALERT_DEFINITIONS = {
         "User-specified {property} '{override_value}' invalid; Using default {property}: {default_value}",
         group="Overrides",
         severity="NONE",
+        persistent=False,
     ),
     "overrides_invalid_equipment_ground": AlertDefinition(
         "Overrides.InvalidEquipmentGround",
         "User-specified equipment ground size '{override_value}' invalid; sizing per NEC Table 250.122",
         group="Overrides",
         severity="NONE",
+        persistent=False,
     ),
     "overrides_invalid_service_ground": AlertDefinition(
         "Overrides.InvalidServiceGround",
         "User-specified service ground size '{override_value}' invalid; sizing per NEC Table 250.102(c)",
         group="Overrides",
         severity="NONE",
+        persistent=False,
     ),
     "overrides_invalid_hot_wire": AlertDefinition(
         "Overrides.InvalidHotWire",
         "User-specified wire size '{override_value}' invalid; returning calculated value instead.",
         group="Overrides",
         severity="NONE",
+        persistent=False,
     ),
     "overrides_invalid_conduit": AlertDefinition(
         "Overrides.InvalidConduit",
         "User-specified conduit size '{override_value}' invalid; returning calculated value instead.",
         group="Overrides",
         severity="NONE",
+        persistent=False,
     ),
     "design_non_standard_ocp_rating": AlertDefinition(
         "Design.NonStandardOCPRating",
@@ -112,6 +117,7 @@ ALERT_DEFINITIONS = {
         "User-specified isolated ground size '{override_value}' invalid; using equipment ground size instead.",
         group="Overrides",
         severity="NONE",
+        persistent=False,
     ),
     "calculation_wire_sizing_failed": AlertDefinition(
         "Calculations.WireSizingFailed",

@@ -14,8 +14,12 @@ from pyrevit import revit, script
 from pyrevitmep.parameter import FamilyParameter, SharedParameter, BipGroup, PType
 from pyrevitmep.parameter.manageshared import ManageSharedParameter
 
-doc = revit.doc  # type: Document
 logger = script.get_logger()
+
+
+def _active_doc():
+    # Resolve document at use time for Rocket mode safety.
+    return revit.doc
 
 
 class ManageFamilyParameter(forms.WPFWindow):
@@ -82,16 +86,20 @@ class ManageFamilyParameter(forms.WPFWindow):
 
     # noinspection PyUnusedLocal
     def ok_click(self, sender, e):
+        active_doc = _active_doc()  # type: Document
+        if active_doc is None:
+            forms.alert("No active document found.")
+            return
         with revit.Transaction("Modify family parameters"):
             for parameter in self.family_parameters:  # type: FamilyParameter
                 try:
-                    parameter.save_to_revit(doc)
+                    parameter.save_to_revit(active_doc)
                 except Exceptions.ArgumentException:
                     logger.info("FAILED to save {}".format(parameter.name))
                     logger.debug(type(parameter.group.enum_member))
 
             for parameter in self.to_delete:
-                parameter.delete_from_revit(doc)
+                parameter.delete_from_revit(active_doc)
 
         # Clean definition file from temporary created external definitions
         src_file = SharedParameter.get_definition_file().Filename
@@ -185,7 +193,8 @@ class ManageFamilyParameter(forms.WPFWindow):
 
     @classmethod
     def show_dialog(cls):
-        if not doc.IsFamilyDocument:
+        active_doc = _active_doc()  # type: Document
+        if active_doc is None or not active_doc.IsFamilyDocument:
             forms.alert("This tool works with family documents only. Not project documents.")
             import sys
 

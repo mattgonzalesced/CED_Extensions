@@ -1,0 +1,107 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Color x:Key="CED.Color.PrimaryBlue">#0459A4</Color>
+  <Color x:Key="CED.Color.Accent">#0459A4</Color>
+  <Color x:Key="CED.Color.AccentBlue">#0459A4</Color>
+  <Color x:Key="CED.Color.AccentRed">#BE202F</Color>
+  <Color x:Key="CED.Color.AccentGreen">#43A047</Color>
+  <Color x:Key="CED.Color.AccentNeutral">#4D596A</Color>
+  <Color x:Key="CED.Color.SecondaryRed">#BE202F</Color>
+  <Color x:Key="CED.Color.TertiaryGreen">#43A047</Color>
+  <Color x:Key="CED.Color.NeutralDark">#323130</Color>
+
+  <Color x:Key="CED.Color.Surface">#F4F7FB</Color>
+  <Color x:Key="CED.Color.SurfaceAlt">#EAF1F9</Color>
+  <Color x:Key="CED.Color.Border">#B8C8DB</Color>
+
+  <Color x:Key="CED.Color.WindowBackground">#F2F3F5</Color>
+  <Color x:Key="CED.Color.HeadingText">#1F2E3D</Color>
+  <Color x:Key="CED.Color.PrimaryText">#1F2E3D</Color>
+  <Color x:Key="CED.Color.SecondaryText">#4A5866</Color>
+
+  <Color x:Key="CED.Color.SearchBorder">#B8C8DB</Color>
+  <Color x:Key="CED.Color.SearchBackground">#FFFFFF</Color>
+  <Color x:Key="CED.Color.IconMuted">#718091</Color>
+  <Color x:Key="CED.Color.PlaceholderText">#A1ADBA</Color>
+  <Color x:Key="CED.Color.ListItemBackground">#FFFFFF</Color>
+
+  <Color x:Key="CED.Color.ListBorder">#9CA9B6</Color>
+  <Color x:Key="CED.Color.ListBackground">#EEF1F4</Color>
+  <Color x:Key="CED.Color.CardBorder">#B4C0CD</Color>
+  <Color x:Key="CED.Color.SelectionBadge">#5F6F82</Color>
+
+  <Color x:Key="CED.Color.ButtonDefaultBackground">#FFFFFF</Color>
+  <Color x:Key="CED.Color.ButtonHoverBackground">#EAF1F9</Color>
+  <Color x:Key="CED.Color.ButtonForegroundOnAccent">#FFFFFF</Color>
+  <Color x:Key="CED.Color.ButtonStateOverlayHover">#0A000000</Color>
+  <Color x:Key="CED.Color.ButtonStateOverlayPressed">#1F000000</Color>
+
+  <Color x:Key="CED.Color.BadgeInfoBackground">#E8F1FF</Color>
+  <Color x:Key="CED.Color.BadgeInfoBorder">#2B62A8</Color>
+  <Color x:Key="CED.Color.BadgeInfoText">#1E4B86</Color>
+  <Color x:Key="CED.Color.BadgeWarningBackground">#FFF1E8</Color>
+  <Color x:Key="CED.Color.BadgeWarningBorder">#9A5D2E</Color>
+  <Color x:Key="CED.Color.BadgeWarningText">#7A451D</Color>
+
+  <Color x:Key="CED.Color.DataGridBorder">#AAB4C0</Color>
+  <Color x:Key="CED.Color.DataGridBackground">#EEF1F4</Color>
+  <Color x:Key="CED.Color.DataGridHeaderBackground">#E7EDF5</Color>
+  <Color x:Key="CED.Color.DataGridHeaderForeground">#1E2A37</Color>
+  <Color x:Key="CED.Color.DataGridHeaderBorder">#AAB4C0</Color>
+  <Color x:Key="CED.Color.DataGridHeaderHoverBackground">#DCE6F2</Color>
+  <Color x:Key="CED.Color.DataGridHeaderPressedBackground">#CEDCEC</Color>
+  <Color x:Key="CED.Color.DataGridAltRow">#F9FBFD</Color>
+  <Color x:Key="CED.Color.DataGridRowForeground">#1F2A36</Color>
+  <Color x:Key="CED.Color.DataGridReadOnlyBackground">#E2E8EF</Color>
+  <Color x:Key="CED.Color.DataGridReadOnlyForeground">#33414F</Color>
+  <Color x:Key="CED.Color.DataGridCellBorder">#D7DEE8</Color>
+  <Color x:Key="CED.Color.DataGridDividerStrong">#8E9AA8</Color>
+  <Color x:Key="CED.Color.DataGridSelectionBackground">#DCEBFA</Color>
+  <Color x:Key="CED.Color.DataGridSelectionForeground">#1F2A36</Color>
+  <Color x:Key="CED.Color.DataGridDisabledForeground">#8994A0</Color>
+  <Color x:Key="CED.Color.DataGridDisabledBackground">#F0F2F4</Color>
+  <Color x:Key="CED.Color.DataGridChangedBackground">#FFF8D6</Color>
+  <Color x:Key="CED.Color.DataGridWarningBackground">#FDEACB</Color>
+  <Color x:Key="CED.Color.DataGridErrorBackground">#F9D6D6</Color>
+
+  <Color x:Key="CED.Color.InfoPanelBorder">#C8D3E0</Color>
+  <Color x:Key="CED.Color.InfoPanelBackground">#F6F9FD</Color>
+  <Color x:Key="CED.Color.InfoAccentBorder">#9BB8D9</Color>
+  <Color x:Key="CED.Color.InfoAccentBackground">#EDF5FF</Color>
+  <Color x:Key="CED.Color.SectionDivider">#C4CFDB</Color>
+  <Color x:Key="CED.Color.CircuitItemHoverBackground">#F5F5F5</Color>
+  <Color x:Key="CED.Color.CircuitItemSelectedBackground">#E0E3E8</Color>
+  <Color x:Key="CED.Color.TabActiveBackground">#EEF1F4</Color>
+  <Color x:Key="CED.Color.TabInactiveBackground">#E7EDF5</Color>
+  <Color x:Key="CED.Color.TabHoverBackground">#DCE6F2</Color>
+  <Color x:Key="CED.Color.TabActiveForeground">#1F2E3D</Color>
+  <Color x:Key="CED.Color.TabInactiveForeground">#7E8A96</Color>
+
+  <Color x:Key="CED.Color.BadgeStd01Background">#DDEBFF</Color>
+  <Color x:Key="CED.Color.BadgeStd01Border">#234A84</Color>
+  <Color x:Key="CED.Color.BadgeStd01Text">#234A84</Color>
+  <Color x:Key="CED.Color.BadgeStd02Background">#D5F1E0</Color>
+  <Color x:Key="CED.Color.BadgeStd02Border">#155C38</Color>
+  <Color x:Key="CED.Color.BadgeStd02Text">#155C38</Color>
+  <Color x:Key="CED.Color.BadgeStd03Background">#EAEAEA</Color>
+  <Color x:Key="CED.Color.BadgeStd03Border">#444444</Color>
+  <Color x:Key="CED.Color.BadgeStd03Text">#444444</Color>
+  <Color x:Key="CED.Color.BadgeStd04Background">#ECEFF3</Color>
+  <Color x:Key="CED.Color.BadgeStd04Border">#52606D</Color>
+  <Color x:Key="CED.Color.BadgeStd04Text">#52606D</Color>
+  <Color x:Key="CED.Color.BadgeStd05Background">#FFE6CC</Color>
+  <Color x:Key="CED.Color.BadgeStd05Border">#8A4B08</Color>
+  <Color x:Key="CED.Color.BadgeStd05Text">#8A4B08</Color>
+  <Color x:Key="CED.Color.BadgeStd06Background">#F7DEFF</Color>
+  <Color x:Key="CED.Color.BadgeStd06Border">#6F2D86</Color>
+  <Color x:Key="CED.Color.BadgeStd06Text">#6F2D86</Color>
+  <Color x:Key="CED.Color.BadgeStd07Background">#E6F8FA</Color>
+  <Color x:Key="CED.Color.BadgeStd07Border">#0E5966</Color>
+  <Color x:Key="CED.Color.BadgeStd07Text">#0E5966</Color>
+  <Color x:Key="CED.Color.BadgeStd08Background">#F0F0F0</Color>
+  <Color x:Key="CED.Color.BadgeStd08Border">#666666</Color>
+  <Color x:Key="CED.Color.BadgeStd08Text">#666666</Color>
+
+  <Color x:Key="CED.Color.ApplyBackground">#DFF2D8</Color>
+  <Color x:Key="CED.Color.ApplyBorder">#4E8A4A</Color>
+</ResourceDictionary>

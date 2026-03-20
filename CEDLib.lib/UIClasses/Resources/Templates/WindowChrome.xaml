@@ -1,0 +1,29 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style x:Key="CED.Window.Base" TargetType="Window">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.WindowBackground}"/>
+    <Setter Property="WindowStartupLocation" Value="CenterOwner"/>
+    <Setter Property="SnapsToDevicePixels" Value="True"/>
+  </Style>
+
+  <Style x:Key="CED.Page.Base" TargetType="Page">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.WindowBackground}"/>
+    <Setter Property="SnapsToDevicePixels" Value="True"/>
+  </Style>
+
+  <Style x:Key="CED.Border.WindowChrome" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.WindowBackground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.Border}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource CED.CornerRadius.Panel}"/>
+    <Setter Property="Padding" Value="{DynamicResource CED.Thickness.PanelMargin}"/>
+  </Style>
+
+  <Style x:Key="CED.Border.SectionCard" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.ListBackground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridBorder}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource CED.CornerRadius.Control}"/>
+    <Setter Property="Padding" Value="8"/>
+  </Style>
+</ResourceDictionary>

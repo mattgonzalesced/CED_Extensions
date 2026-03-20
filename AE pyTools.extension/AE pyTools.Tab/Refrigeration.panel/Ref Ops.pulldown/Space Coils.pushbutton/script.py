@@ -13,6 +13,7 @@ doc = revit.doc
 DEFAULT_WALL_OFFSET_IN = 15.0
 STYLE_WALL = "Wall distribution"
 STYLE_CENTER = "Center distribution"
+SIDE_SPAN_COORD_TOL_FT = 1.0 / 96.0
 
 
 def _is_zero_xy(vec, tol=1e-9):
@@ -97,44 +98,113 @@ def _find_spatial_element(doc, point):
     return None
 
 
-def _bounds_box_from_spatial(spatial):
+def _segment_count(seg_list):
+    try:
+        return seg_list.Count
+    except Exception:
+        return len(seg_list) if seg_list else 0
+
+
+def _loop_points(seg_list):
+    pts = []
+    count = _segment_count(seg_list)
+    if count <= 0:
+        return pts
+    for i in range(count):
+        seg = seg_list[i]
+        curve = seg.GetCurve()
+        pts.append(curve.GetEndPoint(0))
+    try:
+        last_seg = seg_list[count - 1]
+        pts.append(last_seg.GetCurve().GetEndPoint(1))
+    except Exception:
+        pass
+    return pts
+
+
+def _poly_area_xy(pts):
+    if len(pts) < 3:
+        return 0.0
+    area = 0.0
+    for i in range(len(pts)):
+        x1, y1 = pts[i].X, pts[i].Y
+        x2, y2 = pts[(i + 1) % len(pts)].X, pts[(i + 1) % len(pts)].Y
+        area += (x1 * y2) - (x2 * y1)
+    return area * 0.5
+
+
+def _spatial_boundary_loops(spatial):
     options = DB.SpatialElementBoundaryOptions()
     options.SpatialElementBoundaryLocation = DB.SpatialElementBoundaryLocation.Finish
     segments = spatial.GetBoundarySegments(options)
     if not segments:
+        return []
+    return [seg_list for seg_list in segments if _segment_count(seg_list) > 0]
+
+
+def _primary_boundary_loop(loops):
+    if not loops:
+        return None
+    loop_areas = []
+    for seg_list in loops:
+        pts = _loop_points(seg_list)
+        if not pts:
+            continue
+        loop_areas.append((abs(_poly_area_xy(pts)), seg_list))
+    if loop_areas:
+        return max(loop_areas, key=lambda item: item[0])[1]
+    return loops[0]
+
+
+def _full_collinear_span(candidates, chosen, axis):
+    if not candidates or not chosen:
+        return None, None, None
+
+    if axis == "X":
+        target_coord = (chosen["p0"].Y + chosen["p1"].Y) * 0.5
+        peers = [
+            c for c in candidates
+            if abs(((c["p0"].Y + c["p1"].Y) * 0.5) - target_coord) <= SIDE_SPAN_COORD_TOL_FT
+        ]
+        if not peers:
+            peers = [chosen]
+        left = min(min(c["p0"].X, c["p1"].X) for c in peers)
+        right = max(max(c["p0"].X, c["p1"].X) for c in peers)
+        return left, right, target_coord
+
+    target_coord = (chosen["p0"].X + chosen["p1"].X) * 0.5
+    peers = [
+        c for c in candidates
+        if abs(((c["p0"].X + c["p1"].X) * 0.5) - target_coord) <= SIDE_SPAN_COORD_TOL_FT
+    ]
+    if not peers:
+        peers = [chosen]
+    left = min(min(c["p0"].Y, c["p1"].Y) for c in peers)
+    right = max(max(c["p0"].Y, c["p1"].Y) for c in peers)
+    return left, right, target_coord
+
+
+def _find_spatial_for_coils(coils):
+    for coil in coils:
+        point = _get_location_point(coil)
+        spatial = _find_spatial_element(doc, point)
+        if spatial:
+            return spatial
+        bbox = _get_bbox(coil)
+        if bbox:
+            spatial = _find_spatial_element(doc, _bbox_center(bbox))
+            if spatial:
+                return spatial
+    return None
+
+
+def _bounds_box_from_spatial(spatial):
+    loops = _spatial_boundary_loops(spatial)
+    if not loops:
         return None
 
-    def _loop_points(seg_list):
-        pts = []
-        try:
-            count = seg_list.Count
-        except Exception:
-            count = len(seg_list) if seg_list else 0
-        if count <= 0:
-            return pts
-        for i in range(count):
-            seg = seg_list[i]
-            curve = seg.GetCurve()
-            pts.append(curve.GetEndPoint(0))
-        try:
-            last_seg = seg_list[count - 1]
-            pts.append(last_seg.GetCurve().GetEndPoint(1))
-        except Exception:
-            pass
-        return pts
-
-    def _poly_area_xy(pts):
-        if len(pts) < 3:
-            return 0.0
-        area = 0.0
-        for i in range(len(pts)):
-            x1, y1 = pts[i].X, pts[i].Y
-            x2, y2 = pts[(i + 1) % len(pts)].X, pts[(i + 1) % len(pts)].Y
-            area += (x1 * y2) - (x2 * y1)
-        return area * 0.5
-
     loop_bounds = []
-    for seg_list in segments:
+    for seg_list in loops:
         pts = _loop_points(seg_list)
         if not pts:
             continue
@@ -149,7 +219,7 @@ def _bounds_box_from_spatial(spatial):
         _, min_x, max_x, min_y, max_y = max(loop_bounds, key=lambda b: b[0])
     else:
         points = []
-        for seg_list in segments:
+        for seg_list in loops:
             for seg in seg_list:
                 curve = seg.GetCurve()
                 points.append(curve.GetEndPoint(0))
@@ -182,17 +252,19 @@ def _bounds_box_from_spatial(spatial):
 
 
 def _bounds_from_spatial(spatial, direction):
-    options = DB.SpatialElementBoundaryOptions()
-    options.SpatialElementBoundaryLocation = DB.SpatialElementBoundaryLocation.Finish
-    segments = spatial.GetBoundarySegments(options)
-    if not segments:
+    loops = _spatial_boundary_loops(spatial)
+    if not loops:
         return None
+
+    primary_loop = _primary_boundary_loop(loops)
+    if not primary_loop:
+        return None
+
     points = []
-    for seg_list in segments:
-        for seg in seg_list:
-            curve = seg.GetCurve()
-            points.append(curve.GetEndPoint(0))
-            points.append(curve.GetEndPoint(1))
+    for seg in primary_loop:
+        curve = seg.GetCurve()
+        points.append(curve.GetEndPoint(0))
+        points.append(curve.GetEndPoint(1))
     if not points:
         return None
 
@@ -209,22 +281,21 @@ def _bounds_from_spatial(spatial, direction):
         center = DB.XYZ(cx, cy, 0)
 
     candidates = []
-    for seg_list in segments:
-        for seg in seg_list:
-            curve = seg.GetCurve()
-            if not isinstance(curve, DB.Line):
-                continue
-            p0 = curve.GetEndPoint(0)
-            p1 = curve.GetEndPoint(1)
-            mid = (p0 + p1) * 0.5
-            wall_type = _classify_wall(curve)
-            candidates.append({
-                "line": curve,
-                "p0": p0,
-                "p1": p1,
-                "mid": mid,
-                "type": wall_type,
-            })
+    for seg in primary_loop:
+        curve = seg.GetCurve()
+        if not isinstance(curve, DB.Line):
+            continue
+        p0 = curve.GetEndPoint(0)
+        p1 = curve.GetEndPoint(1)
+        mid = (p0 + p1) * 0.5
+        wall_type = _classify_wall(curve)
+        candidates.append({
+            "line": curve,
+            "p0": p0,
+            "p1": p1,
+            "mid": mid,
+            "type": wall_type,
+        })
 
     if not candidates:
         return None
@@ -242,9 +313,9 @@ def _bounds_from_spatial(spatial, direction):
             if not horiz:
                 return None
         chosen = max(horiz, key=lambda c: c["line"].Length)
-        left = min(chosen["p0"].X, chosen["p1"].X)
-        right = max(chosen["p0"].X, chosen["p1"].X)
-        wall_coord = (chosen["p0"].Y + chosen["p1"].Y) * 0.5
+        left, right, wall_coord = _full_collinear_span(horiz, chosen, axis="X")
+        if left is None or right is None or wall_coord is None:
+            return None
         return {
             "axis": "X",
             "perp": "Y",
@@ -266,9 +337,9 @@ def _bounds_from_spatial(spatial, direction):
             return None
 
     chosen = max(vert, key=lambda c: c["line"].Length)
-    left = min(chosen["p0"].Y, chosen["p1"].Y)
-    right = max(chosen["p0"].Y, chosen["p1"].Y)
-    wall_coord = (chosen["p0"].X + chosen["p1"].X) * 0.5
+    left, right, wall_coord = _full_collinear_span(vert, chosen, axis="Y")
+    if left is None or right is None or wall_coord is None:
+        return None
     return {
         "axis": "Y",
         "perp": "X",
@@ -444,8 +515,7 @@ def _bounds_from_walls_extreme(center, direction):
 
 
 def _resolve_bounds(coils, direction):
-    point = _get_location_point(coils[0])
-    spatial = _find_spatial_element(doc, point)
+    spatial = _find_spatial_for_coils(coils)
     if spatial:
         bounds = _bounds_from_spatial(spatial, direction)
         if bounds:
@@ -488,8 +558,7 @@ def _bounds_box_from_walls(center):
 
 
 def _resolve_room_bounds(coils):
-    point = _get_location_point(coils[0])
-    spatial = _find_spatial_element(doc, point)
+    spatial = _find_spatial_for_coils(coils)
     if spatial:
         bounds = _bounds_box_from_spatial(spatial)
         if bounds:
@@ -642,6 +711,34 @@ def _prompt_grid_size():
     return rows, cols
 
 
+def _prompt_mixed_sizes(rows, cols):
+    choice = forms.CommandSwitchWindow.show(
+        ["No", "Yes"],
+        message="Does the {}x{} grid include different coil sizes?".format(rows, cols),
+    )
+    if not choice:
+        script.exit()
+    if choice != "Yes":
+        return False
+
+    forms.alert(
+        (
+            "Arrange the selected coils into the desired {}x{} layout.\n"
+            "Then click Continue.\n\n"
+            "This tells the tool which size belongs in each grid position."
+        ).format(rows, cols),
+        title="Different Coil Sizes",
+    )
+
+    proceed = forms.CommandSwitchWindow.show(
+        ["Continue", "Cancel"],
+        message="Ready to use current layout as the grid template?",
+    )
+    if proceed != "Continue":
+        script.exit()
+    return True
+
+
 def _place_wall_distribution(coils):
     direction = forms.CommandSwitchWindow.show(
         ["North", "South", "East", "West"],
@@ -710,7 +807,7 @@ def _place_wall_distribution(coils):
                 logger.warning("Failed to move coil {}: {}".format(item["id"], ex))
 
 
-def _place_center_distribution(coils, rows, cols):
+def _place_center_distribution(coils, rows, cols, use_current_layout_template=False):
     bounds = _resolve_room_bounds(coils)
     if not bounds:
         forms.alert(
@@ -766,12 +863,21 @@ def _place_center_distribution(coils, rows, cols):
                 logger.warning("Failed to move coil {}: {}".format(item["id"], ex))
         return
 
+    if use_current_layout_template:
+        layout_seed = sorted(data, key=lambda d: (d["center"].Y, d["center"].X))
+        move_seed = layout_seed
+    else:
+        # Preserve legacy behavior: size matrix from incoming order,
+        # then assign to row/col targets by current spatial order.
+        layout_seed = data[:]
+        move_seed = sorted(data, key=lambda d: (d["center"].Y, d["center"].X))
+
     rows_data = []
     idx = 0
     for _ in range(rows):
         row_items = []
         for _ in range(cols):
-            row_items.append(data[idx] if idx < len(data) else None)
+            row_items.append(layout_seed[idx] if idx < len(layout_seed) else None)
             idx += 1
         rows_data.append(row_items)
 
@@ -809,8 +915,6 @@ def _place_center_distribution(coils, rows, cols):
     col_centers = [col_min_x[i] + (col_widths[i] * 0.5) for i in range(cols)]
     row_centers = [row_min_y[i] + (row_heights[i] * 0.5) for i in range(rows)]
 
-    data.sort(key=lambda d: (d["center"].Y, d["center"].X))
-
     family_offsets_y = {}
     for item in data:
         loc = item.get("loc")
@@ -829,7 +933,7 @@ def _place_center_distribution(coils, rows, cols):
             targets.append((row_idx, col_idx))
 
     with revit.Transaction("Space Coils"):
-        for item, target in zip(data, targets):
+        for item, target in zip(move_seed, targets):
             row_idx, col_idx = target
             target_min_x = col_min_x[col_idx]
             delta_x = target_min_x - item["min_x"]
@@ -876,7 +980,13 @@ def main():
         _place_wall_distribution(coils)
     else:
         rows, cols = _prompt_grid_size()
-        _place_center_distribution(coils, rows, cols)
+        mixed_sizes = _prompt_mixed_sizes(rows, cols)
+        _place_center_distribution(
+            coils,
+            rows,
+            cols,
+            use_current_layout_template=mixed_sizes,
+        )
 
 
 if __name__ == "__main__":
