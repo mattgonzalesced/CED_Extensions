@@ -2,15 +2,15 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <Style x:Key="CED.ScrollBar.Menu.Thumb" TargetType="Thumb">
     <Setter Property="Background" Value="{DynamicResource CED.Brush.IconMuted}"/>
-    <Setter Property="MinHeight" Value="16"/>
-    <Setter Property="MinWidth" Value="7"/>
+    <Setter Property="MinHeight" Value="8"/>
+    <Setter Property="MinWidth" Value="8"/>
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="Thumb">
           <Border x:Name="Pill"
                   Background="{TemplateBinding Background}"
-                  CornerRadius="3.5"
-                  Margin="0.5,0.5,0.5,0.5"/>
+                  CornerRadius="3"
+                  Margin="0"/>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
               <Setter TargetName="Pill" Property="Opacity" Value="0.95"/>
@@ -47,62 +47,44 @@
     </Setter>
   </Style>
 
+  <ControlTemplate x:Key="CED.ScrollBar.Menu.Template.Vertical" TargetType="ScrollBar">
+    <Grid Background="{TemplateBinding Background}">
+      <Track x:Name="PART_Track" IsDirectionReversed="True">
+        <Track.Thumb>
+          <Thumb Style="{StaticResource CED.ScrollBar.Menu.Thumb}"/>
+        </Track.Thumb>
+      </Track>
+    </Grid>
+  </ControlTemplate>
+
+  <ControlTemplate x:Key="CED.ScrollBar.Menu.Template.Horizontal" TargetType="ScrollBar">
+    <Grid Background="{TemplateBinding Background}">
+      <Track x:Name="PART_Track" IsDirectionReversed="False">
+        <Track.Thumb>
+          <Thumb Style="{StaticResource CED.ScrollBar.Menu.Thumb}"/>
+        </Track.Thumb>
+      </Track>
+    </Grid>
+  </ControlTemplate>
+
   <Style x:Key="CED.ScrollBar.Menu" TargetType="ScrollBar">
     <Setter Property="Background" Value="{DynamicResource CED.Brush.ListBackground}"/>
     <Setter Property="Foreground" Value="{DynamicResource CED.Brush.IconMuted}"/>
+    <Setter Property="SnapsToDevicePixels" Value="True"/>
+    <Setter Property="UseLayoutRounding" Value="True"/>
     <Setter Property="Width" Value="8"/>
+    <Setter Property="Height" Value="Auto"/>
     <Setter Property="MinWidth" Value="8"/>
-    <Setter Property="MinHeight" Value="5"/>
-    <Setter Property="Template">
-      <Setter.Value>
-        <ControlTemplate TargetType="ScrollBar">
-          <Grid x:Name="Root" Background="{TemplateBinding Background}">
-            <Grid.RowDefinitions>
-              <RowDefinition Height="Auto"/>
-              <RowDefinition Height="*"/>
-              <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-            <RepeatButton x:Name="LineUpButton"
-                          Grid.Row="0"
-                          Style="{StaticResource CED.ScrollBar.Menu.Button}"
-                          Height="12"
-                          Command="ScrollBar.LineUpCommand">
-              <Path Data="M 0 4 L 4 0 L 8 4 Z"
-                    Fill="{DynamicResource CED.Brush.IconMuted}"
-                    Width="8"
-                    Height="4"
-                    Stretch="Fill"/>
-            </RepeatButton>
-            <Track x:Name="PART_Track" Grid.Row="1" IsDirectionReversed="True">
-              <Track.Thumb>
-                <Thumb Style="{StaticResource CED.ScrollBar.Menu.Thumb}"/>
-              </Track.Thumb>
-            </Track>
-            <RepeatButton x:Name="LineDownButton"
-                          Grid.Row="2"
-                          Style="{StaticResource CED.ScrollBar.Menu.Button}"
-                          Height="12"
-                          Command="ScrollBar.LineDownCommand">
-              <Path Data="M 0 0 L 8 0 L 4 4 Z"
-                    Fill="{DynamicResource CED.Brush.IconMuted}"
-                    Width="8"
-                    Height="4"
-                    Stretch="Fill"/>
-            </RepeatButton>
-          </Grid>
-          <ControlTemplate.Triggers>
-            <Trigger Property="Orientation" Value="Horizontal">
-              <Setter TargetName="Root" Property="LayoutTransform">
-                <Setter.Value>
-                  <RotateTransform Angle="-90"/>
-                </Setter.Value>
-              </Setter>
-              <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False"/>
-            </Trigger>
-          </ControlTemplate.Triggers>
-        </ControlTemplate>
-      </Setter.Value>
-    </Setter>
+    <Setter Property="MinHeight" Value="8"/>
+    <Setter Property="Template" Value="{StaticResource CED.ScrollBar.Menu.Template.Vertical}"/>
+    <Style.Triggers>
+      <Trigger Property="Orientation" Value="Horizontal">
+        <Setter Property="Height" Value="8"/>
+        <Setter Property="Width" Value="Auto"/>
+        <Setter Property="MinHeight" Value="8"/>
+        <Setter Property="Template" Value="{StaticResource CED.ScrollBar.Menu.Template.Horizontal}"/>
+      </Trigger>
+    </Style.Triggers>
   </Style>
 
   <Style TargetType="ScrollBar" BasedOn="{StaticResource CED.ScrollBar.Menu}"/>

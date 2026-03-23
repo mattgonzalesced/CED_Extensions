@@ -211,15 +211,22 @@ def find_open_slots(target_panel):
 def main():
     selected_circuits = get_circuits_from_selection()
     all_panels = get_all_panels(doc)
+    get_id_val = get_elementid_value_func()
 
     compatible_panels = []
-    for circuit in selected_circuits:
-        compatible_panels.extend(get_compatible_panels(circuit, all_panels, doc))
+    for idx, circuit in enumerate(selected_circuits):
+        circuit_panels = list(get_compatible_panels(circuit, all_panels, doc) or [])
+        if idx == 0:
+            compatible_panels = circuit_panels
+        else:
+            allowed_ids = set([get_id_val(p.Id) for p in list(circuit_panels or [])])
+            compatible_panels = [
+                panel for panel in list(compatible_panels or [])
+                if get_id_val(panel.Id) in allowed_ids
+            ]
 
     if not compatible_panels:
         forms.alert("No compatible panels found.", exitscript=True)
-
-    compatible_panels = list(set(compatible_panels))
 
     # Sort and filter compatible panels
     # Prompt the user to select a target panel
@@ -237,14 +244,33 @@ def main():
         forms.alert("Panel not found.", exitscript=True)
 
     try:
-        circuit_data = move_circuits_to_panel(selected_circuits, target_panel, doc, output)
+        move_result = move_circuits_to_panel(selected_circuits, target_panel, doc, output)
     except Exception as e:
         output.print_md("**Error occurred while transferring circuits: {}**".format(str(e)))
         return
 
-    # Step 6: Output success message and table
-    output.print_md("**Circuits transferred successfully.**")
+    if isinstance(move_result, dict):
+        circuit_data = list(move_result.get("moved") or [])
+        failed_data = list(move_result.get("failed") or [])
+        partial = bool(move_result.get("partial", False))
+        fallback_used = bool(move_result.get("fallback_used", False))
+    else:
+        circuit_data = list(move_result or [])
+        failed_data = []
+        partial = False
+        fallback_used = False
+
+    if partial:
+        output.print_md("**Partial move accepted. Successful moves are listed below.**")
+    elif fallback_used:
+        output.print_md("**Circuits transferred successfully (with default SPARE/SPACE replacement workflow).**")
+    else:
+        output.print_md("**Circuits transferred successfully.**")
+
     output.print_table(circuit_data, ["Circuit ID", "Previous Circuit", "New Circuit"])
+    if failed_data:
+        output.print_md("**Circuits not moved:**")
+        output.print_table(failed_data, ["Circuit ID", "Previous Circuit", "Failure"])
 
 
 if __name__ == '__main__':

@@ -1,0 +1,75 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        Title="Panel Quick Action"
+        Height="260"
+        Width="520"
+        MinHeight="220"
+        MinWidth="460"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource CED.Brush.WindowBackground}">
+  <Grid Margin="{DynamicResource CED.Thickness.ContentMargin}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+
+    <StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,8">
+      <TextBlock Text="Panel Quick Action" Style="{DynamicResource CED.Text.Title}"/>
+      <TextBlock Name="PanelInfoText"
+                 Margin="0,2,0,0"
+                 Text="Panel"
+                 TextWrapping="Wrap"
+                 Style="{DynamicResource CED.Text.Secondary}"/>
+    </StackPanel>
+
+    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+      <TextBlock Text="Mode:"
+                 Margin="0,0,8,0"
+                 VerticalAlignment="Center"
+                 Style="{DynamicResource CED.Text.Secondary}"/>
+      <RadioButton Name="ModeFillRadio"
+                   Content="Fill With"
+                   GroupName="QuickMode"
+                   IsChecked="True"
+                   Margin="0,0,14,0"/>
+      <RadioButton Name="ModeRemoveRadio"
+                   Content="Remove All"
+                   GroupName="QuickMode"/>
+    </StackPanel>
+
+    <Grid Grid.Row="2">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+      <StackPanel Grid.Column="0" Orientation="Vertical">
+        <Button Name="ActionSpareButton"
+                Style="{DynamicResource CED.Button.Base}"
+                Content="Spare"
+                Width="130"
+                Height="30"
+                Click="quick_spare_clicked"/>
+        <Button Name="ActionSpaceButton"
+                Style="{DynamicResource CED.Button.Base}"
+                Content="Space"
+                Width="130"
+                Height="30"
+                Margin="0,6,0,0"
+                Click="quick_space_clicked"/>
+        <Button Name="ActionBothButton"
+                Style="{DynamicResource CED.Button.Base}"
+                Content="Both"
+                Width="130"
+                Height="30"
+                Margin="0,6,0,0"
+                Click="quick_both_clicked"/>
+      </StackPanel>
+      <TextBlock Grid.Column="1"
+                 Margin="12,0,0,0"
+                 VerticalAlignment="Top"
+                 TextWrapping="Wrap"
+                 Style="{DynamicResource CED.Text.Secondary}"
+                 Text="Clicking a button closes this window and runs the selected action on the active panel schedule."/>
+    </Grid>
+  </Grid>
+</Window>

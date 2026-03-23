@@ -1,0 +1,186 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        Title="Add / Remove Spares and Spaces"
+        Height="680"
+        Width="1100"
+        MinHeight="520"
+        MinWidth="900"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource CED.Brush.WindowBackground}"
+        PreviewMouseDown="window_preview_mouse_down">
+  <Grid Margin="{DynamicResource CED.Thickness.ContentMargin}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <Grid Grid.Row="0" Margin="0,0,0,8">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+      <StackPanel Grid.Column="0" Orientation="Vertical">
+        <TextBlock Text="Add / Remove Spares and Spaces" Style="{DynamicResource CED.Text.Title}"/>
+        <TextBlock Text="Stage add/remove actions by panel schedule, then apply once."
+                   Style="{DynamicResource CED.Text.Secondary}"
+                   Margin="0,2,0,0"/>
+      </StackPanel>
+      <TextBlock Grid.Column="1"
+                 Name="StatusText"
+                 Text="Ready"
+                 Style="{DynamicResource CED.Text.Secondary}"
+                 VerticalAlignment="Bottom"/>
+    </Grid>
+
+    <Border Grid.Row="1"
+            BorderBrush="{DynamicResource CED.Brush.DataGridBorder}"
+            BorderThickness="1"
+            Background="{DynamicResource CED.Brush.SearchBackground}">
+      <DataGrid Name="PanelsList"
+                Style="{DynamicResource CED.DataGrid.Base}"
+                AutoGenerateColumns="False"
+                SelectionMode="Extended"
+                SelectionUnit="FullRow"
+                CanUserAddRows="False"
+                CanUserResizeRows="False"
+                CanUserResizeColumns="False"
+                HeadersVisibility="Column"
+                RowHeaderWidth="0"
+                GridLinesVisibility="Horizontal"
+                AlternatingRowBackground="{DynamicResource CED.Brush.DataGridAltRow}"
+                EnableRowVirtualization="True"
+                EnableColumnVirtualization="True"
+                VirtualizingPanel.IsVirtualizing="True"
+                VirtualizingPanel.VirtualizationMode="Recycling"
+                ScrollViewer.CanContentScroll="True"
+                ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                ColumnHeaderStyle="{DynamicResource HeaderWrapCenter}"
+                RowStyle="{DynamicResource CED.DataGrid.RowDisabledAware}"
+                SelectionChanged="grid_selection_changed"
+                PreviewMouseDown="grid_preview_mouse_down">
+        <DataGrid.Columns>
+          <DataGridTemplateColumn Header="" Width="42" IsReadOnly="True" CellStyle="{DynamicResource ReadonlyCell}">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <CheckBox IsChecked="{Binding is_checked, Mode=OneWay}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          Click="item_checkbox_clicked"/>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTextColumn Header="Panel Name" Width="250" Binding="{Binding panel_name}" IsReadOnly="True" CellStyle="{DynamicResource ReadonlyCell}"/>
+          <DataGridTextColumn Header="Part Type" Width="140" Binding="{Binding part_type}" IsReadOnly="True" CellStyle="{DynamicResource ReadonlyCell}"/>
+          <DataGridTextColumn Header="Dist. System" Width="220" Binding="{Binding dist_system_name}" IsReadOnly="True" CellStyle="{DynamicResource ReadonlyCell}"/>
+          <DataGridTextColumn Header="Open Slots" Width="90" Binding="{Binding open_slots_text}" IsReadOnly="True" ElementStyle="{DynamicResource CenterTextCell}" CellStyle="{DynamicResource ReadonlyCell}"/>
+          <DataGridTextColumn Header="Action" Width="*" Binding="{Binding action_text}" IsReadOnly="True" CellStyle="{DynamicResource ReadonlyCell}"/>
+        </DataGrid.Columns>
+      </DataGrid>
+    </Border>
+
+    <Grid Grid.Row="2" Margin="0,8,0,0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+
+      <StackPanel Grid.Column="0" Orientation="Vertical" VerticalAlignment="Bottom">
+        <StackPanel Orientation="Horizontal">
+          <Button Name="CheckAllButton"
+                  Style="{DynamicResource CED.Button.Base}"
+                  Content="Check All"
+                  Width="76"
+                  Height="24"
+                  Click="check_all_clicked"/>
+          <Button Name="UncheckAllButton"
+                  Style="{DynamicResource CED.Button.Base}"
+                  Content="Uncheck All"
+                  Width="84"
+                  Height="24"
+                  Margin="6,0,0,0"
+                  Click="uncheck_all_clicked"/>
+        </StackPanel>
+        <TextBlock Name="CheckedStatusText"
+                   Margin="2,4,0,0"
+                   Style="{DynamicResource CED.Text.Secondary}"
+                   Text="0 of 0 checked"/>
+      </StackPanel>
+
+      <Border Grid.Column="1"
+              Padding="6,4"
+              Margin="12,0,0,0"
+              BorderBrush="{DynamicResource CED.Brush.InfoPanelBorder}"
+              BorderThickness="1"
+              CornerRadius="3"
+              Background="{DynamicResource CED.Brush.InfoPanelBackground}">
+        <StackPanel Orientation="Vertical">
+          <TextBlock Text="Mode:" Margin="0,0,0,4" Style="{DynamicResource CED.Text.Secondary}"/>
+          <RadioButton Name="ModeSpareRadio" Content="Spare" GroupName="Mode" IsChecked="True"/>
+          <RadioButton Name="ModeSpaceRadio" Content="Space" GroupName="Mode" Margin="0,2,0,0"/>
+          <RadioButton Name="ModeBothRadio" Content="Both" GroupName="Mode" Margin="0,2,0,0"/>
+        </StackPanel>
+      </Border>
+
+      <StackPanel Grid.Column="2" Orientation="Vertical" Margin="8,0,0,0" VerticalAlignment="Bottom">
+        <Button Name="StageAddButton"
+                Style="{DynamicResource CED.Button.Base}"
+                Content="Add"
+                Width="72"
+                Height="24"
+                Click="stage_add_clicked"/>
+        <Button Name="StageRemoveButton"
+                Style="{DynamicResource CED.Button.Base}"
+                Content="Remove"
+                Width="72"
+                Height="24"
+                Margin="0,4,0,0"
+                Click="stage_remove_clicked"/>
+        <Button Name="ResetSelectedButton"
+                Style="{DynamicResource CED.Button.Base}"
+                Content="Reset Selected"
+                Width="96"
+                Height="24"
+                Margin="0,4,0,0"
+                Click="reset_selected_clicked"/>
+      </StackPanel>
+
+      <StackPanel Grid.Column="3"
+                  Orientation="Vertical"
+                  VerticalAlignment="Center"
+                  Margin="12,0,0,0">
+        <TextBlock Name="StagedStatusText"
+                   Style="{DynamicResource CED.Text.Secondary}"
+                   Text="0 panel(s) staged"/>
+      </StackPanel>
+
+      <Border Grid.Column="4"
+              Width="1"
+              Height="20"
+              Margin="14,2,0,0"
+              VerticalAlignment="Bottom"
+              Background="{DynamicResource CED.Brush.SectionDivider}"/>
+
+      <StackPanel Grid.Column="6" Orientation="Horizontal">
+        <Button Name="CancelButton"
+                Style="{DynamicResource CED.Button.Base}"
+                Content="Cancel"
+                Width="90"
+                Height="24"
+                Click="cancel_clicked"/>
+        <Button Name="ApplyButton"
+                Style="{DynamicResource CED.Button.Apply}"
+                Content="Apply"
+                Width="90"
+                Height="24"
+                Margin="6,0,0,0"
+                Click="apply_clicked"/>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>
