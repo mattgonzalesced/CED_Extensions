@@ -90,7 +90,26 @@ if LIB_ROOT not in sys.path:
 
     sys.path.append(LIB_ROOT)
 
-from UIClasses.ProfileEditorWindow import ProfileEditorWindow  # noqa: E402
+def _load_profile_editor_window_class():
+    """Load ProfileEditorWindow fresh each run to avoid stale module caches."""
+    module_path = os.path.join(LIB_ROOT, "UIClasses", "ProfileEditorWindow.py")
+    if not os.path.exists(module_path):
+        raise RuntimeError("ProfileEditorWindow.py not found under CEDLib.lib/UIClasses.")
+    try:
+        module = imp.load_source("ced_profile_editor_window_runtime", module_path)
+    except Exception as exc:
+        raise RuntimeError("Failed to load ProfileEditorWindow.py: {}".format(exc))
+    window_cls = getattr(module, "ProfileEditorWindow", None)
+    if window_cls is None:
+        raise RuntimeError("ProfileEditorWindow class was not found in loaded module.")
+    return window_cls
+
+
+try:
+    ProfileEditorWindow = _load_profile_editor_window_class()  # noqa: E402
+except RuntimeError as exc:
+    forms.alert(str(exc), title="Manage YAML Profiles")
+    raise
 
 from LogicClasses.profile_schema import (  # noqa: E402
 
@@ -2048,27 +2067,30 @@ def _apply_truth_links(profile_dict, truth_groups):
 def _apply_truth_metadata(equipment_defs, truth_groups):
     if not truth_groups:
         return
-    membership_by_id = {}
-    name_to_ids = {}
+    membership_by_name = {}
+    name_to_entries = {}
     for entry in equipment_defs or []:
         eq_name = (entry.get("name") or entry.get("id") or "").strip()
-        eq_id = (entry.get("id") or "").strip()
-        if eq_name and eq_id:
-            name_to_ids.setdefault(eq_name, []).append(eq_id)
+        if eq_name:
+            name_to_entries.setdefault(eq_name, []).append(entry)
     for source_key, data in truth_groups.items():
+        source_name = (data.get("source_profile_name") or source_key or "").strip()
         display_name = (data.get("display_name") or data.get("source_profile_name") or source_key).strip()
         source_id = (data.get("source_id") or source_key or "").strip()
+        source_entries = name_to_entries.get(source_name) or []
+        if not source_id and len(source_entries) == 1:
+            source_id = (source_entries[0].get("id") or "").strip()
         for member in data.get("members") or []:
             member_name = (member or "").strip()
             if not member_name:
                 continue
-            ids = name_to_ids.get(member_name) or []
-            if len(ids) == 1:
-                membership_by_id[ids[0]] = (display_name, source_id)
+            member_entries = name_to_entries.get(member_name) or []
+            if len(member_entries) == 1:
+                membership_by_name[member_name] = (display_name, source_id)
     for entry in equipment_defs or []:
         eq_name = (entry.get("name") or entry.get("id") or "").strip()
         eq_id = (entry.get("id") or "").strip()
-        display, source_id = membership_by_id.get(eq_id, (None, None))
+        display, source_id = membership_by_name.get(eq_name, (None, None))
         if source_id:
             entry[TRUTH_SOURCE_ID_KEY] = source_id
         elif eq_id:

@@ -146,11 +146,12 @@ def _collect_tag_entries(repo, tag_filter=None):
                 if not _has_tag_definition(tag):
                     continue
                 key = tag_key_from_dict(tag)
+                cat = tag.get("category") or tag.get("category_name") or ""
                 fam = tag.get("family") or tag.get("family_name") or "<Family?>"
                 typ = tag.get("type") or tag.get("type_name") or "<Type?>"
                 if not key:
                     key = (
-                        (tag.get("category") or tag.get("category_name") or "").lower(),
+                        cat.lower(),
                         fam,
                         typ,
                     )
@@ -158,6 +159,7 @@ def _collect_tag_entries(repo, tag_filter=None):
                 if not entry:
                     entry = {
                         "key": key,
+                        "tag_category": cat,
                         "tag_family": fam,
                         "tag_type": typ,
                         "contexts": [],
@@ -185,20 +187,28 @@ def _collect_tag_entries(repo, tag_filter=None):
         contexts = entry.get("contexts") or []
         fam = entry.get("tag_family") or "<Family?>"
         typ = entry.get("tag_type") or "<Type?>"
+        cat = entry.get("tag_category") or ""
+        if not cat:
+            key = entry.get("key")
+            if isinstance(key, tuple) and len(key) >= 1:
+                cat = key[0] or ""
+        cat_display = cat if cat else "<Category?>"
         if len(contexts) == 1:
             ctx = contexts[0]
-            entry["display"] = u"{family} : {type}  ({equip} :: {label})".format(
+            entry["display"] = u"{family} : {type} [{category}]  ({equip} :: {label})".format(
                 family=fam,
                 type=typ,
+                category=cat_display,
                 equip=ctx.get("equipment_name") or "<Equipment?>",
                 label=ctx.get("label") or "<Label?>",
             )
         else:
             equip_count = len({ctx.get("equipment_name") for ctx in contexts if ctx.get("equipment_name")})
             label_count = len(contexts)
-            entry["display"] = u"{family} : {type}  ({labels} labels / {defs} equipment definitions)".format(
+            entry["display"] = u"{family} : {type} [{category}]  ({labels} labels / {defs} equipment definitions)".format(
                 family=fam,
                 type=typ,
+                category=cat_display,
                 labels=label_count,
                 defs=equip_count or 1,
             )

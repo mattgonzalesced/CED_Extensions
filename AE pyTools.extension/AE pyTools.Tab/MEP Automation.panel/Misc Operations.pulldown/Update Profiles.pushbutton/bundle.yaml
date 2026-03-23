@@ -1,7 +1,8 @@
 title: Update Profiles
 tooltip: |
-  Sync placed Element_Linker data back into the active YAML profile definitions.
-  The update captures current offsets, parameters, tags, and text-note metadata from the model.
+  Sync placed Element_Linker data from selected elements back into the active YAML profile definitions.
+  Requires an active selection and updates only the selected FamilyInstances/Groups.
+  Nearby proximity capture is currently disabled; only selected hosts and their hosted annotations are captured.
   This keeps stored profiles aligned with field changes made after placement.
   Save and export when needed so downstream projects can consume the refreshed definitions.
 is_beta: false

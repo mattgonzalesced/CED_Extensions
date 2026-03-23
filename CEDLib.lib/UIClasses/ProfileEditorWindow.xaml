@@ -16,6 +16,7 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <Grid Grid.Row="0" Margin="0,0,0,5">
@@ -42,8 +43,16 @@
                             Click="DeleteProfileButton_Click"
                             IsEnabled="False"/>
                 </Grid>
+                <Grid Grid.Row="1" Margin="0,0,0,5">
+                    <Button x:Name="DuplicateProfileButton"
+                            Content="Duplicate Profile"
+                            Width="130"
+                            HorizontalAlignment="Left"
+                            Click="DuplicateProfileButton_Click"
+                            IsEnabled="False"/>
+                </Grid>
                 <ListBox x:Name="ProfileList"
-                         Grid.Row="1"
+                         Grid.Row="2"
                          Margin="0"
                          SelectionChanged="ProfileList_SelectionChanged"/>
             </Grid>

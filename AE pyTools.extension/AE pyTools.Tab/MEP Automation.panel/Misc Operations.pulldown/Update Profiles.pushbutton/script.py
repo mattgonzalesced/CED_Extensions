@@ -2,7 +2,7 @@
 """
 Update Profiles
 ---------------
-Scans elements with Element_Linker metadata and merges hosted annotations
+Scans selected elements with Element_Linker metadata and merges hosted annotations
 (tags/keynotes/text notes) plus parameter changes back into the active YAML.
 Also captures nearby keynotes and text notes within a 5 ft radius.
 """
@@ -43,6 +43,9 @@ PROXIMITY_RADIUS_FT = 5.0
 PROXIMITY_CELL_SIZE_FT = 5.0
 NOTE_KEY_PRECISION = 3
 TIE_DISTANCE_TOLERANCE_FT = 1e-4
+MAX_SELECTION_COUNT = 50
+# Keep proximity capture code available, but disabled for now.
+ENABLE_PROXIMITY_CAPTURE = False
 
 _MANAGE_MODULE = None
 _UI_MODULE = None
@@ -1355,16 +1358,19 @@ def main():
 
     selection = revit.get_selection()
     selected_elements = list(getattr(selection, "elements", []) or []) if selection else []
-    if selected_elements:
-        elements = _collect_candidate_elements(doc, selected_elements)
-        if not elements:
-            forms.alert("No candidate elements found in the current selection.", title=TITLE)
-            return
-    else:
-        elements = _collect_candidate_elements(doc)
-        if not elements:
-            forms.alert("No candidate elements found in the current model.", title=TITLE)
-            return
+    if not selected_elements:
+        forms.alert("Nothing selected, closing program", title=TITLE)
+        return
+    if len(selected_elements) > MAX_SELECTION_COUNT:
+        forms.alert(
+            "Too many things selected, bad data will be created if we proceed, clsoing program",
+            title=TITLE,
+        )
+        return
+    elements = _collect_candidate_elements(doc, selected_elements)
+    if not elements:
+        forms.alert("Nothing selected, closing program", title=TITLE)
+        return
 
     stats = {
         "elements_scanned": 0,
@@ -1453,7 +1459,8 @@ def main():
             if note_key is not None:
                 assigned_note_keys.add(note_key)
 
-    _assign_proximity_notes(doc, host_records, assigned_note_keys, observations, led_index, led_meta, manage)
+    if ENABLE_PROXIMITY_CAPTURE:
+        _assign_proximity_notes(doc, host_records, assigned_note_keys, observations, led_index, led_meta, manage)
 
     discrepancies = []
     any_tag_conflicts = False

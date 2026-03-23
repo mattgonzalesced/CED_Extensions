@@ -331,6 +331,42 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._apply_profile_filter(self._profile_filter)
         self._update_rename_button_state()
 
+    def DuplicateProfileButton_Click(self, sender, args):
+        selected_item = getattr(self.ProfileList, "SelectedItem", None) if hasattr(self, "ProfileList") else None
+        metadata = getattr(selected_item, "Tag", None)
+        is_header = bool(metadata.get("is_header")) if isinstance(metadata, dict) else False
+        if not is_header:
+            forms.alert("Select a non-indented profile to duplicate.", title="Element Linker Profile Editor")
+            return
+        profile_name = self._current_profile_name
+        source_profile = self._profiles.get(profile_name) if profile_name else None
+        if not profile_name or source_profile is None:
+            forms.alert("Select a profile to duplicate.", title="Element Linker Profile Editor")
+            return
+        if self._in_edit_mode and not self._force_read_only and self._current_typecfg:
+            if not self._save_current_typecfg():
+                return
+            self._mirror_group_profiles(self._active_root_key or self._child_to_root.get(self._current_profile_name))
+            source_profile = self._profiles.get(profile_name) or source_profile
+
+        new_name = self._next_duplicate_profile_name(profile_name)
+        duplicated = self._clone_profile_shim(source_profile, new_name)
+        if duplicated is None:
+            forms.alert("Could not duplicate the selected profile.", title="Element Linker Profile Editor")
+            return
+
+        self._profiles[new_name] = duplicated
+        self._truth_groups[new_name] = {
+            "display_name": new_name,
+            "source_profile_name": new_name,
+            "source_id": new_name,
+            "members": [new_name],
+        }
+        self._normalize_truth_groups()
+        self._rebuild_profile_items()
+        self._apply_profile_filter(self._profile_filter)
+        self._select_profile_header(new_name)
+
     def CreateOrphanButton_Click(self, sender, args):
         name = forms.ask_for_string(
             prompt="Enter a unique name for the independent profile:",
@@ -578,9 +614,18 @@ class ProfileEditorWindow(forms.WPFWindow):
             return
         enabled = bool(self._current_profile_name) and bool(self._delete_callback)
         self.DeleteProfileButton.IsEnabled = enabled
+        self._update_duplicate_profile_button_state()
         self._update_add_equipment_button_state()
         self._update_change_type_button_state()
         self._update_duplicate_type_button_state()
+
+    def _update_duplicate_profile_button_state(self):
+        if not hasattr(self, "DuplicateProfileButton"):
+            return
+        selected_item = getattr(self.ProfileList, "SelectedItem", None) if hasattr(self, "ProfileList") else None
+        metadata = getattr(selected_item, "Tag", None)
+        is_header = bool(metadata.get("is_header")) if isinstance(metadata, dict) else False
+        self.DuplicateProfileButton.IsEnabled = bool(self._current_profile_name) and is_header and not self._force_read_only
 
     def _update_add_equipment_button_state(self):
         if not hasattr(self, "AddEquipmentButton"):
@@ -1112,6 +1157,14 @@ class ProfileEditorWindow(forms.WPFWindow):
         except Exception:
             pass
         return cloned
+
+    def _next_duplicate_profile_name(self, source_name):
+        base_name = (source_name or u"Profile").strip() or u"Profile"
+        existing = {((name or u"").strip().lower()) for name in self._profiles.keys()}
+        candidate = u"{}_1".format(base_name)
+        while candidate.strip().lower() in existing:
+            candidate = u"{}_1".format(candidate)
+        return candidate
 
     def _populate_profile_list(self, entries, preferred=None):
         if not hasattr(self, "ProfileList"):

@@ -12,9 +12,21 @@ import copy
 import os
 import sys
 
-from pyrevit import forms, script
+from pyrevit import forms, revit, script
 output = script.get_output()
 output.close_others()
+from Autodesk.Revit.DB import FamilyInstance, Group
+from System.Drawing import Point, Size
+from System.Windows.Forms import (
+    BorderStyle,
+    Button,
+    DialogResult,
+    Form,
+    FormBorderStyle,
+    FormStartPosition,
+    Label,
+    TextBox,
+)
 
 LIB_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib")
@@ -29,6 +41,141 @@ TITLE = "Merge Linked Elements"
 
 TRUTH_SOURCE_ID_KEY = "ced_truth_source_id"
 TRUTH_SOURCE_NAME_KEY = "ced_truth_source_name"
+
+
+def _pick_merge_mode(source_name):
+    """Use a WinForms dialog so users can explicitly pick merge mode."""
+    try:
+        dialog = Form()
+        dialog.Text = "Select Merge Mode"
+        dialog.FormBorderStyle = FormBorderStyle.FixedDialog
+        dialog.StartPosition = FormStartPosition.CenterScreen
+        dialog.ClientSize = Size(780, 230)
+        dialog.MaximizeBox = False
+        dialog.MinimizeBox = False
+        dialog.ShowInTaskbar = False
+
+        header = Label()
+        header.AutoSize = False
+        header.Location = Point(12, 12)
+        header.Size = Size(756, 18)
+        header.Text = "Choose how to merge after selecting the source profile:"
+        dialog.Controls.Add(header)
+
+        source_label = Label()
+        source_label.AutoSize = False
+        source_label.Location = Point(12, 36)
+        source_label.Size = Size(756, 18)
+        source_label.Text = "Source profile (truth):"
+        dialog.Controls.Add(source_label)
+
+        source_box = TextBox()
+        source_box.Location = Point(12, 58)
+        source_box.Size = Size(756, 24)
+        source_box.ReadOnly = True
+        source_box.BorderStyle = BorderStyle.FixedSingle
+        source_box.Text = source_name or ""
+        source_box.TabStop = False
+        dialog.Controls.Add(source_box)
+
+        msg = Label()
+        msg.AutoSize = False
+        msg.Location = Point(12, 92)
+        msg.Size = Size(756, 52)
+        msg.Text = (
+            "Use 'Merge existing profile(s)' to pick targets already in YAML.\n"
+            "Use 'Add new parent' to use the currently highlighted linked Revit element name."
+        )
+        dialog.Controls.Add(msg)
+
+        merge_btn = Button()
+        merge_btn.Text = "Merge existing profile(s)"
+        merge_btn.Size = Size(160, 30)
+        merge_btn.Location = Point(12, 170)
+        merge_btn.DialogResult = DialogResult.Yes
+        dialog.Controls.Add(merge_btn)
+
+        add_parent_btn = Button()
+        add_parent_btn.Text = "Add new parent"
+        add_parent_btn.Size = Size(120, 30)
+        add_parent_btn.Location = Point(185, 170)
+        add_parent_btn.DialogResult = DialogResult.No
+        dialog.Controls.Add(add_parent_btn)
+
+        cancel_btn = Button()
+        cancel_btn.Text = "Cancel"
+        cancel_btn.Size = Size(90, 30)
+        cancel_btn.Location = Point(317, 170)
+        cancel_btn.DialogResult = DialogResult.Cancel
+        dialog.Controls.Add(cancel_btn)
+
+        dialog.AcceptButton = merge_btn
+        dialog.CancelButton = cancel_btn
+        result = dialog.ShowDialog()
+        if result == DialogResult.Yes:
+            return "Merge existing profile(s)"
+        if result == DialogResult.No:
+            return "Add new parent"
+        return None
+    except Exception:
+        # Fallback in case WinForms fails in the current host.
+        return forms.CommandSwitchWindow.show(
+            ["Merge existing profile(s)", "Add new parent"],
+            message="Choose merge mode after selecting source '{}':".format(source_name),
+        )
+
+
+def _build_selected_element_label(elem):
+    if elem is None:
+        return ""
+    if isinstance(elem, FamilyInstance):
+        symbol = getattr(elem, "Symbol", None)
+        family = getattr(symbol, "Family", None) if symbol else None
+        fam_name = getattr(family, "Name", None) if family else None
+        type_name = getattr(symbol, "Name", None) if symbol else None
+        if fam_name and type_name:
+            return u"{} : {}".format(fam_name, type_name).strip()
+        if type_name:
+            return str(type_name).strip()
+        if fam_name:
+            return str(fam_name).strip()
+    if isinstance(elem, Group):
+        name = getattr(elem, "Name", None)
+        if name:
+            return str(name).strip()
+    try:
+        name = getattr(elem, "Name", None)
+        if name:
+            return str(name).strip()
+    except Exception:
+        pass
+    return ""
+
+
+def _selected_profile_name_from_revit_selection():
+    selection = revit.get_selection()
+    if not selection:
+        return ""
+    selected_elements = list(getattr(selection, "elements", []) or [])
+    if not selected_elements:
+        return ""
+    return _build_selected_element_label(selected_elements[0])
+
+
+def _next_eq_number(equipment_defs):
+    max_id = 0
+    for entry in equipment_defs or []:
+        eq_id = (entry.get("id") or "").strip()
+        if not eq_id:
+            continue
+        suffix = eq_id.split("-")[-1]
+        try:
+            num = int(suffix)
+        except Exception:
+            continue
+        if num > max_id:
+            max_id = num
+    return max_id + 1
 
 
 def _build_definition_map(equipment_defs):
@@ -198,18 +345,9 @@ def main():
             forms.alert("Could not resolve the selected source definition.", title=TITLE)
             return
 
-    target_candidates = [name for name in ordered_names if name != source_name]
-    if not target_candidates:
-        forms.alert("There are no other definitions to merge into.", title=TITLE)
-        return
-
-    target_choices = forms.SelectFromList.show(
-        target_candidates,
-        title="Select definition(s) to merge into '{}'".format(source_name),
-        multiselect=True,
-        button_name="Merge",
-    )
-    if not target_choices:
+    selected_profile_name = _selected_profile_name_from_revit_selection()
+    action_choice = _pick_merge_mode(source_name)
+    if not action_choice:
         return
 
     root_id, root_name = _ensure_truth_source(source_entry)
@@ -217,11 +355,41 @@ def main():
         root_id = (source_entry.get("id") or source_entry.get("name") or source_name).strip()
     if not root_name:
         root_name = (source_entry.get("name") or source_display or source_name).strip()
+
     merged = []
-    for target_name in target_choices:
+    created = []
+    if action_choice == "Add new parent":
+        if not selected_profile_name:
+            forms.alert(
+                "No selected element name could be resolved.\n"
+                "Select a linked Revit element first, then run Merge Profiles again.",
+                title=TITLE,
+            )
+            return
+        target_name = selected_profile_name.strip()
+        if not target_name:
+            forms.alert(
+                "Selected element did not provide a usable profile name.",
+                title=TITLE,
+            )
+            return
+        if target_name == source_name:
+            forms.alert(
+                "Selected element name matches the source profile.\n"
+                "Choose a different element or use Merge existing profile(s).",
+                title=TITLE,
+            )
+            return
         target_entry = def_map.get(target_name)
-        if not target_entry or target_entry is source_entry:
-            continue
+        if not target_entry:
+            seq = _next_eq_number(equipment_defs)
+            target_entry = {
+                "id": "EQ-{:03d}".format(seq),
+                "name": target_name,
+            }
+            equipment_defs.append(target_entry)
+            def_map[target_name] = target_entry
+            created.append(target_name)
         _copy_fields(source_entry, target_entry)
         target_entry[TRUTH_SOURCE_ID_KEY] = root_id
         if root_name:
@@ -233,6 +401,34 @@ def main():
             root_name,
         )
         merged.append(target_name)
+    else:
+        target_candidates = [name for name in ordered_names if name != source_name]
+        if not target_candidates:
+            forms.alert("There are no other definitions to merge into.", title=TITLE)
+            return
+        target_choices = forms.SelectFromList.show(
+            target_candidates,
+            title="Select definition(s) to merge into '{}'".format(source_name),
+            multiselect=True,
+            button_name="Merge",
+        )
+        if not target_choices:
+            return
+        for target_name in target_choices:
+            target_entry = def_map.get(target_name)
+            if not target_entry or target_entry is source_entry:
+                continue
+            _copy_fields(source_entry, target_entry)
+            target_entry[TRUTH_SOURCE_ID_KEY] = root_id
+            if root_name:
+                target_entry[TRUTH_SOURCE_NAME_KEY] = root_name
+            _repoint_truth_children(
+                equipment_defs,
+                target_entry.get("id"),
+                root_id,
+                root_name,
+            )
+            merged.append(target_name)
 
     if not merged:
         forms.alert("No definitions were merged.", title=TITLE)
@@ -252,6 +448,9 @@ def main():
         "",
         "Updated data saved back to {}.".format(yaml_label),
     ]
+    if created:
+        lines.insert(3, "Created new parent profile(s): {}".format(", ".join(created)))
+        lines.insert(4, "")
     forms.alert("\n".join(lines), title=TITLE)
 
 
