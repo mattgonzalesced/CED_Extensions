@@ -1,0 +1,94 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Optimize Element Placement"
+        Width="700"
+        Height="620"
+        WindowStartupLocation="CenterOwner">
+  <Grid Margin="10">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="200"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- Category selector -->
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+      <TextBlock Text="Category:"
+                 VerticalAlignment="Center"
+                 Width="80"/>
+      <ComboBox x:Name="CategoryCombo" Width="300"/>
+    </StackPanel>
+
+    <!-- Two-panel family type selector -->
+    <Grid Grid.Row="1" Margin="0,0,0,8">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- Available types (left) — click any item to add it -->
+      <Grid Grid.Column="0" Margin="0,0,5,0">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0"
+                   Text="Available — click to add:"
+                   Margin="0,0,0,4"/>
+        <ListBox Grid.Row="1"
+                 x:Name="AvailableList"/>
+      </Grid>
+
+      <!-- Selected types (right) + Remove button -->
+      <Grid Grid.Column="1" Margin="5,0,0,0">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0"
+                   Text="Selected:"
+                   Margin="0,0,0,4"/>
+        <ListBox Grid.Row="1"
+                 x:Name="SelectedList"/>
+        <Button Grid.Row="2"
+                x:Name="RemoveButton"
+                Content="Remove Selected"
+                Width="130"
+                HorizontalAlignment="Right"
+                Margin="0,4,0,0"
+                IsEnabled="False"/>
+      </Grid>
+    </Grid>
+
+    <!-- Rules section header -->
+    <TextBlock Grid.Row="2"
+               Text="Optimization Rules:"
+               FontWeight="Bold"
+               Margin="0,0,0,4"/>
+
+    <!-- Scrollable rules area (populated dynamically) -->
+    <ScrollViewer Grid.Row="3"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Auto"
+                  Margin="0,0,0,8">
+      <Grid x:Name="RulesGrid"/>
+    </ScrollViewer>
+
+    <!-- Action buttons -->
+    <StackPanel Grid.Row="4"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right">
+      <Button x:Name="RunButton"
+              Content="Run Optimization"
+              Width="140"
+              Margin="0,0,8,0"
+              IsEnabled="False"/>
+      <Button x:Name="CancelButton"
+              Content="Cancel"
+              Width="80"/>
+    </StackPanel>
+  </Grid>
+</Window>
