@@ -1,0 +1,9 @@
+title: Follow Parent
+tooltip: |
+  Move placed profile children to follow their current parent position/rotation.
+  Works with or without selection:
+  - No selection: processes all placed children with Element_Linker metadata.
+  - Selection: processes selected children and/or children whose Parent ElementId matches selected host elements.
+  Uses stored linker offsets relative to parent, then updates each child's Element_Linker payload.
+is_beta: false
+

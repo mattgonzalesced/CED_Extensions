@@ -6,7 +6,9 @@ Optimizes the physical placement of elements by category and family:type.
 Only operates on elements that have a non-blank Element_Linker parameter.
 
 Five optimization modes:
-  Wall    - Snap element to the face of the nearest wall, facing outward.
+  Wall    - Snap element to the face of a nearby wall, facing outward.
+            Only walls within 5 ft are eligible. Prefers 0/180-turn walls when
+            they are within 2 ft of the best 90/270-turn option.
             Walls are searched in the host document AND all loaded linked models.
   Ceiling - Keep element X/Y and move only Z to ceiling height.
             Ceilings are searched in host + linked models.
@@ -16,6 +18,9 @@ Five optimization modes:
   Corner  - Place element at a specified corner of its parent's bounding box.
             Parent elements are searched in host + linked models (default: lower-left).
             Door-aware in-body placement is applied when door-side geometry is found.
+
+If any elements are selected, optimization runs only on the selected elements
+that have a non-blank Element_Linker parameter. Otherwise it runs on all.
 """
 
 import imp
@@ -77,6 +82,11 @@ _ELEV_BIPS = tuple(
 # Door optimization constants
 DOOR_HEIGHT_FT = 4.0   # elevation from level
 DOOR_OFFSET_FT = 1.0   # distance from door frame in door's facing direction
+
+# Wall optimization constants
+WALL_MAX_SNAP_DIST_FT = 5.0
+WALL_PARALLEL_ADVANTAGE_FT = 2.0
+WALL_PARALLEL_DOT_THRESHOLD = 0.70710678  # cos(45 deg)
 
 # Corner key -> (use_max_x, use_max_y)
 _CORNER_MAP = {
@@ -467,14 +477,29 @@ def _get_parent_bb_corners_in_host(doc, parent_id):
     return bb.Min, bb.Max
 
 
-def _find_nearest_wall(doc, pt):
+def _find_nearest_wall(doc, pt, elem=None, max_distance_ft=None,
+                       prefer_parallel_within_ft=WALL_PARALLEL_ADVANTAGE_FT):
     """
-    Find the nearest wall to pt, searching host doc and all loaded linked models.
+    Find a preferred wall to pt, searching host doc and all loaded linked models.
+
+    Selection policy:
+      1) ignore candidates farther than max_distance_ft (if provided)
+      2) if element facing is available, prefer a wall that would require
+         ~0/180 deg turn over ~90/270 deg turn when that preferred wall is no
+         more than prefer_parallel_within_ft farther than the best 90/270 wall
+      3) otherwise pick nearest by distance
+
     Returns dict {"proj_pt": XYZ, "wall_dir": XYZ, "half_width": float}
     in host coordinates, or None if no wall is found.
     """
-    best_dist = float("inf")
-    best = None
+    candidates = []
+
+    elem_facing = getattr(elem, "FacingOrientation", None) if elem is not None else None
+    facing_xy = None
+    if elem_facing and (abs(elem_facing.X) > 1e-9 or abs(elem_facing.Y) > 1e-9):
+        fx, fy = _normalize_xy(elem_facing.X, elem_facing.Y)
+        if fx != 0.0 or fy != 0.0:
+            facing_xy = XYZ(fx, fy, 0)
 
     sources = [(doc, None)] + _get_loaded_links(doc)
 
@@ -513,10 +538,9 @@ def _find_nearest_wall(doc, pt):
                 dist = math.sqrt(
                     (proj_host.X - pt.X) ** 2 + (proj_host.Y - pt.Y) ** 2
                 )
-                if dist >= best_dist:
+                if max_distance_ft is not None and dist > float(max_distance_ft):
                     continue
 
-                best_dist = dist
                 end = curve.GetEndPoint(1)
                 nx, ny = _normalize_xy(end.X - start.X, end.Y - start.Y)
                 dir_link = XYZ(nx, ny, 0)
@@ -530,15 +554,59 @@ def _find_nearest_wall(doc, pt):
                     half_w = wall.Width / 2.0
                 except Exception:
                     half_w = 0.25
-                best = {
+                candidate = {
+                    "dist": dist,
                     "proj_pt": proj_host,
                     "wall_dir": dir_host,
                     "half_width": half_w,
                 }
+                if facing_xy is not None:
+                    wall_normal = XYZ(-dir_host.Y, dir_host.X, 0)
+                    to_elem_x = pt.X - proj_host.X
+                    to_elem_y = pt.Y - proj_host.Y
+                    if wall_normal.X * to_elem_x + wall_normal.Y * to_elem_y < 0:
+                        wall_normal = XYZ(-wall_normal.X, -wall_normal.Y, 0)
+                    align_dot = abs(
+                        wall_normal.X * facing_xy.X + wall_normal.Y * facing_xy.Y
+                    )
+                    candidate["is_parallel_turn"] = align_dot >= WALL_PARALLEL_DOT_THRESHOLD
+                candidates.append(candidate)
             except Exception:
                 continue
 
-    return best
+    if not candidates:
+        return None
+
+    # Always keep nearest as baseline.
+    candidates.sort(key=lambda c: c["dist"])
+    nearest = candidates[0]
+
+    if facing_xy is None:
+        return {
+            "proj_pt": nearest["proj_pt"],
+            "wall_dir": nearest["wall_dir"],
+            "half_width": nearest["half_width"],
+        }
+
+    parallel = [c for c in candidates if c.get("is_parallel_turn")]
+    perpendicular = [c for c in candidates if not c.get("is_parallel_turn")]
+    best_parallel = parallel[0] if parallel else None
+    best_perpendicular = perpendicular[0] if perpendicular else None
+
+    chosen = nearest
+    if best_parallel is not None:
+        if best_perpendicular is None:
+            chosen = best_parallel
+        elif best_parallel["dist"] <= best_perpendicular["dist"] + float(prefer_parallel_within_ft):
+            chosen = best_parallel
+        else:
+            chosen = best_perpendicular
+
+    return {
+        "proj_pt": chosen["proj_pt"],
+        "wall_dir": chosen["wall_dir"],
+        "half_width": chosen["half_width"],
+    }
 
 
 def _find_ceiling_z_above(doc, pt):
@@ -996,6 +1064,39 @@ def _collect_linked_elements(doc):
     return result
 
 
+def _collect_selected_linked_elements(doc):
+    """
+    Return selected host-model FamilyInstances with non-blank Element_Linker.
+    Returns:
+      (elements, had_selection)
+    """
+    selected = []
+    had_selection = False
+    uidoc = getattr(revit, "uidoc", None)
+    if uidoc is None:
+        return selected, had_selection
+    try:
+        sel_ids = list(uidoc.Selection.GetElementIds())
+    except Exception:
+        sel_ids = []
+    if not sel_ids:
+        return selected, had_selection
+
+    had_selection = True
+    for eid in sel_ids:
+        try:
+            elem = doc.GetElement(eid)
+        except Exception:
+            elem = None
+        if elem is None:
+            continue
+        if not isinstance(elem, FamilyInstance):
+            continue
+        if _get_linker_text(elem):
+            selected.append(elem)
+    return selected, had_selection
+
+
 def _build_category_map(elements):
     """Return {category_name: [unique_family_type_label, ...]}."""
     cat_map = {}
@@ -1021,7 +1122,13 @@ def _optimize_wall(doc, elem):
     if pt is None:
         return False
 
-    wall_info = _find_nearest_wall(doc, pt)
+    wall_info = _find_nearest_wall(
+        doc,
+        pt,
+        elem=elem,
+        max_distance_ft=WALL_MAX_SNAP_DIST_FT,
+        prefer_parallel_within_ft=WALL_PARALLEL_ADVANTAGE_FT,
+    )
     if wall_info is None:
         return False
 
@@ -2124,8 +2231,14 @@ def _diagnose_failure(doc, elem, mode):
         return "Element has no point location"
 
     if mode == "Wall":
-        if _find_nearest_wall(doc, pt) is None:
-            return "No nearby wall found"
+        if _find_nearest_wall(
+                doc,
+                pt,
+                elem=elem,
+                max_distance_ft=WALL_MAX_SNAP_DIST_FT,
+                prefer_parallel_within_ft=WALL_PARALLEL_ADVANTAGE_FT,
+        ) is None:
+            return "No eligible wall found within {} ft".format(int(WALL_MAX_SNAP_DIST_FT))
     elif mode == "Ceiling":
         if _find_ceiling_z_above(doc, pt) is None:
             return "No ceiling above"
@@ -2170,12 +2283,19 @@ def main():
         forms.alert("No active document detected.", title=TITLE)
         return
 
-    elements = _collect_linked_elements(doc)
+    selected_elements, had_selection = _collect_selected_linked_elements(doc)
+    elements = selected_elements if had_selection else _collect_linked_elements(doc)
     if not elements:
-        forms.alert(
-            "No elements with a non-blank Element_Linker parameter were found.",
-            title=TITLE,
-        )
+        if had_selection:
+            forms.alert(
+                "Selection contains no FamilyInstances with a non-blank Element_Linker parameter.",
+                title=TITLE,
+            )
+        else:
+            forms.alert(
+                "No elements with a non-blank Element_Linker parameter were found.",
+                title=TITLE,
+            )
         return
 
     category_map = _build_category_map(elements)
