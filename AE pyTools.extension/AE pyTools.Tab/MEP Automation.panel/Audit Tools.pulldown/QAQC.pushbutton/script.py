@@ -1,160 +1,325 @@
 # -*- coding: utf-8 -*-
 """
-QA/QC summary for the active YAML stored in Extensible Storage.
-
-Reports, for each equipment definition:
-* how many host elements were found (Revit + linked docs)
-* how many elements were actually placed (via Element_Linker metadata)
-
-Also prints totals per equipment definition and per linked element type so we can
-quickly confirm coverage. Uses Markdown output so bold entries indicate at least
-one placement, italics indicate nothing placed yet.
+QA/QC Relationship Audit
+-----------------------
+Sync-independent audit for YAML profile coverage and Element Linker integrity.
 """
 
+import imp
 import os
+import re
 import sys
-from collections import defaultdict
 
-from pyrevit import revit, forms, script
-from Autodesk.Revit.DB import FamilyInstance, FilteredElementCollector, Group, RevitLinkInstance
+from pyrevit import forms, revit, script
+from Autodesk.Revit.DB import (
+    ElementId,
+    FamilyInstance,
+    FilteredElementCollector,
+    Group,
+    RevitLinkInstance,
+    XYZ,
+)
+from System.Collections.Generic import List
 
-LIB_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib"))
+output = script.get_output()
+output.close_others()
+
+TITLE = "QA/QC Relationship Audit"
+LOG = script.get_logger()
+_MODELLESS_WINDOW = None
+
+LIB_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib")
+)
 if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
-from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
+from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 
-TITLE = "QA/QC Equipment Coverage"
 LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
-NON_HOST_CATEGORIES = {
-    "Electrical Fixtures",
-    "Lighting Fixtures",
-    "Lighting Devices",
-    "Security Devices",
-    "Communication Devices",
-    "Data Devices",
-    "Nurse Call Devices",
-    "Fire Alarm Devices",
-    "Cable Trays",
-    "Conduits",
-    "Plumbing Fixtures",
-    "Plumbing Equipment",
-    "Mechanical Equipment",
-    "Mechanical Control Devices",
-}
+PARENT_ID_KEYS = ("Parent ElementId", "Parent Element ID")
+TRUTH_SOURCE_ID_KEY = "ced_truth_source_id"
+
+INLINE_LINKER_PATTERN = re.compile(
+    r"(Linked Element Definition ID|Set Definition ID|Host Name|Parent_location|"
+    r"Location XYZ \(ft\)|Rotation \(deg\)|Parent Rotation \(deg\)|"
+    r"Parent ElementId|Parent Element ID|LevelId|ElementId|FacingOrientation)\s*:\s*",
+    re.IGNORECASE,
+)
+
+
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            value = getattr(elem_id, attr)
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return value
+            except Exception:
+                continue
+    return default
 
 
 def _normalize_name(value):
     if not value:
         return ""
-    text = str(value)
-    # Treat punctuation / separators as equivalent so family names with
-    # underscores, hyphens, or tight colons still match the YAML definition.
-    for ch in "_-:":
-        text = text.replace(ch, " ")
-    text = text.strip().lower()
-    return " ".join(text.split())
+    return " ".join(str(value).strip().lower().split())
 
 
-def _format_quantity(value):
-    if abs(value - round(value)) < 1e-6:
-        return str(int(round(value)))
-    return "{:.2f}".format(value)
+def _normalize_name_ignoring_default_suffix(value):
+    normalized = _normalize_name(value)
+    if not normalized:
+        return ""
+    # Treat these suffixes as equivalent to no suffix for Tab 5 host-name drift checks:
+    # ": Default", ": Default 2", ": DefaultType"
+    cleaned = re.sub(
+        r"\s*:\s*(?:default(?:\s*\d+)?|defaulttype|default\s*type)$",
+        "",
+        normalized,
+        flags=re.IGNORECASE,
+    ).strip()
+
+    # Treat "Family : Family" and "Family :" as equivalent to just "Family".
+    if ":" in cleaned:
+        left, right = cleaned.split(":", 1)
+        family = (left or "").strip()
+        type_name = (right or "").strip()
+        if family:
+            if not type_name:
+                return family
+            if type_name == family:
+                return family
+    return cleaned
 
 
-def _has_parent_anchor(entry):
-    if not isinstance(entry, dict):
-        return False
-    for linked_set in entry.get("linked_sets") or []:
-        for led in linked_set.get("linked_element_definitions") or []:
-            if isinstance(led, dict) and led.get("is_parent_anchor"):
-                return True
-    return False
+def _try_int(value):
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except Exception:
+        try:
+            return int(float(value))
+        except Exception:
+            return None
+
+
+def _parse_xyz(value):
+    if not value:
+        return None
+    parts = [part.strip() for part in str(value).split(",")]
+    if len(parts) != 3:
+        return None
+    try:
+        return XYZ(float(parts[0]), float(parts[1]), float(parts[2]))
+    except Exception:
+        return None
+
+
+def _get_symbol(elem):
+    symbol = getattr(elem, "Symbol", None)
+    if symbol is not None:
+        return symbol
+    try:
+        type_id = elem.GetTypeId()
+    except Exception:
+        type_id = None
+    if not type_id:
+        return None
+    try:
+        return elem.Document.GetElement(type_id)
+    except Exception:
+        return None
 
 
 def _name_variants(elem):
-    variants = set()
+    names = set()
+    if elem is None:
+        return names
     try:
-        raw = getattr(elem, "Name", None)
-        if raw:
-            variants.add(_normalize_name(raw))
+        raw_name = getattr(elem, "Name", None)
+        if raw_name:
+            names.add(raw_name)
     except Exception:
         pass
+
     if isinstance(elem, FamilyInstance):
-        symbol = getattr(elem, "Symbol", None)
+        symbol = _get_symbol(elem)
         family = getattr(symbol, "Family", None) if symbol else None
-        fam_name = getattr(family, "Name", None) if family else None
+        family_name = getattr(family, "Name", None) if family else None
         type_name = getattr(symbol, "Name", None) if symbol else None
-        if fam_name and type_name:
-            variants.add(_normalize_name(u"{} : {}".format(fam_name, type_name)))
-        if fam_name:
-            variants.add(_normalize_name(fam_name))
+        if family_name and type_name:
+            names.add(u"{} : {}".format(family_name, type_name))
+            names.add(u"{} : {}".format(type_name, family_name))
+        if family_name:
+            names.add(family_name)
         if type_name:
-            variants.add(_normalize_name(type_name))
+            names.add(type_name)
     elif isinstance(elem, Group):
-        gtype = getattr(elem, "GroupType", None)
-        group_name = getattr(gtype, "Name", None) if gtype else None
-        if group_name:
-            variants.add(_normalize_name(group_name))
-    return {name for name in variants if name}
+        group_type = getattr(elem, "GroupType", None)
+        gname = getattr(group_type, "Name", None) if group_type else None
+        if gname:
+            names.add(gname)
+
+    return {_normalize_name(name) for name in names if _normalize_name(name)}
 
 
-def _iter_host_candidates(doc):
+def _element_label(elem):
+    if elem is None:
+        return "<missing>"
+    label = None
+    if isinstance(elem, FamilyInstance):
+        symbol = _get_symbol(elem)
+        family = getattr(symbol, "Family", None) if symbol else None
+        family_name = getattr(family, "Name", None) if family else None
+        type_name = getattr(symbol, "Name", None) if symbol else None
+        if family_name and type_name:
+            label = "{} : {}".format(family_name, type_name)
+    if not label:
+        try:
+            label = getattr(elem, "Name", None)
+        except Exception:
+            label = None
+    if not label:
+        label = "<element>"
+    try:
+        elem_id = _element_id_value(elem.Id)
+    except Exception:
+        elem_id = None
+    if elem_id is not None:
+        return "{} (Id:{})".format(label, elem_id)
+    return str(label)
+
+
+def _get_element_point(elem):
+    if elem is None:
+        return None
+    loc = getattr(elem, "Location", None)
+    if loc is not None:
+        point = getattr(loc, "Point", None)
+        if point is not None:
+            return point
+        curve = getattr(loc, "Curve", None)
+        if curve is not None:
+            try:
+                return curve.Evaluate(0.5, True)
+            except Exception:
+                try:
+                    return curve.GetEndPoint(0)
+                except Exception:
+                    pass
+    try:
+        bbox = elem.get_BoundingBox(None)
+    except Exception:
+        bbox = None
+    if bbox is not None:
+        try:
+            return (bbox.Min + bbox.Max) * 0.5
+        except Exception:
+            return None
+    return None
+
+
+def _transform_point(transform, point):
+    if transform is None or point is None:
+        return point
+    try:
+        return transform.OfPoint(point)
+    except Exception:
+        return point
+
+
+def _doc_key(doc):
+    if doc is None:
+        return None
+    try:
+        return doc.PathName or doc.Title
+    except Exception:
+        return None
+
+
+def _get_link_transform(link_inst):
+    if link_inst is None:
+        return None
+    try:
+        return link_inst.GetTotalTransform()
+    except Exception:
+        try:
+            return link_inst.GetTransform()
+        except Exception:
+            return None
+
+
+def _combine_transform(parent_transform, child_transform):
+    if parent_transform is None:
+        return child_transform
+    if child_transform is None:
+        return parent_transform
+    try:
+        return parent_transform.Multiply(child_transform)
+    except Exception:
+        return None
+
+
+def _walk_link_documents(doc, parent_transform, doc_chain):
     if doc is None:
         return
-    collectors = (
-        FilteredElementCollector(doc).OfClass(FamilyInstance).WhereElementIsNotElementType(),
-        FilteredElementCollector(doc).OfClass(Group).WhereElementIsNotElementType(),
-    )
-    for collector in collectors:
-        for elem in collector:
-            yield elem
-
-
-def _collect_placeholder_counts(doc, target_map):
-    counts = defaultdict(int)
-    if not target_map:
-        return counts
-
-    def register(match_key):
-        eq_names = target_map.get(match_key)
-        if not eq_names:
-            return
-        for eq in eq_names:
-            counts[eq] += 1
-
-    for elem in _iter_host_candidates(doc):
-        for variant in _name_variants(elem):
-            if variant in target_map:
-                register(variant)
-
+    key = _doc_key(doc)
+    if key and key in doc_chain:
+        return
+    next_chain = set(doc_chain or set())
+    if key:
+        next_chain.add(key)
     for link_inst in FilteredElementCollector(doc).OfClass(RevitLinkInstance):
         link_doc = link_inst.GetLinkDocument()
         if link_doc is None:
             continue
-        linked = FilteredElementCollector(link_doc).OfClass(FamilyInstance).WhereElementIsNotElementType()
-        for elem in linked:
-            for variant in _name_variants(elem):
-                if variant in target_map:
-                    register(variant)
-    return counts
+        transform = _combine_transform(parent_transform, _get_link_transform(link_inst))
+        yield link_doc, transform
+        for nested in _walk_link_documents(link_doc, transform, next_chain):
+            yield nested
 
 
-def _extract_led_id(payload):
-    if not payload:
-        return ""
-    for raw_line in payload.splitlines():
-        line = raw_line.strip()
-        if not line or ":" not in line:
+def _iter_link_documents(doc):
+    for link_doc, transform in _walk_link_documents(doc, None, set()):
+        yield link_doc, transform
+
+
+def _collect_family_and_group_instances(doc):
+    items = []
+    seen = set()
+    for cls in (FamilyInstance, Group):
+        try:
+            collector = FilteredElementCollector(doc).OfClass(cls).WhereElementIsNotElementType()
+        except Exception:
             continue
-        key, _, remainder = line.partition(":")
-        if key.strip().lower() == "linked element definition id":
-            return remainder.strip()
-    return ""
+        for elem in collector:
+            try:
+                elem_id = _element_id_value(elem.Id)
+            except Exception:
+                elem_id = None
+            if elem_id is None:
+                continue
+            marker = (cls.__name__, elem_id)
+            if marker in seen:
+                continue
+            seen.add(marker)
+            items.append(elem)
+    return items
 
 
-def _get_linker_payload(elem):
+def _get_linker_text(elem):
+    if elem is None:
+        return ""
     for name in LINKER_PARAM_NAMES:
         try:
             param = elem.LookupParameter(name)
@@ -162,199 +327,614 @@ def _get_linker_payload(elem):
             param = None
         if not param:
             continue
+        text = None
         try:
-            value = param.AsString()
+            text = param.AsString()
         except Exception:
-            value = None
-        if value:
-            return value
+            text = None
+        if not text:
+            try:
+                text = param.AsValueString()
+            except Exception:
+                text = None
+        if text and str(text).strip():
+            return str(text)
     return ""
 
 
-def _collect_placed_counts(doc, led_to_equipment):
-    eq_counts = defaultdict(int)
-    led_counts = defaultdict(int)
-    if not led_to_equipment:
-        return eq_counts, led_counts
-    for elem in _iter_host_candidates(doc):
-        payload = _get_linker_payload(elem)
-        if not payload:
-            continue
-        led_id = _extract_led_id(payload)
-        if not led_id:
-            continue
-        eq_name = led_to_equipment.get(led_id)
-        if not eq_name:
-            continue
-        eq_counts[eq_name] += 1
-        led_counts[led_id] += 1
-    return eq_counts, led_counts
+def _parse_linker_payload(payload_text):
+    if not payload_text:
+        return {}
+    text = str(payload_text)
+    entries = {}
+    if "\n" in text:
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            if not line or ":" not in line:
+                continue
+            key, _, remainder = line.partition(":")
+            entries[key.strip()] = remainder.strip()
+    else:
+        matches = list(INLINE_LINKER_PATTERN.finditer(text))
+        for idx, match in enumerate(matches):
+            key = match.group(1)
+            start = match.end()
+            end = matches[idx + 1].start() if idx + 1 < len(matches) else len(text)
+            value = text[start:end].strip().rstrip(",")
+            entries[key.strip()] = value.strip(" ,")
+
+    parent_element_id = None
+    for key in PARENT_ID_KEYS:
+        if key in entries:
+            parent_element_id = _try_int(entries.get(key))
+            if parent_element_id is not None:
+                break
+
+    return {
+        "led_id": (entries.get("Linked Element Definition ID") or "").strip(),
+        "set_id": (entries.get("Set Definition ID") or "").strip(),
+        "host_name": (entries.get("Host Name") or "").strip(),
+        "parent_element_id": parent_element_id,
+        "location": _parse_xyz(entries.get("Location XYZ (ft)")),
+        "parent_location": _parse_xyz(entries.get("Parent_location")),
+    }
 
 
-def _build_led_map(data):
-    eq_mapping = {}
-    led_metadata = {}
-    eq_led_counts = defaultdict(int)
-    order = []
-    for eq in data.get("equipment_definitions") or []:
+def _build_yaml_maps(data):
+    profiles = []
+    set_to_profile = {}
+    led_to_profile = {}
+    norm_to_profiles = {}
+    group_to_profiles = {}
+    profile_to_group = {}
+
+    eq_defs = data.get("equipment_definitions") or []
+    for eq in eq_defs:
         if not isinstance(eq, dict):
             continue
-        name = (eq.get("name") or eq.get("id") or "").strip()
-        if not name:
+        profile_name = (eq.get("name") or eq.get("id") or "").strip()
+        if not profile_name:
             continue
-        order.append(name)
+        if profile_name not in profiles:
+            profiles.append(profile_name)
+        norm = _normalize_name(profile_name)
+        if norm:
+            norm_to_profiles.setdefault(norm, []).append(profile_name)
+
+        group_key = (eq.get(TRUTH_SOURCE_ID_KEY) or "").strip()
+        if not group_key:
+            group_key = (eq.get("id") or profile_name).strip()
+        profile_to_group[profile_name] = group_key
+        group_to_profiles.setdefault(group_key, []).append(profile_name)
+
         for linked_set in eq.get("linked_sets") or []:
+            if not isinstance(linked_set, dict):
+                continue
+            set_id = (linked_set.get("id") or "").strip()
+            if set_id:
+                set_to_profile[set_id] = profile_name
             for led in linked_set.get("linked_element_definitions") or []:
                 if not isinstance(led, dict):
                     continue
-                if led.get("is_parent_anchor"):
-                    continue
                 led_id = (led.get("id") or "").strip()
-                if not led_id:
-                    continue
-                if led_id not in eq_mapping:
-                    eq_mapping[led_id] = name
-                eq_led_counts[name] += 1
-                label = (led.get("label") or led_id).strip()
-                led_metadata[led_id] = {
-                    "equipment": name,
-                    "label": label or led_id,
-                }
-    return eq_mapping, led_metadata, eq_led_counts, order
+                if led_id:
+                    led_to_profile[led_id] = profile_name
+
+    profiles.sort(key=lambda value: value.lower())
+    for key in norm_to_profiles:
+        norm_to_profiles[key] = sorted(set(norm_to_profiles[key]), key=lambda value: value.lower())
+    return {
+        "profiles": profiles,
+        "norm_to_profiles": norm_to_profiles,
+        "set_to_profile": set_to_profile,
+        "led_to_profile": led_to_profile,
+        "group_to_profiles": group_to_profiles,
+        "profile_to_group": profile_to_group,
+    }
 
 
-def main():
-    doc = revit.doc
-    if doc is None:
-        forms.alert("No active document detected.", title=TITLE)
-        return
-    try:
-        yaml_path, yaml_data = load_active_yaml_data()
-    except RuntimeError as exc:
-        forms.alert(str(exc), title=TITLE)
-        return
-    yaml_label = get_yaml_display_name(yaml_path)
+def _resolve_profile_name(payload, yaml_maps):
+    if not isinstance(payload, dict):
+        return None
 
-    raw_definitions = [entry for entry in (yaml_data.get("equipment_definitions") or []) if isinstance(entry, dict)]
-    equipment_names = sorted({
-        (entry.get("name") or entry.get("id") or "").strip()
-        for entry in raw_definitions
-    })
-    if not equipment_names:
-        forms.alert("No equipment definitions found in {}.".format(yaml_label), title=TITLE)
-        return
+    host_name = (payload.get("host_name") or "").strip()
+    if host_name:
+        host_norm = _normalize_name(host_name)
+        host_matches = yaml_maps["norm_to_profiles"].get(host_norm) or []
+        if host_matches:
+            return host_matches[0]
 
-    led_map, led_metadata, eq_led_counts, eq_order = _build_led_map(yaml_data)
-    if eq_order:
-        seen = set()
-        ordered_names = []
-        for name in eq_order:
-            if name in equipment_names and name not in seen:
-                ordered_names.append(name)
-                seen.add(name)
-        remaining = [name for name in equipment_names if name not in seen]
-        equipment_names = ordered_names + sorted(remaining)
+    set_id = (payload.get("set_id") or "").strip()
+    if set_id and set_id in yaml_maps["set_to_profile"]:
+        return yaml_maps["set_to_profile"][set_id]
 
-    target_map = defaultdict(list)
-    for entry in raw_definitions:
-        eq_name = (entry.get("name") or entry.get("id") or "").strip()
-        if not eq_name:
+    led_id = (payload.get("led_id") or "").strip()
+    if led_id and led_id in yaml_maps["led_to_profile"]:
+        return yaml_maps["led_to_profile"][led_id]
+
+    return None
+
+
+def _collect_parent_candidates(doc, yaml_maps):
+    norm_to_profiles = yaml_maps["norm_to_profiles"]
+    candidates = []
+    by_parent_id = {}
+    host_parent_elements = {}
+    profile_to_candidates = {}
+
+    def _add_candidate(elem, point, is_linked):
+        variants = _name_variants(elem)
+        matched_profiles = set()
+        for variant in variants:
+            for profile_name in norm_to_profiles.get(variant) or []:
+                matched_profiles.add(profile_name)
+        # Keep linker-derived profile separate so only type-change tabs use it.
+        # Tab 2 should remain driven by name-based parent matching.
+        linker_profile = None
+        linker_text = _get_linker_text(elem)
+        if linker_text:
+            linker_payload = _parse_linker_payload(linker_text)
+            linker_profile = _resolve_profile_name(linker_payload, yaml_maps)
+        parent_id = _element_id_value(getattr(elem, "Id", None))
+        if parent_id is None:
+            return
+        candidate = {
+            "parent_id": parent_id,
+            "display_label": _element_label(elem),
+            "is_linked": bool(is_linked),
+            "point": point,
+            "name_variants": sorted(variants, key=lambda value: value.lower()),
+            "matched_profiles": sorted(matched_profiles, key=lambda value: value.lower()),
+            "linker_profile": linker_profile,
+        }
+        candidates.append(candidate)
+        by_parent_id.setdefault(parent_id, []).append(candidate)
+        if not is_linked and parent_id not in host_parent_elements:
+            host_parent_elements[parent_id] = elem
+        for profile_name in candidate["matched_profiles"]:
+            profile_to_candidates.setdefault(profile_name, []).append(candidate)
+
+    for elem in _collect_family_and_group_instances(doc):
+        _add_candidate(elem, _get_element_point(elem), is_linked=False)
+
+    for link_doc, transform in _iter_link_documents(doc):
+        for elem in _collect_family_and_group_instances(link_doc):
+            point = _transform_point(transform, _get_element_point(elem))
+            _add_candidate(elem, point, is_linked=True)
+
+    return {
+        "all": candidates,
+        "by_parent_id": by_parent_id,
+        "host_parent_elements": host_parent_elements,
+        "profile_to_candidates": profile_to_candidates,
+    }
+
+
+def _collect_placed_instances(doc, yaml_maps):
+    records = []
+    for elem in _collect_family_and_group_instances(doc):
+        payload_text = _get_linker_text(elem)
+        if not payload_text:
             continue
-        parent_filter = entry.get("parent_filter") or {}
-        category_name = (parent_filter.get("category") or "").strip()
-        family_pattern = (parent_filter.get("family_name_pattern") or "").strip()
-        type_pattern = (parent_filter.get("type_name_pattern") or "").strip()
-        has_parent_hint = bool(family_pattern and type_pattern)
-        if category_name and category_name in NON_HOST_CATEGORIES:
-            has_parent_hint = False
-        if not (has_parent_hint or _has_parent_anchor(entry)):
+        payload = _parse_linker_payload(payload_text)
+        if not payload:
             continue
-        aliases = [eq_name, entry.get("id")]
-        if family_pattern and type_pattern:
-            aliases.append(u"{} : {}".format(family_pattern, type_pattern))
-        if family_pattern:
-            aliases.append(family_pattern)
-        # avoid adding isolated type pattern (e.g. "Default") since it's too generic
-        for alias in aliases:
-            norm = _normalize_name(alias)
-            if norm:
-                target_map[norm].append(eq_name)
-    normalized_map = {key: names[:] for key, names in target_map.items()}
-    host_counts = _collect_placeholder_counts(doc, target_map)
-    placed_counts, led_type_counts = _collect_placed_counts(doc, led_map)
-    target_map = normalized_map
+        if not (payload.get("set_id") or payload.get("led_id") or payload.get("host_name")):
+            continue
+        profile_name = _resolve_profile_name(payload, yaml_maps)
+        child_id = _element_id_value(getattr(elem, "Id", None))
+        child_point = _get_element_point(elem) or payload.get("location") or payload.get("parent_location")
+        records.append({
+            "child_id": child_id,
+            "child_label": _element_label(elem),
+            "child_point": child_point,
+            "profile_name": profile_name,
+            "set_id": payload.get("set_id"),
+            "led_id": payload.get("led_id"),
+            "host_name": payload.get("host_name"),
+            "parent_element_id": payload.get("parent_element_id"),
+            "payload_location": payload.get("location"),
+            "payload_parent_location": payload.get("parent_location"),
+        })
+    return records
 
-    output = script.get_output()
-    output.close_others()
-    output.print_md("### QA/QC Report - {}".format(yaml_label))
-    total_found = 0
-    total_placed = 0.0
-    for name in equipment_names:
-        found = host_counts.get(name, 0)
-        placed = placed_counts.get(name, 0)
-        leds_per_def = max(1, eq_led_counts.get(name, 1))
-        placed_configs = placed / float(leds_per_def)
-        total_found += found
-        total_placed += placed_configs
-        label = "**{}**".format(name) if placed_configs > 0 else "_{}_".format(name)
-        delta = found - placed_configs
-        note = ""
-        if delta > 1e-6:
-            note = " ({} awaiting placement)".format(_format_quantity(delta))
-        elif delta < -1e-6:
-            note = " ({} placement(s) lack hosts)".format(_format_quantity(abs(delta)))
-        elif found == 0 and placed_configs == 0:
-            note = " (no hosts detected yet)"
-        output.print_md(
-            "{} - placed `{}` / hosts `{}`{}".format(
-                label,
-                _format_quantity(placed_configs),
-                _format_quantity(found),
-                note,
+
+def _candidate_text(candidate):
+    if not candidate:
+        return ""
+    scope = "Linked" if candidate.get("is_linked") else "Host"
+    return "{} [{}]".format(candidate.get("display_label") or "<parent>", scope)
+
+
+def _pick_candidate(candidates):
+    if not candidates:
+        return None
+    host_candidates = [item for item in candidates if not item.get("is_linked")]
+    if host_candidates:
+        return host_candidates[0]
+    return candidates[0]
+
+
+def _build_row(
+    profile,
+    description,
+    parent_text="",
+    child_text="",
+    child_id=None,
+    parent_id=None,
+    snap_point=None,
+):
+    return {
+        "profile": profile or "",
+        "description": description or "",
+        "parent_text": parent_text or "",
+        "child_text": child_text or "",
+        "child_id": child_id,
+        "parent_id": parent_id,
+        "snap_point": snap_point,
+    }
+
+
+def _build_issue_tabs(doc, data):
+    yaml_maps = _build_yaml_maps(data)
+    parent_data = _collect_parent_candidates(doc, yaml_maps)
+    placed_records = _collect_placed_instances(doc, yaml_maps)
+
+    profiles = yaml_maps["profiles"]
+    profile_to_candidates = parent_data["profile_to_candidates"]
+    by_parent_id = parent_data["by_parent_id"]
+    host_parent_elements = parent_data["host_parent_elements"]
+
+    group_to_profiles = yaml_maps["group_to_profiles"]
+    profile_to_group = yaml_maps["profile_to_group"]
+
+    group_to_candidate_ids = {}
+    for group_key, members in group_to_profiles.items():
+        ids = set()
+        for member in members or []:
+            for candidate in profile_to_candidates.get(member) or []:
+                parent_id = candidate.get("parent_id")
+                if parent_id is not None:
+                    ids.add(parent_id)
+        group_to_candidate_ids[group_key] = ids
+
+    placed_by_profile_parent = {}
+    placed_by_group_parent = {}
+    for record in placed_records:
+        profile_name = record.get("profile_name")
+        parent_id = record.get("parent_element_id")
+        if profile_name and parent_id is not None:
+            placed_by_profile_parent.setdefault(profile_name, set()).add(parent_id)
+            group_key = profile_to_group.get(profile_name) or profile_name
+            placed_by_group_parent.setdefault(group_key, set()).add(parent_id)
+
+    tab1_rows = []
+    tab2_rows = []
+    tab3_rows = []
+    tab4_rows = []
+    tab5_rows = []
+
+    for profile_name in profiles:
+        group_key = profile_to_group.get(profile_name) or profile_name
+        if not group_to_candidate_ids.get(group_key):
+            tab1_rows.append(
+                _build_row(
+                    profile=profile_name,
+                    description="Profile exists in active YAML/extensible storage, but no matching parent elements were found.",
+                )
+            )
+
+    seen_missing_child = set()
+    for profile_name in profiles:
+        group_key = profile_to_group.get(profile_name) or profile_name
+        candidate_ids = group_to_candidate_ids.get(group_key) or set()
+        if not candidate_ids:
+            continue
+        placed_parent_ids = placed_by_group_parent.get(group_key) or set()
+        if candidate_ids and candidate_ids.issubset(placed_parent_ids):
+            continue
+        for candidate in profile_to_candidates.get(profile_name) or []:
+            parent_id = candidate.get("parent_id")
+            if parent_id is None or parent_id in placed_parent_ids:
+                continue
+            unique_key = (profile_name, parent_id, bool(candidate.get("is_linked")))
+            if unique_key in seen_missing_child:
+                continue
+            seen_missing_child.add(unique_key)
+            selectable_parent_id = parent_id if parent_id in host_parent_elements else None
+            tab2_rows.append(
+                _build_row(
+                    profile=profile_name,
+                    description="Matching parent found, but no placed child instances are currently tracked for this profile-parent.",
+                    parent_text=_candidate_text(candidate),
+                    parent_id=selectable_parent_id,
+                    snap_point=candidate.get("point"),
+                )
+            )
+
+    for record in placed_records:
+        child_id = record.get("child_id")
+        profile_name = record.get("profile_name") or (record.get("host_name") or "<unknown profile>")
+        parent_id = record.get("parent_element_id")
+        if parent_id is None:
+            continue
+        if parent_id in by_parent_id:
+            continue
+        tab3_rows.append(
+            _build_row(
+                profile=profile_name,
+                description="Original parent ID from Element Linker no longer exists in host or linked models.",
+                parent_text="Missing Parent Id: {}".format(parent_id),
+                child_text=record.get("child_label") or "",
+                child_id=child_id,
+                snap_point=record.get("child_point") or record.get("payload_location"),
             )
         )
 
-    output.print_md("")
-    output.print_md("**Totals:** placed `{}` configurations across `{}` host matches.".format(_format_quantity(total_placed), _format_quantity(total_found)))
-
-    type_rows = []
-    for led_id, count in led_type_counts.items():
-        if count <= 0:
+    for record in placed_records:
+        child_id = record.get("child_id")
+        profile_name = record.get("profile_name")
+        parent_id = record.get("parent_element_id")
+        if not profile_name or parent_id is None:
             continue
-        meta = led_metadata.get(led_id) or {}
-        eq_name = meta.get("equipment") or led_map.get(led_id) or "<Unknown>"
-        label = (meta.get("label") or led_id).strip() or led_id
-        type_rows.append((eq_name, label, count))
-    if type_rows:
-        type_rows.sort(key=lambda row: (row[0], row[1]))
-        output.print_md("")
-        output.print_md("#### Placed Type Totals")
-        for eq_name, label, count in type_rows:
-            output.print_md("* {} - `{}` placed for '{}'".format(label, count, eq_name))
-
-    eq_total_rows = []
-    for name in equipment_names:
-        placed_total = placed_counts.get(name, 0)
-        if placed_total <= 0:
+        candidates = by_parent_id.get(parent_id) or []
+        if not candidates:
             continue
-        led_per_definition = max(1, eq_led_counts.get(name, 1))
-        configs = placed_total / float(led_per_definition)
-        if abs(configs - round(configs)) < 1e-6:
-            configs_display = int(round(configs))
+        current_profiles = set()
+        current_parent_name_variants = set()
+        for candidate in candidates:
+            for variant in candidate.get("name_variants") or []:
+                if variant:
+                    current_parent_name_variants.add(variant)
+            for current in candidate.get("matched_profiles") or []:
+                current_profiles.add(current)
+            linker_profile = (candidate.get("linker_profile") or "").strip()
+            if linker_profile:
+                current_profiles.add(linker_profile)
+        if profile_name in current_profiles:
+            continue
+        chosen = _pick_candidate(candidates)
+        parent_text = _candidate_text(chosen)
+        selectable_parent_id = parent_id if parent_id in host_parent_elements else None
+        snap_point = (chosen or {}).get("point") or record.get("child_point") or record.get("payload_location")
+        child_text = record.get("child_label") or ""
+        stored_host_norm = _normalize_name(record.get("host_name"))
+        stored_host_no_default = _normalize_name_ignoring_default_suffix(record.get("host_name"))
+        current_parent_name_variants_no_default = {
+            _normalize_name_ignoring_default_suffix(name)
+            for name in current_parent_name_variants
+            if name
+        }
+        parent_name_changed = bool(
+            stored_host_norm
+            and stored_host_norm not in current_parent_name_variants
+            and stored_host_no_default not in current_parent_name_variants_no_default
+        )
+        if current_profiles:
+            new_profile = sorted(current_profiles, key=lambda value: value.lower())[0]
+            tab4_rows.append(
+                _build_row(
+                    profile=profile_name,
+                    description="Original parent now matches profile '{}' instead of '{}'.".format(
+                        new_profile, profile_name
+                    ),
+                    parent_text=parent_text,
+                    child_text=child_text,
+                    child_id=child_id,
+                    parent_id=selectable_parent_id,
+                    snap_point=snap_point,
+                )
+            )
         else:
-            configs_display = round(configs, 2)
-        eq_total_rows.append((name, configs_display))
-    if eq_total_rows:
-        output.print_md("")
-        output.print_md("#### Placed Equipment Totals")
-        for name, configs_display in eq_total_rows:
-            output.print_md("* {} - `{}` configurations placed".format(name, configs_display))
+            if not parent_name_changed:
+                continue
+            tab5_rows.append(
+                _build_row(
+                    profile=profile_name,
+                    description=(
+                        "Child Element Linker Host Name no longer matches current parent name, "
+                        "and no YAML profile exists for the current parent."
+                    ),
+                    parent_text=parent_text or "Parent Id: {}".format(parent_id),
+                    child_text=child_text,
+                    child_id=child_id,
+                    parent_id=selectable_parent_id,
+                    snap_point=snap_point,
+                )
+            )
 
-    forms.alert(
-        "QA/QC summary sent to the pyRevit output panel for {}.\n"
-        "Placed entries are bold; entries with zero placements are italic.".format(yaml_label),
-        title=TITLE,
+    tabs = {
+        "tab1": tab1_rows,
+        "tab2": tab2_rows,
+        "tab3": tab3_rows,
+        "tab4": tab4_rows,
+        "tab5": tab5_rows,
+    }
+    meta = {
+        "total_profiles": len(profiles),
+        "total_parents_scanned": len(parent_data["all"]),
+        "total_children_tracked": len(placed_records),
+    }
+    return tabs, meta
+
+
+def _select_element(elem_id):
+    uidoc = getattr(revit, "uidoc", None)
+    doc = getattr(revit, "doc", None)
+    if uidoc is None or doc is None:
+        return False
+    if elem_id in (None, ""):
+        return False
+    try:
+        target = doc.GetElement(ElementId(int(elem_id)))
+    except Exception:
+        target = None
+    if target is None:
+        return False
+    ids = List[ElementId]()
+    ids.Add(target.Id)
+    try:
+        uidoc.Selection.SetElementIds(ids)
+    except Exception:
+        return False
+    try:
+        uidoc.ShowElements(ids)
+    except Exception:
+        pass
+    return True
+
+
+def _zoom_to_point(point, radius_feet=12.0):
+    if point is None:
+        return False
+    uidoc = getattr(revit, "uidoc", None)
+    doc = getattr(revit, "doc", None)
+    if uidoc is None or doc is None:
+        return False
+    active_view = getattr(doc, "ActiveView", None)
+    if active_view is None:
+        return False
+    ui_view = None
+    try:
+        for candidate in uidoc.GetOpenUIViews():
+            if candidate.ViewId == active_view.Id:
+                ui_view = candidate
+                break
+    except Exception:
+        ui_view = None
+    if ui_view is None:
+        return False
+    try:
+        radius = float(radius_feet)
+    except Exception:
+        radius = 12.0
+    min_pt = XYZ(point.X - radius, point.Y - radius, point.Z - radius)
+    max_pt = XYZ(point.X + radius, point.Y + radius, point.Z + radius)
+    try:
+        ui_view.ZoomAndCenterRectangle(min_pt, max_pt)
+        return True
+    except Exception:
+        return False
+
+
+def _load_window_module():
+    module_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "QAQCReportWindow.py"))
+    if not os.path.exists(module_path):
+        return None
+    try:
+        return imp.load_source("ced_qaqc_report_window", module_path)
+    except Exception as exc:
+        LOG.warning("Failed to load QAQC report window module: %s", exc)
+        return None
+
+
+def main():
+    global _MODELLESS_WINDOW
+    doc = getattr(revit, "doc", None)
+    if doc is None:
+        forms.alert("No active document detected.", title=TITLE)
+        return
+    if getattr(doc, "IsFamilyDocument", False):
+        forms.alert("Open a project document before running QA/QC.", title=TITLE)
+        return
+
+    try:
+        data_path, data = load_active_yaml_data(doc)
+    except RuntimeError as exc:
+        forms.alert(str(exc), title=TITLE)
+        return
+    except Exception as exc:
+        forms.alert("Failed to load active YAML from extensible storage:\n\n{}".format(exc), title=TITLE)
+        return
+
+    tabs, meta = _build_issue_tabs(doc, data)
+    actionable_issues = (
+        len(tabs.get("tab2") or [])
+        + len(tabs.get("tab3") or [])
+        + len(tabs.get("tab4") or [])
+        + len(tabs.get("tab5") or [])
     )
+    yaml_label = get_yaml_display_name(data_path)
+
+    summary_text = (
+        "Source: {} | Profiles: {} | Parent candidates scanned: {} | "
+        "Tracked placed children: {} | Actionable issues: {}"
+    ).format(
+        yaml_label,
+        meta.get("total_profiles", 0),
+        meta.get("total_parents_scanned", 0),
+        meta.get("total_children_tracked", 0),
+        actionable_issues,
+    )
+
+    ui_module = _load_window_module()
+    xaml_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "QAQCReportWindow.xaml"))
+    if ui_module is None or not os.path.exists(xaml_path):
+        lines = [
+            summary_text,
+            "",
+            "1) YAML profile has no matching parents: {}".format(len(tabs.get("tab1") or [])),
+            "2) Matching parent found but no children placed: {}".format(len(tabs.get("tab2") or [])),
+            "3) Placed profile parent ID no longer exists: {}".format(len(tabs.get("tab3") or [])),
+            "4) Parent changed type and matching profile exists: {}".format(len(tabs.get("tab4") or [])),
+            "5) Parent changed type and matching profile missing: {}".format(len(tabs.get("tab5") or [])),
+        ]
+        forms.alert("\n".join(lines), title=TITLE)
+        return
+
+    def _on_select_child(row):
+        if not _select_element((row or {}).get("child_id")):
+            forms.alert("Could not select child element.", title=TITLE)
+
+    def _on_select_parent(row):
+        if not _select_element((row or {}).get("parent_id")):
+            forms.alert("Could not select parent element.\n(Linked parents are not directly selectable.)", title=TITLE)
+
+    def _on_snap(row):
+        point = (row or {}).get("snap_point")
+        if point is None and (row or {}).get("child_id") is not None:
+            try:
+                elem = doc.GetElement(ElementId(int(row.get("child_id"))))
+            except Exception:
+                elem = None
+            point = _get_element_point(elem)
+        if not _zoom_to_point(point):
+            forms.alert("Could not snap to location for this row.", title=TITLE)
+
+    window = ui_module.QAQCReportWindow(
+        xaml_path=xaml_path,
+        tab_rows=tabs,
+        summary_text=summary_text,
+        select_child_callback=_on_select_child,
+        select_parent_callback=_on_select_parent,
+        snap_callback=_on_snap,
+    )
+    # Keep a module-level reference so the modeless window stays alive.
+    if _MODELLESS_WINDOW is not None:
+        try:
+            if bool(_MODELLESS_WINDOW.IsVisible):
+                _MODELLESS_WINDOW.Close()
+        except Exception:
+            pass
+        _MODELLESS_WINDOW = None
+
+    def _on_closed(sender, args):
+        global _MODELLESS_WINDOW
+        try:
+            if sender == _MODELLESS_WINDOW:
+                _MODELLESS_WINDOW = None
+        except Exception:
+            _MODELLESS_WINDOW = None
+
+    _MODELLESS_WINDOW = window
+    try:
+        window.Closed += _on_closed
+    except Exception:
+        pass
+    try:
+        window.Show()
+    except Exception:
+        window.show()
 
 
 if __name__ == "__main__":

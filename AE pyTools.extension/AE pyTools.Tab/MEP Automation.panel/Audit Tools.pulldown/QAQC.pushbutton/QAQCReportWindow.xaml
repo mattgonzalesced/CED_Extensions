@@ -1,0 +1,68 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="QA/QC Relationship Audit"
+        Height="760"
+        Width="1700"
+        WindowStartupLocation="CenterScreen">
+  <Grid Margin="12">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <TextBlock Name="SummaryText"
+               Margin="0,0,0,8"
+               TextWrapping="Wrap"/>
+
+    <TabControl Grid.Row="1"
+                Name="ReportTabs">
+      <TabItem Name="Tab1Item" Header="1. No Matching Parents">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+          <Grid Name="Tab1Grid" Margin="0,4,0,0"/>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Name="Tab2Item" Header="2. Parents Found, Children Missing">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+          <Grid Name="Tab2Grid" Margin="0,4,0,0"/>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Name="Tab3Item" Header="3. Original Parent Missing">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+          <Grid Name="Tab3Grid" Margin="0,4,0,0"/>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Name="Tab4Item" Header="4. Parent Type Changed (Profile Exists)">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+          <Grid Name="Tab4Grid" Margin="0,4,0,0"/>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Name="Tab5Item" Header="5. Parent Type Changed (No Profile)">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+          <Grid Name="Tab5Grid" Margin="0,4,0,0"/>
+        </ScrollViewer>
+      </TabItem>
+    </TabControl>
+
+    <StackPanel Grid.Row="2"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right"
+                Margin="0,8,0,0">
+      <TextBlock Name="FooterText"
+                 VerticalAlignment="Center"
+                 Margin="0,0,12,0"/>
+      <Button Name="CloseButton"
+              Content="Close"
+              Width="90"/>
+    </StackPanel>
+  </Grid>
+</Window>
