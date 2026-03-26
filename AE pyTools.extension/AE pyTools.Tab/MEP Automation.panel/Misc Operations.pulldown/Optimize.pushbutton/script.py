@@ -1189,13 +1189,15 @@ def _optimize_door(doc, elem):
 
 def _is_rectangular_in_plan(elem):
     """
-    Return True if elem's footprint is approximately rectangular in plan view.
+    Return True if elem's footprint is rectangular or near-rectangular in plan.
 
-    Strategy: collect all vertical face normals from the element's geometry.
-    A rectangular solid in plan has vertical faces whose normals fall into
-    exactly 1 or 2 perpendicular XY directions (regardless of rotation).
-    If more than 2 distinct directions are found, or the 2 found directions
-    are not perpendicular, the footprint is non-rectangular.
+    Strategy:
+      1) Collect vertical-face normal directions clustered by parallelism.
+      2) Fast path: true rectangle has <=2 directions and (if 2) they're
+         perpendicular.
+      3) Near-rectangle fallback: if the two dominant orthogonal directions
+         account for most vertical face area, treat as rectangular. This keeps
+         families with tiny chamfers/fillets from being misclassified.
 
     Defaults to True (treat as rectangular) if geometry cannot be read.
     """
@@ -1231,9 +1233,11 @@ def _is_rectangular_in_plan(elem):
         if not solids:
             return True
 
-        # Gather unique XY-plane normal directions from vertical faces
-        directions = []
+        # Gather XY-plane normal clusters from vertical faces (area-weighted)
+        directions = []  # [{"nx": float, "ny": float, "area": float}, ...]
         angle_tol = 0.15  # ~8.6 degrees
+        cos_tol = math.cos(angle_tol)
+        total_vert_area = 0.0
 
         for solid in solids:
             try:
@@ -1247,21 +1251,51 @@ def _is_rectangular_in_plan(elem):
                     nx, ny = _normalize_xy(n.X, n.Y)
                     if nx == 0.0 and ny == 0.0:
                         continue
-                    is_new = True
-                    for dx, dy in directions:
-                        if abs(nx * dx + ny * dy) > math.cos(angle_tol):
-                            is_new = False
+                    try:
+                        area = float(face.Area)
+                    except Exception:
+                        area = 1.0
+                    if area <= 0.0:
+                        area = 1.0
+                    total_vert_area += area
+
+                    merged = False
+                    for cluster in directions:
+                        dot = nx * cluster["nx"] + ny * cluster["ny"]
+                        if abs(dot) > cos_tol:
+                            sign = 1.0 if dot >= 0.0 else -1.0
+                            old_area = cluster["area"]
+                            new_area = old_area + area
+                            ax = cluster["nx"] * old_area + (nx * sign) * area
+                            ay = cluster["ny"] * old_area + (ny * sign) * area
+                            ax, ay = _normalize_xy(ax, ay)
+                            cluster["nx"] = ax
+                            cluster["ny"] = ay
+                            cluster["area"] = new_area
+                            merged = True
                             break
-                    if is_new:
-                        directions.append((nx, ny))
+                    if not merged:
+                        directions.append({"nx": nx, "ny": ny, "area": area})
             except Exception:
                 continue
 
+        if not directions:
+            return True
+
         if len(directions) > 2:
+            # Near-rectangular fallback:
+            # two dominant orthogonal directions + minor residual faces.
+            ranked = sorted(directions, key=lambda d: d["area"], reverse=True)
+            if len(ranked) >= 2 and total_vert_area > 1e-6:
+                d1, d2 = ranked[0], ranked[1]
+                dominant_ratio = (d1["area"] + d2["area"]) / total_vert_area
+                dot = abs(d1["nx"] * d2["nx"] + d1["ny"] * d2["ny"])
+                if dominant_ratio >= 0.80 and dot <= 0.25:
+                    return True
             return False
         if len(directions) == 2:
-            dot = abs(directions[0][0] * directions[1][0] +
-                      directions[0][1] * directions[1][1])
+            dot = abs(directions[0]["nx"] * directions[1]["nx"] +
+                      directions[0]["ny"] * directions[1]["ny"])
             if dot > math.sin(angle_tol):   # not perpendicular
                 return False
         return True
@@ -1272,6 +1306,8 @@ def _is_rectangular_in_plan(elem):
 
 # Corner placement offset (feet) when shape is rectangular
 _CORNER_INSET_FT = 1.0
+# Additional side-to-center offset (feet), perpendicular to container facing.
+_CORNER_PERP_TO_CENTER_OFFSET_FT = 2.0
 
 # For pairs: the opposite corner on the same level (Lower↔Lower, Upper↔Upper, flip side)
 _OPPOSITE_SIDE_CORNER = {
@@ -1282,8 +1318,17 @@ _OPPOSITE_SIDE_CORNER = {
 }
 
 _DOOR_SIDE_CORNER = {
-    "Lower Left":  "Upper Left",
-    "Lower Right": "Upper Right",
+    "Lower Left":  "Lower Left",
+    "Lower Right": "Lower Right",
+    "Upper Left":  "Upper Left",
+    "Upper Right": "Upper Right",
+}
+
+# For non-door containers, invert corner selection as requested:
+# LL->UR, LR->UL, UL->LR, UR->LL
+_NON_DOOR_FLIPPED_CORNER = {
+    "Lower Left":  "Lower Left",
+    "Lower Right": "Lower Right",
     "Upper Left":  "Upper Left",
     "Upper Right": "Upper Right",
 }
@@ -1301,6 +1346,8 @@ _CASE_DOOR_SIDE_ARC_TRIGGER_FT = 0.35
 _CASE_DOOR_SIDE_ARC_POST_SHIFT_FT = 1.0
 # Final direct XY offset for arc-door cases, positive facing direction.
 _CASE_DOOR_SIDE_ARC_FINAL_OFFSET_FT = 0.5
+# Final direct XY offset for all door-side cases in facing direction.
+_CASE_DOOR_SIDE_FACING_OFFSET_FT = 2.0
 
 
 def _alternate_corner(base_corner, idx):
@@ -1312,6 +1359,16 @@ def _alternate_corner(base_corner, idx):
     if idx % 2 == 0:
         return base_corner
     return _OPPOSITE_SIDE_CORNER.get(base_corner, base_corner)
+
+
+def _corner_for_group(base_corner, idx, group_len):
+    """
+    Alternate only for an exact pair in the same-container same-type group.
+    Otherwise keep the selected corner for every element.
+    """
+    if int(group_len or 0) == 2:
+        return _alternate_corner(base_corner, idx)
+    return base_corner
 
 
 def _container_has_non_line_edges(container_elem):
@@ -1356,6 +1413,88 @@ def _container_has_non_line_edges(container_elem):
                     continue
         except Exception:
             continue
+    return False
+
+
+def _has_door_in_names(elem):
+    """Return True if 'door' appears in any common name field of elem."""
+    if elem is None:
+        return False
+    names = []
+    fam_name = ""
+    type_name = ""
+    try:
+        names.append(getattr(elem, "Name", "") or "")
+    except Exception:
+        pass
+    try:
+        sym = getattr(elem, "Symbol", None)
+        type_name = getattr(sym, "Name", "") or ""
+        names.append(type_name)
+        fam = getattr(sym, "Family", None)
+        fam_name = getattr(fam, "Name", "") or ""
+        names.append(fam_name)
+    except Exception:
+        pass
+    if fam_name or type_name:
+        names.append("{}:{}".format(fam_name, type_name))
+    try:
+        label = _element_label(elem)
+        if label:
+            names.append(label)
+    except Exception:
+        pass
+    try:
+        cat = getattr(elem, "Category", None)
+        names.append(getattr(cat, "Name", "") or "")
+    except Exception:
+        pass
+    text = " ".join([str(n) for n in names if n])
+    return "door" in text.lower()
+
+
+def _is_probable_door_case(container_elem, bb_min=None, bb_max=None, door_dir=None,
+                           doc=None, pt=None, exclude_id=None):
+    """
+    Door/non-door switch:
+    if container family/type/instance/category name contains "door"
+    (case-insensitive), it's door logic.
+    Also checks larger containing families at pt to catch nested sub-family
+    containers inside a door case.
+    """
+    if container_elem is None:
+        return False
+    if _has_door_in_names(container_elem):
+        return True
+
+    # Fallback: if this element sits inside a larger door-named container,
+    # still treat as door logic.
+    if doc is not None and pt is not None:
+        try:
+            instances = list(
+                FilteredElementCollector(doc)
+                .OfClass(FamilyInstance)
+                .WhereElementIsNotElementType()
+            )
+        except Exception:
+            instances = []
+        for candidate in instances:
+            try:
+                if exclude_id is not None and candidate.Id == exclude_id:
+                    continue
+            except Exception:
+                pass
+            try:
+                bb = candidate.get_BoundingBox(None)
+            except Exception:
+                bb = None
+            if bb is None:
+                continue
+            if not _bbox_contains_xyz(pt, bb.Min, bb.Max, tol=0.1):
+                continue
+            if _has_door_in_names(candidate):
+                return True
+
     return False
 
 
@@ -1587,7 +1726,7 @@ def _analyze_container_geometry(container_elem, fallback_facing=None):
             (b_min_y - full_bb.Min.Y, XYZ(0, -1, 0)),  # extension in -Y
         ]
         best_ext, best_dir = max(ext_candidates, key=lambda kv: kv[0])
-        if best_ext > 0.5:  # need at least 0.5 ft extension to be meaningful
+        if best_ext > 0.08:  # allow smaller door-swing/door-panel extensions
             door_dir = best_dir
     except Exception:
         pass
@@ -1671,7 +1810,7 @@ def _analyze_container_geometry(container_elem, fallback_facing=None):
         except Exception:
             pass
 
-    if best_filtered is not None and best_shrinkage > 0.05:
+    if best_filtered is not None and best_shrinkage > 0.02:
         body_infos = [(False, pts) for pts in best_filtered]
         if door_dir is None:
             door_dir = best_p2_dir  # Phase 2 identified the door direction
@@ -1833,92 +1972,51 @@ def _optimize_corner(doc, elem, corner="Lower Left"):
             bb_min = container_bb.Min
             bb_max = container_bb.Max
 
-    # --- Choose facing direction for corner-frame calculation ---
-    # Prefer the geometry-derived door_dir (points toward doors regardless of
-    # how FacingOrientation is modeled in the family).  Fall back to
-    # FacingOrientation only when no arc/door geometry was detected.
-    facing_for_corner = door_dir if door_dir is not None else container_facing
-    use_door_side_body_placement = False
-
-    def _orient_to_probable_front(dir_x, dir_y):
-        """
-        Flip direction when full bbox extends more behind than ahead relative to
-        body bbox; otherwise keep as-is.
-        """
-        if container_elem is None:
-            return dir_x, dir_y
+    # Step 1: align moved element facing to the container before corner pick.
+    if container_facing and (
+            abs(container_facing.X) > 1e-9 or abs(container_facing.Y) > 1e-9):
         try:
-            full_bb = container_elem.get_BoundingBox(None)
-            if full_bb is None:
-                return dir_x, dir_y
-            body_min_proj, body_max_proj = _bbox_proj_range(bb_min, bb_max, dir_x, dir_y)
-            full_min_proj, full_max_proj = _bbox_proj_range(
-                full_bb.Min, full_bb.Max, dir_x, dir_y)
-            ext_fwd = max(0.0, full_max_proj - body_max_proj)
-            ext_back = max(0.0, body_min_proj - full_min_proj)
-            if ext_back > ext_fwd + 0.05:
-                return -dir_x, -dir_y
+            _rotate_to_face(doc, elem, container_facing)
+            pt = _get_point(elem) or pt
         except Exception:
             pass
-        return dir_x, dir_y
+
+    # --- Choose facing direction for corner-frame calculation ---
+    # Corner selection should follow the container FacingOrientation directly.
+    # Use geometry-derived door_dir only when FacingOrientation is unavailable.
+    has_door_side_geometry = _is_probable_door_case(
+        container_elem, bb_min, bb_max, door_dir, doc=doc, pt=pt, exclude_id=elem.Id
+    )
+    facing_for_corner = container_facing
+    if (not facing_for_corner) or (
+            abs(facing_for_corner.X) <= 1e-9 and abs(facing_for_corner.Y) <= 1e-9):
+        facing_for_corner = door_dir
 
     if facing_for_corner and (
             abs(facing_for_corner.X) > 1e-9 or abs(facing_for_corner.Y) > 1e-9):
         fx, fy = _normalize_xy(facing_for_corner.X, facing_for_corner.Y)
         if fx != 0.0 or fy != 0.0:
-            fx, fy = _orient_to_probable_front(fx, fy)
             facing_for_corner = XYZ(fx, fy, 0)
-            use_door_side_body_placement = True
+        else:
+            facing_for_corner = None
+    else:
+        facing_for_corner = None
 
-    # Fallback for families with no usable facing vectors:
-    # infer front direction from element position within container bbox.
-    if (not use_door_side_body_placement) and bb_min is not None and bb_max is not None:
-        cx = (bb_min.X + bb_max.X) / 2.0
-        cy = (bb_min.Y + bb_max.Y) / 2.0
-        fx, fy = _normalize_xy(pt.X - cx, pt.Y - cy)
-        if fx == 0.0 and fy == 0.0:
-            d_x_min = abs(pt.X - bb_min.X)
-            d_x_max = abs(bb_max.X - pt.X)
-            d_y_min = abs(pt.Y - bb_min.Y)
-            d_y_max = abs(bb_max.Y - pt.Y)
-            nearest = min(
-                (d_x_min, "x_min"),
-                (d_x_max, "x_max"),
-                (d_y_min, "y_min"),
-                (d_y_max, "y_max"),
-                key=lambda kv: kv[0]
-            )[1]
-            if nearest == "x_min":
-                fx, fy = -1.0, 0.0
-            elif nearest == "x_max":
-                fx, fy = 1.0, 0.0
-            elif nearest == "y_min":
-                fx, fy = 0.0, -1.0
-            else:
-                fx, fy = 0.0, 1.0
-        if fx != 0.0 or fy != 0.0:
-            fx, fy = _orient_to_probable_front(fx, fy)
-            facing_for_corner = XYZ(fx, fy, 0)
-            use_door_side_body_placement = True
-
-    corner_for_target = (
-        _DOOR_SIDE_CORNER.get(corner, corner) if use_door_side_body_placement else corner
-    )
+    corner_for_target = corner
 
     # --- Determine target XY based on container shape ---
-    if not _is_rectangular_in_plan(container_elem):
-        # Non-rectangular: place at the center of the bounding box
+    is_rect_container = _is_rectangular_in_plan(container_elem)
+    if not is_rect_container:
+        # Only center for non-rectangular containers.
         target_x = (bb_min.X + bb_max.X) / 2.0
         target_y = (bb_min.Y + bb_max.Y) / 2.0
-    elif facing_for_corner and (
-            abs(facing_for_corner.X) > 1e-9 or abs(facing_for_corner.Y) > 1e-9):
-        # Rectangular + known door direction in the container-facing frame.
-        fx, fy = _normalize_xy(facing_for_corner.X, facing_for_corner.Y)
+    elif facing_for_corner:
+        # Rectangular container + known frame direction.
         target_x, target_y = _corner_point_in_facing_frame(
-            bb_min, bb_max, XYZ(fx, fy, 0), corner_for_target, inset_ft=_CORNER_INSET_FT
+            bb_min, bb_max, facing_for_corner, corner_for_target, inset_ft=_CORNER_INSET_FT
         )
     else:
-        # No facing info at all: fall back to world-axis min/max + inset
+        # No facing info at all: world-axis min/max + inset.
         use_max_x, use_max_y = _CORNER_MAP.get(corner_for_target, (False, False))
         base_x = bb_max.X if use_max_x else bb_min.X
         base_y = bb_max.Y if use_max_y else bb_min.Y
@@ -1927,48 +2025,35 @@ def _optimize_corner(doc, elem, corner="Lower Left"):
         target_x = base_x + x_sign * _CORNER_INSET_FT
         target_y = base_y + y_sign * _CORNER_INSET_FT
 
-    # For door-side placement, apply base in-body depth logic for all door
-    # families, with extra adjustments only for arc-door families.
-    if use_door_side_body_placement and facing_for_corner and (
-            abs(facing_for_corner.X) > 1e-9 or abs(facing_for_corner.Y) > 1e-9):
-        fx, fy = _normalize_xy(facing_for_corner.X, facing_for_corner.Y)
-        if fx != 0.0 or fy != 0.0:
-            arc_style_case = _container_has_non_line_edges(container_elem)
-            back_proj, front_proj = _bbox_proj_range(bb_min, bb_max, fx, fy)
-            depth = front_proj - back_proj
-            if depth > 1e-6:
-                setback = max(
-                    _CASE_DOOR_SIDE_MIN_SETBACK_FT,
-                    depth * _CASE_DOOR_SIDE_SETBACK_RATIO
-                )
-                # Arc-door family: add extra inset where front extension is present.
-                try:
-                    if container_elem is not None:
-                        full_bb = container_elem.get_BoundingBox(None)
-                    else:
-                        full_bb = None
-                    if full_bb is not None:
-                        _, full_front_proj = _bbox_proj_range(
-                            full_bb.Min, full_bb.Max, fx, fy)
-                        front_extension = max(0.0, full_front_proj - front_proj)
-                        if arc_style_case and front_extension >= _CASE_DOOR_SIDE_ARC_TRIGGER_FT:
-                            setback += _CASE_DOOR_SIDE_ARC_EXTRA_SETBACK_FT
-                except Exception:
-                    pass
-                setback = min(setback, depth * _CASE_DOOR_SIDE_MAX_SETBACK_RATIO)
-                desired_proj = front_proj - setback
-                if arc_style_case:
-                    desired_proj = max(
-                        back_proj + 0.10,
-                        desired_proj - _CASE_DOOR_SIDE_ARC_POST_SHIFT_FT
-                    )
-                target_proj = target_x * fx + target_y * fy
-                delta_proj = desired_proj - target_proj
-                target_x += fx * delta_proj
-                target_y += fy * delta_proj
-            if arc_style_case:
-                target_x += fx * _CASE_DOOR_SIDE_ARC_FINAL_OFFSET_FT
-                target_y += fy * _CASE_DOOR_SIDE_ARC_FINAL_OFFSET_FT
+    # Door-side cases: apply 2 ft offset in the case facing direction.
+    if has_door_side_geometry and _CASE_DOOR_SIDE_FACING_OFFSET_FT > 0.0:
+        door_ref = container_facing if container_facing else facing_for_corner
+        if door_ref and (abs(door_ref.X) > 1e-9 or abs(door_ref.Y) > 1e-9):
+            dfx, dfy = _normalize_xy(door_ref.X, door_ref.Y)
+            if dfx != 0.0 or dfy != 0.0:
+                target_x += dfx * _CASE_DOOR_SIDE_FACING_OFFSET_FT
+                target_y += dfy * _CASE_DOOR_SIDE_FACING_OFFSET_FT
+
+    # Rectangular containers: apply an additional perpendicular shift toward
+    # center based on the container-facing direction.
+    if (is_rect_container and (not has_door_side_geometry) and
+            _CORNER_PERP_TO_CENTER_OFFSET_FT > 0.0):
+        perp_ref = container_facing if container_facing else facing_for_corner
+        if perp_ref and (abs(perp_ref.X) > 1e-9 or abs(perp_ref.Y) > 1e-9):
+            pfx, pfy = _normalize_xy(perp_ref.X, perp_ref.Y)
+            if pfx != 0.0 or pfy != 0.0:
+                # right vector = 90 deg CW from facing
+                rx, ry = pfy, -pfx
+                cx = (bb_min.X + bb_max.X) / 2.0
+                cy = (bb_min.Y + bb_max.Y) / 2.0
+                to_center_x = cx - target_x
+                to_center_y = cy - target_y
+                proj_to_center = to_center_x * rx + to_center_y * ry
+                if abs(proj_to_center) > 1e-9:
+                    step = min(_CORNER_PERP_TO_CENTER_OFFSET_FT, abs(proj_to_center))
+                    sign = 1.0 if proj_to_center > 0.0 else -1.0
+                    target_x += rx * sign * step
+                    target_y += ry * sign * step
 
     target_pt = XYZ(target_x, target_y, pt.Z)
     moved = _move_element(doc, elem, target_pt)
@@ -2002,6 +2087,77 @@ def _apply_optimization(doc, elem, mode, corner="Lower Left"):
     elif mode == "Corner":
         return _optimize_corner(doc, elem, corner)
     return False
+
+
+def _bump_reason(counter, samples, reason, elem=None, max_samples=3):
+    """Increment reason counter and keep a few sample element IDs."""
+    key = reason or "Unknown"
+    counter[key] = counter.get(key, 0) + 1
+    if elem is None:
+        return
+    bucket = samples.setdefault(key, [])
+    if len(bucket) >= max_samples:
+        return
+    try:
+        eid = _element_id_int(elem.Id, None)
+    except Exception:
+        eid = None
+    if eid is None:
+        return
+    eid_txt = str(eid)
+    if eid_txt not in bucket:
+        bucket.append(eid_txt)
+
+
+def _diagnose_failure(doc, elem, mode):
+    """Best-effort reason for a failed optimization call."""
+    if elem is None:
+        return "Element missing"
+    try:
+        if getattr(elem, "Pinned", False):
+            return "Element is pinned"
+    except Exception:
+        pass
+
+    pt = _get_point(elem)
+    if pt is None:
+        return "Element has no point location"
+
+    if mode == "Wall":
+        if _find_nearest_wall(doc, pt) is None:
+            return "No nearby wall found"
+    elif mode == "Ceiling":
+        if _find_ceiling_z_above(doc, pt) is None:
+            return "No ceiling above"
+    elif mode == "Door":
+        if _find_nearest_door(doc, pt) is None:
+            return "No nearby door found"
+    elif mode == "Corner":
+        parent_id = _get_parent_element_id(elem)
+        if parent_id is None or _get_parent_bb_corners_in_host(doc, parent_id) is None:
+            container_elem, _ = _find_container_by_bbox(doc, pt, exclude_id=elem.Id)
+            if container_elem is None:
+                return "No containing family found"
+
+    return "Move/rotate blocked by host or constraints"
+
+
+def _append_reason_lines(lines, title, reason_counts, reason_samples, max_rows=8):
+    """Append reason breakdown lines to summary output."""
+    if not reason_counts:
+        return
+    lines.append("")
+    lines.append(title)
+    ranked = sorted(reason_counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    for reason, count in ranked[:max_rows]:
+        samples = ", ".join(reason_samples.get(reason, []))
+        if samples:
+            lines.append("  - {}: {} (e.g. ElementId {})".format(reason, count, samples))
+        else:
+            lines.append("  - {}: {}".format(reason, count))
+    hidden = len(ranked) - min(len(ranked), max_rows)
+    if hidden > 0:
+        lines.append("  - {} more reason(s) not shown".format(hidden))
 
 
 # ---------------------------------------------------------------------------
@@ -2059,6 +2215,10 @@ def main():
             label_to_elems.setdefault(label, []).append(elem)
 
     stats = {"attempted": 0, "succeeded": 0, "failed": 0, "skipped_no_opt": 0}
+    fail_reasons = {}
+    fail_samples = {}
+    skip_reasons = {}
+    skip_samples = {}
     txn = Transaction(doc, "Optimize Element Placement")
     try:
         txn.Start()
@@ -2074,21 +2234,46 @@ def main():
                         stats["attempted"] += 1
                         if _is_optimization_disabled(elem, led_params_map):
                             stats["skipped_no_opt"] += 1
+                            _bump_reason(
+                                skip_reasons,
+                                skip_samples,
+                                "Optimization=NO for associated profile fixture",
+                                elem,
+                            )
                             continue
-                        effective_corner = _alternate_corner(corner, idx)
+                        effective_corner = _corner_for_group(corner, idx, len(group_elems))
                         try:
                             ok = _apply_optimization(doc, elem, mode, effective_corner)
                             if ok:
                                 stats["succeeded"] += 1
                             else:
                                 stats["failed"] += 1
-                        except Exception:
+                                _bump_reason(
+                                    fail_reasons,
+                                    fail_samples,
+                                    _diagnose_failure(doc, elem, mode),
+                                    elem,
+                                )
+                        except Exception as exc:
                             stats["failed"] += 1
+                            msg = str(exc).strip().splitlines()[0] if str(exc).strip() else type(exc).__name__
+                            _bump_reason(
+                                fail_reasons,
+                                fail_samples,
+                                "Exception: {}".format(msg[:140]),
+                                elem,
+                            )
             else:
                 for elem in elems_for_type:
                     stats["attempted"] += 1
                     if _is_optimization_disabled(elem, led_params_map):
                         stats["skipped_no_opt"] += 1
+                        _bump_reason(
+                            skip_reasons,
+                            skip_samples,
+                            "Optimization=NO for associated profile fixture",
+                            elem,
+                        )
                         continue
                     try:
                         ok = _apply_optimization(doc, elem, mode, corner)
@@ -2096,8 +2281,21 @@ def main():
                             stats["succeeded"] += 1
                         else:
                             stats["failed"] += 1
-                    except Exception:
+                            _bump_reason(
+                                fail_reasons,
+                                fail_samples,
+                                _diagnose_failure(doc, elem, mode),
+                                elem,
+                            )
+                    except Exception as exc:
                         stats["failed"] += 1
+                        msg = str(exc).strip().splitlines()[0] if str(exc).strip() else type(exc).__name__
+                        _bump_reason(
+                            fail_reasons,
+                            fail_samples,
+                            "Exception: {}".format(msg[:140]),
+                            elem,
+                        )
         txn.Commit()
     except Exception as exc:
         try:
@@ -2115,12 +2313,11 @@ def main():
         "",
         "Elements processed: {attempted}".format(**stats),
         "Succeeded: {succeeded}".format(**stats),
-        "Failed / Skipped: {failed}".format(**stats),
+        "Failed: {failed}".format(**stats),
+        "Skipped: {skipped_no_opt}".format(**stats),
     ]
-    if stats["skipped_no_opt"]:
-        summary_lines.append(
-            "Skipped (Optimization=NO in profile): {skipped_no_opt}".format(**stats)
-        )
+    _append_reason_lines(summary_lines, "Skip reasons:", skip_reasons, skip_samples)
+    _append_reason_lines(summary_lines, "Failure reasons:", fail_reasons, fail_samples)
     forms.alert("\n".join(summary_lines), title=TITLE)
 
 
