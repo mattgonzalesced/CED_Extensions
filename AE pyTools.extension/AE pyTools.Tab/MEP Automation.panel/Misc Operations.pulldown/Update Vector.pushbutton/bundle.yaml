@@ -1,7 +1,9 @@
 title: Update Vector
 tooltip: |
-  Recalculate geometric vectors for an existing equipment definition from selected elements.
-  The command updates centroid-relative offsets to match the current arrangement in model space.
-  Profile metadata stays focused on vector geometry instead of rebuilding the entire definition.
-  Use this when layout shifts but the same profile identity should remain intact.
+  Selection-based vector refresh for placed profile elements.
+  Reads Element_Linker metadata, resolves parent context (Parent ElementId, Host Name in active/linked models, or stored Parent_location),
+  and updates the matching YAML linked-element offsets.
+  X/Y and rotation are recomputed relative to the resolved parent.
+  Z is preserved unless the element moved vertically; when it does, Z is recalculated from level elevation.
+  Element_Linker payload text is rewritten so model metadata stays aligned with YAML.
 is_beta: false
