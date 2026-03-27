@@ -1,32 +1,42 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Update Vector
 -------------
-Reads the Element_Linker metadata stored on a selected element, compares the
-current location/rotation to the original insertion point, and writes the
-resulting offset + rotation back to the active YAML stored in Extensible Storage.
+Updates selected elements by recalculating their offset and rotation
+relative to the parent element stored in Element_Linker metadata,
+and writing those values back to active YAML Extensible Storage.
 """
 
 import math
 import os
-import sys
 import re
+import sys
 
-from pyrevit import revit, forms, script
-output = script.get_output()
-output.close_others()
+from pyrevit import forms, revit, script
 from Autodesk.Revit.DB import (
     BuiltInParameter,
-    ElementTransformUtils,
+    ElementId,
+    FamilyInstance,
     FilteredElementCollector,
     Group,
-    GroupType,
-    IndependentTag,
-    Line,
-    TagOrientation,
+    RevitLinkInstance,
     Transaction,
     XYZ,
-    StorageType,
+)
+
+output = script.get_output()
+output.close_others()
+
+TITLE = "Update Vector"
+LOG = script.get_logger()
+LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
+Z_MOVE_TOL_FT = 1.0 / 256.0
+
+INLINE_PAYLOAD_PATTERN = re.compile(
+    r"(Linked Element Definition ID|Set Definition ID|Host Name|Parent_location|"
+    r"Location XYZ \(ft\)|Rotation \(deg\)|Parent Rotation \(deg\)|"
+    r"Parent ElementId|Parent Element ID|LevelId|ElementId|FacingOrientation)\s*:\s*",
+    re.IGNORECASE,
 )
 
 LIB_ROOT = os.path.abspath(
@@ -35,115 +45,56 @@ LIB_ROOT = os.path.abspath(
 if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
-from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
-from LogicClasses.profile_schema import dump_data_to_string  # noqa: E402
 from ExtensibleStorage.yaml_store import load_active_yaml_data, save_active_yaml_data  # noqa: E402
-from ExtensibleStorage import ExtensibleStorage  # noqa: E402
-ELEMENT_LINKER_PARAM_NAME = "Element_Linker Parameter"
-ELEMENT_LINKER_SHARED_PARAM = "Element_Linker"
-TITLE = "Update Vector"
-LOG = script.get_logger()
-
-try:
-    basestring
-except NameError:
-    basestring = str
+from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 
 
-# --------------------------------------------------------------------------- #
-# Geometry + element helpers
-# --------------------------------------------------------------------------- #
-
-
-
-
-def _element_id_value(elem_id, default=None):
-    if elem_id is None:
+def _to_int(value, default=None):
+    if value in (None, ""):
         return default
-    for attr in ("Value", "IntegerValue"):
-        try:
-            value = getattr(elem_id, attr)
-        except Exception:
-            value = None
-        if value is None:
-            continue
-        try:
-            return int(value)
-        except Exception:
-            try:
-                return value
-            except Exception:
-                continue
-    return default
-def _get_point(elem):
-    loc = getattr(elem, "Location", None)
-    if loc is None:
-        return None
-    if hasattr(loc, "Point") and loc.Point:
-        return loc.Point
-    if hasattr(loc, "Curve") and loc.Curve:
-        try:
-            return loc.Curve.Evaluate(0.5, True)
-        except Exception:
-            return None
-    return None
-
-
-def _get_tag_point(tag):
     try:
-        return getattr(tag, "TagHeadPosition", None)
+        return int(value)
     except Exception:
-        return None
+        try:
+            return int(float(value))
+        except Exception:
+            return default
 
 
-def _vector_angle(vec):
+def _to_float(value, default=None):
+    if value in (None, ""):
+        return default
+    try:
+        return float(value)
+    except Exception:
+        return default
+
+
+def _normalize_angle(deg):
+    value = float(deg or 0.0)
+    while value <= -180.0:
+        value += 360.0
+    while value > 180.0:
+        value -= 360.0
+    return value
+
+
+def _rotate_xy(vec, deg):
     if vec is None:
         return None
+    angle = math.radians(float(deg or 0.0))
+    cos_a = math.cos(angle)
+    sin_a = math.sin(angle)
+    return XYZ(
+        vec.X * cos_a - vec.Y * sin_a,
+        vec.X * sin_a + vec.Y * cos_a,
+        vec.Z,
+    )
+
+
+def _feet_to_inches(ft):
     try:
-        x = float(vec.X)
-        y = float(vec.Y)
-    except Exception:
-        return None
-    if abs(x) < 1e-9 and abs(y) < 1e-9:
-        return None
-    try:
-        return math.degrees(math.atan2(y, x))
-    except Exception:
-        return None
-
-
-def _get_rotation_degrees(elem):
-    # Prefer basis vectors over Location.Rotation so mirrored/flipped families register 180° changes.
-    for attr in ("HandOrientation", "FacingOrientation"):
-        angle = _vector_angle(getattr(elem, attr, None))
-        if angle is not None:
-            return angle
-    loc = getattr(elem, "Location", None)
-    if loc is not None and hasattr(loc, "Rotation"):
-        try:
-            return math.degrees(loc.Rotation)
-        except Exception:
-            pass
-    try:
-        transform = elem.GetTransform()
-        angle = _vector_angle(getattr(transform, "BasisX", None))
-        if angle is not None:
-            return angle
-    except Exception:
-        pass
-    return 0.0
-
-
-def _feet_to_inches(value):
-    try:
-        return float(value) * 12.0
-    except Exception:
-        return 0.0
-
-
-def _inches_to_feet(value):
-    try:
-        return float(value) / 12.0
+        return float(ft) * 12.0
     except Exception:
         return 0.0
 
@@ -153,12 +104,14 @@ def _level_relative_z_inches(elem, world_point):
         return 0.0
     doc = getattr(elem, "Document", None)
     level_elem = None
+
     level_id = getattr(elem, "LevelId", None)
     if level_id and doc:
         try:
             level_elem = doc.GetElement(level_id)
         except Exception:
             level_elem = None
+
     if not level_elem:
         level_param_names = (
             "INSTANCE_REFERENCE_LEVEL_PARAM",
@@ -166,8 +119,8 @@ def _level_relative_z_inches(elem, world_point):
             "INSTANCE_LEVEL_PARAM",
             "SCHEDULE_LEVEL_PARAM",
         )
-        for name in level_param_names:
-            bip = getattr(BuiltInParameter, name, None)
+        for param_name in level_param_names:
+            bip = getattr(BuiltInParameter, param_name, None)
             if not bip:
                 continue
             try:
@@ -177,621 +130,180 @@ def _level_relative_z_inches(elem, world_point):
             if not param:
                 continue
             try:
-                eid = param.AsElementId()
+                elem_id = param.AsElementId()
             except Exception:
-                eid = None
-            if eid and doc:
+                elem_id = None
+            if elem_id and doc:
                 try:
-                    level_elem = doc.GetElement(eid)
+                    level_elem = doc.GetElement(elem_id)
                 except Exception:
                     level_elem = None
                 if level_elem:
                     break
+
     level_elev = 0.0
     if level_elem:
         try:
-            level_elev = getattr(level_elem, "Elevation", 0.0) or 0.0
+            level_elev = float(getattr(level_elem, "Elevation", 0.0) or 0.0)
         except Exception:
             level_elev = 0.0
-    world_z = getattr(world_point, "Z", None)
-    if world_z is None:
-        world_z = 0.0
-    try:
-        relative_ft = float(world_z) - float(level_elev)
-    except Exception:
-        relative_ft = 0.0
-    return _feet_to_inches(relative_ft)
+
+    world_z = 0.0
+    if world_point is not None:
+        try:
+            world_z = float(getattr(world_point, "Z", 0.0) or 0.0)
+        except Exception:
+            world_z = 0.0
+
+    return _feet_to_inches(world_z - level_elev)
 
 
-def _rotate_xy(vec, angle_degrees):
+def _element_id_value(elem_id, default=None):
+    if elem_id is None:
+        return default
+    for attr in ("Value", "IntegerValue"):
+        try:
+            raw = getattr(elem_id, attr)
+        except Exception:
+            raw = None
+        if raw is None:
+            continue
+        try:
+            return int(raw)
+        except Exception:
+            continue
+    return default
+
+
+def _get_point(elem):
+    loc = getattr(elem, "Location", None)
+    if loc is None:
+        return None
+
+    point = getattr(loc, "Point", None)
+    if point is not None:
+        return point
+
+    curve = getattr(loc, "Curve", None)
+    if curve is not None:
+        try:
+            return curve.Evaluate(0.5, True)
+        except Exception:
+            return None
+
+    return None
+
+
+def _vector_angle_deg(vec):
     if vec is None:
         return None
-    if not angle_degrees:
-        return XYZ(vec.X, vec.Y, vec.Z)
     try:
-        ang = math.radians(angle_degrees)
+        x_val = float(vec.X)
+        y_val = float(vec.Y)
     except Exception:
-        return XYZ(vec.X, vec.Y, vec.Z)
-    cos_a = math.cos(ang)
-    sin_a = math.sin(ang)
-    x = vec.X * cos_a - vec.Y * sin_a
-    y = vec.X * sin_a + vec.Y * cos_a
-    return XYZ(x, y, vec.Z)
-
-
-def _normalize_angle(delta_deg):
-    if delta_deg is None:
-        return 0.0
-    value = float(delta_deg)
-    while value <= -180.0:
-        value += 360.0
-    while value > 180.0:
-        value -= 360.0
-    return value
-
-
-def _label_variants(value):
-    base = (value or "").strip()
-    variants = []
-    if base:
-        variants.append(base)
-        if "#" in base:
-            variants.append(base.split("#")[0].strip())
-    return [v for v in variants if v]
-
-
-WILDCARD_SIGNATURE = ("", "", "")
-
-
-def _collect_hosted_tags(elem, host_point):
-    doc = getattr(elem, "Document", None)
-    if doc is None or host_point is None:
-        return []
+        return None
+    if abs(x_val) < 1e-9 and abs(y_val) < 1e-9:
+        return None
     try:
-        deps = list(elem.GetDependentElements(None))
+        return math.degrees(math.atan2(y_val, x_val))
     except Exception:
-        deps = []
-    tags = []
-    for dep_id in deps:
-        try:
-            tag = doc.GetElement(dep_id)
-        except Exception:
-            tag = None
-        if not tag or not isinstance(tag, IndependentTag):
+        return None
+
+
+def _get_orientation_vector(elem):
+    for attr in ("HandOrientation", "FacingOrientation"):
+        vec = getattr(elem, attr, None)
+        if vec is None:
             continue
         try:
-            tag_pt = tag.TagHeadPosition
+            x_val = float(vec.X)
+            y_val = float(vec.Y)
         except Exception:
-            tag_pt = None
-        tag_symbol = None
-        try:
-            tag_symbol = doc.GetElement(tag.GetTypeId())
-        except Exception:
-            tag_symbol = None
-        fam_name = None
-        type_name = None
-        category_name = None
-        if tag_symbol:
-            try:
-                fam_name = getattr(tag_symbol, "FamilyName", None)
-                if not fam_name:
-                    fam = getattr(tag_symbol, "Family", None)
-                    fam_name = getattr(fam, "Name", None) if fam else None
-            except Exception:
-                fam_name = None
-            try:
-                type_name = getattr(tag_symbol, "Name", None)
-                if not type_name and hasattr(tag_symbol, "get_Parameter"):
-                    try:
-                        sparam = tag_symbol.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
-                        if sparam:
-                            type_name = sparam.AsString()
-                    except Exception:
-                        pass
-            except Exception:
-                type_name = None
-            try:
-                cat = getattr(tag_symbol, "Category", None)
-                category_name = getattr(cat, "Name", None) if cat else None
-            except Exception:
-                category_name = None
-        if not category_name:
-            try:
-                cat = getattr(tag, "Category", None)
-                category_name = getattr(cat, "Name", None) if cat else None
-            except Exception:
-                category_name = None
-        if not fam_name:
-            try:
-                sym = getattr(tag, "Symbol", None)
-                fam = getattr(sym, "Family", None) if sym else None
-                fam_name = getattr(fam, "Name", None) if fam else fam_name
-            except Exception:
-                pass
-        if not type_name:
-            try:
-                tag_type = getattr(tag, "TagType", None)
-                type_name = getattr(tag_type, "Name", None)
-            except Exception:
-                pass
-        if not fam_name or not type_name:
             continue
-        offsets = {
-            "x_inches": 0.0,
-            "y_inches": 0.0,
-            "z_inches": 0.0,
-            "rotation_deg": 0.0,
-        }
-        if tag_pt:
-            delta = tag_pt - host_point
-            offsets["x_inches"] = _feet_to_inches(delta.X)
-            offsets["y_inches"] = _feet_to_inches(delta.Y)
-            offsets["z_inches"] = _feet_to_inches(delta.Z)
-        tags.append({
-            "family_name": fam_name,
-            "type_name": type_name,
-            "category_name": category_name,
-            "parameters": {},
-            "offsets": offsets,
-        })
-    return tags
+        if abs(x_val) < 1e-9 and abs(y_val) < 1e-9:
+            continue
+        return XYZ(vec.X, vec.Y, vec.Z)
 
-
-def _normalize_text(value):
-    if not value:
-        return ""
-    return " ".join(str(value).strip().lower().split())
-
-
-def _tag_entry_key(entry):
-    if not isinstance(entry, dict):
-        return None
-    return _normalize_text(entry.get("type_name") or entry.get("type"))
-
-
-def _tag_element_key(tag):
-    if not isinstance(tag, IndependentTag):
-        return None
-    doc = getattr(tag, "Document", None)
-    symbol = None
-    try:
-        if doc:
-            symbol = doc.GetElement(tag.GetTypeId())
-    except Exception:
-        symbol = None
-    family = None
-    type_name = None
-    if symbol:
+    loc = getattr(elem, "Location", None)
+    if loc is not None and hasattr(loc, "Rotation"):
         try:
-            family = getattr(symbol, "FamilyName", None)
-            if not family:
-                fam = getattr(symbol, "Family", None)
-                family = getattr(fam, "Name", None) if fam else None
-        except Exception:
-            family = None
-        try:
-            type_name = getattr(symbol, "Name", None)
-            if not type_name:
-                param = symbol.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
-                if param:
-                    type_name = param.AsString()
-        except Exception:
-            type_name = None
-    if not family:
-        try:
-            sym = getattr(tag, "Symbol", None)
-            fam = getattr(sym, "Family", None) if sym else None
-            family = getattr(fam, "Name", None) if fam else family
+            angle = float(loc.Rotation)
+            return XYZ(math.cos(angle), math.sin(angle), 0.0)
         except Exception:
             pass
-    if not type_name:
-        try:
-            tag_type = getattr(tag, "TagType", None)
-            type_name = getattr(tag_type, "Name", None)
-        except Exception:
-            pass
-    return _normalize_text(type_name)
 
-
-def _collect_hosted_tag_elements(elem):
-    doc = getattr(elem, "Document", None)
-    if doc is None:
-        return []
     try:
-        dep_ids = list(elem.GetDependentElements(None))
+        transform = elem.GetTransform()
     except Exception:
-        dep_ids = []
-    results = []
-    host_id = _element_id_value(getattr(elem, "Id", None), None)
-    for dep_id in dep_ids:
-        try:
-            tag = doc.GetElement(dep_id)
-        except Exception:
-            tag = None
-        if not tag or not isinstance(tag, IndependentTag):
-            continue
-        head = _get_tag_point(tag)
-        if not head:
-            continue
-        signature = _tag_element_key(tag)
-        orientation = None
-        try:
-            orientation = tag.TagOrientation
-        except Exception:
-            orientation = None
-        results.append(
-            {
-                "element": tag,
-                "head_point": head,
-                "signature": signature,
-                "orientation": orientation,
-            }
-        )
-    if not results:
-        try:
-            all_tags = FilteredElementCollector(doc).OfClass(IndependentTag)
-        except Exception:
-            all_tags = []
-        for tag in all_tags:
-            host = _get_tag_host(tag)
-            if host is None:
-                continue
-            try:
-                tag_host_id = _element_id_value(host.Id)
-            except Exception:
-                tag_host_id = None
-            if host_id is not None and tag_host_id != host_id:
-                continue
-            head = _get_tag_point(tag)
-            if not head:
-                continue
-            signature = _tag_element_key(tag)
-            results.append(
-                {
-                    "element": tag,
-                    "head_point": head,
-                    "signature": signature,
-                }
-            )
-    return results
+        transform = None
+    if transform is not None:
+        for basis_name in ("BasisX", "BasisY"):
+            basis = getattr(transform, basis_name, None)
+            if basis and (abs(basis.X) > 1e-9 or abs(basis.Y) > 1e-9):
+                return XYZ(basis.X, basis.Y, basis.Z)
 
-
-def _group_tag_entries(tag_entries):
-    grouped = {}
-    for entry in tag_entries or []:
-        key = _tag_entry_key(entry)
-        if not key:
-            continue
-        grouped.setdefault(key, []).append(entry)
-    return grouped
-
-
-def _pop_matching_tag_entry(entry_map, target_key):
-    if not entry_map:
-        return None
-    if target_key:
-        bucket = entry_map.get(target_key)
-        if bucket:
-            entry = bucket.pop(0)
-            if bucket:
-                entry_map[target_key] = bucket
-            else:
-                entry_map.pop(target_key, None)
-            return entry
-    for key in list(entry_map.keys()):
-        bucket = entry_map.get(key)
-        if not bucket:
-            continue
-        entry = bucket.pop(0)
-        if bucket:
-            entry_map[key] = bucket
-        else:
-            entry_map.pop(key, None)
-        return entry
     return None
 
 
-def _ensure_tag_offset_entry(tag_entry):
-    if not isinstance(tag_entry, dict):
-        return {"x_inches": 0.0, "y_inches": 0.0, "z_inches": 0.0, "rotation_deg": 0.0}
-    offsets = tag_entry.get("offsets")
-    entry = None
-    if isinstance(offsets, list) and offsets:
-        entry = offsets[0]
-        if not isinstance(entry, dict):
-            entry = {}
-            offsets[0] = entry
-    elif isinstance(offsets, dict):
-        entry = offsets
-    else:
-        entry = {}
-        tag_entry["offsets"] = [entry]
-    entry.setdefault("x_inches", 0.0)
-    entry.setdefault("y_inches", 0.0)
-    entry.setdefault("z_inches", 0.0)
-    entry.setdefault("rotation_deg", 0.0)
-    return entry
-
-
-def _update_tag_yaml_offsets(elem, led_entry, host_point, signature_filter=None):
-    if not led_entry or host_point is None:
-        return 0
-    fresh_tags = _collect_hosted_tags(elem, host_point)
-    if not fresh_tags:
-        return 0
-    tag_key = signature_filter
-    if tag_key:
-        existing = led_entry.get("tags") or []
-        new_list = []
-        replaced = False
-        for entry in existing:
-            key = _tag_entry_key(entry)
-            if not replaced and key == tag_key:
-                new_list.extend(fresh_tags)
-                replaced = True
-            else:
-                new_list.append(entry)
-        if not replaced:
-            new_list.extend(fresh_tags)
-        led_entry["tags"] = new_list
-        return len(fresh_tags)
-    led_entry["tags"] = fresh_tags
-    return len(fresh_tags)
-
-
-def _apply_tag_offsets_to_instance(doc, elem, tag_entries, host_point, rotation_delta_deg):
-    if not doc or not elem or not tag_entries or host_point is None:
-        return
-    tag_infos = _collect_hosted_tag_elements(elem)
-    if not tag_infos:
-        return
-    entry_map = _group_tag_entries(tag_entries)
-    tol = 1e-6
-    for info in tag_infos:
-        signature = info.get("signature")
-        if signature is None:
-            continue
-        target_sig = signature
-        tag_entry = _pop_matching_tag_entry(entry_map, target_sig)
-        if not tag_entry:
-            continue
-        offsets = _ensure_tag_offset_entry(tag_entry)
-        delta = XYZ(
-            _inches_to_feet(offsets.get("x_inches") or 0.0),
-            _inches_to_feet(offsets.get("y_inches") or 0.0),
-            _inches_to_feet(offsets.get("z_inches") or 0.0),
-        )
-        target_point = host_point + delta
-        tag_elem = info.get("element")
-        head_point = info.get("head_point")
-        target_orientation = info.get("orientation")
-        if not tag_elem or not head_point:
-            continue
-
-        move_vec = target_point - head_point
+def _get_rotation_deg(elem, link_transform=None):
+    vec = _get_orientation_vector(elem)
+    if vec is not None and link_transform is not None:
         try:
-            move_len = move_vec.GetLength()
+            vec = link_transform.OfVector(vec)
         except Exception:
-            move_len = 0.0
-        if move_len > tol:
-            try:
-                ElementTransformUtils.MoveElement(doc, tag_elem.Id, move_vec)
-                head_point = target_point
-            except Exception:
-                head_point = target_point
-
-        if rotation_delta_deg and abs(rotation_delta_deg) > tol:
-            try:
-                axis = Line.CreateBound(head_point, head_point + XYZ(0, 0, 1))
-                ElementTransformUtils.RotateElement(doc, tag_elem.Id, axis, math.radians(rotation_delta_deg))
-            except Exception:
-                pass
-        if target_orientation is not None:
-            try:
-                tag_elem.TagOrientation = target_orientation
-            except Exception:
-                pass
+            pass
+    angle = _vector_angle_deg(vec)
+    if angle is not None:
+        return angle
+    return 0.0
 
 
-def _get_tag_host(tag):
-    doc = getattr(tag, "Document", None) or revit.doc
-    if doc is None:
-        return None
-
-    def _element_from_id(elem_id):
-        if elem_id is None:
-            return None
-        target_id = getattr(elem_id, "ElementId", elem_id)
-        try:
-            return doc.GetElement(target_id)
-        except Exception:
-            return None
-
-    try:
-        local_ids = tag.GetTaggedLocalElementIds()
-        if local_ids:
-            for elem_id in local_ids:
-                host = _element_from_id(elem_id)
-                if host:
-                    return host
-    except Exception:
-        pass
-    try:
-        refs = tag.GetTaggedReferences()
-        if refs:
-            for ref in refs:
-                host = _element_from_id(getattr(ref, "ElementId", None))
-                if host:
-                    return host
-    except Exception:
-        pass
-    try:
-        tagged = getattr(tag, "TaggedElementId", None)
-        if tagged:
-            host = _element_from_id(tagged)
-            if host:
-                return host
-    except Exception:
-        pass
-    return None
-
-
-def _get_tag_metadata(tag):
-    data = {
-        "element": tag,
-        "host_element": None,
-        "host_point": None,
-        "head_point": None,
-        "family_name": None,
-        "type_name": None,
-        "category_name": None,
-    }
-    if not isinstance(tag, IndependentTag):
-        return data
-    host = _get_tag_host(tag)
-    if host:
-        data["host_element"] = host
-        data["host_point"] = _get_point(host)
-    data["head_point"] = _get_tag_point(tag)
-    doc = getattr(tag, "Document", None) or revit.doc
-    tag_symbol = None
-    try:
-        if doc:
-            tag_symbol = doc.GetElement(tag.GetTypeId())
-    except Exception:
-        tag_symbol = None
-    fam_name = None
-    type_name = None
-    category_name = None
-    if tag_symbol:
-        try:
-            fam_name = getattr(tag_symbol, "FamilyName", None)
-            if not fam_name:
-                fam = getattr(tag_symbol, "Family", None)
-                fam_name = getattr(fam, "Name", None) if fam else None
-        except Exception:
-            fam_name = None
-        try:
-            type_name = getattr(tag_symbol, "Name", None)
-            if not type_name:
-                param = tag_symbol.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
-                if param:
-                    type_name = param.AsString()
-        except Exception:
-            type_name = None
-        try:
-            cat = getattr(tag_symbol, "Category", None)
-            category_name = getattr(cat, "Name", None) if cat else None
-        except Exception:
-            category_name = None
-    if not category_name:
-        try:
-            cat = getattr(tag, "Category", None)
-            category_name = getattr(cat, "Name", None) if cat else None
-        except Exception:
-            category_name = None
-    data["family_name"] = fam_name
-    data["type_name"] = type_name
-    data["category_name"] = category_name
-    return data
-
-
-def _build_label(elem):
-    fam_name = None
-    type_name = None
-    is_group = isinstance(elem, (Group, GroupType))
-
-    if is_group:
-        try:
-            fam_name = getattr(elem, "Name", None)
-            type_name = fam_name
-        except Exception:
-            fam_name = None
-            type_name = None
-    else:
-        try:
-            sym = getattr(elem, "Symbol", None) or getattr(elem, "GroupType", None)
-            if sym:
-                fam = getattr(sym, "Family", None)
-                fam_name = getattr(fam, "Name", None) if fam else None
-                type_name = getattr(sym, "Name", None)
-                if not type_name:
-                    try:
-                        tparam = sym.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
-                        if tparam:
-                            type_name = tparam.AsString()
-                    except Exception:
-                        pass
-        except Exception:
-            fam_name = None
-            type_name = None
-
-    if fam_name and type_name:
-        return u"{} : {}".format(fam_name, type_name)
-    if type_name:
-        return type_name
-    if fam_name:
-        return fam_name
-    return ""
-
-
-def _resolve_target_element():
-    selection = None
-    try:
-        selection = revit.get_selection()
-    except Exception:
-        selection = None
-    picked = None
-    if selection:
-        try:
-            elems = list(selection.elements)
-        except Exception:
-            elems = []
-        if elems:
-            picked = elems[0]
-    if picked:
-        return picked
-    try:
-        return revit.pick_element(message="Select equipment to update vector")
-    except Exception:
-        return None
-
-
-# --------------------------------------------------------------------------- #
-# Element_Linker helpers
-# --------------------------------------------------------------------------- #
-
-
-def _get_element_linker_payload(elem):
-    param_names = (ELEMENT_LINKER_SHARED_PARAM, ELEMENT_LINKER_PARAM_NAME)
-    for name in param_names:
+def _get_linker_value(elem):
+    for name in LINKER_PARAM_NAMES:
         try:
             param = elem.LookupParameter(name)
         except Exception:
             param = None
         if not param:
             continue
-        value = None
+
         try:
-            value = param.AsString()
+            raw = param.AsString()
         except Exception:
-            value = None
-        if not value:
+            raw = None
+        if not raw:
             try:
-                value = param.AsValueString()
+                raw = param.AsValueString()
             except Exception:
-                value = None
-        if value:
-            stripped = value.strip()
-            if stripped:
-                return stripped
-    return None
+                raw = None
+
+        if raw and str(raw).strip():
+            return str(raw).strip()
+
+    return ""
 
 
-def _parse_xyz_string(text):
+def _set_linker_value(elem, text):
+    wrote = False
+    for name in LINKER_PARAM_NAMES:
+        try:
+            param = elem.LookupParameter(name)
+        except Exception:
+            param = None
+        if not param or param.IsReadOnly:
+            continue
+        try:
+            param.Set(text)
+            wrote = True
+        except Exception:
+            continue
+    return wrote
+
+
+def _parse_xyz(text):
     if not text:
         return None
-    parts = [p.strip() for p in text.split(",")]
+    parts = [p.strip() for p in str(text).split(",")]
     if len(parts) != 3:
         return None
     try:
@@ -800,677 +312,573 @@ def _parse_xyz_string(text):
         return None
 
 
-def _parse_float(value, default=None):
-    if value is None:
-        return default
-    if isinstance(value, basestring):
-        cleaned = value.strip()
-        if not cleaned:
-            return default
-        try:
-            return float(cleaned)
-        except Exception:
-            return default
+def _format_xyz(point):
+    if point is None:
+        return ""
+    return "{:.6f},{:.6f},{:.6f}".format(point.X, point.Y, point.Z)
+
+
+def _normalize_name(value):
+    if not value:
+        return ""
+    return " ".join(str(value).strip().lower().split())
+
+
+def _name_variants(elem):
+    names = set()
+    if elem is None:
+        return names
     try:
-        return float(value)
+        raw_name = getattr(elem, "Name", None)
+        if raw_name:
+            names.add(raw_name)
     except Exception:
-        return default
+        pass
+
+    if isinstance(elem, FamilyInstance):
+        symbol = getattr(elem, "Symbol", None)
+        family = getattr(symbol, "Family", None) if symbol else None
+        family_name = getattr(family, "Name", None) if family else None
+        type_name = getattr(symbol, "Name", None) if symbol else None
+        if family_name and type_name:
+            names.add(u"{} : {}".format(family_name, type_name))
+        if family_name:
+            names.add(family_name)
+        if type_name:
+            names.add(type_name)
+    elif isinstance(elem, Group):
+        group_type = getattr(elem, "GroupType", None)
+        group_name = getattr(group_type, "Name", None) if group_type else None
+        if group_name:
+            names.add(group_name)
+
+    return {_normalize_name(name) for name in names if _normalize_name(name)}
 
 
-def _parse_int(value, default=None):
-    if value is None:
-        return default
-    if isinstance(value, basestring):
-        cleaned = value.strip()
-        if not cleaned:
-            return default
-        try:
-            return int(cleaned)
-        except Exception:
-            return default
+def _doc_key(doc):
+    if doc is None:
+        return None
     try:
-        return int(value)
+        return doc.PathName or doc.Title
     except Exception:
-        return default
+        return None
 
 
-def _parse_element_linker_payload(payload_text):
-    if not payload_text:
-        return {}
-    text = str(payload_text)
+def _get_link_transform(link_inst):
+    if link_inst is None:
+        return None
+    try:
+        return link_inst.GetTotalTransform()
+    except Exception:
+        try:
+            return link_inst.GetTransform()
+        except Exception:
+            return None
+
+
+def _combine_transform(parent_transform, child_transform):
+    if parent_transform is None:
+        return child_transform
+    if child_transform is None:
+        return parent_transform
+    try:
+        return parent_transform.Multiply(child_transform)
+    except Exception:
+        return None
+
+
+def _walk_link_documents(doc, parent_transform, doc_chain):
+    if doc is None:
+        return
+    key = _doc_key(doc)
+    if key and key in doc_chain:
+        return
+    next_chain = set(doc_chain or set())
+    if key:
+        next_chain.add(key)
+
+    for link_inst in FilteredElementCollector(doc).OfClass(RevitLinkInstance):
+        link_doc = link_inst.GetLinkDocument()
+        if link_doc is None:
+            continue
+        transform = _combine_transform(parent_transform, _get_link_transform(link_inst))
+        yield link_doc, transform
+        for nested in _walk_link_documents(link_doc, transform, next_chain):
+            yield nested
+
+
+def _iter_link_documents(doc):
+    for link_doc, transform in _walk_link_documents(doc, None, set()):
+        yield link_doc, transform
+
+
+def _transform_point(transform, point):
+    if transform is None or point is None:
+        return point
+    try:
+        return transform.OfPoint(point)
+    except Exception:
+        return point
+
+
+def _collect_parent_candidates_by_host_name(doc, host_name):
+    target = _normalize_name(host_name)
+    if not target:
+        return []
+
+    candidates = []
+
+    def _collect_from_doc(scan_doc, link_transform=None):
+        if scan_doc is None:
+            return
+        for cls in (FamilyInstance, Group):
+            try:
+                collector = FilteredElementCollector(scan_doc).OfClass(cls).WhereElementIsNotElementType()
+            except Exception:
+                continue
+            for elem in collector:
+                variants = _name_variants(elem)
+                if not variants or target not in variants:
+                    continue
+                point = _get_point(elem)
+                if point is None:
+                    continue
+                host_point = _transform_point(link_transform, point)
+                candidates.append({
+                    "element": elem,
+                    "point": host_point,
+                    "rotation_deg": _get_rotation_deg(elem, link_transform=link_transform),
+                    "parent_id": _element_id_value(getattr(elem, "Id", None), None),
+                    "is_linked": bool(link_transform),
+                })
+
+    _collect_from_doc(doc, link_transform=None)
+    for link_doc, link_transform in _iter_link_documents(doc):
+        _collect_from_doc(link_doc, link_transform=link_transform)
+    return candidates
+
+
+def _choose_nearest_candidate(candidates, reference_point, preferred_parent_id=None):
+    if not candidates:
+        return None
+    best = None
+    best_key = None
+    for cand in candidates:
+        point = cand.get("point")
+        id_match = 1 if (preferred_parent_id is not None and cand.get("parent_id") == preferred_parent_id) else 0
+        if reference_point is not None and point is not None:
+            try:
+                dist = point.DistanceTo(reference_point)
+            except Exception:
+                dist = 1e99
+        else:
+            dist = 1e99
+        key = (id_match, -dist)
+        if best_key is None or key > best_key:
+            best = cand
+            best_key = key
+    return best
+
+
+def _resolve_parent_context(doc, parsed_payload, child_point):
+    parent_id = parsed_payload.get("parent_id")
+    host_name = parsed_payload.get("host_name")
+    stored_parent_point = parsed_payload.get("parent_location")
+    stored_parent_rot = parsed_payload.get("parent_rotation_deg")
+
+    if parent_id is not None:
+        try:
+            parent_elem = doc.GetElement(ElementId(int(parent_id)))
+        except Exception:
+            parent_elem = None
+        if parent_elem is not None:
+            parent_point = _get_point(parent_elem)
+            if parent_point is not None:
+                return {
+                    "parent_id": parent_id,
+                    "parent_point": parent_point,
+                    "parent_rotation_deg": _get_rotation_deg(parent_elem),
+                    "resolution": "parent_id",
+                }
+
+    if host_name:
+        reference_point = stored_parent_point or child_point
+        candidates = _collect_parent_candidates_by_host_name(doc, host_name)
+        chosen = _choose_nearest_candidate(candidates, reference_point, preferred_parent_id=parent_id)
+        if chosen is not None:
+            resolution = "host_name_linked" if chosen.get("is_linked") else "host_name"
+            return {
+                "parent_id": chosen.get("parent_id"),
+                "parent_point": chosen.get("point"),
+                "parent_rotation_deg": chosen.get("rotation_deg") or 0.0,
+                "resolution": resolution,
+            }
+
+    if stored_parent_point is not None:
+        return {
+            "parent_id": parent_id,
+            "parent_point": stored_parent_point,
+            "parent_rotation_deg": float(stored_parent_rot or 0.0),
+            "resolution": "payload_parent",
+        }
+
+    return None
+
+
+def _parse_linker_payload(payload_text):
     entries = {}
-    if "\n" in text:
-        for raw_line in text.splitlines():
+    if not payload_text:
+        return {
+            "led_id": "",
+            "set_id": "",
+            "parent_id": None,
+            "host_name": "",
+            "parent_location": None,
+            "parent_rotation_deg": 0.0,
+            "entries": entries,
+        }
+
+    if "\n" in payload_text:
+        for raw_line in payload_text.splitlines():
             line = raw_line.strip()
             if not line or ":" not in line:
                 continue
-            key, _, remainder = line.partition(":")
-            entries[key.strip()] = remainder.strip()
+            key, _, val = line.partition(":")
+            entries[key.strip()] = val.strip()
     else:
-        pattern = re.compile(
-            r"(Linked Element Definition ID|Set Definition ID|Location XYZ \(ft\)|"
-            r"Rotation \(deg\)|Parent Rotation \(deg\)|Parent ElementId|LevelId|"
-            r"ElementId|FacingOrientation)\s*:\s*"
-        )
-        matches = list(pattern.finditer(text))
+        matches = list(INLINE_PAYLOAD_PATTERN.finditer(payload_text))
         for idx, match in enumerate(matches):
-            key = match.group(1)
+            key = match.group(1).strip()
             start = match.end()
-            end = matches[idx + 1].start() if idx + 1 < len(matches) else len(text)
-            value = text[start:end].strip().rstrip(",")
-            entries[key] = value.strip(" ,")
+            end = matches[idx + 1].start() if idx + 1 < len(matches) else len(payload_text)
+            val = payload_text[start:end].strip().strip(",")
+            entries[key] = val.strip()
+
+    parent_id = _to_int(entries.get("Parent ElementId"))
+    if parent_id is None:
+        parent_id = _to_int(entries.get("Parent Element ID"))
+
     return {
-        "led_id": entries.get("Linked Element Definition ID", "").strip(),
-        "set_id": entries.get("Set Definition ID", "").strip(),
-        "location": _parse_xyz_string(entries.get("Location XYZ (ft)")),
-        "rotation_deg": _parse_float(entries.get("Rotation (deg)"), 0.0),
-        "parent_rotation_deg": _parse_float(entries.get("Parent Rotation (deg)")),
-        "parent_element_id": _parse_int(entries.get("Parent ElementId")),
-        "facing": _parse_xyz_string(entries.get("FacingOrientation")),
-        "raw": entries,
+        "led_id": (entries.get("Linked Element Definition ID") or "").strip(),
+        "set_id": (entries.get("Set Definition ID") or "").strip(),
+        "parent_id": parent_id,
+        "host_name": (entries.get("Host Name") or "").strip(),
+        "location": _parse_xyz(entries.get("Location XYZ (ft)")),
+        "parent_location": _parse_xyz(entries.get("Parent_location")),
+        "parent_rotation_deg": _to_float(entries.get("Parent Rotation (deg)"), 0.0),
+        "entries": entries,
     }
 
 
-def _format_xyz(vec):
-    if not vec:
-        return ""
-    return "{:.6f},{:.6f},{:.6f}".format(vec.X, vec.Y, vec.Z)
+def _build_linker_payload(parsed, child_elem, child_pt, child_rot, parent_pt, parent_rot, parent_id):
+    entries = dict((parsed or {}).get("entries") or {})
 
+    entries["Linked Element Definition ID"] = (parsed.get("led_id") or entries.get("Linked Element Definition ID") or "").strip()
+    entries["Set Definition ID"] = (parsed.get("set_id") or entries.get("Set Definition ID") or "").strip()
+    entries["Parent_location"] = _format_xyz(parent_pt)
+    entries["Location XYZ (ft)"] = _format_xyz(child_pt)
+    entries["Rotation (deg)"] = "{:.6f}".format(float(child_rot or 0.0))
+    entries["Parent Rotation (deg)"] = "{:.6f}".format(float(parent_rot or 0.0))
+    entries["Parent ElementId"] = str(parent_id if parent_id is not None else "")
+    entries["LevelId"] = str(_element_id_value(getattr(child_elem, "LevelId", None), "") or "")
+    entries["ElementId"] = str(_element_id_value(getattr(child_elem, "Id", None), "") or "")
+    entries["FacingOrientation"] = _format_xyz(getattr(child_elem, "FacingOrientation", None))
 
-def _build_linker_payload(led_id, set_id, location, rotation_deg, level_id, element_id, facing, parent_rotation, parent_element_id=None):
-    lines = [
-        "Linked Element Definition ID: {}".format(led_id or ""),
-        "Set Definition ID: {}".format(set_id or ""),
-        "Location XYZ (ft): {}".format(_format_xyz(location)),
-        "Rotation (deg): {:.6f}".format(rotation_deg or 0.0),
-        "Parent Rotation (deg): {:.6f}".format(parent_rotation or 0.0),
-        "Parent ElementId: {}".format(parent_element_id if parent_element_id is not None else ""),
-        "LevelId: {}".format(level_id if level_id is not None else ""),
-        "ElementId: {}".format(element_id if element_id is not None else ""),
-        "FacingOrientation: {}".format(_format_xyz(facing)),
+    ordered_keys = [
+        "Linked Element Definition ID",
+        "Set Definition ID",
+        "Host Name",
+        "Parent_location",
+        "Location XYZ (ft)",
+        "Rotation (deg)",
+        "Parent Rotation (deg)",
+        "Parent ElementId",
+        "LevelId",
+        "ElementId",
+        "FacingOrientation",
     ]
+
+    lines = []
+    used = set()
+
+    for key in ordered_keys:
+        if key in entries:
+            lines.append("{}: {}".format(key, entries.get(key, "")))
+            used.add(key)
+
+    for key, val in entries.items():
+        if key in used:
+            continue
+        lines.append("{}: {}".format(key, val if val is not None else ""))
+
     return "\n".join(lines).strip()
 
 
-def _set_element_linker_payload(elem, text_value):
-    if not elem or not text_value:
-        return False
-    for name in (ELEMENT_LINKER_SHARED_PARAM, ELEMENT_LINKER_PARAM_NAME):
-        try:
-            param = elem.LookupParameter(name)
-        except Exception:
-            param = None
-        if not param or param.IsReadOnly:
-            continue
-        try:
-            param.Set(text_value)
-            return True
-        except Exception:
-            continue
-    return False
-
-
-def _write_element_linker_payload(elem, text_value, transaction_name=None):
-    if not elem or not text_value:
-        return False
-    doc = getattr(elem, "Document", None) or revit.doc
-    if doc is None:
-        return False
-    if getattr(doc, "IsModifiable", False):
-        return _set_element_linker_payload(elem, text_value)
-    txn = None
-    try:
-        txn = Transaction(doc, transaction_name or "Update Element_Linker payload")
-        txn.Start()
-        success = _set_element_linker_payload(elem, text_value)
-        if success:
-            txn.Commit()
-        else:
-            txn.RollBack()
-        return success
-    except Exception:
-        if txn:
-            try:
-                txn.RollBack()
-            except Exception:
-                pass
-        return False
-
-
-def _collect_similar_elements(doc, led_id, original_elem):
-    """
-    Gather all non-type elements in the active document that share the same
-    Linked Element Definition ID. Skips the originally selected element.
-    """
-    matches = []
-    if doc is None:
-        return matches
-    target = (led_id or "").strip().lower()
-    if not target:
-        return matches
-    try:
-        collector = FilteredElementCollector(doc).WhereElementIsNotElementType()
-    except Exception:
-        return matches
-
-    original_id = _element_id_value(getattr(original_elem, "Id", None), None)
-    for elem in collector:
-        try:
-            if original_id and _element_id_value(elem.Id) == original_id:
-                continue
-        except Exception:
-            pass
-        payload_text = _get_element_linker_payload(elem)
-        if not payload_text:
-            continue
-        payload = _parse_element_linker_payload(payload_text)
-        cand_id = (payload.get("led_id") or "").strip().lower()
-        if cand_id == target:
-            matches.append(elem)
-    return matches
-
-
-def _apply_offsets_to_similar(doc, elements, original_local_offset, original_rotation_offset, new_local_offset, new_rotation_offset, rotation_delta_deg, tag_entries):
-    """
-    Move each similar element to match the updated offsets/rotation relative to
-    their individual Element_Linker base points.
-    """
-    if doc is None or not elements:
-        return 0, False, []
-    local_offset = new_local_offset or XYZ(0, 0, 0)
-    old_local_offset = original_local_offset or XYZ(0, 0, 0)
-    tol = 1e-6
-    rotation_offset = float(new_rotation_offset or 0.0)
-    old_rotation_offset = float(original_rotation_offset or 0.0)
-    rotation_change = abs(rotation_delta_deg or 0.0) > tol
-    moved = []
-    t = Transaction(doc, "Apply vector to similar equipment")
-    try:
-        t.Start()
-        for elem in elements:
-            elem_point = _get_point(elem)
-            if not elem_point:
-                continue
-            payload_text = _get_element_linker_payload(elem)
-            payload = _parse_element_linker_payload(payload_text)
-            elem_rotation = _get_rotation_degrees(elem)
-            parent_rot = payload.get("parent_rotation_deg")
-            if parent_rot is not None:
-                base_rotation = parent_rot
-            else:
-                base_rotation = elem_rotation - old_rotation_offset
-
-            previous_world_offset = _rotate_xy(old_local_offset, base_rotation)
-            base_point = elem_point - previous_world_offset
-
-            target_rotation = base_rotation + rotation_offset
-            world_offset = _rotate_xy(local_offset, base_rotation)
-            target_point = base_point + world_offset
-
-            move_vec = target_point - elem_point
-            move_len = 0.0
-            try:
-                move_len = move_vec.GetLength()
-            except Exception:
-                move_len = 0.0
-            if move_len > tol:
-                ElementTransformUtils.MoveElement(doc, elem.Id, move_vec)
-                elem_point = target_point
-
-            rot_delta = _normalize_angle(target_rotation - elem_rotation)
-            if rotation_change and abs(rot_delta) > tol:
-                axis = Line.CreateBound(elem_point, elem_point + XYZ(0, 0, 1))
-                ElementTransformUtils.RotateElement(doc, elem.Id, axis, math.radians(rot_delta))
-                elem_rotation = target_rotation
-
-            new_payload_text = _build_linker_payload(
-                payload.get("led_id"),
-                payload.get("set_id"),
-                target_point,
-                elem_rotation,
-                _element_id_value(getattr(elem, "LevelId", None), None),
-                _element_id_value(getattr(elem, "Id", None), None),
-                getattr(elem, "FacingOrientation", None),
-                base_rotation,
-                payload.get("parent_element_id"),
-            )
-            _write_element_linker_payload(elem, new_payload_text)
-
-            if tag_entries:
-                _apply_tag_offsets_to_instance(
-                    doc,
-                    elem,
-                    tag_entries,
-                    target_point,
-                    rotation_delta_deg if rotation_change else 0.0,
-                )
-
-            moved.append(elem)
-        t.Commit()
-        return len(moved), True, moved
-    except Exception:
-        try:
-            t.RollBack()
-        except Exception:
-            pass
-        return len(moved), False, moved
-
-
-# --------------------------------------------------------------------------- #
-# Active YAML helpers
-# --------------------------------------------------------------------------- #
-
-
-def _get_element_param(elem, name):
-    if elem is None or not name:
-        return None
-    try:
-        param = elem.LookupParameter(name)
-    except Exception:
-        param = None
-    if not param:
-        return None
-    try:
-        if param.StorageType == StorageType.String:
-            return param.AsString()
-        if param.StorageType == StorageType.Double:
-            return str(param.AsDouble())
-        if param.StorageType == StorageType.Integer:
-            return str(param.AsInteger())
-        return param.AsValueString()
-    except Exception:
+def _find_linked_def(data, led_id, set_id):
+    target_led = (led_id or "").strip().lower()
+    target_set = (set_id or "").strip().lower()
+    if not target_led:
         return None
 
-
-def _parameter_match_score(element, led_entry):
-    if element is None or not isinstance(led_entry, dict):
-        return 0
-    params = led_entry.get("parameters") or {}
-    score = 0
-    for name, expected in params.items():
-        expected_text = (str(expected or "").strip())
-        if not expected_text:
-            continue
-        actual = _get_element_param(element, name)
-        if actual is None:
-            continue
-        if actual.strip() == expected_text:
-            score += 1
-    return score
-
-
-def _find_led_entry(data, led_id, set_hint=None, element=None):
-    target = (led_id or "").strip().lower()
-    if not target:
-        return None
-    set_target = (set_hint or "").strip().lower()
     fallback = None
-    fallback_idx = None
-    best_match = None
-    best_idx = None
-    best_score = -1
     for eq in data.get("equipment_definitions") or []:
-        for set_entry in eq.get("linked_sets") or []:
-            set_id = (set_entry.get("id") or "").strip()
-            set_id_lower = set_id.lower()
-            led_list = set_entry.get("linked_element_definitions") or []
-            for idx, led_entry in enumerate(led_list):
-                current_id = (led_entry.get("id") or led_entry.get("led_id") or "").strip()
-                if not current_id:
+        for linked_set in eq.get("linked_sets") or []:
+            current_set = (linked_set.get("id") or "").strip().lower()
+            for led in linked_set.get("linked_element_definitions") or []:
+                current_led = (led.get("id") or led.get("led_id") or "").strip().lower()
+                if current_led != target_led:
                     continue
-                if current_id.strip().lower() != target:
-                    continue
-                if set_target and set_id_lower == set_target:
-                    return eq, set_entry, led_entry, idx
-                score = _parameter_match_score(element, led_entry)
-                if score > best_score:
-                    best_match = (eq, set_entry, led_entry)
-                    best_idx = idx
-                    best_score = score
+                if target_set and target_set == current_set:
+                    return led
                 if fallback is None:
-                    fallback = (eq, set_entry, led_entry)
-                    fallback_idx = idx
-    if best_match is not None:
-        return best_match[0], best_match[1], best_match[2], best_idx
-    if fallback is None:
-        return None
-    return fallback[0], fallback[1], fallback[2], fallback_idx
+                    fallback = led
+    return fallback
 
 
-def _ensure_offset_entry(led_entry):
+def _ensure_offsets(led_entry):
     offsets = led_entry.setdefault("offsets", [])
     if not isinstance(offsets, list):
         offsets = [{}]
         led_entry["offsets"] = offsets
     if not offsets:
         offsets.append({})
-    entry = offsets[0]
-    if not isinstance(entry, dict):
-        entry = {}
-        offsets[0] = entry
-    entry.setdefault("x_inches", 0.0)
-    entry.setdefault("y_inches", 0.0)
-    entry.setdefault("z_inches", 0.0)
-    entry.setdefault("rotation_deg", 0.0)
-    return entry
+
+    first = offsets[0]
+    if not isinstance(first, dict):
+        first = {}
+        offsets[0] = first
+
+    first.setdefault("x_inches", 0.0)
+    first.setdefault("y_inches", 0.0)
+    first.setdefault("z_inches", 0.0)
+    first.setdefault("rotation_deg", 0.0)
+    return first
 
 
-def _verify_saved_offsets(led_id, set_id, expected_entry):
-    """Reload YAML after saving to confirm offsets persisted."""
+def _selected_elements(doc):
+    uidoc = getattr(revit, "uidoc", None)
+    if uidoc is None:
+        return []
     try:
-        _, verify_data = load_active_yaml_data()
-    except Exception as exc:
-        try:
-            LOG.warning("[Update Vector] verification reload failed for %s: %s", led_id, exc)
-        except Exception:
-            pass
-        return False, "Reload failed: {}".format(exc)
-    verify_lookup = _find_led_entry(verify_data, led_id, set_id)
-    if not verify_lookup:
-        try:
-            LOG.warning("[Update Vector] verification could not find LED %s", led_id)
-        except Exception:
-            pass
-        return False, "LED '{}' not found in refreshed YAML.".format(led_id)
-    verify_entry = _ensure_offset_entry(verify_lookup[2])
-    for key in ("x_inches", "y_inches", "z_inches", "rotation_deg"):
-        exp = expected_entry.get(key, 0.0)
-        act = verify_entry.get(key, 0.0)
-        try:
-            exp_val = float(exp)
-        except Exception:
-            exp_val = 0.0
-        try:
-            act_val = float(act)
-        except Exception:
-            act_val = 0.0
-        if abs(exp_val - act_val) > 1e-6:
-            try:
-                LOG.warning("[Update Vector] verification mismatch for %s key=%s expected=%s actual=%s", led_id, key, exp_val, act_val)
-            except Exception:
-                pass
-            return False, "Mismatch for {} (expected {}, found {})".format(key, exp_val, act_val)
-    try:
-        LOG.info(
-            "[Update Vector] verification comparison matched for %s offsets=%s",
-            led_id,
-            {k: expected_entry.get(k) for k in ("x_inches", "y_inches", "z_inches", "rotation_deg")},
-        )
+        ids = list(uidoc.Selection.GetElementIds())
     except Exception:
-        pass
-    return True, ""
+        ids = []
+
+    elems = []
+    for elem_id in ids:
+        try:
+            elem = doc.GetElement(elem_id)
+        except Exception:
+            elem = None
+        if elem is not None:
+            elems.append(elem)
+    return elems
 
 
-# --------------------------------------------------------------------------- #
-# Main
-# --------------------------------------------------------------------------- #
+def _apply_payload_updates(doc, updates):
+    if not updates:
+        return 0
+
+    count = 0
+    tx = Transaction(doc, "Update Vector Element_Linker")
+    try:
+        tx.Start()
+        for elem_id, payload_text in updates.items():
+            if elem_id is None:
+                continue
+            try:
+                elem = doc.GetElement(ElementId(int(elem_id)))
+            except Exception:
+                elem = None
+            if elem is None:
+                continue
+            if _set_linker_value(elem, payload_text):
+                count += 1
+        tx.Commit()
+    except Exception:
+        try:
+            tx.RollBack()
+        except Exception:
+            pass
+        raise
+    return count
 
 
 def main():
-    selected = _resolve_target_element()
-    if not selected:
-        forms.alert("No element selected.", title=TITLE)
+    doc = getattr(revit, "doc", None)
+    if doc is None:
+        forms.alert("No active document.", title=TITLE)
+        return
+    if getattr(doc, "IsFamilyDocument", False):
+        forms.alert("Run this in a project document.", title=TITLE)
         return
 
-    tag_only = False
-    tag_signature_filter = None
-    tag_meta = None
-    elem = selected
-    if isinstance(selected, IndependentTag):
-        tag_meta = _get_tag_metadata(selected)
-        host_elem = tag_meta.get("host_element")
-        if not host_elem:
-            forms.alert("Selected tag is not associated with a host element.", title=TITLE)
-            return
-        elem = host_elem
-        tag_only = True
-        tag_signature_filter = _tag_element_key(selected)
-
-    elem_point = _get_point(elem)
-    if tag_only:
-        tag_host_point = tag_meta.get("host_point")
-        if tag_host_point:
-            elem_point = tag_host_point
-    if not elem_point:
-        forms.alert("Unable to read the element location.", title=TITLE)
+    elements = _selected_elements(doc)
+    if not elements:
+        forms.alert("Select one or more placed elements and run again.", title=TITLE)
         return
 
-    elem_rotation = _get_rotation_degrees(elem)
-    label = _build_label(elem) or (getattr(elem, "Name", None) or "")
-
-    payload_text = _get_element_linker_payload(elem)
-    if not payload_text:
-        forms.alert("The selected element does not contain Element_Linker data. Re-run 'Add YAML Profiles' first.", title=TITLE)
-        return
-    payload = _parse_element_linker_payload(payload_text)
-    led_id = payload.get("led_id")
-    if not led_id:
-        forms.alert("Element_Linker parameter is missing the 'Linked Element Definition ID' entry.", title=TITLE)
-        return
-    payload_location = payload.get("location")
-    if not payload_location:
-        forms.alert("Element_Linker parameter does not contain a valid base location.", title=TITLE)
-        return
-    payload_rotation = float(payload.get("rotation_deg") or 0.0)
     try:
         data_path, data = load_active_yaml_data()
-    except RuntimeError as exc:
-        forms.alert(str(exc), title=TITLE)
+    except Exception as exc:
+        forms.alert("Failed to load active YAML.\n\n{}".format(exc), title=TITLE)
         return
+
     yaml_label = get_yaml_display_name(data_path)
 
-    eq_entry = _find_led_entry(data, led_id, payload.get("set_id"), elem)
-    if not eq_entry:
-        forms.alert("Could not locate '{}' inside {}.".format(led_id, yaml_label), title=TITLE)
-        return
-    eq_def, set_entry, led_entry, led_index = eq_entry
-    offset_entry = _ensure_offset_entry(led_entry)
-    tag_entries = []
+    stats = {
+        "selected": len(elements),
+        "yaml_updated": 0,
+        "payload_updated": 0,
+        "skip_no_linker": 0,
+        "skip_no_led": 0,
+        "skip_no_parent_context": 0,
+        "skip_no_point": 0,
+        "skip_led_missing": 0,
+        "resolved_by_parent_id": 0,
+        "resolved_by_host_name": 0,
+        "resolved_by_host_name_linked": 0,
+        "resolved_by_payload_parent": 0,
+    }
 
-    original_local_offset = XYZ(
-        _inches_to_feet(offset_entry.get("x_inches") or 0.0),
-        _inches_to_feet(offset_entry.get("y_inches") or 0.0),
-        _inches_to_feet(offset_entry.get("z_inches") or 0.0),
-    )
-    original_rotation_offset = float(offset_entry.get("rotation_deg") or 0.0)
-    parent_rotation = payload.get("parent_rotation_deg")
-    if parent_rotation is not None:
-        base_rotation = parent_rotation
-    else:
-        base_rotation = payload_rotation - original_rotation_offset
-    try:
-        LOG.info(
-            "[Update Vector] starting offsets led=%s label=%s inches=(%.3f, %.3f, %.3f) rot=%.3f",
-            led_id,
-            label,
-            float(offset_entry.get("x_inches") or 0.0),
-            float(offset_entry.get("y_inches") or 0.0),
-            float(offset_entry.get("z_inches") or 0.0),
-            original_rotation_offset,
-        )
-    except Exception:
-        pass
+    payload_updates = {}
 
-    previous_world_offset = _rotate_xy(original_local_offset, base_rotation)
-    base_point = payload_location - previous_world_offset
-    delta_world = elem_point - base_point
-    original_total_rotation = payload_rotation
-    level_relative_z_inches = None
-    if tag_only:
-        rotation_delta = 0.0
-        new_rotation_offset = original_rotation_offset
-        total_rotation = base_rotation + new_rotation_offset
-        local_offset = original_local_offset
-        new_local_offset = XYZ(original_local_offset.X, original_local_offset.Y, original_local_offset.Z)
-    else:
-        new_rotation_offset = round(_normalize_angle(elem_rotation - base_rotation), 6)
-        rotation_delta = _normalize_angle(new_rotation_offset - original_rotation_offset)
-        local_offset = _rotate_xy(delta_world, -base_rotation)
-        level_relative_z_inches = _level_relative_z_inches(elem, elem_point)
-        local_offset = XYZ(local_offset.X, local_offset.Y, _inches_to_feet(level_relative_z_inches))
-        total_rotation = base_rotation + new_rotation_offset
-        new_local_offset = XYZ(local_offset.X, local_offset.Y, local_offset.Z)
+    for elem in elements:
+        linker_text = _get_linker_value(elem)
+        if not linker_text:
+            stats["skip_no_linker"] += 1
+            continue
 
-    tags_changed = 0
-    if led_entry:
-        tags_changed = _update_tag_yaml_offsets(elem, led_entry, elem_point, tag_signature_filter)
-        if tag_only and tags_changed == 0:
-            forms.alert("No matching tag definition was found for the selected tag.", title=TITLE)
-            return
-        tag_entries = led_entry.get("tags") or []
+        parsed = _parse_linker_payload(linker_text)
+        led_id = parsed.get("led_id")
+        set_id = parsed.get("set_id")
 
-    if not tag_only:
-        offset_entry["x_inches"] = round(_feet_to_inches(local_offset.X if local_offset else 0.0), 6)
-        offset_entry["y_inches"] = round(_feet_to_inches(local_offset.Y if local_offset else 0.0), 6)
-        if level_relative_z_inches is None:
-            level_relative_z_inches = _feet_to_inches(local_offset.Z if local_offset else 0.0)
-        offset_entry["z_inches"] = round(level_relative_z_inches, 6)
-        offset_entry["rotation_deg"] = new_rotation_offset
-        try:
-            LOG.info(
-                "[Update Vector] updated offsets led=%s inches=(%.3f, %.3f, %.3f) rot=%.3f",
-                led_id,
-                offset_entry["x_inches"],
-                offset_entry["y_inches"],
-                offset_entry["z_inches"],
-                offset_entry["rotation_deg"],
-            )
-        except Exception:
-            pass
-    if led_index is not None:
-        les = set_entry.get("linked_element_definitions") or []
-        if 0 <= led_index < len(les):
-            les[led_index] = led_entry
+        if not led_id:
+            stats["skip_no_led"] += 1
+            continue
 
-    doc = getattr(revit, "doc", None)
-    similar_elements = []
-    apply_to_similar = False
-    local_delta = XYZ(
-        new_local_offset.X - original_local_offset.X,
-        new_local_offset.Y - original_local_offset.Y,
-        new_local_offset.Z - original_local_offset.Z,
-    )
-    delta_length = 0.0
-    try:
-        delta_length = local_delta.GetLength()
-    except Exception:
-        delta_length = 0.0
-    should_propagate = (delta_length > 1e-6) or (abs(rotation_delta) > 1e-6) or (tags_changed > 0)
-    if doc and led_id and should_propagate:
-        similar_elements = _collect_similar_elements(doc, led_id, elem)
-        if similar_elements:
-            plural = "" if len(similar_elements) == 1 else "s"
-            message = "Apply to all similar equipment? ({} additional instance{})".format(len(similar_elements), plural)
-            apply_to_similar = bool(forms.alert(message, title=TITLE, yes=True, no=True))
-        else:
-            apply_to_similar = False
-    propagate_requested = apply_to_similar
-    if not apply_to_similar:
-        similar_elements = []
+        child_pt = _get_point(elem)
+        if child_pt is None:
+            stats["skip_no_point"] += 1
+            continue
 
-    try:
-        save_active_yaml_data(
-            None,
-            data,
-            "Update Vector",
-            "Updated offsets for {}".format(led_id),
-        )
-    except Exception as ex:
-        forms.alert("Failed to update {}:\n\n{}".format(yaml_label, ex), title=TITLE)
-        return
+        parent_ctx = _resolve_parent_context(doc, parsed, child_pt)
+        if not parent_ctx:
+            stats["skip_no_parent_context"] += 1
+            continue
 
-    if not tag_only:
-        verify_ok, verify_msg = _verify_saved_offsets(led_id, payload.get("set_id"), offset_entry)
-        if not verify_ok:
-            forms.alert(
-                "Warning: YAML verification after saving failed.\n{}\n"
-                "Re-run Update Vector or review Extensible Storage history.".format(verify_msg),
-                title=TITLE,
-            )
-        else:
+        parent_pt = parent_ctx.get("parent_point")
+        if parent_pt is None:
+            stats["skip_no_parent_context"] += 1
+            continue
+
+        resolution = parent_ctx.get("resolution")
+        if resolution == "parent_id":
+            stats["resolved_by_parent_id"] += 1
+        elif resolution == "host_name":
+            stats["resolved_by_host_name"] += 1
+        elif resolution == "host_name_linked":
+            stats["resolved_by_host_name_linked"] += 1
+        elif resolution == "payload_parent":
+            stats["resolved_by_payload_parent"] += 1
+
+        parent_id = parent_ctx.get("parent_id")
+        child_rot = _get_rotation_deg(elem)
+        parent_rot = float(parent_ctx.get("parent_rotation_deg") or 0.0)
+
+        world_delta = child_pt - parent_pt
+        local_delta = _rotate_xy(world_delta, -parent_rot)
+        rel_rot = _normalize_angle(child_rot - parent_rot)
+
+        led_entry = _find_linked_def(data, led_id, set_id)
+        if led_entry is None:
+            stats["skip_led_missing"] += 1
+            continue
+
+        offsets = _ensure_offsets(led_entry)
+        previous_z_inches = offsets.get("z_inches")
+        offsets["x_inches"] = round(_feet_to_inches(local_delta.X), 6)
+        offsets["y_inches"] = round(_feet_to_inches(local_delta.Y), 6)
+        payload_loc = parsed.get("location")
+        moved_vertically = False
+        if payload_loc is not None:
             try:
-                text = dump_data_to_string(data)
-                ExtensibleStorage.update_active_text_only(revit.doc, data_path, text)
-            except Exception as exc:
-                LOG.warning("[Update Vector] failed to refresh active YAML snapshot: %s", exc)
-
-    updated_payload_text = _build_linker_payload(
-        led_id,
-        payload.get("set_id"),
-        elem_point,
-        elem_rotation,
-        _element_id_value(getattr(elem, "LevelId", None), None),
-        _element_id_value(getattr(elem, "Id", None), None),
-        getattr(elem, "FacingOrientation", None),
-        base_rotation,
-        payload.get("parent_element_id"),
-    )
-    _write_element_linker_payload(elem, updated_payload_text)
-
-    moved_count = 0
-    propagate_success = False
-    moved_instances = []
-    if apply_to_similar and similar_elements:
-        moved_count, propagate_success, moved_instances = _apply_offsets_to_similar(
-            doc,
-            similar_elements,
-            original_local_offset,
-            original_rotation_offset,
-            new_local_offset,
-            new_rotation_offset,
-            rotation_delta,
-            tag_entries,
-        )
-        if propagate_success and moved_instances:
-            try:
-                selection = revit.get_selection()
-                if selection:
-                    selection.set_to([elem.Id for elem in moved_instances])
+                moved_vertically = abs(float(child_pt.Z) - float(payload_loc.Z)) > Z_MOVE_TOL_FT
             except Exception:
-                pass
+                moved_vertically = False
 
-    delta_inch_x = round(_feet_to_inches(local_delta.X), 6)
-    delta_inch_y = round(_feet_to_inches(local_delta.Y), 6)
-    delta_inch_z = round(_feet_to_inches(local_delta.Z), 6)
-
-    def _format_float(val):
-        try:
-            return "{:.3f}".format(float(val))
-        except Exception:
-            return str(val)
-
-    message = [
-        "Updated vector for '{}' (LED: {})".format(label or led_id, led_id),
-        "Rotation offset (deg): {}".format(_format_float(new_rotation_offset)),
-        "Rotation change (deg): {}".format(_format_float(rotation_delta)),
-        "Offsets (inches): X={}, Y={}, Z={}".format(
-            _format_float(offset_entry["x_inches"]),
-            _format_float(offset_entry["y_inches"]),
-            _format_float(offset_entry["z_inches"]),
-        ),
-        "Applied move (inches): X={}, Y={}, Z={}".format(
-            _format_float(delta_inch_x),
-            _format_float(delta_inch_y),
-            _format_float(delta_inch_z),
-        ),
-    ]
-    if propagate_requested:
-        message.append("")
-        if propagate_success:
-            message.append("Moved {} similar element{} by the same vector.".format(
-                moved_count,
-                "" if moved_count == 1 else "s",
-            ))
-            if moved_instances:
-                message.append("The moved instances are now selected so you can review their locations.")
-        elif not similar_elements:
-            message.append("No additional similar elements were found.")
+        if moved_vertically or previous_z_inches in (None, ""):
+            offsets["z_inches"] = round(_level_relative_z_inches(elem, child_pt), 6)
         else:
-            message.append("Failed to move similar equipment; YAML offsets were still updated.")
-    forms.alert("\n".join(message), title=TITLE)
+            try:
+                offsets["z_inches"] = round(float(previous_z_inches), 6)
+            except Exception:
+                offsets["z_inches"] = round(_level_relative_z_inches(elem, child_pt), 6)
+        offsets["rotation_deg"] = round(rel_rot, 6)
+
+        stats["yaml_updated"] += 1
+
+        payload_updates[_element_id_value(elem.Id)] = _build_linker_payload(
+            parsed,
+            elem,
+            child_pt,
+            child_rot,
+            parent_pt,
+            parent_rot,
+            parent_id,
+        )
+
+        LOG.info(
+            "[Update Vector] elem=%s parent=%s mode=%s led=%s set=%s offsets=(%.3f, %.3f, %.3f) rot=%.3f",
+            _element_id_value(elem.Id),
+            parent_id,
+            resolution,
+            led_id,
+            set_id or "",
+            offsets["x_inches"],
+            offsets["y_inches"],
+            offsets["z_inches"],
+            offsets["rotation_deg"],
+        )
+
+    if stats["yaml_updated"] > 0:
+        try:
+            save_active_yaml_data(
+                None,
+                data,
+                "Update Vector",
+                "Updated selected offsets/rotation relative to parent elements",
+            )
+        except Exception as exc:
+            forms.alert("Failed saving to {}.\n\n{}".format(yaml_label, exc), title=TITLE)
+            return
+
+    try:
+        stats["payload_updated"] = _apply_payload_updates(doc, payload_updates)
+    except Exception as exc:
+        forms.alert("YAML saved, but failed to write Element_Linker payloads.\n\n{}".format(exc), title=TITLE)
+        return
+
+    lines = [
+        "YAML source: {}".format(yaml_label),
+        "Selected: {}".format(stats["selected"]),
+        "YAML offsets updated: {}".format(stats["yaml_updated"]),
+        "Element_Linker payloads updated: {}".format(stats["payload_updated"]),
+        "",
+        "Skipped (no Element_Linker): {}".format(stats["skip_no_linker"]),
+        "Skipped (missing LED id): {}".format(stats["skip_no_led"]),
+        "Skipped (no parent context from id/host/payload): {}".format(stats["skip_no_parent_context"]),
+        "Skipped (missing location point): {}".format(stats["skip_no_point"]),
+        "Skipped (LED not found in YAML): {}".format(stats["skip_led_missing"]),
+        "",
+        "Resolved parent by Parent ElementId: {}".format(stats["resolved_by_parent_id"]),
+        "Resolved parent by Host Name (active model): {}".format(stats["resolved_by_host_name"]),
+        "Resolved parent by Host Name (linked model): {}".format(stats["resolved_by_host_name_linked"]),
+        "Resolved parent by payload Parent_location: {}".format(stats["resolved_by_payload_parent"]),
+    ]
+
+    forms.alert("\n".join(lines), title=TITLE)
 
 
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
