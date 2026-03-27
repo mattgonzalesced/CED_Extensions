@@ -1,0 +1,48 @@
+﻿Arrange Lights in Space Workflow Guide
+======================================
+
+Purpose: Evenly distributes selected fixtures within one selected Space
+boundary.
+
+Inputs
+------
+- Selection containing one Space and fixture instances.
+- Space boundary geometry from Revit spatial boundaries.
+
+What It Changes
+---------------
+- Moves fixture location points in transaction.
+
+Run Sequence
+------------
+1. Select one Space and target fixtures.
+2. Run command to read boundary extents.
+3. Tool auto-solves row/column layout from current fixture clustering.
+4. Fixture count must equal slot count.
+5. Fixtures are moved to even X/Y spacing at existing Z.
+
+Validation Checklist
+--------------------
+- Fixtures are uniformly distributed inside target space.
+- No fixture count mismatch remains.
+- Fixture elevations remain unchanged.
+
+Troubleshooting
+---------------
+- Selection error: include space and fixtures.
+- No boundary: verify enclosed/valid space.
+- Slot mismatch: adjust selected fixture count.
+
+Notes
+-----
+Current script path defaults to auto layout mode.
+
+
+
+
+
+
+
+
+
+

@@ -15,7 +15,8 @@ import sys
 from pyrevit import forms, revit, script
 output = script.get_output()
 output.close_others()
-from Autodesk.Revit.DB import FamilyInstance, Group
+from Autodesk.Revit.DB import ElementId, FamilyInstance, Group, RevitLinkInstance
+from Autodesk.Revit.UI.Selection import ObjectType
 from System.Drawing import Point, Size
 from System.Windows.Forms import (
     BorderStyle,
@@ -84,7 +85,7 @@ def _pick_merge_mode(source_name):
         msg.Size = Size(756, 52)
         msg.Text = (
             "Use 'Merge existing profile(s)' to pick targets already in YAML.\n"
-            "Use 'Add new parent' to use the currently highlighted linked Revit element name."
+            "Use 'Add new parent' to use the selected host/linked element name (or pick one when prompted)."
         )
         dialog.Controls.Add(msg)
 
@@ -159,7 +160,55 @@ def _selected_profile_name_from_revit_selection():
     selected_elements = list(getattr(selection, "elements", []) or [])
     if not selected_elements:
         return ""
-    return _build_selected_element_label(selected_elements[0])
+    for elem in selected_elements:
+        if isinstance(elem, RevitLinkInstance):
+            continue
+        label = _build_selected_element_label(elem).strip()
+        if label:
+            return label
+    return ""
+
+
+def _linked_element_from_reference(doc, reference):
+    linked_id = getattr(reference, "LinkedElementId", None)
+    if isinstance(linked_id, ElementId) and linked_id != ElementId.InvalidElementId:
+        try:
+            host_elem = doc.GetElement(reference.ElementId)
+        except Exception:
+            host_elem = None
+        if isinstance(host_elem, RevitLinkInstance):
+            link_doc = host_elem.GetLinkDocument()
+            if link_doc:
+                try:
+                    linked_elem = link_doc.GetElement(linked_id)
+                except Exception:
+                    linked_elem = None
+                if linked_elem is not None:
+                    return linked_elem
+    try:
+        return doc.GetElement(reference.ElementId)
+    except Exception:
+        return None
+
+
+def _pick_profile_name_from_element(prompt):
+    uidoc = getattr(revit, "uidoc", None)
+    doc = getattr(revit, "doc", None)
+    if uidoc is None or doc is None:
+        return ""
+    try:
+        reference = uidoc.Selection.PickObject(ObjectType.Element, prompt)
+    except Exception:
+        return ""
+    elem = _linked_element_from_reference(doc, reference)
+    if isinstance(elem, RevitLinkInstance):
+        forms.alert("Select the specific element inside the link after this message.", title=TITLE)
+        try:
+            link_ref = uidoc.Selection.PickObject(ObjectType.LinkedElement, prompt)
+        except Exception:
+            return ""
+        elem = _linked_element_from_reference(doc, link_ref)
+    return _build_selected_element_label(elem).strip()
 
 
 def _next_eq_number(equipment_defs):
@@ -359,17 +408,13 @@ def main():
     merged = []
     created = []
     if action_choice == "Add new parent":
-        if not selected_profile_name:
-            forms.alert(
-                "No selected element name could be resolved.\n"
-                "Select a linked Revit element first, then run Merge Profiles again.",
-                title=TITLE,
-            )
-            return
-        target_name = selected_profile_name.strip()
+        target_name = selected_profile_name.strip() if selected_profile_name else ""
+        if not target_name:
+            target_name = _pick_profile_name_from_element("Select parent element for merged profile")
         if not target_name:
             forms.alert(
-                "Selected element did not provide a usable profile name.",
+                "No selected element name could be resolved.\n"
+                "Select a host or linked Revit element with a usable name.",
                 title=TITLE,
             )
             return

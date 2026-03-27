@@ -1,0 +1,48 @@
+﻿SUPER CIRCUIT V4 Workflow Guide
+===============================
+
+Purpose: Enhanced super-circuit workflow with panel-choice parsing and BA/DA
+diagnostics.
+
+Inputs
+------
+- Client choice (Planet Fitness or HEB).
+- Electrical fixtures/devices including mechanical control devices.
+- Panel lookup plus optional client preprocess hooks.
+
+What It Changes
+---------------
+- Creates circuits and applies circuit data.
+- Prints BA/DA debug diagnostics for panel routing analysis.
+
+Run Sequence
+------------
+1. Run command and select client.
+2. Tool gathers items and computes panel choice counts.
+3. Optional client preprocess modifies item metadata.
+4. Groups are prioritized by panel-choice confidence and group type.
+5. Circuits are created and then populated with circuit data.
+6. Review debug and summary output.
+
+Validation Checklist
+--------------------
+- Multi-panel items route to intended panel.
+- Created circuit count matches expectation.
+- BA/DA diagnostics are reasonable for affected items.
+
+Troubleshooting
+---------------
+- No client selected: command aborts.
+- Bad panel parsing: review CKT_Panel_CEDT formatting.
+- Helper load errors: verify client helper modules.
+
+Notes
+-----
+V4 expands V3 with better panel disambiguation and debugging.
+
+
+
+
+
+
+

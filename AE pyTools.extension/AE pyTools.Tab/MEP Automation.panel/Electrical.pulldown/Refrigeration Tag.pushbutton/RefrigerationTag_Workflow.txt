@@ -1,0 +1,48 @@
+﻿Refrigeration Tag Workflow Guide
+================================
+
+Purpose: Updates refrigeration tagging based on connector-derived
+primary/secondary roles.
+
+Inputs
+------
+- Refrigeration equipment with usable connector/system data.
+- Electrical panel/circuit information from connected systems.
+
+What It Changes
+---------------
+- Writes updated refrigeration tag text/fields in transaction.
+
+Run Sequence
+------------
+1. Run tool with refrigeration equipment in scope.
+2. Connector analysis classifies primary vs secondary loads.
+3. Primary/secondary labeling rules are applied.
+4. Tag values are rebuilt and written.
+5. Review output for updated and skipped items.
+
+Validation Checklist
+--------------------
+- Primary and secondary labels match equipment intent.
+- Panel/circuit strings are complete and formatted.
+
+Troubleshooting
+---------------
+- Missing connector data: check family/system setup.
+- Unexpected labels: review connector naming conventions.
+- Tag write failure: verify tag family parameter support.
+
+Notes
+-----
+Connector data quality directly controls output accuracy.
+
+
+
+
+
+
+
+
+
+
+

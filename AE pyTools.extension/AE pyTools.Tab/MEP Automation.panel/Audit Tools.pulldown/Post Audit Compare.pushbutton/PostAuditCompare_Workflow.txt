@@ -1,0 +1,48 @@
+﻿Post Audit Compare Workflow Guide
+=================================
+
+Purpose: Saves and compares relationship snapshots using Element_Linker
+parent/location pairs.
+
+Inputs
+------
+- Current model Element_Linker data.
+- Optional prior snapshot file in compare mode.
+
+What It Changes
+---------------
+- Save mode writes snapshot file.
+- Compare mode reports moved/added/removed keys.
+- Optional move action can reposition children in compare workflows.
+
+Run Sequence
+------------
+1. Run command and choose Save or Compare.
+2. Save mode exports current snapshot.
+3. Compare mode loads prior snapshot and computes deltas.
+4. Review report and optional corrective action prompts.
+
+Validation Checklist
+--------------------
+- Snapshot contains expected record volume.
+- Compare deltas align with known model changes.
+- Any corrective move action is visually verified.
+
+Troubleshooting
+---------------
+- No payloads found: check Element_Linker coverage.
+- Bad snapshot file: regenerate from Save mode.
+- Unexpected deltas: verify linked model state/alignment.
+
+Notes
+-----
+Use Save before major coordination changes for reliable compare baselines.
+
+
+
+
+
+
+
+
+

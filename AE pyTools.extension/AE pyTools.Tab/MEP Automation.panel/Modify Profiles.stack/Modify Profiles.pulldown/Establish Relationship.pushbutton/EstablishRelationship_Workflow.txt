@@ -1,0 +1,48 @@
+﻿Establish Relationship Workflow Guide
+=====================================
+
+Purpose: Creates one parent/child relationship profile and mapping flags, then
+writes metadata.
+
+Inputs
+------
+- Configuration name entered by user.
+- One parent selection and one-or-more child selections.
+- Active YAML plus mapping UI module resources.
+
+What It Changes
+---------------
+- Adds profile and linked element entries in YAML.
+- Writes Element_Linker payloads to parent and child elements.
+- Applies mapping directives (BYPARENT/BYSIBLING/static) when chosen.
+
+Run Sequence
+------------
+1. Run command and enter configuration name.
+2. Pick one parent element.
+3. Pick child elements (excluding parent).
+4. Tool computes child offsets/rotation relative to parent.
+5. Optional mapping window captures parameter flag choices.
+6. YAML and payload updates are committed in transaction scope.
+
+Validation Checklist
+--------------------
+- New relationship entry exists in active YAML.
+- Parent/child offsets and rotation values are sensible.
+- Mapping strings are present where configured.
+
+Troubleshooting
+---------------
+- No YAML: load/select active YAML first.
+- Selection error: ensure one parent plus valid children.
+- Mapping UI load issues: verify module/xaml deployment.
+
+Notes
+-----
+This is a core authoring tool for downstream relationship-based placement.
+
+
+
+
+
+

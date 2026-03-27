@@ -1,0 +1,48 @@
+﻿Circuit By Space Workflow Guide
+===============================
+
+Purpose: Creates circuits by grouping lighting fixtures by panel, space
+bucket, and class.
+
+Inputs
+------
+- Lighting fixtures from selection or model scope.
+- Panel lookup data.
+- Optional Planet Fitness helper rules for space splitting.
+
+What It Changes
+---------------
+- Creates electrical circuits.
+- Applies circuit metadata/load naming to created systems.
+
+Run Sequence
+------------
+1. Run command and choose optional client mode.
+2. Tool gathers fixture circuit context and space data.
+3. Items are grouped by panel + space + standard/emergency class.
+4. Optional helper rules split groups by fixture type/min circuits.
+5. Circuits are created, then circuit data is applied.
+
+Validation Checklist
+--------------------
+- Circuit totals match expected space grouping.
+- Standard/emergency split is correct.
+- Panel and load naming follow standards.
+
+Troubleshooting
+---------------
+- No fixtures found: verify scope and category.
+- Missing panel context: inspect circuit source parameters.
+- Unexpected split: check helper rules and space naming.
+
+Notes
+-----
+Focused on lighting-by-space circuiting workflow.
+
+
+
+
+
+
+
+

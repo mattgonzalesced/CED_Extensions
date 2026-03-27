@@ -1,0 +1,48 @@
+﻿Copy Import layers Workflow Guide
+=================================
+
+Purpose: Current folder is a placeholder; no executable script is present in
+this pushbutton.
+
+Inputs
+------
+- No runtime inputs because script.py and bundle.yaml are absent.
+
+What It Changes
+---------------
+- No actions are executed from this folder state.
+
+Run Sequence
+------------
+1. Verify whether this button is expected in your deployment.
+2. If required, restore script.py and bundle.yaml from source control.
+3. Document intended import-layer copy behavior before release.
+
+Validation Checklist
+--------------------
+- Folder contains executable files when tool is implemented.
+
+Troubleshooting
+---------------
+- Button does nothing: expected while script is missing.
+- Deployment mismatch: compare branch/package contents.
+
+Notes
+-----
+Documented as intentionally non-functional until implementation is restored.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

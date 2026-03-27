@@ -1,0 +1,48 @@
+﻿Color Circuits by dev group Workflow Guide
+==========================================
+
+Purpose: Builds view filters by dev-Group ID and applies colorized
+template/legend setup.
+
+Inputs
+------
+- Active floor plan view.
+- dev-Group ID values from supported categories.
+
+What It Changes
+---------------
+- Creates or updates parameter filters.
+- Updates view template, legend, and temporary template mode.
+
+Run Sequence
+------------
+1. Open floor plan view.
+2. Run tool to collect unique dev-group values.
+3. Tool creates/updates filter rules and colors.
+4. Template/legend are generated or refreshed.
+5. Temporary template mode is activated for review.
+
+Validation Checklist
+--------------------
+- Filters exist for expected dev-group values.
+- Legend labels/colors match filters.
+- View appearance updates only target categories.
+
+Troubleshooting
+---------------
+- Wrong view type: run from floor plan.
+- No values: verify dev-group parameter population.
+- Template conflicts: clear old overrides and rerun.
+
+Notes
+-----
+This is a visualization/filtering workflow, not a placement tool.
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,48 @@
+﻿Place Identity Mark Workflow Guide
+==================================
+
+Purpose: Copies case Identity Mark values to matching Mechanical Control
+Devices.
+
+Inputs
+------
+- Refrigerated case Mechanical Equipment values.
+- Mechanical Control Device targets.
+- Identity Mark and related matching parameters.
+
+What It Changes
+---------------
+- Writes Identity Mark to matched control devices.
+- Reports blank/missing source cases and update totals.
+
+Run Sequence
+------------
+1. Run command in the host model.
+2. Tool collects case and device candidates.
+3. Matching logic maps devices to source cases.
+4. Identity Mark values are written in transaction.
+5. Review output summary and unresolved items.
+
+Validation Checklist
+--------------------
+- Updated devices show correct Identity Mark.
+- No unrelated devices were modified.
+- Blank source marks are reported clearly.
+
+Troubleshooting
+---------------
+- No candidates: verify categories/worksets and visibility.
+- No source marks: populate case Identity Mark first.
+- Write denied: check ownership and parameter read-only state.
+
+Notes
+-----
+This command updates model parameters only.
+
+
+
+
+
+
+
+

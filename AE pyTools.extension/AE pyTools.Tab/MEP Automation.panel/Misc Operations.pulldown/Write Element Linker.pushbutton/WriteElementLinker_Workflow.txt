@@ -1,0 +1,48 @@
+﻿Write Element Linker Workflow Guide
+===================================
+
+Purpose: Writes missing Element_Linker metadata by matching elements to active
+YAML definitions.
+
+Inputs
+------
+- Active YAML linked element definitions.
+- Current selection or full model fixtures/groups.
+- Element labels and parameter values for profile scoring.
+
+What It Changes
+---------------
+- Sets Element_Linker fields on matched elements missing payload.
+- Includes LED/SET ids plus location/rotation and related metadata fields.
+
+Run Sequence
+------------
+1. Run command after loading active YAML.
+2. Tool scans target elements and skips those already linked.
+3. Candidates are matched via label and parameter scoring.
+4. Parent checks and ambiguity handling are applied.
+5. Payload is written in transaction and counters are reported.
+
+Validation Checklist
+--------------------
+- Written count matches expected missing-linker pool.
+- Payload values contain expected IDs and geometry fields.
+- Skip counters align with known unmatched/ambiguous cases.
+
+Troubleshooting
+---------------
+- No definitions: verify active YAML content.
+- No match: inspect labels/parameters against YAML.
+- Write failures: check parameter lock/ownership.
+
+Notes
+-----
+Run before QA/QC tasks that require complete linker coverage.
+
+
+
+
+
+
+
+

@@ -1,0 +1,48 @@
+﻿Where da Stuff Workflow Guide
+=============================
+
+Purpose: Finds and zooms to the linked parent element referenced by selected
+child payload.
+
+Inputs
+------
+- Exactly one selected host element.
+- Parent ElementId in Element_Linker payload.
+- Loaded Revit link documents.
+
+What It Changes
+---------------
+- No model data edits.
+- Selection changes to linked references and view zooms to target.
+
+Run Sequence
+------------
+1. Select one placed child element.
+2. Run command to parse Parent ElementId.
+3. Tool searches loaded links for matching element id.
+4. If found, selects reference and centers view.
+
+Validation Checklist
+--------------------
+- Linked target is highlighted in view.
+- Zoom area corresponds to expected linked element.
+
+Troubleshooting
+---------------
+- Select exactly one element before run.
+- Missing Parent ElementId: repair payload first.
+- Not found: confirm link is loaded and up to date.
+
+Notes
+-----
+This is a locate/inspect utility and does not write YAML.
+
+
+
+
+
+
+
+
+
+

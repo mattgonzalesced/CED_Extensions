@@ -1,0 +1,48 @@
+﻿Color Fixtures by Host Name Workflow Guide
+==========================================
+
+Purpose: Color-codes elements by Host Name parsed from Element_Linker
+payloads.
+
+Inputs
+------
+- Active floor plan view.
+- Element_Linker payload values with Host Name field.
+
+What It Changes
+---------------
+- Creates/updates host-name parameter filters.
+- Refreshes template/legend and enables temporary template mode.
+
+Run Sequence
+------------
+1. Open a floor plan.
+2. Run command to parse Host Name values.
+3. Tool builds per-host filter rules and colors.
+4. Template/legend updates are applied.
+5. Review grouped colors in temporary template mode.
+
+Validation Checklist
+--------------------
+- Host-name filters match payload values.
+- Legend entries are readable and complete.
+- Elements without payload are not miscolored.
+
+Troubleshooting
+---------------
+- No host names found: verify payload presence.
+- Parse issue: inspect Host Name token formatting.
+- Template overwrite issues: reset and rerun.
+
+Notes
+-----
+Useful for visual host relationship QA by metadata.
+
+
+
+
+
+
+
+
+

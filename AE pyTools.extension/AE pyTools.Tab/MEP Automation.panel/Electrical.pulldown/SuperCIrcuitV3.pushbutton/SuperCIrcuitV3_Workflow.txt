@@ -1,0 +1,48 @@
+﻿SUPER CIRCUIT V3 Workflow Guide
+===============================
+
+Purpose: Client-configured circuit creation workflow using shared grouping
+utilities.
+
+Inputs
+------
+- Client choice (Planet Fitness or HEB).
+- Eligible electrical elements from selection/model scope.
+- Panel lookup and element circuit metadata.
+
+What It Changes
+---------------
+- Creates circuit systems.
+- Applies circuit data to created systems.
+
+Run Sequence
+------------
+1. Run command and choose client.
+2. Tool gathers elements and filters disallowed lighting categories.
+3. Element circuit info is collected against panel lookup.
+4. Client helper preprocess may adjust item data.
+5. Groups are assembled/sorted and circuits created.
+6. Circuit data is applied to created systems.
+
+Validation Checklist
+--------------------
+- Created count is expected for selected scope.
+- Panel/load assignment follows client rules.
+
+Troubleshooting
+---------------
+- No client selected: command exits by design.
+- No elements found: verify category scope.
+- Grouping oddities: inspect client helper behavior.
+
+Notes
+-----
+V3 remains an active path for specific client standards.
+
+
+
+
+
+
+
+

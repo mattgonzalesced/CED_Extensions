@@ -1,0 +1,48 @@
+﻿Convert Schema Workflow Guide
+=============================
+
+Purpose: Converts old YAML definitions to the current template schema and
+saves a new file.
+
+Inputs
+------
+- OLD YAML file selected by user.
+- CURRENT template YAML with target schema_version.
+
+What It Changes
+---------------
+- Writes converted YAML to selected output path.
+- Does not modify active project model directly.
+
+Run Sequence
+------------
+1. Select old YAML input.
+2. Select current template YAML.
+3. Tool validates template schema_version consistency.
+4. Equipment definitions are reshaped to template structure.
+5. Choose output path and save converted file.
+
+Validation Checklist
+--------------------
+- Converted entry count equals source entry count.
+- Output schema_version matches template version.
+- Output YAML parses cleanly in downstream tools.
+
+Troubleshooting
+---------------
+- Template version errors: fix schema_version consistency.
+- Save failure: verify destination permissions.
+- Unexpected field result: compare template defaults vs source.
+
+Notes
+-----
+This command is file-based conversion, separate from in-model YAML state.
+
+
+
+
+
+
+
+
+

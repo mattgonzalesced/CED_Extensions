@@ -1,0 +1,48 @@
+﻿Optimize Workflow Guide
+=======================
+
+Purpose: Optimizes Element_Linker-enabled element placement using
+wall/ceiling/floor/door/corner strategies.
+
+Inputs
+------
+- Elements with non-blank Element_Linker in selection or model scope.
+- Host and linked geometry used by mode-specific target searches.
+
+What It Changes
+---------------
+- Moves and rotates elements per selected mode.
+- Refreshes Element_Linker payload context for processed elements.
+
+Run Sequence
+------------
+1. Run command and pick optimization mode.
+2. Tool gathers eligible Element_Linker elements.
+3. Mode-specific nearest target geometry is resolved.
+4. Element transforms are applied in transaction.
+5. Summary reports moved/skipped/failure counts.
+
+Validation Checklist
+--------------------
+- Placement changes match chosen mode rules.
+- No unintended jumps to wrong linked geometry.
+- Element_Linker remains populated after update.
+
+Troubleshooting
+---------------
+- No eligible elements: verify payload coverage.
+- Bad target choice: confirm link alignment and model context.
+- Corner anomalies: inspect parent context data.
+
+Notes
+-----
+Optimize should not create output files; results are in-model only.
+
+
+
+
+
+
+
+
+

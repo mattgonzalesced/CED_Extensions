@@ -1,0 +1,48 @@
+﻿Follow Parent Workflow Guide
+============================
+
+Purpose: Moves child instances to follow parent movement/rotation using
+Element_Linker offsets.
+
+Inputs
+------
+- Selected children/parents or full-model fallback scope.
+- Element_Linker payload with parent/offset data.
+- Loaded links for parent lookup when needed.
+
+What It Changes
+---------------
+- Moves and rotates child elements.
+- Rewrites Element_Linker payload values on processed children.
+
+Run Sequence
+------------
+1. Optionally preselect children or parent hosts.
+2. Run command in project document.
+3. Tool resolves parent context and target transform.
+4. Children are moved/rotated to follow parent.
+5. Review summary counts for processed/skipped items.
+
+Validation Checklist
+--------------------
+- Children align with parent placement.
+- Payload location/rotation fields are refreshed.
+- Skipped counts match expected data gaps.
+
+Troubleshooting
+---------------
+- No eligible children: check Element_Linker exists.
+- Parent not found: verify parent IDs and loaded links.
+- Unexpected placement: inspect stored offsets in payload.
+
+Notes
+-----
+Follow Parent updates model geometry and metadata, not YAML.
+
+
+
+
+
+
+
+

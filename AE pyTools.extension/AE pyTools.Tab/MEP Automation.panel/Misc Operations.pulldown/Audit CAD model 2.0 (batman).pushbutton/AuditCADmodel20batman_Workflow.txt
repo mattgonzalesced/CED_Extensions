@@ -1,0 +1,48 @@
+﻿Audit CAD model 2.0 (batman) Workflow Guide
+===========================================
+
+Purpose: Imports CSV name inventory and interactively creates empty or merged
+YAML profiles.
+
+Inputs
+------
+- CSV source with Name column.
+- Active YAML equipment definitions.
+- Per-user ignore list persisted in appdata JSON.
+
+What It Changes
+---------------
+- Adds created/merged profiles to active YAML.
+- Updates ignore list with names user chooses to ignore.
+
+Run Sequence
+------------
+1. Run command and select CSV file.
+2. Tool reads unique Name values.
+3. Existing YAML names are skipped automatically.
+4. For missing names choose create empty, merge existing, ignore, or skip.
+5. If merge is chosen, pick source definition.
+6. Tool saves YAML and reports outcome counts.
+
+Validation Checklist
+--------------------
+- Created and merged totals match user decisions.
+- Merged profiles carry expected source metadata fields.
+
+Troubleshooting
+---------------
+- No names read: verify Name column header.
+- Merge lookup issues: refresh YAML and rerun.
+- Save error: check active YAML availability and permissions.
+
+Notes
+-----
+Designed for rapid profile growth from CAD naming exports.
+
+
+
+
+
+
+
+

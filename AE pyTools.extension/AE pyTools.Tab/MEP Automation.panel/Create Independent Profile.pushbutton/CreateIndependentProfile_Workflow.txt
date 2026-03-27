@@ -1,0 +1,48 @@
+﻿Create Independent Profile Workflow Guide
+=========================================
+
+Purpose: Creates an independent profile in active YAML from current element
+selection.
+
+Inputs
+------
+- Current selected elements.
+- Profile name entered by user.
+- Manage Profiles module and active YAML data.
+
+What It Changes
+---------------
+- Adds a new independent equipment definition to YAML.
+- Uses Manage Profiles capture routine for entry structure.
+
+Run Sequence
+------------
+1. Select elements to capture.
+2. Run command and enter profile name.
+3. Tool loads active YAML and backend capture module.
+4. Capture routine writes independent profile entry.
+5. Review alert and verify YAML result.
+
+Validation Checklist
+--------------------
+- New profile appears with entered name.
+- Captured labels/offsets match selection intent.
+
+Troubleshooting
+---------------
+- Manage module not found: verify extension deployment.
+- No active YAML: load/select YAML first.
+- Blank name: rerun with valid profile name.
+
+Notes
+-----
+This tool edits YAML definitions, not placed instance geometry.
+
+
+
+
+
+
+
+
+

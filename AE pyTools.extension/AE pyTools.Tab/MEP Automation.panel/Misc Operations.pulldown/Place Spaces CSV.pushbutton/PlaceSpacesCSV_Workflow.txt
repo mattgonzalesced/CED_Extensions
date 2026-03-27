@@ -1,0 +1,48 @@
+﻿Place Spaces from CSV Workflow Guide
+====================================
+
+Purpose: Creates unbounded spaces from CSV coordinates and applies number/name
+values.
+
+Inputs
+------
+- CSV with Position X / Position Y and naming fields.
+- User-selected target level.
+- Feet-inch coordinate strings for parsing.
+
+What It Changes
+---------------
+- Creates spaces at parsed coordinates.
+- Sets space number and name fields.
+- May place tags in qualifying views when logic finds targets.
+
+Run Sequence
+------------
+1. Choose level when prompted.
+2. Select CSV source file.
+3. Tool parses rows and resolves supported naming formats.
+4. Invalid rows are skipped with warnings.
+5. Valid spaces are created and summary is shown.
+
+Validation Checklist
+--------------------
+- Placed count matches valid CSV rows.
+- Space names/numbers match source values.
+- Coordinate placement is visually correct.
+
+Troubleshooting
+---------------
+- Parse failures: verify coordinate/header formats.
+- No placement: check level selection and row validity.
+- Tag issues: confirm tag family/type availability.
+
+Notes
+-----
+Keep CSV under version control for repeatable placement runs.
+
+
+
+
+
+
+

@@ -1,0 +1,48 @@
+﻿Remove Profiles Workflow Guide
+==============================
+
+Purpose: Deletes placed profile elements from active plan view by
+Element_Linker grouping.
+
+Inputs
+------
+- Active non-template, non-3D plan view.
+- Element_Linker payload group keys (parent id/host/location).
+- User selection in profile grouping window.
+
+What It Changes
+---------------
+- Deletes selected profile placement elements in transaction.
+- Removes related hosted annotations/dependents as implemented by script.
+
+Run Sequence
+------------
+1. Open valid plan view and run command.
+2. Tool scans active view for Element_Linker placements.
+3. Placements are grouped for selection UI.
+4. Choose groups/items to remove.
+5. Confirm delete and review summary output.
+
+Validation Checklist
+--------------------
+- Only chosen groups were deleted.
+- Remaining groups are untouched.
+- View cleanup matches selected scope.
+
+Troubleshooting
+---------------
+- Wrong view type: switch from 3D/template view.
+- No groups shown: verify payload presence in active view.
+- Partial delete: inspect dependent elements and ownership.
+
+Notes
+-----
+Use grouped removal instead of manual one-by-one cleanup.
+
+
+
+
+
+
+
+

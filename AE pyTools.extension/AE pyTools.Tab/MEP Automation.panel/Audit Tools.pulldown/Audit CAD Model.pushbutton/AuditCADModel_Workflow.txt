@@ -1,0 +1,48 @@
+﻿Audit CAD Model Workflow Guide
+==============================
+
+Purpose: Audits CAD names from Excel/CSV against active YAML and helps create
+missing profiles from close matches.
+
+Inputs
+------
+- Excel or CSV source file.
+- User-selected name column.
+- Active YAML loaded in Extensible Storage.
+
+What It Changes
+---------------
+- Writes new profile entries only for names user confirms.
+- Prints missing-name and match details to output.
+
+Run Sequence
+------------
+1. Pick source file.
+2. Select the CAD-name column.
+3. Review missing names and suggested matches.
+4. Select names to create.
+5. Confirm YAML update and review summary.
+
+Validation Checklist
+--------------------
+- Created names exist in YAML.
+- No unintended duplicate entries were added.
+- Match quality is acceptable for created items.
+
+Troubleshooting
+---------------
+- No rows found: verify file format and headers.
+- Bad suggestions: review naming and source cleanup.
+- Save error: confirm active YAML is loaded and writable.
+
+Notes
+-----
+This tool is for profile auditing/creation, not geometry edits.
+
+
+
+
+
+
+
+
