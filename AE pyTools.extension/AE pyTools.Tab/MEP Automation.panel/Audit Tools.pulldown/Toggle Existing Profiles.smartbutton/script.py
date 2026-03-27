@@ -167,9 +167,6 @@ def _iter_target_link_elements(link_doc):
 
 
 def _collect_matching_link_element_ids(doc, profile_norms):
-    if LinkElementId is None:
-        raise RuntimeError("Current Revit API does not expose LinkElementId for linked-element visibility control.")
-
     link_element_ids = []
     matched_pairs = []
     seen = set()
@@ -204,11 +201,12 @@ def _collect_matching_link_element_ids(doc, profile_norms):
             if key in seen:
                 continue
             seen.add(key)
-            try:
-                link_element_ids.append(LinkElementId(link_inst.Id, elem.Id))
-            except Exception:
-                continue
             matched_pairs.append(key)
+            if LinkElementId is not None:
+                try:
+                    link_element_ids.append(LinkElementId(link_inst.Id, elem.Id))
+                except Exception:
+                    pass
             matched += 1
 
     return link_element_ids, matched_pairs, scanned, matched, link_count
@@ -422,7 +420,23 @@ def _post_visibility_command(uidoc, refs, hide_mode):
     cmd_id = RevitCommandId.LookupPostableCommandId(cmd_enum)
     if cmd_id is None:
         raise RuntimeError("Unable to resolve '{}' command id.".format(cmd_enum))
+    can_post = getattr(__revit__, "CanPostCommand", None)
+    if callable(can_post):
+        if not can_post(cmd_id):
+            raise RuntimeError(
+                "The '{}' command is currently unavailable in this view/context.".format(cmd_enum)
+            )
     __revit__.PostCommand(cmd_id)
+
+
+def _is_revit_2025_or_newer(doc):
+    if doc is None:
+        return False
+    try:
+        version_raw = getattr(doc.Application, "VersionNumber", "") or ""
+        return int(str(version_raw).strip()) >= 2025
+    except Exception:
+        return False
 
 
 def main():
@@ -455,11 +469,13 @@ def main():
 
     hidden_now = _get_toggle_state(doc, default=False)
     hide_mode = not hidden_now
+    prefer_ui_mode = _is_revit_2025_or_newer(doc) or (LinkElementId is None)
 
     scanned = 0
     matched = 0
     link_count = 0
     matched_pairs = []
+    link_element_ids = []
 
     if hide_mode:
         try:
@@ -473,17 +489,28 @@ def main():
     else:
         stored_pairs = _get_hidden_pairs(doc)
         if stored_pairs:
-            try:
-                link_element_ids = _build_link_element_ids_from_pairs(doc, stored_pairs)
-                matched_pairs = list(stored_pairs)
-                matched = len(link_element_ids)
-            except Exception:
-                link_element_ids = []
+            matched_pairs = list(stored_pairs)
+            matched = len(matched_pairs)
+            if not prefer_ui_mode:
+                try:
+                    link_element_ids = _build_link_element_ids_from_pairs(doc, stored_pairs)
+                    matched = len(link_element_ids) or matched
+                except Exception:
+                    link_element_ids = []
         else:
+            matched_pairs = []
             link_element_ids = []
-        if not link_element_ids:
+        needs_rescan = (not link_element_ids) and (not (prefer_ui_mode and matched_pairs))
+        if needs_rescan:
             try:
-                link_element_ids, matched_pairs, scanned, matched, link_count = _collect_matching_link_element_ids(doc, profile_norms)
+                coll_link_ids, coll_pairs, coll_scanned, coll_matched, coll_link_count = _collect_matching_link_element_ids(doc, profile_norms)
+                if not matched_pairs:
+                    matched_pairs = coll_pairs
+                    matched = coll_matched
+                scanned = coll_scanned
+                link_count = coll_link_count
+                if not prefer_ui_mode:
+                    link_element_ids = coll_link_ids
             except Exception as exc:
                 forms.alert(
                     "Unable to collect linked elements for toggling:\n\n{}".format(exc),
@@ -491,7 +518,7 @@ def main():
                 )
                 return
 
-    if not link_element_ids:
+    if not matched_pairs:
         _set_toggle_state(doc, False)
         _set_hidden_pairs(doc, [])
         _set_button_icon(False)
@@ -505,34 +532,64 @@ def main():
         return
 
     action_text = "Hide" if hide_mode else "Unhide"
-    apply_mode = "api"
-    txn_name = "{} Existing Profiles".format(action_text)
-    try:
-        with revit.Transaction(txn_name):
-            _apply_visibility(view, link_element_ids, hide_mode)
-    except Exception as exc:
-        message = str(exc or "")
-        mismatch = ("ICollection[ElementId]" in message) or ("LinkElementId" in message)
-        if not mismatch:
-            forms.alert(
-                "{} failed.\n\n{}".format(action_text, exc),
-                title=TITLE,
-            )
-            return
+    apply_mode = "ui" if prefer_ui_mode else "api"
+
+    if prefer_ui_mode:
         try:
             refs = _build_link_references_from_pairs(doc, matched_pairs)
             _post_visibility_command(revit.uidoc, refs, hide_mode)
-            apply_mode = "ui"
-        except Exception as fallback_exc:
-            forms.alert(
-                "{} failed.\n\n{}\n\nFallback command path also failed:\n\n{}".format(
-                    action_text,
-                    exc,
-                    fallback_exc,
-                ),
-                title=TITLE,
-            )
-            return
+        except Exception as ui_exc:
+            if LinkElementId is None:
+                forms.alert(
+                    "{} failed.\n\n{}".format(action_text, ui_exc),
+                    title=TITLE,
+                )
+                return
+            try:
+                if not link_element_ids:
+                    link_element_ids = _build_link_element_ids_from_pairs(doc, matched_pairs)
+                if not link_element_ids:
+                    raise RuntimeError("No API-compatible linked element ids were available for fallback.")
+                with revit.Transaction("{} Existing Profiles".format(action_text)):
+                    _apply_visibility(view, link_element_ids, hide_mode)
+                apply_mode = "api"
+            except Exception as api_fallback_exc:
+                forms.alert(
+                    "{} failed.\n\nUI command error:\n{}\n\nAPI fallback error:\n{}".format(
+                        action_text,
+                        ui_exc,
+                        api_fallback_exc,
+                    ),
+                    title=TITLE,
+                )
+                return
+    else:
+        if not link_element_ids and LinkElementId is not None:
+            try:
+                link_element_ids = _build_link_element_ids_from_pairs(doc, matched_pairs)
+            except Exception:
+                link_element_ids = []
+        txn_name = "{} Existing Profiles".format(action_text)
+        try:
+            if not link_element_ids:
+                raise RuntimeError("No API-compatible linked element ids were available for visibility update.")
+            with revit.Transaction(txn_name):
+                _apply_visibility(view, link_element_ids, hide_mode)
+        except Exception as api_exc:
+            try:
+                refs = _build_link_references_from_pairs(doc, matched_pairs)
+                _post_visibility_command(revit.uidoc, refs, hide_mode)
+                apply_mode = "ui"
+            except Exception as ui_fallback_exc:
+                forms.alert(
+                    "{} failed.\n\nAPI error:\n{}\n\nUI fallback error:\n{}".format(
+                        action_text,
+                        api_exc,
+                        ui_fallback_exc,
+                    ),
+                    title=TITLE,
+                )
+                return
 
     _set_toggle_state(doc, hide_mode)
     if hide_mode:
