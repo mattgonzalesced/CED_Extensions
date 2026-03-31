@@ -7,7 +7,6 @@ exist as equipment profiles in the active YAML (stored in Extensible Storage).
 """
 
 import os
-import re
 import sys
 
 from pyrevit import forms, revit, script
@@ -16,10 +15,10 @@ import pyrevit.extensions as exts
 output = script.get_output()
 output.close_others()
 from Autodesk.Revit.DB import (
+    BuiltInCategory,
     ElementId,
     FamilyInstance,
     FilteredElementCollector,
-    Group,
     Reference,
     RevitLinkInstance,
 )
@@ -63,23 +62,19 @@ def _normalize_name(value):
     return " ".join(str(value).strip().lower().split())
 
 
-def _normalize_name_ignoring_default_suffix(value):
-    normalized = _normalize_name(value)
-    if not normalized:
+def _normalize_family_type_key(value):
+    text = _normalize_name(value)
+    if not text:
         return ""
-    cleaned = re.sub(
-        r"\s*:\s*(?:default(?:\s*\d+)?|defaulttype|default\s*type)$",
-        "",
-        normalized,
-        flags=re.IGNORECASE,
-    ).strip()
-    if ":" in cleaned:
-        left, right = cleaned.split(":", 1)
-        family = (left or "").strip()
-        type_name = (right or "").strip()
-        if family and (not type_name or type_name == family):
-            return family
-    return cleaned
+    # Normalize full-width colon and spacing around separator.
+    text = text.replace(u"\uff1a", ":")
+    if ":" in text:
+        left, right = text.split(":", 1)
+        left = left.strip()
+        right = right.strip()
+        if left and right:
+            return "{}:{}".format(left, right)
+    return text
 
 
 def _element_id_value(elem_id, default=None):
@@ -102,114 +97,294 @@ def _element_id_value(elem_id, default=None):
     return default
 
 
-def _build_label(elem):
-    if isinstance(elem, FamilyInstance):
-        symbol = getattr(elem, "Symbol", None)
-        family = getattr(symbol, "Family", None) if symbol else None
-        fam_name = getattr(family, "Name", None) if family else None
-        type_name = getattr(symbol, "Name", None) if symbol else None
-        if fam_name and type_name:
-            return u"{} : {}".format(fam_name, type_name)
-        if type_name:
-            return type_name
-        if fam_name:
-            return fam_name
-    try:
-        name = getattr(elem, "Name", None)
-        if name:
-            return name
-    except Exception:
-        pass
+def _family_type_label(elem):
+    if not isinstance(elem, FamilyInstance):
+        return ""
+    symbol = getattr(elem, "Symbol", None)
+    if symbol is None:
+        try:
+            type_id = elem.GetTypeId()
+        except Exception:
+            type_id = None
+        if type_id is not None:
+            try:
+                symbol = elem.Document.GetElement(type_id)
+            except Exception:
+                symbol = None
+    family = getattr(symbol, "Family", None) if symbol else None
+    fam_name = getattr(family, "Name", None) if family else None
+    type_name = getattr(symbol, "Name", None) if symbol else None
+    if not type_name and symbol is not None:
+        try:
+            type_name = getattr(elem, "Name", None)
+        except Exception:
+            type_name = None
+    if fam_name and type_name:
+        return u"{} : {}".format(fam_name, type_name)
     return ""
 
 
-def _name_variants(elem):
-    variants = set()
-    label = _build_label(elem)
-    if label:
-        variants.add(_normalize_name(label))
-        variants.add(_normalize_name_ignoring_default_suffix(label))
-    try:
-        raw_name = getattr(elem, "Name", None)
-        if raw_name:
-            variants.add(_normalize_name(raw_name))
-            variants.add(_normalize_name_ignoring_default_suffix(raw_name))
-    except Exception:
-        pass
-    return {value for value in variants if value}
+def _linked_name_candidates(elem):
+    candidates = []
+    family_type = _family_type_label(elem)
+    if family_type:
+        key = _normalize_family_type_key(family_type)
+        if key:
+            candidates.append(("family_type", family_type, key))
+    return candidates
 
 
-def _collect_profile_name_norms(data):
-    norms = set()
+def _match_profile_for_element(elem, profile_lookup):
+    for basis, raw_name, key in _linked_name_candidates(elem):
+        profiles = profile_lookup.get(key) or []
+        if profiles:
+            return profiles[0], raw_name, basis, key
+    return None, None, None, None
+
+
+def _collect_profile_name_lookup(data):
+    lookup = {}
+
+    def _add_profile_name(raw_value):
+        raw_text = (raw_value or "").strip()
+        if not raw_text:
+            return
+        normalized = _normalize_family_type_key(raw_text)
+        if not normalized:
+            return
+        existing = lookup.setdefault(normalized, [])
+        if raw_text not in existing:
+            existing.append(raw_text)
+
     for eq in data.get("equipment_definitions") or []:
         if not isinstance(eq, dict):
             continue
-        for raw in (eq.get("name"), eq.get("id")):
-            if not raw:
+        _add_profile_name(eq.get("name"))
+        linked_sets = eq.get("linked_sets") or []
+        if (not linked_sets) and isinstance(eq.get("linked_element_definitions"), list):
+            linked_sets = [{"linked_element_definitions": eq.get("linked_element_definitions")}]
+        for linked_set in linked_sets or []:
+            if not isinstance(linked_set, dict):
                 continue
-            normalized = _normalize_name(raw)
-            if normalized:
-                norms.add(normalized)
-            normalized_loose = _normalize_name_ignoring_default_suffix(raw)
-            if normalized_loose:
-                norms.add(normalized_loose)
-    return norms
+            for led in linked_set.get("linked_element_definitions") or []:
+                if not isinstance(led, dict):
+                    continue
+                _add_profile_name(led.get("label"))
+                _add_profile_name(led.get("name"))
+    return lookup
 
 
 def _iter_target_link_elements(link_doc):
-    for cls in (FamilyInstance, Group):
+    try:
+        collector = FilteredElementCollector(link_doc).OfClass(FamilyInstance).WhereElementIsNotElementType()
+    except Exception:
+        collector = []
+    target_cat_id = None
+    try:
+        target_cat_id = int(BuiltInCategory.OST_SpecialityEquipment)
+    except Exception:
+        target_cat_id = None
+    for elem in collector:
+        if target_cat_id is not None:
+            try:
+                cat = getattr(elem, "Category", None)
+                cat_id = _element_id_value(getattr(cat, "Id", None), default=None) if cat is not None else None
+            except Exception:
+                cat_id = None
+            if cat_id != target_cat_id:
+                continue
+        yield elem
+
+
+def _doc_key(doc):
+    if doc is None:
+        return None
+    path = None
+    title = None
+    hash_code = None
+    try:
+        path = doc.PathName
+    except Exception:
+        path = None
+    try:
+        title = doc.Title
+    except Exception:
+        title = None
+    try:
+        hash_code = doc.GetHashCode()
+    except Exception:
+        hash_code = None
+    return "{}||{}||{}".format(path or "", title or "", hash_code if hash_code is not None else "")
+
+
+def _iter_link_doc_chains(doc):
+    if doc is None:
+        return
+    root_key = _doc_key(doc)
+    start_seen = set([root_key]) if root_key else set()
+
+    def _walk(source_doc, chain, seen_keys):
         try:
-            collector = FilteredElementCollector(link_doc).OfClass(cls).WhereElementIsNotElementType()
+            link_instances = list(FilteredElementCollector(source_doc).OfClass(RevitLinkInstance))
         except Exception:
-            collector = []
-        for elem in collector:
-            yield elem
+            link_instances = []
+        for link_inst in link_instances:
+            try:
+                link_doc = link_inst.GetLinkDocument()
+            except Exception:
+                link_doc = None
+            if link_doc is None:
+                continue
+            key = _doc_key(link_doc)
+            if key and key in seen_keys:
+                continue
+            next_seen = set(seen_keys)
+            if key:
+                next_seen.add(key)
+            next_chain = list(chain)
+            next_chain.append(link_inst)
+            yield link_doc, next_chain
+            for nested in _walk(link_doc, next_chain, next_seen):
+                yield nested
+
+    for item in _walk(doc, [], start_seen):
+        yield item
 
 
-def _collect_matching_link_element_ids(doc, profile_norms):
+def _chain_ids_from_instances(link_chain):
+    chain_ids = []
+    for link_inst in link_chain or []:
+        link_id_int = _element_id_value(getattr(link_inst, "Id", None), default=None)
+        if link_id_int is None:
+            return None
+        chain_ids.append(int(link_id_int))
+    if not chain_ids:
+        return None
+    return tuple(chain_ids)
+
+
+def _normalize_target_entry(entry):
+    if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+        return None
+    chain_part, elem_part = entry
+    try:
+        elem_id_int = int(elem_part)
+    except Exception:
+        return None
+    if isinstance(chain_part, (list, tuple)):
+        chain_ids = []
+        for raw in chain_part:
+            try:
+                chain_ids.append(int(raw))
+            except Exception:
+                return None
+    else:
+        try:
+            chain_ids = [int(chain_part)]
+        except Exception:
+            return None
+    if not chain_ids:
+        return None
+    return (tuple(chain_ids), elem_id_int)
+
+
+def _has_nested_targets(targets):
+    for target in targets or []:
+        normalized = _normalize_target_entry(target)
+        if not normalized:
+            continue
+        chain_ids, _elem_id_int = normalized
+        if len(chain_ids) > 1:
+            return True
+    return False
+
+
+def _resolve_chain_instances(doc, chain_ids):
+    if doc is None or not chain_ids:
+        return None, None
+    current_doc = doc
+    chain_instances = []
+    for raw_link_id in chain_ids:
+        try:
+            link_id = ElementId(int(raw_link_id))
+        except Exception:
+            return None, None
+        try:
+            link_inst = current_doc.GetElement(link_id)
+        except Exception:
+            link_inst = None
+        if link_inst is None:
+            return None, None
+        chain_instances.append(link_inst)
+        try:
+            current_doc = link_inst.GetLinkDocument()
+        except Exception:
+            current_doc = None
+        if current_doc is None:
+            return None, None
+    return chain_instances, current_doc
+
+
+def _collect_matching_link_element_ids(doc, profile_lookup):
     link_element_ids = []
     matched_pairs = []
+    match_records = []
+    linked_name_samples = {}
     seen = set()
     scanned = 0
     matched = 0
     link_count = 0
 
-    try:
-        link_instances = list(FilteredElementCollector(doc).OfClass(RevitLinkInstance))
-    except Exception:
-        link_instances = []
-
-    for link_inst in link_instances:
-        try:
-            link_doc = link_inst.GetLinkDocument()
-        except Exception:
-            link_doc = None
-        if link_doc is None:
-            continue
+    for link_doc, link_chain in _iter_link_doc_chains(doc):
         link_count += 1
-        link_id_int = _element_id_value(getattr(link_inst, "Id", None), default=None)
-        if link_id_int is None:
+        chain_ids = _chain_ids_from_instances(link_chain)
+        if not chain_ids:
             continue
+        chain_names = []
+        for inst in link_chain or []:
+            try:
+                chain_names.append(getattr(inst, "Name", None) or "<link>")
+            except Exception:
+                chain_names.append("<link>")
+        chain_text = " > ".join(chain_names) if chain_names else "<link>"
+        link_doc_name = getattr(link_doc, "Title", None) or "<linked doc>"
+        is_direct = len(chain_ids) == 1
+        root_link_inst = link_chain[0] if link_chain else None
         for elem in _iter_target_link_elements(link_doc):
             scanned += 1
             elem_id_int = _element_id_value(getattr(elem, "Id", None), default=None)
             if elem_id_int is None:
                 continue
-            if not (_name_variants(elem) & profile_norms):
+            for _basis, raw_name, key in _linked_name_candidates(elem):
+                if key and key not in linked_name_samples:
+                    linked_name_samples[key] = raw_name
+            profile_name, matched_name, match_basis, matched_key = _match_profile_for_element(elem, profile_lookup)
+            if not profile_name:
                 continue
-            key = (link_id_int, elem_id_int)
+            key = (chain_ids, int(elem_id_int))
             if key in seen:
                 continue
             seen.add(key)
             matched_pairs.append(key)
-            if LinkElementId is not None:
+            match_records.append({
+                "chain_ids": chain_ids,
+                "chain_text": chain_text,
+                "linked_doc_name": link_doc_name,
+                "linked_element_id": int(elem_id_int),
+                "linked_name": matched_name,
+                "linked_family_type": _family_type_label(elem),
+                "match_basis": match_basis,
+                "match_key": matched_key,
+                "profile_name": profile_name,
+            })
+            if is_direct and LinkElementId is not None and root_link_inst is not None:
                 try:
-                    link_element_ids.append(LinkElementId(link_inst.Id, elem.Id))
+                    link_element_ids.append(LinkElementId(root_link_inst.Id, elem.Id))
                 except Exception:
                     pass
             matched += 1
 
-    return link_element_ids, matched_pairs, scanned, matched, link_count
+    return link_element_ids, matched_pairs, match_records, linked_name_samples, scanned, matched, link_count
 
 
 def _get_toggle_state(doc, default=False):
@@ -259,7 +434,15 @@ def _set_button_icon(is_on, script_cmp=None, ui_button_cmp=None):
 def _serialize_pairs(pairs):
     if not pairs:
         return ""
-    return ";".join(["{},{}".format(int(link_id), int(elem_id)) for link_id, elem_id in pairs])
+    encoded = []
+    for entry in pairs:
+        normalized = _normalize_target_entry(entry)
+        if not normalized:
+            continue
+        chain_ids, elem_id_int = normalized
+        chain_token = ">".join([str(int(link_id)) for link_id in chain_ids])
+        encoded.append("{}|{}".format(chain_token, int(elem_id_int)))
+    return ";".join(encoded)
 
 
 def _deserialize_pairs(raw):
@@ -268,13 +451,32 @@ def _deserialize_pairs(raw):
         return results
     for chunk in str(raw).split(";"):
         token = chunk.strip()
-        if not token or "," not in token:
+        if not token:
             continue
-        link_raw, elem_raw = token.split(",", 1)
+        if "|" in token:
+            chain_raw, elem_raw = token.split("|", 1)
+        elif "," in token:
+            # Backward-compatible legacy format: "link_id,elem_id"
+            chain_raw, elem_raw = token.split(",", 1)
+        else:
+            continue
+        chain_ids = []
+        for part in str(chain_raw).split(">"):
+            part = part.strip()
+            if not part:
+                continue
+            try:
+                chain_ids.append(int(part))
+            except Exception:
+                chain_ids = []
+                break
+        if not chain_ids:
+            continue
         try:
-            results.append((int(link_raw), int(elem_raw)))
+            elem_id_int = int(elem_raw)
         except Exception:
             continue
+        results.append((tuple(chain_ids), elem_id_int))
     return results
 
 
@@ -305,27 +507,19 @@ def _build_link_element_ids_from_pairs(doc, pairs):
     if not pairs:
         return []
 
-    link_map = {}
-    try:
-        link_instances = list(FilteredElementCollector(doc).OfClass(RevitLinkInstance))
-    except Exception:
-        link_instances = []
-    for link_inst in link_instances:
-        link_id_int = _element_id_value(getattr(link_inst, "Id", None), default=None)
-        if link_id_int is None or link_id_int in link_map:
-            continue
-        link_map[link_id_int] = link_inst
-
     results = []
     seen = set()
-    for link_id_int, elem_id_int in pairs:
-        link_inst = link_map.get(link_id_int)
-        if link_inst is None:
+    for entry in pairs:
+        normalized = _normalize_target_entry(entry)
+        if not normalized:
             continue
-        try:
-            link_doc = link_inst.GetLinkDocument()
-        except Exception:
-            link_doc = None
+        chain_ids, elem_id_int = normalized
+        if len(chain_ids) != 1:
+            continue
+        chain_instances, link_doc = _resolve_chain_instances(doc, chain_ids)
+        if not chain_instances or link_doc is None:
+            continue
+        link_inst = chain_instances[0]
         if link_doc is None:
             continue
         try:
@@ -334,7 +528,7 @@ def _build_link_element_ids_from_pairs(doc, pairs):
             linked_elem = None
         if linked_elem is None:
             continue
-        key = (int(link_id_int), int(elem_id_int))
+        key = (tuple(chain_ids), int(elem_id_int))
         if key in seen:
             continue
         seen.add(key)
@@ -348,27 +542,17 @@ def _build_link_element_ids_from_pairs(doc, pairs):
 def _build_link_references_from_pairs(doc, pairs):
     if not pairs:
         return []
-    link_map = {}
-    try:
-        link_instances = list(FilteredElementCollector(doc).OfClass(RevitLinkInstance))
-    except Exception:
-        link_instances = []
-    for link_inst in link_instances:
-        link_id_int = _element_id_value(getattr(link_inst, "Id", None), default=None)
-        if link_id_int is None or link_id_int in link_map:
-            continue
-        link_map[link_id_int] = link_inst
 
     refs = []
     seen = set()
-    for link_id_int, elem_id_int in pairs:
-        link_inst = link_map.get(link_id_int)
-        if link_inst is None:
+    for entry in pairs:
+        normalized = _normalize_target_entry(entry)
+        if not normalized:
             continue
-        try:
-            link_doc = link_inst.GetLinkDocument()
-        except Exception:
-            link_doc = None
+        chain_ids, elem_id_int = normalized
+        chain_instances, link_doc = _resolve_chain_instances(doc, chain_ids)
+        if not chain_instances or link_doc is None:
+            continue
         if link_doc is None:
             continue
         try:
@@ -377,15 +561,135 @@ def _build_link_references_from_pairs(doc, pairs):
             linked_elem = None
         if linked_elem is None:
             continue
-        key = (int(link_id_int), int(elem_id_int))
+        key = (tuple(chain_ids), int(elem_id_int))
         if key in seen:
             continue
         seen.add(key)
         try:
-            refs.append(Reference(linked_elem).CreateLinkReference(link_inst))
+            ref = Reference(linked_elem)
+            for link_inst in reversed(chain_instances):
+                ref = ref.CreateLinkReference(link_inst)
+            refs.append(ref)
         except Exception:
             continue
     return refs
+
+
+def _build_report_records_from_pairs(doc, pairs, profile_lookup):
+    records = []
+    seen = set()
+    for entry in pairs or []:
+        normalized = _normalize_target_entry(entry)
+        if not normalized:
+            continue
+        chain_ids, elem_id_int = normalized
+        key = (tuple(chain_ids), int(elem_id_int))
+        if key in seen:
+            continue
+        seen.add(key)
+
+        chain_instances, link_doc = _resolve_chain_instances(doc, chain_ids)
+        chain_names = []
+        for inst in chain_instances or []:
+            try:
+                chain_names.append(getattr(inst, "Name", None) or "<link>")
+            except Exception:
+                chain_names.append("<link>")
+        chain_text = " > ".join(chain_names) if chain_names else "<missing link path>"
+        link_doc_name = getattr(link_doc, "Title", None) if link_doc is not None else "<missing linked doc>"
+
+        linked_elem = None
+        if link_doc is not None:
+            try:
+                linked_elem = link_doc.GetElement(ElementId(int(elem_id_int)))
+            except Exception:
+                linked_elem = None
+
+        profile_name, matched_name, match_basis, matched_key = _match_profile_for_element(linked_elem, profile_lookup)
+        family_type = _family_type_label(linked_elem) if linked_elem is not None else ""
+
+        records.append({
+            "chain_ids": chain_ids,
+            "chain_text": chain_text,
+            "linked_doc_name": link_doc_name,
+            "linked_element_id": int(elem_id_int),
+            "linked_name": matched_name or family_type or "<missing family:type>",
+            "linked_family_type": family_type or "<missing family:type>",
+            "match_basis": match_basis or "<not resolved>",
+            "match_key": matched_key or "",
+            "profile_name": profile_name or "<profile name not resolved>",
+        })
+    return records
+
+
+def _print_match_report(action_text, apply_mode, yaml_label, records, scanned, link_count, matched):
+    output.print_md("### {} Report".format(TITLE))
+    output.print_md(
+        "- Action: **{}** | Apply mode: **{}** | YAML: **{}**".format(
+            action_text,
+            str(apply_mode or "").upper(),
+            yaml_label or "",
+        )
+    )
+    output.print_md(
+        "- Scope: YAML profile **name** compared against linked **Family : Type** only."
+    )
+    output.print_md("- Note: YAML lookup includes equipment profile names and linked definition labels.")
+    output.print_md(
+        "- Links scanned: **{}** | Elements scanned: **{}** | Matches: **{}**".format(
+            link_count,
+            scanned,
+            matched,
+        )
+    )
+    if not records:
+        output.print_md("_No matched linked elements to report._")
+        return
+
+    rows = []
+    for rec in records:
+        rows.append([
+            rec.get("profile_name") or "",
+            rec.get("linked_name") or "",
+            rec.get("linked_family_type") or "",
+            rec.get("match_basis") or "",
+            rec.get("linked_element_id"),
+            rec.get("linked_doc_name") or "",
+            rec.get("chain_text") or "",
+        ])
+    rows.sort(key=lambda item: (str(item[0]).lower(), str(item[1]).lower(), str(item[6]).lower(), int(item[4] or 0)))
+    output.print_table(
+        table_data=rows,
+        columns=["Profile Name", "Matched Linked Family : Type", "Linked Family : Type", "Match Basis", "Linked Element Id", "Linked Doc", "Link Path"],
+    )
+
+
+def _print_no_match_diagnostics(yaml_lookup, linked_name_samples):
+    yaml_keys = set(yaml_lookup.keys())
+    linked_keys = set(linked_name_samples.keys())
+    only_yaml = sorted(list(yaml_keys - linked_keys))
+    only_linked = sorted(list(linked_keys - yaml_keys))
+
+    output.print_md("### {} Diagnostics".format(TITLE))
+    output.print_md("- No matches found for strict linked `Family : Type` vs profile `name` matching.")
+    output.print_md("- YAML profile names loaded: **{}**".format(len(yaml_keys)))
+    output.print_md("- Unique linked Family : Type names scanned: **{}**".format(len(linked_keys)))
+
+    if only_yaml:
+        output.print_md("#### YAML Names Not Found In Linked Scan (sample)")
+        sample_rows = []
+        for key in only_yaml[:30]:
+            raw = (yaml_lookup.get(key) or [key])[0]
+            sample_rows.append([raw, key])
+        output.print_table(table_data=sample_rows, columns=["YAML Profile Name", "Normalized Key"])
+
+    if only_linked:
+        output.print_md("#### Linked Names Not Found In YAML (sample)")
+        sample_rows = []
+        for key in only_linked[:30]:
+            raw = linked_name_samples.get(key) or key
+            sample_rows.append([raw, key])
+        output.print_table(table_data=sample_rows, columns=["Linked Family : Type", "Normalized Key"])
 
 
 def _apply_visibility(view, link_element_ids, hide_mode):
@@ -462,8 +766,8 @@ def main():
         forms.alert("Failed to load active YAML data:\n\n{}".format(exc), title=TITLE)
         return
 
-    profile_norms = _collect_profile_name_norms(data)
-    if not profile_norms:
+    profile_lookup = _collect_profile_name_lookup(data)
+    if not profile_lookup:
         forms.alert("No equipment profile names were found in the active YAML.", title=TITLE)
         return
 
@@ -475,11 +779,15 @@ def main():
     matched = 0
     link_count = 0
     matched_pairs = []
+    match_records = []
+    linked_name_samples = {}
     link_element_ids = []
 
     if hide_mode:
         try:
-            link_element_ids, matched_pairs, scanned, matched, link_count = _collect_matching_link_element_ids(doc, profile_norms)
+            link_element_ids, matched_pairs, match_records, linked_name_samples, scanned, matched, link_count = _collect_matching_link_element_ids(doc, profile_lookup)
+            if _has_nested_targets(matched_pairs):
+                prefer_ui_mode = True
         except Exception as exc:
             forms.alert(
                 "Unable to collect linked elements for toggling:\n\n{}".format(exc),
@@ -491,6 +799,8 @@ def main():
         if stored_pairs:
             matched_pairs = list(stored_pairs)
             matched = len(matched_pairs)
+            if _has_nested_targets(matched_pairs):
+                prefer_ui_mode = True
             if not prefer_ui_mode:
                 try:
                     link_element_ids = _build_link_element_ids_from_pairs(doc, stored_pairs)
@@ -503,10 +813,14 @@ def main():
         needs_rescan = (not link_element_ids) and (not (prefer_ui_mode and matched_pairs))
         if needs_rescan:
             try:
-                coll_link_ids, coll_pairs, coll_scanned, coll_matched, coll_link_count = _collect_matching_link_element_ids(doc, profile_norms)
+                coll_link_ids, coll_pairs, coll_records, coll_linked_samples, coll_scanned, coll_matched, coll_link_count = _collect_matching_link_element_ids(doc, profile_lookup)
                 if not matched_pairs:
                     matched_pairs = coll_pairs
                     matched = coll_matched
+                    match_records = coll_records
+                    linked_name_samples = coll_linked_samples
+                    if _has_nested_targets(matched_pairs):
+                        prefer_ui_mode = True
                 scanned = coll_scanned
                 link_count = coll_link_count
                 if not prefer_ui_mode:
@@ -522,11 +836,12 @@ def main():
         _set_toggle_state(doc, False)
         _set_hidden_pairs(doc, [])
         _set_button_icon(False)
+        _print_no_match_diagnostics(profile_lookup, linked_name_samples)
         forms.alert(
-            "No linked elements matched active YAML profile names.\n\n"
+            "No linked Family : Type names matched YAML profile names.\n\n"
             "Links scanned: {}\n"
             "Elements scanned: {}\n"
-            "Matches: {}".format(link_count, scanned, matched),
+            "Matches: {}\n\nSee pyRevit output for mismatch diagnostics.".format(link_count, scanned, matched),
             title=TITLE,
         )
         return
@@ -599,9 +914,12 @@ def main():
     _set_button_icon(hide_mode)
     state_text = "ON (hidden)" if hide_mode else "OFF (visible)"
     yaml_label = get_yaml_display_name(data_path)
+    if not match_records:
+        match_records = _build_report_records_from_pairs(doc, matched_pairs, profile_lookup)
+    _print_match_report(action_text, apply_mode, yaml_label, match_records, scanned, link_count, matched)
     forms.show_balloon(
         TITLE,
-        "State: {}\nMatched linked elements: {}\nElements scanned: {}\nApply mode: {}\nYAML: {}".format(
+        "State: {}\nMatched linked elements: {}\nElements scanned: {}\nApply mode: {}\nYAML: {}\nReport: pyRevit output panel".format(
             state_text,
             matched,
             scanned,
