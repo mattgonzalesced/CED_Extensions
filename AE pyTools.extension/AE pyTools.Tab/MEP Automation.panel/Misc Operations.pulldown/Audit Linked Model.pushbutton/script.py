@@ -36,8 +36,8 @@ DIRECTION_TOKENS = {
     "left", "right", "lh", "rh", "l", "r", "lhs", "rhs", "left-hand", "right-hand",
 }
 VERSION_TOKEN_RE = re.compile(r"^v\\d+$", re.IGNORECASE)
-SEPARATORS_RE = re.compile(r"[_/\\\\-]+")
-NON_ALNUM_RE = re.compile(r"[^a-zA-Z0-9 ]+")
+SEPARATORS_RE = re.compile(r"[_/\\\\]+")
+NON_ALNUM_RE = re.compile(r"[^a-zA-Z0-9 -]+")
 MIN_PARTIAL_SCORE = 80.0
 MIN_COMMON_TOKENS = 2
 

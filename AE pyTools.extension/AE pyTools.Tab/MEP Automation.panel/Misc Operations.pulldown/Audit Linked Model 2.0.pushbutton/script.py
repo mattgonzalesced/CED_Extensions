@@ -37,8 +37,8 @@ DIRECTION_TOKENS = {
 }
 VERSION_TOKEN_RE = re.compile(r"^v\d+$", re.IGNORECASE)
 HAS_DIGIT_TOKEN_RE = re.compile(r".*\d")
-SEPARATORS_RE = re.compile(r"[_/\\\\-]+")
-NON_ALNUM_RE = re.compile(r"[^a-zA-Z0-9 ]+")
+SEPARATORS_RE = re.compile(r"[_/\\\\]+")
+NON_ALNUM_RE = re.compile(r"[^a-zA-Z0-9 -]+")
 MATCH_STOP_TOKENS = {"name"}
 MIN_PARTIAL_SCORE = 80.0
 MIN_COMMON_TOKENS = 1

@@ -1398,7 +1398,7 @@ def _normalize_key(value):
     value = (value or "").strip().lower()
     if not value:
         return ""
-    return "".join(ch for ch in value if ch.isalnum())
+    return "".join(ch for ch in value if ch.isalnum() or ch == "-")
 
 
 def _find_equipment_definition_by_name(data, name):
