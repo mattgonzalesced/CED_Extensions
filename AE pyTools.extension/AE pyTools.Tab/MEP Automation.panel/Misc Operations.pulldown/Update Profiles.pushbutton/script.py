@@ -508,7 +508,8 @@ def _save_active_yaml_data_safe(doc, data, action, description):
     """
     try:
         from ExtensibleStorage import ExtensibleStorage
-        from LogicClasses.profile_schema import dump_data_to_string
+        from LogicClasses.profile_schema import dump_data_to_string, load_data_from_text
+        from LogicClasses.truth_group_sync import synchronize_truth_groups
     except Exception:
         return save_active_yaml_data(doc, data, action, description)
     try:
@@ -517,6 +518,22 @@ def _save_active_yaml_data_safe(doc, data, action, description):
         return save_active_yaml_data(doc, data, action, description)
 
     logger.info("[Update Profiles] save start v=%s action=%s yaml=%s", _LOG_VERSION, action, yaml_path)
+    previous_data = None
+    try:
+        previous_data = load_data_from_text(prev_text or "", yaml_path)
+    except Exception:
+        previous_data = None
+    sync_report = None
+    try:
+        sync_report = synchronize_truth_groups(data, previous_data=previous_data)
+    except Exception as sync_exc:
+        logger.info("[Update Profiles] truth-group sync failed: %s", sync_exc)
+    if sync_report and sync_report.get("groups_with_conflicting_member_changes"):
+        raise RuntimeError(
+            "Conflicting truth-group member edits were detected during save. "
+            "Resolve the group edits, then save again."
+        )
+    logger.info("[Update Profiles] truth-sync report=%s", sync_report)
     _log_byte_hits("raw-data", data)
     _log_non_ascii_bytes("raw-data", data)
     changed_notes = _sanitize_text_notes_bytes(data)

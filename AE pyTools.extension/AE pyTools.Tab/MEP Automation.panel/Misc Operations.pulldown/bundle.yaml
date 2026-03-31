@@ -1,14 +1,16 @@
-layout:
+﻿layout:
   - Audit Linked Model
   - Audit Linked Model 2.0
   - Convert Schema
   - SchemaViewer
   - Place Annotations
   - Update Profiles
+  - Normalize Truth Groups
   - Write Element Linker
   - Place Spaces CSV
   - Audit CAD model 2.0 (batman)
   - Copy Import layers
   - Optimize
   - Update Vector
+
 

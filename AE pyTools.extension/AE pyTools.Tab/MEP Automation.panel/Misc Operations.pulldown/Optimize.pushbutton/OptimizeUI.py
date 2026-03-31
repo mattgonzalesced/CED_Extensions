@@ -9,6 +9,7 @@ Left panel  - Available family:types for the selected category.
 Right panel - Selected family:types (can come from any category).
               "Remove Selected" button removes the highlighted item.
 Bottom      - One rule row per selected type: Mode + Corner (Corner mode only).
+              Door mode includes adjustable distance from door in feet.
 """
 
 from pyrevit import forms
@@ -26,6 +27,7 @@ from System.Windows.Controls import (
     Grid,
     RowDefinition,
     TextBlock,
+    TextBox,
 )
 
 OPTIMIZATION_MODES = ["Wall", "Ceiling", "Floor", "Door", "Corner"]
@@ -49,9 +51,10 @@ class OptimizeWindow(forms.WPFWindow):
         self._category_map = category_map or {}
         self._mode_combos = {}    # ft_label -> ComboBox
         self._corner_combos = {}  # ft_label -> ComboBox
+        self._door_distance_boxes = {}  # ft_label -> TextBox
         self._adding = False      # re-entrancy guard for AvailableList events
         self.confirmed = False
-        self.rules = {}           # {ft_label: {"mode": str, "corner": str}}
+        self.rules = {}           # {ft_label: {"mode": str, "corner": str, "door_offset_ft": float}}
         self._init_controls()
 
     # ------------------------------------------------------------------
@@ -159,11 +162,35 @@ class OptimizeWindow(forms.WPFWindow):
         for ft_label, mode_combo in self._mode_combos.items():
             mode = str(mode_combo.SelectedItem) if mode_combo.SelectedItem else "Wall"
             corner = DEFAULT_CORNER
+            door_offset_ft = 1.0
             if mode == "Corner":
                 corner_combo = self._corner_combos.get(ft_label)
                 if corner_combo and corner_combo.SelectedItem:
                     corner = str(corner_combo.SelectedItem)
-            self.rules[ft_label] = {"mode": mode, "corner": corner}
+            elif mode == "Door":
+                dist_box = self._door_distance_boxes.get(ft_label)
+                raw_text = (dist_box.Text or "").strip() if dist_box is not None else ""
+                if not raw_text:
+                    raw_text = "1.0"
+                try:
+                    door_offset_ft = float(raw_text)
+                except Exception:
+                    forms.alert(
+                        "Invalid Door distance for:\n{}\n\nEnter a numeric value in feet.".format(ft_label),
+                        title="Optimize Element Placement",
+                    )
+                    return
+                if door_offset_ft < 0:
+                    forms.alert(
+                        "Door distance cannot be negative for:\n{}".format(ft_label),
+                        title="Optimize Element Placement",
+                    )
+                    return
+            self.rules[ft_label] = {
+                "mode": mode,
+                "corner": corner,
+                "door_offset_ft": door_offset_ft,
+            }
         self.confirmed = True
         self.Close()
 
@@ -174,6 +201,16 @@ class OptimizeWindow(forms.WPFWindow):
     # ------------------------------------------------------------------
     # Rules grid helpers
     # ------------------------------------------------------------------
+
+    def _default_mode_for_label(self, ft_label):
+        label = str(ft_label or "").lower()
+        if "wall" in label:
+            return "Wall"
+        if "drop" in label or "ceiling" in label:
+            return "Ceiling"
+        if "floor" in label:
+            return "Floor"
+        return "Wall"
 
     def _get_selected_types(self):
         """Return all labels currently in the Selected list."""
@@ -191,6 +228,7 @@ class OptimizeWindow(forms.WPFWindow):
         grid.ColumnDefinitions.Clear()
         self._mode_combos.clear()
         self._corner_combos.clear()
+        self._door_distance_boxes.clear()
 
     def _rebuild_rules_grid(self):
         self._clear_rules_grid()
@@ -201,8 +239,8 @@ class OptimizeWindow(forms.WPFWindow):
         if grid is None:
             return
 
-        # Three columns: label | mode | corner
-        for width in [280, 175, 160]:
+        # Four columns: label | mode | corner | door distance
+        for width in [280, 150, 160, 120]:
             col = ColumnDefinition()
             col.Width = GridLength(width, GridUnitType.Pixel)
             grid.ColumnDefinitions.Add(col)
@@ -211,7 +249,7 @@ class OptimizeWindow(forms.WPFWindow):
         hdr_row = RowDefinition()
         hdr_row.Height = GridLength(26, GridUnitType.Pixel)
         grid.RowDefinitions.Add(hdr_row)
-        for col_idx, title in enumerate(["Family : Type", "Mode", "Corner"]):
+        for col_idx, title in enumerate(["Family : Type", "Mode", "Corner", "Door Dist (ft)"]):
             cell = TextBlock()
             cell.Text = title
             cell.FontWeight = FontWeights.Bold
@@ -240,7 +278,8 @@ class OptimizeWindow(forms.WPFWindow):
             mode_combo.Margin = Thickness(0, 2, 6, 2)
             for mode in OPTIMIZATION_MODES:
                 mode_combo.Items.Add(mode)
-            mode_combo.SelectedIndex = 0
+            default_mode = self._default_mode_for_label(ft_label)
+            mode_combo.SelectedItem = default_mode
             mode_combo.Tag = ft_label
             mode_combo.SelectionChanged += self._on_mode_changed
             self._mode_combos[ft_label] = mode_combo
@@ -260,6 +299,16 @@ class OptimizeWindow(forms.WPFWindow):
             Grid.SetColumn(corner_combo, 2)
             grid.Children.Add(corner_combo)
 
+            # Door distance TextBox (hidden unless mode == Door)
+            dist_box = TextBox()
+            dist_box.Margin = Thickness(0, 2, 0, 2)
+            dist_box.Text = "1.0"
+            dist_box.Visibility = Visibility.Collapsed
+            self._door_distance_boxes[ft_label] = dist_box
+            Grid.SetRow(dist_box, row_idx)
+            Grid.SetColumn(dist_box, 3)
+            grid.Children.Add(dist_box)
+
     def _on_mode_changed(self, sender, args):
         try:
             ft_label = str(sender.Tag)
@@ -267,11 +316,17 @@ class OptimizeWindow(forms.WPFWindow):
             return
         selected_mode = sender.SelectedItem
         corner_combo = self._corner_combos.get(ft_label)
+        dist_box = self._door_distance_boxes.get(ft_label)
         if corner_combo is not None:
             if str(selected_mode) == "Corner":
                 corner_combo.Visibility = Visibility.Visible
             else:
                 corner_combo.Visibility = Visibility.Collapsed
+        if dist_box is not None:
+            if str(selected_mode) == "Door":
+                dist_box.Visibility = Visibility.Visible
+            else:
+                dist_box.Visibility = Visibility.Collapsed
 
     def _update_run_button(self):
         run_btn = self.FindName("RunButton")

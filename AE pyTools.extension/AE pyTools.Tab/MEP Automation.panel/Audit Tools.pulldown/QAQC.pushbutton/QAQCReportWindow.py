@@ -17,6 +17,7 @@ class QAQCReportWindow(forms.WPFWindow):
         select_child_callback=None,
         select_parent_callback=None,
         snap_callback=None,
+        adjust_callback=None,
     ):
         forms.WPFWindow.__init__(self, xaml_path)
 
@@ -24,6 +25,7 @@ class QAQCReportWindow(forms.WPFWindow):
         self._select_child_callback = select_child_callback
         self._select_parent_callback = select_parent_callback
         self._snap_callback = snap_callback
+        self._adjust_callback = adjust_callback
         self._button_meta = {}
 
         summary = self.FindName("SummaryText")
@@ -35,12 +37,20 @@ class QAQCReportWindow(forms.WPFWindow):
         self._build_tab("Tab3Grid", "Tab3Item", self._tab_rows.get("tab3") or [], "Original Parent Missing")
         self._build_tab("Tab4Grid", "Tab4Item", self._tab_rows.get("tab4") or [], "Parent Type Changed (Profile Exists)")
         self._build_tab("Tab5Grid", "Tab5Item", self._tab_rows.get("tab5") or [], "Parent Type Changed (No Profile)")
+        self._build_tab(
+            "Tab6Grid",
+            "Tab6Item",
+            self._tab_rows.get("tab6") or [],
+            "Far from Parent",
+            include_adjust=True,
+        )
 
         total_issues = (
             len(self._tab_rows.get("tab2") or [])
             + len(self._tab_rows.get("tab3") or [])
             + len(self._tab_rows.get("tab4") or [])
             + len(self._tab_rows.get("tab5") or [])
+            + len(self._tab_rows.get("tab6") or [])
         )
         footer = self.FindName("FooterText")
         if footer is not None:
@@ -50,16 +60,16 @@ class QAQCReportWindow(forms.WPFWindow):
         if close_btn is not None:
             close_btn.Click += self._on_close
 
-    def _build_tab(self, grid_name, tab_name, rows, title):
+    def _build_tab(self, grid_name, tab_name, rows, title, include_adjust=False):
         grid = self.FindName(grid_name)
         tab = self.FindName(tab_name)
         if tab is not None:
             tab.Header = "{} ({})".format(title, len(rows))
         if grid is None:
             return
-        self._build_grid(grid, rows)
+        self._build_grid(grid, rows, include_adjust=include_adjust)
 
-    def _build_grid(self, grid, rows):
+    def _build_grid(self, grid, rows, include_adjust=False):
         grid.Children.Clear()
         grid.RowDefinitions.Clear()
         grid.ColumnDefinitions.Clear()
@@ -73,6 +83,8 @@ class QAQCReportWindow(forms.WPFWindow):
             ("Select Parent", 105),
             ("Snap", 80),
         ]
+        if include_adjust:
+            columns.append(("Adjust", 90))
         for _title, width in columns:
             col = ColumnDefinition()
             col.Width = GridLength(width, GridUnitType.Pixel)
@@ -131,6 +143,13 @@ class QAQCReportWindow(forms.WPFWindow):
             parent_btn.Click += self._on_action
             snap_btn.Click += self._on_action
 
+            if include_adjust:
+                adjust_col = len(columns) - 1
+                adjust_btn = self._add_button_cell(grid, row_index, adjust_col, "Adjust")
+                self._button_meta[adjust_btn] = {"row": row, "kind": "adjust"}
+                adjust_btn.IsEnabled = bool(row.get("adjust_enabled"))
+                adjust_btn.Click += self._on_action
+
             row_index += 1
 
     def _add_text_cell(self, grid, row_index, col_index, text):
@@ -164,6 +183,9 @@ class QAQCReportWindow(forms.WPFWindow):
             return
         if kind == "snap" and self._snap_callback:
             self._snap_callback(row)
+            return
+        if kind == "adjust" and self._adjust_callback:
+            self._adjust_callback(row)
 
     def _on_close(self, sender, args):
         try:

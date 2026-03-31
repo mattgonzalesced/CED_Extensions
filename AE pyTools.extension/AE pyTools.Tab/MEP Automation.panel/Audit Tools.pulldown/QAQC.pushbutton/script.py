@@ -6,6 +6,7 @@ Sync-independent audit for YAML profile coverage and Element Linker integrity.
 """
 
 import imp
+import math
 import os
 import re
 import sys
@@ -17,8 +18,10 @@ from Autodesk.Revit.DB import (
     FilteredElementCollector,
     Group,
     RevitLinkInstance,
+    Transaction,
     XYZ,
 )
+from Autodesk.Revit.UI import ExternalEvent, IExternalEventHandler
 from System.Collections.Generic import List
 
 output = script.get_output()
@@ -27,6 +30,10 @@ output.close_others()
 TITLE = "QA/QC Relationship Audit"
 LOG = script.get_logger()
 _MODELLESS_WINDOW = None
+_FOLLOW_PARENT_MODULE = None
+_OPTIMIZE_MODULE = None
+_ADJUST_HANDLER = None
+_ADJUST_EXTERNAL_EVENT = None
 
 LIB_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib")
@@ -47,6 +54,8 @@ INLINE_LINKER_PATTERN = re.compile(
     r"Parent ElementId|Parent Element ID|LevelId|ElementId|FacingOrientation)\s*:\s*",
     re.IGNORECASE,
 )
+
+FAR_FROM_PARENT_THRESHOLD_FT = 10.0
 
 
 def _element_id_value(elem_id, default=None):
@@ -200,6 +209,23 @@ def _element_label(elem):
     return str(label)
 
 
+def _family_type_label(elem):
+    if elem is None:
+        return ""
+    if isinstance(elem, FamilyInstance):
+        symbol = _get_symbol(elem)
+        family = getattr(symbol, "Family", None) if symbol else None
+        family_name = getattr(family, "Name", None) if family else None
+        type_name = getattr(symbol, "Name", None) if symbol else None
+        if family_name and type_name:
+            return u"{} : {}".format(family_name, type_name)
+    try:
+        name = getattr(elem, "Name", None)
+    except Exception:
+        name = None
+    return str(name or "")
+
+
 def _get_element_point(elem):
     if elem is None:
         return None
@@ -227,6 +253,17 @@ def _get_element_point(elem):
         except Exception:
             return None
     return None
+
+
+def _xy_distance(point_a, point_b):
+    if point_a is None or point_b is None:
+        return None
+    try:
+        dx = float(point_a.X) - float(point_b.X)
+        dy = float(point_a.Y) - float(point_b.Y)
+    except Exception:
+        return None
+    return math.sqrt(dx * dx + dy * dy)
 
 
 def _transform_point(transform, point):
@@ -563,6 +600,7 @@ def _build_row(
     child_id=None,
     parent_id=None,
     snap_point=None,
+    adjust_enabled=False,
 ):
     return {
         "profile": profile or "",
@@ -572,6 +610,7 @@ def _build_row(
         "child_id": child_id,
         "parent_id": parent_id,
         "snap_point": snap_point,
+        "adjust_enabled": bool(adjust_enabled),
     }
 
 
@@ -613,6 +652,7 @@ def _build_issue_tabs(doc, data):
     tab3_rows = []
     tab4_rows = []
     tab5_rows = []
+    tab6_rows = []
 
     for profile_name in profiles:
         group_key = profile_to_group.get(profile_name) or profile_name
@@ -743,12 +783,58 @@ def _build_issue_tabs(doc, data):
                 )
             )
 
+    for record in placed_records:
+        child_id = record.get("child_id")
+        parent_id = record.get("parent_element_id")
+        if child_id is None or parent_id is None:
+            continue
+        candidates = by_parent_id.get(parent_id) or []
+        chosen = _pick_candidate(candidates)
+        if chosen is None:
+            continue
+
+        child_point = record.get("child_point") or record.get("payload_location")
+        current_parent_point = chosen.get("point")
+        stored_child_point = record.get("payload_location")
+        stored_parent_point = record.get("payload_parent_location")
+        if child_point is None or current_parent_point is None:
+            continue
+        if stored_child_point is None or stored_parent_point is None:
+            continue
+
+        actual_xy = _xy_distance(child_point, current_parent_point)
+        stored_xy = _xy_distance(stored_child_point, stored_parent_point)
+        if actual_xy is None or stored_xy is None:
+            continue
+        if actual_xy <= FAR_FROM_PARENT_THRESHOLD_FT:
+            continue
+        if stored_xy > FAR_FROM_PARENT_THRESHOLD_FT:
+            continue
+
+        profile_name = record.get("profile_name") or (record.get("host_name") or "<unknown profile>")
+        selectable_parent_id = parent_id if parent_id in host_parent_elements else None
+        tab6_rows.append(
+            _build_row(
+                profile=profile_name,
+                description=(
+                    "Current child-parent XY distance is {:.2f} ft, but stored XY offset is {:.2f} ft (<= {:.0f} ft)."
+                ).format(actual_xy, stored_xy, FAR_FROM_PARENT_THRESHOLD_FT),
+                parent_text=_candidate_text(chosen) or "Parent Id: {}".format(parent_id),
+                child_text=record.get("child_label") or "",
+                child_id=child_id,
+                parent_id=selectable_parent_id,
+                snap_point=child_point,
+                adjust_enabled=True,
+            )
+        )
+
     tabs = {
         "tab1": tab1_rows,
         "tab2": tab2_rows,
         "tab3": tab3_rows,
         "tab4": tab4_rows,
         "tab5": tab5_rows,
+        "tab6": tab6_rows,
     }
     meta = {
         "total_profiles": len(profiles),
@@ -828,8 +914,211 @@ def _load_window_module():
         return None
 
 
+class _AdjustExternalEventHandler(IExternalEventHandler):
+    def __init__(self):
+        self.child_id = None
+
+    def GetName(self):
+        return "QAQC Adjust External Event"
+
+    def request(self, child_id):
+        self.child_id = child_id
+
+    def Execute(self, uiapp):
+        child_id = self.child_id
+        self.child_id = None
+        uidoc = getattr(uiapp, "ActiveUIDocument", None)
+        doc = getattr(uidoc, "Document", None) if uidoc else None
+        ok, message = _adjust_element(doc, child_id)
+        try:
+            forms.alert(message, title="{} - Adjust".format(TITLE))
+        except Exception:
+            LOG.warning("[QAQC Adjust] %s", message)
+        if ok and uidoc is not None and child_id not in (None, ""):
+            try:
+                ids = List[ElementId]()
+                ids.Add(ElementId(int(child_id)))
+                uidoc.Selection.SetElementIds(ids)
+                uidoc.ShowElements(ids)
+            except Exception:
+                pass
+
+
+def _ensure_adjust_external_event():
+    global _ADJUST_HANDLER, _ADJUST_EXTERNAL_EVENT
+    if _ADJUST_HANDLER is not None and _ADJUST_EXTERNAL_EVENT is not None:
+        return True
+    try:
+        _ADJUST_HANDLER = _AdjustExternalEventHandler()
+        _ADJUST_EXTERNAL_EVENT = ExternalEvent.Create(_ADJUST_HANDLER)
+        return True
+    except Exception as exc:
+        _ADJUST_HANDLER = None
+        _ADJUST_EXTERNAL_EVENT = None
+        LOG.warning("Failed to create QAQC adjust external event: %s", exc)
+        return False
+
+
+def _load_follow_parent_module():
+    global _FOLLOW_PARENT_MODULE
+    if _FOLLOW_PARENT_MODULE is not None:
+        return _FOLLOW_PARENT_MODULE
+    module_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "Follow Parent.pushbutton", "script.py")
+    )
+    if not os.path.exists(module_path):
+        return None
+    try:
+        _FOLLOW_PARENT_MODULE = imp.load_source("ced_follow_parent_runtime", module_path)
+    except Exception as exc:
+        LOG.warning("Failed to load Follow Parent module: %s", exc)
+        _FOLLOW_PARENT_MODULE = None
+    return _FOLLOW_PARENT_MODULE
+
+
+def _load_optimize_module():
+    global _OPTIMIZE_MODULE
+    if _OPTIMIZE_MODULE is not None:
+        return _OPTIMIZE_MODULE
+    module_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "Misc Operations.pulldown",
+            "Optimize.pushbutton",
+            "script.py",
+        )
+    )
+    if not os.path.exists(module_path):
+        return None
+    try:
+        _OPTIMIZE_MODULE = imp.load_source("ced_optimize_runtime", module_path)
+    except Exception as exc:
+        LOG.warning("Failed to load Optimize module: %s", exc)
+        _OPTIMIZE_MODULE = None
+    return _OPTIMIZE_MODULE
+
+
+def _get_optimize_mode_for_element(elem):
+    label = (_family_type_label(elem) or "").lower()
+    if "wall" in label:
+        return "Wall"
+    if "drop" in label or "ceiling" in label:
+        return "Ceiling"
+    if "floor" in label:
+        return "Floor"
+    return None
+
+
+def _run_follow_parent_for_element(doc, elem, follow_module):
+    payload_text = follow_module._get_linker_text(elem)
+    if not payload_text:
+        return False, "Element_Linker payload is blank."
+
+    payload = follow_module._parse_linker_payload(payload_text)
+    parent_id = (payload or {}).get("parent_element_id")
+    if parent_id is None:
+        return False, "Parent ElementId was not found in Element_Linker."
+
+    parent_candidates = follow_module._collect_parent_candidates_for_ids(doc, {parent_id})
+    candidates = parent_candidates.get(parent_id) or []
+    parent_choice = follow_module._choose_parent_candidate(payload, candidates)
+    if parent_choice is None:
+        return False, "Parent element could not be resolved."
+
+    child_point_old = payload.get("location") or follow_module._get_point(elem)
+    parent_point_old = payload.get("parent_location") or parent_choice.get("point")
+    parent_point_new = parent_choice.get("point")
+    if child_point_old is None or parent_point_old is None or parent_point_new is None:
+        return False, "Required location data is missing."
+
+    parent_rot_old = payload.get("parent_rotation_deg")
+    if parent_rot_old is None:
+        parent_rot_old = parent_choice.get("rotation_deg") or 0.0
+
+    child_rot_old = payload.get("rotation_deg")
+    if child_rot_old is None:
+        child_rot_old = follow_module._get_rotation_degrees(elem)
+
+    local_offset_old = follow_module._rotate_xy(child_point_old - parent_point_old, -parent_rot_old)
+    rotation_offset_old = follow_module._normalize_angle(child_rot_old - parent_rot_old)
+
+    parent_rot_new = parent_choice.get("rotation_deg") or parent_rot_old
+    target_point = parent_point_new + follow_module._rotate_xy(local_offset_old, parent_rot_new)
+    target_rot = parent_rot_new + rotation_offset_old
+
+    moved, rotated = follow_module._move_and_rotate_child(doc, elem, target_point, target_rot)
+    payload_text_new = follow_module._build_linker_payload(
+        payload,
+        elem,
+        target_point,
+        target_rot,
+        parent_point_new,
+        parent_rot_new,
+        parent_id,
+    )
+    payload_updated = follow_module._set_linker_text(elem, payload_text_new)
+    return True, "follow moved={}, rotated={}, payload_updated={}".format(
+        bool(moved), bool(rotated), bool(payload_updated)
+    )
+
+
+def _run_optimize_for_element(doc, elem, optimize_module, mode):
+    if not mode:
+        return False, "no optimize mode matched"
+    try:
+        ok = bool(optimize_module._apply_optimization(doc, elem, mode, "Lower Left"))
+    except Exception as exc:
+        return False, "optimize {} error: {}".format(mode, exc)
+    if ok:
+        return True, "optimize {} succeeded".format(mode)
+    return False, "optimize {} did not move element".format(mode)
+
+
+def _adjust_element(doc, child_id):
+    if doc is None:
+        return False, "No active document available for adjust."
+    if child_id in (None, ""):
+        return False, "Child element id is missing."
+    try:
+        elem = doc.GetElement(ElementId(int(child_id)))
+    except Exception:
+        elem = None
+    if elem is None:
+        return False, "Child element no longer exists."
+
+    follow_module = _load_follow_parent_module()
+    if follow_module is None:
+        return False, "Follow Parent module could not be loaded."
+    optimize_module = _load_optimize_module()
+    if optimize_module is None:
+        return False, "Optimize module could not be loaded."
+
+    mode = _get_optimize_mode_for_element(elem)
+    txn = Transaction(doc, "QAQC Adjust Element {}".format(int(child_id)))
+    try:
+        txn.Start()
+        follow_ok, follow_msg = _run_follow_parent_for_element(doc, elem, follow_module)
+        optimize_ok, optimize_msg = _run_optimize_for_element(doc, elem, optimize_module, mode)
+        txn.Commit()
+    except Exception as exc:
+        try:
+            txn.RollBack()
+        except Exception:
+            pass
+        return False, "Adjust failed: {}".format(exc)
+
+    lines = [
+        "Child Id {}.".format(int(child_id)),
+        "Follow Parent: {}".format(follow_msg),
+        "Optimize: {}".format(optimize_msg),
+    ]
+    return bool(follow_ok or optimize_ok), "\n".join(lines)
+
+
 def main():
-    global _MODELLESS_WINDOW
+    global _MODELLESS_WINDOW, _ADJUST_HANDLER, _ADJUST_EXTERNAL_EVENT
     doc = getattr(revit, "doc", None)
     if doc is None:
         forms.alert("No active document detected.", title=TITLE)
@@ -837,6 +1126,11 @@ def main():
     if getattr(doc, "IsFamilyDocument", False):
         forms.alert("Open a project document before running QA/QC.", title=TITLE)
         return
+    if not _ensure_adjust_external_event():
+        forms.alert(
+            "Could not initialize modeless adjust event. Adjust actions will be unavailable.",
+            title=TITLE,
+        )
 
     try:
         data_path, data = load_active_yaml_data(doc)
@@ -853,6 +1147,7 @@ def main():
         + len(tabs.get("tab3") or [])
         + len(tabs.get("tab4") or [])
         + len(tabs.get("tab5") or [])
+        + len(tabs.get("tab6") or [])
     )
     yaml_label = get_yaml_display_name(data_path)
 
@@ -878,6 +1173,7 @@ def main():
             "3) Placed profile parent ID no longer exists: {}".format(len(tabs.get("tab3") or [])),
             "4) Parent changed type and matching profile exists: {}".format(len(tabs.get("tab4") or [])),
             "5) Parent changed type and matching profile missing: {}".format(len(tabs.get("tab5") or [])),
+            "6) Far from Parent: {}".format(len(tabs.get("tab6") or [])),
         ]
         forms.alert("\n".join(lines), title=TITLE)
         return
@@ -901,6 +1197,23 @@ def main():
         if not _zoom_to_point(point):
             forms.alert("Could not snap to location for this row.", title=TITLE)
 
+    def _on_adjust(row):
+        child_id = (row or {}).get("child_id")
+        if child_id in (None, ""):
+            forms.alert("No child element id found for this row.", title="{} - Adjust".format(TITLE))
+            return
+        if _ADJUST_HANDLER is None or _ADJUST_EXTERNAL_EVENT is None:
+            ok, message = _adjust_element(doc, child_id)
+            forms.alert(message, title="{} - Adjust".format(TITLE))
+            if ok:
+                _select_element(child_id)
+            return
+        try:
+            _ADJUST_HANDLER.request(child_id)
+            _ADJUST_EXTERNAL_EVENT.Raise()
+        except Exception as exc:
+            forms.alert("Failed to queue adjust request:\n\n{}".format(exc), title="{} - Adjust".format(TITLE))
+
     window = ui_module.QAQCReportWindow(
         xaml_path=xaml_path,
         tab_rows=tabs,
@@ -908,6 +1221,7 @@ def main():
         select_child_callback=_on_select_child,
         select_parent_callback=_on_select_parent,
         snap_callback=_on_snap,
+        adjust_callback=_on_adjust,
     )
     # Keep a module-level reference so the modeless window stays alive.
     if _MODELLESS_WINDOW is not None:

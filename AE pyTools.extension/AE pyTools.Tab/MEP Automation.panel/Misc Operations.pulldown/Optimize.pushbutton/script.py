@@ -1238,9 +1238,9 @@ def _optimize_floor(doc, elem):
 # Optimization: Door
 # ---------------------------------------------------------------------------
 
-def _optimize_door(doc, elem):
+def _optimize_door(doc, elem, door_offset_ft=DOOR_OFFSET_FT):
     """
-    Place the element 1 ft from the nearest door (host or linked),
+    Place the element at a configurable distance from the nearest door (host or linked),
     at 4 ft elevation from the associated level.
     """
     pt = _get_point(elem)
@@ -1272,8 +1272,8 @@ def _optimize_door(doc, elem):
             pass
 
     target_pt = XYZ(
-        door_pt.X + facing_dir.X * DOOR_OFFSET_FT,
-        door_pt.Y + facing_dir.Y * DOOR_OFFSET_FT,
+        door_pt.X + facing_dir.X * float(door_offset_ft),
+        door_pt.Y + facing_dir.Y * float(door_offset_ft),
         level_elev + DOOR_HEIGHT_FT,
     )
 
@@ -2182,7 +2182,7 @@ def _optimize_corner(doc, elem, corner="Lower Left"):
 # Dispatch
 # ---------------------------------------------------------------------------
 
-def _apply_optimization(doc, elem, mode, corner="Lower Left"):
+def _apply_optimization(doc, elem, mode, corner="Lower Left", door_offset_ft=DOOR_OFFSET_FT):
     if mode == "Wall":
         return _optimize_wall(doc, elem)
     elif mode == "Ceiling":
@@ -2190,7 +2190,7 @@ def _apply_optimization(doc, elem, mode, corner="Lower Left"):
     elif mode == "Floor":
         return _optimize_floor(doc, elem)
     elif mode == "Door":
-        return _optimize_door(doc, elem)
+        return _optimize_door(doc, elem, door_offset_ft=door_offset_ft)
     elif mode == "Corner":
         return _optimize_corner(doc, elem, corner)
     return False
@@ -2345,6 +2345,7 @@ def main():
         for ft_label, rule in window.rules.items():
             mode = rule.get("mode", "Wall")
             corner = rule.get("corner", "Lower Left")
+            door_offset_ft = rule.get("door_offset_ft", DOOR_OFFSET_FT)
             elems_for_type = label_to_elems.get(ft_label, [])
             if mode == "Corner":
                 # Group by container so paired elements alternate corners
@@ -2363,7 +2364,13 @@ def main():
                             continue
                         effective_corner = _corner_for_group(corner, idx, len(group_elems))
                         try:
-                            ok = _apply_optimization(doc, elem, mode, effective_corner)
+                            ok = _apply_optimization(
+                                doc,
+                                elem,
+                                mode,
+                                effective_corner,
+                                door_offset_ft=door_offset_ft,
+                            )
                             if ok:
                                 stats["succeeded"] += 1
                             else:
@@ -2396,7 +2403,13 @@ def main():
                         )
                         continue
                     try:
-                        ok = _apply_optimization(doc, elem, mode, corner)
+                        ok = _apply_optimization(
+                            doc,
+                            elem,
+                            mode,
+                            corner,
+                            door_offset_ft=door_offset_ft,
+                        )
                         if ok:
                             stats["succeeded"] += 1
                         else:

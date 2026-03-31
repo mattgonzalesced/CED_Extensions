@@ -10,6 +10,7 @@ import hashlib
 from pyrevit import revit, script
 
 from LogicClasses.profile_schema import load_data_from_text, dump_data_to_string  # noqa: E402
+from LogicClasses.truth_group_sync import synchronize_truth_groups  # noqa: E402
 from ExtensibleStorage import ExtensibleStorage  # noqa: E402
 
 _ACTIVE_CACHE = None
@@ -92,6 +93,11 @@ def load_active_yaml_data(doc=None):
         except Exception:
             pass
         raise
+    try:
+        synchronize_truth_groups(data, previous_data=None)
+    except Exception:
+        # Do not block load if sync cannot run; save-time sync still enforces consistency.
+        pass
     logger = script.get_logger()
     logger.info("[YAML Storage] loaded equipment definitions: %s | snippet=%s", [eq.get("name") or eq.get("id") for eq in data.get("equipment_definitions") or [] if isinstance(eq, dict)], _extract_led_snippet(text))
     _ACTIVE_CACHE = {
@@ -108,10 +114,32 @@ def save_active_yaml_data(doc, data, action, description):
     if doc is None:
         raise RuntimeError("No active document detected.")
     path, text = load_active_yaml_text(doc)
+    previous_data = None
+    try:
+        previous_data = load_data_from_text(_sanitize_hash_keys(text or ""), path)
+    except Exception:
+        previous_data = None
+    sync_report = None
+    try:
+        sync_report = synchronize_truth_groups(data, previous_data=previous_data)
+    except Exception as sync_exc:
+        logger = script.get_logger()
+        logger.warning("[YAML Storage] truth-group sync failed: %s", sync_exc)
+    if sync_report and sync_report.get("groups_with_conflicting_member_changes"):
+        raise RuntimeError(
+            "Conflicting truth-group member edits were detected during save. "
+            "Resolve the group edits, then save again."
+        )
     new_text = dump_data_to_string(data)
     logger = script.get_logger()
     snippet = _extract_led_snippet(new_text)
-    logger.info("[YAML Storage] saving action=%s len=%s snippet=%s", action, len(new_text or ""), snippet)
+    logger.info(
+        "[YAML Storage] saving action=%s len=%s snippet=%s truth_sync=%s",
+        action,
+        len(new_text or ""),
+        snippet,
+        sync_report,
+    )
     if new_text == text:
         return
     ExtensibleStorage.update_active_yaml(doc, path, text, new_text, action, description)
@@ -127,6 +155,10 @@ def refresh_active_yaml_snapshot(doc, yaml_path, data):
     doc = _get_doc(doc)
     if doc is None:
         raise RuntimeError("No active document detected.")
+    try:
+        synchronize_truth_groups(data, previous_data=None)
+    except Exception:
+        pass
     new_text = dump_data_to_string(data)
     ExtensibleStorage.update_active_text_only(doc, yaml_path, new_text)
     global _ACTIVE_CACHE
@@ -149,6 +181,27 @@ def seed_active_yaml(doc, yaml_path, raw_text):
         "digest": _text_digest(sanitized),
         "data": None,
     }
+
+
+def normalize_active_yaml_truth_groups(doc=None, action="Normalize Truth Groups"):
+    """
+    One-shot normalization for existing active YAML data.
+    Returns (yaml_path, report, saved_bool).
+    """
+    target_doc = _get_doc(doc)
+    if target_doc is None:
+        raise RuntimeError("No active document detected.")
+    yaml_path, data = load_active_yaml_data(target_doc)
+    report = synchronize_truth_groups(data, previous_data=None)
+    if not report.get("changed"):
+        return yaml_path, report, False
+    save_active_yaml_data(
+        target_doc,
+        data,
+        action,
+        "Normalized truth-group metadata and synchronized grouped profile payloads",
+    )
+    return yaml_path, report, True
 
 
 def _text_digest(text):

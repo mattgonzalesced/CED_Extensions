@@ -1,0 +1,6 @@
+﻿title: Normalize Truth Groups
+tooltip: |
+  Run a one-time normalization pass on the active YAML truth groups.
+  Synchronizes grouped profile payloads, repairs truth-source metadata,
+  and saves only when changes are required.
+is_beta: false

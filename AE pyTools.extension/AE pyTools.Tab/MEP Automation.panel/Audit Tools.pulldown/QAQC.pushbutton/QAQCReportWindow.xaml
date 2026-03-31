@@ -51,6 +51,13 @@
           <Grid Name="Tab5Grid" Margin="0,4,0,0"/>
         </ScrollViewer>
       </TabItem>
+
+      <TabItem Name="Tab6Item" Header="6. Far from Parent">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+          <Grid Name="Tab6Grid" Margin="0,4,0,0"/>
+        </ScrollViewer>
+      </TabItem>
     </TabControl>
 
     <StackPanel Grid.Row="2"
