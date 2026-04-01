@@ -100,7 +100,7 @@
       <StackPanel Grid.Column="0" Orientation="Vertical" VerticalAlignment="Top">
         <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
           <Button Style="{DynamicResource CED.Button.Base}" Content="Check All" Width="76" Height="24" Click="check_all_clicked"/>
-          <Button Style="{DynamicResource CED.Button.Base}" Content="Uncheck All" Width="84" Height="24" Margin="6,0,0,0" Click="uncheck_all_clicked"/>
+          <Button Style="{DynamicResource CED.Button.Base}" Content="Check None" Width="84" Height="24" Margin="6,0,0,0" Click="uncheck_all_clicked"/>
           <Border Width="1" Height="20" Margin="14,2,14,0" Background="{DynamicResource CED.Brush.SectionDivider}" VerticalAlignment="Top"/>
           <Button Name="AddButton" Style="{DynamicResource CED.Button.Base}" Content="Add" Width="72" Height="24" VerticalAlignment="Top" Click="add_clicked"/>
           <Button Name="RemoveButton" Style="{DynamicResource CED.Button.Base}" Content="Remove" Width="72" Height="24" Margin="6,0,0,0" VerticalAlignment="Top" Click="remove_clicked"/>

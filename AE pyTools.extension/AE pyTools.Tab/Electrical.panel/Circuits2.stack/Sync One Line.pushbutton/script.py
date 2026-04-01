@@ -1,22 +1,16 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 # IRONPYTHON 2.7 COMPATIBLE (no f-strings, no .format usage)
 from pyrevit import revit, DB, script, forms
-from pyrevit.compat import get_elementid_value_func, get_elementid_from_value_func
+
+from Snippets import revit_helpers
 
 logger = script.get_logger()
-_get_elid_value = get_elementid_value_func()
-_get_elid_from_value = get_elementid_from_value_func()
-
-
 def _idval(item):
-    try:
-        return int(_get_elid_value(item))
-    except Exception:
-        return int(getattr(item, "IntegerValue", 0))
+    return int(revit_helpers.get_elementid_value(item))
 
 
 def _idfrom(value):
-    return _get_elid_from_value(int(value))
+    return revit_helpers.elementid_from_value(value)
 
 # ----------------------------------------------------------------------
 # SOURCE: The circuit/panel data is read from Revit elements:
@@ -43,7 +37,7 @@ DEVICE_CATEGORY_IDS = [
 ]
 
 # Circuit built-in param -> we store them in a dictionary so we can quickly read
-# Then we map them to detail param names that we’ll set.
+# Then we map them to detail param names that weâ€™ll set.
 # Key here is "DetailParamName" : "BuiltInParamOnCircuit"
 CIRCUIT_VALUE_MAP = {
     "x VD Schedule": "x VD Schedule",
@@ -146,7 +140,7 @@ def get_model_param_value(elem, param_key, allow_type_fallback=True):
 
 def get_detail_param_value(elem, param_name):
     """
-    Read a string/int/double from the detail item’s custom param param_name. Return None if not found or empty.
+    Read a string/int/double from the detail itemâ€™s custom param param_name. Return None if not found or empty.
     """
     p = elem.LookupParameter(param_name)
     if not p:
@@ -167,7 +161,7 @@ def get_detail_param_value(elem, param_name):
 
 def set_detail_param_value(elem, param_name, new_value):
     """
-    Sets the detail item’s param_name to str(new_value).
+    Sets the detail itemâ€™s param_name to str(new_value).
     """
     p = elem.LookupParameter(param_name)
     if not p:
@@ -462,7 +456,7 @@ def resolve_panels(panel_map, circuited_panel_names):
 
     for panel_name, candidates in panel_map.items():
 
-        # Single panel — always valid
+        # Single panel â€” always valid
         if len(candidates) == 1:
             pdata = candidates[0]
             resolved[panel_name] = {
@@ -594,7 +588,7 @@ def reconcile_panel_identity_from_circuit(
         return False
 
     # -------------------------
-    # ✅ NEW GUARDRAIL: ignore Spare / Space circuits
+    # âœ… NEW GUARDRAIL: ignore Spare / Space circuits
     # -------------------------
     if _is_spare_or_space_circuit(circuit_elem):
         return False
@@ -754,7 +748,7 @@ def _build_output_summary(detail_items, circuit_map, panel_map, panel_map_by_id,
             rejected_ids = dupdata.get("rejected", [])
             if rejected_ids:
                 unmapped_panels.append({
-                    "name": panel_name + " (Duplicate Name – Not Used)",
+                    "name": panel_name + " (Duplicate Name â€“ Not Used)",
                     "ids": rejected_ids
                 })
 
@@ -771,7 +765,7 @@ def _render_summary(equipment_rows, circuit_rows, unmapped_details, unmapped_pan
 
     # Duplicate-name conflicts (your "bigger problem" text stays)
     if failed_panels:
-        output.print_md("### ⚠ Duplicate Panel Name Conflicts")
+        output.print_md("### âš  Duplicate Panel Name Conflicts")
         for panel_name in sorted(failed_panels.keys(), key=lambda x: x.upper()):
             data = failed_panels.get(panel_name, {})
             used_id = data.get("used")
@@ -1029,3 +1023,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

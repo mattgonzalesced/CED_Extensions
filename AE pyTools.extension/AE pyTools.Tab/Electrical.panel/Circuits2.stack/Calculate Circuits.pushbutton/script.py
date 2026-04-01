@@ -1,22 +1,16 @@
 ﻿# -*- coding: utf-8 -*-
 
 from pyrevit import forms, revit, DB, script
-from pyrevit.compat import get_elementid_value_func
 
 from CEDElectrical.Application.dto.operation_request import OperationRequest
 from CEDElectrical.Application.services.operation_runner import build_default_runner
 from Snippets import _elecutils as eu
+from Snippets import revit_helpers
 
 doc = revit.doc
 logger = script.get_logger()
-_get_elid_value = get_elementid_value_func()
-
-
 def _idval(item):
-    try:
-        return int(_get_elid_value(item))
-    except Exception:
-        return int(getattr(item, "IntegerValue", 0))
+    return int(revit_helpers.get_elementid_value(item))
 
 
 def _collect_target_circuit_ids(doc):
@@ -55,3 +49,4 @@ def main():
 
 
 main()
+

@@ -95,7 +95,7 @@
         <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
           <StackPanel Orientation="Horizontal">
             <Button Style="{DynamicResource CED.Button.Base}" Content="Check All" Width="86" Height="28" Click="check_all_clicked"/>
-            <Button Style="{DynamicResource CED.Button.Base}" Content="Uncheck All" Width="94" Height="28" Margin="6,0,0,0" Click="uncheck_all_clicked"/>
+            <Button Style="{DynamicResource CED.Button.Base}" Content="Check None" Width="94" Height="28" Margin="6,0,0,0" Click="uncheck_all_clicked"/>
           </StackPanel>
           <TextBlock Name="CheckedStatusText" Margin="2,4,0,0" Style="{DynamicResource CED.Text.Secondary}" Text="0 of 0 checked"/>
         </StackPanel>

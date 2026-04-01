@@ -8,7 +8,7 @@
   </Style>
 
   <Style x:Key="CED.SearchBox.Input" TargetType="TextBox">
-    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.NeutralDark}"/>
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
     <Setter Property="Padding" Value="6,3"/>
     <Setter Property="Height" Value="22"/>
     <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -31,8 +31,43 @@
     <Setter Property="Padding" Value="{DynamicResource CED.Thickness.IconButtonPadding}"/>
     <Setter Property="Focusable" Value="False"/>
     <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.IconMuted}"/>
     <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
     <Setter Property="BorderThickness" Value="0"/>
     <Setter Property="Margin" Value="2,0,2,0"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Root"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="{DynamicResource CED.CornerRadius.Control}"
+                  SnapsToDevicePixels="True">
+            <Grid>
+              <ContentPresenter Margin="{TemplateBinding Padding}"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                RecognizesAccessKey="True"/>
+              <Border x:Name="StateOverlay"
+                      CornerRadius="{DynamicResource CED.CornerRadius.Control}"
+                      Background="Transparent"/>
+            </Grid>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="StateOverlay" Property="Background" Value="{DynamicResource CED.Brush.ButtonStateOverlayHover}"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+              <Setter TargetName="StateOverlay" Property="Background" Value="{DynamicResource CED.Brush.ButtonStateOverlayPressed}"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter TargetName="Root" Property="Opacity" Value="0.55"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
   </Style>
 </ResourceDictionary>

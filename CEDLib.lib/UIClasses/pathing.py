@@ -61,3 +61,51 @@ def resolve_ui_resources_root(lib_root):
     if os.path.isdir(resources_root):
         return resources_root
     return None
+
+
+def resolve_start_dir(module_name=None, fallback_dir=None):
+    """Resolve absolute start directory for a module name or fallback path."""
+    module = None
+    if module_name:
+        try:
+            module = sys.modules.get(module_name)
+        except Exception:
+            module = None
+    module_file = getattr(module, "__file__", None) if module is not None else None
+    if module_file:
+        try:
+            return os.path.abspath(os.path.dirname(module_file))
+        except Exception:
+            pass
+    if fallback_dir:
+        try:
+            return os.path.abspath(fallback_dir)
+        except Exception:
+            pass
+    return os.path.abspath(os.getcwd())
+
+
+def resolve_ui_context(start_dir, marker_dir="CEDLib.lib", fallback_rel_parts=None, ensure_syspath=True):
+    """Resolve workspace/lib/resources context for UI tools.
+
+    Returns:
+        dict with keys:
+            start_dir, workspace_root, lib_root, resources_root
+    """
+    start_abs = os.path.abspath(start_dir)
+    workspace_root = find_workspace_root(start_abs, marker_dir=marker_dir)
+    lib_root = resolve_lib_root(start_abs, marker_dir=marker_dir)
+    if not lib_root:
+        rel_parts = fallback_rel_parts
+        if rel_parts is None:
+            rel_parts = ("..", "..", "..", "..", "..", "CEDLib.lib")
+        lib_root = os.path.abspath(os.path.join(start_abs, *tuple(rel_parts)))
+    if ensure_syspath and lib_root and os.path.isdir(lib_root) and lib_root not in sys.path:
+        sys.path.append(lib_root)
+    resources_root = resolve_ui_resources_root(lib_root)
+    return {
+        "start_dir": start_abs,
+        "workspace_root": workspace_root,
+        "lib_root": lib_root,
+        "resources_root": resources_root,
+    }

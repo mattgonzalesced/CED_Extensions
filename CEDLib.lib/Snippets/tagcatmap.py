@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-from pyrevit import DB
+from pyrevit import DB, HOST_APP
 
-TAG_CAT_MAP = {
+
+version = HOST_APP.version
+BASE_MAP = {
     DB.BuiltInCategory.OST_AreaLoadTags: DB.BuiltInCategory.OST_AreaLoads,
     DB.BuiltInCategory.OST_AreaReinTags: DB.BuiltInCategory.OST_AreaRein,
     DB.BuiltInCategory.OST_AreaTags: DB.BuiltInCategory.OST_AreaColorFill,
@@ -71,7 +73,6 @@ TAG_CAT_MAP = {
     DB.BuiltInCategory.OST_MaterialTags: DB.BuiltInCategory.OST_Materials,
     DB.BuiltInCategory.OST_MechanicalEquipmentSetTags: DB.BuiltInCategory.OST_MechanicalEquipmentSet,
     DB.BuiltInCategory.OST_MechanicalEquipmentTags: DB.BuiltInCategory.OST_MechanicalEquipment,
-    DB.BuiltInCategory.OST_MechanicalControlDeviceTags:DB.BuiltInCategory.OST_MechanicalControlDevices,
     DB.BuiltInCategory.OST_MEPSpaceTags: DB.BuiltInCategory.OST_MEPSpaceColorFill,
     DB.BuiltInCategory.OST_MultiCategoryTags: DB.BuiltInCategory.OST_MultiCategoryTags,
     DB.BuiltInCategory.OST_NodeAnalyticalTags: DB.BuiltInCategory.OST_NodeAnalyticalTags,
@@ -126,3 +127,18 @@ TAG_CAT_MAP = {
     DB.BuiltInCategory.OST_ZoneTags: DB.BuiltInCategory.OST_ZoneSchemes
 
 }
+MAP_2024 = {DB.BuiltInCategory.OST_MechanicalControlDeviceTags:DB.BuiltInCategory.OST_MechanicalControlDevices,
+            DB.BuiltInCategory.OST_PlumbingEquipmentTags: DB.BuiltInCategory.OST_PlumbingEquipment
+}
+
+
+
+def _build_tag_cat_map():
+    result_map = dict(BASE_MAP)
+
+    if version >= 2024:
+        result_map.update(MAP_2024)
+
+    return result_map
+
+TAG_CAT_MAP = _build_tag_cat_map()

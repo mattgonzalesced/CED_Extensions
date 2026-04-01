@@ -42,7 +42,7 @@ ALERT_DEFINITIONS = {
     ),
     "design_non_standard_ocp_rating": AlertDefinition(
         "Design.NonStandardOCPRating",
-        "'{breaker_size}A' Circuit Breaker is a non-standard rating. Using next available size ({next_size}A) for calculations. Review your breaker ratings!",
+        "Overcurrent Device has non-standard ampere rating ({breaker_size}A) per NEC Table 240.6(A).",
         group="Design",
         severity="MEDIUM",
     ),

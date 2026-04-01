@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 from pyrevit import script, revit, forms, DB
 
 logger = script.get_logger()
 import csv
-from pyrevit.compat import get_elementid_value_func
+from Snippets import revit_helpers
 
-get_id_value = get_elementid_value_func()
+get_id_value = revit_helpers.get_elementid_value
 
 
 # -------------------------------

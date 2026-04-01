@@ -1,0 +1,696 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Batch Swap Circuits"
+        Height="760"
+        Width="1220"
+        MinHeight="560"
+        MinWidth="1240"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource CED.Brush.WindowBackground}">
+  <Grid Margin="{DynamicResource CED.Thickness.ContentMargin}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <Grid Grid.Row="0" Margin="0,0,0,8">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+      <StackPanel Grid.Column="0" Orientation="Vertical">
+        <TextBlock Text="Batch Swap Circuits" Style="{DynamicResource CED.Text.Title}"/>
+        <TextBlock Text="Drag circuits to reorder in-panel or move across panels. Apply runs staged changes in sequence."
+                   Style="{DynamicResource CED.Text.Secondary}"
+                   Margin="0,2,0,0"/>
+      </StackPanel>
+      <TextBlock Grid.Column="1"
+                 Name="SwapSummaryText"
+                 Text="Ready"
+                 Style="{DynamicResource CED.Text.Secondary}"
+                 VerticalAlignment="Bottom"/>
+    </Grid>
+
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="8"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="8"/>
+        <ColumnDefinition Width="300"/>
+      </Grid.ColumnDefinitions>
+
+      <Border Grid.Column="0"
+              Padding="8"
+              BorderBrush="{DynamicResource CED.Brush.InfoPanelBorder}"
+              BorderThickness="1"
+              CornerRadius="4"
+              Background="{DynamicResource CED.Brush.InfoPanelBackground}">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          <Grid Grid.Row="0">
+            <ComboBox Name="LeftPanelCombo"
+                      MinHeight="26"
+                      DropDownOpened="panel_dropdown_opened"
+                      DropDownClosed="panel_dropdown_closed"
+                      SelectionChanged="left_panel_changed"
+                      TextSearch.TextPath="left_text">
+              <ComboBox.ItemTemplate>
+                <DataTemplate>
+                  <Grid Margin="2,0">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding left_text}"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Grid.Column="1"
+                               Margin="8,0,0,0"
+                               Text="{Binding right_text}"
+                               TextAlignment="Right"
+                               HorizontalAlignment="Right"
+                               Style="{DynamicResource CED.Text.Secondary}"/>
+                  </Grid>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Name="LeftPanelHeaderText"
+                       Visibility="Collapsed"
+                       VerticalAlignment="Center"
+                       TextWrapping="Wrap"
+                       Style="{DynamicResource CED.Text.Secondary}"/>
+          </Grid>
+          <Grid Grid.Row="1" Margin="0,4,0,6">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Name="LeftPanelMeta"
+                       Grid.Column="0"
+                       Style="{DynamicResource CED.Text.Secondary}"
+                       Text="Panel details"/>
+            <TextBlock Name="LeftPanelTypeMeta"
+                       Grid.Column="1"
+                       Margin="8,0,0,0"
+                       HorizontalAlignment="Right"
+                       Style="{DynamicResource CED.Text.Secondary}"
+                       Text="Panel type"/>
+          </Grid>
+          <Border Name="LeftMissingSchedulePanel"
+                  Grid.Row="2"
+                  Margin="0,0,0,6"
+                  Padding="6"
+                  Visibility="Collapsed"
+                  BorderBrush="{DynamicResource CED.Brush.WarningBorder}"
+                  BorderThickness="1"
+                  CornerRadius="3"
+                  Background="{DynamicResource CED.Brush.WarningBackground}">
+            <StackPanel Orientation="Vertical">
+              <TextBlock Name="LeftMissingScheduleText"
+                         Text="No panel schedule view found for this panel."
+                         TextWrapping="Wrap"
+                         Style="{DynamicResource CED.Text.Secondary}"/>
+              <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                <Button Name="LeftCreateScheduleButton"
+                        Style="{DynamicResource CED.Button.Base}"
+                        Content="Create Schedule"
+                        Width="118"
+                        Height="26"
+                        HorizontalAlignment="Left"
+                        IsEnabled="False"
+                        Click="left_create_schedule_clicked"/>
+                <TextBlock Name="LeftTemplateRequirementText"
+                           Margin="8,0,0,0"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           Visibility="Collapsed"
+                           Style="{DynamicResource CED.Text.Secondary}"/>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <Border Grid.Row="3"
+                  BorderBrush="{DynamicResource CED.Brush.ListBorder}"
+                  BorderThickness="1"
+                  Background="{DynamicResource CED.Brush.ListBackground}">
+            <Grid>
+              <ListView Name="LeftRowsList"
+                        Style="{DynamicResource CED.ListView.Virtualized}"
+                        SelectionMode="Extended"
+                        SelectionChanged="list_selection_changed"
+                        VirtualizingPanel.IsVirtualizing="True"
+                        VirtualizingPanel.VirtualizationMode="Recycling"
+                        ScrollViewer.CanContentScroll="False"
+                        ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                        PreviewMouseLeftButtonDown="list_preview_mouse_left_button_down"
+                        PreviewMouseLeftButtonUp="list_preview_mouse_left_button_up"
+                        MouseMove="list_mouse_move"
+                        DragOver="list_drag_over"
+                        DragLeave="list_drag_leave"
+                        Drop="list_drop"
+                        AllowDrop="True">
+              <ListView.ItemTemplate>
+                <DataTemplate>
+                  <Grid Margin="0" Height="{Binding row_height}" MinWidth="340">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="30"/>
+                      <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.ColumnSpan="2"
+                            Height="1"
+                            VerticalAlignment="Top"
+                            Background="{DynamicResource CED.Brush.DataGridCellBorder}"
+                            Visibility="{Binding divider_visibility}"/>
+                    <Border Grid.Column="0"
+                            BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
+                            BorderThickness="1,1,0,1"
+                            Padding="0">
+                      <ItemsControl ItemsSource="{Binding slot_cells}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Border Height="{Binding height}"
+                                    Background="{Binding background}"
+                                    BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
+                                    BorderThickness="0,0,0,1">
+                              <TextBlock Text="{Binding label}"
+                                         VerticalAlignment="Center"
+                                         HorizontalAlignment="Center"
+                                         FontWeight="Bold"
+                                         FontSize="11"/>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Border>
+                    <Border Grid.Column="1"
+                            Margin="0"
+                            Padding="2,0"
+                            BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
+                            BorderThickness="1"
+                            Background="{Binding row_background}"
+                            Opacity="{Binding row_opacity}"
+                            ToolTip="{Binding row_tooltip}">
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="*"/>
+                          <ColumnDefinition Width="36"/>
+                          <ColumnDefinition Width="114"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding load_text}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Column="1" Text="{Binding indicator_text}" VerticalAlignment="Center" HorizontalAlignment="Left" FontSize="10"/>
+                        <TextBlock Grid.Column="2" Text="{Binding meta_text}" VerticalAlignment="Center" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"/>
+                      </Grid>
+                    </Border>
+                  </Grid>
+                </DataTemplate>
+              </ListView.ItemTemplate>
+              <ListView.ItemContainerStyle>
+                <Style TargetType="{x:Type ListViewItem}">
+                  <Setter Property="Padding" Value="0"/>
+                  <Setter Property="Margin" Value="0"/>
+                  <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                </Style>
+              </ListView.ItemContainerStyle>
+              </ListView>
+              <ListBox Name="LeftTemplateList"
+                       Visibility="Collapsed"
+                       SelectionChanged="left_template_changed"
+                       ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto"
+                       BorderThickness="0">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Border Padding="6,3">
+                      <TextBlock Text="{Binding display_name}" TextWrapping="Wrap"/>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </Grid>
+          </Border>
+          <Grid Grid.Row="4" Margin="0,6,0,0">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Row="0"
+                       Grid.Column="0"
+                       Text="Connected:"
+                       Style="{DynamicResource CED.Text.Secondary}"/>
+            <TextBlock Name="LeftPanelCurrentConnectedText"
+                       Grid.Row="0"
+                       Grid.Column="1"
+                       Margin="6,0,0,0"
+                       Style="{DynamicResource CED.Text.Secondary}"
+                       TextTrimming="CharacterEllipsis"
+                       Text="- (Ia: -, Ib: -, Ic: -)"/>
+            <TextBlock Grid.Row="1"
+                       Grid.Column="0"
+                       Margin="0,2,0,0"
+                       Text="Demand:"
+                       Style="{DynamicResource CED.Text.Secondary}"/>
+            <TextBlock Name="LeftPanelCurrentDemandText"
+                       Grid.Row="1"
+                       Grid.Column="1"
+                       Margin="6,2,0,0"
+                       Style="{DynamicResource CED.Text.Secondary}"
+                       Text="-"/>
+          </Grid>
+        </Grid>
+      </Border>
+
+      <Border Grid.Column="2"
+              Padding="8"
+              BorderBrush="{DynamicResource CED.Brush.InfoPanelBorder}"
+              BorderThickness="1"
+              CornerRadius="4"
+              Background="{DynamicResource CED.Brush.InfoPanelBackground}">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          <Grid Grid.Row="0">
+            <ComboBox Name="RightPanelCombo"
+                      MinHeight="26"
+                      DropDownOpened="panel_dropdown_opened"
+                      DropDownClosed="panel_dropdown_closed"
+                      SelectionChanged="right_panel_changed"
+                      TextSearch.TextPath="left_text">
+              <ComboBox.ItemTemplate>
+                <DataTemplate>
+                  <Grid Margin="2,0">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding left_text}"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Grid.Column="1"
+                               Margin="8,0,0,0"
+                               Text="{Binding right_text}"
+                               TextAlignment="Right"
+                               HorizontalAlignment="Right"
+                               Style="{DynamicResource CED.Text.Secondary}"/>
+                  </Grid>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Name="RightPanelHeaderText"
+                       Visibility="Collapsed"
+                       VerticalAlignment="Center"
+                       TextWrapping="Wrap"
+                       Style="{DynamicResource CED.Text.Secondary}"/>
+          </Grid>
+          <Grid Grid.Row="1" Margin="0,4,0,6">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Name="RightPanelMeta"
+                       Grid.Column="0"
+                       Style="{DynamicResource CED.Text.Secondary}"
+                       Text="Panel details"/>
+            <TextBlock Name="RightPanelTypeMeta"
+                       Grid.Column="1"
+                       Margin="8,0,0,0"
+                       HorizontalAlignment="Right"
+                       Style="{DynamicResource CED.Text.Secondary}"
+                       Text="Panel type"/>
+          </Grid>
+          <Border Name="RightMissingSchedulePanel"
+                  Grid.Row="2"
+                  Margin="0,0,0,6"
+                  Padding="6"
+                  Visibility="Collapsed"
+                  BorderBrush="{DynamicResource CED.Brush.WarningBorder}"
+                  BorderThickness="1"
+                  CornerRadius="3"
+                  Background="{DynamicResource CED.Brush.WarningBackground}">
+            <StackPanel Orientation="Vertical">
+              <TextBlock Name="RightMissingScheduleText"
+                         Text="No panel schedule view found for this panel."
+                         TextWrapping="Wrap"
+                         Style="{DynamicResource CED.Text.Secondary}"/>
+              <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                <Button Name="RightCreateScheduleButton"
+                        Style="{DynamicResource CED.Button.Base}"
+                        Content="Create Schedule"
+                        Width="118"
+                        Height="26"
+                        HorizontalAlignment="Left"
+                        IsEnabled="False"
+                        Click="right_create_schedule_clicked"/>
+                <TextBlock Name="RightTemplateRequirementText"
+                           Margin="8,0,0,0"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           Visibility="Collapsed"
+                           Style="{DynamicResource CED.Text.Secondary}"/>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <Border Grid.Row="3"
+                  BorderBrush="{DynamicResource CED.Brush.ListBorder}"
+                  BorderThickness="1"
+                  Background="{DynamicResource CED.Brush.ListBackground}">
+            <Grid>
+              <ListView Name="RightRowsList"
+                        Style="{DynamicResource CED.ListView.Virtualized}"
+                        SelectionMode="Extended"
+                        SelectionChanged="list_selection_changed"
+                        VirtualizingPanel.IsVirtualizing="True"
+                        VirtualizingPanel.VirtualizationMode="Recycling"
+                        ScrollViewer.CanContentScroll="False"
+                        ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                        PreviewMouseLeftButtonDown="list_preview_mouse_left_button_down"
+                        PreviewMouseLeftButtonUp="list_preview_mouse_left_button_up"
+                        MouseMove="list_mouse_move"
+                        DragOver="list_drag_over"
+                        DragLeave="list_drag_leave"
+                        Drop="list_drop"
+                        AllowDrop="True">
+              <ListView.ItemTemplate>
+                <DataTemplate>
+                  <Grid Margin="0" Height="{Binding row_height}" MinWidth="340">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="30"/>
+                      <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.ColumnSpan="2"
+                            Height="1"
+                            VerticalAlignment="Top"
+                            Background="{DynamicResource CED.Brush.DataGridCellBorder}"
+                            Visibility="{Binding divider_visibility}"/>
+                    <Border Grid.Column="0"
+                            BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
+                            BorderThickness="1,1,0,1"
+                            Padding="0">
+                      <ItemsControl ItemsSource="{Binding slot_cells}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Border Height="{Binding height}"
+                                    Background="{Binding background}"
+                                    BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
+                                    BorderThickness="0,0,0,1">
+                              <TextBlock Text="{Binding label}"
+                                         VerticalAlignment="Center"
+                                         HorizontalAlignment="Center"
+                                         FontWeight="Bold"
+                                         FontSize="11"/>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Border>
+                    <Border Grid.Column="1"
+                            Margin="0"
+                            Padding="2,0"
+                            BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
+                            BorderThickness="1"
+                            Background="{Binding row_background}"
+                            Opacity="{Binding row_opacity}"
+                            ToolTip="{Binding row_tooltip}">
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="*"/>
+                          <ColumnDefinition Width="36"/>
+                          <ColumnDefinition Width="114"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding load_text}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Column="1" Text="{Binding indicator_text}" VerticalAlignment="Center" HorizontalAlignment="Left" FontSize="10"/>
+                        <TextBlock Grid.Column="2" Text="{Binding meta_text}" VerticalAlignment="Center" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"/>
+                      </Grid>
+                    </Border>
+                  </Grid>
+                </DataTemplate>
+              </ListView.ItemTemplate>
+              <ListView.ItemContainerStyle>
+                <Style TargetType="{x:Type ListViewItem}">
+                  <Setter Property="Padding" Value="0"/>
+                  <Setter Property="Margin" Value="0"/>
+                  <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                </Style>
+              </ListView.ItemContainerStyle>
+              </ListView>
+              <ListBox Name="RightTemplateList"
+                       Visibility="Collapsed"
+                       SelectionChanged="right_template_changed"
+                       ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto"
+                       BorderThickness="0">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Border Padding="6,3">
+                      <TextBlock Text="{Binding display_name}" TextWrapping="Wrap"/>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </Grid>
+          </Border>
+          <Grid Grid.Row="4" Margin="0,6,0,0">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Row="0"
+                       Grid.Column="0"
+                       Text="Connected:"
+                       Style="{DynamicResource CED.Text.Secondary}"/>
+            <TextBlock Name="RightPanelCurrentConnectedText"
+                       Grid.Row="0"
+                       Grid.Column="1"
+                       Margin="6,0,0,0"
+                       Style="{DynamicResource CED.Text.Secondary}"
+                       TextTrimming="CharacterEllipsis"
+                       Text="- (Ia: -, Ib: -, Ic: -)"/>
+            <TextBlock Grid.Row="1"
+                       Grid.Column="0"
+                       Margin="0,2,0,0"
+                       Text="Demand:"
+                       Style="{DynamicResource CED.Text.Secondary}"/>
+            <TextBlock Name="RightPanelCurrentDemandText"
+                       Grid.Row="1"
+                       Grid.Column="1"
+                       Margin="6,2,0,0"
+                       Style="{DynamicResource CED.Text.Secondary}"
+                       Text="-"/>
+          </Grid>
+        </Grid>
+      </Border>
+
+      <Border Grid.Column="4"
+              Padding="8"
+              BorderBrush="{DynamicResource CED.Brush.InfoPanelBorder}"
+              BorderThickness="1"
+              CornerRadius="4"
+              Background="{DynamicResource CED.Brush.InfoPanelBackground}">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          <TextBlock Text="Staged Changes"
+                     Style="{DynamicResource CED.Text.Title}"/>
+          <Border Grid.Row="1"
+                  Margin="0,6,0,6"
+                  BorderBrush="{DynamicResource CED.Brush.ListBorder}"
+                  BorderThickness="1"
+                  Background="{DynamicResource CED.Brush.ListBackground}">
+              <ListBox Name="ChangeLogList"
+                      ScrollViewer.CanContentScroll="True"
+                      FontSize="11"
+                      BorderThickness="0">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Border Background="{Binding background}" Padding="4,2">
+                    <TextBlock Text="{Binding text}" TextWrapping="Wrap" ToolTip="{Binding text}"/>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Border>
+          <StackPanel Grid.Row="2"
+                      Orientation="Horizontal"
+                      HorizontalAlignment="Center">
+            <Button Name="UndoLastButton"
+                    Style="{DynamicResource CED.Button.Base}"
+                    Content="Undo Last"
+                    Width="84"
+                    Height="28"
+                    Margin="0,0,0,0"
+                    IsEnabled="False"
+                    Click="undo_last_clicked"/>
+            <Button Name="UndoAllButton"
+                    Style="{DynamicResource CED.Button.Base}"
+                    Content="Undo All"
+                    Width="84"
+                    Height="28"
+                    Margin="6,0,0,0"
+                    IsEnabled="False"
+                    Click="undo_all_clicked"/>
+            <Button Name="ClearListButton"
+                    Style="{DynamicResource CED.Button.Base}"
+                    Content="Clear List"
+                    Width="84"
+                    Height="28"
+                    Margin="6,0,0,0"
+                    IsEnabled="False"
+                    Click="clear_list_clicked"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Grid Grid.Row="2" Margin="0,8,0,0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+      <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,12,0">
+        <CheckBox Name="AllowDiscardToggle"
+                  Style="{DynamicResource CED.Input.CheckBox}"
+                  IsChecked="False"
+                  ToolTip="Default spare/space definition:
+- Unlocked slot
+- No schedule notes
+- Default load name
+- Default rating">
+          <TextBlock Text="Allow replacing default SPARE/SPACE rows when dropping circuits." TextWrapping="Wrap"/>
+        </CheckBox>
+        <CheckBox Name="MaintainGroupToggle"
+                  Style="{DynamicResource CED.Input.CheckBox}"
+                  Margin="0,2,0,0"
+                  IsChecked="True">
+          <TextBlock Text="Maintain grouped circuits when moving." TextWrapping="Wrap"/>
+        </CheckBox>
+      </StackPanel>
+      <StackPanel Grid.Column="1"
+                  Orientation="Horizontal"
+                  Margin="0,0,12,0"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center">
+        <Border Padding="6,4"
+                BorderBrush="{DynamicResource CED.Brush.InfoPanelBorder}"
+                BorderThickness="1"
+                CornerRadius="3"
+                Background="{DynamicResource CED.Brush.InfoPanelBackground}">
+          <StackPanel Orientation="Vertical">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+              <TextBlock Text="Poles:"
+                         VerticalAlignment="Center"
+                         Margin="0,0,8,0"
+                         Style="{DynamicResource CED.Text.Secondary}"/>
+              <RadioButton Name="AddPole1Radio"
+                           Content="1P"
+                           IsChecked="True"
+                           VerticalAlignment="Center"
+                           Margin="0,0,8,0"
+                           Checked="add_poles_changed"/>
+              <RadioButton Name="AddPole2Radio"
+                           Content="2P"
+                           VerticalAlignment="Center"
+                           Margin="0,0,8,0"
+                           Checked="add_poles_changed"/>
+              <RadioButton Name="AddPole3Radio"
+                           Content="3P"
+                           VerticalAlignment="Center"
+                           Checked="add_poles_changed"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="Spare Rating:"
+                         VerticalAlignment="Center"
+                         Margin="0,0,8,0"
+                         Style="{DynamicResource CED.Text.Secondary}"/>
+              <TextBox Name="SpareRatingTextBox"
+                       Width="56"
+                       Height="24"
+                       VerticalContentAlignment="Center"
+                       Text="20 A"
+                       GotKeyboardFocus="amp_input_focus"
+                       PreviewMouseLeftButtonDown="amp_input_mouse_down"
+                       LostKeyboardFocus="spare_rating_lost_focus"/>
+              <TextBlock Text="Frame:"
+                         VerticalAlignment="Center"
+                         Margin="8,0,8,0"
+                         Style="{DynamicResource CED.Text.Secondary}"/>
+              <TextBox Name="SpareFrameTextBox"
+                       Width="56"
+                       Height="24"
+                       VerticalContentAlignment="Center"
+                       Text="20 A"
+                       GotKeyboardFocus="amp_input_focus"
+                       PreviewMouseLeftButtonDown="amp_input_mouse_down"
+                       LostKeyboardFocus="spare_frame_lost_focus"/>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+        <StackPanel Orientation="Vertical" Margin="8,0,0,0">
+          <Button Name="AddSpareButton"
+                  Style="{DynamicResource CED.Button.Base}"
+                  Content="Add Spare"
+                  Width="96"
+                  Height="28"
+                  IsEnabled="False"
+                  Click="add_spare_clicked"/>
+          <Button Name="AddSpaceButton"
+                  Style="{DynamicResource CED.Button.Base}"
+                  Content="Add Space"
+                  Width="96"
+                  Height="28"
+                  Margin="0,4,0,0"
+                  IsEnabled="False"
+                  Click="add_space_clicked"/>
+        </StackPanel>
+        <Button Name="RemoveSpecialButton"
+                Style="{DynamicResource CED.Button.Base}"
+                Content="Remove Sp/Sp"
+                Width="110"
+                Height="28"
+                Margin="8,0,0,0"
+                VerticalAlignment="Bottom"
+                IsEnabled="False"
+                Click="remove_special_clicked"/>
+      </StackPanel>
+      <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,0" VerticalAlignment="Center">
+        <Button Name="ApplyButton"
+                Style="{DynamicResource CED.Button.Apply}"
+                Content="Apply"
+                Width="90"
+                Height="28"
+                IsEnabled="False"
+                Click="apply_clicked"/>
+        <Button Style="{DynamicResource CED.Button.Base}"
+                Content="Close"
+                Width="90"
+                Height="28"
+                Margin="6,0,0,0"
+                Click="close_clicked"/>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>

@@ -1,4 +1,6 @@
 ﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sw="clr-namespace:System.Windows;assembly=PresentationFramework"
         Title="Circuit Alerts"
         Height="520"
         Width="980"
@@ -9,6 +11,10 @@
         PreviewMouseDown="window_preview_mouse_down">
   <Window.Resources>
     <ResourceDictionary>
+      <SolidColorBrush x:Key="{x:Static sw:SystemColors.HighlightBrushKey}" Color="{DynamicResource CED.Color.CircuitItemSelectedBackground}"/>
+      <SolidColorBrush x:Key="{x:Static sw:SystemColors.InactiveSelectionHighlightBrushKey}" Color="{DynamicResource CED.Color.CircuitItemSelectedBackground}"/>
+      <SolidColorBrush x:Key="{x:Static sw:SystemColors.HighlightTextBrushKey}" Color="{DynamicResource CED.Color.PrimaryText}"/>
+      <SolidColorBrush x:Key="{x:Static sw:SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="{DynamicResource CED.Color.PrimaryText}"/>
     </ResourceDictionary>
   </Window.Resources>
 
@@ -30,9 +36,11 @@
       <TabItem Header="Active">
         <Border BorderBrush="{DynamicResource CED.Brush.DataGridBorder}" BorderThickness="1" Background="{DynamicResource CED.Brush.ListBackground}" Margin="4">
           <DataGrid Name="ActiveAlertsList"
-                    Style="{DynamicResource CED.DataGrid.Display}"
+                    Style="{DynamicResource CED.DataGrid.Base}"
                     ColumnHeaderStyle="{DynamicResource HeaderWrapCenter}"
-                    RowStyle="{DynamicResource CED.DataGrid.Row.Display}"
+                    RowStyle="{DynamicResource CED.DataGrid.RowDisabledAware.NeutralSelection}"
+                    Focusable="False"
+                    IsTabStop="False"
                     AutoGenerateColumns="False"
                     IsReadOnly="True"
                     CanUserAddRows="False"
@@ -50,10 +58,10 @@
                     ScrollViewer.CanContentScroll="True"
                     PreviewMouseDown="alerts_list_preview_mouse_down">
             <DataGrid.Columns>
-              <DataGridTextColumn Header="Severity" Width="0.9*" Binding="{Binding severity}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly}" ElementStyle="{DynamicResource CenterTextCell}"/>
-              <DataGridTextColumn Header="Group" Width="1.1*" Binding="{Binding group}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly}" ElementStyle="{DynamicResource CenterTextCell}"/>
-              <DataGridTextColumn Header="Alert ID" Width="1.9*" Binding="{Binding definition_id}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly}"/>
-              <DataGridTemplateColumn Header="Message" Width="3*" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly}">
+              <DataGridTextColumn Header="Severity" Width="0.9*" Binding="{Binding severity}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}" ElementStyle="{DynamicResource CenterTextCell}"/>
+              <DataGridTextColumn Header="Group" Width="1.1*" Binding="{Binding group}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}" ElementStyle="{DynamicResource CenterTextCell}"/>
+              <DataGridTextColumn Header="Alert ID" Width="1.9*" Binding="{Binding definition_id}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}"/>
+              <DataGridTemplateColumn Header="Message" Width="3*" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <TextBlock Text="{Binding message}" TextWrapping="Wrap" Style="{DynamicResource RemarksTextCell}"/>
@@ -67,9 +75,11 @@
       <TabItem Header="Hidden">
         <Border BorderBrush="{DynamicResource CED.Brush.DataGridBorder}" BorderThickness="1" Background="{DynamicResource CED.Brush.ListBackground}" Margin="4">
           <DataGrid Name="HiddenAlertsList"
-                    Style="{DynamicResource CED.DataGrid.Display}"
+                    Style="{DynamicResource CED.DataGrid.Base}"
                     ColumnHeaderStyle="{DynamicResource HeaderWrapCenter}"
-                    RowStyle="{DynamicResource CED.DataGrid.Row.Display}"
+                    RowStyle="{DynamicResource CED.DataGrid.RowDisabledAware.NeutralSelection}"
+                    Focusable="False"
+                    IsTabStop="False"
                     AutoGenerateColumns="False"
                     IsReadOnly="True"
                     CanUserAddRows="False"
@@ -87,10 +97,10 @@
                     ScrollViewer.CanContentScroll="True"
                     PreviewMouseDown="alerts_list_preview_mouse_down">
             <DataGrid.Columns>
-              <DataGridTextColumn Header="Severity" Width="0.9*" Binding="{Binding severity}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly}" ElementStyle="{DynamicResource CenterTextCell}"/>
-              <DataGridTextColumn Header="Group" Width="1.1*" Binding="{Binding group}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly}" ElementStyle="{DynamicResource CenterTextCell}"/>
-              <DataGridTextColumn Header="Alert ID" Width="1.9*" Binding="{Binding definition_id}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly}"/>
-              <DataGridTemplateColumn Header="Message" Width="3*" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly}">
+              <DataGridTextColumn Header="Severity" Width="0.9*" Binding="{Binding severity}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}" ElementStyle="{DynamicResource CenterTextCell}"/>
+              <DataGridTextColumn Header="Group" Width="1.1*" Binding="{Binding group}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}" ElementStyle="{DynamicResource CenterTextCell}"/>
+              <DataGridTextColumn Header="Alert ID" Width="1.9*" Binding="{Binding definition_id}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}"/>
+              <DataGridTemplateColumn Header="Message" Width="3*" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <TextBlock Text="{Binding message}" TextWrapping="Wrap" Style="{DynamicResource RemarksTextCell}"/>
@@ -113,5 +123,3 @@
     </StackPanel>
   </Grid>
 </Window>
-
-

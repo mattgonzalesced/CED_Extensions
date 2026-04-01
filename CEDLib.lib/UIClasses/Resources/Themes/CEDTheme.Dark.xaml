@@ -53,6 +53,7 @@
   <Color x:Key="CED.Color.DataGridRowForeground">#D7E0EB</Color>
   <Color x:Key="CED.Color.DataGridReadOnlyBackground">#232C35</Color>
   <Color x:Key="CED.Color.DataGridReadOnlyForeground">#C7D1DD</Color>
+  <Color x:Key="CED.Color.DataGridEditableBackground">#1B242E</Color>
   <Color x:Key="CED.Color.DataGridCellBorder">#36404B</Color>
   <Color x:Key="CED.Color.DataGridDividerStrong">#586575</Color>
   <Color x:Key="CED.Color.DataGridSelectionBackground">#2B3C4F</Color>

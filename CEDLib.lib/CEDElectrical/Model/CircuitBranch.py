@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 
 import Autodesk.Revit.DB.Electrical as DBE
 from System import Guid
 from pyrevit import DB, script, revit
-from pyrevit.compat import get_elementid_value_func
 
 from CEDElectrical.Model.alerts import Alerts, NoticeCollector
 from CEDElectrical.Model.circuit_settings import (
@@ -22,11 +21,12 @@ from CEDElectrical.refdata.ocp_cable_defaults import OCP_CABLE_DEFAULTS
 from CEDElectrical.refdata.service_ground_table import SERVICE_GROUND_TABLE
 from CEDElectrical.refdata.shared_params_table import SHARED_PARAMS
 from CEDElectrical.refdata.standard_ocp_table import BREAKER_FRAME_SWITCH_TABLE
+from Snippets import revit_helpers
 
 console = script.get_output()
 logger = script.get_logger()
 DEV_LOGGING = False
-get_elementid = get_elementid_value_func()
+get_elementid = revit_helpers.get_elementid_value
 PART_TYPE_MAP = {
     14: "Panelboard",
     15: "Transformer",
@@ -539,31 +539,40 @@ class CircuitBranch(object):
         table = OCP_CABLE_DEFAULTS
 
         if rating_key in table:
-            material_map = table[rating_key]
+            wire_info_by_material = table[rating_key]
         else:
-            # TODO: If key not found, we can use next size for max lug, wire/conduit props, and equipment ground
-            #  size, but hot wire Sizing should not default to next highest breaker key. it will over size wire on
-            #  larger breakers
             sorted_keys = sorted(table.keys())
-            material_map = None
+            lower_key = None
+            higher_key = None
             for key in sorted_keys:
+                if key <= rating_key:
+                    lower_key = key
                 if key >= rating_key:
-                    self.log_warning(Alerts.NonStandardOCPRating(rating_key, key))
-                    # TODO: we should turn NonStandardOCPRating alert off for larger breakers (over 1000) or rethink
-                    #  implementation. it will throw warnings for all breakers with adjustable trip settings.
-                    material_map = table[key]
+                    higher_key = key
                     break
 
-            if material_map is None:
-                fallback = sorted_keys[-1]
-                self.log_warning(
-                    "Breaker rating {} exceeds defaults; using max available {}.".format(
-                        rating_key, fallback
-                    )
-                )
-                material_map = table[fallback]
+            reference_key = higher_key if higher_key is not None else lower_key
+            self.log_warning(Alerts.NonStandardOCPRating(rating_key, reference_key or rating_key))
 
-        wire_info_by_material = material_map or {}
+            lower_map = table.get(lower_key, {}) if lower_key is not None else {}
+            higher_map = table.get(higher_key, {}) if higher_key is not None else {}
+            materials = set(list(lower_map.keys()) + list(higher_map.keys()))
+
+            wire_info_by_material = {}
+            for material in list(materials):
+                low_defaults = dict(lower_map.get(material) or {})
+                high_defaults = dict(higher_map.get(material) or {})
+
+                # Base sizing defaults from the next-lower key to avoid oversizing.
+                merged = dict(low_defaults or high_defaults)
+                # Keep constraints from the next-higher key when available.
+                for key_name in ("max_lug_size", "max_lug_qty", "conduit_type"):
+                    if key_name in high_defaults:
+                        merged[key_name] = high_defaults.get(key_name)
+                wire_info_by_material[material] = merged
+
+            if not wire_info_by_material and sorted_keys:
+                wire_info_by_material = table.get(sorted_keys[-1], {})
         material_preference = None
         if self._wire_material_override:
             try:
@@ -1654,7 +1663,7 @@ class CircuitBranch(object):
         return False
 
     def _auto_hot_sizing(self, rating):
-        """Automatic hot conductor sizing (Ampacity → Voltage Drop) using allowed sizes."""
+        """Automatic hot conductor sizing (Ampacity â†’ Voltage Drop) using allowed sizes."""
 
         wire_info = self._wire_info or {}
         if not wire_info:
@@ -1699,7 +1708,7 @@ class CircuitBranch(object):
             return
 
         # -------------------------------------------------
-        # PHASE 1 — AMPACITY SIZING
+        # PHASE 1 â€” AMPACITY SIZING
         # -------------------------------------------------
 
         solution_found = False
@@ -1770,7 +1779,7 @@ class CircuitBranch(object):
             return
 
         # -------------------------------------------------
-        # PHASE 2 — VOLTAGE DROP REFINEMENT
+        # PHASE 2 â€” VOLTAGE DROP REFINEMENT
         # -------------------------------------------------
 
         solution_found = False
@@ -2339,3 +2348,4 @@ class CircuitBranch(object):
                 )
             )
             self.cable.ground_size = upsized
+

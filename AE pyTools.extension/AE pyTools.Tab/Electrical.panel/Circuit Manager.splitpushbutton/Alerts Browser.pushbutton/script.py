@@ -1,14 +1,15 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 
-import json
 import os
 import sys
 
-import Autodesk.Revit.DB.Electrical as DBE
 from Autodesk.Revit.UI import ExternalEvent, IExternalEventHandler
 from System.Windows import Application
-from pyrevit import forms, revit, DB, script
-from pyrevit.compat import get_elementid_value_func, get_elementid_from_value_func
+from System.Windows.Controls import Button, DataGridRow
+from System.Windows.Media import VisualTreeHelper
+from pyrevit import forms, revit, script
+
+from Snippets import revit_helpers
 
 TITLE = "Alerts Browser"
 ALERT_DATA_PARAM = "Circuit Data_CED"
@@ -19,19 +20,36 @@ VALID_THEME_MODES = ("light", "dark", "dark_alt")
 VALID_ACCENT_MODES = ("blue", "red", "green", "neutral")
 _WINDOW_MARKER = "_ae_alerts_browser_window"
 
-_get_elid_value = get_elementid_value_func()
-_get_elid_from_value = get_elementid_from_value_func()
-
-
 def _idval(item):
-    try:
-        return int(_get_elid_value(item))
-    except Exception:
-        return int(getattr(item, "IntegerValue", 0))
+    return int(revit_helpers.get_elementid_value(item))
 
 
 def _idfrom(value):
-    return _get_elid_from_value(int(value))
+    return revit_helpers.elementid_from_value(value)
+
+
+def _find_visual_ancestor(start, target_type):
+    current = start
+    while current is not None:
+        if isinstance(current, target_type):
+            return current
+        try:
+            current = VisualTreeHelper.GetParent(current)
+        except Exception:
+            return None
+    return None
+
+
+def _is_descendant_of_control(start, control):
+    current = start
+    while current is not None:
+        if current == control:
+            return True
+        try:
+            current = VisualTreeHelper.GetParent(current)
+        except Exception:
+            return False
+    return False
 
 
 def _normalize_theme_mode(value, fallback="light"):
@@ -45,17 +63,15 @@ def _normalize_accent_mode(value, fallback="blue"):
 
 
 def _load_theme_state_from_config(default_theme="light", default_accent="blue"):
-    theme_mode = _normalize_theme_mode(default_theme, "light")
-    accent_mode = _normalize_accent_mode(default_accent, "blue")
-    try:
-        cfg = script.get_config(THEME_CONFIG_SECTION)
-        if cfg is None:
-            return theme_mode, accent_mode
-        theme_mode = _normalize_theme_mode(cfg.get_option(THEME_CONFIG_THEME_KEY, theme_mode), theme_mode)
-        accent_mode = _normalize_accent_mode(cfg.get_option(THEME_CONFIG_ACCENT_KEY, accent_mode), accent_mode)
-    except Exception:
-        pass
-    return theme_mode, accent_mode
+    from UIClasses import load_theme_state_from_config
+
+    return load_theme_state_from_config(
+        section_name=THEME_CONFIG_SECTION,
+        theme_key_name=THEME_CONFIG_THEME_KEY,
+        accent_key_name=THEME_CONFIG_ACCENT_KEY,
+        default_theme=default_theme,
+        default_accent=default_accent,
+    )
 
 
 def _find_workspace_root(start_dir):
@@ -79,105 +95,20 @@ LIB_ROOT = os.path.abspath(os.path.join(WORKSPACE_ROOT, "CEDLib.lib"))
 if LIB_ROOT not in sys.path:
     sys.path.append(LIB_ROOT)
 
-from CEDElectrical.Application.dto.operation_request import OperationRequest
-from CEDElectrical.Application.services.operation_runner import build_default_runner
-from CEDElectrical.Domain import settings_manager
 from CEDElectrical.Infrastructure.Revit.repositories.revit_circuit_repository import RevitCircuitRepository
-from CEDElectrical.Model.alerts import get_alert_definition
 from Snippets.circuit_ui_actions import (
     clear_revit_selection,
     collect_circuit_targets,
-    format_writeback_lock_reason,
     set_revit_selection,
 )
 from UIClasses import pathing as ui_pathing
 from UIClasses import resource_loader
+from alerts_browser_services import build_snapshot
+from alerts_browser_services import recalculate_and_snapshot
 
 UI_RESOURCES_ROOT = ui_pathing.resolve_ui_resources_root(LIB_ROOT)
 _LOCK_REPOSITORY = RevitCircuitRepository()
 _LOGGER = script.get_logger()
-
-
-def _lookup_param_text(element, name):
-    try:
-        param = element.LookupParameter(name)
-        if not param:
-            return None
-        value = param.AsString()
-        if value is None:
-            value = param.AsValueString()
-        return value
-    except Exception:
-        return None
-
-
-def _read_alert_payload(circuit):
-    raw = _lookup_param_text(circuit, ALERT_DATA_PARAM)
-    if not raw:
-        return None
-    try:
-        return json.loads(raw)
-    except Exception:
-        return None
-
-
-def _payload_alert_records(payload):
-    if not isinstance(payload, dict):
-        return []
-    alerts = payload.get("alerts")
-    return alerts if isinstance(alerts, list) else []
-
-
-def _payload_hidden_ids(payload):
-    if not isinstance(payload, dict):
-        return set()
-    hidden = payload.get("hidden_definition_ids")
-    if not isinstance(hidden, list):
-        return set()
-    return set([x for x in hidden if x])
-
-
-class AlertRow(object):
-    def __init__(self, severity, group, definition_id, message):
-        self.severity = str(severity or "NONE")
-        self.group = str(group or "Other")
-        self.definition_id = str(definition_id or "-")
-        self.message = str(message or "")
-
-
-def _alert_rows_from_payload(payload):
-    hidden_ids = _payload_hidden_ids(payload)
-    rows = []
-    for item in _payload_alert_records(payload):
-        if not isinstance(item, dict):
-            continue
-        definition_id = item.get("definition_id") or item.get("id")
-        if definition_id in hidden_ids:
-            is_hidden = True
-        else:
-            is_hidden = False
-        severity = str(item.get("severity") or "NONE").upper()
-        group = str(item.get("group") or "Other")
-        definition = get_alert_definition(definition_id) if definition_id else None
-        message_value = item.get("message")
-        if message_value:
-            if isinstance(message_value, (dict, list)):
-                try:
-                    text = json.dumps(message_value, ensure_ascii=False)
-                except Exception:
-                    text = str(message_value)
-            else:
-                text = str(message_value)
-        elif definition:
-            text = definition.GetDescriptionText()
-        elif definition_id:
-            text = definition_id
-        else:
-            text = "Unmapped alert"
-        row = AlertRow(severity, group, definition_id or "-", text)
-        row.is_hidden = bool(is_hidden)
-        rows.append(row)
-    return rows
 
 
 def _active_doc():
@@ -188,101 +119,7 @@ def _active_doc():
         uidoc = __revit__.ActiveUIDocument
         return uidoc.Document if uidoc else None
     except Exception:
-        return None
-
-
-class AlertCircuitItem(object):
-    def __init__(self, circuit, rows, blocked=False, block_reason=""):
-        self.circuit = circuit
-        self.circuit_id = _idval(circuit.Id)
-        self.panel = "No Panel"
-        try:
-            if circuit.BaseEquipment:
-                self.panel = getattr(circuit.BaseEquipment, "Name", self.panel) or self.panel
-        except Exception:
-            pass
-        self.circuit_number = getattr(circuit, "CircuitNumber", "") or ""
-        self.load_name = getattr(circuit, "LoadName", "") or ""
-        self.panel_ckt_text = "{} / {}".format(self.panel or "-", self.circuit_number or "-")
-        self.rows = list(rows or [])
-        self.active_rows = [x for x in self.rows if not bool(getattr(x, "is_hidden", False))]
-        self.hidden_rows = [x for x in self.rows if bool(getattr(x, "is_hidden", False))]
-        self.total_count = len(self.rows)
-        self.active_count = len(self.active_rows)
-        self.hidden_count = len(self.hidden_rows)
-        self.counts_text = "Alerts: {} | Active: {} | Hidden: {}".format(
-            self.total_count,
-            self.active_count,
-            self.hidden_count,
-        )
-        self.recalc_blocked = bool(blocked)
-        self.recalc_block_reason = str(block_reason or "")
-
-
-def _build_writeback_lock_map(doc, circuits):
-    if doc is None or not getattr(doc, "IsWorkshared", False):
-        return {}
-    circuit_list = [c for c in list(circuits or []) if c is not None]
-    if not circuit_list:
-        return {}
-    try:
-        settings = settings_manager.load_circuit_settings(doc)
-    except Exception:
-        settings = None
-    if settings is None:
-        return {}
-    try:
-        _, _, locked_rows = _LOCK_REPOSITORY.partition_locked_elements(
-            doc,
-            circuit_list,
-            settings,
-            collect_all_device_owners=False,
-        )
-    except Exception:
-        return {}
-    lock_map = {}
-    for row in list(locked_rows or []):
-        try:
-            cid = int((row or {}).get("circuit_id") or 0)
-        except Exception:
-            cid = 0
-        if cid <= 0:
-            continue
-        lock_map[cid] = row
-    return lock_map
-
-
-def _build_snapshot(doc):
-    if doc is None:
-        return {"doc_title": "-", "items": []}
-    circuits = list(
-        DB.FilteredElementCollector(doc)
-        .OfClass(DBE.ElectricalSystem)
-        .WhereElementIsNotElementType()
-        .ToElements()
-    )
-    circuits.sort(
-        key=lambda c: (
-            (getattr(getattr(c, "BaseEquipment", None), "Name", "") or ""),
-            (getattr(c, "StartSlot", 0) or 0),
-            (getattr(c, "LoadName", "") or ""),
-        )
-    )
-    lock_map = _build_writeback_lock_map(doc, circuits)
-    items = []
-    for circuit in circuits:
-        rows = _alert_rows_from_payload(_read_alert_payload(circuit))
-        if not rows:
-            continue
-        circuit_id = _idval(circuit.Id)
-        lock_row = lock_map.get(circuit_id)
-        blocked = lock_row is not None
-        reason = format_writeback_lock_reason(lock_row) if blocked else ""
-        items.append(AlertCircuitItem(circuit, rows, blocked=blocked, block_reason=reason))
-    return {
-        "doc_title": getattr(doc, "Title", "-") or "-",
-        "items": items,
-    }
+        return getattr(revit, "doc", None)
 
 
 class AlertsBrowserExternalEventGateway(object):
@@ -355,26 +192,14 @@ class _AlertsBrowserExternalEventHandler(IExternalEventHandler):
             uidoc = application.ActiveUIDocument
             doc = uidoc.Document if uidoc else None
             if op_name == "refresh":
-                result = _build_snapshot(doc)
+                result = build_snapshot(doc, ALERT_DATA_PARAM, _idval, _LOCK_REPOSITORY)
             elif op_name == "recalculate":
                 if doc is None:
                     raise Exception("No active document.")
                 circuit_id = int(payload.get("circuit_id") or 0)
                 if circuit_id <= 0:
                     raise Exception("No circuit selected.")
-                request = OperationRequest(
-                    operation_key="calculate_circuits",
-                    circuit_ids=[circuit_id],
-                    source="alerts_browser",
-                    options={"show_output": False},
-                )
-                runner = build_default_runner(alert_parameter_name=ALERT_DATA_PARAM)
-                operation_result = runner.run(request, doc) or {}
-                result = {
-                    "operation_result": operation_result,
-                    "snapshot": _build_snapshot(doc),
-                    "circuit_id": circuit_id,
-                }
+                result = recalculate_and_snapshot(doc, circuit_id, ALERT_DATA_PARAM, _idval, _LOCK_REPOSITORY)
             elif op_name == "select":
                 if uidoc is None or doc is None:
                     raise Exception("No active document.")
@@ -430,15 +255,12 @@ class AlertsBrowserWindow(forms.WPFWindow):
         self._apply_snapshot(snapshot, preferred_circuit_id=None)
 
     def _apply_theme(self):
-        try:
-            resource_loader.apply_theme(
-                self,
-                resources_root=UI_RESOURCES_ROOT,
-                theme_mode=self._theme_mode,
-                accent_mode=self._accent_mode,
-            )
-        except Exception:
-            pass
+        resource_loader.apply_theme(
+            self,
+            resources_root=UI_RESOURCES_ROOT,
+            theme_mode=self._theme_mode,
+            accent_mode=self._accent_mode,
+        )
 
     def _set_status(self, text):
         if self._status_text is None:
@@ -573,7 +395,33 @@ class AlertsBrowserWindow(forms.WPFWindow):
     def circuit_selection_changed(self, sender, args):
         self._set_selected(self._selected_item())
 
-    def readonly_grid_selection_changed(self, sender, args):
+    def _clear_alert_grid_selection(self):
+        try:
+            if self._active_list is not None:
+                self._active_list.SelectedItem = None
+            if self._hidden_list is not None:
+                self._hidden_list.SelectedItem = None
+        except Exception:
+            pass
+
+    def window_preview_mouse_down(self, sender, args):
+        source = getattr(args, "OriginalSource", None)
+        if source is None:
+            return
+        if _find_visual_ancestor(source, Button) is not None:
+            return
+        if self._active_list is not None and _is_descendant_of_control(source, self._active_list):
+            return
+        if self._hidden_list is not None and _is_descendant_of_control(source, self._hidden_list):
+            return
+        self._clear_alert_grid_selection()
+
+    def alerts_list_preview_mouse_down(self, sender, args):
+        source = getattr(args, "OriginalSource", None)
+        if source is None:
+            return
+        if _find_visual_ancestor(source, DataGridRow) is not None:
+            return
         try:
             sender.SelectedItem = None
         except Exception:
@@ -638,13 +486,21 @@ def _show_or_focus_window():
     existing = _find_existing_window()
     if existing is not None:
         try:
+            theme_mode, accent_mode = _load_theme_state_from_config(
+                default_theme=getattr(existing, "_theme_mode", "light"),
+                default_accent=getattr(existing, "_accent_mode", "blue"),
+            )
+            existing._theme_mode = theme_mode
+            existing._accent_mode = accent_mode
+            if hasattr(existing, "_apply_theme"):
+                existing._apply_theme()
             existing.Show()
             existing.Activate()
             return
         except Exception:
             pass
     theme_mode, accent_mode = _load_theme_state_from_config("light", "blue")
-    snapshot = _build_snapshot(_active_doc())
+    snapshot = build_snapshot(_active_doc(), ALERT_DATA_PARAM, _idval, _LOCK_REPOSITORY)
     gateway = AlertsBrowserExternalEventGateway(logger=_LOGGER)
     window = AlertsBrowserWindow(
         theme_mode=theme_mode,
@@ -660,3 +516,4 @@ def _show_or_focus_window():
 
 
 _show_or_focus_window()
+

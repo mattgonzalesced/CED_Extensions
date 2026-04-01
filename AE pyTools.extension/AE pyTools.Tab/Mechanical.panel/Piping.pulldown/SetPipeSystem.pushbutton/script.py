@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import Autodesk.Revit.DB.Plumbing as DBP
 import Autodesk.Revit.DB.Mechanical as DBM
+import Autodesk.Revit.DB.Plumbing as DBP
 from System.Collections.Generic import List
 from pyrevit import revit, DB, forms, script
+from pyrevit.compat import get_elementid_value_func
 
 from pyrevitmep.meputils import get_connector_manager, NoConnectorManagerError
 
@@ -11,6 +12,22 @@ doc = revit.doc
 logger = script.get_logger()
 output = script.get_output()
 output.close_others()
+_get_elid_value = get_elementid_value_func()
+
+
+def _elid_value(item, default=0):
+    if item is None:
+        return int(default or 0)
+    try:
+        return int(_get_elid_value(item))
+    except Exception:
+        try:
+            return int(getattr(item, "IntegerValue"))
+        except Exception:
+            try:
+                return int(getattr(item, "Value"))
+            except Exception:
+                return int(default or 0)
 
 VERBOSE_LOGGING = False
 
@@ -350,7 +367,7 @@ def _collect_duct_system_ids_preop(ducts):
         sys = _get_duct_system_preop(d)
         if sys:
             try:
-                sys_ids.add(sys.Id.IntegerValue)
+                sys_ids.add(_elid_value(sys.Id))
             except:
                 pass
     return sys_ids
@@ -366,7 +383,7 @@ def _collect_duct_system_ids_from_connectors(ducts):
                 sys = None
             if sys:
                 try:
-                    sys_ids.add(sys.Id.IntegerValue)
+                    sys_ids.add(_elid_value(sys.Id))
                 except:
                     pass
     return sys_ids
@@ -434,7 +451,7 @@ def network_is_eligible(pipes):
     while queue:
         el = queue.pop()
         try:
-            elid = el.Id.IntegerValue
+            elid = _elid_value(el.Id)
         except:
             continue
 
@@ -475,7 +492,7 @@ def _is_plumbing_fixture_owner(el):
         cat = el.Category
         if not cat:
             return False
-        return cat.Id.IntegerValue == int(DB.BuiltInCategory.OST_PlumbingFixtures)
+        return _elid_value(cat.Id) == int(DB.BuiltInCategory.OST_PlumbingFixtures)
     except:
         return False
 
@@ -491,7 +508,7 @@ def _owner_has_three_plus_piping_connectors(el):
 
 def _connector_key(conn, tol_digits=6):
     try:
-        oid = conn.Owner.Id.IntegerValue
+        oid = _elid_value(conn.Owner.Id)
     except:
         oid = -1
 
@@ -519,7 +536,7 @@ def _collect_eligible_connectors_for_undefined_system(pipes):
 
     for p in pipes:
         try:
-            pid = p.Id.IntegerValue
+            pid = _elid_value(p.Id)
         except:
             continue
         queue.append(p)
@@ -532,7 +549,7 @@ def _collect_eligible_connectors_for_undefined_system(pipes):
     while queue:
         el = queue.pop(0)
         try:
-            elid = el.Id.IntegerValue
+            elid = _elid_value(el.Id)
         except:
             continue
 
@@ -552,7 +569,7 @@ def _collect_eligible_connectors_for_undefined_system(pipes):
 
                 try:
                     other_owner = other.Owner
-                    other_id = other_owner.Id.IntegerValue
+                    other_id = _elid_value(other_owner.Id)
                 except:
                     continue
 
@@ -656,14 +673,14 @@ def _iter_piping_system_types_for_seed(target_system_type):
 
     if target_system_type:
         try:
-            yielded.add(target_system_type.Id.IntegerValue)
+            yielded.add(_elid_value(target_system_type.Id))
             yield target_system_type
         except:
             pass
 
     for st in DB.FilteredElementCollector(doc).OfClass(DBP.PipingSystemType).ToElements():
         try:
-            sid = st.Id.IntegerValue
+            sid = _elid_value(st.Id)
         except:
             continue
         if sid in yielded:
@@ -682,7 +699,7 @@ def _seed_undefined_system_with_fallback(connectors, target_system_type):
         try:
             seed_name = DB.Element.Name.__get__(seed_type)
         except:
-            seed_name = str(seed_type.Id.IntegerValue)
+            seed_name = str(_elid_value(seed_type.Id))
 
         new_sys = _create_empty_piping_system(seed_type)
         if not new_sys:
@@ -693,7 +710,7 @@ def _seed_undefined_system_with_fallback(connectors, target_system_type):
         if added > 0:
             # If we seeded with a non-target type, flip to requested target type now.
             try:
-                if seed_type.Id.IntegerValue != target_system_type.Id.IntegerValue:
+                if _elid_value(seed_type.Id) != _elid_value(target_system_type.Id):
                     _set_type_on_system(new_sys, target_system_type)
             except:
                 pass
@@ -756,7 +773,7 @@ def collect_boundary_work(elements, connector_iter):
       saved_pairs: list(dict) with owner ids + connector origins (for reconnect)
       affected_system_ids: set(int) system ids to divide later
     """
-    selected_ids = set([el.Id.IntegerValue for el in elements])
+    selected_ids = set([_elid_value(el.Id) for el in elements])
     saved_pairs = []
     affected_system_ids = set()
 
@@ -766,7 +783,7 @@ def collect_boundary_work(elements, connector_iter):
         try:
             sys = el.MEPSystem
             if sys:
-                affected_system_ids.add(sys.Id.IntegerValue)
+                affected_system_ids.add(_elid_value(sys.Id))
         except:
             pass
 
@@ -792,7 +809,7 @@ def collect_boundary_work(elements, connector_iter):
                     continue
 
                 try:
-                    if other_owner.Id.IntegerValue in selected_ids:
+                    if _elid_value(other_owner.Id) in selected_ids:
                         continue
                 except:
                     continue
@@ -802,18 +819,18 @@ def collect_boundary_work(elements, connector_iter):
                 try:
                     sys = driver.MEPSystem
                     if sys:
-                        affected_system_ids.add(sys.Id.IntegerValue)
+                        affected_system_ids.add(_elid_value(sys.Id))
                 except:
                     pass
 
                 try:
-                    driver_owner_id = driver.Owner.Id.IntegerValue
+                    driver_owner_id = _elid_value(driver.Owner.Id)
                     driver_origin = driver.Origin
                 except:
                     continue
 
                 try:
-                    target_owner_id = target.Owner.Id.IntegerValue
+                    target_owner_id = _elid_value(target.Owner.Id)
                     target_origin = target.Origin
                 except:
                     continue
@@ -918,7 +935,7 @@ def divide_affected_systems(affected_system_ids, system_class):
             if new_ids:
                 for nid in new_ids:
                     try:
-                        created_ids.add(nid.IntegerValue)
+                        created_ids.add(_elid_value(nid))
                     except:
                         pass
 
@@ -954,7 +971,7 @@ def _collect_pipe_system_ids(pipes):
         sys = _get_pipe_system(p)
         if sys:
             try:
-                sys_ids.add(sys.Id.IntegerValue)
+                sys_ids.add(_elid_value(sys.Id))
             except:
                 pass
     return sys_ids
@@ -990,7 +1007,7 @@ def _collect_pipe_system_ids_preop(pipes):
         sys = _get_pipe_system_preop(p)
         if sys:
             try:
-                sys_ids.add(sys.Id.IntegerValue)
+                sys_ids.add(_elid_value(sys.Id))
             except:
                 pass
     return sys_ids
@@ -1011,7 +1028,7 @@ def _collect_pipe_system_ids_from_connectors(pipes):
 
             if sys:
                 try:
-                    sys_ids.add(sys.Id.IntegerValue)
+                    sys_ids.add(_elid_value(sys.Id))
                 except:
                     pass
     return sys_ids
@@ -1130,7 +1147,7 @@ def _create_short_pipe_from_open_connector(pipe, open_conn, target_system_type):
 
 def _is_selected_pipe_element(el, selected_pipe_ids):
     try:
-        return isinstance(el, DBP.Pipe) and el.Id.IntegerValue in selected_pipe_ids
+        return isinstance(el, DBP.Pipe) and _elid_value(el.Id) in selected_pipe_ids
     except:
         return False
 
@@ -1178,7 +1195,7 @@ def _find_branch_open_connector_from_junction(junction_conn, selected_pipe_ids):
 
     while current_owner:
         try:
-            owner_id = current_owner.Id.IntegerValue
+            owner_id = _elid_value(current_owner.Id)
         except:
             return None
 
@@ -1215,7 +1232,7 @@ def _find_branch_open_connector_from_junction(junction_conn, selected_pipe_ids):
 
             for other_owner, other_conn in _iter_connected_piping_owners(c):
                 try:
-                    other_id = other_owner.Id.IntegerValue
+                    other_id = _elid_value(other_owner.Id)
                 except:
                     continue
 
@@ -1252,7 +1269,7 @@ def _create_open_branch_stubs_from_selection(pipes, target_system_type):
     selected_pipe_ids = set()
     for p in pipes:
         try:
-            selected_pipe_ids.add(p.Id.IntegerValue)
+            selected_pipe_ids.add(_elid_value(p.Id))
         except:
             pass
 
@@ -1316,7 +1333,7 @@ def _create_open_branch_stubs_from_selection(pipes, target_system_type):
         stub = _create_short_pipe_from_open_connector(pipe, conn, target_system_type)
         if stub:
             try:
-                created_stub_ids.append(stub.Id.IntegerValue)
+                created_stub_ids.append(_elid_value(stub.Id))
             except:
                 pass
         else:
@@ -1719,3 +1736,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

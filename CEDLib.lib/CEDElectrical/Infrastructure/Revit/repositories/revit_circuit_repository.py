@@ -3,22 +3,16 @@
 
 import Autodesk.Revit.DB.Electrical as DBE
 from pyrevit import DB
-from pyrevit.compat import get_elementid_value_func, get_elementid_from_value_func
 
-
-_get_elid_value = get_elementid_value_func()
-_get_elid_from_value = get_elementid_from_value_func()
+from Snippets import revit_helpers
 
 
 def _elid_value(item):
-    try:
-        return int(_get_elid_value(item))
-    except Exception:
-        return int(getattr(item, "IntegerValue", 0))
+    return int(revit_helpers.get_elementid_value(item))
 
 
 def _elid_from_value(value):
-    return _get_elid_from_value(int(value))
+    return revit_helpers.elementid_from_value(value)
 
 
 class RevitCircuitRepository(object):
@@ -165,3 +159,4 @@ class RevitCircuitRepository(object):
                         continue
             summary['other'] += 1
         return summary
+

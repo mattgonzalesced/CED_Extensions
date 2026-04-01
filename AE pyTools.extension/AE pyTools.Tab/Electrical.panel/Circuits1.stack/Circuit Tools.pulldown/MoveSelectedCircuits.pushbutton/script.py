@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 from Autodesk.Revit.DB import Electrical
 from pyrevit import DB
 from pyrevit import HOST_APP
 from pyrevit import forms
 from pyrevit import script
-from pyrevit.compat import get_elementid_value_func
 
+from Snippets import revit_helpers
 # Import reusable utilities
 from Snippets._elecutils import get_panel_dist_system, get_compatible_panels, move_circuits_to_panel, \
     get_all_panels
@@ -16,6 +16,24 @@ doc = __revit__.ActiveUIDocument.Document
 logger = script.get_logger()
 output = script.get_output()
 output.close_others()
+_ELECTRICAL_EQUIPMENT_CAT_ID = int(DB.BuiltInCategory.OST_ElectricalEquipment)
+
+
+def _idval(item):
+    return int(revit_helpers.get_elementid_value(item))
+
+
+def _is_electrical_equipment_instance(element):
+    try:
+        category = getattr(element, "Category", None)
+    except Exception:
+        category = None
+    if category is None:
+        return False
+    try:
+        return _idval(category.Id) == _ELECTRICAL_EQUIPMENT_CAT_ID
+    except Exception:
+        return False
 
 
 def get_sorted_filtered_panels(all_panels, doc):
@@ -99,8 +117,7 @@ def get_circuits_from_selection(include_electrical_equipment=True):
                 circuits.append(element)
 
             elif isinstance(element, DB.FamilyInstance):
-                if element.Category.Id == DB.ElementId(
-                        DB.BuiltInCategory.OST_ElectricalEquipment) and not include_electrical_equipment:
+                if _is_electrical_equipment_instance(element) and not include_electrical_equipment:
                     logger.info("Skipping electrical equipment: %s", element_id)
                     discarded_elements.append(element_id)
                     continue
@@ -140,7 +157,7 @@ def get_circuits_from_selection(include_electrical_equipment=True):
                             electrical_systems = mep_model.GetElectricalSystems()
                             if electrical_systems:
                                 for circuit in electrical_systems:
-                                    if element.Category.Id == DB.ElementId(DB.BuiltInCategory.OST_ElectricalEquipment):
+                                    if _is_electrical_equipment_instance(element):
                                         if circuit.BaseEquipment is None or circuit.BaseEquipment.Id != element_id:
                                             logger.info("Adding feeder circuit: %s", circuit.Id)
                                             circuits.append(circuit)
@@ -163,8 +180,7 @@ def get_circuits_from_selection(include_electrical_equipment=True):
     unique_circuits = []
     seen_ids = set()
     for circuit in circuits:
-        get_id_val = get_elementid_value_func()
-        cid = get_id_val(circuit.Id)
+        cid = _idval(circuit.Id)
         if cid not in seen_ids:
             unique_circuits.append(circuit)
             seen_ids.add(cid)
@@ -213,13 +229,19 @@ def main():
     all_panels = get_all_panels(doc)
 
     compatible_panels = []
-    for circuit in selected_circuits:
-        compatible_panels.extend(get_compatible_panels(circuit, all_panels, doc))
+    for idx, circuit in enumerate(selected_circuits):
+        circuit_panels = list(get_compatible_panels(circuit, all_panels, doc) or [])
+        if idx == 0:
+            compatible_panels = circuit_panels
+        else:
+            allowed_ids = set([_idval(p.Id) for p in list(circuit_panels or [])])
+            compatible_panels = [
+                panel for panel in list(compatible_panels or [])
+                if _idval(panel.Id) in allowed_ids
+            ]
 
     if not compatible_panels:
         forms.alert("No compatible panels found.", exitscript=True)
-
-    compatible_panels = list(set(compatible_panels))
 
     # Sort and filter compatible panels
     # Prompt the user to select a target panel
@@ -237,15 +259,40 @@ def main():
         forms.alert("Panel not found.", exitscript=True)
 
     try:
-        circuit_data = move_circuits_to_panel(selected_circuits, target_panel, doc, output)
+        move_result = move_circuits_to_panel(selected_circuits, target_panel, doc, output)
     except Exception as e:
         output.print_md("**Error occurred while transferring circuits: {}**".format(str(e)))
         return
 
-    # Step 6: Output success message and table
-    output.print_md("**Circuits transferred successfully.**")
+    if isinstance(move_result, dict):
+        circuit_data = list(move_result.get("moved") or [])
+        failed_data = list(move_result.get("failed") or [])
+        skipped_data = list(move_result.get("skipped") or [])
+        partial = bool(move_result.get("partial", False))
+        fallback_used = bool(move_result.get("fallback_used", False))
+    else:
+        circuit_data = list(move_result or [])
+        failed_data = []
+        skipped_data = []
+        partial = False
+        fallback_used = False
+
+    if partial:
+        output.print_md("**Partial move accepted. Successful moves are listed below.**")
+    elif fallback_used:
+        output.print_md("**Circuits transferred successfully (with default SPARE/SPACE replacement workflow).**")
+    else:
+        output.print_md("**Circuits transferred successfully.**")
+
     output.print_table(circuit_data, ["Circuit ID", "Previous Circuit", "New Circuit"])
+    if failed_data:
+        output.print_md("**Circuits not moved:**")
+        output.print_table(failed_data, ["Circuit ID", "Previous Circuit", "Failure"])
+    if skipped_data:
+        output.print_md("**Circuits skipped:**")
+        output.print_table(skipped_data, ["Circuit ID", "Circuit", "Reason"])
 
 
 if __name__ == '__main__':
     main()
+

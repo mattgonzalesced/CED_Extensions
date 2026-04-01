@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 import math
 from collections import defaultdict
 
@@ -7,9 +7,10 @@ from Autodesk.Revit.DB import (XYZ, Line, ElementTransformUtils, IndependentTag,
 from pyrevit import DB
 from pyrevit import HOST_APP
 from pyrevit import script
-from pyrevit.compat import get_elementid_value_func
 
-get_id_value = get_elementid_value_func()
+from Snippets import revit_helpers
+
+get_id_value = revit_helpers.get_elementid_value
 
 # Initialize logger
 logger = script.get_logger()
@@ -319,3 +320,4 @@ def orient_elements_group(doc, grouped_data, target_orientation, adjust_tag_posi
             adjust_tag_locations(grouped_data, angle)
             if adjust_tag_rotation:
                 adjust_tag_rotations(grouped_data, angle, keep_model_orientation)
+
