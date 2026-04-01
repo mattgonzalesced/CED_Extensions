@@ -22,6 +22,7 @@ from Autodesk.Revit.DB import (
     FilteredElementCollector,
     Reference,
     RevitLinkInstance,
+    TemporaryViewMode,
 )
 from System.Collections.Generic import List
 
@@ -46,10 +47,13 @@ from ExtensibleStorage.yaml_store import load_active_yaml_data  # noqa: E402
 from ExtensibleStorage import ExtensibleStorage  # noqa: E402
 from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 
-TITLE = "Toggle Existing Profiles"
-BUILD_TAG = "2026-03-31-unhide-hotfix2"
+TITLE = "Hide Existing Profiles"
+BUILD_TAG = "2026-04-01-hide-only2"
 SETTING_KEY = "mep_automation.toggle_existing_profiles_hidden"
 SETTING_IDS_KEY = "mep_automation.toggle_existing_profiles_pairs"
+SETTING_STRATEGY_KEY = "mep_automation.toggle_existing_profiles_strategy"
+SETTING_HIDDEN_HOST_IDS_KEY = "mep_automation.toggle_existing_profiles_hidden_host_ids"
+USE_TEMPORARY_HIDE_ISOLATE = False
 
 
 try:
@@ -421,6 +425,32 @@ def _set_toggle_state(doc, value):
         return False
 
 
+def _get_last_hide_strategy(doc, default_value="targeted"):
+    try:
+        value = ExtensibleStorage.get_user_setting(doc, SETTING_STRATEGY_KEY, default=None)
+    except Exception:
+        value = None
+    if not value:
+        return default_value
+    try:
+        text = str(value).strip().lower()
+    except Exception:
+        return default_value
+    return text or default_value
+
+
+def _set_last_hide_strategy(doc, strategy):
+    try:
+        return ExtensibleStorage.set_user_setting(
+            doc,
+            SETTING_STRATEGY_KEY,
+            str(strategy or "targeted"),
+            transaction_name="TOGGLE_EXISTING_PROFILES_STRATEGY",
+        )
+    except Exception:
+        return False
+
+
 def _set_button_icon(is_on, script_cmp=None, ui_button_cmp=None):
     if script_cmp is not None and ui_button_cmp is not None:
         try:
@@ -505,6 +535,122 @@ def _set_hidden_pairs(doc, pairs):
         )
     except Exception:
         return False
+
+
+def _serialize_int_ids(values):
+    if not values:
+        return ""
+    parts = []
+    seen = set()
+    for raw in values:
+        try:
+            val = int(raw)
+        except Exception:
+            continue
+        if val <= 0 or val in seen:
+            continue
+        seen.add(val)
+        parts.append(str(val))
+    return ",".join(parts)
+
+
+def _deserialize_int_ids(raw):
+    result = []
+    if not raw:
+        return result
+    seen = set()
+    for part in str(raw).split(","):
+        token = part.strip()
+        if not token:
+            continue
+        try:
+            val = int(token)
+        except Exception:
+            continue
+        if val <= 0 or val in seen:
+            continue
+        seen.add(val)
+        result.append(val)
+    return result
+
+
+def _get_hidden_host_ids(doc):
+    try:
+        raw = ExtensibleStorage.get_user_setting(doc, SETTING_HIDDEN_HOST_IDS_KEY, default=None)
+    except Exception:
+        raw = None
+    return _deserialize_int_ids(raw)
+
+
+def _set_hidden_host_ids(doc, host_ids):
+    payload = _serialize_int_ids(host_ids)
+    try:
+        return ExtensibleStorage.set_user_setting(
+            doc,
+            SETTING_HIDDEN_HOST_IDS_KEY,
+            payload,
+            transaction_name="TOGGLE_EXISTING_PROFILES_HOST_IDS",
+        )
+    except Exception:
+        return False
+
+
+def _get_view_hidden_id_values(view):
+    values = set()
+    if view is None:
+        return values
+    try:
+        hidden_ids = view.GetHiddenElementIds()
+    except Exception:
+        hidden_ids = None
+    if hidden_ids is None:
+        return values
+    for elem_id in hidden_ids:
+        val = _element_id_value(elem_id, default=None)
+        if val is None:
+            continue
+        try:
+            val = int(val)
+        except Exception:
+            continue
+        if val > 0:
+            values.add(val)
+    return values
+
+
+def _unhide_via_stored_host_ids(doc, view, host_id_values):
+    if doc is None or view is None or not host_id_values:
+        return 0
+    currently_hidden = _get_view_hidden_id_values(view)
+    if currently_hidden:
+        candidate_vals = [val for val in host_id_values if int(val) in currently_hidden]
+    else:
+        candidate_vals = list(host_id_values)
+    if not candidate_vals:
+        return 0
+
+    success = 0
+    with revit.Transaction("Unhide Existing Profiles (Stored Host Ids)"):
+        for raw_val in candidate_vals:
+            try:
+                elem_id = ElementId(int(raw_val))
+            except Exception:
+                continue
+            # Keep this path targeted; do not treat root link instances as element surrogates.
+            try:
+                host_elem = doc.GetElement(elem_id)
+            except Exception:
+                host_elem = None
+            if isinstance(host_elem, RevitLinkInstance):
+                continue
+            ids = List[ElementId]()
+            ids.Add(elem_id)
+            try:
+                view.UnhideElements(ids)
+                success += 1
+            except Exception:
+                continue
+    return success
 
 
 def _build_link_element_ids_from_pairs(doc, pairs):
@@ -615,10 +761,42 @@ def _unhide_via_root_links(doc, view, pairs):
     success = 0
     with revit.Transaction("Unhide Existing Profile Link Instances"):
         for link_id in root_link_ids:
+            link_elem = None
+            try:
+                link_elem = doc.GetElement(link_id)
+            except Exception:
+                link_elem = None
+            if link_elem is None:
+                continue
+            # Count success only when the link instance was actually hidden.
+            try:
+                was_hidden = bool(link_elem.IsHidden(view))
+            except Exception:
+                was_hidden = False
+            if not was_hidden:
+                continue
             ids = List[ElementId]()
             ids.Add(link_id)
             try:
                 view.UnhideElements(ids)
+                success += 1
+            except Exception:
+                continue
+    return success
+
+
+def _hide_via_root_links(doc, view, pairs):
+    root_link_ids = _collect_root_link_ids_from_pairs(doc, pairs)
+    if not root_link_ids:
+        return 0
+
+    success = 0
+    with revit.Transaction("Hide Existing Profile Link Instances"):
+        for link_id in root_link_ids:
+            ids = List[ElementId]()
+            ids.Add(link_id)
+            try:
+                view.HideElements(ids)
                 success += 1
             except Exception:
                 continue
@@ -742,10 +920,167 @@ def _print_no_match_diagnostics(yaml_lookup, linked_name_samples):
         output.print_table(table_data=sample_rows, columns=["Linked Family : Type", "Normalized Key"])
 
 
+def _build_host_surrogate_ids_from_link_ids(doc, link_element_ids):
+    elem_ids = List[ElementId]()
+    seen = set()
+    if not link_element_ids:
+        return elem_ids
+    for lid in link_element_ids:
+        host_id = None
+        try:
+            host_id = getattr(lid, "HostElementId", None)
+        except Exception:
+            host_id = None
+        host_val = _element_id_value(host_id, default=None)
+        if host_val is None:
+            continue
+        try:
+            host_val = int(host_val)
+        except Exception:
+            continue
+        if host_val <= 0 or host_val in seen:
+            continue
+        # Guard: never treat a root link instance id as a per-element surrogate.
+        if doc is not None:
+            try:
+                host_elem = doc.GetElement(host_id)
+            except Exception:
+                host_elem = None
+            if isinstance(host_elem, RevitLinkInstance):
+                continue
+        seen.add(host_val)
+        try:
+            elem_ids.Add(host_id)
+        except Exception:
+            continue
+    return elem_ids
+
+
+def _host_surrogate_values_from_link_ids(doc, link_element_ids):
+    values = []
+    seen = set()
+    elem_ids = _build_host_surrogate_ids_from_link_ids(doc, link_element_ids)
+    for elem_id in elem_ids:
+        val = _element_id_value(elem_id, default=None)
+        if val is None:
+            continue
+        try:
+            val = int(val)
+        except Exception:
+            continue
+        if val <= 0 or val in seen:
+            continue
+        seen.add(val)
+        values.append(val)
+    return values
+
+
+def _hide_via_host_ids(doc, view, host_id_values):
+    if doc is None or view is None or not host_id_values:
+        return 0
+    ids = List[ElementId]()
+    seen = set()
+    for raw_val in host_id_values:
+        try:
+            val = int(raw_val)
+        except Exception:
+            continue
+        if val <= 0 or val in seen:
+            continue
+        seen.add(val)
+        try:
+            elem_id = ElementId(val)
+        except Exception:
+            continue
+        # Never hide whole link instances from surrogate fallback.
+        try:
+            host_elem = doc.GetElement(elem_id)
+        except Exception:
+            host_elem = None
+        if isinstance(host_elem, RevitLinkInstance):
+            continue
+        try:
+            ids.Add(elem_id)
+        except Exception:
+            continue
+
+    if ids.Count <= 0:
+        return 0
+
+    try:
+        view.HideElements(ids)
+        return int(ids.Count)
+    except Exception:
+        # Keep transaction alive and salvage with per-id calls.
+        success = 0
+        for elem_id in ids:
+            one = List[ElementId]()
+            one.Add(elem_id)
+            try:
+                view.HideElements(one)
+                success += 1
+            except Exception:
+                continue
+        return success
+
+
+def _unhide_all_hidden_non_link_elements(doc, view):
+    if doc is None or view is None:
+        return 0
+    try:
+        hidden_ids = list(view.GetHiddenElementIds() or [])
+    except Exception:
+        hidden_ids = []
+    if not hidden_ids:
+        return 0
+
+    ids = List[ElementId]()
+    seen = set()
+    for elem_id in hidden_ids:
+        val = _element_id_value(elem_id, default=None)
+        if val is None:
+            continue
+        try:
+            val = int(val)
+        except Exception:
+            continue
+        if val <= 0 or val in seen:
+            continue
+        seen.add(val)
+        try:
+            elem = doc.GetElement(elem_id)
+        except Exception:
+            elem = None
+        if isinstance(elem, RevitLinkInstance):
+            continue
+        try:
+            ids.Add(elem_id)
+        except Exception:
+            continue
+
+    if ids.Count <= 0:
+        return 0
+
+    with revit.Transaction("Unhide Existing Profiles (Emergency Non-Link Recovery)"):
+        view.UnhideElements(ids)
+    return int(ids.Count)
+
+
 def _apply_visibility(view, link_element_ids, hide_mode):
     typed_ids = List[LinkElementId]()
     for item in link_element_ids:
         typed_ids.Add(item)
+
+    def _invoke_element_ids_from_link_ids():
+        doc = getattr(view, "Document", None)
+        elem_ids = _build_host_surrogate_ids_from_link_ids(doc, link_element_ids)
+        if elem_ids.Count <= 0:
+            return False
+        if hide_mode:
+            view.HideElements(elem_ids)
+        else:
+            view.UnhideElements(elem_ids)
+        return True
 
     def _invoke_link_overload(method_name):
         try:
@@ -756,7 +1091,7 @@ def _apply_visibility(view, link_element_ids, hide_mode):
         for method in methods:
             try:
                 params = method.GetParameters()
-                if len(params) != 1:
+                if len(params) <= 0:
                     continue
                 ptype = params[0].ParameterType
                 if not getattr(ptype, "IsGenericType", False):
@@ -767,7 +1102,21 @@ def _apply_visibility(view, link_element_ids, hide_mode):
                 target_arg = getattr(gargs[0], "FullName", None) or ""
                 if target_arg != "Autodesk.Revit.DB.LinkElementId":
                     continue
-                args = System.Array[System.Object]([typed_ids])
+                invoke_args = [typed_ids]
+                if len(params) == 2:
+                    second_type = params[1].ParameterType
+                    second_name = getattr(second_type, "FullName", None) or ""
+                    if second_name in ("System.Boolean", "bool"):
+                        invoke_args.append(False)
+                    elif second_name in ("System.Int32", "int"):
+                        invoke_args.append(0)
+                    elif getattr(second_type, "IsEnum", False):
+                        invoke_args.append(System.Enum.ToObject(second_type, 0))
+                    else:
+                        continue
+                elif len(params) > 2:
+                    continue
+                args = System.Array[System.Object](invoke_args)
                 method.Invoke(view, args)
                 return True
             except Exception:
@@ -775,16 +1124,47 @@ def _apply_visibility(view, link_element_ids, hide_mode):
         return False
 
     method_name = "HideElements" if hide_mode else "UnhideElements"
-    try:
-        if hide_mode:
-            view.HideElements(typed_ids)
-        else:
-            view.UnhideElements(typed_ids)
-        return
-    except Exception as direct_exc:
+    if hide_mode:
+        # Hide: prefer link-id overload first, then host surrogate ids.
         if _invoke_link_overload(method_name):
             return
-        raise direct_exc
+        if _invoke_element_ids_from_link_ids():
+            return
+    else:
+        # Unhide: prefer host surrogate ids first to avoid brittle link-id overloads.
+        if _invoke_element_ids_from_link_ids():
+            return
+        if _invoke_link_overload(method_name):
+            return
+
+    raise RuntimeError(
+        "No compatible {} overload accepted the linked element collection.".format(method_name)
+    )
+
+
+def _has_link_overload(view, method_name):
+    try:
+        view_type = view.GetType()
+        methods = [m for m in view_type.GetMethods() if m.Name == method_name]
+    except Exception:
+        methods = []
+    for method in methods:
+        try:
+            params = method.GetParameters()
+            if len(params) <= 0:
+                continue
+            ptype = params[0].ParameterType
+            if not getattr(ptype, "IsGenericType", False):
+                continue
+            gargs = ptype.GetGenericArguments()
+            if not gargs or len(gargs) != 1:
+                continue
+            target_arg = getattr(gargs[0], "FullName", None) or ""
+            if target_arg == "Autodesk.Revit.DB.LinkElementId":
+                return True
+        except Exception:
+            continue
+    return False
 
 
 def _post_visibility_command(uidoc, refs, hide_mode):
@@ -800,26 +1180,13 @@ def _post_visibility_command(uidoc, refs, hide_mode):
         typed_refs.Add(ref)
     uidoc.Selection.SetReferences(typed_refs)
 
-    def _try_post_command_id(cmd_id):
-        if cmd_id is None:
-            return False
-        can_post = getattr(__revit__, "CanPostCommand", None)
-        if callable(can_post):
-            try:
-                if not can_post(cmd_id):
-                    return False
-            except Exception:
-                return False
-        __revit__.PostCommand(cmd_id)
-        return True
-
     if hide_mode:
         cmd_enum = getattr(PostableCommand, "HideElements", None)
     else:
         cmd_enum = getattr(PostableCommand, "UnhideElements", None) or getattr(PostableCommand, "UnhideElement", None)
     if cmd_enum is not None:
         cmd_id = RevitCommandId.LookupPostableCommandId(cmd_enum)
-        if _try_post_command_id(cmd_id):
+        if _try_post_command_id(cmd_id, require_can_post=hide_mode):
             return
 
     if hide_mode:
@@ -829,8 +1196,13 @@ def _post_visibility_command(uidoc, refs, hide_mode):
     # command id exists; try known command id names directly.
     candidate_names = [
         "ID_VIEW_UNHIDE_ELEMENTS",
+        "ID_VIEW_UNHIDE_ELEMENT",
         "ID_VIEW_UNHIDE_ELEMS",
         "ID_UNHIDE_ELEMENTS",
+        "ID_UNHIDE_ELEMENT",
+        "ID_EDIT_UNHIDE_ELEMENTS",
+        "ID_VIEW_UNHIDE",
+        "ID_VIEW_UNHIDE_IN_VIEW",
         "ID_UNHIDE_IN_VIEW_ELEMENTS",
         "ID_VIEW_UNHIDE_IN_VIEW_ELEMENTS",
     ]
@@ -839,10 +1211,267 @@ def _post_visibility_command(uidoc, refs, hide_mode):
             candidate_cmd = RevitCommandId.LookupCommandId(name)
         except Exception:
             candidate_cmd = None
-        if _try_post_command_id(candidate_cmd):
+        if _try_post_command_id(candidate_cmd, require_can_post=False):
             return
 
     raise RuntimeError("No postable unhide command is available.")
+
+
+def _can_post_unhide_command():
+    if PostableCommand is None or RevitCommandId is None:
+        return False
+    can_post = getattr(__revit__, "CanPostCommand", None)
+    if not callable(can_post):
+        return False
+
+    enum_candidates = [
+        getattr(PostableCommand, "UnhideElements", None),
+        getattr(PostableCommand, "UnhideElement", None),
+    ]
+    for cmd_enum in enum_candidates:
+        if cmd_enum is None:
+            continue
+        try:
+            cmd_id = RevitCommandId.LookupPostableCommandId(cmd_enum)
+        except Exception:
+            cmd_id = None
+        if cmd_id is None:
+            continue
+        try:
+            if can_post(cmd_id):
+                return True
+        except Exception:
+            continue
+
+    candidate_names = [
+        "ID_VIEW_UNHIDE_ELEMENTS",
+        "ID_VIEW_UNHIDE_ELEMS",
+        "ID_UNHIDE_ELEMENTS",
+        "ID_UNHIDE_IN_VIEW_ELEMENTS",
+        "ID_VIEW_UNHIDE_IN_VIEW_ELEMENTS",
+    ]
+    for name in candidate_names:
+        try:
+            cmd_id = RevitCommandId.LookupCommandId(name)
+        except Exception:
+            cmd_id = None
+        if cmd_id is None:
+            continue
+        try:
+            if can_post(cmd_id):
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def _try_post_command_id(cmd_id, require_can_post=True):
+    if cmd_id is None:
+        return False
+    can_post = getattr(__revit__, "CanPostCommand", None)
+    if callable(can_post):
+        try:
+            can_post_now = bool(can_post(cmd_id))
+        except Exception:
+            can_post_now = False
+        if require_can_post and (not can_post_now):
+            return False
+    try:
+        __revit__.PostCommand(cmd_id)
+        return True
+    except Exception:
+        return False
+
+
+def _post_temp_hide_command(uidoc, refs):
+    if PostableCommand is None or RevitCommandId is None:
+        raise RuntimeError("Revit UI command API is unavailable in this environment.")
+    if uidoc is None:
+        raise RuntimeError("No active UI document available.")
+    if not refs:
+        raise RuntimeError("No linked references available for temporary hide command.")
+
+    typed_refs = List[Reference]()
+    for ref in refs:
+        typed_refs.Add(ref)
+    uidoc.Selection.SetReferences(typed_refs)
+
+    enum_candidates = [
+        getattr(PostableCommand, "TemporaryHideIsolateElement", None),
+        getattr(PostableCommand, "TemporaryHideIsolateElements", None),
+    ]
+    for cmd_enum in enum_candidates:
+        if cmd_enum is None:
+            continue
+        try:
+            cmd_id = RevitCommandId.LookupPostableCommandId(cmd_enum)
+        except Exception:
+            cmd_id = None
+        if _try_post_command_id(cmd_id):
+            return
+
+    candidate_names = [
+        "ID_VIEW_TEMP_HIDE_ELEMENTS",
+        "ID_VIEW_TEMP_HIDE_ELEMS",
+        "ID_VIEW_TEMPORARY_HIDE_ELEMENTS",
+        "ID_VIEW_TEMP_HIDE_ISOLATE_ELEMENTS",
+    ]
+    for name in candidate_names:
+        try:
+            cmd_id = RevitCommandId.LookupCommandId(name)
+        except Exception:
+            cmd_id = None
+        if _try_post_command_id(cmd_id):
+            return
+
+    raise RuntimeError("No postable temporary hide command is available.")
+
+
+def _hide_elements_temporary(view, link_element_ids):
+    if LinkElementId is None:
+        raise RuntimeError("LinkElementId is unavailable for temporary linked hide.")
+    if view is None:
+        raise RuntimeError("No active view is available.")
+    if not link_element_ids:
+        raise RuntimeError("No linked element ids were supplied for temporary hide.")
+
+    typed_ids = List[LinkElementId]()
+    for item in link_element_ids:
+        typed_ids.Add(item)
+
+    try:
+        view_type = view.GetType()
+        methods = [m for m in view_type.GetMethods() if m.Name == "HideElementsTemporary"]
+    except Exception:
+        methods = []
+
+    for method in methods:
+        try:
+            params = method.GetParameters()
+            if len(params) <= 0:
+                continue
+            first_type = params[0].ParameterType
+            if not getattr(first_type, "IsGenericType", False):
+                continue
+            gargs = first_type.GetGenericArguments()
+            if not gargs or len(gargs) != 1:
+                continue
+            target_arg = getattr(gargs[0], "FullName", None) or ""
+            if target_arg != "Autodesk.Revit.DB.LinkElementId":
+                continue
+
+            invoke_args = [typed_ids]
+            if len(params) == 2:
+                second_type = params[1].ParameterType
+                second_name = getattr(second_type, "FullName", None) or ""
+                if second_name in ("System.Boolean", "bool"):
+                    invoke_args.append(False)
+                elif second_name in ("System.Int32", "int"):
+                    invoke_args.append(0)
+                elif getattr(second_type, "IsEnum", False):
+                    invoke_args.append(System.Enum.ToObject(second_type, 0))
+                else:
+                    continue
+            elif len(params) > 2:
+                continue
+
+            args = System.Array[System.Object](invoke_args)
+            method.Invoke(view, args)
+            return
+        except Exception:
+            continue
+
+    # Fallback: some Revit builds only expose ICollection<ElementId> here.
+    # Use host surrogate ids, but skip root link instance ids to avoid hiding walls/doors/etc.
+    doc = getattr(view, "Document", None)
+    elem_ids = _build_host_surrogate_ids_from_link_ids(doc, link_element_ids)
+    if elem_ids.Count > 0:
+        try:
+            view.HideElementsTemporary(elem_ids)
+            return
+        except Exception:
+            pass
+
+    raise RuntimeError("No compatible HideElementsTemporary overload accepted linked ids or host-surrogate ids.")
+
+
+def _clear_temporary_hide_isolate(view):
+    if view is None:
+        raise RuntimeError("No active view is available.")
+    with revit.Transaction("Clear Temporary Hide/Isolate Existing Profiles"):
+        view.DisableTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate)
+
+
+def _set_reference_selection(uidoc, refs):
+    if uidoc is None or not refs:
+        return 0
+    typed_refs = List[Reference]()
+    for ref in refs:
+        try:
+            typed_refs.Add(ref)
+        except Exception:
+            continue
+    if typed_refs.Count <= 0:
+        return 0
+    uidoc.Selection.SetReferences(typed_refs)
+    return int(typed_refs.Count)
+
+
+def _enable_reveal_hidden_mode(view):
+    if view is None:
+        raise RuntimeError("No active view is available.")
+    try:
+        if view.IsInTemporaryViewMode(TemporaryViewMode.RevealHiddenElements):
+            return
+    except Exception:
+        pass
+    try:
+        view.EnableRevealHiddenMode()
+        return
+    except Exception:
+        pass
+    with revit.Transaction("Enable Reveal Hidden Elements"):
+        view.EnableRevealHiddenMode()
+
+
+def _disable_reveal_hidden_mode(view):
+    if view is None:
+        return
+    try:
+        if not view.IsInTemporaryViewMode(TemporaryViewMode.RevealHiddenElements):
+            return
+    except Exception:
+        return
+    try:
+        view.DisableTemporaryViewMode(TemporaryViewMode.RevealHiddenElements)
+    except Exception:
+        with revit.Transaction("Disable Reveal Hidden Elements"):
+            view.DisableTemporaryViewMode(TemporaryViewMode.RevealHiddenElements)
+
+
+def _post_reveal_hidden_command():
+    if PostableCommand is None or RevitCommandId is None:
+        raise RuntimeError("Revit UI command API is unavailable in this environment.")
+    cmd_enum = getattr(PostableCommand, "RevealHiddenElements", None)
+    if cmd_enum is not None:
+        try:
+            cmd_id = RevitCommandId.LookupPostableCommandId(cmd_enum)
+        except Exception:
+            cmd_id = None
+        if _try_post_command_id(cmd_id):
+            return
+    candidate_names = [
+        "ID_VIEW_REVEAL_HIDDEN_ELEMENTS",
+        "ID_REVEAL_HIDDEN_ELEMENTS",
+    ]
+    for name in candidate_names:
+        try:
+            cmd_id = RevitCommandId.LookupCommandId(name)
+        except Exception:
+            cmd_id = None
+        if _try_post_command_id(cmd_id):
+            return
+    raise RuntimeError("No postable reveal hidden command is available.")
 
 
 def _is_revit_2025_or_newer(doc):
@@ -883,10 +1512,6 @@ def main():
         forms.alert("No equipment profile names were found in the active YAML.", title=TITLE)
         return
 
-    hidden_now = _get_toggle_state(doc, default=False)
-    hide_mode = not hidden_now
-    prefer_ui_mode = _is_revit_2025_or_newer(doc) or (LinkElementId is None)
-
     scanned = 0
     matched = 0
     link_count = 0
@@ -894,60 +1519,16 @@ def main():
     match_records = []
     linked_name_samples = {}
     link_element_ids = []
-
-    if hide_mode:
-        try:
-            link_element_ids, matched_pairs, match_records, linked_name_samples, scanned, matched, link_count = _collect_matching_link_element_ids(doc, profile_lookup)
-            if _has_nested_targets(matched_pairs):
-                prefer_ui_mode = True
-        except Exception as exc:
-            forms.alert(
-                "Unable to collect linked elements for toggling:\n\n{}".format(exc),
-                title=TITLE,
-            )
-            return
-    else:
-        stored_pairs = _get_hidden_pairs(doc)
-        if stored_pairs:
-            matched_pairs = list(stored_pairs)
-            matched = len(matched_pairs)
-            if _has_nested_targets(matched_pairs):
-                prefer_ui_mode = True
-            if not prefer_ui_mode:
-                try:
-                    link_element_ids = _build_link_element_ids_from_pairs(doc, stored_pairs)
-                    matched = len(link_element_ids) or matched
-                except Exception:
-                    link_element_ids = []
-        else:
-            matched_pairs = []
-            link_element_ids = []
-        needs_rescan = (not link_element_ids) and (not (prefer_ui_mode and matched_pairs))
-        if needs_rescan:
-            try:
-                coll_link_ids, coll_pairs, coll_records, coll_linked_samples, coll_scanned, coll_matched, coll_link_count = _collect_matching_link_element_ids(doc, profile_lookup)
-                if not matched_pairs:
-                    matched_pairs = coll_pairs
-                    matched = coll_matched
-                    match_records = coll_records
-                    linked_name_samples = coll_linked_samples
-                    if _has_nested_targets(matched_pairs):
-                        prefer_ui_mode = True
-                scanned = coll_scanned
-                link_count = coll_link_count
-                if not prefer_ui_mode:
-                    link_element_ids = coll_link_ids
-            except Exception as exc:
-                forms.alert(
-                    "Unable to collect linked elements for toggling:\n\n{}".format(exc),
-                    title=TITLE,
-                )
-                return
+    try:
+        link_element_ids, matched_pairs, match_records, linked_name_samples, scanned, matched, link_count = _collect_matching_link_element_ids(doc, profile_lookup)
+    except Exception as exc:
+        forms.alert(
+            "Unable to collect linked elements for hiding:\n\n{}".format(exc),
+            title=TITLE,
+        )
+        return
 
     if not matched_pairs:
-        _set_toggle_state(doc, False)
-        _set_hidden_pairs(doc, [])
-        _set_button_icon(False)
         _print_no_match_diagnostics(profile_lookup, linked_name_samples)
         forms.alert(
             _with_build(
@@ -960,129 +1541,55 @@ def main():
         )
         return
 
-    action_text = "Hide" if hide_mode else "Unhide"
-    apply_mode = "ui" if prefer_ui_mode else "api"
-    already_applied = False
+    action_text = "Hide"
+    apply_mode = "api-host-ids"
+    hidden_count = 0
+    target_host_ids = _host_surrogate_values_from_link_ids(doc, link_element_ids) if link_element_ids else []
+    hide_errors = []
 
-    # Revit 2025/2026 can lack a postable unhide command for linked refs.
-    # Try a safe ElementId-based link-instance unhide path first.
-    if not hide_mode:
+    if target_host_ids or link_element_ids:
         try:
-            unhidden_links = _unhide_via_root_links(doc, view, matched_pairs)
-            if unhidden_links > 0:
-                apply_mode = "api-link-instance"
-                already_applied = True
-        except Exception:
-            already_applied = False
+            with revit.Transaction("Hide Existing Profiles"):
+                if target_host_ids and hidden_count <= 0:
+                    try:
+                        hidden_count = _hide_via_host_ids(doc, view, target_host_ids)
+                        if hidden_count > 0:
+                            apply_mode = "api-host-ids"
+                    except Exception as exc:
+                        hide_errors.append("Host-id hide error: {}".format(exc))
 
-    if (not already_applied) and prefer_ui_mode:
+                if hidden_count <= 0 and link_element_ids:
+                    try:
+                        _apply_visibility(view, link_element_ids, True)
+                        hidden_count = len(link_element_ids)
+                        apply_mode = "api-link"
+                    except Exception as exc:
+                        hide_errors.append("Linked API hide error: {}".format(exc))
+        except Exception as exc:
+            hide_errors.append("API transaction error: {}".format(exc))
+
+    if hidden_count <= 0:
         try:
             refs = _build_link_references_from_pairs(doc, matched_pairs)
-            _post_visibility_command(revit.uidoc, refs, hide_mode)
-        except Exception as ui_exc:
-            if not hide_mode:
-                try:
-                    unhidden_links = _unhide_via_root_links(doc, view, matched_pairs)
-                    if unhidden_links > 0:
-                        apply_mode = "api-link-instance"
-                    else:
-                        raise RuntimeError("No matching root link instances could be unhidden.")
-                except Exception as link_unhide_exc:
-                    forms.alert(
-                        _with_build("{} failed.\n\nUI command error:\n{}\n\nLink-instance fallback error:\n{}".format(
-                            action_text,
-                            ui_exc,
-                            link_unhide_exc,
-                        )),
-                        title=TITLE,
-                    )
-                    return
-            elif LinkElementId is None:
-                forms.alert(
-                    _with_build("{} failed.\n\n{}".format(action_text, ui_exc)),
-                    title=TITLE,
-                )
-                return
-            try:
-                if not link_element_ids:
-                    link_element_ids = _build_link_element_ids_from_pairs(doc, matched_pairs)
-                if not link_element_ids:
-                    raise RuntimeError("No API-compatible linked element ids were available for fallback.")
-                with revit.Transaction("{} Existing Profiles".format(action_text)):
-                    _apply_visibility(view, link_element_ids, hide_mode)
-                apply_mode = "api"
-            except Exception as api_fallback_exc:
-                forms.alert(
-                    _with_build("{} failed.\n\nUI command error:\n{}\n\nAPI fallback error:\n{}".format(
-                        action_text,
-                        ui_exc,
-                        api_fallback_exc,
-                    )),
-                    title=TITLE,
-                )
-                return
-    elif not already_applied:
-        if not link_element_ids and LinkElementId is not None:
-            try:
-                link_element_ids = _build_link_element_ids_from_pairs(doc, matched_pairs)
-            except Exception:
-                link_element_ids = []
-        txn_name = "{} Existing Profiles".format(action_text)
-        try:
-            if not link_element_ids:
-                raise RuntimeError("No API-compatible linked element ids were available for visibility update.")
-            with revit.Transaction(txn_name):
-                _apply_visibility(view, link_element_ids, hide_mode)
-        except Exception as api_exc:
-            try:
-                refs = _build_link_references_from_pairs(doc, matched_pairs)
-                _post_visibility_command(revit.uidoc, refs, hide_mode)
-                apply_mode = "ui"
-            except Exception as ui_fallback_exc:
-                if not hide_mode:
-                    try:
-                        unhidden_links = _unhide_via_root_links(doc, view, matched_pairs)
-                        if unhidden_links > 0:
-                            apply_mode = "api-link-instance"
-                        else:
-                            raise RuntimeError("No matching root link instances could be unhidden.")
-                    except Exception as link_unhide_exc:
-                        forms.alert(
-                            _with_build("{} failed.\n\nAPI error:\n{}\n\nUI fallback error:\n{}\n\nLink-instance fallback error:\n{}".format(
-                                action_text,
-                                api_exc,
-                                ui_fallback_exc,
-                                link_unhide_exc,
-                            )),
-                            title=TITLE,
-                        )
-                        return
-                else:
-                    forms.alert(
-                        _with_build("{} failed.\n\nAPI error:\n{}\n\nUI fallback error:\n{}".format(
-                            action_text,
-                            api_exc,
-                            ui_fallback_exc,
-                        )),
-                        title=TITLE,
-                    )
-                    return
+            _post_visibility_command(revit.uidoc, refs, True)
+            hidden_count = len(refs)
+            apply_mode = "ui"
+        except Exception as exc:
+            hide_errors.append("UI hide error: {}".format(exc))
 
-    _set_toggle_state(doc, hide_mode)
-    if hide_mode:
-        _set_hidden_pairs(doc, matched_pairs)
-    else:
-        _set_hidden_pairs(doc, [])
-    _set_button_icon(hide_mode)
-    state_text = "ON (hidden)" if hide_mode else "OFF (visible)"
+    if hidden_count <= 0:
+        detail = "\n\n".join(hide_errors) if hide_errors else "No hide method succeeded."
+        forms.alert(_with_build("Hide failed.\n\n{}".format(detail)), title=TITLE)
+        return
+
+    # Keep this command single-transaction: no ExtensibleStorage writes.
+
     yaml_label = get_yaml_display_name(data_path)
-    if not match_records:
-        match_records = _build_report_records_from_pairs(doc, matched_pairs, profile_lookup)
     _print_match_report(action_text, apply_mode, yaml_label, match_records, scanned, link_count, matched)
     forms.show_balloon(
         TITLE,
-        "State: {}\nMatched linked elements: {}\nElements scanned: {}\nApply mode: {}\nYAML: {}\nBuild: {}\nReport: pyRevit output panel".format(
-            state_text,
+        "Hidden linked elements: {}\nMatched linked elements: {}\nElements scanned: {}\nApply mode: {}\nYAML: {}\nBuild: {}\nTo reveal: use Undo in Revit.".format(
+            hidden_count,
             matched,
             scanned,
             apply_mode.upper(),
@@ -1090,17 +1597,6 @@ def main():
             BUILD_TAG,
         ),
     )
-
-
-def __selfinit__(script_cmp, ui_button_cmp, __rvt__):
-    doc = None
-    try:
-        uidoc = getattr(__rvt__, "ActiveUIDocument", None)
-        doc = uidoc.Document if uidoc else None
-    except Exception:
-        doc = None
-    state = _get_toggle_state(doc, default=False)
-    _set_button_icon(state, script_cmp=script_cmp, ui_button_cmp=ui_button_cmp)
 
 
 if __name__ == "__main__":

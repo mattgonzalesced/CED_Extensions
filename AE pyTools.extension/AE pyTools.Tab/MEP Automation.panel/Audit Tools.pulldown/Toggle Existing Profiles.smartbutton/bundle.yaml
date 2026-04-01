@@ -1,7 +1,0 @@
-title: Toggle Existing Profiles
-tooltip: |
-  Toggle linked model visibility for elements that already have matching equipment profiles in the active YAML.
-  ON hides linked elements whose names match existing YAML profile names.
-  OFF unhides those linked elements so full link context is visible again.
-  Use this to quickly isolate linked equipment that still needs new profiles.
-is_beta: false

@@ -1,0 +1,6 @@
+title: Hide Existing Profiles
+tooltip: |
+  Hide linked model elements that already have matching equipment profiles in the active YAML.
+  This tool only performs hide. To reveal hidden elements, use Undo in Revit.
+  Use this to quickly isolate linked equipment that still needs new profiles.
+is_beta: false
