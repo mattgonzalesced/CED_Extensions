@@ -8,6 +8,7 @@
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
@@ -16,19 +17,44 @@
                TextWrapping="Wrap"
                Margin="0,0,0,6"/>
 
+    <WrapPanel Grid.Row="1"
+               Margin="0,0,0,8"
+               VerticalAlignment="Center">
+      <TextBlock Text="Color Key: "
+                 FontWeight="Bold"
+                 VerticalAlignment="Center"
+                 Margin="0,0,6,0"/>
+
+      <Border Background="#FFFFFFFF" BorderBrush="#FFBDBDBD" BorderThickness="1" Padding="6,2" Margin="0,0,8,0">
+        <TextBlock Text="1 = No Color"/>
+      </Border>
+      <Border Background="#FF2E7D32" Padding="6,2" Margin="0,0,8,0">
+        <TextBlock Text="2 = Green" Foreground="White"/>
+      </Border>
+      <Border Background="#FF1565C0" Padding="6,2" Margin="0,0,8,0">
+        <TextBlock Text="3 = Blue" Foreground="White"/>
+      </Border>
+      <Border Background="#FF303F9F" Padding="6,2" Margin="0,0,8,0">
+        <TextBlock Text="4-7 = Indigo" Foreground="White"/>
+      </Border>
+      <Border Background="#FFC62828" Padding="6,2">
+        <TextBlock Text="8+ = Red" Foreground="White"/>
+      </Border>
+    </WrapPanel>
+
     <TextBlock x:Name="SummaryText"
-               Grid.Row="1"
+               Grid.Row="2"
                Margin="0,0,0,6"/>
 
     <DataGrid x:Name="PreviewGrid"
-              Grid.Row="2"
+              Grid.Row="3"
               AutoGenerateColumns="False"
               CanUserAddRows="False"
-              IsReadOnly="True"
+              IsReadOnly="False"
               SelectionMode="Extended"
               SelectionUnit="FullRow"
               Margin="0,0,0,8">
-            <DataGrid.RowStyle>
+      <DataGrid.RowStyle>
         <Style TargetType="DataGridRow">
           <Setter Property="Background" Value="{Binding row_background}"/>
           <Setter Property="Foreground" Value="{Binding row_foreground}"/>
@@ -45,24 +71,70 @@
       </DataGrid.RowStyle>
       <DataGrid.Columns>
         <DataGridTextColumn Header="Circuit Batch"
-                            Width="2.5*"
+                            Width="2.4*"
+                            IsReadOnly="True"
                             Binding="{Binding group_label}"/>
-        <DataGridTextColumn Header="CKT_Panel_CEDT"
-                            Width="1.2*"
-                            Binding="{Binding panel_name}"/>
-        <DataGridTextColumn Header="CKT_Circuit Number_CEDT"
-                            Width="1.3*"
-                            Binding="{Binding circuit_number}"/>
+
+        <DataGridTemplateColumn Header="CKT_Panel_CEDT" Width="1.3*">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <ComboBox ItemsSource="{Binding panel_options}"
+                        Text="{Binding panel_name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        IsEditable="True"
+                        StaysOpenOnEdit="True"
+                        BorderThickness="0"
+                        Background="Transparent"
+                        Foreground="{Binding row_foreground}">
+                <ComboBox.Style>
+                  <Style TargetType="ComboBox">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding is_spacer}" Value="True">
+                        <Setter Property="IsEnabled" Value="False"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </ComboBox.Style>
+              </ComboBox>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+
+        <DataGridTemplateColumn Header="CKT_Circuit Number_CEDT" Width="1.4*">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <ComboBox ItemsSource="{Binding circuit_options}"
+                        Text="{Binding circuit_number, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        IsEditable="True"
+                        StaysOpenOnEdit="True"
+                        BorderThickness="0"
+                        Background="Transparent"
+                        Foreground="{Binding row_foreground}">
+                <ComboBox.Style>
+                  <Style TargetType="ComboBox">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding is_spacer}" Value="True">
+                        <Setter Property="IsEnabled" Value="False"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </ComboBox.Style>
+              </ComboBox>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+
         <DataGridTextColumn Header="Family : Type"
                             Width="2.0*"
+                            IsReadOnly="True"
                             Binding="{Binding family_type}"/>
         <DataGridTextColumn Header="Element ID"
                             Width="0.9*"
+                            IsReadOnly="True"
                             Binding="{Binding element_id}"/>
       </DataGrid.Columns>
     </DataGrid>
 
-    <StackPanel Grid.Row="3"
+    <StackPanel Grid.Row="4"
                 Orientation="Horizontal"
                 HorizontalAlignment="Right">
       <Button x:Name="EditSelectedButton"
@@ -79,4 +151,3 @@
     </StackPanel>
   </Grid>
 </Window>
-

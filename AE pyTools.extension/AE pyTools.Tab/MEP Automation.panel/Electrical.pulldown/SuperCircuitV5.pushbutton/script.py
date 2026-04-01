@@ -82,6 +82,8 @@ class PreviewRow(object):
         row_background=None,
         row_foreground=None,
         is_spacer=False,
+        panel_options=None,
+        circuit_options=None,
     ):
         self.group_index = group_index
         self.group_label = group_label
@@ -93,6 +95,8 @@ class PreviewRow(object):
         self.row_background = row_background
         self.row_foreground = row_foreground or DEFAULT_ROW_FOREGROUND
         self.is_spacer = bool(is_spacer)
+        self.panel_options = list(panel_options or [])
+        self.circuit_options = list(circuit_options or [])
 
 class SuperCircuitPreviewWindow(forms.WPFWindow):
     def __init__(self, xaml_path, rows):
@@ -104,8 +108,8 @@ class SuperCircuitPreviewWindow(forms.WPFWindow):
         if header is not None:
             header.Text = (
                 "Preview of circuits to be created. Rows are grouped by circuit batch and panel. "
-                "Select one or more rows, click Edit Selected to change panel/circuit, then Run Circuits. "
-                "Color legend for grouped circuits: 2=Green, 3=Blue, 4-7=Indigo, 8+=Red. Blank rows separate each circuit batch."
+                "Edit panel and circuit directly in the combo boxes in this window, then click Run Circuits. "
+                "Use the Color Key at the top (1=No Color, 2=Green, 3=Blue, 4-7=Indigo, 8+=Red). Blank rows separate each circuit batch."
             )
 
         summary = self.FindName("SummaryText")
@@ -161,31 +165,14 @@ class SuperCircuitPreviewWindow(forms.WPFWindow):
                 pass
 
     def _on_edit_selected(self, sender, args):
-        rows = self._selected_rows()
-        if not rows:
-            forms.alert("Select at least one row to edit.", title=__title__)
+        grid = self.FindName("PreviewGrid")
+        if grid is None:
             return
-
-        first = rows[0]
-        panel_value = forms.ask_for_string(
-            prompt="Enter panel value for {} selected element(s).".format(len(rows)),
-            default=first.panel_name,
-            title="Edit Panel",
-        )
-        if panel_value is None:
-            return
-
-        circuit_value = forms.ask_for_string(
-            prompt="Enter circuit number value for {} selected element(s).".format(len(rows)),
-            default=first.circuit_number,
-            title="Edit Circuit Number",
-        )
-        if circuit_value is None:
-            return
-
-        panel_value = panel_value.strip()
-        circuit_value = circuit_value.strip()
-        self._apply_row_values(rows, panel_value, circuit_value)
+        try:
+            grid.Focus()
+            grid.BeginEdit()
+        except Exception:
+            pass
 
     def _close_with_result(self, accepted):
         self.accepted = bool(accepted)
@@ -546,7 +533,74 @@ def _family_type_text(element):
     return "{} : {}".format(family_name or "Unknown", type_name or "Unknown")
 
 
-def _build_preview_rows(groups):
+
+
+def _collect_panel_combo_options(groups, panel_lookup):
+    options = []
+    seen = set()
+
+    def add_option(value):
+        name = (value or "").strip()
+        if not name:
+            return
+        key = name.upper()
+        if key in seen:
+            return
+        seen.add(key)
+        options.append(name)
+
+    for panel_name in sorted((panel_lookup or {}).keys(), key=lambda v: (v or "").upper()):
+        add_option(panel_name)
+
+    for group in groups or []:
+        add_option(group.get("panel_name"))
+        for member in group.get("members") or []:
+            add_option(member.get("panel_name"))
+
+    return options
+
+
+def _collect_circuit_combo_options(groups):
+    options = []
+    seen = set()
+
+    def add_option(value):
+        name = (value or "").strip()
+        if not name:
+            return
+        key = name.upper()
+        if key in seen:
+            return
+        seen.add(key)
+        options.append(name)
+
+    for group in groups or []:
+        add_option(group.get("circuit_number"))
+        for member in group.get("members") or []:
+            add_option(member.get("circuit_number"))
+
+    defaults = [
+        "DEDICATED",
+        "BYPARENT",
+        "SECONDBYPARENT",
+        "NONGROUPEDBLOCK",
+        "TVTRUSS",
+        "EMERGENCY",
+        "STANDARD",
+    ]
+    for value in defaults:
+        add_option(value)
+
+    def sort_key(value):
+        value = (value or "").strip()
+        if re.match(r"^\d+$", value):
+            return (0, int(value), value)
+        return (1, value.upper(), value)
+
+    return sorted(options, key=sort_key)
+
+
+def _build_preview_rows(groups, panel_options, circuit_options):
     rows = []
     group_index = 0
 
@@ -568,6 +622,8 @@ def _build_preview_rows(groups):
                     row_background=None,
                     row_foreground=DEFAULT_ROW_FOREGROUND,
                     is_spacer=True,
+                    panel_options=[],
+                    circuit_options=[],
                 )
             )
 
@@ -598,13 +654,17 @@ def _build_preview_rows(groups):
                 source_item=member,
                 row_background=row_background,
                 row_foreground=row_foreground,
+                panel_options=panel_options,
+                circuit_options=circuit_options,
             )
             rows.append(row)
 
     return rows
 
-def _show_preview_dialog(groups):
-    rows = _build_preview_rows(groups)
+def _show_preview_dialog(groups, panel_lookup):
+    panel_options = _collect_panel_combo_options(groups, panel_lookup)
+    circuit_options = _collect_circuit_combo_options(groups)
+    rows = _build_preview_rows(groups, panel_options, circuit_options)
     if not rows:
         return None
 
@@ -819,7 +879,7 @@ def main():
 
     groups = _sort_groups(groups)
 
-    preview_rows = _show_preview_dialog(groups)
+    preview_rows = _show_preview_dialog(groups, panel_lookup)
     if preview_rows is False:
         logger.info("Preview cancelled; no circuits created.")
         return
@@ -852,6 +912,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 

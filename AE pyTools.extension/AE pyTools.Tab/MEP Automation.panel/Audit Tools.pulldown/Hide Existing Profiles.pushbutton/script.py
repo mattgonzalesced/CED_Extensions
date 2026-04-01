@@ -23,6 +23,8 @@ from Autodesk.Revit.DB import (
     Reference,
     RevitLinkInstance,
     TemporaryViewMode,
+    View,
+    ViewDuplicateOption,
 )
 from System.Collections.Generic import List
 
@@ -48,7 +50,8 @@ from ExtensibleStorage import ExtensibleStorage  # noqa: E402
 from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 
 TITLE = "Hide Existing Profiles"
-BUILD_TAG = "2026-04-01-hide-only2"
+BUILD_TAG = "2026-04-01-hide-only3"
+WORK_VIEW_NAME = "TemporaryHideExistingProfiles"
 SETTING_KEY = "mep_automation.toggle_existing_profiles_hidden"
 SETTING_IDS_KEY = "mep_automation.toggle_existing_profiles_pairs"
 SETTING_STRATEGY_KEY = "mep_automation.toggle_existing_profiles_strategy"
@@ -1484,19 +1487,87 @@ def _is_revit_2025_or_newer(doc):
         return False
 
 
+def _prepare_working_view(doc, source_view, view_name):
+    if doc is None or source_view is None:
+        raise RuntimeError("No source view is available.")
+    if getattr(source_view, "IsTemplate", False):
+        raise RuntimeError("Source view cannot be a template.")
+    try:
+        source_name = (source_view.Name or "").strip()
+    except Exception:
+        source_name = ""
+    if source_name.lower() == str(view_name or "").strip().lower():
+        raise RuntimeError(
+            "Run this tool from a production/source view, not from '{}'.".format(view_name)
+        )
+
+    can_dup = False
+    try:
+        can_dup = bool(source_view.CanViewBeDuplicated(ViewDuplicateOption.Duplicate))
+    except Exception:
+        can_dup = False
+    if not can_dup:
+        raise RuntimeError("Current view type cannot be duplicated.")
+
+    existing_ids = []
+    for v in FilteredElementCollector(doc).OfClass(View).WhereElementIsNotElementType():
+        if v is None:
+            continue
+        try:
+            if getattr(v, "IsTemplate", False):
+                continue
+            if (getattr(v, "Name", None) or "").strip().lower() != str(view_name).strip().lower():
+                continue
+            if _element_id_value(v.Id, default=None) == _element_id_value(source_view.Id, default=None):
+                continue
+            existing_ids.append(v.Id)
+        except Exception:
+            continue
+
+    new_view = None
+    with revit.Transaction("Prepare Temporary Hide Existing Profiles View"):
+        for old_id in existing_ids:
+            try:
+                doc.Delete(old_id)
+            except Exception:
+                continue
+        new_id = source_view.Duplicate(ViewDuplicateOption.Duplicate)
+        new_view = doc.GetElement(new_id)
+        if new_view is None:
+            raise RuntimeError("Failed to duplicate active view.")
+        new_view.Name = view_name
+
+    return new_view
+
+
 def main():
     doc = revit.doc
     if doc is None:
         forms.alert("No active document detected.", title=TITLE)
         return
 
-    view = getattr(doc, "ActiveView", None)
-    if view is None:
+    source_view = getattr(doc, "ActiveView", None)
+    if source_view is None:
         forms.alert("No active view detected.", title=TITLE)
         return
-    if getattr(view, "IsTemplate", False):
+    if getattr(source_view, "IsTemplate", False):
         forms.alert("Active view is a template. Open a model view and try again.", title=TITLE)
         return
+
+    try:
+        view = _prepare_working_view(doc, source_view, WORK_VIEW_NAME)
+    except Exception as exc:
+        forms.alert(
+            _with_build("Unable to prepare working view '{}':\n\n{}".format(WORK_VIEW_NAME, exc)),
+            title=TITLE,
+        )
+        return
+
+    try:
+        if revit.uidoc is not None:
+            revit.uidoc.ActiveView = view
+    except Exception:
+        pass
 
     try:
         data_path, data = load_active_yaml_data(doc)
@@ -1588,7 +1659,8 @@ def main():
     _print_match_report(action_text, apply_mode, yaml_label, match_records, scanned, link_count, matched)
     forms.show_balloon(
         TITLE,
-        "Hidden linked elements: {}\nMatched linked elements: {}\nElements scanned: {}\nApply mode: {}\nYAML: {}\nBuild: {}\nTo reveal: use Undo in Revit.".format(
+        "Working view: {}\nHidden linked elements: {}\nMatched linked elements: {}\nElements scanned: {}\nApply mode: {}\nYAML: {}\nBuild: {}\nTo reveal: use Undo in Revit.".format(
+            WORK_VIEW_NAME,
             hidden_count,
             matched,
             scanned,
