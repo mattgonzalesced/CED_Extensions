@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 from Autodesk.Revit.DB import Electrical
 from pyrevit import DB
 from pyrevit import HOST_APP
 from pyrevit import forms
 from pyrevit import script
-from pyrevit.compat import get_elementid_value_func
 
+from Snippets import revit_helpers
 # Import reusable utilities
 from Snippets._elecutils import get_panel_dist_system, get_compatible_panels, move_circuits_to_panel, \
     get_all_panels
@@ -16,15 +16,11 @@ doc = __revit__.ActiveUIDocument.Document
 logger = script.get_logger()
 output = script.get_output()
 output.close_others()
-_get_id_value = get_elementid_value_func()
 _ELECTRICAL_EQUIPMENT_CAT_ID = int(DB.BuiltInCategory.OST_ElectricalEquipment)
 
 
 def _idval(item):
-    try:
-        return int(_get_id_value(item))
-    except Exception:
-        return int(getattr(item, "IntegerValue", 0))
+    return int(revit_helpers.get_elementid_value(item))
 
 
 def _is_electrical_equipment_instance(element):
@@ -299,3 +295,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

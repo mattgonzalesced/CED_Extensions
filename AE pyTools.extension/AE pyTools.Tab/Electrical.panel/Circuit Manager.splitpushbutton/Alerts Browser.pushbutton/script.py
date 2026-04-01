@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 
 import os
 import sys
@@ -8,7 +8,8 @@ from System.Windows import Application
 from System.Windows.Controls import Button, DataGridRow
 from System.Windows.Media import VisualTreeHelper
 from pyrevit import forms, revit, script
-from pyrevit.compat import get_elementid_value_func, get_elementid_from_value_func
+
+from Snippets import revit_helpers
 
 TITLE = "Alerts Browser"
 ALERT_DATA_PARAM = "Circuit Data_CED"
@@ -19,19 +20,12 @@ VALID_THEME_MODES = ("light", "dark", "dark_alt")
 VALID_ACCENT_MODES = ("blue", "red", "green", "neutral")
 _WINDOW_MARKER = "_ae_alerts_browser_window"
 
-_get_elid_value = get_elementid_value_func()
-_get_elid_from_value = get_elementid_from_value_func()
-
-
 def _idval(item):
-    try:
-        return int(_get_elid_value(item))
-    except Exception:
-        return int(getattr(item, "IntegerValue", 0))
+    return int(revit_helpers.get_elementid_value(item))
 
 
 def _idfrom(value):
-    return _get_elid_from_value(int(value))
+    return revit_helpers.elementid_from_value(value)
 
 
 def _find_visual_ancestor(start, target_type):
@@ -522,3 +516,4 @@ def _show_or_focus_window():
 
 
 _show_or_focus_window()
+

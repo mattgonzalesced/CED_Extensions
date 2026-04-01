@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 __title__ = "Wire Circuited Elements"
 
 from pyrevit import script, DB, forms, revit
-from pyrevit.compat import get_elementid_value_func
 
+from Snippets import revit_helpers
 from Snippets.wireutils import (
     wire_connected_unconnected_connectors,
     is_homerun_wire,
@@ -21,14 +21,8 @@ from Snippets.wireutils import (
 logger = script.get_logger()
 HOME_RUN_LENGTH = 4.0
 GEOM_TOL = 1e-6
-_get_elid_value = get_elementid_value_func()
-
-
 def _idval(item):
-    try:
-        return int(_get_elid_value(item))
-    except Exception:
-        return int(getattr(item, "IntegerValue", 0))
+    return int(revit_helpers.get_elementid_value(item))
 
 WIRING_TYPE_NAMES = {
     "Arc": DB.Electrical.WiringType.Arc,
@@ -336,3 +330,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

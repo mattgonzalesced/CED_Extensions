@@ -160,18 +160,6 @@ def main():
     config_excel_path = os.path.join(content_dir, 'ELEC SHARED PARAM TABLE.xlsx')
 
 
-
-    forms.alert(
-        title="Load Electrical Parameters",
-        msg="This tool loads all required parameters for the 'Calculate Circuits' tool."
-            "\n\nPlease Sync before starting!"
-            "\n\nDo you wish to continue?",
-        ok=True,
-        cancel=True,
-        warn_icon=True,
-        exitscript=True
-    )
-
     output.close_others()
     output.show()
 

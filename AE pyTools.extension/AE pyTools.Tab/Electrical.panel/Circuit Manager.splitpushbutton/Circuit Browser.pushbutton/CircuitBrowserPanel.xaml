@@ -263,12 +263,20 @@
                 ScrollViewer.CanContentScroll="True"
                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
                 ScrollViewer.VerticalScrollBarVisibility="Auto">
+        <ListView.Resources>
+          <Style TargetType="{x:Type ScrollViewer}">
+            <Setter Property="Background" Value="{DynamicResource CED.Brush.ListBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.ListBorder}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template" Value="{DynamicResource CED.ScrollViewer.Themed.Template}"/>
+          </Style>
+        </ListView.Resources>
       </ListView>
     </Border>
 
     <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="{DynamicResource CED.Thickness.RowGap}">
       <Button Name="CheckAllButton" Style="{DynamicResource CED.Button.Base}" Content="Check All" Width="76" Height="22" Click="check_all_clicked"/>
-      <Button Name="UncheckAllButton" Style="{DynamicResource CED.Button.Base}" Content="Check None" Width="82" Height="22" Margin="6,0,0,0" Click="uncheck_all_clicked"/>
+      <Button Name="UncheckAllButton" Style="{DynamicResource CED.Button.Base}" Content="Check None" Width="84" Height="22" Margin="6,0,0,0" Click="uncheck_all_clicked"/>
     </StackPanel>
 
     <Border Grid.Row="5"

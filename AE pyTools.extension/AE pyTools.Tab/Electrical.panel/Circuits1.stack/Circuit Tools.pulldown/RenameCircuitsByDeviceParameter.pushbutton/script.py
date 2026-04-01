@@ -1,16 +1,19 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 import os
 from collections import OrderedDict
 
 import Autodesk.Revit.DB.Electrical as DBE
 from pyrevit import revit, DB, forms, script
-from Snippets import _elecutils as eu
 
+from Snippets import _elecutils as eu
+from Snippets import revit_helpers
 
 doc = revit.doc
 uidoc = revit.uidoc
 output = script.get_output()
 output.close_others()
+def _elid_value(item, default=0):
+    return int(revit_helpers.get_elementid_value(item, default=default))
 
 XAML_PATH = os.path.join(os.path.dirname(__file__), "ParameterSelectionWindow.xaml")
 CONFIG_KEY = "rename_circuit_builder_config"
@@ -65,7 +68,7 @@ def _dedupe_elements(elements):
         if not element:
             continue
         try:
-            eid = element.Id.IntegerValue
+            eid = _elid_value(element.Id)
         except Exception:
             continue
         if eid in seen_ids:
@@ -145,7 +148,7 @@ def _build_circuit_map(selected_elements):
 
     for element in selected_elements:
         for circuit in _get_element_circuits(element):
-            cid = circuit.Id.IntegerValue
+            cid = _elid_value(circuit.Id)
             if cid not in circuit_map:
                 circuit_map[cid] = {"circuit": circuit, "source_elements": []}
             if not isinstance(element, DBE.ElectricalSystem):
@@ -280,7 +283,7 @@ def _resolve_preferred_param_value(elements, param_name):
     sortable = []
     for element in elements or []:
         try:
-            sortable.append((element.Id.IntegerValue, element))
+            sortable.append((_elid_value(element.Id), element))
         except Exception:
             continue
     sortable.sort(key=lambda x: x[0])
@@ -334,8 +337,8 @@ def _format_circuit_label(circuit):
     circuit_number = _safe_text(circuit.CircuitNumber) or "?"
     load_name = _safe_text(circuit.LoadName)
     if load_name:
-        return "[{}] {} / {} - {}".format(circuit.Id.IntegerValue, panel_name, circuit_number, load_name)
-    return "[{}] {} / {}".format(circuit.Id.IntegerValue, panel_name, circuit_number)
+        return "[{}] {} / {} - {}".format(_elid_value(circuit.Id), panel_name, circuit_number, load_name)
+    return "[{}] {} / {}".format(_elid_value(circuit.Id), panel_name, circuit_number)
 
 
 def _get_circuit_sort_key(circuit):
@@ -350,7 +353,7 @@ def _get_circuit_sort_key(circuit):
         panel_name.lower(),
         _get_circuit_start_slot(circuit),
         _safe_text(circuit.CircuitNumber),
-        circuit.Id.IntegerValue
+        _elid_value(circuit.Id)
     )
 
 
@@ -404,7 +407,7 @@ def _build_row_data(circuit_map):
             resolved_values[pname] = _resolve_preferred_param_value(source_elements, pname)
 
         row_data.append({
-            "circuit_id": circuit.Id.IntegerValue,
+            "circuit_id": _elid_value(circuit.Id),
             "circuit": circuit,
             "circuit_label": _format_circuit_label(circuit),
             "selector_name": selector_name,
@@ -1083,3 +1086,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

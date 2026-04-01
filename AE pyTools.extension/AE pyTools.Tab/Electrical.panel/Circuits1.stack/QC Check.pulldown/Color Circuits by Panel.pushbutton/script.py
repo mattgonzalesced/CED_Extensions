@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
-# Color Circuits by Panel  |  Revit Python 2.7 – pyRevit / Revit API
+﻿# -*- coding: utf-8 -*-
+# Color Circuits by Panel  |  Revit Python 2.7 â€“ pyRevit / Revit API
 # - Creates/updates: per-panel multi-category OR filters (per your screenshot)
 # - Colors current (or new) plan/RCP/3D view using overrides (unique for included, grey+halftone for others)
 # - Creates/updates legend drafting view with swatches + labels (swatches keyed via Comments)
@@ -7,19 +7,14 @@
 
 from System.Collections.Generic import List
 from pyrevit import revit, DB, forms, script
-from pyrevit.compat import get_elementid_value_func
+
+from Snippets import revit_helpers
 
 logger = script.get_logger()
 output = script.get_output()
 doc = revit.doc
-_get_elid_value = get_elementid_value_func()
-
-
 def _idval(item):
-    try:
-        return int(_get_elid_value(item))
-    except Exception:
-        return int(getattr(item, "IntegerValue", 0))
+    return int(revit_helpers.get_elementid_value(item))
 
 # -----------------------------------------------------------------------------
 # 0) Constants
@@ -677,3 +672,4 @@ if __name__ == "__main__":
         main()
     except Exception as ex:
         logger.exception("Color Circuits by Panel failed: {0}".format(ex))
+

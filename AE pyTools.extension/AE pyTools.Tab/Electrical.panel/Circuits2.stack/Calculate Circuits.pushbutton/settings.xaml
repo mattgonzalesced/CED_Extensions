@@ -197,11 +197,29 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,10">
-            <TextBlock Text="Calculate Circuits Settings" Style="{DynamicResource CED.Text.Title}"/>
-            <TextBlock Text="Configure conduit, wiring, voltage drop, and write-back behavior."
-                       Style="{DynamicResource CED.Text.Secondary}" Margin="0,2,0,0"/>
-        </StackPanel>
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Calculate Circuits Settings" Style="{DynamicResource CED.Text.Title}"/>
+                <TextBlock Text="Configure conduit, wiring, voltage drop, and write-back behavior."
+                           Style="{DynamicResource CED.Text.Secondary}" Margin="0,2,0,0"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" VerticalAlignment="Top" HorizontalAlignment="Right">
+                <Button x:Name="verify_parameters_btn"
+                        Content="Verify Parameters"
+                        Style="{DynamicResource CED.Button.Apply}"
+                        MinWidth="140"
+                        Padding="14,6"
+                        ToolTip="Verify and update required electrical shared parameters for this project."/>
+                <TextBlock x:Name="verify_parameters_status"
+                           Margin="0,6,0,0"
+                           HorizontalAlignment="Right"
+                           Style="{DynamicResource CED.Text.Secondary}"/>
+            </StackPanel>
+        </Grid>
 
         <Border Grid.Row="1"
                 Margin="0,0,0,10"
@@ -366,7 +384,7 @@
                         </StackPanel>
                     </Border>
 
-                    <Border Style="{StaticResource SettingsSectionCard}" Margin="0">
+                    <Border Style="{StaticResource SettingsSectionCard}">
                         <StackPanel>
                             <TextBlock Text="Data Writeback" Style="{DynamicResource CED.Text.SectionHeader}" Margin="0,0,0,8"/>
                             <Grid>
@@ -386,6 +404,48 @@
                                 </StackPanel>
                                 <TextBlock x:Name="write_results_default" Grid.Column="2" Style="{StaticResource SettingsDefaultText}" VerticalAlignment="Top"/>
                             </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource SettingsSectionCard}" Margin="0">
+                        <StackPanel>
+                            <TextBlock Text="Theme and Accent" Style="{DynamicResource CED.Text.SectionHeader}" Margin="0,0,0,8"/>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsLabelCol"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsValueCol"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Theme" Style="{StaticResource SettingsLabel}"/>
+                                <ComboBox x:Name="theme_mode_cb" Grid.Column="1" Style="{StaticResource SettingsCombo}">
+                                    <ComboBoxItem Content="Light" Tag="light"/>
+                                    <ComboBoxItem Content="Dark" Tag="dark"/>
+                                    <ComboBoxItem Content="Dark Alt" Tag="dark_alt"/>
+                                </ComboBox>
+                                <TextBlock x:Name="theme_mode_default" Grid.Column="2" Style="{StaticResource SettingsDefaultText}"/>
+                            </Grid>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsLabelCol"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsValueCol"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Accent" Style="{StaticResource SettingsLabel}"/>
+                                <ComboBox x:Name="accent_mode_cb" Grid.Column="1" Style="{StaticResource SettingsCombo}">
+                                    <ComboBoxItem Content="Blue" Tag="blue"/>
+                                    <ComboBoxItem Content="Red" Tag="red"/>
+                                    <ComboBoxItem Content="Green" Tag="green"/>
+                                    <ComboBoxItem Content="Neutral" Tag="neutral"/>
+                                </ComboBox>
+                                <TextBlock x:Name="accent_mode_default" Grid.Column="2" Style="{StaticResource SettingsDefaultText}" Margin="0"/>
+                            </Grid>
+
+                            <TextBlock Text="Theme and accent update this window immediately. Changes apply to all tools after Save Settings."
+                                       Style="{DynamicResource CED.Text.Secondary}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,2,0,0"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>

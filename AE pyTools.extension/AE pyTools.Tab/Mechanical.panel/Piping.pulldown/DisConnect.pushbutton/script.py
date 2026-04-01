@@ -1,12 +1,29 @@
 # coding: utf8
 import Autodesk.Revit.DB.Plumbing as DBP
 from pyrevit import script, revit, DB
+from pyrevit.compat import get_elementid_value_func
 
 from pyrevitmep.meputils import NoConnectorManagerError, get_connector_manager
 
 logger = script.get_logger()
 doc = revit.doc
 output = script.get_output()
+_get_elid_value = get_elementid_value_func()
+
+
+def _elid_value(item, default=0):
+    if item is None:
+        return int(default or 0)
+    try:
+        return int(_get_elid_value(item))
+    except Exception:
+        try:
+            return int(getattr(item, "IntegerValue"))
+        except Exception:
+            try:
+                return int(getattr(item, "Value"))
+            except Exception:
+                return int(default or 0)
 
 SUPPORTED_DOMAINS = {
     DB.Domain.DomainPiping: {
@@ -65,7 +82,7 @@ def disconnect_element_connectors(el, selected_ids, systems_to_divide):
                 continue
 
             # Only disconnect across selection boundary
-            if other_owner and other_owner.Id.IntegerValue in selected_ids:
+            if other_owner and _elid_value(other_owner.Id) in selected_ids:
                 continue
 
             # Choose disconnect direction (prefer MEPCurve side)
@@ -202,7 +219,7 @@ def disconnect():
         logger.info("Nothing selected.")
         return
 
-    selected_ids = set([el.Id.IntegerValue for el in selection])
+    selected_ids = set([_elid_value(el.Id) for el in selection])
     systems_to_divide = set()
     with DB.TransactionGroup(doc, "Disconnect Elements") as tg:
         tg.Start()
@@ -243,3 +260,4 @@ def disconnect():
 
 
 disconnect()
+

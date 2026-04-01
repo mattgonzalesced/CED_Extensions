@@ -12,7 +12,8 @@ from System.Windows import Visibility
 from System.Windows import FontStyles
 from System.Windows.Media import Brushes
 
-from pyrevit import forms, revit, script
+from pyrevit import forms, revit, script, DB
+from pyrevit.interop import xl as pyxl
 
 from CEDElectrical.Domain import settings_manager
 from CEDElectrical.Model.circuit_settings import (
@@ -23,6 +24,7 @@ from CEDElectrical.Model.circuit_settings import (
     WireMaterialDisplay,
     WireStringSeparator,
 )
+from Snippets.revit_helpers import get_elementid_value
 from UIClasses import pathing as ui_pathing
 from UIClasses import resource_loader
 
@@ -38,6 +40,35 @@ THEME_CONFIG_THEME_KEY = "theme_mode"
 THEME_CONFIG_ACCENT_KEY = "accent_mode"
 VALID_THEME_MODES = ("light", "dark", "dark_alt")
 VALID_ACCENT_MODES = ("blue", "red", "green", "neutral")
+ELECTRICAL_PANEL_ROOT = (
+    ui_pathing.find_named_ancestor(THIS_DIR, "Electrical.panel")
+    or os.path.abspath(os.path.join(THIS_DIR, "..", ".."))
+)
+LOAD_PARAMS_CONTENT_DIR = os.path.join(
+    ELECTRICAL_PANEL_ROOT,
+    "Circuits1.stack",
+    "Circuit Tools.pulldown",
+    "Load Electrical Parameters.pushbutton",
+    "Content",
+)
+LOAD_PARAMS_SHARED_TXT = os.path.join(LOAD_PARAMS_CONTENT_DIR, "ELEC SHARED PARAMS.txt")
+LOAD_PARAMS_TABLE_XLSX = os.path.join(LOAD_PARAMS_CONTENT_DIR, "ELEC SHARED PARAM TABLE.xlsx")
+LOAD_PARAMS_COLUMNS = (
+    "GUID",
+    "UniqueId",
+    "Parameter Name",
+    "Discipline",
+    "Type of Parameter",
+    "Group Under",
+    "Instance/Type",
+    "Categories",
+    "Groups",
+)
+LOAD_PARAMS_GROUP_MAP = {
+    "Electrical": DB.GroupTypeId.Electrical,
+    "Identity Data": DB.GroupTypeId.IdentityData,
+    "Electrical - Circuiting": DB.GroupTypeId.ElectricalCircuiting,
+}
 
 
 def _normalize_theme_mode(value, fallback="light"):
@@ -64,6 +95,157 @@ def _load_theme_state(default_theme="light", default_accent="blue"):
     return theme_mode, accent_mode
 
 
+def _save_theme_state(theme_mode, accent_mode):
+    cfg = script.get_config(THEME_CONFIG_SECTION)
+    if cfg is None:
+        return
+    cfg.set_option(THEME_CONFIG_THEME_KEY, _normalize_theme_mode(theme_mode, "light"))
+    cfg.set_option(THEME_CONFIG_ACCENT_KEY, _normalize_accent_mode(accent_mode, "blue"))
+    script.save_config()
+
+
+def _load_parameter_rows(config_path):
+    xldata = pyxl.load(config_path, headers=False)
+    sheet = xldata.get("Parameter List")
+    if not sheet:
+        raise Exception("Sheet 'Parameter List' not found in ELEC SHARED PARAM TABLE.xlsx.")
+    rows = [dict(zip(LOAD_PARAMS_COLUMNS, row)) for row in sheet["rows"][1:] if len(row) >= len(LOAD_PARAMS_COLUMNS)]
+    return sorted(rows, key=lambda row: row.get("UniqueId", ""))
+
+
+def _get_shared_definition(shared_param_file, name):
+    for group in shared_param_file.Groups:
+        definition = group.Definitions.get_Item(name)
+        if definition:
+            return definition
+    return None
+
+
+def _get_existing_binding(doc, definition_name):
+    iterator = doc.ParameterBindings.ForwardIterator()
+    iterator.Reset()
+    while iterator.MoveNext():
+        if iterator.Key.Name == definition_name:
+            return iterator.Current
+    return None
+
+
+def _category_set_from_names(doc, names):
+    category_set = DB.CategorySet()
+    category_map = {cat.Name: cat for cat in doc.Settings.Categories}
+    missing = []
+    inserted = 0
+    for name in list(names or []):
+        cat = category_map.get(name)
+        if cat is None:
+            missing.append(name)
+            continue
+        category_set.Insert(cat)
+        inserted += 1
+    return category_set, inserted, missing
+
+
+def _category_id_set(categories):
+    return set([int(get_elementid_value(cat.Id, 0)) for cat in list(categories or []) if cat is not None])
+
+
+def _create_binding(app, category_set, is_instance):
+    try:
+        return DB.InstanceBinding(category_set) if is_instance else DB.TypeBinding(category_set)
+    except Exception:
+        creator = getattr(app, "Create", None)
+        if creator is None:
+            raise
+        return creator.NewInstanceBinding(category_set) if is_instance else creator.NewTypeBinding(category_set)
+
+
+def _verify_project_parameters(doc, app):
+    if not os.path.exists(LOAD_PARAMS_SHARED_TXT):
+        raise Exception("Shared parameter file not found: {}".format(LOAD_PARAMS_SHARED_TXT))
+    if not os.path.exists(LOAD_PARAMS_TABLE_XLSX):
+        raise Exception("Parameter table not found: {}".format(LOAD_PARAMS_TABLE_XLSX))
+
+    rows = _load_parameter_rows(LOAD_PARAMS_TABLE_XLSX)
+    warnings = []
+    errors = []
+    updated = 0
+    unchanged = 0
+    skipped = 0
+
+    original_shared_file = app.SharedParametersFilename
+    shared_param_file = None
+    try:
+        app.SharedParametersFilename = LOAD_PARAMS_SHARED_TXT
+        shared_param_file = app.OpenSharedParameterFile()
+        if not shared_param_file:
+            raise Exception("Failed to open shared parameter file.")
+
+        with DB.TransactionGroup(doc, "Verify Electrical Parameters") as tg:
+            tg.Start()
+            with revit.Transaction("Verify Shared Parameters", doc):
+                bindmap = doc.ParameterBindings
+                for row in rows:
+                    name = row.get("Parameter Name")
+                    if not name:
+                        skipped += 1
+                        continue
+
+                    definition = _get_shared_definition(shared_param_file, name)
+                    if definition is None:
+                        warnings.append("Missing shared definition: {}".format(name))
+                        skipped += 1
+                        continue
+
+                    categories = [c.strip() for c in str(row.get("Categories") or "").split(",") if c and c.strip()]
+                    category_set, inserted, missing_categories = _category_set_from_names(doc, categories)
+                    if missing_categories:
+                        warnings.append("{}: missing categories: {}".format(name, ", ".join(missing_categories)))
+                    if inserted <= 0:
+                        warnings.append("{}: no valid categories found; skipped.".format(name))
+                        skipped += 1
+                        continue
+
+                    is_instance = str(row.get("Instance/Type") or "").strip().lower() == "instance"
+                    group_label = str(row.get("Group Under") or "").strip()
+                    group_id = LOAD_PARAMS_GROUP_MAP.get(group_label, DB.GroupTypeId.ElectricalCircuiting)
+
+                    existing_binding = _get_existing_binding(doc, definition.Name)
+                    if existing_binding:
+                        current_is_instance = isinstance(existing_binding, DB.InstanceBinding)
+                        current_categories = _category_id_set(existing_binding.Categories)
+                        target_categories = _category_id_set(category_set)
+                        needs_update = not (current_is_instance == is_instance and current_categories == target_categories)
+                    else:
+                        needs_update = True
+
+                    if not needs_update:
+                        unchanged += 1
+                        continue
+
+                    try:
+                        binding = _create_binding(app, category_set, is_instance)
+                        if existing_binding:
+                            bindmap.ReInsert(definition, binding, group_id)
+                        else:
+                            bindmap.Insert(definition, binding, group_id)
+                        updated += 1
+                    except Exception as ex:
+                        errors.append("{}: {}".format(name, ex))
+            tg.Assimilate()
+    finally:
+        if original_shared_file:
+            app.SharedParametersFilename = original_shared_file
+
+    return {
+        "updated": updated,
+        "unchanged": unchanged,
+        "skipped": skipped,
+        "warnings": warnings,
+        "errors": errors,
+        "total": len(rows),
+    }
+
+
 class CircuitSettingsWindow(forms.WPFWindow):
     def __init__(self):
         forms.WPFWindow.__init__(self, XAML_PATH)
@@ -88,12 +270,14 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self._last_clear_success = bool(getattr(self.settings, 'last_clear_success', False))
         self._help_key = None
         self._is_normalizing = False
+        self._is_loading_ui = True
 
         self._bind_events()
         self._load_defaults_panel()
         self._load_values()
         self._refresh_styles()
         self._set_help_context('min_conduit_size')
+        self._is_loading_ui = False
 
     def _apply_theme(self):
         resource_loader.apply_theme(
@@ -119,6 +303,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.cancel_btn.Click += self._on_cancel
         self.reset_btn.Click += self._on_reset
         self.help_btn.Click += self._on_help
+        self.verify_parameters_btn.Click += self._on_verify_parameters
         self.clear_writeback_btn.Click += self._on_clear_persistent
         self.min_conduit_size_cb.SelectionChanged += self._on_value_changed
         self.min_conduit_size_cb.GotFocus += lambda s, e: self._set_help_context('min_conduit_size')
@@ -151,6 +336,11 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.write_fixtures_cb.Unchecked += self._on_value_changed
         self.write_fixtures_cb.GotFocus += lambda s, e: self._set_help_context('write_results')
         self.clear_writeback_btn.GotFocus += lambda s, e: self._set_help_context('clear_writebacks')
+        self.theme_mode_cb.SelectionChanged += self._on_theme_value_changed
+        self.theme_mode_cb.GotFocus += lambda s, e: self._set_help_context('theme_mode')
+        self.accent_mode_cb.SelectionChanged += self._on_theme_value_changed
+        self.accent_mode_cb.GotFocus += lambda s, e: self._set_help_context('accent_mode')
+        self.verify_parameters_btn.GotFocus += lambda s, e: self._set_help_context('verify_parameters')
 
         self.max_conduit_fill_tb.TextChanged += lambda s, e: self._on_percent_value_changed(self.max_conduit_fill_tb, 0.1, 1.0, self.max_conduit_fill_warn, 0.4)
         self.max_branch_vd_tb.TextChanged += lambda s, e: self._on_percent_value_changed(self.max_branch_vd_tb, 0.001, 1.0, self.max_branch_vd_warn, 0.05)
@@ -174,6 +364,8 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.max_feeder_vd_default.Text = u"(Default: {}%)".format(self._percent_value(self.defaults.max_feeder_voltage_drop))
         self.feeder_vd_method_default.Text = u"(Default: {})".format(self._describe_feeder_method(self.defaults.feeder_vd_method))
         self.write_results_default.Text = u"(Defaults: Equipment ✓, Fixtures ✕)"
+        self.theme_mode_default.Text = u"(Current: {})".format(self._describe_theme_mode(self._theme_mode))
+        self.accent_mode_default.Text = u"(Current: {})".format(self._describe_accent_mode(self._accent_mode))
 
     def _load_values(self):
         self._select_combo_by_tag(self.min_conduit_size_cb, self.settings.min_conduit_size)
@@ -186,11 +378,14 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self._select_combo_by_tag(self.wire_material_display_cb, self.settings.wire_material_display)
         self._select_combo_by_tag(self.wire_string_separator_cb, self.settings.wire_string_separator)
         self._select_combo_by_tag(self.feeder_vd_method_cb, self.settings.feeder_vd_method)
+        self._select_combo_by_tag(self.theme_mode_cb, self._theme_mode)
+        self._select_combo_by_tag(self.accent_mode_cb, self._accent_mode)
 
         self.write_equipment_cb.IsChecked = bool(self.settings.write_equipment_results)
         self.write_fixtures_cb.IsChecked = bool(self.settings.write_fixture_results)
 
         self._refresh_clear_alert()
+        self._set_verify_status("")
 
     def _select_combo_by_tag(self, combo, tag_value):
         for item in combo.Items:
@@ -272,6 +467,8 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self._apply_default_style(self.feeder_vd_method_cb, self._is_default('feeder_vd_method', fd_value))
         self._apply_default_style(self.write_equipment_cb, self._is_default('write_equipment_results', bool(self.write_equipment_cb.IsChecked)))
         self._apply_default_style(self.write_fixtures_cb, self._is_default('write_fixture_results', bool(self.write_fixtures_cb.IsChecked)))
+        self._apply_default_style(self.theme_mode_cb, False)
+        self._apply_default_style(self.accent_mode_cb, False)
 
         self._refresh_validation_state()
         self._update_help_preview()
@@ -279,6 +476,21 @@ class CircuitSettingsWindow(forms.WPFWindow):
     def _on_value_changed(self, sender, args):
         self._refresh_styles()
         self._refresh_clear_alert()
+
+    def _on_theme_value_changed(self, sender, args):
+        if self._is_loading_ui:
+            return
+        theme_mode = _normalize_theme_mode(self._get_combo_tag(self.theme_mode_cb), self._theme_mode)
+        accent_mode = _normalize_accent_mode(self._get_combo_tag(self.accent_mode_cb), self._accent_mode)
+        if theme_mode == self._theme_mode and accent_mode == self._accent_mode:
+            return
+        self._theme_mode = theme_mode
+        self._accent_mode = accent_mode
+        self._apply_theme()
+        self._refresh_theme_brushes()
+        self._refresh_styles()
+        self.theme_mode_default.Text = u"(Current: {})".format(self._describe_theme_mode(self._theme_mode))
+        self.accent_mode_default.Text = u"(Current: {})".format(self._describe_accent_mode(self._accent_mode))
 
     # ------------- Helpers -------------------
     def _describe_neutral(self, value):
@@ -313,6 +525,21 @@ class CircuitSettingsWindow(forms.WPFWindow):
             FeederVDMethod.HUNDRED_PERCENT: "100% of Breaker",
         }.get(value, value)
 
+    def _describe_theme_mode(self, value):
+        return {
+            "light": "Light",
+            "dark": "Dark",
+            "dark_alt": "Dark Alt",
+        }.get(str(value or "").strip().lower(), value)
+
+    def _describe_accent_mode(self, value):
+        return {
+            "blue": "Blue",
+            "red": "Red",
+            "green": "Green",
+            "neutral": "Neutral",
+        }.get(str(value or "").strip().lower(), value)
+
     def _help_texts(self):
         return {
             'min_conduit_size': "Smallest conduit size proposed during automatic calculations (has no effect on manual user overrides).",
@@ -326,6 +553,9 @@ class CircuitSettingsWindow(forms.WPFWindow):
             'feeder_vd_method': "Which feeder load basis to use for voltage drop calculations and automatic sizing (only applies to feeder circuits that supply panels, switchboards, and transformers). Branch circuits are always based on connected load.",
             'write_results': "Toggle whether calculated results push to downstream elements when present.",
             'clear_writebacks': "Clear persistent data on categories that are currently disabled for write-back. This keeps the window open and honors ownership locks.",
+            'theme_mode': "Select the UI theme for CED electrical tools.",
+            'accent_mode': "Select the accent color used for highlights and primary actions.",
+            'verify_parameters': "Verify required electrical shared parameters in the active project and update bindings when needed.",
         }
 
     def _option_help(self):
@@ -356,6 +586,17 @@ class CircuitSettingsWindow(forms.WPFWindow):
                 '1/2"': u"Selected: 1/2\"",
                 '3/4"': u"Selected: 3/4\"",
             },
+            'theme_mode': {
+                'light': "[Light] Uses the light CED theme.",
+                'dark': "[Dark] Uses the dark CED theme.",
+                'dark_alt': "[Dark Alt] Uses the alternate dark CED theme.",
+            },
+            'accent_mode': {
+                'blue': "[Blue] Uses blue as the tool accent color.",
+                'red': "[Red] Uses red as the tool accent color.",
+                'green': "[Green] Uses green as the tool accent color.",
+                'neutral': "[Neutral] Uses neutral gray as the tool accent color.",
+            },
         }
 
     def _set_help_context(self, key):
@@ -366,7 +607,16 @@ class CircuitSettingsWindow(forms.WPFWindow):
         key = self._help_key or ''
         preview = self._help_texts().get(key, "Select a field to see what it controls.")
         option_detail = None
-        if key in ('feeder_vd_method', 'neutral_behavior', 'isolated_ground_behavior', 'wire_material_display', 'wire_string_separator', 'min_conduit_size'):
+        if key in (
+            'feeder_vd_method',
+            'neutral_behavior',
+            'isolated_ground_behavior',
+            'wire_material_display',
+            'wire_string_separator',
+            'min_conduit_size',
+            'theme_mode',
+            'accent_mode',
+        ):
             combo = getattr(self, key + '_cb', None)
             if combo:
                 option_detail = self._option_help().get(key, {}).get(self._get_combo_tag(combo), None)
@@ -394,6 +644,22 @@ class CircuitSettingsWindow(forms.WPFWindow):
             "Some downstream equipment or devices may still have out-of-date data. "
             "Use 'Clear persistent write-back data' to resync disabled categories."
         ) if show_alert else None
+
+    def _set_verify_status(self, text, level=None):
+        message = str(text or "").strip()
+        self.verify_parameters_status.Text = message
+        if not message:
+            self.verify_parameters_status.Foreground = self._secondary_text_brush or self._primary_text_brush or Brushes.Black
+            return
+        if level == "ok":
+            brush = self.TryFindResource("CED.Brush.AccentGreen")
+        elif level == "warn":
+            brush = self.TryFindResource("CED.Brush.BadgeWarningText")
+        elif level == "error":
+            brush = self.TryFindResource("CED.Brush.SecondaryRed")
+        else:
+            brush = self._primary_text_brush
+        self.verify_parameters_status.Foreground = brush or self._primary_text_brush or Brushes.Black
 
     # ------------- Event handlers ------------
     def _on_save(self, sender, args):
@@ -460,6 +726,9 @@ class CircuitSettingsWindow(forms.WPFWindow):
 
         settings_manager.save_circuit_settings(self.doc, updated)
         self.settings = updated
+        self._theme_mode = _normalize_theme_mode(self._get_combo_tag(self.theme_mode_cb), self._theme_mode)
+        self._accent_mode = _normalize_accent_mode(self._get_combo_tag(self.accent_mode_cb), self._accent_mode)
+        _save_theme_state(self._theme_mode, self._accent_mode)
         self._previous_equipment_write = bool(self.settings.write_equipment_results)
         self._previous_fixture_write = bool(self.settings.write_fixture_results)
         self._last_clear_equipment_disabled = bool(getattr(self.settings, 'last_clear_equipment_disabled', False))
@@ -485,6 +754,46 @@ class CircuitSettingsWindow(forms.WPFWindow):
         with open(md_path, "r") as f:
             text = f.read().decode("utf-8")
             output.print_md(text)
+
+    def _on_verify_parameters(self, sender, args):
+        self.verify_parameters_btn.IsEnabled = False
+        self._set_verify_status("Verifying project parameters...", level=None)
+        try:
+            result = _verify_project_parameters(self.doc, self.doc.Application)
+            warnings = list(result.get("warnings") or [])
+            errors = list(result.get("errors") or [])
+            if not warnings and not errors:
+                self._set_verify_status("All Project Parameters configured", level="ok")
+                return
+
+            self._set_verify_status("Parameter verification completed with warnings", level="warn")
+            summary = [
+                "Parameter verification completed with warnings.",
+                "",
+                "Updated: {}".format(result.get("updated", 0)),
+                "Unchanged: {}".format(result.get("unchanged", 0)),
+                "Skipped: {}".format(result.get("skipped", 0)),
+            ]
+            if warnings:
+                summary.append("")
+                summary.append("Warnings:")
+                for message in warnings[:12]:
+                    summary.append("- {}".format(message))
+                if len(warnings) > 12:
+                    summary.append("- ...and {} more warnings".format(len(warnings) - 12))
+            if errors:
+                summary.append("")
+                summary.append("Errors:")
+                for message in errors[:12]:
+                    summary.append("- {}".format(message))
+                if len(errors) > 12:
+                    summary.append("- ...and {} more errors".format(len(errors) - 12))
+            forms.alert("\n".join(summary))
+        except Exception as ex:
+            self._set_verify_status("Parameter verification failed", level="error")
+            forms.alert("Verify Parameters failed.\n\n{}".format(ex))
+        finally:
+            self.verify_parameters_btn.IsEnabled = True
 
     def _on_clear_persistent(self, sender, args):
         clear_equipment = not bool(self.write_equipment_cb.IsChecked)

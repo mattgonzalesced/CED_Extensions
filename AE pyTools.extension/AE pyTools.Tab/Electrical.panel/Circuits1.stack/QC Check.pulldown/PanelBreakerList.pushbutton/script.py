@@ -1,13 +1,14 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 __title__ = "Panel Breaker Report"
 
 from collections import defaultdict
 
 from pyrevit import revit, DB
 from pyrevit import script
-from pyrevit.compat import get_elementid_value_func
 
-get_id_value = get_elementid_value_func()
+from Snippets import revit_helpers
+
+get_id_value = revit_helpers.get_elementid_value
 
 # Access the current Revit document
 doc = revit.doc
@@ -232,4 +233,5 @@ def generate_report_tables():
 
 # Run the report generation
 generate_report_tables()
+
 

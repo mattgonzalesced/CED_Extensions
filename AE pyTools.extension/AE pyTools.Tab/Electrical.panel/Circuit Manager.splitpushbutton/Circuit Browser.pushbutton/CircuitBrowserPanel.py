@@ -31,7 +31,6 @@ from System.Windows.Input import Keyboard, ModifierKeys
 from System.Windows.Media import BrushConverter, Stretch, VisualTreeHelper
 from System.Windows.Shapes import Path as ShapePath
 from pyrevit import forms, revit, DB, script, HOST_APP
-from pyrevit.compat import get_elementid_value_func, get_elementid_from_value_func
 
 _THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -56,6 +55,7 @@ def _bootstrap_lib_root(start_dir):
 
 
 LIB_ROOT = _bootstrap_lib_root(_THIS_DIR)
+from Snippets import revit_helpers
 
 from CEDElectrical.Model.alerts import get_alert_definition
 from CEDElectrical.Model.CircuitBranch import CircuitBranch
@@ -142,8 +142,6 @@ CIRCUIT_TYPE_TAG_STYLES = {
 }
 OCP_TABLE_KEYS = sorted([int(k) for k in BREAKER_FRAME_SWITCH_TABLE.keys()])
 _DOC_SENTINEL = object()
-_get_elid_value = get_elementid_value_func()
-_get_elid_from_value = get_elementid_from_value_func()
 
 
 def _normalize_theme_mode(value, fallback="light"):
@@ -152,14 +150,11 @@ def _normalize_theme_mode(value, fallback="light"):
 
 
 def _elid_value(item):
-    try:
-        return int(_get_elid_value(item))
-    except Exception:
-        return int(getattr(item, "IntegerValue", 0))
+    return int(revit_helpers.get_elementid_value(item))
 
 
 def _elid_from_value(value):
-    return _get_elid_from_value(int(value))
+    return revit_helpers.elementid_from_value(value)
 
 
 def _normalize_accent_mode(value, fallback="blue"):
@@ -3389,6 +3384,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
     def panel_loaded(self, sender, args):
         if not self._is_pane_visible():
             return
+        self._sync_theme_from_config(apply_if_changed=True)
         self._get_list_scrollviewer()
         self._attach_event_handlers()
         doc = self._get_active_doc()
@@ -3407,6 +3403,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         if not self._is_pane_visible():
             self._detach_event_handlers()
             return
+        self._sync_theme_from_config(apply_if_changed=True)
         self._attach_event_handlers()
         doc = self._get_active_doc()
         key = self._doc_key(doc)
@@ -3438,6 +3435,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
     def refresh_clicked(self, sender, args):
         # Manual refresh should reflect latest circuit metadata (name/number/panel/type).
+        self._sync_theme_from_config(apply_if_changed=True)
         self._safe_load_items()
 
     def filter_button_clicked(self, sender, args):
@@ -3620,6 +3618,36 @@ class CircuitBrowserPanel(forms.WPFPanel):
         if self._browser_compress_item is not None:
             self._browser_compress_item.IsChecked = bool(self._compress_item_width)
 
+    def _apply_theme_visual_state(self, refresh_visible_items=True):
+        _try_apply_theme(self)
+        self._surface_item_style = _try_find_resource(self, "CED.ListViewItem.SurfaceBehavior")
+        self._clear_type_tag_brush_cache()
+        self._apply_type_tag_brushes()
+        self._apply_list_interaction_mode()
+        self._update_filter_button_style()
+        self._update_search_chrome()
+        self._update_toggle_button_visual()
+        if bool(refresh_visible_items):
+            self._refresh_visible_items()
+        self._sync_browser_options_menu_state()
+
+    def _sync_theme_from_config(self, apply_if_changed=True):
+        global CURRENT_THEME_MODE
+        global CURRENT_ACCENT_MODE
+        cfg_theme, cfg_accent = _load_theme_state_from_config(self._theme_mode, self._accent_mode)
+        cfg_theme = _normalize_theme_mode(cfg_theme, self._theme_mode)
+        cfg_accent = _normalize_accent_mode(cfg_accent, self._accent_mode)
+        changed = (cfg_theme != self._theme_mode) or (cfg_accent != self._accent_mode)
+        self._theme_mode = cfg_theme
+        self._accent_mode = cfg_accent
+        CURRENT_THEME_MODE = cfg_theme
+        CURRENT_ACCENT_MODE = cfg_accent
+        if changed and bool(apply_if_changed):
+            self._apply_theme_visual_state(refresh_visible_items=True)
+        else:
+            self._sync_browser_options_menu_state()
+        return changed
+
     def browser_options_clicked(self, sender, args):
         self._build_browser_options_menu()
         if self._browser_options_menu is not None:
@@ -3639,16 +3667,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         _save_theme_state_to_config(self._theme_mode, self._accent_mode)
         self._sync_browser_options_menu_state()
         def _apply_theme_change():
-            _try_apply_theme(self)
-            self._surface_item_style = _try_find_resource(self, "CED.ListViewItem.SurfaceBehavior")
-            self._clear_type_tag_brush_cache()
-            self._apply_type_tag_brushes()
-            self._apply_list_interaction_mode()
-            self._update_filter_button_style()
-            self._update_search_chrome()
-            self._update_toggle_button_visual()
-            self._refresh_visible_items()
-            self._sync_browser_options_menu_state()
+            self._apply_theme_visual_state(refresh_visible_items=True)
         _invoke_later(self, _apply_theme_change)
 
     def browser_accent_clicked(self, sender, args):
@@ -3664,12 +3683,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         _save_theme_state_to_config(self._theme_mode, self._accent_mode)
         self._sync_browser_options_menu_state()
         def _apply_accent_change():
-            _try_apply_theme(self)
-            self._clear_type_tag_brush_cache()
-            self._apply_type_tag_brushes()
-            self._update_filter_button_style()
-            self._refresh_visible_items()
-            self._sync_browser_options_menu_state()
+            self._apply_theme_visual_state(refresh_visible_items=True)
         _invoke_later(self, _apply_accent_change)
 
     def browser_display_mode_clicked(self, sender, args):
@@ -4917,6 +4931,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
             self._set_status("Failed to open settings")
             forms.alert("Failed to open Calculate Circuits settings:\n\n{}".format(error), title=TITLE)
             return
+        self._sync_theme_from_config(apply_if_changed=True)
         self._set_status("Closed Calculate Circuits settings")
 
     def _set_alert_hover_state(self, sender, is_hovered):
@@ -5003,3 +5018,4 @@ def ensure_panel_visible():
     panel = CircuitBrowserPanel.get_instance()
     if panel is not None:
         panel.refresh_on_open()
+

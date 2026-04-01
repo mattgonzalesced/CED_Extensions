@@ -1,28 +1,21 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 import Autodesk.Revit.DB.Electrical as DBE
 from pyrevit import revit, DB, forms, script
-from pyrevit.compat import get_elementid_value_func, get_elementid_from_value_func
 
 from Snippets import _elecutils as eu
+from Snippets import revit_helpers
 
 doc = revit.doc
 uidoc = revit.uidoc
 logger = script.get_logger()
 output = script.get_output()
 output.close_others()
-_get_elid_value = get_elementid_value_func()
-_get_elid_from_value = get_elementid_from_value_func()
-
-
 def _idval(item):
-    try:
-        return int(_get_elid_value(item))
-    except Exception:
-        return int(getattr(item, "IntegerValue", 0))
+    return int(revit_helpers.get_elementid_value(item))
 
 
 def _idfrom(value):
-    return _get_elid_from_value(int(value))
+    return revit_helpers.elementid_from_value(value)
 
 
 class SwallowMergeFailures(DB.IFailuresPreprocessor):
@@ -523,3 +516,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

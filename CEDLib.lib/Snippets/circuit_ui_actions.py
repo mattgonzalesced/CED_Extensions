@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """Reusable selection helpers for circuit-centric UI tools."""
 
 from System.Collections.Generic import List
 from pyrevit import DB, revit
-from pyrevit.compat import get_elementid_value_func
 
-_get_elid_value = get_elementid_value_func()
+from Snippets import revit_helpers
 
 
 def _idval(item):
-    try:
-        return int(_get_elid_value(item))
-    except Exception:
-        return int(getattr(item, "IntegerValue", 0))
+    return int(revit_helpers.get_elementid_value(item))
 
 
 def set_revit_selection(elements, uidoc=None):
@@ -86,3 +82,4 @@ def format_writeback_lock_reason(row):
             return "Blocked by writeback ownership ({})".format(device_owner)
         return "Blocked by downstream ownership ({})".format(device_owner)
     return "Blocked by ownership"
+

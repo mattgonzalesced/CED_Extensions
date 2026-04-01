@@ -1,16 +1,16 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """Service-layer execution for Add/Remove Spares and Spaces."""
 
 from pyrevit import DB, revit
-from pyrevit.compat import get_elementid_from_value_func
 
 from CEDElectrical.Infrastructure.Revit.repositories import panel_schedule_repository as ps_repo
 from CEDElectrical.Model.panel_schedule_enums import PanelSpecialKind as SpecialKind
 from CEDElectrical.Model.panel_schedule_enums import PanelUiActionType as UiActionType
 from CEDElectrical.Model.panel_schedule_enums import PanelUiMode as UiMode
 from CEDElectrical.Model.panel_schedule_manager import PanelScheduleManager
+from Snippets import revit_helpers
 
-_elid_from_value = get_elementid_from_value_func()
+_elid_from_value = revit_helpers.elementid_from_value
 
 
 def _collect_all_circuits(doc):
@@ -548,3 +548,4 @@ def execute_staged_actions(doc, staged_actions, option_lookup):
     return {
         "finalize_summary": dict(finalize_summary or {}),
     }
+

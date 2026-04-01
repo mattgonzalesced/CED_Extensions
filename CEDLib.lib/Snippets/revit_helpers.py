@@ -3,10 +3,6 @@
 
 import Autodesk.Revit.DB as DB
 from System import Int64
-from pyrevit.compat import get_elementid_from_value_func
-
-
-_get_elid_from_value = get_elementid_from_value_func()
 
 
 def get_elementid_value(item, default=0):
@@ -26,10 +22,6 @@ def get_elementid_value(item, default=0):
 def elementid_from_value(value):
     """Create a Revit ElementId from an integer-like value."""
     numeric = int(value or 0)
-    try:
-        return _get_elid_from_value(numeric)
-    except Exception:
-        pass
     try:
         return DB.ElementId(Int64(numeric))
     except Exception:
