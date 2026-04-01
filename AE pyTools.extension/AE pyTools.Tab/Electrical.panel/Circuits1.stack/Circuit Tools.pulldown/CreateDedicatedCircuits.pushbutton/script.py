@@ -90,41 +90,60 @@ else:
     selected_panel = panel_dict[selected_panel_key]
 
 # Step 3: Create circuits for each fixture and assign them to the selected panel
-circuit_data = []  # This will hold the data for output (Circuit ID, Panel, Circuit Number)
+circuit_data = []  # This will hold the data for output (Fixture, Circuit, Panel, Circuit Number, Result)
+
+
+def _short_error(ex):
+    text = str(ex or "").strip()
+    if not text:
+        return "Unknown error"
+    return " ".join(text.splitlines())
 
 with revit.Transaction("Create Circuit and Assign to Panel"):
     for fixture in fixtures_with_mep_model:
-        system = DB.Electrical.ElectricalSystem.Create(doc, [fixture.Id],
-                                                       DB.Electrical.ElectricalSystemType.PowerCircuit)
+        try:
+            system = DB.Electrical.ElectricalSystem.Create(
+                doc,
+                [fixture.Id],
+                DB.Electrical.ElectricalSystemType.PowerCircuit
+            )
+        except Exception as create_ex:
+            circuit_data.append([
+                output.linkify(fixture.Id),
+                "-",
+                selected_panel.Name,
+                "-",
+                "Create failed: {}".format(_short_error(create_ex)),
+            ])
+            continue
+
         try:
             # Assign the created circuit to the selected panel
             system.SelectPanel(selected_panel)
-            doc.Regenerate()
             # Get the circuit number and other relevant data
             circuit_number = system.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER).AsString()
             circuit_data.append([
                 output.linkify(fixture.Id),
                 output.linkify(system.Id),  # Linkified element ID of the circuit
                 selected_panel.Name,         # Panel name
-                circuit_number               # Circuit number
+                circuit_number,              # Circuit number
+                "Created"
             ])
-
-        except Exception as e:
-            # Even if assignment fails, still collect the created circuit data and log the error
+        except Exception as assign_ex:
             circuit_data.append([
+                output.linkify(fixture.Id),
                 output.linkify(system.Id),  # Linkified element ID of the circuit
-                "Assignment Failed",         # Indicate failure to assign to panel
-                "N/A"                        # No circuit number if assignment fails
+                selected_panel.Name,
+                "-",
+                "Assign failed: {}".format(_short_error(assign_ex))
             ])
-            output.print_md("Error assigning circuit for fixture '{}' - '{}': {}".format(fixture.Id, fixture.Name, str(e)))
 
 # Step 4: Output success message and table
 if circuit_data:
-    # After transaction, print the table with Circuit ID, Panel Name, and Circuit Number
-    output.print_md("**Circuits created and assigned to panel (or failed to assign) as listed below.**")
+    output.print_md("**Create Dedicated Circuits results:**")
     output.print_table(
         circuit_data,
-        ["Element ID","Circuit ID", "Panel", "Circuit Number"]  # Column headers for the table
+        ["Fixture ID", "Circuit ID", "Panel", "Circuit Number", "Result"]
     )
 else:
     output.print_md("No circuits were created.")

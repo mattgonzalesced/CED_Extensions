@@ -7,8 +7,10 @@ import sys
 
 from System import Math
 from System.Windows import DataObject, DragDrop, DragDropEffects
+from System.Windows import FontWeights
 from System.Windows import Visibility
 from System.Windows.Controls import ListViewItem
+from System.Windows.Documents import Run
 from System.Windows.Input import MouseButtonState
 from System.Windows.Media import Color, SolidColorBrush, VisualTreeHelper
 from pyrevit import DB, forms, revit, script
@@ -44,6 +46,9 @@ from CEDElectrical.Application.operations.panel_schedule_actions import (
     PanelScheduleRemoveSpareOperation,
     PanelScheduleRemoveSpaceOperation,
 )
+from CEDElectrical.Model.panel_schedule_enums import PanelScheduleOperationKey as OpKey
+from CEDElectrical.Model.panel_schedule_enums import PanelSpecialKind as SpecialKind
+from CEDElectrical.Model.panel_schedule_enums import PanelStagedAction as StagedAction
 from Snippets import revit_helpers
 from UIClasses import resource_loader
 
@@ -79,6 +84,24 @@ def _load_accent_mode(default_accent="blue"):
     except Exception:
         pass
     return accent_mode
+
+
+def operation_key_for_action(action):
+    """Resolve operation key for a staged placement action."""
+    if StagedAction.is_add_spare(action):
+        return OpKey.ADD_SPARE
+    if StagedAction.is_add_space(action):
+        return OpKey.ADD_SPACE
+    if StagedAction.is_remove_spare(action):
+        return OpKey.REMOVE_SPARE
+    if StagedAction.is_remove_space(action):
+        return OpKey.REMOVE_SPACE
+    return OpKey.MOVE_TO_SPECIFIC_SLOT
+
+
+def is_add_action(action):
+    """Return True when staged action is add_spare/add_space."""
+    return bool(StagedAction.is_add_spare(action) or StagedAction.is_add_space(action))
 
 
 class PanelOptionItem(object):
@@ -165,6 +188,7 @@ class SwapRowItem(object):
         is_regular = bool(row.get("is_regular_circuit", False))
         is_transferable = bool(row.get("transferable", False))
         is_editable = bool(row.get("is_editable", True))
+        is_excess_slot = bool(row.get("is_excess_slot", False))
         is_staged = bool(row.get("is_staged", False))
         reason = str(row.get("transfer_reason", "") or "")
         covered_slots = [int(x) for x in list(row.get("covered_slots") or []) if int(x) > 0]
@@ -179,6 +203,7 @@ class SwapRowItem(object):
         self.span = span
         self.is_regular_circuit = is_regular
         self.is_transferable = is_transferable
+        self.is_excess_slot = bool(is_excess_slot)
         self.is_draggable = bool(kind in ("circuit", "spare", "space") and is_editable)
         self.row_height = 20 * span
         self.row_opacity = 1.0 if self.is_draggable else 0.46
@@ -187,11 +212,18 @@ class SwapRowItem(object):
         show_default_replace = bool(allow_default_replace and (is_default_spare or is_default_space))
 
         if kind == "empty":
-            number_text = "EMPTY"
-            load_text = "Available slot"
-            meta_text = "-"
-            base_bg = brushes.get("empty_bg")
-            tooltip = "Empty slot"
+            if bool(is_excess_slot):
+                number_text = "N/A"
+                load_text = "Exceeds equipment capacity"
+                meta_text = "-"
+                base_bg = brushes.get("slot_bg") or brushes.get("empty_bg")
+                tooltip = "Unavailable slot: panel schedule template has more rows than device supports."
+            else:
+                number_text = "EMPTY"
+                load_text = "Available slot"
+                meta_text = "-"
+                base_bg = brushes.get("empty_bg")
+                tooltip = "Empty slot"
         elif kind == "spare":
             number_text = row.get("circuit_number") or "SPARE"
             load_text = "SPARE"
@@ -310,22 +342,16 @@ class BatchSwapWindow(forms.WPFWindow):
 
     def _active_doc(self):
         """Return current active document."""
-        try:
-            return revit.doc
-        except Exception:
-            return None
+        return revit.doc
 
     def _apply_theme(self):
         """Apply forced light theme and configured accent."""
-        try:
-            resource_loader.apply_theme(
-                self,
-                resources_root=UI_RESOURCES_ROOT,
-                theme_mode="light",
-                accent_mode=self._accent_mode,
-            )
-        except Exception as ex:
-            LOGGER.warning("Batch Swap UI theme apply failed: %s", ex)
+        resource_loader.apply_theme(
+            self,
+            resources_root=UI_RESOURCES_ROOT,
+            theme_mode="light",
+            accent_mode=self._accent_mode,
+        )
 
     def _make_brush(self, argb_hex):
         """Create a fallback SolidColorBrush from ARGB hex."""
@@ -353,6 +379,10 @@ class BatchSwapWindow(forms.WPFWindow):
         self.RightPanelMeta = self.FindName("RightPanelMeta")
         self.LeftPanelTypeMeta = self.FindName("LeftPanelTypeMeta")
         self.RightPanelTypeMeta = self.FindName("RightPanelTypeMeta")
+        self.LeftPanelCurrentConnectedText = self.FindName("LeftPanelCurrentConnectedText")
+        self.LeftPanelCurrentDemandText = self.FindName("LeftPanelCurrentDemandText")
+        self.RightPanelCurrentConnectedText = self.FindName("RightPanelCurrentConnectedText")
+        self.RightPanelCurrentDemandText = self.FindName("RightPanelCurrentDemandText")
         self.LeftMissingSchedulePanel = self.FindName("LeftMissingSchedulePanel")
         self.RightMissingSchedulePanel = self.FindName("RightMissingSchedulePanel")
         self.LeftMissingScheduleText = self.FindName("LeftMissingScheduleText")
@@ -476,7 +506,7 @@ class BatchSwapWindow(forms.WPFWindow):
         if max_slot <= 0:
             return lookup
         sort_mode = option.get("sort_mode", "panelboard")
-        for slot in ps_repo.get_slot_order(max_slot, sort_mode):
+        for slot in ps_repo.get_option_slot_order(option, include_excess=True):
             try:
                 slot_value = int(slot)
                 if slot_value <= 0:
@@ -604,6 +634,93 @@ class BatchSwapWindow(forms.WPFWindow):
             wire_text,
             ll_text,
             lg_text,
+        )
+
+    def _format_amp_value(self, value):
+        """Return compact amperes text from numeric-like value."""
+        if value is None:
+            return "-"
+        try:
+            numeric = float(value)
+        except Exception:
+            return "-"
+        if abs(numeric - round(numeric)) < 0.05:
+            return "{0:.0f}".format(numeric)
+        return "{0:.1f}".format(numeric)
+
+    def _set_rich_text(self, textblock, parts):
+        """Apply mixed-color inline runs: descriptors secondary, values black."""
+        if textblock is None:
+            return
+        try:
+            textblock.Inlines.Clear()
+        except Exception:
+            try:
+                textblock.Text = "".join([str(x[0] or "") for x in list(parts or [])])
+            except Exception:
+                pass
+            return
+        secondary = self._resource("CED.Brush.TextSecondary")
+        for text, is_value in list(parts or []):
+            run = Run(str(text or ""))
+            try:
+                if bool(is_value):
+                    run.FontWeight = FontWeights.SemiBold
+                    if secondary is not None:
+                        run.Foreground = secondary
+                elif secondary is not None:
+                    run.Foreground = secondary
+            except Exception:
+                pass
+            textblock.Inlines.Add(run)
+
+    def _set_profile_rich_text(self, option, textblock):
+        """Render distribution profile with descriptor/value colors."""
+        profile = (option or {}).get("profile") or {}
+        lg = profile.get("lg_voltage")
+        ll = profile.get("ll_voltage")
+        phase = self._format_phase_text(profile.get("phase"))
+        wires = profile.get("wire_count")
+        wire_text = "-" if wires is None else str(int(wires))
+        lg_text = "-" if lg is None else "{0:.0f}V".format(float(lg))
+        ll_text = "-" if ll is None else "{0:.0f}V".format(float(ll))
+        self._set_rich_text(
+            textblock,
+            [
+                ("Ph: ", False), (phase, True),
+                ("  Wire: ", False), (wire_text, True),
+                ("  L-L: ", False), (ll_text, True),
+                ("  L-G: ", False), (lg_text, True),
+            ],
+        )
+
+    def _set_currents_rich_text(self, option, connected_textblock, demand_textblock):
+        """Render two-row current summary with aligned labels and black values."""
+        model = (option or {}).get("equipment_model")
+        conn = self._format_amp_value(getattr(model, "current_connected_total", None) if model is not None else None)
+        dmd = self._format_amp_value(getattr(model, "current_demand_total", None) if model is not None else None)
+        ia = self._format_amp_value(getattr(model, "branch_current_phase_a", None) if model is not None else None)
+        ib = self._format_amp_value(getattr(model, "branch_current_phase_b", None) if model is not None else None)
+        ic = self._format_amp_value(getattr(model, "branch_current_phase_c", None) if model is not None else None)
+
+        def _amp_text(value_text):
+            return "{0} A".format(value_text) if str(value_text or "-") != "-" else "-"
+
+        self._set_rich_text(
+            connected_textblock,
+            [
+                (_amp_text(conn), True),
+                (" (Ia: ", False), (_amp_text(ia), True),
+                (", Ib: ", False), (_amp_text(ib), True),
+                (", Ic: ", False), (_amp_text(ic), True),
+                (")", False),
+            ],
+        )
+        self._set_rich_text(
+            demand_textblock,
+            [
+                (_amp_text(dmd), True),
+            ],
         )
 
     def _selected_option(self, combo):
@@ -838,8 +955,18 @@ class BatchSwapWindow(forms.WPFWindow):
         self._recompute_transferability()
         self._refresh_row_views()
 
-        self.LeftPanelMeta.Text = self._format_profile(self._left_option)
-        self.RightPanelMeta.Text = self._format_profile(self._right_option)
+        self._set_profile_rich_text(self._left_option, self.LeftPanelMeta)
+        self._set_profile_rich_text(self._right_option, self.RightPanelMeta)
+        self._set_currents_rich_text(
+            self._left_option,
+            self.LeftPanelCurrentConnectedText,
+            self.LeftPanelCurrentDemandText,
+        )
+        self._set_currents_rich_text(
+            self._right_option,
+            self.RightPanelCurrentConnectedText,
+            self.RightPanelCurrentDemandText,
+        )
         if self.LeftPanelTypeMeta is not None:
             self.LeftPanelTypeMeta.Text = self._format_schedule_type_label(self._left_option)
         if self.RightPanelTypeMeta is not None:
@@ -881,7 +1008,9 @@ class BatchSwapWindow(forms.WPFWindow):
         staged_ids = self._collect_staged_circuit_ids()
         for row in self._left_rows:
             row["is_editable"] = bool(self._is_row_editable(row))
-            if not bool(row.get("is_editable", True)):
+            if bool(row.get("is_excess_slot", False)):
+                ok, reason = False, "Exceeds equipment slot capacity."
+            elif not bool(row.get("is_editable", True)):
                 ok, reason = False, "Owned by {0}".format(str(row.get("edited_by", "") or "another user"))
             elif str(row.get("kind", "")).lower() in ("spare", "space"):
                 ok, reason = True, ""
@@ -895,7 +1024,9 @@ class BatchSwapWindow(forms.WPFWindow):
 
         for row in self._right_rows:
             row["is_editable"] = bool(self._is_row_editable(row))
-            if not bool(row.get("is_editable", True)):
+            if bool(row.get("is_excess_slot", False)):
+                ok, reason = False, "Exceeds equipment slot capacity."
+            elif not bool(row.get("is_editable", True)):
                 ok, reason = False, "Owned by {0}".format(str(row.get("edited_by", "") or "another user"))
             elif str(row.get("kind", "")).lower() in ("spare", "space"):
                 ok, reason = True, ""
@@ -925,6 +1056,8 @@ class BatchSwapWindow(forms.WPFWindow):
     def _row_indicator_text(self, row):
         """Return short slot flags for grouped/locked/ownership states."""
         tags = []
+        if bool(row.get("is_excess_slot", False)):
+            tags.append("EXCESS")
         if bool(row.get("is_slot_grouped", False)):
             group_no = int(row.get("slot_group_number", 0) or 0)
             if group_no > 0:
@@ -933,13 +1066,13 @@ class BatchSwapWindow(forms.WPFWindow):
                 tags.append("GRP")
         if bool(row.get("is_slot_locked", False)):
             tags.append("LOCK")
-        if not bool(row.get("is_editable", True)):
+        if not bool(row.get("is_editable", True)) and not bool(row.get("is_excess_slot", False)):
             tags.append("OWN")
         return " ".join(tags)
 
     def _sorted_rows(self, rows, option):
         """Sort rows by panel slot display order."""
-        slot_order = ps_repo.get_slot_order(option.get("max_slot", 0), option.get("sort_mode", "panelboard"))
+        slot_order = ps_repo.get_option_slot_order(option, include_excess=True)
         index = {int(slot): i for i, slot in enumerate(slot_order)}
         return sorted(list(rows or []), key=lambda x: (index.get(int(x.get("slot", 0)), 999999), int(x.get("slot", 0))))
 
@@ -997,7 +1130,8 @@ class BatchSwapWindow(forms.WPFWindow):
 
     def _update_action_buttons_state(self):
         """Enable add/remove special-row buttons based on current selection."""
-        can_add = False
+        can_add_spare = False
+        can_add_space = False
         can_remove = False
         selected_poles = int(max(1, self._selected_add_poles()))
         for list_ctrl, rows in (
@@ -1006,16 +1140,23 @@ class BatchSwapWindow(forms.WPFWindow):
         ):
             current_option = self._left_option if list_ctrl is self.LeftRowsList else self._right_option
             option_supports_poles = self._panel_accepts_add_poles(current_option, selected_poles)
+            is_data_panel = False
+            try:
+                is_data_panel = bool((current_option or {}).get("schedule_type") == ps_repo.PSTYPE_DATA)
+            except Exception:
+                is_data_panel = False
             for row in self._selected_rows_from_list(list_ctrl, rows):
                 kind = str(row.get("kind", "") or "").lower()
-                if kind == "empty" and bool(option_supports_poles):
-                    can_add = True
+                if kind == "empty" and bool(row.get("is_editable", True)) and bool(option_supports_poles):
+                    can_add_space = True
+                    if not bool(is_data_panel):
+                        can_add_spare = True
                 elif kind in ("spare", "space") and bool(row.get("is_editable", True)):
                     can_remove = True
         if self.AddSpareButton is not None:
-            self.AddSpareButton.IsEnabled = bool(can_add)
+            self.AddSpareButton.IsEnabled = bool(can_add_spare)
         if self.AddSpaceButton is not None:
-            self.AddSpaceButton.IsEnabled = bool(can_add)
+            self.AddSpaceButton.IsEnabled = bool(can_add_space)
         if self.RemoveSpecialButton is not None:
             self.RemoveSpecialButton.IsEnabled = bool(can_remove)
         self._update_create_schedule_button("left")
@@ -1124,7 +1265,7 @@ class BatchSwapWindow(forms.WPFWindow):
         row["transferable"] = True
         row["transfer_reason"] = ""
         row["edited_by"] = ""
-        row["is_editable"] = True
+        row["is_editable"] = bool(row.get("is_valid_slot", True))
         row["circuit_number"] = ps_repo.predict_circuit_number(option, slot_value, poles=1)
         row["row_key"] = "panel:{0}|slot:{1}|{2}:temp:{3}".format(
             int(option.get("panel_id", 0) or 0),
@@ -1141,6 +1282,10 @@ class BatchSwapWindow(forms.WPFWindow):
 
     def _is_row_editable(self, row):
         """Return False when row is owned by another user."""
+        if bool(row.get("is_excess_slot", False)):
+            return False
+        if not bool(row.get("is_valid_slot", True)):
+            return False
         owner = str(row.get("edited_by", "") or "").strip()
         if not owner:
             return True
@@ -1339,7 +1484,7 @@ class BatchSwapWindow(forms.WPFWindow):
                         origin_by_circuit[circuit_id] = dict(move)
                     removed_any = True
                     continue
-                if action.startswith("remove_") and linked_circuit_id in collapse_circuits:
+                if (StagedAction.is_remove_spare(action) or StagedAction.is_remove_space(action)) and linked_circuit_id in collapse_circuits:
                     removed_any = True
                     continue
                 kept.append(move)
@@ -1428,9 +1573,9 @@ class BatchSwapWindow(forms.WPFWindow):
                     prefix = "#{0} [{1}]".format(seq, status_label)
                 else:
                     prefix = "#{0}".format(seq)
-                if action.startswith("add_"):
+                if StagedAction.is_add_spare(action) or StagedAction.is_add_space(action):
                     text = "{0} ADD {1} -> {2}[{3}]{4}".format(prefix, load, to_panel, new_slots, condition_suffix)
-                elif action.startswith("remove_"):
+                elif StagedAction.is_remove_spare(action) or StagedAction.is_remove_space(action):
                     text = "{0} REMOVE {1} {2}[{3}]".format(prefix, load, from_panel, old_slots)
                 elif int(move.get("from_panel_id", 0)) == int(move.get("to_panel_id", 0)):
                     text = "{0} {1} {2}[{3}] -> {2}[{4}]".format(prefix, load, from_panel, old_slots, new_slots)
@@ -1663,22 +1808,9 @@ class BatchSwapWindow(forms.WPFWindow):
             return None
 
     def _run_transaction(self, doc, name, action):
-        """Run one DB.Transaction and rollback on failure."""
-        tx = DB.Transaction(doc, str(name or "BatchSwap Apply"))
-        tx.Start()
-        try:
-            result = action()
-            status = tx.Commit()
-            if status != DB.TransactionStatus.Committed:
-                raise Exception("Transaction did not commit: {0}".format(name))
-            return result
-        except Exception:
-            try:
-                if tx.GetStatus() == DB.TransactionStatus.Started:
-                    tx.RollBack()
-            except Exception:
-                pass
-            raise
+        """Run one scoped transaction with automatic rollback on exception."""
+        with revit.Transaction(str(name or "BatchSwap Apply"), doc):
+            return action()
 
     def _slot_cells(self, schedule_view, slot):
         """Return row/col cells for a schedule slot."""
@@ -1807,33 +1939,16 @@ class BatchSwapWindow(forms.WPFWindow):
     def _set_slot_locked(self, schedule_view, slot, is_locked):
         """Best-effort set slot lock state."""
         cells = self._slot_cells(schedule_view, slot)
-        methods = ("SetSlotLocked", "SetLockSlot", "SetCellLocked")
-        ok = False
+        setter = getattr(schedule_view, "SetLockSlot", None)
+        if setter is None:
+            return False
         for row, col in list(cells or []):
-            for method_name in methods:
-                method = getattr(schedule_view, method_name, None)
-                if method is None:
-                    continue
-                attempts = (
-                    (int(row), int(col), bool(is_locked)),
-                    (int(row), int(col)),
-                    (int(slot), bool(is_locked)),
-                    (int(slot),),
-                )
-                for args in attempts:
-                    try:
-                        result = method(*args)
-                        if isinstance(result, bool) and not result:
-                            continue
-                        ok = True
-                        break
-                    except Exception:
-                        continue
-                if ok:
-                    break
-            if ok:
-                break
-        return ok
+            try:
+                setter(int(row), int(col), bool(is_locked))
+                return True
+            except Exception:
+                continue
+        return False
 
     def _unlock_slots_with_snapshot(self, schedule_view, slots):
         """Unlock slots and return original lock snapshot."""
@@ -2115,13 +2230,11 @@ class BatchSwapWindow(forms.WPFWindow):
             for occ_slot in occ_slots:
                 covered_slots.add(int(occ_slot))
 
-        snapshot = self._unlock_slots_with_snapshot(schedule_view, covered_slots)
         for occ in to_delete.values():
             try:
                 doc.Delete(occ["circuit"].Id)
             except Exception as ex:
                 raise Exception("Failed removing target spare/space: {0}".format(ex))
-        return snapshot
 
     def _apply_add_placement_create(self, doc, placement):
         """Create one staged spare/space row at target slot."""
@@ -2263,12 +2376,14 @@ class BatchSwapWindow(forms.WPFWindow):
         target_slots = [int(x) for x in list(placement.get("new_covered_slots") or []) if int(x) > 0]
         if not target_slots:
             poles_hint = int(max(1, len(list(placement.get("new_covered_slots") or [])) or int(placement.get("poles", 1) or 1)))
-            target_slots = ps_repo.get_slot_span_slots(
-                start_slot=target_slot,
-                pole_count=poles_hint,
-                max_slot=target_option.get("max_slot", 0),
-                sort_mode=target_option.get("sort_mode", "panelboard"),
-            ) or [target_slot]
+            target_slots = ps_repo.get_slot_span_slots_for_option(
+                target_option,
+                start_slot=int(target_slot),
+                pole_count=int(poles_hint),
+                require_valid=True,
+            )
+        if not target_slots:
+            raise Exception("Move operation target slot exceeds equipment-supported slot capacity.")
         target_state_before = []
         for slot in list(target_slots or []):
             target_state_before.append("{0}:{1}".format(int(slot), self._describe_slot_state(doc, target_option, slot, protected_circuit_id=circuit_id)))
@@ -2378,17 +2493,8 @@ class BatchSwapWindow(forms.WPFWindow):
 
     def _apply_placement(self, doc, placement):
         """Apply one placement entry through registered panel schedule operations."""
-        action = str(placement.get("action", "") or "").lower()
-        if action.startswith("add_spare"):
-            op_key = "panel_schedule_add_spare"
-        elif action.startswith("add_space"):
-            op_key = "panel_schedule_add_space"
-        elif action.startswith("remove_spare"):
-            op_key = "panel_schedule_remove_spare"
-        elif action.startswith("remove_space"):
-            op_key = "panel_schedule_remove_space"
-        else:
-            op_key = "panel_schedule_move_circuit_to_specific_slot"
+        action = placement.get("action", "")
+        op_key = operation_key_for_action(action)
 
         option_lookup = {}
         for panel_id, item in dict(self._panel_option_by_id or {}).items():
@@ -2415,7 +2521,7 @@ class BatchSwapWindow(forms.WPFWindow):
         try:
             temp_id_map = {}
             for idx, placement in enumerate(list(operation.get("placements") or []), 1):
-                action_name = str(placement.get("action", "") or "").lower()
+                action_name = StagedAction.normalize(placement.get("action", ""))
                 effective = dict(placement)
                 original_circuit_id = int(placement.get("circuit_id", 0) or 0)
                 if original_circuit_id < 0 and original_circuit_id in temp_id_map:
@@ -2423,7 +2529,7 @@ class BatchSwapWindow(forms.WPFWindow):
                 linked_id = int(placement.get("for_circuit_id", 0) or 0)
                 if linked_id < 0 and linked_id in temp_id_map:
                     effective["for_circuit_id"] = int(temp_id_map.get(linked_id))
-                if action_name == "move" and int(effective.get("circuit_id", 0) or 0) <= 0:
+                if action_name == StagedAction.MOVE and int(effective.get("circuit_id", 0) or 0) <= 0:
                     raise Exception(
                         "Move action for staged special could not resolve runtime circuit id (temp id: {0}).".format(
                             int(original_circuit_id)
@@ -2449,7 +2555,7 @@ class BatchSwapWindow(forms.WPFWindow):
                     "Batch Swap Seq #{0} - Step {1}".format(int(seq), int(idx)),
                     _tx_action,
                 )
-                if action_name.startswith("add_") and int(original_circuit_id) < 0:
+                if is_add_action(action_name) and int(original_circuit_id) < 0:
                     resolved_id = 0
                     if isinstance(tx_result, dict):
                         try:
@@ -2558,10 +2664,13 @@ class BatchSwapWindow(forms.WPFWindow):
     def _stage_add_special(self, kind):
         """Stage adding spare/space rows into selected empty slots."""
         poles = int(max(1, self._selected_add_poles()))
-        kind_value = str(kind or "").strip().lower()
+        kind_value = SpecialKind.normalize(kind, None)
+        if kind_value is None:
+            self._set_status("Invalid special kind: {0}".format(str(kind or "")))
+            return
         spare_rating = 0
         spare_frame = 0
-        if kind_value == "spare":
+        if kind_value == SpecialKind.SPARE:
             rating = self._selected_spare_rating()
             if rating is None:
                 self._set_status("Add SPARE cancelled.")
@@ -2580,9 +2689,11 @@ class BatchSwapWindow(forms.WPFWindow):
             for row in self._selected_rows_from_list(list_ctrl, rows):
                 if str(row.get("kind", "") or "") != "empty":
                     continue
+                if not bool(row.get("is_editable", True)):
+                    continue
                 targets.append((rows, option, row))
         if not targets:
-            self._set_status("Select one or more EMPTY rows to add {0}.".format(str(kind).upper()))
+            self._set_status("Select one or more EMPTY rows to add {0}.".format(str(kind_value).upper()))
             return
 
         touched_panels = set([int(option.get("panel_id", 0) or 0) for _, option, _ in targets])
@@ -2591,15 +2702,23 @@ class BatchSwapWindow(forms.WPFWindow):
         rejected = 0
 
         for rows, option, row in sorted(targets, key=lambda x: (int(x[1].get("panel_id", 0) or 0), int(x[2].get("slot", 0) or 0))):
+            is_data_panel = False
+            try:
+                is_data_panel = bool((option or {}).get("schedule_type") == ps_repo.PSTYPE_DATA)
+            except Exception:
+                is_data_panel = False
+            if bool(is_data_panel and kind_value != SpecialKind.SPACE):
+                rejected += 1
+                continue
             if not self._panel_accepts_add_poles(option, poles):
                 rejected += 1
                 continue
             slot_value = int(row.get("slot", 0) or 0)
-            covered = ps_repo.get_slot_span_slots(
-                start_slot=slot_value,
-                pole_count=poles,
-                max_slot=option.get("max_slot", 0),
-                sort_mode=option.get("sort_mode", "panelboard"),
+            covered = ps_repo.get_slot_span_slots_for_option(
+                option,
+                start_slot=int(slot_value),
+                pole_count=int(poles),
+                require_valid=True,
             )
             if not covered:
                 rejected += 1
@@ -2621,7 +2740,7 @@ class BatchSwapWindow(forms.WPFWindow):
                         self._remove_row_by_key(rows, existing.get("row_key"))
                         break
 
-            staged = self._build_staged_special_row(option, slot_value, kind, spare_rating=spare_rating)
+            staged = self._build_staged_special_row(option, slot_value, kind_value, spare_rating=spare_rating)
             staged["poles"] = int(poles)
             staged["spare_frame"] = int(spare_frame)
             staged["span"] = int(max(1, len(covered)))
@@ -2630,7 +2749,7 @@ class BatchSwapWindow(forms.WPFWindow):
             rows.append(staged)
             placements.append(
                 {
-                    "action": "add_{0}".format(str(kind).lower()),
+                    "action": StagedAction.ADD_SPARE if kind_value == SpecialKind.SPARE else StagedAction.ADD_SPACE,
                     "circuit_id": int(staged.get("circuit_id", 0)),
                     "circuit_number": staged.get("circuit_number", ""),
                     "load_name": staged.get("load_name", ""),
@@ -2668,19 +2787,19 @@ class BatchSwapWindow(forms.WPFWindow):
         if rejected:
             self._set_status(
                 "Added {0} staged {1} row(s). {2} request(s) rejected (insufficient slot fit).".format(
-                    len(placements), str(kind).upper(), int(rejected)
+                    len(placements), str(kind_value).upper(), int(rejected)
                 )
             )
         else:
-            self._set_status("Added {0} staged {1} row(s).".format(len(placements), str(kind).upper()))
+            self._set_status("Added {0} staged {1} row(s).".format(len(placements), str(kind_value).upper()))
 
     def add_spare_clicked(self, sender, args):
         """Add staged SPARE rows to selected empty slots."""
-        self._stage_add_special("spare")
+        self._stage_add_special(SpecialKind.SPARE)
 
     def add_space_clicked(self, sender, args):
         """Add staged SPACE rows to selected empty slots."""
-        self._stage_add_special("space")
+        self._stage_add_special(SpecialKind.SPACE)
 
     def remove_special_clicked(self, sender, args):
         """Remove selected spare/space rows regardless of removable status."""
@@ -2691,7 +2810,7 @@ class BatchSwapWindow(forms.WPFWindow):
         ):
             for row in self._selected_rows_from_list(list_ctrl, rows):
                 kind = str(row.get("kind", "") or "").lower()
-                if kind not in ("spare", "space"):
+                if kind not in SpecialKind.all():
                     continue
                 if not bool(row.get("is_editable", True)):
                     continue
@@ -2716,7 +2835,7 @@ class BatchSwapWindow(forms.WPFWindow):
                 rows.append(ps_repo.build_empty_row(option, int(slot_value)))
             placements.append(
                 {
-                    "action": "remove_{0}".format(kind),
+                    "action": StagedAction.REMOVE_SPARE if kind == SpecialKind.SPARE else StagedAction.REMOVE_SPACE,
                     "circuit_id": int(row.get("circuit_id", 0) or 0),
                     "circuit_number": row.get("circuit_number", ""),
                     "load_name": row.get("load_name", ""),
@@ -2733,6 +2852,7 @@ class BatchSwapWindow(forms.WPFWindow):
                     "old_covered_slots": [int(x) for x in covered],
                     "new_slot": 0,
                     "new_covered_slots": [],
+                    "leave_unlocked": True,
                     "same_panel": True,
                 }
             )
@@ -3127,7 +3247,7 @@ class BatchSwapWindow(forms.WPFWindow):
 
     def _next_slot_after(self, option, slot):
         """Return next slot in panel display order."""
-        slot_order = ps_repo.get_slot_order(option.get("max_slot", 0), option.get("sort_mode", "panelboard"))
+        slot_order = ps_repo.get_option_slot_order(option, include_excess=False)
         current = int(slot or 0)
         if current not in slot_order:
             return 0
@@ -3217,7 +3337,7 @@ class BatchSwapWindow(forms.WPFWindow):
         temporary_row_keys=None,
     ):
         """Find first slot where moving row can fit."""
-        slot_order = ps_repo.get_slot_order(target_option.get("max_slot", 0), target_option.get("sort_mode", "panelboard"))
+        slot_order = ps_repo.get_option_slot_order(target_option, include_excess=False)
         occupancy = self._slot_occupancy(target_rows, target_option)
 
         preferred = int(preferred_slot or 0)
@@ -3232,11 +3352,11 @@ class BatchSwapWindow(forms.WPFWindow):
 
         poles = int(max(1, moving_row.get("poles", 1) or 1))
         for start in ordered_starts:
-            covered_slots = ps_repo.get_slot_span_slots(
-                start_slot=start,
-                pole_count=poles,
-                max_slot=target_option.get("max_slot", 0),
-                sort_mode=target_option.get("sort_mode", "panelboard"),
+            covered_slots = ps_repo.get_slot_span_slots_for_option(
+                target_option,
+                start_slot=int(start),
+                pole_count=int(poles),
+                require_valid=True,
             )
             if not covered_slots:
                 continue
@@ -3261,7 +3381,7 @@ class BatchSwapWindow(forms.WPFWindow):
 
     def _normalize_rows(self, rows, option):
         """Normalize rows into unique occupants + explicit empties."""
-        slot_order = ps_repo.get_slot_order(option.get("max_slot", 0), option.get("sort_mode", "panelboard"))
+        slot_order = ps_repo.get_option_slot_order(option, include_excess=True)
         slot_set = set(slot_order)
 
         occupants = []
@@ -3340,10 +3460,7 @@ class BatchSwapWindow(forms.WPFWindow):
                 continue
             moving_rows.append(row)
 
-        slot_order = ps_repo.get_slot_order(
-            source_option.get("max_slot", 0),
-            source_option.get("sort_mode", "panelboard"),
-        )
+        slot_order = ps_repo.get_option_slot_order(source_option, include_excess=True)
         order_index = {int(slot): idx for idx, slot in enumerate(list(slot_order or []))}
         moving_rows = sorted(
             moving_rows,
@@ -3422,11 +3539,11 @@ class BatchSwapWindow(forms.WPFWindow):
                     continue
                 source_rows.append(ps_repo.build_empty_row(source_option, free_slot))
 
-            target_covered = ps_repo.get_slot_span_slots(
-                start_slot=fit_slot,
+            target_covered = ps_repo.get_slot_span_slots_for_option(
+                target_option,
+                start_slot=int(fit_slot),
                 pole_count=int(max(1, moving.get("poles", 1) or 1)),
-                max_slot=target_option.get("max_slot", 0),
-                sort_mode=target_option.get("sort_mode", "panelboard"),
+                require_valid=True,
             ) or [int(fit_slot)]
             target_condition = self._target_condition_label(
                 target_rows=target_rows,
@@ -3442,7 +3559,7 @@ class BatchSwapWindow(forms.WPFWindow):
             )
             for removed in list(removed_rows or []):
                 removed_kind = str(removed.get("kind", "") or "").strip().lower()
-                if removed_kind not in ("spare", "space"):
+                if removed_kind not in SpecialKind.all():
                     continue
                 removed_slots = ps_repo.get_row_covered_slots(removed, option=target_option)
                 if not removed_slots:
@@ -3451,7 +3568,7 @@ class BatchSwapWindow(forms.WPFWindow):
                         removed_slots = [removed_slot]
                 placements.append(
                     {
-                        "action": "remove_{0}".format(removed_kind),
+                        "action": StagedAction.REMOVE_SPARE if removed_kind == SpecialKind.SPARE else StagedAction.REMOVE_SPACE,
                         "circuit_id": int(removed.get("circuit_id", 0) or 0),
                         "for_circuit_id": int(moving.get("circuit_id", 0) or 0),
                         "circuit_number": str(removed.get("circuit_number", "") or ""),
@@ -3469,6 +3586,7 @@ class BatchSwapWindow(forms.WPFWindow):
                         "old_covered_slots": [int(x) for x in list(removed_slots or []) if int(x) > 0],
                         "new_slot": 0,
                         "new_covered_slots": [],
+                        "leave_unlocked": True,
                         "same_panel": True,
                     }
                 )
@@ -3496,7 +3614,7 @@ class BatchSwapWindow(forms.WPFWindow):
 
             placements.append(
                 {
-                    "action": "move",
+                    "action": StagedAction.MOVE,
                     "circuit_id": int(placed.get("circuit_id", 0) or 0),
                     "circuit_number": str(moving.get("circuit_number", "") or ""),
                     "load_name": str(moving.get("load_name", "") or ""),

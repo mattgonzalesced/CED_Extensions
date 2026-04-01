@@ -38,6 +38,12 @@ class DistributionEquipment(object):
         self.current_connected_total = kwargs.get("current_connected_total")
         self.power_demand_total = kwargs.get("power_demand_total")
         self.current_demand_total = kwargs.get("current_demand_total")
+        self.branch_current_phase_a = kwargs.get("branch_current_phase_a")
+        self.branch_current_phase_b = kwargs.get("branch_current_phase_b")
+        self.branch_current_phase_c = kwargs.get("branch_current_phase_c")
+        self.branch_load_phase_a = kwargs.get("branch_load_phase_a")
+        self.branch_load_phase_b = kwargs.get("branch_load_phase_b")
+        self.branch_load_phase_c = kwargs.get("branch_load_phase_c")
 
     @property
     def ID(self):

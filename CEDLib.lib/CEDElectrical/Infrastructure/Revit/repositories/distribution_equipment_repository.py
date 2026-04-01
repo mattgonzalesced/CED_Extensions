@@ -7,11 +7,6 @@ from pyrevit import DB
 from CEDElectrical.Model.distribution_equipment import DistributionEquipment, PowerBus, Transformer
 from Snippets import revit_helpers
 
-try:
-    _INTEGER_TYPES = (int, long)
-except Exception:
-    _INTEGER_TYPES = (int,)
-
 PART_TYPE_MAP = {
     14: "Panelboard",
     15: "Transformer",
@@ -20,19 +15,10 @@ PART_TYPE_MAP = {
     18: "Equipment Switch",
 }
 
-
-def _panel_schedule_type(name, fallback=None):
-    """Return DBE.PanelScheduleType member by name."""
-    try:
-        return getattr(DBE.PanelScheduleType, name)
-    except Exception:
-        return fallback
-
-
-PSTYPE_UNKNOWN = _panel_schedule_type("Unknown", None)
-PSTYPE_BRANCH = _panel_schedule_type("Branch", PSTYPE_UNKNOWN)
-PSTYPE_SWITCHBOARD = _panel_schedule_type("Switchboard", PSTYPE_BRANCH)
-PSTYPE_DATA = _panel_schedule_type("Data", PSTYPE_BRANCH)
+PSTYPE_UNKNOWN = DBE.PanelScheduleType.Unknown
+PSTYPE_BRANCH = DBE.PanelScheduleType.Branch
+PSTYPE_SWITCHBOARD = DBE.PanelScheduleType.Switchboard
+PSTYPE_DATA = DBE.PanelScheduleType.Data
 
 PART_TYPE_TO_PANEL_SCHEDULE_TYPE = {
     14: PSTYPE_BRANCH,
@@ -56,12 +42,35 @@ def _to_text(value, fallback=""):
         return fallback
 
 
-def _bip(name):
-    """Return BuiltInParameter member by name."""
-    try:
-        return getattr(DB.BuiltInParameter, name)
-    except Exception:
-        return None
+BIP_ELEC_PANEL_CONFIGURATION = DB.BuiltInParameter.RBS_ELEC_PANEL_CONFIGURATION_PARAM
+BIP_FAMILY_CONTENT_PART_TYPE = DB.BuiltInParameter.FAMILY_CONTENT_PART_TYPE
+BIP_FAMILY_DIST_SYSTEM = DB.BuiltInParameter.RBS_FAMILY_CONTENT_DISTRIBUTION_SYSTEM
+BIP_FAMILY_SECONDARY_DIST_SYSTEM = DB.BuiltInParameter.RBS_FAMILY_CONTENT_SECONDARY_DISTRIBSYS
+BIP_SYMBOL_NAME = DB.BuiltInParameter.SYMBOL_NAME_PARAM
+BIP_VOLTAGE_TYPE_VOLTAGE = DB.BuiltInParameter.RBS_VOLTAGETYPE_VOLTAGE_PARAM
+BIP_PANEL_TOTAL_LOAD = DB.BuiltInParameter.RBS_ELEC_PANEL_TOTALLOAD_PARAM
+BIP_PANEL_TOTAL_CONNECTED_LOAD = DB.BuiltInParameter.RBS_ELEC_PANEL_TOTALLOAD_PARAM
+BIP_PANEL_TOTAL_CURRENT = DB.BuiltInParameter.RBS_ELEC_PANEL_TOTAL_CONNECTED_CURRENT_PARAM
+BIP_PANEL_TOTAL_CONNECTED_CURRENT = DB.BuiltInParameter.RBS_ELEC_PANEL_TOTAL_CONNECTED_CURRENT_PARAM
+BIP_PANEL_TOTAL_DEMAND_LOAD = DB.BuiltInParameter.RBS_ELEC_PANEL_TOTALESTLOAD_PARAM
+BIP_PANEL_TOTAL_DEMAND_CURRENT = DB.BuiltInParameter.RBS_ELEC_PANEL_TOTAL_DEMAND_CURRENT_PARAM
+BIP_PANEL_CONNECTED_CURRENT_PHASEA = DB.BuiltInParameter.RBS_ELEC_PANEL_BRANCH_CIRCUIT_CURRENT_PHASEA
+BIP_PANEL_CONNECTED_CURRENT_PHASEB = DB.BuiltInParameter.RBS_ELEC_PANEL_BRANCH_CIRCUIT_CURRENT_PHASEB
+BIP_PANEL_CONNECTED_CURRENT_PHASEC = DB.BuiltInParameter.RBS_ELEC_PANEL_BRANCH_CIRCUIT_CURRENT_PHASEC
+BIP_PANEL_CONNECTED_LOAD_PHASEA = DB.BuiltInParameter.RBS_ELEC_PANEL_BRANCH_CIRCUIT_APPARENT_LOAD_PHASEA
+BIP_PANEL_CONNECTED_LOAD_PHASEB = DB.BuiltInParameter.RBS_ELEC_PANEL_BRANCH_CIRCUIT_APPARENT_LOAD_PHASEB
+BIP_PANEL_CONNECTED_LOAD_PHASEC = DB.BuiltInParameter.RBS_ELEC_PANEL_BRANCH_CIRCUIT_APPARENT_LOAD_PHASEC
+BIP_PANEL_NAME =DB.BuiltInParameter.RBS_ELEC_PANEL_NAME
+BIP_PANEL_MCB_RATING = DB.BuiltInParameter.RBS_ELEC_PANEL_MCB_RATING_PARAM
+BIP_PANEL_MAINS_RATING = DB.BuiltInParameter.RBS_ELEC_MAINS
+BIP_PANEL_MODIFICATIONS = DB.BuiltInParameter.RBS_ELEC_MODIFICATIONS
+BIP_PANEL_MOUNTING = DB.BuiltInParameter.RBS_ELEC_MOUNTING
+BIP_PANEL_ENCLOSURE = DB.BuiltInParameter.RBS_ELEC_ENCLOSURE
+BIP_PANEL_FEED_THRU_LUGS = DB.BuiltInParameter.RBS_ELEC_PANEL_FEED_THRU_LUGS_PARAM
+BIP_PANEL_FEED = DB.BuiltInParameter.RBS_ELEC_PANEL_FEED_PARAM
+BIP_PANEL_MAX_BREAKERS = DB.BuiltInParameter.RBS_ELEC_MAX_POLE_BREAKERS
+BIP_PANEL_MAX_CIRCUITS = DB.BuiltInParameter.RBS_ELEC_NUMBER_OF_CIRCUITS
+BIP_PANEL_SHORT_CIRCUIT_RATING = DB.BuiltInParameter.RBS_ELEC_SHORT_CIRCUIT_RATING
 
 
 def _param_from_names(element, names, include_type=True):
@@ -71,7 +80,7 @@ def _param_from_names(element, names, include_type=True):
             element,
             name,
             include_type=bool(include_type),
-            case_insensitive=True,
+            case_insensitive=False,
         )
         if param is not None:
             return param
@@ -83,12 +92,9 @@ def _param_value(param, default=None):
     return revit_helpers.get_parameter_value(param, default=default)
 
 
-def _param_from_bips(element, bip_names):
+def _param_from_bips(element, bips):
     """Return first non-empty built-in parameter value."""
-    for bip_name in list(bip_names or []):
-        bip = _bip(bip_name)
-        if bip is None:
-            continue
+    for bip in list(bips or []):
         try:
             param = element.get_Parameter(bip)
         except Exception:
@@ -112,20 +118,12 @@ def _enum_equals(value, target):
         return int(value) == int(target)
     except Exception:
         pass
-    return _to_text(value, "").strip().lower() == _to_text(target, "").strip().lower()
+    return False
 
 
-def _panel_configuration_member(name, fallback=None):
-    """Return DBE.PanelConfiguration member by name."""
-    try:
-        return getattr(DBE.PanelConfiguration, name)
-    except Exception:
-        return fallback
-
-
-PCFG_ONE_COLUMN = _panel_configuration_member("OneColumn", None)
-PCFG_TWO_COLUMNS_ACROSS = _panel_configuration_member("TwoColumnsCircuitsAcross", None)
-PCFG_TWO_COLUMNS_DOWN = _panel_configuration_member("TwoColumnsCircuitsDown", None)
+PCFG_ONE_COLUMN = DBE.PanelConfiguration.OneColumn
+PCFG_TWO_COLUMNS_ACROSS = DBE.PanelConfiguration.TwoColumnsCircuitsAcross
+PCFG_TWO_COLUMNS_DOWN = DBE.PanelConfiguration.TwoColumnsCircuitsDown
 
 
 def _normalize_panel_configuration(value):
@@ -137,20 +135,12 @@ def _normalize_panel_configuration(value):
             continue
         if _enum_equals(value, candidate):
             return candidate
-    text = _to_text(value, "").strip().lower()
-    if text in ("onecolumn", "one column"):
-        return PCFG_ONE_COLUMN
-    if text in ("twocolumnscircuitsacross", "two columns circuits across", "across"):
-        return PCFG_TWO_COLUMNS_ACROSS
-    if text in ("twocolumnscircuitsdown", "two columns circuits down", "down"):
-        return PCFG_TWO_COLUMNS_DOWN
     return None
 
 
-def _family_parameter_from_bip(equipment, bip_name):
+def _family_parameter_from_bip(equipment, bip):
     """Return built-in parameter from Family definition of an instance."""
-    bip = _bip(bip_name)
-    if bip is None or equipment is None:
+    if equipment is None:
         return None
     if not isinstance(equipment, DB.FamilyInstance):
         return None
@@ -180,11 +170,11 @@ def _family_parameter_from_bip(equipment, bip_name):
 
 def _panel_configuration_for_equipment(equipment, part_type):
     """Return panel configuration using part-type rules and family fallback."""
-    if int(part_type or 0) in (16, 17):
+    if part_type in (16, 17):
         return PCFG_ONE_COLUMN
-    if int(part_type or 0) != 14:
+    if part_type != 14:
         return PCFG_ONE_COLUMN
-    param = _family_parameter_from_bip(equipment, "RBS_ELEC_PANEL_CONFIGURATION_PARAM")
+    param = _family_parameter_from_bip(equipment, BIP_ELEC_PANEL_CONFIGURATION)
     value = _param_value(param, default=None)
     config = _normalize_panel_configuration(value)
     if config is not None:
@@ -199,13 +189,7 @@ def _param_bool(value):
     if isinstance(value, bool):
         return value
     try:
-        if isinstance(value, _INTEGER_TYPES):
-            return bool(int(value))
-    except Exception:
-        pass
-    try:
-        if isinstance(value, float):
-            return bool(int(value))
+        return bool(int(value))
     except Exception:
         pass
     return None
@@ -228,7 +212,7 @@ def get_family_part_type(equipment):
     try:
         symbol = equipment.Symbol
         family = symbol.Family if symbol else None
-        param = family.get_Parameter(DB.BuiltInParameter.FAMILY_CONTENT_PART_TYPE) if family else None
+        param = family.get_Parameter(BIP_FAMILY_CONTENT_PART_TYPE) if family else None
         if param and param.HasValue and param.StorageType == DB.StorageType.Integer:
             return int(param.AsInteger())
     except Exception:
@@ -272,7 +256,7 @@ def _distribution_system_snapshot(doc, dist_system_id):
     if dist is None:
         return result
     try:
-        name_param = dist.get_Parameter(DB.BuiltInParameter.SYMBOL_NAME_PARAM)
+        name_param = dist.get_Parameter(BIP_SYMBOL_NAME)
         if name_param and name_param.HasValue:
             result["name"] = _to_text(name_param.AsString(), "")
     except Exception:
@@ -292,7 +276,7 @@ def _distribution_system_snapshot(doc, dist_system_id):
     try:
         lg = dist.VoltageLineToGround
         if lg is not None:
-            lg_param = lg.get_Parameter(DB.BuiltInParameter.RBS_VOLTAGETYPE_VOLTAGE_PARAM)
+            lg_param = lg.get_Parameter(BIP_VOLTAGE_TYPE_VOLTAGE)
             if lg_param and lg_param.HasValue:
                 result["lg_voltage"] = _volts_from_internal(lg_param.AsDouble())
     except Exception:
@@ -300,7 +284,7 @@ def _distribution_system_snapshot(doc, dist_system_id):
     try:
         ll = dist.VoltageLineToLine
         if ll is not None:
-            ll_param = ll.get_Parameter(DB.BuiltInParameter.RBS_VOLTAGETYPE_VOLTAGE_PARAM)
+            ll_param = ll.get_Parameter(BIP_VOLTAGE_TYPE_VOLTAGE)
             if ll_param and ll_param.HasValue:
                 result["ll_voltage"] = _volts_from_internal(ll_param.AsDouble())
     except Exception:
@@ -375,24 +359,48 @@ def _total_power_current_snapshot(equipment):
         "power_connected_total": _param_from_bips(
             equipment,
             [
-                "RBS_ELEC_PANEL_TOTALLOAD_PARAM",
-                "RBS_ELEC_PANEL_TOTAL_CONNECTED_LOAD",
+                BIP_PANEL_TOTAL_LOAD,
+                BIP_PANEL_TOTAL_CONNECTED_LOAD,
             ],
         ),
         "current_connected_total": _param_from_bips(
             equipment,
             [
-                "RBS_ELEC_PANEL_TOTALLOAD_CURRENT_PARAM",
-                "RBS_ELEC_PANEL_TOTAL_CONNECTED_CURRENT",
+                BIP_PANEL_TOTAL_CURRENT,
+                BIP_PANEL_TOTAL_CONNECTED_CURRENT,
             ],
         ),
         "power_demand_total": _param_from_bips(
             equipment,
-            ["RBS_ELEC_PANEL_TOTALESTLOAD_PARAM"],
+            [BIP_PANEL_TOTAL_DEMAND_LOAD],
         ),
         "current_demand_total": _param_from_bips(
             equipment,
-            ["RBS_ELEC_PANEL_TOTAL_DEMAND_CURRENT_PARAM"],
+            [BIP_PANEL_TOTAL_DEMAND_CURRENT],
+        ),
+        "branch_current_phase_a": _param_from_bips(
+            equipment,
+            [BIP_PANEL_CONNECTED_CURRENT_PHASEA],
+        ),
+        "branch_current_phase_b": _param_from_bips(
+            equipment,
+            [BIP_PANEL_CONNECTED_CURRENT_PHASEB],
+        ),
+        "branch_current_phase_c": _param_from_bips(
+            equipment,
+            [BIP_PANEL_CONNECTED_CURRENT_PHASEC],
+        ),
+        "branch_load_phase_a": _param_from_bips(
+            equipment,
+            [BIP_PANEL_CONNECTED_LOAD_PHASEA],
+        ),
+        "branch_load_phase_b": _param_from_bips(
+            equipment,
+            [BIP_PANEL_CONNECTED_LOAD_PHASEB],
+        ),
+        "branch_load_phase_c": _param_from_bips(
+            equipment,
+            [BIP_PANEL_CONNECTED_LOAD_PHASEC],
         ),
     }
 
@@ -407,11 +415,11 @@ def build_distribution_equipment(doc, equipment, schedule_view=None):
 
     primary_dist_id = _param_from_bips(
         equipment,
-        ["RBS_FAMILY_CONTENT_DISTRIBUTION_SYSTEM"],
+        [BIP_FAMILY_DIST_SYSTEM],
     )
     secondary_dist_id = _param_from_bips(
         equipment,
-        ["RBS_FAMILY_CONTENT_SECONDARY_DISTRIBSYS"],
+        [BIP_FAMILY_SECONDARY_DIST_SYSTEM],
     )
     primary_profile = _distribution_system_snapshot(doc, primary_dist_id)
     secondary_profile = _distribution_system_snapshot(doc, secondary_dist_id)
@@ -462,25 +470,25 @@ def build_distribution_equipment(doc, equipment, schedule_view=None):
 
     has_feed_thru_lugs = _param_bool(
         _param_value(
-            _param_from_names(equipment, ["Feed Thru Lugs", "Has Feed Thru Lugs"], include_type=True),
+            _param_from_names(equipment, ["Feed Thru Lugs_CED"], include_type=True),
             default=None,
         )
     )
     has_neutral_bus = _param_bool(
         _param_value(
-            _param_from_names(equipment, ["Neutral Bus", "Has Neutral Bus"], include_type=True),
+            _param_from_names(equipment, ["Neutral Bus_CED"], include_type=True),
             default=None,
         )
     )
     has_ground_bus = _param_bool(
         _param_value(
-            _param_from_names(equipment, ["Ground Bus", "Has Ground Bus"], include_type=True),
+            _param_from_names(equipment, ["Ground Bus_CED"], include_type=True),
             default=None,
         )
     )
     has_isolated_ground_bus = _param_bool(
         _param_value(
-            _param_from_names(equipment, ["Isolated Ground Bus", "Has Isolated Ground Bus"], include_type=True),
+            _param_from_names(equipment, ["Isolated Ground Bus_CED"], include_type=True),
             default=None,
         )
     )
@@ -494,8 +502,12 @@ def build_distribution_equipment(doc, equipment, schedule_view=None):
         poles = max([int(x.get("poles", 0) or 0) for x in options if int(x.get("poles", 0) or 0) > 0] or [None])
 
     max_poles = None
-    if part_type in (14, 17):
-        max_poles = _schedule_slot_count(schedule_view)
+    if part_type in (14, 15, 17):
+        max_poles = _param_from_bips(equipment, [BIP_PANEL_MAX_BREAKERS])
+        try:
+            max_poles = int(max_poles or 0)
+        except Exception:
+            max_poles = 0
         if max_poles <= 0:
             max_poles = _param_value(
                 _param_from_names(
@@ -505,8 +517,30 @@ def build_distribution_equipment(doc, equipment, schedule_view=None):
                 ),
                 default=None,
             )
-    elif part_type in (15, 16):
-        max_poles = len(_system_ids(assigned_systems))
+        try:
+            max_poles = int(max_poles or 0)
+        except Exception:
+            max_poles = 0
+        if max_poles <= 0:
+            max_poles = _schedule_slot_count(schedule_view)
+    elif part_type == 16:
+        max_poles = 0
+        mep_model = getattr(equipment, "MEPModel", None)
+        if mep_model is not None:
+            for attr in ("MaxNumberOfCircuits", "maxNumberOfCircuits"):
+                try:
+                    value = int(getattr(mep_model, attr, 0) or 0)
+                except Exception:
+                    value = 0
+                if value > 0:
+                    max_poles = int(value)
+                    break
+        if max_poles <= 0:
+            value = _param_from_bips(equipment, [BIP_PANEL_MAX_CIRCUITS])
+            try:
+                max_poles = int(value or 0)
+            except Exception:
+                max_poles = 0
         if max_poles <= 0:
             max_poles = _param_value(
                 _param_from_names(
@@ -516,10 +550,22 @@ def build_distribution_equipment(doc, equipment, schedule_view=None):
                 ),
                 default=None,
             )
+            try:
+                max_poles = int(max_poles or 0)
+            except Exception:
+                max_poles = 0
+        if max_poles <= 0:
+            max_poles = _schedule_slot_count(schedule_view)
+
+    equipment_name = None
+    try:
+        equipment_name = equipment.Name
+    except Exception:
+        equipment_name = None
 
     base_kwargs = {
         "id": _idval(equipment.Id),
-        "name": _to_text(getattr(equipment, "Name", None), None),
+        "name": _to_text(equipment_name, None),
         "part_type": part_type,
         "equipment_type": equipment_type,
         "voltage": voltage,
@@ -544,21 +590,27 @@ def build_distribution_equipment(doc, equipment, schedule_view=None):
         "current_connected_total": totals.get("current_connected_total"),
         "power_demand_total": totals.get("power_demand_total"),
         "current_demand_total": totals.get("current_demand_total"),
+        "branch_current_phase_a": totals.get("branch_current_phase_a"),
+        "branch_current_phase_b": totals.get("branch_current_phase_b"),
+        "branch_current_phase_c": totals.get("branch_current_phase_c"),
+        "branch_load_phase_a": totals.get("branch_load_phase_a"),
+        "branch_load_phase_b": totals.get("branch_load_phase_b"),
+        "branch_load_phase_c": totals.get("branch_load_phase_c"),
     }
 
     if part_type == 15:
         base_kwargs.update(
             {
                 "xfmr_rating": _param_value(
-                    _param_from_names(equipment, ["Transformer Rating", "XFMR Rating"], include_type=True),
+                    _param_from_names(equipment, ["Transformer Rating_CED"], include_type=True),
                     default=None,
                 ),
                 "xfmr_impedance": _param_value(
-                    _param_from_names(equipment, ["Transformer Impedance", "XFMR Impedance"], include_type=True),
+                    _param_from_names(equipment, ["Transformer %Z_CED"], include_type=True),
                     default=None,
                 ),
                 "xfmr_kfactor": _param_value(
-                    _param_from_names(equipment, ["K-Factor", "Transformer K-Factor"], include_type=True),
+                    _param_from_names(equipment, ["Transformer K-Factor_CEDT"], include_type=True),
                     default=None,
                 ),
             }

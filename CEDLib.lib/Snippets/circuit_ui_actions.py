@@ -22,10 +22,7 @@ def set_revit_selection(elements, uidoc=None):
     ids = List[DB.ElementId]()
     seen = set()
     for element in list(elements or []):
-        try:
-            element_id = getattr(element, "Id", None)
-        except Exception:
-            element_id = None
+        element_id = element.Id
         if element_id is None:
             continue
         key = _idval(element_id)

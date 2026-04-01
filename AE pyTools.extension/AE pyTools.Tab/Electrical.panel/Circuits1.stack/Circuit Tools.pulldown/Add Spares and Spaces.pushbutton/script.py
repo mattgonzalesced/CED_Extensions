@@ -6,11 +6,13 @@ import sys
 
 from System.Windows.Controls import Button, DataGridRow
 from System.Windows.Media import VisualTreeHelper
-from pyrevit import DB, forms, revit, script
+from pyrevit import forms, revit, script
 
 TITLE = "Add / Remove Spares and Spaces"
 THEME_CONFIG_SECTION = "AE-pyTools-Theme"
+THEME_CONFIG_THEME_KEY = "theme_mode"
 THEME_CONFIG_ACCENT_KEY = "accent_mode"
+VALID_THEME_MODES = ("light", "dark", "dark_alt")
 VALID_ACCENT_MODES = ("blue", "red", "green", "neutral")
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -27,7 +29,14 @@ if not LIB_ROOT or not os.path.isdir(LIB_ROOT):
 
 from UIClasses import resource_loader
 from CEDElectrical.Infrastructure.Revit.repositories import panel_schedule_repository as ps_repo
-from CEDElectrical.Model.panel_schedule_manager import PanelScheduleManager
+from CEDElectrical.Model.panel_schedule_enums import PanelUiActionType as UiActionType
+from add_remove_execution import collect_panel_assignment_usage
+from add_remove_execution import count_open_slots_fast
+from add_remove_execution import execute_quick_action
+from add_remove_execution import execute_staged_actions
+from add_remove_execution import format_panel_info
+from add_spares_spaces_view_models import PanelListItem
+from add_spares_spaces_view_models import action_label
 
 LOGGER = script.get_logger()
 UI_RESOURCES_ROOT = ui_pathing.resolve_ui_resources_root(LIB_ROOT)
@@ -59,148 +68,25 @@ def _is_descendant_of_control(node, control):
     return False
 
 
+def _normalize_theme_mode(value, fallback="light"):
+    mode = str(value or fallback).strip().lower()
+    return mode if mode in VALID_THEME_MODES else fallback
+
+
 def _normalize_accent_mode(value, fallback="blue"):
     mode = str(value or fallback).strip().lower()
     return mode if mode in VALID_ACCENT_MODES else fallback
 
 
-def _load_accent_mode(default_accent="blue"):
-    accent_mode = _normalize_accent_mode(default_accent, "blue")
-    try:
-        cfg = script.get_config(THEME_CONFIG_SECTION)
-        if cfg is None:
-            return accent_mode
-        accent_mode = _normalize_accent_mode(cfg.get_option(THEME_CONFIG_ACCENT_KEY, accent_mode), accent_mode)
-    except Exception:
-        pass
-    return accent_mode
+def _load_theme_state(default_theme="light", default_accent="blue"):
+    from UIClasses import load_theme_state_from_config
 
-
-def _collect_all_circuits(doc):
-    """Return all electrical systems once for batch removable evaluation."""
-    try:
-        return list(
-            DB.FilteredElementCollector(doc)
-            .OfClass(ps_repo.DBE.ElectricalSystem)
-            .WhereElementIsNotElementType()
-            .ToElements()
-        )
-    except Exception:
-        return []
-
-
-def _open_slot_numbers(option):
-    """Return open slots for a panel option in schedule display order."""
-    empties = dict(ps_repo.gather_empty_slot_cells(option.get("schedule_view")) or {})
-    if not empties:
-        return []
-    max_slot = int(option.get("max_slot", 0) or 0)
-    sort_mode = option.get("sort_mode", "panelboard")
-    order = list(ps_repo.get_slot_order(max_slot, sort_mode) or [])
-    if order:
-        return [int(slot) for slot in order if int(slot) in empties]
-    return sorted([int(x) for x in empties.keys() if int(x) > 0])
-
-
-def _count_open_slots_fast(option):
-    """Return open slot count using empty-cell slot map (fast path)."""
-    return int(len(_open_slot_numbers(option)))
-
-
-def _removable_slots_for_option(doc, option, all_circuits):
-    """Return removable spare/space slots for one panel option."""
-    rows = list(ps_repo.build_panel_rows(doc, option, all_circuits=all_circuits) or [])
-    removable_spare_slots = []
-    removable_space_slots = []
-    for row in rows:
-        kind = str(row.get("kind", "") or "").lower()
-        slot_value = int(row.get("slot", 0) or 0)
-        if slot_value <= 0:
-            continue
-        if kind == "spare" and bool(row.get("is_spare_removable", False)):
-            removable_spare_slots.append(slot_value)
-        elif kind == "space" and bool(row.get("is_space_removable", False)):
-            removable_space_slots.append(slot_value)
-    return sorted(set(removable_spare_slots)), sorted(set(removable_space_slots))
-
-
-def _execute_add_for_option(manager, option, mode):
-    """Execute add special action for one panel option."""
-    panel_id = int(option.get("panel_id", 0) or 0)
-    slots = list(_open_slot_numbers(option) or [])
-    if panel_id <= 0 or not slots:
-        return {"added_spares": 0, "added_spaces": 0}
-
-    mode_key = str(mode or "").lower()
-    if mode_key not in ("spare", "space", "mixed"):
-        mode_key = "space"
-
-    add_spares = 0
-    add_spaces = 0
-    for index, slot in enumerate(slots):
-        if mode_key == "spare":
-            kind = "spare"
-        elif mode_key == "space":
-            kind = "space"
-        else:
-            kind = "spare" if int(index % 2) == 0 else "space"
-
-        if kind == "spare":
-            manager.add_spare(
-                panel_id=panel_id,
-                panel_slot=int(slot),
-                poles=1,
-                rating=20,
-                frame=20,
-                unlock=True,
-            )
-            add_spares += 1
-        else:
-            manager.add_space(
-                panel_id=panel_id,
-                panel_slot=int(slot),
-                poles=1,
-                unlock=True,
-            )
-            add_spaces += 1
-
-    return {"added_spares": int(add_spares), "added_spaces": int(add_spaces)}
-
-
-def _execute_remove_for_option(manager, doc, option, mode, all_circuits):
-    """Execute removable-only remove special action for one panel option."""
-    panel_id = int(option.get("panel_id", 0) or 0)
-    if panel_id <= 0:
-        return {"removed_spares": 0, "removed_spaces": 0}
-
-    mode_key = str(mode or "").lower()
-    remove_spares = mode_key in ("spare", "both")
-    remove_spaces = mode_key in ("space", "both")
-    removable_spare_slots, removable_space_slots = _removable_slots_for_option(doc, option, all_circuits)
-
-    removed_spares = 0
-    removed_spaces = 0
-    if remove_spares:
-        for slot in list(removable_spare_slots or []):
-            manager.remove_spare(panel_id=panel_id, panel_slot=int(slot))
-            removed_spares += 1
-    if remove_spaces:
-        for slot in list(removable_space_slots or []):
-            manager.remove_space(panel_id=panel_id, panel_slot=int(slot))
-            removed_spaces += 1
-
-    return {"removed_spares": int(removed_spares), "removed_spaces": int(removed_spaces)}
-
-
-def _format_panel_info(option):
-    """Return one-line panel info for quick mode header."""
-    if not option:
-        return "Unknown Panel"
-    return "{0} ({1}) | {2} | Open Slots: {3}".format(
-        str(option.get("panel_name", "") or "Unnamed Panel"),
-        str(option.get("part_type_name", "") or option.get("board_type", "Unknown")),
-        str(option.get("dist_system_name", "") or "Unknown Dist. System"),
-        str(_count_open_slots_fast(option)),
+    return load_theme_state_from_config(
+        section_name=THEME_CONFIG_SECTION,
+        theme_key_name=THEME_CONFIG_THEME_KEY,
+        accent_key_name=THEME_CONFIG_ACCENT_KEY,
+        default_theme=default_theme,
+        default_accent=default_accent,
     )
 
 
@@ -231,77 +117,105 @@ def _get_active_schedule_option(doc):
     return option
 
 
-def _run_quick_action(doc, option, action_type, mode):
-    """Run single-panel quick action in one transaction."""
-    panel_id = int((option or {}).get("panel_id", 0) or 0)
-    if panel_id <= 0:
-        forms.alert("Could not resolve active panel for quick action.", title=TITLE)
-        return
-
-    mode_key = str(mode or "").lower()
-    if str(action_type or "").lower() == "add":
-        if mode_key == "both":
-            mode_key = "mixed"
-        elif mode_key not in ("spare", "space"):
-            mode_key = "space"
-    else:
-        if mode_key not in ("spare", "space", "both"):
-            mode_key = "both"
-
-    manager = PanelScheduleManager(doc, panel_option_lookup={int(panel_id): option})
-    all_circuits = _collect_all_circuits(doc) if str(action_type or "").lower() == "remove" else None
-    tx = DB.Transaction(doc, "Panel Quick Action - Spares/Spaces")
-    tx.Start()
+def _get_selected_sheet_instance_options(doc):
+    """Return panel options from selected PanelScheduleSheetInstance elements."""
     try:
-        if str(action_type or "").lower() == "add":
-            result = _execute_add_for_option(manager, option, mode_key)
-            message = "Added Spare: {0}, Space: {1}".format(
+        uidoc = revit.uidoc
+        selected_ids = list(uidoc.Selection.GetElementIds() or [])
+    except Exception:
+        selected_ids = []
+    if not selected_ids:
+        return []
+    selected_panels = []
+    seen_panel_ids = set()
+    for selected_id in list(selected_ids or []):
+        try:
+            element = doc.GetElement(selected_id)
+        except Exception:
+            element = None
+        if not isinstance(element, ps_repo.DBE.PanelScheduleSheetInstance):
+            continue
+        try:
+            schedule_view = doc.GetElement(element.ScheduleId)
+        except Exception:
+            schedule_view = None
+        if not isinstance(schedule_view, ps_repo.DBE.PanelScheduleView):
+            continue
+        panel = ps_repo.resolve_schedule_panel(doc, schedule_view)
+        if panel is None:
+            continue
+        panel_id = int(ps_repo._idval(getattr(panel, "Id", None)))
+        if panel_id <= 0 or panel_id in seen_panel_ids:
+            continue
+        seen_panel_ids.add(panel_id)
+        selected_panels.append(panel)
+    if not selected_panels:
+        return []
+    options = list(
+        ps_repo.collect_panel_equipment_options(
+            doc,
+            panels=selected_panels,
+            include_without_schedule=True,
+        )
+        or []
+    )
+    options.sort(key=lambda x: (str(x.get("panel_name", "") or ""), str(x.get("dist_system_name", "") or "")))
+    return options
+
+
+def _get_quick_options(doc):
+    """Return quick-action panel options from active schedule or selected sheet instances."""
+    active_option = _get_active_schedule_option(doc)
+    if active_option is not None:
+        return [active_option]
+    return list(_get_selected_sheet_instance_options(doc) or [])
+
+
+def _run_quick_action(doc, options, action_type, mode):
+    """Run quick action for one or more panel options and report summary."""
+    try:
+        result = execute_quick_action(doc, options, action_type, mode)
+        action_kind = UiActionType.normalize(result.get("action_kind", ""), default=UiActionType.ADD)
+        if action_kind == UiActionType.ADD:
+            message = "Panels: {0}\nAdded Spare: {1}, Space: {2}".format(
+                int(result.get("touched", 0) or 0),
                 int(result.get("added_spares", 0) or 0),
                 int(result.get("added_spaces", 0) or 0),
             )
         else:
-            result = _execute_remove_for_option(manager, doc, option, mode_key, all_circuits)
-            message = "Removed Spare: {0}, Space: {1}".format(
+            message = "Panels: {0}\nRemoved Spare: {1}, Space: {2}".format(
+                int(result.get("touched", 0) or 0),
                 int(result.get("removed_spares", 0) or 0),
                 int(result.get("removed_spaces", 0) or 0),
             )
-        status = tx.Commit()
-        if status != DB.TransactionStatus.Committed:
-            raise Exception("Transaction did not commit.")
+        finalize_summary = dict(result.get("finalize_summary") or {})
     except Exception as ex:
-        try:
-            if tx.GetStatus() == DB.TransactionStatus.Started:
-                tx.RollBack()
-        except Exception:
-            pass
         forms.alert("Quick action failed and was rolled back.\n\n{0}".format(str(ex)), title=TITLE)
         return
 
+    if action_kind == UiActionType.ADD and int(finalize_summary.get("unlock_failed", 0) or 0) > 0:
+        message = "{0}\nUnlock warnings: {1}/{2} slot(s) remained locked.".format(
+            str(message or ""),
+            int(finalize_summary.get("unlock_failed", 0) or 0),
+            int(finalize_summary.get("unlock_attempted", 0) or 0),
+        )
+    if action_kind == UiActionType.ADD and int(finalize_summary.get("pole_failed", 0) or 0) > 0:
+        message = "{0}\nPole warnings: {1}/{2} switchboard rows could not be set to 3P.".format(
+            str(message or ""),
+            int(finalize_summary.get("pole_failed", 0) or 0),
+            int(finalize_summary.get("pole_attempted", 0) or 0),
+        )
     forms.alert(message, title=TITLE)
-
-
-class PanelListItem(object):
-    """List row view-model for one panel schedule option."""
-
-    def __init__(self, option, open_slots):
-        self.option = option
-        self.panel_id = int(option.get("panel_id", 0) or 0)
-        self.panel_name = str(option.get("panel_name", "") or "Unnamed Panel")
-        self.part_type = str(option.get("part_type_name", "") or option.get("board_type", "Unknown"))
-        self.dist_system_name = str(option.get("dist_system_name", "") or "Unknown Dist. System")
-        self.open_slots = int(max(0, open_slots or 0))
-        self.open_slots_text = str(self.open_slots)
-        self.action_text = ""
-        self.is_checked = False
 
 
 class QuickPanelActionWindow(forms.WPFWindow):
     """Super-lightweight active-panel action window."""
 
-    def __init__(self, option, accent_mode):
+    def __init__(self, options, theme_mode, accent_mode):
         xaml_path = os.path.abspath(os.path.join(THIS_DIR, "AddSparesSpacesQuickWindow.xaml"))
+        self._theme_mode = _normalize_theme_mode(theme_mode, "light")
         self._accent_mode = _normalize_accent_mode(accent_mode, "blue")
-        self.option = option
+        self.options = [x for x in list(options or []) if x is not None]
         self.result = None
         forms.WPFWindow.__init__(self, xaml_path)
         self._apply_theme()
@@ -312,7 +226,7 @@ class QuickPanelActionWindow(forms.WPFWindow):
             resource_loader.apply_theme(
                 self,
                 resources_root=UI_RESOURCES_ROOT,
-                theme_mode="light",
+                theme_mode=self._theme_mode,
                 accent_mode=self._accent_mode,
             )
         except Exception as ex:
@@ -322,11 +236,41 @@ class QuickPanelActionWindow(forms.WPFWindow):
         self.PanelInfoText = self.FindName("PanelInfoText")
         self.ModeFillRadio = self.FindName("ModeFillRadio")
         self.ModeRemoveRadio = self.FindName("ModeRemoveRadio")
+        self.QuickGuidanceText = self.FindName("QuickGuidanceText")
+        self.QuickDefaultDefinitionText = self.FindName("QuickDefaultDefinitionText")
+        usage = collect_panel_assignment_usage(revit.doc)
         if self.PanelInfoText is not None:
-            self.PanelInfoText.Text = _format_panel_info(self.option)
+            count = int(len(list(self.options or [])))
+            if count <= 1:
+                single = self.options[0] if count == 1 else None
+                self.PanelInfoText.Text = format_panel_info(single, usage)
+            else:
+                self.PanelInfoText.Text = "({0}) Panels selected".format(int(count))
+        self._update_quick_guidance()
 
     def _selected_action_type(self):
-        return "remove" if bool(getattr(self.ModeRemoveRadio, "IsChecked", False)) else "add"
+        return UiActionType.REMOVE if bool(getattr(self.ModeRemoveRadio, "IsChecked", False)) else UiActionType.ADD
+
+    def _update_quick_guidance(self):
+        """Update quick-mode guidance copy based on selected action mode."""
+        action_type = self._selected_action_type()
+        if self.QuickGuidanceText is not None:
+            if action_type == UiActionType.REMOVE:
+                self.QuickGuidanceText.Text = "All default spares/spaces will be removed from selected panels."
+            else:
+                self.QuickGuidanceText.Text = "All available slots on selected panels will be filled with default spares/spaces."
+        if self.QuickDefaultDefinitionText is not None:
+            self.QuickDefaultDefinitionText.Text = (
+                "Default spare/space definition:\n"
+                "- Unlocked\n"
+                "- No schedule notes\n"
+                "- Default load name\n"
+                "- Default rating"
+            )
+
+    def quick_mode_changed(self, sender, args):
+        """Handle Fill/Remove radio mode toggle for guidance text."""
+        self._update_quick_guidance()
 
     def _finish(self, mode):
         self.result = {"action_type": self._selected_action_type(), "mode": str(mode or "")}
@@ -345,8 +289,9 @@ class QuickPanelActionWindow(forms.WPFWindow):
 class AddRemoveSparesSpacesWindow(forms.WPFWindow):
     """Staged planner for adding/removing panel schedule specials."""
 
-    def __init__(self, accent_mode):
+    def __init__(self, theme_mode, accent_mode):
         xaml_path = os.path.abspath(os.path.join(THIS_DIR, "AddSparesSpacesWindow.xaml"))
+        self._theme_mode = _normalize_theme_mode(theme_mode, "light")
         self._accent_mode = _normalize_accent_mode(accent_mode, "blue")
         self._items = []
         self._item_by_panel_id = {}
@@ -369,16 +314,14 @@ class AddRemoveSparesSpacesWindow(forms.WPFWindow):
             return None
 
     def _apply_theme(self):
-        """Apply forced light UI theme with configured accent."""
-        try:
-            resource_loader.apply_theme(
-                self,
-                resources_root=UI_RESOURCES_ROOT,
-                theme_mode="light",
-                accent_mode=self._accent_mode,
-            )
-        except Exception as ex:
-            LOGGER.warning("Add/Remove Spares and Spaces theme apply failed: %s", ex)
+        """Apply configured UI theme + accent."""
+
+        resource_loader.apply_theme(
+            self,
+            resources_root=UI_RESOURCES_ROOT,
+            theme_mode=self._theme_mode,
+            accent_mode=self._accent_mode,
+        )
 
     def _init_controls(self):
         """Resolve XAML controls."""
@@ -417,10 +360,11 @@ class AddRemoveSparesSpacesWindow(forms.WPFWindow):
         if not options:
             forms.alert("No panel schedule views found in this model.", title=TITLE, exitscript=True)
 
+        usage_by_panel = collect_panel_assignment_usage(doc)
         self._items = []
         self._item_by_panel_id = {}
         for option in options:
-            open_slots = _count_open_slots_fast(option)
+            open_slots = count_open_slots_fast(option, usage_by_panel)
             item = PanelListItem(option, open_slots)
             self._items.append(item)
             self._item_by_panel_id[int(item.panel_id)] = item
@@ -440,12 +384,16 @@ class AddRemoveSparesSpacesWindow(forms.WPFWindow):
             self.PanelsList.ItemsSource = self._items
 
     def _selected_items(self):
-        """Return checked panel rows."""
-        selected = []
+        """Return union of checked rows and grid-selected rows."""
+        selected_by_id = {}
         for item in list(self._items or []):
             if bool(getattr(item, "is_checked", False)):
-                selected.append(item)
-        return selected
+                selected_by_id[int(getattr(item, "panel_id", 0) or 0)] = item
+        for item in list(self._selected_grid_items() or []):
+            panel_id = int(getattr(item, "panel_id", 0) or 0)
+            if panel_id > 0:
+                selected_by_id[panel_id] = item
+        return list(selected_by_id.values())
 
     def _selected_grid_items(self):
         """Return currently selected rows in grid."""
@@ -485,24 +433,7 @@ class AddRemoveSparesSpacesWindow(forms.WPFWindow):
             if not action:
                 item.action_text = ""
                 continue
-            kind = str(action.get("action_type", "") or "").lower()
-            mode = str(action.get("mode", "") or "").lower()
-            if kind == "add":
-                if mode == "spare":
-                    item.action_text = "Add Spare"
-                elif mode == "space":
-                    item.action_text = "Add Space"
-                else:
-                    item.action_text = "Add 50/50"
-            elif kind == "remove":
-                if mode == "both":
-                    item.action_text = "Remove Both"
-                elif mode == "space":
-                    item.action_text = "Remove Space"
-                else:
-                    item.action_text = "Remove Spare"
-            else:
-                item.action_text = ""
+            item.action_text = action_label(action.get("action_type", ""), action.get("mode", ""))
         self._refresh_panel_list()
         self._refresh_status()
 
@@ -515,8 +446,12 @@ class AddRemoveSparesSpacesWindow(forms.WPFWindow):
 
     def _refresh_open_slot_counts(self):
         """Refresh open-slot counts after apply."""
+        doc = self._active_doc()
+        if doc is None:
+            return
+        usage_by_panel = collect_panel_assignment_usage(doc)
         for item in list(self._items or []):
-            item.open_slots = int(_count_open_slots_fast(item.option))
+            item.open_slots = int(count_open_slots_fast(item.option, usage_by_panel))
             item.open_slots_text = str(int(item.open_slots))
 
     def _refresh_status(self):
@@ -531,10 +466,11 @@ class AddRemoveSparesSpacesWindow(forms.WPFWindow):
 
         has_checked = checked > 0
         has_selected = len(self._selected_grid_items()) > 0
+        has_targets = bool(has_checked or has_selected)
         if self.StageAddButton is not None:
-            self.StageAddButton.IsEnabled = bool(has_checked)
+            self.StageAddButton.IsEnabled = bool(has_targets)
         if self.StageRemoveButton is not None:
-            self.StageRemoveButton.IsEnabled = bool(has_checked)
+            self.StageRemoveButton.IsEnabled = bool(has_targets)
         if self.ResetSelectedButton is not None:
             self.ResetSelectedButton.IsEnabled = bool(has_selected)
         if self.ApplyButton is not None:
@@ -691,38 +627,15 @@ class AddRemoveSparesSpacesWindow(forms.WPFWindow):
             return
 
         option_lookup = self._panel_option_lookup()
-        manager = PanelScheduleManager(doc, panel_option_lookup=option_lookup)
         staged = []
         for item in list(self._items or []):
             action = (self._staged_actions_by_panel or {}).get(int(item.panel_id))
             if action:
                 staged.append(action)
-        need_remove_scan = any(str(x.get("action_type", "")).lower() == "remove" for x in staged)
-        all_circuits = _collect_all_circuits(doc) if need_remove_scan else []
-
-        tx = DB.Transaction(doc, "Add/Remove Spares and Spaces")
-        tx.Start()
         try:
-            for action in staged:
-                panel_id = int(action.get("panel_id", 0) or 0)
-                option = option_lookup.get(int(panel_id))
-                if option is None:
-                    continue
-                kind = str(action.get("action_type", "") or "")
-                mode = str(action.get("mode", "") or "")
-                if kind == "add":
-                    _execute_add_for_option(manager, option, mode)
-                elif kind == "remove":
-                    _execute_remove_for_option(manager, doc, option, mode, all_circuits)
-            status = tx.Commit()
-            if status != DB.TransactionStatus.Committed:
-                raise Exception("Transaction did not commit.")
+            result = execute_staged_actions(doc, staged, option_lookup)
+            finalize_summary = dict(result.get("finalize_summary") or {})
         except Exception as ex:
-            try:
-                if tx.GetStatus() == DB.TransactionStatus.Started:
-                    tx.RollBack()
-            except Exception:
-                pass
             forms.alert("Apply failed. Changes were rolled back.\n\n{0}".format(str(ex)), title=TITLE)
             self._set_status("Apply failed and rolled back.")
             return
@@ -730,7 +643,22 @@ class AddRemoveSparesSpacesWindow(forms.WPFWindow):
         self._staged_actions_by_panel = {}
         self._refresh_open_slot_counts()
         self._rebuild_action_column()
-        self._set_status("Apply completed.")
+        if int(finalize_summary.get("unlock_failed", 0) or 0) > 0:
+            self._set_status(
+                "Apply completed with unlock warnings ({0}/{1} failed).".format(
+                    int(finalize_summary.get("unlock_failed", 0) or 0),
+                    int(finalize_summary.get("unlock_attempted", 0) or 0),
+                )
+            )
+        elif int(finalize_summary.get("pole_failed", 0) or 0) > 0:
+            self._set_status(
+                "Apply completed with pole warnings ({0}/{1} failed).".format(
+                    int(finalize_summary.get("pole_failed", 0) or 0),
+                    int(finalize_summary.get("pole_attempted", 0) or 0),
+                )
+            )
+        else:
+            self._set_status("Apply completed.")
 
     def cancel_clicked(self, sender, args):
         """Close window without applying staged actions."""
@@ -739,7 +667,8 @@ class AddRemoveSparesSpacesWindow(forms.WPFWindow):
 
 def _show_modal():
     """Show staged planner window."""
-    window = AddRemoveSparesSpacesWindow(accent_mode=_load_accent_mode("blue"))
+    theme_mode, accent_mode = _load_theme_state("light", "blue")
+    window = AddRemoveSparesSpacesWindow(theme_mode=theme_mode, accent_mode=accent_mode)
     try:
         window.ShowDialog()
     except Exception:
@@ -750,9 +679,10 @@ def _show_modal():
         pass
 
 
-def _show_quick_modal(option):
-    """Show quick active-panel action window and return selected action dict."""
-    window = QuickPanelActionWindow(option=option, accent_mode=_load_accent_mode("blue"))
+def _show_quick_modal(options):
+    """Show quick action window and return selected action dict."""
+    theme_mode, accent_mode = _load_theme_state("light", "blue")
+    window = QuickPanelActionWindow(options=options, theme_mode=theme_mode, accent_mode=accent_mode)
     try:
         window.ShowDialog()
     except Exception:
@@ -762,13 +692,13 @@ def _show_quick_modal(option):
 
 if __name__ == "__main__":
     active_doc = revit.doc
-    quick_option = _get_active_schedule_option(active_doc)
-    if quick_option is not None:
-        quick_action = _show_quick_modal(quick_option)
+    quick_options = _get_quick_options(active_doc)
+    if quick_options:
+        quick_action = _show_quick_modal(quick_options)
         if quick_action:
             _run_quick_action(
                 active_doc,
-                quick_option,
+                quick_options,
                 quick_action.get("action_type"),
                 quick_action.get("mode"),
             )

@@ -4,19 +4,20 @@
     <Setter Property="Background" Value="{DynamicResource CED.Brush.IconMuted}"/>
     <Setter Property="MinHeight" Value="8"/>
     <Setter Property="MinWidth" Value="8"/>
+    <Setter Property="Opacity" Value="0.68"/>
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="Thumb">
           <Border x:Name="Pill"
                   Background="{TemplateBinding Background}"
-                  CornerRadius="3"
+                  CornerRadius="2"
                   Margin="0"/>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="Pill" Property="Opacity" Value="0.95"/>
+              <Setter TargetName="Pill" Property="Opacity" Value="0.8"/>
             </Trigger>
             <Trigger Property="IsDragging" Value="True">
-              <Setter TargetName="Pill" Property="Opacity" Value="1"/>
+              <Setter TargetName="Pill" Property="Opacity" Value="0.95"/>
             </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
@@ -26,12 +27,16 @@
 
   <Style x:Key="CED.ScrollBar.Menu.Button" TargetType="RepeatButton">
     <Setter Property="Background" Value="Transparent"/>
-    <Setter Property="BorderBrush" Value="Transparent"/>
-    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridCellBorder}"/>
+    <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="RepeatButton">
-          <Border x:Name="Root" Background="{TemplateBinding Background}" CornerRadius="4">
+          <Border x:Name="Root"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="3">
             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
           </Border>
           <ControlTemplate.Triggers>
@@ -47,41 +52,140 @@
     </Setter>
   </Style>
 
+  <Style x:Key="CED.ScrollBar.Menu.EndButton" TargetType="RepeatButton" BasedOn="{StaticResource CED.ScrollBar.Menu.Button}">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.SearchBackground}"/>
+    <Setter Property="Opacity" Value="0.85"/>
+  </Style>
+
+  <Style x:Key="CED.ScrollBar.Menu.TrackButton" TargetType="RepeatButton" BasedOn="{StaticResource CED.ScrollBar.Menu.Button}">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+  </Style>
+
   <ControlTemplate x:Key="CED.ScrollBar.Menu.Template.Vertical" TargetType="ScrollBar">
-    <Grid Background="{TemplateBinding Background}">
-      <Track x:Name="PART_Track" IsDirectionReversed="True">
-        <Track.Thumb>
-          <Thumb Style="{StaticResource CED.ScrollBar.Menu.Thumb}"/>
-        </Track.Thumb>
-      </Track>
+    <Grid Background="Transparent">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="16"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="16"/>
+      </Grid.RowDefinitions>
+      <RepeatButton Grid.Row="0"
+                    Style="{StaticResource CED.ScrollBar.Menu.EndButton}"
+                    Command="ScrollBar.LineUpCommand">
+        <Path Data="M1,7 L4,3 L7,7 Z"
+              Fill="{DynamicResource CED.Brush.IconMuted}"
+              Stretch="Fill"
+              Width="8"
+              Height="6"/>
+      </RepeatButton>
+      <Border Grid.Row="1"
+              Margin="0,1,0,1"
+              Background="{DynamicResource CED.Brush.WindowBackground}"
+              BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
+              BorderThickness="1"
+              CornerRadius="2">
+        <Track x:Name="PART_Track"
+               IsDirectionReversed="True"
+               HorizontalAlignment="Center"
+               Width="8"
+               Margin="1"
+               Minimum="{TemplateBinding Minimum}"
+               Maximum="{TemplateBinding Maximum}"
+               Value="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+               ViewportSize="{TemplateBinding ViewportSize}">
+          <Track.DecreaseRepeatButton>
+            <RepeatButton Style="{StaticResource CED.ScrollBar.Menu.TrackButton}" Command="ScrollBar.PageUpCommand"/>
+          </Track.DecreaseRepeatButton>
+          <Track.Thumb>
+            <Thumb Style="{StaticResource CED.ScrollBar.Menu.Thumb}"/>
+          </Track.Thumb>
+          <Track.IncreaseRepeatButton>
+            <RepeatButton Style="{StaticResource CED.ScrollBar.Menu.TrackButton}" Command="ScrollBar.PageDownCommand"/>
+          </Track.IncreaseRepeatButton>
+        </Track>
+      </Border>
+      <RepeatButton Grid.Row="2"
+                    Style="{StaticResource CED.ScrollBar.Menu.EndButton}"
+                    Command="ScrollBar.LineDownCommand">
+        <Path Data="M1,3 L4,7 L7,3 Z"
+              Fill="{DynamicResource CED.Brush.IconMuted}"
+              Stretch="Fill"
+              Width="8"
+              Height="6"/>
+      </RepeatButton>
     </Grid>
   </ControlTemplate>
 
   <ControlTemplate x:Key="CED.ScrollBar.Menu.Template.Horizontal" TargetType="ScrollBar">
-    <Grid Background="{TemplateBinding Background}">
-      <Track x:Name="PART_Track" IsDirectionReversed="False">
-        <Track.Thumb>
-          <Thumb Style="{StaticResource CED.ScrollBar.Menu.Thumb}"/>
-        </Track.Thumb>
-      </Track>
+    <Grid Background="Transparent">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="16"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="16"/>
+      </Grid.ColumnDefinitions>
+      <RepeatButton Grid.Column="0"
+                    Style="{StaticResource CED.ScrollBar.Menu.EndButton}"
+                    Command="ScrollBar.LineLeftCommand">
+        <Path Data="M7,1 L3,4 L7,7 Z"
+              Fill="{DynamicResource CED.Brush.IconMuted}"
+              Stretch="Fill"
+              Width="6"
+              Height="8"/>
+      </RepeatButton>
+      <Border Grid.Column="1"
+              Margin="1,0,1,0"
+              Background="{DynamicResource CED.Brush.WindowBackground}"
+              BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
+              BorderThickness="1"
+              CornerRadius="2">
+        <Track x:Name="PART_Track"
+               IsDirectionReversed="False"
+               VerticalAlignment="Center"
+               Height="8"
+               Margin="1"
+               Minimum="{TemplateBinding Minimum}"
+               Maximum="{TemplateBinding Maximum}"
+               Value="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+               ViewportSize="{TemplateBinding ViewportSize}">
+          <Track.DecreaseRepeatButton>
+            <RepeatButton Style="{StaticResource CED.ScrollBar.Menu.TrackButton}" Command="ScrollBar.PageLeftCommand"/>
+          </Track.DecreaseRepeatButton>
+          <Track.Thumb>
+            <Thumb Style="{StaticResource CED.ScrollBar.Menu.Thumb}"/>
+          </Track.Thumb>
+          <Track.IncreaseRepeatButton>
+            <RepeatButton Style="{StaticResource CED.ScrollBar.Menu.TrackButton}" Command="ScrollBar.PageRightCommand"/>
+          </Track.IncreaseRepeatButton>
+        </Track>
+      </Border>
+      <RepeatButton Grid.Column="2"
+                    Style="{StaticResource CED.ScrollBar.Menu.EndButton}"
+                    Command="ScrollBar.LineRightCommand">
+        <Path Data="M3,1 L7,4 L3,7 Z"
+              Fill="{DynamicResource CED.Brush.IconMuted}"
+              Stretch="Fill"
+              Width="6"
+              Height="8"/>
+      </RepeatButton>
     </Grid>
   </ControlTemplate>
 
   <Style x:Key="CED.ScrollBar.Menu" TargetType="ScrollBar">
-    <Setter Property="Background" Value="{DynamicResource CED.Brush.ListBackground}"/>
+    <Setter Property="Background" Value="Transparent"/>
     <Setter Property="Foreground" Value="{DynamicResource CED.Brush.IconMuted}"/>
     <Setter Property="SnapsToDevicePixels" Value="True"/>
     <Setter Property="UseLayoutRounding" Value="True"/>
-    <Setter Property="Width" Value="8"/>
+    <Setter Property="Width" Value="12"/>
     <Setter Property="Height" Value="Auto"/>
-    <Setter Property="MinWidth" Value="8"/>
-    <Setter Property="MinHeight" Value="8"/>
+    <Setter Property="MinWidth" Value="12"/>
+    <Setter Property="MinHeight" Value="12"/>
     <Setter Property="Template" Value="{StaticResource CED.ScrollBar.Menu.Template.Vertical}"/>
     <Style.Triggers>
       <Trigger Property="Orientation" Value="Horizontal">
-        <Setter Property="Height" Value="8"/>
+        <Setter Property="Height" Value="12"/>
         <Setter Property="Width" Value="Auto"/>
-        <Setter Property="MinHeight" Value="8"/>
+        <Setter Property="MinHeight" Value="12"/>
         <Setter Property="Template" Value="{StaticResource CED.ScrollBar.Menu.Template.Horizontal}"/>
       </Trigger>
     </Style.Triggers>
@@ -257,11 +361,14 @@
     <Setter Property="Background" Value="Transparent"/>
     <Setter Property="BorderThickness" Value="0"/>
     <Setter Property="Padding" Value="0"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="ListViewItem">
           <Border Background="Transparent" SnapsToDevicePixels="True">
-            <ContentPresenter/>
+            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                              Margin="{TemplateBinding Padding}"/>
           </Border>
         </ControlTemplate>
       </Setter.Value>
@@ -272,8 +379,8 @@
     <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridBackground}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridBorder}"/>
     <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridRowForeground}"/>
-    <Setter Property="RowBackground" Value="{DynamicResource CED.Brush.DataGridBackground}"/>
-    <Setter Property="AlternatingRowBackground" Value="{DynamicResource CED.Brush.DataGridBackground}"/>
+    <Setter Property="RowBackground" Value="{DynamicResource CED.Brush.ListItemBackground}"/>
+    <Setter Property="AlternatingRowBackground" Value="{DynamicResource CED.Brush.DataGridAltRow}"/>
     <Setter Property="GridLinesVisibility" Value="Horizontal"/>
     <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource CED.Brush.DataGridCellBorder}"/>
     <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource CED.Brush.DataGridCellBorder}"/>
@@ -331,6 +438,34 @@
     <Setter Property="BorderThickness" Value="0,0,0,1"/>
     <Setter Property="Padding" Value="2,1"/>
     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ListViewItem">
+          <Border x:Name="ItemRoot"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  SnapsToDevicePixels="True">
+            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                              Margin="{TemplateBinding Padding}"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="ItemRoot" Property="Background" Value="{DynamicResource CED.Brush.CircuitItemHoverBackground}"/>
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+              <Setter TargetName="ItemRoot" Property="Background" Value="{DynamicResource CED.Brush.CircuitItemSelectedBackground}"/>
+              <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter TargetName="ItemRoot" Property="Opacity" Value="0.55"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
     <Style.Triggers>
       <Trigger Property="IsMouseOver" Value="True">
         <Setter Property="Background" Value="{DynamicResource CED.Brush.CircuitItemHoverBackground}"/>
@@ -345,26 +480,7 @@
     </Style.Triggers>
   </Style>
 
-  <Style x:Key="CED.ListViewItem.AlertsGrid" TargetType="ListViewItem">
-    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
-    <Setter Property="Background" Value="{DynamicResource CED.Brush.ListItemBackground}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridCellBorder}"/>
-    <Setter Property="BorderThickness" Value="0,0,0,1"/>
-    <Setter Property="Padding" Value="2,1"/>
-    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-    <Style.Triggers>
-      <Trigger Property="IsMouseOver" Value="True">
-        <Setter Property="Background" Value="{DynamicResource CED.Brush.CircuitItemHoverBackground}"/>
-      </Trigger>
-      <Trigger Property="IsSelected" Value="True">
-        <Setter Property="Background" Value="{DynamicResource CED.Brush.CircuitItemSelectedBackground}"/>
-        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
-      </Trigger>
-      <Trigger Property="IsEnabled" Value="False">
-        <Setter Property="Opacity" Value="0.55"/>
-      </Trigger>
-    </Style.Triggers>
-  </Style>
+  <Style x:Key="CED.ListViewItem.AlertsGrid" TargetType="ListViewItem" BasedOn="{StaticResource CED.ListViewItem.Alerts}"/>
 
   <Style x:Key="CED.TabItem.Base" TargetType="TabItem">
     <Setter Property="Foreground" Value="{DynamicResource CED.Brush.TabInactiveForeground}"/>

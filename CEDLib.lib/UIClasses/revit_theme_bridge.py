@@ -35,6 +35,11 @@ def dock_pane_frame_hex(dark_hex=DOCK_PANE_FRAME_DARK, light_hex=DOCK_PANE_FRAME
     return dark_hex if is_revit_dark_theme() else light_hex
 
 
+def default_ced_theme_mode(light_mode="light", dark_mode="dark"):
+    """Map current Revit canvas theme to a CED theme mode name."""
+    return str(dark_mode if is_revit_dark_theme() else light_mode)
+
+
 class RevitThemeBridge(object):
     """Subscribes to UIApplication.ThemeChanged (when available) and invokes a callback."""
 

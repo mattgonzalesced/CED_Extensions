@@ -30,7 +30,7 @@
   <Color x:Key="CED.Color.CardBorder">#59616B</Color>
   <Color x:Key="CED.Color.SelectionBadge">#BCC8D4</Color>
 
-  <Color x:Key="CED.Color.ButtonDefaultBackground">#4C5661</Color>
+  <Color x:Key="CED.Color.ButtonDefaultBackground">#3F454C</Color>
   <Color x:Key="CED.Color.ButtonHoverBackground">#36404B</Color>
   <Color x:Key="CED.Color.ButtonForegroundOnAccent">#F5F8FC</Color>
   <Color x:Key="CED.Color.ButtonStateOverlayHover">#0AFFFFFF</Color>
@@ -54,6 +54,7 @@
   <Color x:Key="CED.Color.DataGridRowForeground">#E5E9ED</Color>
   <Color x:Key="CED.Color.DataGridReadOnlyBackground">#434A52</Color>
   <Color x:Key="CED.Color.DataGridReadOnlyForeground">#DDE2E7</Color>
+  <Color x:Key="CED.Color.DataGridEditableBackground">#3F4852</Color>
   <Color x:Key="CED.Color.DataGridCellBorder">#4C5661</Color>
   <Color x:Key="CED.Color.DataGridDividerStrong">#7A8592</Color>
   <Color x:Key="CED.Color.DataGridSelectionBackground">#566170</Color>

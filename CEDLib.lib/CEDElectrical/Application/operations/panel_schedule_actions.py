@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Panel schedule action operations for staged UI workflows."""
 
+from CEDElectrical.Model.panel_schedule_enums import PanelScheduleOperationKey as OpKey
 from CEDElectrical.Model.panel_schedule_manager import PanelScheduleManager
 
 
@@ -23,7 +24,7 @@ def _placement_from_request(request):
 class PanelScheduleAddSpareOperation(object):
     """Operation key for adding SPARE rows."""
 
-    key = "panel_schedule_add_spare"
+    key = OpKey.ADD_SPARE
 
     def execute(self, request, doc):
         manager = PanelScheduleManager(doc, panel_option_lookup=_panel_option_lookup_from_request(request))
@@ -34,7 +35,7 @@ class PanelScheduleAddSpareOperation(object):
 class PanelScheduleAddSpaceOperation(object):
     """Operation key for adding SPACE rows."""
 
-    key = "panel_schedule_add_space"
+    key = OpKey.ADD_SPACE
 
     def execute(self, request, doc):
         manager = PanelScheduleManager(doc, panel_option_lookup=_panel_option_lookup_from_request(request))
@@ -45,7 +46,7 @@ class PanelScheduleAddSpaceOperation(object):
 class PanelScheduleRemoveSpareOperation(object):
     """Operation key for removing SPARE rows."""
 
-    key = "panel_schedule_remove_spare"
+    key = OpKey.REMOVE_SPARE
 
     def execute(self, request, doc):
         manager = PanelScheduleManager(doc, panel_option_lookup=_panel_option_lookup_from_request(request))
@@ -56,7 +57,7 @@ class PanelScheduleRemoveSpareOperation(object):
 class PanelScheduleRemoveSpaceOperation(object):
     """Operation key for removing SPACE rows."""
 
-    key = "panel_schedule_remove_space"
+    key = OpKey.REMOVE_SPACE
 
     def execute(self, request, doc):
         manager = PanelScheduleManager(doc, panel_option_lookup=_panel_option_lookup_from_request(request))
@@ -67,7 +68,7 @@ class PanelScheduleRemoveSpaceOperation(object):
 class PanelScheduleMoveCircuitToPanelOperation(object):
     """Primitive operation key for SelectPanel panel transfer."""
 
-    key = "panel_schedule_move_circuit_to_panel"
+    key = OpKey.MOVE_TO_PANEL
 
     def execute(self, request, doc):
         manager = PanelScheduleManager(doc, panel_option_lookup=_panel_option_lookup_from_request(request))
@@ -81,7 +82,7 @@ class PanelScheduleMoveCircuitToPanelOperation(object):
 class PanelScheduleMoveCircuitInPanelOperation(object):
     """Primitive operation key for MoveSlotTo within one panel."""
 
-    key = "panel_schedule_move_circuit_in_panel"
+    key = OpKey.MOVE_IN_PANEL
 
     def execute(self, request, doc):
         manager = PanelScheduleManager(doc, panel_option_lookup=_panel_option_lookup_from_request(request))
@@ -96,10 +97,9 @@ class PanelScheduleMoveCircuitInPanelOperation(object):
 class PanelScheduleMoveCircuitToSpecificSlotOperation(object):
     """Composite operation key for move-to-slot actions."""
 
-    key = "panel_schedule_move_circuit_to_specific_slot"
+    key = OpKey.MOVE_TO_SPECIFIC_SLOT
 
     def execute(self, request, doc):
         manager = PanelScheduleManager(doc, panel_option_lookup=_panel_option_lookup_from_request(request))
         placement = _placement_from_request(request)
         return manager.apply_move_action(placement)
-

@@ -9,6 +9,7 @@ from pyrevit.compat import get_elementid_value_func, get_elementid_from_value_fu
 
 from CEDElectrical.Domain import settings_manager
 from CEDElectrical.Model.CircuitBranch import CircuitBranch
+from CEDElectrical.Model.circuit_settings import CircuitSettings
 
 _get_elid_value = get_elementid_value_func()
 _get_elid_from_value = get_elementid_from_value_func()
@@ -38,6 +39,15 @@ class CalculateCircuitsOperation(object):
     def execute(self, request, doc):
         """Run calculation workflow for target circuits in the active document."""
         settings = settings_manager.load_circuit_settings(doc)
+        min_breaker_size_override = request.options.get('min_breaker_size_override')
+        if min_breaker_size_override is not None:
+            try:
+                override_value = int(min_breaker_size_override)
+                if override_value > 0:
+                    settings = CircuitSettings.from_json(settings.to_json())
+                    settings.set('min_breaker_size', override_value)
+            except Exception:
+                pass
         circuits = self.repository.get_target_circuits(doc, request.circuit_ids)
 
         circuits, locked_ids, locked_rows = self.repository.partition_locked_elements(doc, circuits, settings)

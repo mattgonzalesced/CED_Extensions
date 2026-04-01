@@ -24,7 +24,10 @@ from System.Windows.Controls import (
     ListViewItem,
     Button,
     DataGridTextColumn,
+    ScrollViewer,
+    ScrollBarVisibility,
 )
+from System.Windows.Input import Keyboard, ModifierKeys
 from System.Windows.Media import BrushConverter, Stretch, VisualTreeHelper
 from System.Windows.Shapes import Path as ShapePath
 from pyrevit import forms, revit, DB, script, HOST_APP
@@ -56,6 +59,8 @@ LIB_ROOT = _bootstrap_lib_root(_THIS_DIR)
 
 from CEDElectrical.Model.alerts import get_alert_definition
 from CEDElectrical.Model.CircuitBranch import CircuitBranch
+from CEDElectrical.Application.dto.operation_request import OperationRequest
+from CEDElectrical.Application.services.operation_runner import build_default_runner
 from CEDElectrical.Domain import settings_manager
 from CEDElectrical.refdata.standard_ocp_table import BREAKER_FRAME_SWITCH_TABLE
 from CEDElectrical.Infrastructure.Revit.external_events.circuit_operation_event import (
@@ -67,6 +72,12 @@ from Snippets.circuit_ui_actions import (
     collect_circuit_targets,
     format_writeback_lock_reason,
     set_revit_selection,
+)
+from Snippets._elecutils import (
+    get_all_panels,
+    get_compatible_panels,
+    get_panel_dist_system,
+    move_circuits_to_panel,
 )
 from UIClasses import Resources as UIResources
 from UIClasses import pathing as ui_pathing
@@ -157,17 +168,15 @@ def _normalize_accent_mode(value, fallback="blue"):
 
 
 def _load_theme_state_from_config(default_theme="light", default_accent="blue"):
-    theme_mode = _normalize_theme_mode(default_theme, "light")
-    accent_mode = _normalize_accent_mode(default_accent, "blue")
-    try:
-        cfg = script.get_config(THEME_CONFIG_SECTION)
-        if cfg is None:
-            return theme_mode, accent_mode
-        theme_mode = _normalize_theme_mode(cfg.get_option(THEME_CONFIG_THEME_KEY, theme_mode), theme_mode)
-        accent_mode = _normalize_accent_mode(cfg.get_option(THEME_CONFIG_ACCENT_KEY, accent_mode), accent_mode)
-    except Exception:
-        pass
-    return theme_mode, accent_mode
+    from UIClasses import load_theme_state_from_config
+
+    return load_theme_state_from_config(
+        section_name=THEME_CONFIG_SECTION,
+        theme_key_name=THEME_CONFIG_THEME_KEY,
+        accent_key_name=THEME_CONFIG_ACCENT_KEY,
+        default_theme=default_theme,
+        default_accent=default_accent,
+    )
 
 
 def _save_theme_state_to_config(theme_mode, accent_mode):
@@ -203,6 +212,17 @@ def _fmt_amp(value, digits=0):
     if digits <= 0:
         return "{} A".format(int(round(numeric, 0)))
     return "{} A".format(round(numeric, digits))
+
+
+def _clip_with_ellipsis(value, max_chars):
+    text = str(value or "")
+    try:
+        limit = int(max_chars or 0)
+    except Exception:
+        limit = 0
+    if limit <= 3 or len(text) <= limit:
+        return text
+    return "{}...".format(text[: max(0, limit - 3)])
 
 
 def _parse_whole_amps(value):
@@ -257,6 +277,48 @@ def _is_descendant_of_control(start, control):
     return False
 
 
+def _find_visual_descendant(start, target_type):
+    if start is None:
+        return None
+    queue = [start]
+    while queue:
+        current = queue.pop(0)
+        if isinstance(current, target_type):
+            return current
+        try:
+            child_count = int(VisualTreeHelper.GetChildrenCount(current) or 0)
+        except Exception:
+            child_count = 0
+        for idx in range(child_count):
+            try:
+                queue.append(VisualTreeHelper.GetChild(current, idx))
+            except Exception:
+                continue
+    return None
+
+
+def _find_visual_descendants(start, target_type):
+    if start is None:
+        return []
+    results = []
+    queue = [start]
+    while queue:
+        current = queue.pop(0)
+        try:
+            child_count = int(VisualTreeHelper.GetChildrenCount(current) or 0)
+        except Exception:
+            child_count = 0
+        for idx in range(child_count):
+            try:
+                child = VisualTreeHelper.GetChild(current, idx)
+            except Exception:
+                continue
+            if isinstance(child, target_type):
+                results.append(child)
+            queue.append(child)
+    return results
+
+
 def _to_brush(value, fallback=None):
     converter = BrushConverter()
     try:
@@ -271,17 +333,14 @@ def _to_brush(value, fallback=None):
 
 
 def _try_apply_theme(owner):
-    try:
-        return bool(
-            resource_loader.apply_theme(
-                owner,
-                resources_root=UI_RESOURCES_ROOT,
-                theme_mode=getattr(owner, "_theme_mode", "light"),
-                accent_mode=getattr(owner, "_accent_mode", "blue"),
-            )
+    return bool(
+        resource_loader.apply_theme(
+            owner,
+            resources_root=UI_RESOURCES_ROOT,
+            theme_mode=getattr(owner, "_theme_mode", "light"),
+            accent_mode=getattr(owner, "_accent_mode", "blue"),
         )
-    except Exception:
-        return False
+    )
 
 
 def _try_find_resource(owner, key):
@@ -634,7 +693,7 @@ class CircuitListItem(object):
         self.circuit_id = _elid_value(circuit.Id)
         self.is_checked = False
 
-        self.panel = "No Panel"
+        self.panel = "-"
         try:
             if circuit.BaseEquipment:
                 self.panel = getattr(circuit.BaseEquipment, "Name", self.panel) or self.panel
@@ -643,6 +702,7 @@ class CircuitListItem(object):
 
         self.circuit_number = getattr(circuit, "CircuitNumber", "") or ""
         self.load_name = getattr(circuit, "LoadName", "") or ""
+        self.load_name_display = self.load_name
 
         poles = "?"
         try:
@@ -689,7 +749,7 @@ class CircuitListItem(object):
         conduit_wire = _lookup_param_value(circuit, "Conduit and Wire Size_CEDT")
         if conduit_wire is None:
             conduit_wire = "-"
-        self.wire_line = "Conduit/Wire: {}".format(conduit_wire)
+        self.wire_line = "Wire: {}".format(conduit_wire)
 
         tag_bg, tag_fg = CIRCUIT_TYPE_TAG_STYLES.get(
             self.branch_type,
@@ -1291,12 +1351,13 @@ class BreakerActionRow(object):
         if rating_value <= 0:
             return 0, None, "", "Collapsed", ""
         pct = float(load_value) / float(rating_value)
-        if pct > 1.0:
-            return 2, "#BE202F", "Load exceeds breaker rating", "Visible", "Load exceeds breaker rating"
-        if pct > 0.90:
-            return 1, "#F08A00", "Load greater than 90% of breaker rating", "Visible", "Load > 90% of rating"
-        if pct > 0.80:
-            return 0, "#D8B300", "Load greater than 80% of breaker rating", "Visible", "Load > 80% of rating"
+        pct_text = "{}%".format(int(round(pct * 100.0, 0)))
+        if pct >= 1.0:
+            return 2, "#BE202F", "Load = {} of breaker rating".format(pct_text), "Visible", "Load = {} of rating".format(pct_text)
+        if pct >= 0.90:
+            return 1, "#F08A00", "Load = {} of breaker rating".format(pct_text), "Visible", "Load = {} of rating".format(pct_text)
+        if pct >= 0.80:
+            return 0, "#D8B300", "Load = {} of breaker rating".format(pct_text), "Visible", "Load = {} of rating".format(pct_text)
         return 0, None, "", "Collapsed", ""
 
     def recompute_state(self):
@@ -1359,17 +1420,24 @@ class BreakerActionWindow(forms.WPFWindow):
         self._set_frame_cb = self.FindName("AutoFrameCheck")
         self._allow_15a_cb = self.FindName("Allow15AToggle")
         self._upsize_only_cb = self.FindName("UpsizeOnlyToggle")
+        self._max_load_pct_tb = self.FindName("MaxLoadPercentTextBox")
         self._show_unsupported_cb = self.FindName("ShowUnsupportedToggle")
         self._show_changed_only_cb = self.FindName("ShowChangedOnlyToggle")
         self._autosize_btn = self.FindName("AutosizePreviewButton")
         self._reset_btn = self.FindName("ResetButton")
         self._apply_btn = self.FindName("ApplyButton")
         self._row_filter_mode = "all"
+        self._max_load_percent = 80
 
         if self._show_unsupported_cb is not None:
             self._show_unsupported_cb.IsChecked = True
         if self._show_changed_only_cb is not None:
             self._show_changed_only_cb.IsChecked = False
+        if self._max_load_pct_tb is not None:
+            self._max_load_pct_tb.Text = self._format_max_load_percent(self._max_load_percent)
+            self._max_load_pct_tb.PreviewMouseLeftButtonDown += self.max_load_percent_preview_mouse_down
+            self._max_load_pct_tb.GotKeyboardFocus += self.max_load_percent_got_focus
+            self._max_load_pct_tb.LostFocus += self.max_load_percent_lost_focus
         for row in self._rows:
             row.is_checked = False
         self.Loaded += self.window_loaded
@@ -1504,12 +1572,66 @@ class BreakerActionWindow(forms.WPFWindow):
         self._refresh_status()
         self._sync_button_states()
 
+    def _format_max_load_percent(self, value):
+        try:
+            pct = int(round(float(value)))
+        except Exception:
+            pct = 80
+        if pct < 50:
+            pct = 50
+        elif pct > 100:
+            pct = 100
+        return "{} %".format(pct)
+
+    def _parse_max_load_percent(self, value):
+        text = str(value or "").strip().replace("%", "").strip()
+        try:
+            pct = float(text)
+        except Exception:
+            pct = 80.0
+        if pct < 50.0:
+            pct = 50.0
+        elif pct > 100.0:
+            pct = 100.0
+        return int(round(pct))
+
+    def _get_max_load_percent(self):
+        pct = self._parse_max_load_percent(getattr(self._max_load_pct_tb, "Text", None))
+        if self._max_load_pct_tb is not None:
+            self._max_load_pct_tb.Text = self._format_max_load_percent(pct)
+            self._max_load_pct_tb.CaretIndex = len(self._max_load_pct_tb.Text or "")
+        self._max_load_percent = pct
+        return pct
+
+    def max_load_percent_preview_mouse_down(self, sender, args):
+        if sender is None:
+            return
+        try:
+            if not sender.IsKeyboardFocusWithin:
+                sender.Focus()
+                args.Handled = True
+                return
+            sender.SelectAll()
+            args.Handled = True
+        except Exception:
+            pass
+
+    def max_load_percent_got_focus(self, sender, args):
+        try:
+            sender.SelectAll()
+        except Exception:
+            pass
+
+    def max_load_percent_lost_focus(self, sender, args):
+        self._get_max_load_percent()
+
     def apply_autosized_clicked(self, sender, args):
         set_breaker = bool(getattr(self._set_breaker_cb, "IsChecked", True))
         set_frame = bool(getattr(self._set_frame_cb, "IsChecked", True))
         allow_15a = bool(getattr(self._allow_15a_cb, "IsChecked", False))
         upsize_only = bool(getattr(self._upsize_only_cb, "IsChecked", False))
-        self._preview_apply_callback(self._rows, set_breaker, set_frame, allow_15a, upsize_only)
+        max_load_percent = self._get_max_load_percent()
+        self._preview_apply_callback(self._rows, set_breaker, set_frame, allow_15a, upsize_only, max_load_percent)
         self._is_syncing_checks = True
         try:
             for row in self._rows:
@@ -1523,7 +1645,8 @@ class BreakerActionWindow(forms.WPFWindow):
         set_frame = bool(getattr(self._set_frame_cb, "IsChecked", True))
         allow_15a = bool(getattr(self._allow_15a_cb, "IsChecked", False))
         upsize_only = bool(getattr(self._upsize_only_cb, "IsChecked", False))
-        if self._apply_callback(self._rows, set_breaker, set_frame, allow_15a, upsize_only):
+        max_load_percent = self._get_max_load_percent()
+        if self._apply_callback(self._rows, set_breaker, set_frame, allow_15a, upsize_only, max_load_percent):
             self.Close()
 
     def reset_clicked(self, sender, args):
@@ -1965,6 +2088,182 @@ class _CalculateSettingsHandler(IExternalEventHandler):
         return "CED Calculate Settings External Event"
 
 
+class _BufferedMoveOutput(object):
+    """Captures move-tool output so successful runs stay silent."""
+
+    def __init__(self):
+        self._events = []
+
+    def linkify(self, element_id):
+        return _elid_value(element_id)
+
+    def print_md(self, text):
+        self._events.append(("md", str(text or "")))
+
+    def print_table(self, table_data, columns):
+        self._events.append((
+            "table",
+            list(table_data or []),
+            list(columns or []),
+        ))
+
+    def flush_to(self, output):
+        if output is None:
+            return
+        for event in list(self._events or []):
+            kind = event[0]
+            if kind == "md":
+                output.print_md(event[1])
+                continue
+            if kind == "table":
+                output.print_table(event[1], event[2])
+
+
+class MoveCircuitsExternalEventGateway(object):
+    """Runs move-selected-circuits in API context from the modeless browser pane."""
+
+    def __init__(self, logger=None, alert_parameter_name=ALERT_DATA_PARAM):
+        self.logger = logger
+        self.alert_parameter_name = alert_parameter_name
+        self._pending = None
+        self._handler = _MoveCircuitsHandler(self)
+        self._event = ExternalEvent.Create(self._handler)
+
+    def is_busy(self):
+        if self._pending is not None:
+            return True
+        try:
+            return bool(self._event.IsPending)
+        except Exception:
+            return False
+
+    def raise_move(self, circuit_ids, target_panel_id, callback=None):
+        if self._pending is not None:
+            return False
+        try:
+            if bool(self._event.IsPending):
+                return False
+        except Exception:
+            pass
+        self._pending = {
+            "circuit_ids": [int(x) for x in list(circuit_ids or []) if int(x or 0) > 0],
+            "target_panel_id": int(target_panel_id or 0),
+            "callback": callback,
+        }
+        try:
+            self._event.Raise()
+            return True
+        except Exception as ex:
+            self._pending = None
+            if self.logger:
+                self.logger.warning("Failed to raise Move Circuits ExternalEvent: %s", ex)
+            return False
+
+    def _consume_pending(self):
+        pending = self._pending
+        self._pending = None
+        return pending
+
+
+class _MoveCircuitsHandler(IExternalEventHandler):
+    def __init__(self, gateway):
+        self._gateway = gateway
+
+    def Execute(self, application):
+        pending = self._gateway._consume_pending()
+        if not pending:
+            return
+
+        callback = pending.get("callback")
+        status = "ok"
+        error = None
+        payload = {}
+        try:
+            uidoc = application.ActiveUIDocument
+            doc = uidoc.Document if uidoc else None
+            if doc is None:
+                raise Exception("No active Revit document available.")
+
+            target_panel_id = int(pending.get("target_panel_id", 0) or 0)
+            if target_panel_id <= 0:
+                raise Exception("Target panel selection is invalid.")
+
+            target_panel = doc.GetElement(_elid_from_value(target_panel_id))
+            if target_panel is None:
+                raise Exception("Target panel was not found in the active document.")
+
+            circuits = []
+            pre_on_target_ids = set()
+            for cid in list(pending.get("circuit_ids") or []):
+                circuit = doc.GetElement(_elid_from_value(int(cid)))
+                if not isinstance(circuit, DBE.ElectricalSystem):
+                    continue
+                circuits.append(circuit)
+                base_equipment = getattr(circuit, "BaseEquipment", None)
+                if base_equipment is None:
+                    continue
+                if _elid_value(getattr(base_equipment, "Id", None)) == target_panel_id:
+                    pre_on_target_ids.add(_elid_value(circuit.Id))
+
+            if not circuits:
+                raise Exception("No valid circuits were found to move.")
+
+            buffered_output = _BufferedMoveOutput()
+            move_result = move_circuits_to_panel(circuits, target_panel, doc, buffered_output)
+
+            moved_ids = []
+            for circuit in list(circuits or []):
+                cid = _elid_value(circuit.Id)
+                if cid in pre_on_target_ids:
+                    continue
+                base_equipment = getattr(circuit, "BaseEquipment", None)
+                if base_equipment is None:
+                    continue
+                if _elid_value(getattr(base_equipment, "Id", None)) == target_panel_id:
+                    moved_ids.append(cid)
+
+            recalc_result = None
+            recalc_error = None
+            moved_ids = sorted(list(set([int(x) for x in list(moved_ids or []) if int(x) > 0])))
+            if moved_ids:
+                try:
+                    runner = build_default_runner(alert_parameter_name=self._gateway.alert_parameter_name)
+                    recalc_request = OperationRequest(
+                        operation_key="calculate_circuits",
+                        circuit_ids=moved_ids,
+                        source="pane_move",
+                        options={"show_output": False},
+                    )
+                    recalc_result = runner.run(recalc_request, doc)
+                except Exception as ex:
+                    recalc_error = ex
+                    if self._gateway.logger:
+                        self._gateway.logger.exception("Move succeeded but recalculation failed: %s", ex)
+
+            payload = {
+                "move_result": move_result,
+                "buffered_output": buffered_output,
+                "moved_ids": moved_ids,
+                "recalc_result": recalc_result,
+                "recalc_error": recalc_error,
+            }
+        except Exception as ex:
+            status = "error"
+            error = ex
+            if self._gateway.logger:
+                self._gateway.logger.exception("Move Circuits ExternalEvent failed: %s", ex)
+
+        if callback:
+            try:
+                callback(status, payload, error)
+            except Exception as cb_ex:
+                if self._gateway.logger:
+                    self._gateway.logger.exception("Move Circuits callback failed: %s", cb_ex)
+
+    def GetName(self):
+        return "CED Move Circuits External Event"
+
+
 class CircuitBrowserPanel(forms.WPFPanel):
     panel_id = PANEL_ID
     panel_title = TITLE
@@ -1983,6 +2282,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         self._theme_bridge = None
         self._dock_frame_host = None
         self._all_items = []
+        self._item_index = {}
         self._session_sync_lock_map = {}
         self._is_card_view = False
         self._type_options = []
@@ -2003,14 +2303,30 @@ class CircuitBrowserPanel(forms.WPFPanel):
         self._browser_theme_items = {}
         self._browser_accent_items = {}
         self._browser_display_items = {}
+        self._browser_compress_item = None
         self._compact_show_type_badges = True
         self._use_surface_item_states = True
         self._last_selected_items = []
+        self._last_visible_ids = []
+        self._type_tag_brush_cache = {}
+        self._visible_items = ObservableCollection[CircuitListItem]()
         self._operation_gateway = self._get_operation_gateway()
         self._settings_gateway = CalculateSettingsExternalEventGateway(logger=self._logger)
+        self._move_gateway = MoveCircuitsExternalEventGateway(
+            logger=self._logger,
+            alert_parameter_name=ALERT_DATA_PARAM,
+        )
         self._lock_repository = RevitCircuitRepository()
 
         self._list = self.FindName("CircuitList")
+        self._list_scrollviewer = None
+        self._list_scrollviewer_hooked = False
+        self._uniform_item_width = 0.0
+        self._compress_item_width = False
+        self._browser_compress_item = None
+        self._applying_scroll_policy = False
+        if self._list is not None:
+            self._list.ItemsSource = self._visible_items
         self._search = self.FindName("SearchBox")
         self._search_placeholder = self.FindName("SearchPlaceholderText")
         self._search_clear = self.FindName("ClearSearchButton")
@@ -2159,10 +2475,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         window.ShowDialog()
 
     def _has_active_doc(self):
-        try:
-            return revit.doc is not None and revit.uidoc is not None
-        except Exception:
-            return False
+        return getattr(revit, "doc", None) is not None and getattr(revit, "uidoc", None) is not None
 
     def _get_active_doc(self):
         try:
@@ -2171,10 +2484,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
                 return uidoc.Document
         except Exception:
             pass
-        try:
-            return revit.doc
-        except Exception:
-            return None
+        return getattr(revit, "doc", None)
 
     def _doc_key(self, doc):
         if doc is None:
@@ -2328,17 +2638,24 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
         self._set_doc_banner(doc)
 
-    def _safe_load_items(self, doc_override=_DOC_SENTINEL):
+    def _safe_load_items(self, doc_override=_DOC_SENTINEL, fast=False):
         doc = self._get_active_doc() if doc_override is _DOC_SENTINEL else doc_override
         self._active_doc_key = self._doc_key(doc)
         self._set_doc_banner(doc)
         if doc is None:
             self._all_items = []
-            self._list.ItemsSource = ObservableCollection[CircuitListItem]([])
+            self._item_index = {}
+            self._last_visible_ids = []
+            try:
+                self._visible_items.Clear()
+            except Exception:
+                self._visible_items = ObservableCollection[CircuitListItem]()
+                if self._list is not None:
+                    self._list.ItemsSource = self._visible_items
             self._loaded_doc_key = None
             self._set_status("Open a model document to load circuits.")
             return
-        self._load_items(doc)
+        self._load_items(doc, fast=bool(fast))
         self._loaded_doc_key = self._active_doc_key
 
     def refresh_on_open(self):
@@ -2447,14 +2764,223 @@ class CircuitBrowserPanel(forms.WPFPanel):
         except Exception:
             pass
 
+    def _get_list_scrollviewer(self):
+        viewer = _find_visual_descendant(self._list, ScrollViewer)
+        if viewer is None:
+            return self._list_scrollviewer
+        if viewer is not self._list_scrollviewer:
+            old = self._list_scrollviewer
+            if old is not None and bool(self._list_scrollviewer_hooked):
+                try:
+                    old.ScrollChanged -= self.list_scroll_changed
+                except Exception:
+                    pass
+            self._list_scrollviewer = viewer
+            self._list_scrollviewer_hooked = False
+        if not bool(self._list_scrollviewer_hooked):
+            try:
+                viewer.ScrollChanged += self.list_scroll_changed
+                self._list_scrollviewer_hooked = True
+            except Exception:
+                pass
+        self._list_scrollviewer = viewer
+        return self._list_scrollviewer
+
+    def _detach_list_scrollviewer(self):
+        if self._list_scrollviewer is not None and bool(self._list_scrollviewer_hooked):
+            try:
+                self._list_scrollviewer.ScrollChanged -= self.list_scroll_changed
+            except Exception:
+                pass
+        self._list_scrollviewer_hooked = False
+        self._list_scrollviewer = None
+
+    def _compute_uniform_item_width(self):
+        viewer = self._get_list_scrollviewer()
+        if viewer is None or self._list is None:
+            return 0.0
+        try:
+            self._list.UpdateLayout()
+        except Exception:
+            pass
+        try:
+            viewer.UpdateLayout()
+        except Exception:
+            pass
+        try:
+            extent_width = float(getattr(viewer, "ExtentWidth", 0.0) or 0.0)
+        except Exception:
+            extent_width = 0.0
+        try:
+            viewport_width = float(getattr(viewer, "ViewportWidth", 0.0) or 0.0)
+        except Exception:
+            viewport_width = 0.0
+        realized_max = 0.0
+        for row in _find_visual_descendants(self._list, ListViewItem):
+            if row is None:
+                continue
+            try:
+                width = float(getattr(row, "ActualWidth", 0.0) or 0.0)
+            except Exception:
+                width = 0.0
+            if width > realized_max:
+                realized_max = width
+        base_width = max(extent_width, viewport_width, realized_max)
+        return float(base_width)
+
+    def _compute_compressed_item_width(self):
+        viewer = self._get_list_scrollviewer()
+        if viewer is not None:
+            try:
+                viewport = float(getattr(viewer, "ViewportWidth", 0.0) or 0.0)
+            except Exception:
+                viewport = 0.0
+        else:
+            viewport = 0.0
+        if viewport <= 0.0:
+            try:
+                viewport = float(getattr(self._list, "ActualWidth", 0.0) or 0.0)
+            except Exception:
+                viewport = 0.0
+        if viewport <= 0.0:
+            return 0.0
+        return max(0.0, float(viewport - 1.0))
+
+    def _apply_horizontal_scroll_policy(self, viewer):
+        if viewer is None:
+            return
+        desired = ScrollBarVisibility.Hidden if bool(self._compress_item_width) else ScrollBarVisibility.Auto
+        try:
+            if getattr(viewer, "HorizontalScrollBarVisibility", ScrollBarVisibility.Auto) != desired:
+                viewer.HorizontalScrollBarVisibility = desired
+        except Exception:
+            pass
+
+    def _apply_uniform_item_width_to_realized_rows(self):
+        if self._list is None:
+            return
+        width_value = float(self._uniform_item_width or 0.0)
+        use_uniform = width_value > 0.0
+        for row in _find_visual_descendants(self._list, ListViewItem):
+            if row is None:
+                continue
+            if use_uniform:
+                try:
+                    row.MinWidth = width_value
+                except Exception:
+                    pass
+                try:
+                    row.Width = width_value
+                except Exception:
+                    pass
+            else:
+                try:
+                    row.MinWidth = 0.0
+                except Exception:
+                    pass
+                try:
+                    row.Width = float("nan")
+                except Exception:
+                    pass
+
+    def _compute_load_name_char_limit(self):
+        viewport = self._compute_compressed_item_width()
+        if viewport <= 0.0:
+            return 72
+        approx_chars = int(max(20.0, (viewport * 0.48) / 7.1))
+        return max(20, min(approx_chars, 96))
+
+    def _apply_item_width_mode(self, items):
+        records = list(items or [])
+        char_limit = self._compute_load_name_char_limit() if bool(self._compress_item_width) else 0
+        for item in records:
+            full_name = str(getattr(item, "load_name", "") or "")
+            if bool(self._compress_item_width):
+                item.load_name_display = _clip_with_ellipsis(full_name, char_limit)
+            else:
+                item.load_name_display = full_name
+
+    def list_scroll_changed(self, sender, args):
+        if bool(self._applying_scroll_policy):
+            return
+        if bool(self._compress_item_width):
+            try:
+                viewport_change = abs(float(getattr(args, "ViewportWidthChange", 0.0) or 0.0)) > 0.0
+            except Exception:
+                viewport_change = False
+            self._applying_scroll_policy = True
+            try:
+                if viewport_change:
+                    self._apply_item_width_mode(self._all_items)
+                    self._refresh_visible_items()
+                self._uniform_item_width = self._compute_compressed_item_width()
+                self._apply_uniform_item_width_to_realized_rows()
+                viewer = sender if isinstance(sender, ScrollViewer) else self._get_list_scrollviewer()
+                self._apply_horizontal_scroll_policy(viewer)
+            finally:
+                self._applying_scroll_policy = False
+            return
+        self._uniform_item_width = self._compute_uniform_item_width()
+        self._apply_uniform_item_width_to_realized_rows()
+
+    def list_preview_mouse_wheel(self, sender, args):
+        none_mod = getattr(ModifierKeys, "None")
+        try:
+            modifiers = Keyboard.Modifiers
+        except Exception:
+            modifiers = none_mod
+        if (modifiers & ModifierKeys.Shift) != ModifierKeys.Shift:
+            return
+        if bool(self._compress_item_width):
+            return
+        viewer = self._get_list_scrollviewer()
+        if viewer is None:
+            return
+        try:
+            delta = int(getattr(args, "Delta", 0) or 0)
+        except Exception:
+            delta = 0
+        if delta == 0:
+            return
+        step = 40.0
+        try:
+            current = float(viewer.HorizontalOffset)
+        except Exception:
+            current = 0.0
+        if delta > 0:
+            target = max(0.0, current - step)
+        else:
+            target = current + step
+        try:
+            viewer.ScrollToHorizontalOffset(float(target))
+            args.Handled = True
+        except Exception:
+            pass
+
+    def _clear_type_tag_brush_cache(self):
+        self._type_tag_brush_cache = {}
+
+    def _resolve_type_tag_brush(self, resource_key, fallback):
+        if not resource_key:
+            return fallback
+        if resource_key in self._type_tag_brush_cache:
+            return self._type_tag_brush_cache[resource_key]
+        resolved = _try_find_resource(self, resource_key)
+        value = resolved if resolved is not None else fallback
+        self._type_tag_brush_cache[resource_key] = value
+        return value
+
+    def _apply_type_tag_brush(self, item):
+        if item is None:
+            return
+        bg_key = getattr(item, "type_tag_bg_key", None)
+        fg_key = getattr(item, "type_tag_fg_key", None)
+        item.type_tag_bg = self._resolve_type_tag_brush(bg_key, "#ECEFF3")
+        item.type_tag_fg = self._resolve_type_tag_brush(fg_key, "#52606D")
+
     def _apply_type_tag_brushes(self):
         for item in list(self._all_items or []):
-            bg_key = getattr(item, "type_tag_bg_key", None)
-            fg_key = getattr(item, "type_tag_fg_key", None)
-            bg_resource = _try_find_resource(self, bg_key) if bg_key else None
-            fg_resource = _try_find_resource(self, fg_key) if fg_key else None
-            item.type_tag_bg = bg_resource if bg_resource is not None else "#ECEFF3"
-            item.type_tag_fg = fg_resource if fg_resource is not None else "#52606D"
+            self._apply_type_tag_brush(item)
 
     def _refresh_visible_items(self):
         try:
@@ -2464,6 +2990,39 @@ class CircuitBrowserPanel(forms.WPFPanel):
         except Exception:
             pass
         self._refresh_list()
+
+    def _set_visible_items(self, items):
+        items = list(items or [])
+        visible_ids = [int(getattr(item, "circuit_id", 0) or 0) for item in items]
+        same_ids = visible_ids == list(self._last_visible_ids or [])
+        same_refs = False
+        if same_ids:
+            try:
+                current_items = list(self._visible_items or [])
+            except Exception:
+                current_items = []
+            if len(current_items) == len(items):
+                same_refs = True
+                for idx, item in enumerate(items):
+                    if current_items[idx] is not item:
+                        same_refs = False
+                        break
+        if same_ids and same_refs:
+            try:
+                if self._list is not None:
+                    self._list.Items.Refresh()
+            except Exception:
+                pass
+            return
+        self._last_visible_ids = list(visible_ids)
+        try:
+            self._visible_items.Clear()
+            for item in items:
+                self._visible_items.Add(item)
+        except Exception:
+            self._visible_items = ObservableCollection[CircuitListItem](items)
+            if self._list is not None:
+                self._list.ItemsSource = self._visible_items
 
     def _refresh_list(self):
         query = ""
@@ -2488,36 +3047,86 @@ class CircuitBrowserPanel(forms.WPFPanel):
         for item in items:
             item.show_type_tag = bool(self._compact_show_type_badges)
             item.type_tag_visibility = "Visible" if item.show_type_tag else "Collapsed"
+        self._apply_item_width_mode(items)
 
-        self._list.ItemsSource = ObservableCollection[CircuitListItem](items)
+        self._set_visible_items(items)
+        viewer = self._get_list_scrollviewer()
+        self._apply_horizontal_scroll_policy(viewer)
+        if bool(self._compress_item_width):
+            self._uniform_item_width = self._compute_compressed_item_width()
+            self._apply_uniform_item_width_to_realized_rows()
+        else:
+            self._uniform_item_width = self._compute_uniform_item_width()
+            self._apply_uniform_item_width_to_realized_rows()
         self._set_status("Showing {} of {} circuits".format(len(items), len(self._all_items)))
 
-    def _load_items(self, doc):
-        self._set_status("Loading circuits...")
-
+    def _collect_sorted_circuits(self, doc):
         circuits = list(
             DB.FilteredElementCollector(doc)
             .OfClass(DBE.ElectricalSystem)
             .WhereElementIsNotElementType()
             .ToElements()
         )
-
         circuits.sort(key=lambda c: (
             (getattr(getattr(c, "BaseEquipment", None), "Name", "") or ""),
             (getattr(c, "StartSlot", 0) or 0),
             (getattr(c, "LoadName", "") or "")
         ))
+        return circuits
 
-        def _session_state_for(circuit):
-            try:
-                return self._session_sync_lock_map.get(_elid_value(circuit.Id))
-            except Exception:
-                return None
+    def _session_state_for_circuit(self, circuit):
+        try:
+            return self._session_sync_lock_map.get(_elid_value(circuit.Id))
+        except Exception:
+            return None
 
-        self._all_items = [CircuitListItem(c, session_sync_state=_session_state_for(c)) for c in circuits]
-        self._apply_type_tag_brushes()
+    def _load_items_full(self, circuits):
+        checked_ids = set([int(item.circuit_id) for item in list(self._all_items or []) if bool(getattr(item, "is_checked", False))])
+        refreshed_items = []
+        refreshed_index = {}
+        for circuit in list(circuits or []):
+            item = CircuitListItem(circuit, session_sync_state=self._session_state_for_circuit(circuit))
+            item.is_checked = int(item.circuit_id) in checked_ids
+            self._apply_type_tag_brush(item)
+            refreshed_items.append(item)
+            refreshed_index[int(item.circuit_id)] = item
+        self._all_items = refreshed_items
+        self._item_index = refreshed_index
         self._rebuild_filter_options()
         self._refresh_list()
+
+    def _load_items_fast(self, circuits):
+        existing_index = dict(self._item_index or {})
+        refreshed_items = []
+        refreshed_index = {}
+        added = 0
+        removed = 0
+        for circuit in list(circuits or []):
+            cid = int(_elid_value(circuit.Id))
+            item = existing_index.pop(cid, None)
+            if item is None:
+                item = CircuitListItem(circuit, session_sync_state=self._session_state_for_circuit(circuit))
+                self._apply_type_tag_brush(item)
+                added += 1
+            else:
+                item.circuit = circuit
+            refreshed_items.append(item)
+            refreshed_index[cid] = item
+        removed = len(existing_index)
+        self._all_items = refreshed_items
+        self._item_index = refreshed_index
+        self._rebuild_filter_options()
+        self._refresh_list()
+        if added or removed:
+            self._logger.debug("Circuit Browser fast refresh: +%s / -%s", added, removed)
+
+    def _load_items(self, doc, fast=False):
+        self._set_status("Loading circuits...")
+        circuits = self._collect_sorted_circuits(doc)
+        if bool(fast):
+            self._load_items_fast(circuits)
+            return
+        self._load_items_full(circuits)
 
     def _target_items(self):
         checked = [x for x in self._all_items if x.is_checked]
@@ -2595,6 +3204,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
         if removed_count:
             self._all_items = valid_all
+            self._item_index = {int(getattr(x, "circuit_id", 0) or 0): x for x in list(valid_all or [])}
             self._rebuild_filter_options()
             self._refresh_list()
             self.selection_changed(None, None)
@@ -2779,6 +3389,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
     def panel_loaded(self, sender, args):
         if not self._is_pane_visible():
             return
+        self._get_list_scrollviewer()
         self._attach_event_handlers()
         doc = self._get_active_doc()
         key = self._doc_key(doc)
@@ -2789,6 +3400,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
             self._set_doc_banner(doc)
 
     def panel_unloaded(self, sender, args):
+        self._detach_list_scrollviewer()
         self._detach_event_handlers()
 
     def panel_visibility_changed(self, sender, args):
@@ -2825,6 +3437,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         self._refresh_list()
 
     def refresh_clicked(self, sender, args):
+        # Manual refresh should reflect latest circuit metadata (name/number/panel/type).
         self._safe_load_items()
 
     def filter_button_clicked(self, sender, args):
@@ -2860,6 +3473,16 @@ class CircuitBrowserPanel(forms.WPFPanel):
         mark_existing_item.Header = "Mark as New/Existing"
         mark_existing_item.Click += self.action_mark_existing_clicked
         menu.Items.Add(mark_existing_item)
+
+        sep = Separator()
+        _set_if_resource(self, sep, "Style", "CED.Separator.Menu")
+        menu.Items.Add(sep)
+
+        move_item = MenuItem()
+        _set_if_resource(self, move_item, "Style", "CED.MenuItem.Base")
+        move_item.Header = "Move Selected Circuits"
+        move_item.Click += self.action_move_checked_clicked
+        menu.Items.Add(move_item)
 
         self._actions_menu = menu
 
@@ -2969,6 +3592,15 @@ class CircuitBrowserPanel(forms.WPFPanel):
         badges_item.StaysOpenOnClick = True
         badges_item.Click += self.toggle_compact_badges_clicked
         compact_menu.Items.Add(badges_item)
+        compress_item = MenuItem()
+        _set_if_resource(self, compress_item, "Style", "CED.MenuItem.Base")
+        compress_item.Header = "Compress Item Width"
+        compress_item.IsCheckable = True
+        compress_item.IsChecked = bool(self._compress_item_width)
+        compress_item.StaysOpenOnClick = True
+        compress_item.Click += self.toggle_compress_item_width_clicked
+        compact_menu.Items.Add(compress_item)
+        self._browser_compress_item = compress_item
         menu.Items.Add(compact_menu)
 
         self._browser_options_menu = menu
@@ -2985,6 +3617,8 @@ class CircuitBrowserPanel(forms.WPFPanel):
         for mode, item in (self._browser_display_items or {}).items():
             if item is not None:
                 item.IsChecked = (mode == selected_display)
+        if self._browser_compress_item is not None:
+            self._browser_compress_item.IsChecked = bool(self._compress_item_width)
 
     def browser_options_clicked(self, sender, args):
         self._build_browser_options_menu()
@@ -3007,6 +3641,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         def _apply_theme_change():
             _try_apply_theme(self)
             self._surface_item_style = _try_find_resource(self, "CED.ListViewItem.SurfaceBehavior")
+            self._clear_type_tag_brush_cache()
             self._apply_type_tag_brushes()
             self._apply_list_interaction_mode()
             self._update_filter_button_style()
@@ -3030,6 +3665,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         self._sync_browser_options_menu_state()
         def _apply_accent_change():
             _try_apply_theme(self)
+            self._clear_type_tag_brush_cache()
             self._apply_type_tag_brushes()
             self._update_filter_button_style()
             self._refresh_visible_items()
@@ -3050,6 +3686,220 @@ class CircuitBrowserPanel(forms.WPFPanel):
         # Actions run only on explicitly checked circuits to avoid
         # selection/checkbox ambiguity for users.
         return [x for x in self._all_items if getattr(x, "is_checked", False)]
+
+    def _collect_selected_row_targets(self):
+        try:
+            return list(self._list.SelectedItems or [])
+        except Exception:
+            return []
+
+    def _sorted_display_panels(self, panels, doc):
+        valid = []
+        for panel in list(panels or []):
+            panel_data = get_panel_dist_system(panel, doc)
+            dist_name = (panel_data or {}).get("dist_system_name")
+            if not dist_name:
+                continue
+            if dist_name == "Unnamed Distribution System":
+                continue
+            valid.append((str(getattr(panel, "Name", "") or ""), str(dist_name), panel))
+        valid.sort(key=lambda x: (x[0], x[1]))
+        return [panel for _, _, panel in valid]
+
+    def _format_panel_display(self, panel, doc):
+        panel_data = get_panel_dist_system(panel, doc)
+        dist_name = (panel_data or {}).get("dist_system_name") or "Unknown Dist. System"
+        return "{} - {} (ID: {})".format(
+            getattr(panel, "Name", "Unnamed Panel") or "Unnamed Panel",
+            dist_name,
+            _elid_value(getattr(panel, "Id", None)),
+        )
+
+    def _prompt_for_move_target_panel(self, panels, doc):
+        sorted_panels = self._sorted_display_panels(panels, doc)
+        panel_map = {}
+        for panel in sorted_panels:
+            panel_map[self._format_panel_display(panel, doc)] = panel
+        if not panel_map:
+            return None
+        selected_display = forms.SelectFromList.show(
+            sorted(panel_map.keys()),
+            title="Select Target Panel",
+            prompt="Choose the target panel to move the circuits to:",
+            multiselect=False,
+        )
+        if not selected_display:
+            return None
+        return panel_map.get(selected_display)
+
+    def _print_move_results(self, output, move_result):
+        if isinstance(move_result, dict):
+            moved_rows = list(move_result.get("moved") or [])
+            failed_rows = list(move_result.get("failed") or [])
+            skipped_rows = list(move_result.get("skipped") or [])
+            partial = bool(move_result.get("partial", False))
+            fallback_used = bool(move_result.get("fallback_used", False))
+        else:
+            moved_rows = list(move_result or [])
+            failed_rows = []
+            skipped_rows = []
+            partial = False
+            fallback_used = False
+
+        if output is not None:
+            if partial:
+                output.print_md("**Partial move accepted. Successful moves are listed below.**")
+            elif fallback_used:
+                output.print_md("**Circuits transferred successfully (with default SPARE/SPACE replacement workflow).**")
+            else:
+                output.print_md("**Circuits transferred successfully.**")
+
+            output.print_table(moved_rows, ["Circuit ID", "Previous Circuit", "New Circuit"])
+            if failed_rows:
+                output.print_md("**Circuits not moved:**")
+                output.print_table(failed_rows, ["Circuit ID", "Previous Circuit", "Failure"])
+            if skipped_rows:
+                output.print_md("**Circuits skipped:**")
+                output.print_table(skipped_rows, ["Circuit ID", "Circuit", "Reason"])
+
+        if failed_rows:
+            return "Moved {} circuits ({} failed)".format(len(moved_rows), len(failed_rows))
+        if skipped_rows:
+            return "Moved {} circuits ({} skipped)".format(len(moved_rows), len(skipped_rows))
+        return "Moved {} circuits".format(len(moved_rows))
+
+    def _on_move_selected_circuits_complete(self, status, payload, error):
+        payload = dict(payload or {})
+        if status == "error":
+            self._set_status("Move failed")
+            forms.alert("Failed to move circuits:\n\n{}".format(error), title=TITLE)
+            self._safe_load_items()
+            return
+
+        move_result = payload.get("move_result")
+        moved_rows = []
+        failed_rows = []
+        if isinstance(move_result, dict):
+            moved_rows = list(move_result.get("moved") or [])
+            failed_rows = list(move_result.get("failed") or [])
+        else:
+            moved_rows = list(move_result or [])
+
+        show_output = bool(failed_rows)
+        output = None
+        if show_output:
+            output = script.get_output()
+            try:
+                output.show()
+            except Exception:
+                pass
+            buffered_output = payload.get("buffered_output")
+            if buffered_output is not None:
+                try:
+                    buffered_output.flush_to(output)
+                except Exception:
+                    pass
+            forms.alert(
+                "{} circuit(s) could not be moved. Review the results table for details.".format(
+                    int(len(failed_rows or []))
+                ),
+                title=TITLE,
+            )
+
+        summary = self._print_move_results(output, move_result)
+        recalc_error = payload.get("recalc_error")
+        recalc_result = payload.get("recalc_result")
+        moved_ids = list(payload.get("moved_ids") or [])
+        if recalc_error is not None:
+            self._set_status("{} | Recalc failed".format(summary))
+            forms.alert("Circuits moved, but recalculation failed:\n\n{}".format(recalc_error), title=TITLE)
+        else:
+            recalced_count = 0
+            if isinstance(recalc_result, dict):
+                try:
+                    recalced_count = int(recalc_result.get("updated_circuits", 0) or 0)
+                except Exception:
+                    recalced_count = 0
+            if moved_ids and recalced_count > 0:
+                self._set_status("{} | Recalculated {}".format(summary, recalced_count))
+            else:
+                self._set_status(summary)
+        self._safe_load_items()
+
+    def _run_move_selected_circuits(self, targets, checked_only):
+        if not self._has_active_doc():
+            forms.alert("Open a model document first.", title=TITLE)
+            return
+
+        targets = list(targets or [])
+        if not targets:
+            forms.alert(
+                "Check one or more circuits first." if checked_only else "Select one or more rows first.",
+                title=TITLE,
+            )
+            return
+
+        targets, removed_count = self._prune_stale_items(targets)
+        if removed_count:
+            self._set_status("Removed {} deleted circuits from list.".format(removed_count))
+
+        deduped_circuits = []
+        seen_ids = set()
+        for item in list(targets or []):
+            circuit = getattr(item, "circuit", None)
+            if circuit is None:
+                continue
+            cid = _elid_value(circuit.Id)
+            if cid in seen_ids:
+                continue
+            seen_ids.add(cid)
+            deduped_circuits.append(circuit)
+
+        if not deduped_circuits:
+            forms.alert("No valid circuits selected.", title=TITLE)
+            return
+
+        doc = self._get_active_doc()
+        all_panels = list(get_all_panels(doc) or [])
+        if not all_panels:
+            forms.alert("No panels found in this model.", title=TITLE)
+            return
+
+        compatible_panels = []
+        for idx, circuit in enumerate(deduped_circuits):
+            circuit_panels = list(get_compatible_panels(circuit, all_panels, doc) or [])
+            if idx == 0:
+                compatible_panels = list(circuit_panels)
+                continue
+            allowed_ids = set([_elid_value(panel.Id) for panel in list(circuit_panels or [])])
+            compatible_panels = [
+                panel for panel in list(compatible_panels or [])
+                if _elid_value(panel.Id) in allowed_ids
+            ]
+            if not compatible_panels:
+                break
+
+        if not compatible_panels:
+            forms.alert("No compatible target panel found for the selected circuits.", title=TITLE)
+            return
+
+        target_panel = self._prompt_for_move_target_panel(compatible_panels, doc)
+        if target_panel is None:
+            self._set_status("Move cancelled")
+            return
+
+        if self._move_gateway.is_busy() or self._operation_gateway.is_busy():
+            forms.alert("An operation is already running. Please wait.", title=TITLE)
+            return
+
+        self._set_status("Moving {} circuits...".format(len(deduped_circuits)))
+        raised = self._move_gateway.raise_move(
+            circuit_ids=[_elid_value(circuit.Id) for circuit in deduped_circuits],
+            target_panel_id=_elid_value(target_panel.Id),
+            callback=self._on_move_selected_circuits_complete,
+        )
+        if not raised:
+            self._set_status("Unable to queue move operation")
 
     def _is_locked_circuit(self, circuit, doc=None):
         if doc is None:
@@ -3452,11 +4302,31 @@ class CircuitBrowserPanel(forms.WPFPanel):
             rows.append(row)
         return rows
 
-    def _preview_breaker_rows(self, rows, set_breaker, set_frame, allow_15a=False, upsize_only=False):
+    def _preview_breaker_rows(
+        self,
+        rows,
+        set_breaker,
+        set_frame,
+        allow_15a=False,
+        upsize_only=False,
+        max_load_percent=80,
+    ):
         min_ocp = 15 if allow_15a else 20
+        try:
+            target_load_pct = float(max_load_percent)
+        except Exception:
+            target_load_pct = 80.0
+        if target_load_pct < 50.0:
+            target_load_pct = 50.0
+        elif target_load_pct > 100.0:
+            target_load_pct = 100.0
+        breaker_factor = 100.0 / target_load_pct
         for row in rows:
             load_value = _safe_float(row._load_current_value)
-            auto_rating = self._next_ocp_size((load_value * 1.25) if load_value is not None else None, min_ocp=min_ocp)
+            auto_rating = self._next_ocp_size(
+                (load_value * breaker_factor) if load_value is not None else None,
+                min_ocp=min_ocp,
+            )
             if auto_rating is None:
                 auto_rating = self._next_ocp_size(row._current_rating_value, min_ocp=min_ocp)
             row.autosized_rating = _fmt_amp(auto_rating, 0)
@@ -3480,7 +4350,15 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
             row.recompute_state()
 
-    def _apply_breaker_rows(self, rows, set_breaker, set_frame, allow_15a=False, upsize_only=False):
+    def _apply_breaker_rows(
+        self,
+        rows,
+        set_breaker,
+        set_frame,
+        allow_15a=False,
+        upsize_only=False,
+        max_load_percent=80,
+    ):
         updates = []
         invalid_rows = []
         for row in rows:
@@ -3518,7 +4396,11 @@ class CircuitBrowserPanel(forms.WPFPanel):
         return self._raise_action_operation(
             "autosize_breaker_and_recalculate",
             [x.get("circuit_id") for x in updates],
-            {"updates": updates, "show_output": False},
+            {
+                "updates": updates,
+                "show_output": False,
+                "allow_15a": bool(allow_15a),
+            },
         )
 
     def _build_mark_existing_rows(self, targets):
@@ -3694,6 +4576,12 @@ class CircuitBrowserPanel(forms.WPFPanel):
         except Exception as ex:
             forms.alert("Failed to open breaker autosize window:\n\n{}".format(ex), title=TITLE)
 
+    def action_move_checked_clicked(self, sender, args):
+        self._run_move_selected_circuits(self._collect_action_targets(), checked_only=True)
+
+    def action_move_selected_rows_clicked(self, sender, args):
+        self._run_move_selected_circuits(self._collect_selected_row_targets(), checked_only=False)
+
     def _reset_filters(self):
         self._active_type_filters = set(self._type_options)
         self._warnings_only = False
@@ -3774,13 +4662,15 @@ class CircuitBrowserPanel(forms.WPFPanel):
         self._sync_filter_menu_state()
 
     def _set_card_view(self, is_card_view):
-        self._is_card_view = bool(is_card_view)
+        new_card_view = bool(is_card_view)
+        self._is_card_view = bool(new_card_view)
         if self._is_card_view:
             self._list.ItemTemplate = self._card_template
         else:
             self._list.ItemTemplate = self._compact_template
         self._update_toggle_button_visual()
         self._sync_browser_options_menu_state()
+        self._refresh_list()
 
     def toggle_view_clicked(self, sender, args):
         self._set_card_view(not self._is_card_view)
@@ -3803,27 +4693,78 @@ class CircuitBrowserPanel(forms.WPFPanel):
         if _find_visual_ancestor(source, ListViewItem) is None:
             self._clear_list_selection()
 
-    def list_preview_mouse_right_button_up(self, sender, args):
-        if self._is_card_view:
+    def _ensure_context_row_selection(self, source):
+        row = _find_visual_ancestor(source, ListViewItem)
+        if row is None:
             return
+        try:
+            clicked_item = row.DataContext
+        except Exception:
+            clicked_item = None
+        if clicked_item is None:
+            return
+        try:
+            selected_items = list(self._list.SelectedItems)
+        except Exception:
+            selected_items = []
+        if clicked_item in selected_items:
+            return
+        try:
+            self._list.SelectedItems.Clear()
+        except Exception:
+            pass
+        try:
+            self._list.SelectedItem = clicked_item
+        except Exception:
+            return
+        self.selection_changed(None, None)
+
+    def list_preview_mouse_right_button_up(self, sender, args):
         source = getattr(args, "OriginalSource", None)
         if source is None:
             return
+        self._ensure_context_row_selection(source)
         menu = ContextMenu()
         _set_if_resource(self, menu, "Style", "CED.ContextMenu.Base")
-        toggle = MenuItem()
-        _set_if_resource(self, toggle, "Style", "CED.MenuItem.Base")
-        toggle.Header = "Show Circuit Type Badges"
-        toggle.IsCheckable = True
-        toggle.IsChecked = bool(self._compact_show_type_badges)
-        toggle.Click += self.toggle_compact_badges_clicked
-        menu.Items.Add(toggle)
+        if not self._is_card_view:
+            toggle = MenuItem()
+            _set_if_resource(self, toggle, "Style", "CED.MenuItem.Base")
+            toggle.Header = "Show Circuit Type Badges"
+            toggle.IsCheckable = True
+            toggle.IsChecked = bool(self._compact_show_type_badges)
+            toggle.Click += self.toggle_compact_badges_clicked
+            menu.Items.Add(toggle)
+        compress_item = MenuItem()
+        _set_if_resource(self, compress_item, "Style", "CED.MenuItem.Base")
+        compress_item.Header = "Compress Item Width"
+        compress_item.IsCheckable = True
+        compress_item.IsChecked = bool(self._compress_item_width)
+        compress_item.Click += self.toggle_compress_item_width_clicked
+        menu.Items.Add(compress_item)
+
+        selected_rows = self._collect_selected_row_targets()
+        if menu.Items.Count > 0:
+            sep = Separator()
+            _set_if_resource(self, sep, "Style", "CED.Separator.Menu")
+            menu.Items.Add(sep)
+
+        move_item = MenuItem()
+        _set_if_resource(self, move_item, "Style", "CED.MenuItem.Base")
+        move_item.Header = "Move Selected Circuits"
+        move_item.IsEnabled = bool(selected_rows)
+        move_item.Click += self.action_move_selected_rows_clicked
+        menu.Items.Add(move_item)
         menu.PlacementTarget = self._list
         menu.IsOpen = True
         args.Handled = True
 
     def toggle_compact_badges_clicked(self, sender, args):
         self._compact_show_type_badges = bool(getattr(sender, "IsChecked", True))
+        self._refresh_list()
+
+    def toggle_compress_item_width_clicked(self, sender, args):
+        self._compress_item_width = bool(getattr(sender, "IsChecked", False))
+        self._sync_browser_options_menu_state()
         self._refresh_list()
 
     def _clear_list_selection(self):

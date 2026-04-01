@@ -6,6 +6,8 @@ from pyrevit import DB, script
 
 from CEDElectrical.Infrastructure.Revit.repositories import panel_schedule_repository as ps_repo
 from Snippets import revit_helpers
+from .panel_schedule_enums import PanelSpecialKind as SpecialKind
+from .panel_schedule_enums import PanelStagedAction as StagedAction
 from .panel_slot import PanelSlot
 
 
@@ -138,6 +140,8 @@ class PanelScheduleManager(object):
         for row in rows:
             if str(row.get("kind", "") or "").strip().lower() != "empty":
                 continue
+            if not bool(row.get("is_editable", True)):
+                continue
             slot = int(row.get("slot", 0) or 0)
             if slot > 0:
                 slots.append(slot)
@@ -159,8 +163,8 @@ class PanelScheduleManager(object):
             slot=slot_value,
             cells=cells,
             is_locked=bool(self._slot_is_locked(schedule_view, slot_value)),
-            is_spare=bool(kind == "spare"),
-            is_space=bool(kind == "space"),
+            is_spare=bool(kind == SpecialKind.SPARE),
+            is_space=bool(kind == SpecialKind.SPACE),
             is_circuit=bool(kind == "circuit"),
             poles=int(max(1, poles or 1)),
             group_number=group_no,
@@ -184,39 +188,91 @@ class PanelScheduleManager(object):
         return bool(self._set_slot_locked(option.get("schedule_view"), int(slot), bool(is_locked)))
 
     def add_spare(self, panel_id, panel_slot, poles=1, rating=0, frame=0, unlock=True, load_name=None, schedule_notes=None):
-        """Add SPARE at a slot, then set poles/rating/notes."""
+        """Add SPARE with custom poles/rating/frame behavior (Batch Swap path)."""
         return self._add_special(
             panel_id=panel_id,
             panel_slot=panel_slot,
-            kind="spare",
+            kind=SpecialKind.SPARE,
             poles=poles,
             rating=rating,
             frame=frame,
             unlock=unlock,
             load_name=load_name,
             schedule_notes=schedule_notes,
+            apply_custom_properties=True,
+            force_switchboard_three_p=False,
+            restrict_data_to_space=True,
         )
 
     def add_space(self, panel_id, panel_slot, poles=1, unlock=True, load_name=None, schedule_notes=None):
-        """Add SPACE at a slot, then set poles/notes."""
+        """Add SPACE with custom pole behavior (Batch Swap path)."""
         return self._add_special(
             panel_id=panel_id,
             panel_slot=panel_slot,
-            kind="space",
+            kind=SpecialKind.SPACE,
             poles=poles,
             rating=0,
             unlock=unlock,
             load_name=load_name,
             schedule_notes=schedule_notes,
+            apply_custom_properties=True,
+            force_switchboard_three_p=False,
+            restrict_data_to_space=True,
         )
+
+    def add_spare_default(self, panel_id, panel_slot, unlock=True, apply_switchboard_default_poles=True):
+        """Add SPARE with add/remove-tool defaults and no post-add parameter edits."""
+        option = self._option_for_panel_id(panel_id)
+        poles = 3 if option and option.get("schedule_type") == ps_repo.PSTYPE_SWITCHBOARD else 1
+        return self._add_special(
+            panel_id=panel_id,
+            panel_slot=panel_slot,
+            kind=SpecialKind.SPARE,
+            poles=int(poles),
+            rating=0,
+            frame=0,
+            unlock=unlock,
+            load_name=None,
+            schedule_notes=None,
+            apply_custom_properties=False,
+            force_switchboard_three_p=bool(apply_switchboard_default_poles),
+            restrict_data_to_space=False,
+        )
+
+    def add_space_default(self, panel_id, panel_slot, unlock=True, apply_switchboard_default_poles=True):
+        """Add SPACE with add/remove-tool defaults and no post-add parameter edits."""
+        option = self._option_for_panel_id(panel_id)
+        poles = 3 if option and option.get("schedule_type") == ps_repo.PSTYPE_SWITCHBOARD else 1
+        return self._add_special(
+            panel_id=panel_id,
+            panel_slot=panel_slot,
+            kind=SpecialKind.SPACE,
+            poles=int(poles),
+            rating=0,
+            frame=0,
+            unlock=unlock,
+            load_name=None,
+            schedule_notes=None,
+            apply_custom_properties=False,
+            force_switchboard_three_p=bool(apply_switchboard_default_poles),
+            restrict_data_to_space=False,
+        )
+
+    def set_circuit_poles(self, circuit_id, poles):
+        """Set poles on one circuit by id when writable."""
+        circuit = self._element_by_id_value(circuit_id)
+        if not isinstance(circuit, DBE.ElectricalSystem):
+            return False
+        self._set_circuit_poles(circuit, int(max(1, poles or 1)))
+        return True
 
     def remove_spare(self, panel_id, panel_slot):
         """Remove spare row/circuit from one slot."""
-        return self._remove_special(panel_id=panel_id, panel_slot=panel_slot, kind_hint="spare")
+        return self._remove_special(panel_id=panel_id, panel_slot=panel_slot, kind_hint=SpecialKind.SPARE)
 
     def remove_space(self, panel_id, panel_slot):
         """Remove space row/circuit from one slot."""
-        return self._remove_special(panel_id=panel_id, panel_slot=panel_slot, kind_hint="space")
+        return self._remove_special(panel_id=panel_id, panel_slot=panel_slot, kind_hint=SpecialKind.SPACE)
 
     def move_circuit_to_panel(self, circuit_id, target_panel_id):
         """Move circuit to new panel using ElectricalSystem.SelectPanel."""
@@ -231,6 +287,7 @@ class PanelScheduleManager(object):
             raise Exception("Target panel element is unavailable.")
         self._select_panel_for_circuit(circuit, panel)
         self.doc.Regenerate()
+        self._invalidate_schedule_cache(target_option.get("schedule_view"))
         return int(ps_repo.get_circuit_start_slot(circuit) or 0)
 
     def move_circuit_in_panel(self, panel_id, circuit_id, target_slot):
@@ -238,6 +295,13 @@ class PanelScheduleManager(object):
         option = self._option_for_panel_id(panel_id)
         if not option:
             raise Exception("Panel option not found: {0}".format(int(panel_id or 0)))
+        target_slot_value = int(target_slot or 0)
+        if not bool(ps_repo.is_slot_valid_for_option(option, int(target_slot_value))):
+            raise Exception(
+                "Target slot {0} exceeds equipment-supported slot capacity for this panel.".format(
+                    int(target_slot_value)
+                )
+            )
         schedule_view = option.get("schedule_view")
         if schedule_view is None:
             raise Exception("Panel schedule view is unavailable.")
@@ -247,8 +311,9 @@ class PanelScheduleManager(object):
         source_slot = int(ps_repo.get_circuit_start_slot(circuit) or 0)
         if source_slot <= 0:
             raise Exception("Could not resolve current slot for circuit {0}.".format(int(circuit_id)))
-        self._move_slot_to(schedule_view, source_slot, int(target_slot), circuit_id=int(circuit_id))
+        self._move_slot_to(schedule_view, source_slot, int(target_slot_value), circuit_id=int(circuit_id))
         self.doc.Regenerate()
+        self._invalidate_schedule_cache(schedule_view)
         return int(ps_repo.get_circuit_start_slot(circuit) or 0)
 
     # -------------------------------------------------------------------------
@@ -258,16 +323,29 @@ class PanelScheduleManager(object):
         """Apply staged add-spare/add-space action."""
         panel_id = int(placement.get("to_panel_id", 0) or 0)
         slot_value = int(placement.get("new_slot", 0) or 0)
+        option = self._option_for_panel_id(panel_id)
+        is_data_panel = bool(option and option.get("schedule_type") == ps_repo.PSTYPE_DATA)
         poles = int(max(1, placement.get("poles", 1) or 1))
         spare_rating = int(placement.get("spare_rating", 0) or 0)
-        kind = "spare" if str(placement.get("action", "")).lower().startswith("add_spare") else "space"
-        if kind == "spare":
+        action = placement.get("action", "")
+        if StagedAction.is_add_spare(action):
+            kind = SpecialKind.SPARE
+        elif StagedAction.is_add_space(action):
+            kind = SpecialKind.SPACE
+        else:
+            raise Exception("Unsupported add action: {0}".format(str(action or "")))
+        if bool(is_data_panel):
+            if kind != SpecialKind.SPACE:
+                raise Exception("Data panels only allow adding 1P SPACE.")
+            poles = 1
+            spare_rating = 0
+        if kind == SpecialKind.SPARE:
             return self.add_spare(
                 panel_id=panel_id,
                 panel_slot=slot_value,
                 poles=poles,
                 rating=spare_rating,
-                frame=int(placement.get("spare_frame", 0) or 0),
+                frame=(0 if is_data_panel else int(placement.get("spare_frame", 0) or 0)),
                 unlock=True,
                 load_name=placement.get("load_name"),
                 schedule_notes=placement.get("schedule_notes"),
@@ -285,12 +363,28 @@ class PanelScheduleManager(object):
         """Apply staged remove-spare/remove-space action."""
         panel_id = int(placement.get("from_panel_id", 0) or 0)
         slot_value = int(placement.get("old_slot", 0) or 0)
-        action = str(placement.get("action", "") or "").lower()
-        if action.startswith("remove_spare"):
-            return self.remove_spare(panel_id, slot_value)
-        if action.startswith("remove_space"):
-            return self.remove_space(panel_id, slot_value)
-        return self._remove_special(panel_id=panel_id, panel_slot=slot_value, kind_hint=None)
+        action = placement.get("action", "")
+        restore_lock_state = not bool(placement.get("leave_unlocked", False))
+        if StagedAction.is_remove_spare(action):
+            return self._remove_special(
+                panel_id=panel_id,
+                panel_slot=slot_value,
+                kind_hint=SpecialKind.SPARE,
+                restore_lock_state=restore_lock_state,
+            )
+        if StagedAction.is_remove_space(action):
+            return self._remove_special(
+                panel_id=panel_id,
+                panel_slot=slot_value,
+                kind_hint=SpecialKind.SPACE,
+                restore_lock_state=restore_lock_state,
+            )
+        return self._remove_special(
+            panel_id=panel_id,
+            panel_slot=slot_value,
+            kind_hint=None,
+            restore_lock_state=restore_lock_state,
+        )
 
     def apply_move_action(self, placement):
         """Apply staged move action including replacement of target specials."""
@@ -305,6 +399,13 @@ class PanelScheduleManager(object):
         target_option = self._option_for_panel_id(target_panel_id)
         if target_option is None:
             raise Exception("Target panel option not found: {0}".format(int(target_panel_id)))
+        if not bool(ps_repo.is_slot_valid_for_option(target_option, int(target_slot))):
+            raise Exception(
+                "Target slot {0} exceeds equipment-supported slot capacity for panel {1}.".format(
+                    int(target_slot),
+                    int(target_panel_id),
+                )
+            )
         target_schedule = target_option.get("schedule_view")
         if target_schedule is None:
             raise Exception("Target panel has no schedule view.")
@@ -325,12 +426,21 @@ class PanelScheduleManager(object):
         target_slots = [int(x) for x in list(placement.get("new_covered_slots") or []) if int(x) > 0]
         if not target_slots:
             poles_hint = int(max(1, placement.get("poles", 1) or 1))
-            target_slots = ps_repo.get_slot_span_slots(
+            target_slots = ps_repo.get_slot_span_slots_for_option(
+                target_option,
                 start_slot=int(target_slot),
                 pole_count=int(poles_hint),
-                max_slot=target_option.get("max_slot", 0),
-                sort_mode=target_option.get("sort_mode", "panelboard"),
-            ) or [int(target_slot)]
+                require_valid=True,
+            )
+        if not target_slots:
+            raise Exception(
+                "Target slot {0} / pole span exceeds equipment-supported slot capacity.".format(int(target_slot))
+            )
+        for slot in list(target_slots or []):
+            if not bool(ps_repo.is_slot_valid_for_option(target_option, int(slot))):
+                raise Exception(
+                    "Target slot {0} exceeds equipment-supported slot capacity.".format(int(slot))
+                )
 
         current_slots = self._covered_slots_for_circuit(
             current_option,
@@ -354,7 +464,11 @@ class PanelScheduleManager(object):
 
             same_panel = bool(current_panel_id == target_panel_id)
             if same_panel:
-                current_start = int(ps_repo.get_circuit_start_slot(circuit) or 0)
+                current_start = self._resolve_circuit_start_slot_in_schedule(
+                    current_schedule,
+                    circuit,
+                    fallback_slot=int(placement.get("old_slot", 0) or 0),
+                )
                 if current_start <= 0:
                     raise Exception("Could not resolve current slot for circuit {0}.".format(int(circuit_id)))
                 self._move_slot_to(target_schedule, current_start, int(target_slot), circuit_id=int(circuit_id))
@@ -362,10 +476,18 @@ class PanelScheduleManager(object):
                 placed_start = self.move_circuit_to_panel(circuit_id, target_panel_id)
                 if placed_start <= 0:
                     raise Exception("Circuit {0} has invalid placement after SelectPanel.".format(int(circuit_id)))
+                placed_start = self._resolve_circuit_start_slot_in_schedule(
+                    target_schedule,
+                    circuit,
+                    fallback_slot=int(placed_start),
+                )
                 if int(placed_start) != int(target_slot):
                     self._move_slot_to(target_schedule, int(placed_start), int(target_slot), circuit_id=int(circuit_id))
 
             self.doc.Regenerate()
+            self._invalidate_schedule_cache(target_schedule)
+            if not same_panel:
+                self._invalidate_schedule_cache(current_schedule)
             final_slots = self._covered_slots_for_circuit(
                 target_option,
                 circuit,
@@ -411,13 +533,46 @@ class PanelScheduleManager(object):
         except Exception:
             return None
 
-    def _slot_cells(self, schedule_view, slot):
+    def _schedule_id_value(self, schedule_view):
+        if schedule_view is None:
+            return 0
+        try:
+            return int(self._idval(getattr(schedule_view, "Id", None)))
+        except Exception:
+            return 0
+
+    def _invalidate_schedule_cache(self, schedule_view=None, slots=None):
+        """Clear cached slot-cell/layout mapping after schedule mutations."""
+        if schedule_view is None:
+            self._slot_cells_cache = {}
+            self._layout_context_cache = {}
+            return
+        sid = self._schedule_id_value(schedule_view)
+        if sid <= 0:
+            self._slot_cells_cache = {}
+            self._layout_context_cache = {}
+            return
+        if slots is None:
+            self._layout_context_cache.pop(int(sid), None)
+            stale_keys = [key for key in list(self._slot_cells_cache.keys()) if int(key[0]) == int(sid)]
+            for key in stale_keys:
+                self._slot_cells_cache.pop(key, None)
+            return
+        for slot in list(slots or []):
+            slot_value = int(slot or 0)
+            if slot_value <= 0:
+                continue
+            self._slot_cells_cache.pop((int(sid), int(slot_value)), None)
+
+    def _slot_cells(self, schedule_view, slot, refresh=False):
         cache_key = self._schedule_slot_cache_key(schedule_view, slot)
-        if cache_key is not None and cache_key in self._slot_cells_cache:
+        if (not bool(refresh)) and cache_key is not None and cache_key in self._slot_cells_cache:
             return list(self._slot_cells_cache.get(cache_key) or [])
         slot_value = int(slot or 0)
         if slot_value <= 0:
             return []
+        if bool(refresh):
+            self._invalidate_schedule_cache(schedule_view, slots=[int(slot_value)])
         try:
             cells = list(ps_repo.get_cells_by_slot_number(schedule_view, slot_value) or [])
         except Exception:
@@ -494,38 +649,11 @@ class PanelScheduleManager(object):
         return ordered
 
     def _slot_cells_for_add(self, schedule_view, slot):
-        """Return broad candidate cell set for AddSpare/AddSpace calls."""
+        """Return native slot cells for AddSpare/AddSpace calls."""
         slot_value = int(slot or 0)
         if slot_value <= 0 or schedule_view is None:
             return []
-        cells = []
-        cells.extend(list(ps_repo.get_cells_by_slot_number(schedule_view, slot_value) or []))
-        try:
-            table = schedule_view.GetTableData()
-            body = table.GetSectionData(DB.SectionType.Body)
-        except Exception:
-            body = None
-        if body is not None:
-            is_circuit_cell = getattr(schedule_view, "IsCellInCircuitTable", None)
-            for row in range(int(body.NumberOfRows)):
-                row_in_circuit = getattr(schedule_view, "IsRowInCircuitTable", None)
-                try:
-                    if row_in_circuit is not None and not bool(row_in_circuit(int(row))):
-                        continue
-                except Exception:
-                    pass
-                for col in range(int(body.NumberOfColumns)):
-                    try:
-                        if is_circuit_cell is not None and not bool(is_circuit_cell(int(row), int(col))):
-                            continue
-                    except Exception:
-                        pass
-                    try:
-                        cell_slot = int(schedule_view.GetSlotNumberByCell(int(row), int(col)) or 0)
-                    except Exception:
-                        cell_slot = 0
-                    if cell_slot == slot_value:
-                        cells.append((int(row), int(col)))
+        cells = list(ps_repo.get_cells_by_slot_number(schedule_view, slot_value) or [])
         deduped = []
         seen = set()
         for row, col in list(cells or []):
@@ -549,50 +677,89 @@ class PanelScheduleManager(object):
         except Exception:
             return 0
 
+    def _scan_cells_for_slot(self, schedule_view, slot, circuit_id=None):
+        slot_value = int(slot or 0)
+        if schedule_view is None or slot_value <= 0:
+            return []
+        try:
+            table = schedule_view.GetTableData()
+            body = table.GetSectionData(DB.SectionType.Body)
+        except Exception:
+            return []
+        rows = int(getattr(body, "NumberOfRows", 0) or 0)
+        cols = int(getattr(body, "NumberOfColumns", 0) or 0)
+        if rows <= 0 or cols <= 0:
+            return []
+        target_cid = None
+        if circuit_id is not None:
+            target_cid = int(circuit_id or 0)
+
+        matches = []
+        for row in range(rows):
+            for col in range(cols):
+                if not self._is_cell_in_circuit_table(schedule_view, row, col):
+                    continue
+                try:
+                    slot_no = int(schedule_view.GetSlotNumberByCell(int(row), int(col)) or 0)
+                except Exception:
+                    slot_no = 0
+                if int(slot_no) != int(slot_value):
+                    continue
+                if target_cid is not None and target_cid > 0:
+                    cid = int(self._cell_circuit_id(schedule_view, int(row), int(col)))
+                    if int(cid) != int(target_cid):
+                        continue
+                matches.append((int(row), int(col)))
+        return sorted(set(matches), key=lambda x: (int(x[1]), int(x[0])))
+
+    def _is_cell_in_circuit_table(self, schedule_view, row, col):
+        checker = getattr(schedule_view, "IsCellInCircuitTable", None)
+        if checker is None:
+            return True
+        try:
+            return bool(checker(int(row), int(col)))
+        except Exception:
+            return True
+
     def _slot_is_locked(self, schedule_view, slot):
+        # Some schedules expose multiple cells per slot; treat slot as locked
+        # when any mapped cell reports locked.
         for row, col in self._slot_cells(schedule_view, slot):
             try:
-                return bool(ps_repo._slot_is_locked(schedule_view, row, col))
+                if bool(ps_repo._slot_is_locked(schedule_view, row, col)):
+                    return True
             except Exception:
                 continue
         return False
 
     def _set_slot_locked(self, schedule_view, slot, is_locked):
-        cells = self._slot_cells(schedule_view, slot)
-        methods = ("SetSlotLocked", "SetLockSlot", "SetCellLocked")
-        ok = False
+        slot_value = int(slot or 0)
+        if schedule_view is None or slot_value <= 0:
+            return False
+        lock_value = bool(is_locked)
+        cells = [c for c in list(self._slot_cells(schedule_view, slot_value) or []) if len(c) >= 2]
+        if not cells:
+            cells = list(self._scan_cells_for_slot(schedule_view, slot_value, circuit_id=None) or [])
+        setter = getattr(schedule_view, "SetLockSlot", None)
+        if setter is None:
+            return False
         for row, col in list(cells or []):
-            for method_name in methods:
-                method = getattr(schedule_view, method_name, None)
-                if method is None:
-                    continue
-                for args in (
-                    (int(row), int(col), bool(is_locked)),
-                    (int(row), int(col)),
-                    (int(slot), bool(is_locked)),
-                    (int(slot),),
-                ):
-                    try:
-                        result = method(*args)
-                        if isinstance(result, bool) and not result:
-                            continue
-                        ok = True
-                        break
-                    except Exception:
-                        continue
-                if ok:
-                    break
-            if ok:
-                break
-        return ok
+            try:
+                setter(int(row), int(col), bool(lock_value))
+                return True
+            except Exception:
+                continue
+        return False
 
     def _unlock_slots_with_snapshot(self, schedule_view, slots):
         snapshot = {}
         for slot in sorted(set([int(x) for x in list(slots or []) if int(x) > 0])):
             locked = bool(self._slot_is_locked(schedule_view, slot))
             snapshot[int(slot)] = locked
-            if locked:
-                self._set_slot_locked(schedule_view, slot, False)
+            if not bool(self._set_slot_locked(schedule_view, slot, False)):
+                self.logger.warning("Unlock attempt returned no-op for slot %s.", int(slot))
+            elif bool(self._slot_is_locked(schedule_view, slot)):
+                self.logger.warning("Slot %s still reports locked after unlock attempt.", int(slot))
         return snapshot
 
     def _restore_slot_locks(self, schedule_view, snapshot):
@@ -601,27 +768,78 @@ class PanelScheduleManager(object):
                 self._set_slot_locked(schedule_view, int(slot), True)
 
     def _get_circuit_at_slot(self, schedule_view, slot):
-        for row, col in self._slot_cells(schedule_view, slot):
-            getter = getattr(schedule_view, "GetCircuitByCell", None)
-            if getter is not None:
+        def _resolve_from_cells(cells):
+            for row, col in list(cells or []):
+                getter = getattr(schedule_view, "GetCircuitByCell", None)
+                if getter is not None:
+                    try:
+                        circuit = getter(int(row), int(col))
+                        if isinstance(circuit, DBE.ElectricalSystem):
+                            return circuit
+                    except Exception:
+                        pass
+                getter_id = getattr(schedule_view, "GetCircuitIdByCell", None)
+                if getter_id is not None:
+                    try:
+                        cid = getter_id(int(row), int(col))
+                        if cid is None or cid == DB.ElementId.InvalidElementId:
+                            continue
+                        circuit = self.doc.GetElement(cid)
+                        if isinstance(circuit, DBE.ElectricalSystem):
+                            return circuit
+                    except Exception:
+                        pass
+            return None
+
+        cached_cells = self._slot_cells(schedule_view, slot, refresh=False)
+        resolved = _resolve_from_cells(cached_cells)
+        if isinstance(resolved, DBE.ElectricalSystem):
+            return resolved
+        # Retry once from fresh API cells in case cached row/col map is stale.
+        fresh_cells = self._slot_cells(schedule_view, slot, refresh=True)
+        return _resolve_from_cells(fresh_cells)
+
+    def _find_circuit_slots_in_schedule(self, schedule_view, circuit_id):
+        target_id = int(circuit_id or 0)
+        if schedule_view is None or target_id <= 0:
+            return []
+        try:
+            table = schedule_view.GetTableData()
+            body = table.GetSectionData(DB.SectionType.Body)
+        except Exception:
+            return []
+        rows = int(getattr(body, "NumberOfRows", 0) or 0)
+        cols = int(getattr(body, "NumberOfColumns", 0) or 0)
+        if rows <= 0 or cols <= 0:
+            return []
+        slots = set()
+        for row in range(rows):
+            for col in range(cols):
+                if not self._is_cell_in_circuit_table(schedule_view, row, col):
+                    continue
+                cid = int(self._cell_circuit_id(schedule_view, int(row), int(col)))
+                if int(cid) != int(target_id):
+                    continue
                 try:
-                    circuit = getter(int(row), int(col))
-                    if isinstance(circuit, DBE.ElectricalSystem):
-                        return circuit
+                    slot_no = int(schedule_view.GetSlotNumberByCell(int(row), int(col)) or 0)
                 except Exception:
-                    pass
-            getter_id = getattr(schedule_view, "GetCircuitIdByCell", None)
-            if getter_id is not None:
-                try:
-                    cid = getter_id(int(row), int(col))
-                    if cid is None or cid == DB.ElementId.InvalidElementId:
-                        continue
-                    circuit = self.doc.GetElement(cid)
-                    if isinstance(circuit, DBE.ElectricalSystem):
-                        return circuit
-                except Exception:
-                    pass
-        return None
+                    slot_no = 0
+                if slot_no > 0:
+                    slots.add(int(slot_no))
+        return sorted(slots)
+
+    def _resolve_circuit_start_slot_in_schedule(self, schedule_view, circuit, fallback_slot=0):
+        circuit_id = int(self._idval(getattr(circuit, "Id", None)))
+        slots = self._find_circuit_slots_in_schedule(schedule_view, circuit_id)
+        if slots:
+            return int(slots[0])
+        try:
+            start_slot = int(ps_repo.get_circuit_start_slot(circuit) or 0)
+        except Exception:
+            start_slot = 0
+        if start_slot > 0:
+            return int(start_slot)
+        return int(fallback_slot or 0)
 
     def _get_circuit_poles(self, circuit, fallback=1):
         poles = None
@@ -665,17 +883,66 @@ class PanelScheduleManager(object):
         if mover is None:
             raise Exception("PanelScheduleView.MoveSlotTo is unavailable.")
 
-        src_cells = list(self._slot_cells(schedule_view, source_slot))
-        dst_cells = list(self._slot_cells(schedule_view, target_slot))
+        src_cells = list(self._slot_cells(schedule_view, source_slot, refresh=True))
+        dst_cells = list(self._slot_cells(schedule_view, target_slot, refresh=True))
+        src_cells = [c for c in list(src_cells or []) if self._is_cell_in_circuit_table(schedule_view, c[0], c[1])]
+        dst_cells = [c for c in list(dst_cells or []) if self._is_cell_in_circuit_table(schedule_view, c[0], c[1])]
         src_ordered = list(src_cells)
         if int(circuit_id or 0) > 0 and src_cells:
             owned = [cell for cell in src_cells if int(self._cell_circuit_id(schedule_view, cell[0], cell[1])) == int(circuit_id)]
+            if not owned:
+                owned = list(self._scan_cells_for_slot(schedule_view, source_slot, circuit_id=int(circuit_id)))
             if owned:
                 src_ordered = owned
+        if not src_ordered:
+            src_ordered = list(self._scan_cells_for_slot(schedule_view, source_slot, circuit_id=None))
         dst_ordered = list(dst_cells)
+        scanned_dst = list(self._scan_cells_for_slot(schedule_view, target_slot, circuit_id=None))
+        if scanned_dst:
+            dst_seen = set([tuple([int(x[0]), int(x[1])]) for x in list(dst_ordered or [])])
+            for row, col in list(scanned_dst or []):
+                key = (int(row), int(col))
+                if key in dst_seen:
+                    continue
+                dst_ordered.append(key)
+                dst_seen.add(key)
 
         attempts = []
         seen_attempts = set()
+
+        # Prefer same-column mapping between source and destination.
+        for s_row, s_col in src_ordered:
+            for d_row, d_col in dst_ordered:
+                if int(s_col) != int(d_col):
+                    continue
+                key = (int(s_row), int(s_col), int(d_row), int(d_col))
+                if key in seen_attempts:
+                    continue
+                seen_attempts.add(key)
+                attempts.append(key)
+
+        # Add low-cost directional fallbacks (avoid full cartesian noise first).
+        if src_ordered and dst_ordered:
+            s0_row, s0_col = src_ordered[0]
+            d0_row, d0_col = dst_ordered[0]
+            key = (int(s0_row), int(s0_col), int(d0_row), int(d0_col))
+            if key not in seen_attempts:
+                seen_attempts.add(key)
+                attempts.append(key)
+            for d_row, d_col in dst_ordered:
+                key = (int(s0_row), int(s0_col), int(d_row), int(d_col))
+                if key in seen_attempts:
+                    continue
+                seen_attempts.add(key)
+                attempts.append(key)
+            for s_row, s_col in src_ordered:
+                key = (int(s_row), int(s_col), int(d0_row), int(d0_col))
+                if key in seen_attempts:
+                    continue
+                seen_attempts.add(key)
+                attempts.append(key)
+
+        # Final fallback: full cartesian attempts.
         for s_row, s_col in src_ordered:
             for d_row, d_col in dst_ordered:
                 key = (int(s_row), int(s_col), int(d_row), int(d_col))
@@ -710,6 +977,7 @@ class PanelScheduleManager(object):
                     int(idx),
                     str(args),
                 )
+                self._invalidate_schedule_cache(schedule_view)
                 return
             except Exception as ex:
                 errors.append("args={0} -> {1}".format(args, str(ex)))
@@ -892,10 +1160,10 @@ class PanelScheduleManager(object):
             pass
 
     def _add_special_to_slot(self, schedule_view, slot, kind):
-        action = str(kind or "").strip().lower()
-        if action not in ("spare", "space"):
+        action = SpecialKind.normalize(kind, None)
+        if action is None:
             raise Exception("Unsupported special kind: {0}".format(kind))
-        method_name = "AddSpare" if action == "spare" else "AddSpace"
+        method_name = "AddSpare" if action == SpecialKind.SPARE else "AddSpace"
         method = getattr(schedule_view, method_name, None)
         if method is None:
             raise Exception("{0} is unavailable.".format(method_name))
@@ -922,7 +1190,21 @@ class PanelScheduleManager(object):
         )
         raise Exception("Could not add {0} at slot {1}.".format(action.upper(), int(slot)))
 
-    def _add_special(self, panel_id, panel_slot, kind, poles=1, rating=0, frame=0, unlock=True, load_name=None, schedule_notes=None):
+    def _add_special(
+        self,
+        panel_id,
+        panel_slot,
+        kind,
+        poles=1,
+        rating=0,
+        frame=0,
+        unlock=True,
+        load_name=None,
+        schedule_notes=None,
+        apply_custom_properties=True,
+        force_switchboard_three_p=False,
+        restrict_data_to_space=True,
+    ):
         panel_id_value = int(panel_id or 0)
         option = self._option_for_panel_id(panel_id_value)
         if option is None:
@@ -933,30 +1215,87 @@ class PanelScheduleManager(object):
         slot_value = int(panel_slot or 0)
         if slot_value <= 0:
             raise Exception("Invalid slot for add operation.")
+        if not bool(ps_repo.is_slot_valid_for_option(option, int(slot_value))):
+            raise Exception(
+                "Target slot {0} exceeds equipment-supported slot capacity for this panel.".format(
+                    int(slot_value)
+                )
+            )
+
+        requested_poles = int(max(1, poles or 1))
+        requested_rating = int(rating or 0)
+        requested_frame = int(frame or 0)
+        slot_span_hint = ps_repo.get_slot_span_slots_for_option(
+            option,
+            start_slot=int(slot_value),
+            pole_count=int(requested_poles),
+            require_valid=True,
+        )
+        if not slot_span_hint:
+            raise Exception(
+                "Target slot {0} / pole span exceeds equipment-supported slot capacity.".format(int(slot_value))
+            )
 
         if bool(unlock):
-            self._unlock_slots_with_snapshot(schedule_view, [int(slot_value)])
+            self._unlock_slots_with_snapshot(schedule_view, [int(x) for x in slot_span_hint if int(x) > 0])
 
         self._add_special_to_slot(schedule_view, int(slot_value), kind)
+        self._invalidate_schedule_cache(schedule_view, slots=[int(slot_value)])
 
         is_switchboard = False
         try:
             is_switchboard = bool(option.get("schedule_type") == ps_repo.PSTYPE_SWITCHBOARD)
         except Exception:
             is_switchboard = False
+        is_data_panel = False
+        try:
+            is_data_panel = bool(option.get("schedule_type") == ps_repo.PSTYPE_DATA)
+        except Exception:
+            is_data_panel = False
+        kind_key = SpecialKind.normalize(kind, None)
+        if kind_key is None:
+            raise Exception("Unsupported special kind: {0}".format(kind))
+        if bool(restrict_data_to_space and is_data_panel and kind_key != SpecialKind.SPACE):
+            raise Exception("Data panels only allow adding SPACE.")
 
         occupant = self._get_circuit_at_slot(schedule_view, int(slot_value))
         if not isinstance(occupant, DBE.ElectricalSystem):
             # Fallback only when immediate lookup fails after add.
             self.doc.Regenerate()
+            self._invalidate_schedule_cache(schedule_view, slots=[int(slot_value)])
             occupant = self._get_circuit_at_slot(schedule_view, int(slot_value))
         if not isinstance(occupant, DBE.ElectricalSystem):
             raise Exception("Added {0} could not be resolved at slot {1}.".format(str(kind).upper(), int(slot_value)))
 
-        if bool(is_switchboard):
-            self._set_circuit_poles(occupant, 3)
+        target_poles = int(requested_poles)
+        if bool(force_switchboard_three_p and is_switchboard):
+            target_poles = 3
+        if bool(is_data_panel):
+            target_poles = 1
+
+        if not bool(is_data_panel):
+            if bool(apply_custom_properties):
+                self._set_circuit_poles(occupant, int(target_poles))
+            elif bool(force_switchboard_three_p and is_switchboard):
+                self._set_circuit_poles(occupant, 3)
+            if bool(apply_custom_properties) and kind_key == SpecialKind.SPARE:
+                if requested_rating > 0:
+                    self._set_circuit_rating(occupant, requested_rating)
+                if requested_frame > 0:
+                    self._set_circuit_frame(occupant, requested_frame)
+        if bool(apply_custom_properties):
+            self._set_circuit_load_name(occupant, load_name)
+            self._set_circuit_notes(occupant, schedule_notes)
+
         if bool(unlock):
-            self._set_slot_locked(schedule_view, int(slot_value), False)
+            covered_slots = self._covered_slots_for_circuit(
+                option,
+                occupant,
+                fallback_slot=int(slot_value),
+                fallback_poles=int(target_poles),
+            )
+            for slot in [int(x) for x in list(covered_slots or []) if int(x) > 0]:
+                self._set_slot_locked(schedule_view, int(slot), False)
 
         return {
             "panel_id": panel_id_value,
@@ -964,7 +1303,7 @@ class PanelScheduleManager(object):
             "circuit_id": int(self._idval(occupant.Id)),
         }
 
-    def _remove_special(self, panel_id, panel_slot, kind_hint=None):
+    def _remove_special(self, panel_id, panel_slot, kind_hint=None, restore_lock_state=True):
         panel_id_value = int(panel_id or 0)
         option = self._option_for_panel_id(panel_id_value)
         if option is None:
@@ -975,6 +1314,7 @@ class PanelScheduleManager(object):
         slot_value = int(panel_slot or 0)
         if slot_value <= 0:
             raise Exception("Invalid slot for remove operation.")
+        self._invalidate_schedule_cache(schedule_view, slots=[int(slot_value)])
         snapshot = self._unlock_slots_with_snapshot(schedule_view, [int(slot_value)])
         try:
             target = self._get_circuit_at_slot(schedule_view, int(slot_value))
@@ -983,18 +1323,21 @@ class PanelScheduleManager(object):
             kind = str(ps_repo._kind_from_circuit(target) or "").lower()
             if kind_hint and kind != str(kind_hint).lower():
                 raise Exception("Target slot does not contain {0}.".format(str(kind_hint).upper()))
-            if kind not in ("spare", "space"):
+            if kind not in SpecialKind.all():
                 raise Exception("Target slot is occupied by non spare/space.")
             removed_id = int(self._idval(target.Id))
             self.doc.Delete(target.Id)
+            self._invalidate_schedule_cache(schedule_view)
             return {"panel_id": panel_id_value, "slot": int(slot_value), "removed_circuit_id": int(removed_id)}
         finally:
-            self._restore_slot_locks(schedule_view, snapshot)
+            if bool(restore_lock_state):
+                self._restore_slot_locks(schedule_view, snapshot)
 
     def _remove_specials_in_slots(self, target_option, slots, protected_circuit_id=0):
         schedule_view = target_option.get("schedule_view")
         to_delete = {}
         covered_slots = set([int(x) for x in list(slots or []) if int(x) > 0])
+        self._invalidate_schedule_cache(schedule_view, slots=list(covered_slots))
         for slot in list(covered_slots):
             occupant = self._get_circuit_at_slot(schedule_view, slot)
             if not isinstance(occupant, DBE.ElectricalSystem):
@@ -1003,7 +1346,7 @@ class PanelScheduleManager(object):
             if occ_id <= 0 or occ_id == int(protected_circuit_id or 0):
                 continue
             kind = str(ps_repo._kind_from_circuit(occupant) or "").lower()
-            if kind not in ("spare", "space"):
+            if kind not in SpecialKind.all():
                 raise Exception("Target slot {0} is occupied by a non-spare/space circuit.".format(int(slot)))
             occ_slots = self._covered_slots_for_circuit(target_option, occupant, fallback_slot=slot, fallback_poles=1)
             to_delete[occ_id] = {"circuit": occupant, "slots": occ_slots}
@@ -1013,4 +1356,5 @@ class PanelScheduleManager(object):
         snapshot = self._unlock_slots_with_snapshot(schedule_view, covered_slots)
         for occ in to_delete.values():
             self.doc.Delete(occ["circuit"].Id)
+        self._invalidate_schedule_cache(schedule_view)
         return snapshot

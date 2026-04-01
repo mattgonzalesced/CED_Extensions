@@ -2,13 +2,15 @@
 import Autodesk.Revit.DB.Electrical as DBE
 from Autodesk.Revit.DB import FilteredElementCollector, Electrical, Transaction, BuiltInCategory, BuiltInParameter
 from pyrevit import script, forms, DB
-from pyrevit.compat import get_elementid_value_func
+from pyrevit.compat import get_elementid_value_func, get_elementid_from_value_func
 
 from CEDElectrical.Infrastructure.Revit.repositories import distribution_equipment_repository as de_repo
 from CEDElectrical.Infrastructure.Revit.repositories import panel_schedule_repository as ps_repo
+from CEDElectrical.Model.panel_schedule_manager import PanelScheduleManager
 
 logger = script.get_logger()
 _get_elid_value = get_elementid_value_func()
+_get_elid_from_value = get_elementid_from_value_func()
 
 
 def _elid_value(item):
@@ -16,6 +18,10 @@ def _elid_value(item):
         return int(_get_elid_value(item))
     except Exception:
         return int(getattr(item, "IntegerValue", 0))
+
+
+def _elid_from(value):
+    return _get_elid_from_value(int(value))
 
 
 #design option filter
@@ -279,9 +285,25 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
             pass
         return "N/A"
 
-    def _run_select_panel_moves(allow_partial=False):
+    def _run_select_panel_moves(allow_partial=False, sort_by_poles=False, phase="primary"):
+        move_list = list(circuits or [])
+        if bool(sort_by_poles):
+            move_list = sorted(move_list, key=lambda c: int(_get_circuit_poles(c)), reverse=True)
+        phase_name = _safe_text(phase, "primary")
+        target_id = _panel_id(target_panel)
+        try:
+            logger.info(
+                "[MoveSelectedCircuits] SelectPanel phase=%s start requested=%s allow_partial=%s sort_by_poles=%s regenerate=%s",
+                phase_name,
+                int(len(move_list)),
+                bool(allow_partial),
+                bool(sort_by_poles),
+                False,
+            )
+        except Exception:
+            pass
         snapshots = []
-        for ckt in list(circuits or []):
+        for ckt in move_list:
             snapshots.append({
                 "circuit": ckt,
                 "old_panel": _safe_panel_name(ckt),
@@ -291,8 +313,12 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
         failed_rows = []
         for snap in snapshots:
             try:
-                snap["circuit"].SelectPanel(target_panel)
-                doc.Regenerate()
+                result = snap["circuit"].SelectPanel(target_panel)
+                if isinstance(result, bool) and not result:
+                    raise Exception("SelectPanel returned False.")
+                base_after = getattr(snap["circuit"], "BaseEquipment", None)
+                if int(_panel_id(base_after)) != int(target_id):
+                    raise Exception("SelectPanel did not place circuit on target panel.")
             except Exception as ex:
                 if not bool(allow_partial):
                     raise
@@ -307,6 +333,17 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
             prev_circuit = "{} / {}".format(snap["old_panel"], snap["old_circuit_number"])
             new_circuit = "{} / {}".format(_safe_text(getattr(target_panel, "Name", None), "N/A"), new_circuit_number)
             data_rows.append([output.linkify(snap["circuit"].Id), prev_circuit, new_circuit])
+        try:
+            logger.info(
+                "[MoveSelectedCircuits] SelectPanel phase=%s done requested=%s moved=%s failed=%s regenerate=%s",
+                phase_name,
+                int(len(snapshots)),
+                int(len(data_rows)),
+                int(len(failed_rows)),
+                False,
+            )
+        except Exception:
+            pass
         return data_rows, failed_rows
 
     def _get_panel_schedule_view(panel):
@@ -347,6 +384,26 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
         except Exception:
             pass
         return 1
+
+    def _set_circuit_poles(circuit, poles):
+        try:
+            target = int(max(1, poles or 1))
+        except Exception:
+            target = 1
+        for attr in ("NumberOfPoles", "PolesNumber"):
+            try:
+                setattr(circuit, attr, int(target))
+                return True
+            except Exception:
+                continue
+        try:
+            param = circuit.get_Parameter(BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES)
+            if param and not bool(getattr(param, "IsReadOnly", False)):
+                param.Set(int(target))
+                return True
+        except Exception:
+            pass
+        return False
 
     def _covered_slots(schedule_view, circuit, start_slot):
         slot_value = int(start_slot or 0)
@@ -403,7 +460,20 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
                 return True
         return False
 
-    def _add_special_to_slot(schedule_view, slot, kind):
+    def _get_slot_circuit(schedule_view, slot):
+        for row, col in list(ps_repo.get_cells_by_slot_number(schedule_view, int(slot or 0)) or []):
+            try:
+                cid = schedule_view.GetCircuitIdByCell(int(row), int(col))
+            except Exception:
+                cid = DB.ElementId.InvalidElementId
+            if cid is None or cid == DB.ElementId.InvalidElementId:
+                continue
+            element = doc.GetElement(cid)
+            if isinstance(element, DBE.ElectricalSystem):
+                return element
+        return None
+
+    def _add_special_to_slot(schedule_view, slot, kind, poles=1):
         action = str(kind or "").strip().lower()
         if action not in ("spare", "space"):
             raise Exception("Unsupported special row type: {0}".format(kind))
@@ -416,12 +486,37 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
                 cells = list(empties.get(slot_value) or [])
             except Exception:
                 cells = []
+        try:
+            table = schedule_view.GetTableData()
+            body = table.GetSectionData(DB.SectionType.Body)
+            body_rows = int(getattr(body, "NumberOfRows", 0) or 0)
+            body_cols = int(getattr(body, "NumberOfColumns", 0) or 0)
+        except Exception:
+            body_rows = 0
+            body_cols = 0
+        is_circuit_cell = getattr(schedule_view, "IsCellInCircuitTable", None)
         unique_cells = []
         seen_cells = set()
         for pair in list(cells or []):
             if not pair or len(pair) < 2:
                 continue
-            key = (int(pair[0]), int(pair[1]))
+            row = int(pair[0])
+            col = int(pair[1])
+            if body_rows > 0 and (row < 0 or row >= body_rows):
+                continue
+            if body_cols > 0 and (col < 0 or col >= body_cols):
+                continue
+            try:
+                if is_circuit_cell is not None and not bool(is_circuit_cell(int(row), int(col))):
+                    continue
+            except Exception:
+                continue
+            try:
+                if int(schedule_view.GetSlotNumberByCell(int(row), int(col)) or 0) != int(slot_value):
+                    continue
+            except Exception:
+                continue
+            key = (row, col)
             if key in seen_cells:
                 continue
             seen_cells.add(key)
@@ -435,12 +530,14 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
             attempts = []
             for row, col in list(unique_cells or []):
                 attempts.append((int(row), int(col)))
-            attempts.append((slot_value,))
             for args in attempts:
                 try:
                     result = method(*args)
                     if isinstance(result, bool) and not result:
                         continue
+                    occupant = _get_slot_circuit(schedule_view, slot_value)
+                    if isinstance(occupant, DBE.ElectricalSystem):
+                        _set_circuit_poles(occupant, int(max(1, poles or 1)))
                     return True
                 except Exception as ex:
                     errors.append("{0}{1} -> {2}".format(method_name, tuple(args), ex))
@@ -513,8 +610,12 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
             entries.append({
                 "circuit_id": _elid_value(circuit.Id),
                 "kind": kind,
+                "start_slot": int(start_slot),
+                "poles": int(max(1, _get_circuit_poles(circuit))),
+                "cells": [(int(r), int(c)) for r, c in list(ps_repo.get_cells_by_slot_number(schedule_view, start_slot) or [])],
                 "slots": _covered_slots(schedule_view, circuit, start_slot),
             })
+        entries.sort(key=lambda x: (int(x.get("start_slot", 0) or 0), -int(x.get("poles", 1) or 1)))
         return entries
 
     def _circuits_requiring_new_slots():
@@ -531,22 +632,20 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
     def _fit_count(option, free_slots, pole_counts):
         if option is None:
             return 0
-        slot_order = list(ps_repo.get_slot_order(option.get("max_slot", 0), option.get("sort_mode", "panelboard")) or [])
+        slot_order = list(ps_repo.get_option_slot_order(option, include_excess=False) or [])
         if not slot_order:
             return 0
-        max_slot = int(option.get("max_slot", 0) or 0)
-        sort_mode = option.get("sort_mode", "panelboard")
         available = set([int(x) for x in list(free_slots or []) if int(x) > 0])
         moved = 0
         for poles in list(pole_counts or []):
             pole_count = int(max(1, poles or 1))
             placed = False
             for start in slot_order:
-                covered = ps_repo.get_slot_span_slots(
+                covered = ps_repo.get_slot_span_slots_for_option(
+                    option,
                     start_slot=int(start),
-                    pole_count=pole_count,
-                    max_slot=max_slot,
-                    sort_mode=sort_mode,
+                    pole_count=int(pole_count),
+                    require_valid=True,
                 )
                 if not covered:
                     continue
@@ -600,38 +699,152 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
             return False
         return bool(fit_with > fit_without)
 
+    def _partition_requested_circuits():
+        target_id = _panel_id(target_panel)
+        to_move = []
+        skipped = []
+        for circuit in list(circuits or []):
+            old_ref = "{} / {}".format(_safe_panel_name(circuit), _safe_circuit_number(circuit))
+            base = getattr(circuit, "BaseEquipment", None)
+            if _panel_id(base) == target_id:
+                skipped.append([output.linkify(circuit.Id), old_ref, "Already on target panel"])
+                continue
+            to_move.append(circuit)
+        return to_move, skipped
+
+    def _collect_empty_slots(option):
+        if option is None:
+            return set()
+        rows = list(ps_repo.build_panel_rows(doc, option) or [])
+        empty_slots = set()
+        for row in rows:
+            kind = _safe_text(row.get("kind", ""), "").strip().lower()
+            if kind != "empty":
+                continue
+            if not bool(row.get("is_editable", True)):
+                continue
+            for slot in list(ps_repo.get_row_covered_slots(row, option=option) or []):
+                sval = int(slot or 0)
+                if sval > 0:
+                    empty_slots.add(sval)
+        return empty_slots
+
+    def _log_default_snapshot(entries):
+        if not entries:
+            return
+        try:
+            rows = []
+            for entry in list(entries or []):
+                cell_text = ", ".join(["({0},{1})".format(int(rc[0]), int(rc[1])) for rc in list(entry.get("cells") or [])])
+                rows.append([
+                    str(entry.get("kind", "")).upper(),
+                    int(entry.get("start_slot", 0) or 0),
+                    int(entry.get("poles", 1) or 1),
+                    ",".join([str(int(x)) for x in list(entry.get("slots") or []) if int(x) > 0]),
+                    cell_text,
+                ])
+            output.print_md("**Default SPARE/SPACE snapshot on target panel (pre-move):**")
+            output.print_table(rows, ["Type", "Start Slot", "Poles", "Covered Slots", "Cells (row,col)"])
+        except Exception:
+            pass
+
     def _remove_default_special_rows(entries):
         deleted = set()
         for entry in list(entries or []):
             cid = int(entry.get("circuit_id", 0) or 0)
             if cid <= 0 or cid in deleted:
                 continue
-            element = doc.GetElement(DB.ElementId(cid))
+            element = doc.GetElement(_elid_from(cid))
             if element is None:
                 continue
             doc.Delete(element.Id)
             deleted.add(cid)
 
     def _restore_default_special_rows(schedule_view, entries):
-        slot_restore = []
-        for entry in list(entries or []):
+        restore_order = sorted(
+            list(entries or []),
+            key=lambda x: (-int(x.get("poles", 1) or 1), int(x.get("start_slot", 0) or 0)),
+        )
+        for entry in restore_order:
             kind = _safe_text(entry.get("kind", ""), "").strip().lower()
-            for slot in list(entry.get("slots") or []):
-                sval = int(slot or 0)
-                if sval <= 0:
-                    continue
-                slot_restore.append((sval, kind))
-        slot_restore.sort(key=lambda x: int(x[0]))
-        for slot, kind in slot_restore:
-            if _slot_is_occupied(schedule_view, slot):
+            start_slot = int(entry.get("start_slot", 0) or 0)
+            poles = int(max(1, entry.get("poles", 1) or 1))
+            if kind not in ("spare", "space") or start_slot <= 0:
                 continue
-            _set_slot_locked(schedule_view, slot, False)
-            if not _add_special_to_slot(schedule_view, slot, kind):
-                raise Exception("Failed to restore {0} at slot {1}.".format(kind.upper(), int(slot)))
-            _set_slot_locked(schedule_view, slot, False)
+            intended_slots = [int(x) for x in list(entry.get("slots") or []) if int(x) > 0]
+            if not intended_slots:
+                intended_slots = [int(start_slot)]
+            if any(_slot_is_occupied(schedule_view, slot) for slot in intended_slots):
+                continue
+            for slot in intended_slots:
+                _set_slot_locked(schedule_view, slot, False)
+            try:
+                if kind == "spare":
+                    psm.add_spare(
+                        panel_id=target_panel_id,
+                        panel_slot=int(start_slot),
+                        poles=int(poles),
+                        rating=0,
+                        frame=0,
+                        unlock=True,
+                        load_name=None,
+                        schedule_notes=None,
+                    )
+                else:
+                    psm.add_space(
+                        panel_id=target_panel_id,
+                        panel_slot=int(start_slot),
+                        poles=int(poles),
+                        unlock=True,
+                        load_name=None,
+                        schedule_notes=None,
+                    )
+            except Exception:
+                continue
+
+    def _backfill_new_empty_with_default_spaces(schedule_view, option, baseline_empty_slots):
+        if option is None:
+            return 0
+        baseline = set([int(x) for x in list(baseline_empty_slots or []) if int(x) > 0])
+        current_empty = _collect_empty_slots(option)
+        newly_open = set([int(x) for x in list(current_empty or []) if int(x) > 0 and int(x) not in baseline])
+        if not newly_open:
+            return 0
+        slot_order = list(ps_repo.get_option_slot_order(option, include_excess=False) or [])
+        if not slot_order:
+            slot_order = sorted(list(newly_open))
+        added = 0
+        for slot in slot_order:
+            sval = int(slot or 0)
+            if sval <= 0 or sval not in newly_open:
+                continue
+            if _slot_is_occupied(schedule_view, sval):
+                continue
+            try:
+                psm.add_space_default(panel_id=target_panel_id, panel_slot=int(sval), unlock=True)
+                added += 1
+            except Exception:
+                continue
+        return int(added)
 
     schedule_view = _get_panel_schedule_view(target_panel)
+    target_option = _get_target_option(target_panel, schedule_view)
+    target_panel_id = int(_panel_id(target_panel))
+    panel_option_lookup = {}
+    if target_option is not None and target_panel_id > 0:
+        panel_option_lookup[int(target_panel_id)] = target_option
+    psm = PanelScheduleManager(doc, panel_option_lookup=panel_option_lookup, logger=logger)
     default_entries = _collect_default_special_rows(target_panel, schedule_view)
+    requested_moves, skipped_rows = _partition_requested_circuits()
+    circuits = list(requested_moves)
+    if not circuits:
+        return {
+            "moved": [],
+            "failed": [],
+            "skipped": list(skipped_rows),
+            "partial": False,
+            "fallback_used": False,
+        }
     tx_group = DB.TransactionGroup(doc, "Move Selected Circuits")
     tx_group.Start()
     try:
@@ -640,17 +853,25 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
         initial_tx = Transaction(doc, "Move Circuits to New Panel")
         initial_tx.Start()
         try:
-            data, failed = _run_select_panel_moves(allow_partial=False)
+            data, failed = _run_select_panel_moves(allow_partial=False, sort_by_poles=False, phase="primary")
             initial_tx.Commit()
             tx_group.Assimilate()
             return {
                 "moved": data,
                 "failed": failed,
+                "skipped": list(skipped_rows),
                 "partial": False,
                 "fallback_used": False,
             }
         except Exception as ex:
             first_error = _safe_text(ex, "Move failed.")
+            try:
+                logger.info(
+                    "[MoveSelectedCircuits] Primary move failed; evaluating fallback. error=%s",
+                    _safe_text(first_error, "Move failed."),
+                )
+            except Exception:
+                pass
             try:
                 initial_tx.RollBack()
             except Exception:
@@ -662,6 +883,7 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
             # actually manipulate default SPARE/SPACE rows on this target, still offer retry.
             offer_replace = bool(
                 schedule_view is not None
+                and target_option is not None
                 and len(list(default_entries or [])) > 0
                 and len(_circuits_requiring_new_slots()) > 0
             )
@@ -681,12 +903,26 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
         if not proceed:
             raise Exception(first_error)
 
+        _log_default_snapshot(default_entries)
+        baseline_empty_slots = _collect_empty_slots(target_option)
+
         remove_tx = Transaction(doc, "Remove Default SPARE/SPACE Rows")
         remove_tx.Start()
         try:
+            try:
+                logger.info(
+                    "[MoveSelectedCircuits] Fallback remove defaults start entries=%s regenerate=%s",
+                    int(len(list(default_entries or []))),
+                    False,
+                )
+            except Exception:
+                pass
             _remove_default_special_rows(default_entries)
-            doc.Regenerate()
             remove_tx.Commit()
+            try:
+                logger.info("[MoveSelectedCircuits] Fallback remove defaults committed.")
+            except Exception:
+                pass
         except Exception:
             try:
                 remove_tx.RollBack()
@@ -697,9 +933,20 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
         move_tx = Transaction(doc, "Move Circuits to New Panel")
         move_tx.Start()
         try:
-            data, failed = _run_select_panel_moves(allow_partial=True)
-            doc.Regenerate()
+            try:
+                logger.info("[MoveSelectedCircuits] Fallback move batch start regenerate=%s", False)
+            except Exception:
+                pass
+            data, failed = _run_select_panel_moves(allow_partial=True, sort_by_poles=True, phase="fallback")
             move_tx.Commit()
+            try:
+                logger.info(
+                    "[MoveSelectedCircuits] Fallback move batch committed moved=%s failed=%s.",
+                    int(len(data or [])),
+                    int(len(failed or [])),
+                )
+            except Exception:
+                pass
         except Exception:
             try:
                 move_tx.RollBack()
@@ -710,9 +957,17 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
         restore_tx = Transaction(doc, "Restore Default SPARE/SPACE Rows")
         restore_tx.Start()
         try:
+            try:
+                logger.info("[MoveSelectedCircuits] Fallback restore defaults start regenerate=%s", False)
+            except Exception:
+                pass
             _restore_default_special_rows(schedule_view, default_entries)
-            doc.Regenerate()
+            _backfill_new_empty_with_default_spaces(schedule_view, target_option, baseline_empty_slots)
             restore_tx.Commit()
+            try:
+                logger.info("[MoveSelectedCircuits] Fallback restore defaults committed.")
+            except Exception:
+                pass
         except Exception:
             try:
                 restore_tx.RollBack()
@@ -723,6 +978,14 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
         if failed:
             moved_count = int(len(data or []))
             total_count = int(moved_count + len(failed or []))
+            try:
+                logger.warning(
+                    "[MoveSelectedCircuits] Fallback move partial result moved=%s failed=%s.",
+                    int(moved_count),
+                    int(len(failed or [])),
+                )
+            except Exception:
+                pass
             if moved_count <= 0:
                 raise Exception("No circuits could be moved after removing default SPARE/SPACE rows.")
             keep_partial = forms.alert(
@@ -742,6 +1005,7 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
         return {
             "moved": data,
             "failed": failed,
+            "skipped": list(skipped_rows),
             "partial": bool(failed),
             "fallback_used": True,
         }

@@ -2,16 +2,13 @@
 """Reusable panel schedule helpers for circuit-centric tools."""
 
 import Autodesk.Revit.DB.Electrical as DBE
+import clr
+from System.Collections.Generic import IList
+from System.Collections.Generic import List
 from pyrevit import DB, forms
 
 from Snippets import revit_helpers
 from . import distribution_equipment_repository as de_repo
-
-try:
-    _INTEGER_TYPES = (int, long)
-except Exception:
-    _INTEGER_TYPES = (int,)
-
 
 SORT_MODE_SWITCHBOARD = "switchboard"
 SORT_MODE_PANELBOARD_ACROSS = "panelboard_two_columns_across"
@@ -23,41 +20,26 @@ _PANEL_SORT_MODES = (
     SORT_MODE_PANELBOARD_ONE_COLUMN,
 )
 _DESIGN_OPTION_MAIN_MODEL_FILTER = DB.ElementDesignOptionFilter(DB.ElementId.InvalidElementId)
-PART_TYPE_MAP = dict(getattr(de_repo, "PART_TYPE_MAP", {
-    14: "Panelboard",
-    15: "Transformer",
-    16: "Switchboard",
-    17: "Other Panel",
-    18: "Equipment Switch",
-}))
-
-
-def _panel_schedule_type_member(name, fallback=None):
-    """Return PanelScheduleType enum member by name when available."""
-    try:
-        return getattr(DBE.PanelScheduleType, name)
-    except Exception:
-        return fallback
-
-
-PSTYPE_UNKNOWN = de_repo.PSTYPE_UNKNOWN if hasattr(de_repo, "PSTYPE_UNKNOWN") else _panel_schedule_type_member("Unknown", None)
-PSTYPE_BRANCH = de_repo.PSTYPE_BRANCH if hasattr(de_repo, "PSTYPE_BRANCH") else _panel_schedule_type_member("Branch", PSTYPE_UNKNOWN)
-PSTYPE_SWITCHBOARD = de_repo.PSTYPE_SWITCHBOARD if hasattr(de_repo, "PSTYPE_SWITCHBOARD") else _panel_schedule_type_member("Switchboard", PSTYPE_BRANCH)
-PSTYPE_DATA = de_repo.PSTYPE_DATA if hasattr(de_repo, "PSTYPE_DATA") else _panel_schedule_type_member("Data", PSTYPE_BRANCH)
-if hasattr(de_repo, "PART_TYPE_TO_PANEL_SCHEDULE_TYPE"):
-    _PART_TYPE_TO_SCHEDULE_TYPE = de_repo.PART_TYPE_TO_PANEL_SCHEDULE_TYPE
-else:
-    _PART_TYPE_TO_SCHEDULE_TYPE = {
-        14: PSTYPE_BRANCH,
-        16: PSTYPE_SWITCHBOARD,
-        17: PSTYPE_DATA,
-    }
+PART_TYPE_MAP = dict(de_repo.PART_TYPE_MAP)
+PSTYPE_UNKNOWN = de_repo.PSTYPE_UNKNOWN
+PSTYPE_BRANCH = de_repo.PSTYPE_BRANCH
+PSTYPE_SWITCHBOARD = de_repo.PSTYPE_SWITCHBOARD
+PSTYPE_DATA = de_repo.PSTYPE_DATA
+_PART_TYPE_TO_SCHEDULE_TYPE = de_repo.PART_TYPE_TO_PANEL_SCHEDULE_TYPE
 
 
 class PanelLayoutInfo(dict):
     """Lightweight layout descriptor for panel schedule behavior."""
 
-    def __init__(self, schedule_type, panel_configuration, sort_mode, board_type, max_slot=0):
+    def __init__(
+        self,
+        schedule_type,
+        panel_configuration,
+        sort_mode,
+        board_type,
+        max_slot=0,
+        show_slots_from_device=False,
+    ):
         dict.__init__(self)
         self["schedule_type"] = schedule_type
         self["schedule_type_name"] = _to_text(schedule_type, "Unknown")
@@ -66,6 +48,7 @@ class PanelLayoutInfo(dict):
         self["sort_mode"] = _to_text(sort_mode, SORT_MODE_PANELBOARD_ACROSS)
         self["board_type"] = _to_text(board_type, "Panelboard")
         self["max_slot"] = int(max_slot or 0)
+        self["show_slots_from_device"] = bool(show_slots_from_device)
 
 
 class PanelEquipmentOption(dict):
@@ -170,10 +153,13 @@ def _first_valid_element(doc, candidates):
                 element = doc.GetElement(candidate)
                 if element is not None:
                     return element
-            if isinstance(candidate, _INTEGER_TYPES):
-                element = doc.GetElement(revit_helpers.elementid_from_value(int(candidate)))
-                if element is not None:
-                    return element
+            try:
+                element_id = revit_helpers.elementid_from_value(int(candidate))
+            except Exception:
+                continue
+            element = doc.GetElement(element_id)
+            if element is not None:
+                return element
         except Exception:
             continue
     return None
@@ -223,6 +209,10 @@ def _layout_from_table_data(table_data):
         max_slot = int(table_data.NumberOfSlots or 0)
     except Exception:
         max_slot = 0
+    try:
+        show_slots_from_device = bool(getattr(table_data, "ShowSlotFromDeviceInsteadOfTemplate", False))
+    except Exception:
+        show_slots_from_device = False
 
     if _is_switchboard_schedule_type(schedule_type):
         return PanelLayoutInfo(
@@ -231,6 +221,7 @@ def _layout_from_table_data(table_data):
             sort_mode=SORT_MODE_SWITCHBOARD,
             board_type="Switchboard",
             max_slot=max_slot,
+            show_slots_from_device=show_slots_from_device,
         )
     if _is_data_panel_schedule_type(schedule_type):
         return PanelLayoutInfo(
@@ -239,6 +230,7 @@ def _layout_from_table_data(table_data):
             sort_mode=SORT_MODE_PANELBOARD_ONE_COLUMN,
             board_type="Other Panel",
             max_slot=max_slot,
+            show_slots_from_device=show_slots_from_device,
         )
     return PanelLayoutInfo(
         schedule_type=schedule_type,
@@ -246,6 +238,7 @@ def _layout_from_table_data(table_data):
         sort_mode=_panel_sort_mode_from_configuration(panel_configuration),
         board_type="Panelboard",
         max_slot=max_slot,
+        show_slots_from_device=show_slots_from_device,
     )
 
 
@@ -745,81 +738,106 @@ def prompt_pick_panel_schedules(doc, title="Choose panel schedules", multiselect
 
 
 def get_cells_by_slot_number(schedule_view, slot, body=None):
-    """Return body cell coordinates that belong to a slot number."""
-    cells = []
+    """Return raw API cell coordinates for a slot from PanelScheduleView.GetCellsBySlotNumber."""
     if schedule_view is None:
-        return cells
+        return []
     target_slot = int(slot or 0)
     if target_slot <= 0:
-        return cells
-    checker = getattr(schedule_view, "IsCellInCircuitTable", None)
+        return []
+    getter = getattr(schedule_view, "GetCellsBySlotNumber", None)
+    if getter is None:
+        return []
 
-    def _is_circuit_cell(row, col):
-        if checker is None:
-            return True
-        try:
-            return bool(checker(int(row), int(col)))
-        except Exception:
-            return True
+    def _filter_cells(pairs):
+        filtered = []
+        for pair in list(pairs or []):
+            if not pair or len(pair) < 2:
+                continue
+            row = int(pair[0])
+            col = int(pair[1])
+            try:
+                slot_no = int(schedule_view.GetSlotNumberByCell(int(row), int(col)) or 0)
+            except Exception:
+                slot_no = 0
+            if int(slot_no) != int(target_slot):
+                continue
+            filtered.append((int(row), int(col)))
+        return sorted(set(filtered))
 
-    direct = None
+    # Pattern A: out-ref (most reliable across pythonnet bindings)
     try:
-        getter = getattr(schedule_view, "GetCellsBySlotNumber", None)
-        if getter is not None:
-            direct = getter(target_slot)
+        row_ref = clr.Reference[IList[int]]()
+        col_ref = clr.Reference[IList[int]]()
+        getter(int(target_slot), row_ref, col_ref)
+        row_arr = list(row_ref.Value or [])
+        col_arr = list(col_ref.Value or [])
+        pair_count = int(min(len(row_arr), len(col_arr)))
+        pairs = []
+        for idx in range(pair_count):
+            pairs.append((int(row_arr[idx]), int(col_arr[idx])))
+        filtered = _filter_cells(pairs)
+        if filtered:
+            return filtered
+    except Exception:
+        pass
+
+    # Pattern B: tuple-return overload
+    try:
+        direct = getter(int(target_slot))
     except Exception:
         direct = None
+    tuple_pairs = []
+    if isinstance(direct, tuple) and len(direct) >= 2:
+        try:
+            row_arr = list(direct[0] or [])
+            col_arr = list(direct[1] or [])
+            pair_count = int(min(len(row_arr), len(col_arr)))
+            for idx in range(pair_count):
+                tuple_pairs.append((int(row_arr[idx]), int(col_arr[idx])))
+        except Exception:
+            tuple_pairs = []
+    if tuple_pairs:
+        filtered = _filter_cells(tuple_pairs)
+        if filtered:
+            return filtered
 
-    if direct is not None:
-        for item in list(direct):
-            row = None
-            col = None
-            for pair in (("Row", "Column"), ("RowNumber", "ColumnNumber"), ("Item1", "Item2")):
-                try:
-                    row = int(getattr(item, pair[0]))
-                    col = int(getattr(item, pair[1]))
-                    break
-                except Exception:
-                    row = None
-                    col = None
-            if row is None or col is None:
-                try:
-                    row = int(item[0])
-                    col = int(item[1])
-                except Exception:
-                    continue
-            if not _is_circuit_cell(row, col):
-                continue
+    # Pattern C: enumerable of row/col pair objects
+    pairs = []
+    for item in list(direct or []):
+        row = None
+        col = None
+        for pair in (("Row", "Column"), ("RowNumber", "ColumnNumber"), ("Item1", "Item2")):
             try:
-                verify_slot = int(schedule_view.GetSlotNumberByCell(row, col) or 0)
-                if verify_slot != target_slot:
-                    continue
+                row = int(getattr(item, pair[0]))
+                col = int(getattr(item, pair[1]))
+                break
             except Exception:
-                pass
-            cells.append((row, col))
-        if cells:
-            return sorted(set(cells))
+                row = None
+                col = None
+        if row is None or col is None:
+            try:
+                row = int(item[0])
+                col = int(item[1])
+            except Exception:
+                continue
+        pairs.append((int(row), int(col)))
+    if pairs:
+        filtered = _filter_cells(pairs)
+        if filtered:
+            return filtered
 
+    # Pattern D: preallocated lists (last fallback)
     try:
-        if body is None:
-            table = schedule_view.GetTableData()
-            body = table.GetSectionData(DB.SectionType.Body)
+        row_arr = List[int]()
+        col_arr = List[int]()
+        getter(int(target_slot), row_arr, col_arr)
+        pair_count = int(min(len(row_arr), len(col_arr)))
+        pairs = []
+        for idx in range(pair_count):
+            pairs.append((int(row_arr[idx]), int(col_arr[idx])))
+        return _filter_cells(pairs)
     except Exception:
-        body = None
-    if body is None:
-        return cells
-
-    for row in range(body.NumberOfRows):
-        for col in range(body.NumberOfColumns):
-            if not _is_circuit_cell(row, col):
-                continue
-            try:
-                cell_slot = int(schedule_view.GetSlotNumberByCell(row, col) or 0)
-            except Exception:
-                cell_slot = 0
-            if cell_slot == target_slot:
-                cells.append((row, col))
-    return sorted(set(cells))
+        return []
 
 
 def _build_slot_cell_map(schedule_view, body, max_slot):
@@ -920,40 +938,32 @@ def gather_empty_slot_cells(schedule_view):
     if max_slot <= 0:
         return empties
 
-    for row in range(body.NumberOfRows):
-        active_slot = None
-        cols_for_slot = []
-        for col in range(body.NumberOfColumns):
+    valid_slots = list(range(1, int(max_slot) + 1))
+    try:
+        doc = getattr(schedule_view, "Document", None)
+        panel = resolve_schedule_panel(doc, schedule_view) if doc is not None else None
+        if panel is not None:
+            option = _panel_option_from_panel_and_view(doc, panel, schedule_view=schedule_view)
+            candidate = list(get_option_valid_slots(option) or [])
+            if candidate:
+                valid_slots = [int(x) for x in list(candidate or []) if int(x) > 0]
+    except Exception:
+        pass
+
+    for slot in list(valid_slots or []):
+        slot_cells = list(get_cells_by_slot_number(schedule_view, int(slot), body=body) or [])
+        if not slot_cells:
+            continue
+        empty_cells = []
+        for row, col in slot_cells:
             try:
-                slot = int(schedule_view.GetSlotNumberByCell(row, col) or 0)
-            except Exception:
-                slot = 0
-            try:
-                ckt_id = schedule_view.GetCircuitIdByCell(row, col)
+                ckt_id = schedule_view.GetCircuitIdByCell(int(row), int(col))
             except Exception:
                 ckt_id = DB.ElementId.InvalidElementId
-
-            is_empty = bool(1 <= slot <= max_slot and ckt_id == DB.ElementId.InvalidElementId)
-            if is_empty and slot == active_slot:
-                cols_for_slot.append(col)
-                continue
-
-            if active_slot and cols_for_slot:
-                if active_slot not in empties:
-                    empties[active_slot] = []
-                empties[active_slot].extend([(row, x) for x in cols_for_slot])
-
-            if is_empty:
-                active_slot = slot
-                cols_for_slot = [col]
-            else:
-                active_slot = None
-                cols_for_slot = []
-
-        if active_slot and cols_for_slot:
-            if active_slot not in empties:
-                empties[active_slot] = []
-            empties[active_slot].extend([(row, x) for x in cols_for_slot])
+            if ckt_id is None or ckt_id == DB.ElementId.InvalidElementId:
+                empty_cells.append((int(row), int(col)))
+        if empty_cells:
+            empties[int(slot)] = sorted(set(empty_cells))
 
     return empties
 
@@ -980,6 +990,177 @@ def get_slot_order(max_slot, sort_mode):
     if mode == SORT_MODE_PANELBOARD_ACROSS:
         return sorted(slots, key=lambda x: (x % 2 == 0, x))
     return slots
+
+
+def get_slot_row_order(max_slot, sort_mode):
+    """Return row-wise slot order (top-to-bottom rows) independent of add sequencing."""
+    slot_count = int(max(0, max_slot or 0))
+    if slot_count <= 0:
+        return []
+    mode = _to_text(sort_mode, SORT_MODE_PANELBOARD_ACROSS).strip().lower()
+    if mode == "panelboard":
+        mode = SORT_MODE_PANELBOARD_ACROSS
+    if mode == SORT_MODE_PANELBOARD_DOWN:
+        left_count = int((slot_count + 1) / 2)
+        ordered = []
+        for row_slot in range(1, left_count + 1):
+            ordered.append(int(row_slot))
+            right_slot = int(left_count + row_slot)
+            if right_slot <= slot_count:
+                ordered.append(int(right_slot))
+        return ordered
+    return list(range(1, slot_count + 1))
+
+
+def _int_or_zero(value):
+    try:
+        return int(round(float(value)))
+    except Exception:
+        return 0
+
+
+def _param_int_or_zero(param):
+    value = revit_helpers.get_parameter_value(param, default=None)
+    return _int_or_zero(value)
+
+
+def _panel_device_slot_capacity(option):
+    """Return equipment-based slot capacity (poles/circuits) for a panel option."""
+    panel = (option or {}).get("panel")
+    schedule_type = (option or {}).get("schedule_type")
+    model = (option or {}).get("equipment_model")
+
+    # Prefer the already-built distribution equipment model value.
+    if model is not None:
+        value = _int_or_zero(getattr(model, "max_poles", 0))
+        if value:
+            return value
+
+    if panel is not None and schedule_type == PSTYPE_SWITCHBOARD:
+        try:
+            param = panel.get_Parameter(DB.BuiltInParameter.RBS_ELEC_NUMBER_OF_CIRCUITS)
+        except Exception:
+            param = None
+        value = _param_int_or_zero(param)
+        if value:
+            return value
+    if panel is not None:
+        try:
+            param = panel.get_Parameter(DB.BuiltInParameter.RBS_ELEC_MAX_POLE_BREAKERS)
+        except Exception:
+            param = None
+        value = _param_int_or_zero(param)
+        if value:
+            return value
+    return 0
+
+
+def _compute_option_slot_limits(option):
+    """Compute schedule/device slot limits and derived valid/invalid slot sets."""
+    schedule_slots = _int_or_zero((option or {}).get("max_slot", 0))
+    sort_mode = (option or {}).get("sort_mode", SORT_MODE_PANELBOARD_ACROSS)
+    show_from_device = bool((option or {}).get("show_slots_from_device", False))
+    device_capacity = _int_or_zero((option or {}).get("device_slot_capacity", 0))
+    if not device_capacity:
+        device_capacity = _panel_device_slot_capacity(option)
+
+    all_slots = list(get_slot_order(schedule_slots, sort_mode) or [])
+    valid_slots = list(all_slots)
+    invalid_slots = []
+    has_excess = False
+
+    if (
+        schedule_slots > 0
+        and not bool(show_from_device)
+        and int(device_capacity) > 0
+        and int(schedule_slots) > int(device_capacity)
+    ):
+        row_order = list(get_slot_row_order(schedule_slots, sort_mode) or [])
+        valid_set = set([int(x) for x in list(row_order[:int(device_capacity)]) if int(x) > 0])
+        valid_slots = [int(x) for x in list(all_slots or []) if int(x) in valid_set]
+        invalid_slots = [int(x) for x in list(all_slots or []) if int(x) not in valid_set]
+        has_excess = bool(invalid_slots)
+
+    return {
+        "schedule_slot_count": int(schedule_slots),
+        "device_slot_capacity": int(device_capacity),
+        "show_slots_from_device": bool(show_from_device),
+        "all_slots": [int(x) for x in list(all_slots or []) if int(x) > 0],
+        "valid_slots": [int(x) for x in list(valid_slots or []) if int(x) > 0],
+        "invalid_slots": [int(x) for x in list(invalid_slots or []) if int(x) > 0],
+        "usable_slot_count": int(len([x for x in list(valid_slots or []) if int(x) > 0])),
+        "has_excess_slots": bool(has_excess),
+    }
+
+
+def get_option_slot_limits(option):
+    """Return slot limits map for a panel option."""
+    cached = {}
+    try:
+        cached = dict((option or {}).get("slot_limits") or {})
+    except Exception:
+        cached = {}
+    if cached and "valid_slots" in cached and "all_slots" in cached:
+        return cached
+    return _compute_option_slot_limits(option)
+
+
+def get_option_slot_order(option, include_excess=False):
+    """Return option slot order, filtered to valid slots by default."""
+    limits = get_option_slot_limits(option)
+    if bool(include_excess):
+        return [int(x) for x in list(limits.get("all_slots") or []) if int(x) > 0]
+    return [int(x) for x in list(limits.get("valid_slots") or []) if int(x) > 0]
+
+
+def get_option_valid_slots(option):
+    """Return valid slot list for add/move operations on this option."""
+    return list(get_option_slot_order(option, include_excess=False))
+
+
+def get_option_invalid_slots(option):
+    """Return excess template-only slot list that exceeds device capacity."""
+    limits = get_option_slot_limits(option)
+    return [int(x) for x in list(limits.get("invalid_slots") or []) if int(x) > 0]
+
+
+def get_option_usable_slot_count(option):
+    """Return count of valid usable slots for this option."""
+    limits = get_option_slot_limits(option)
+    return int(limits.get("usable_slot_count", 0) or 0)
+
+
+def is_slot_valid_for_option(option, slot):
+    """Return True when slot is inside equipment-supported slot range for this option."""
+    slot_value = int(slot or 0)
+    if slot_value <= 0:
+        return False
+    valid_slots = set([int(x) for x in list(get_option_valid_slots(option) or []) if int(x) > 0])
+    if valid_slots:
+        return bool(slot_value in valid_slots)
+    max_slot = int((option or {}).get("max_slot", 0) or 0)
+    return bool(max_slot > 0 and slot_value <= max_slot)
+
+
+def get_slot_span_slots_for_option(option, start_slot, pole_count, require_valid=False):
+    """Return covered slot span for an option-aware start slot/pole combination."""
+    if option is None:
+        return []
+    slots = get_slot_span_slots(
+        start_slot=int(start_slot or 0),
+        pole_count=int(max(1, pole_count or 1)),
+        max_slot=int(option.get("max_slot", 0) or 0),
+        sort_mode=option.get("sort_mode", SORT_MODE_PANELBOARD_ACROSS),
+    )
+    if not slots:
+        return []
+    normalized = [int(x) for x in list(slots or []) if int(x) > 0]
+    if not bool(require_valid):
+        return normalized
+    for slot in list(normalized or []):
+        if not bool(is_slot_valid_for_option(option, int(slot))):
+            return []
+    return normalized
 
 
 def get_slot_display_column(slot, max_slot, sort_mode):
@@ -1101,13 +1282,24 @@ def _approx_equal(a, b, tol=1e-6):
 
 def _slot_is_locked(schedule_view, row, col):
     """Best-effort slot lock state for a schedule cell."""
+    slot_value = 0
+    try:
+        slot_value = int(schedule_view.GetSlotNumberByCell(int(row), int(col)) or 0)
+    except Exception:
+        slot_value = 0
     for attr in ("IsSlotLocked", "GetLockSlot", "IsCellLocked"):
         fn = getattr(schedule_view, attr, None)
         if fn:
-            try:
-                return bool(fn(row, col))
-            except Exception:
-                pass
+            for args in (
+                (int(row), int(col)),
+                (int(slot_value),) if int(slot_value) > 0 else None,
+            ):
+                if args is None:
+                    continue
+                try:
+                    return bool(fn(*args))
+                except Exception:
+                    continue
     return False
 
 
@@ -1277,6 +1469,20 @@ def _panel_option_from_panel_and_view(doc, panel, schedule_view=None):
         schedule_name = ""
 
     board_type = _to_text(layout.get("board_type"), "Panelboard")
+    schedule_slots = int(layout.get("max_slot", 0) or 0)
+    show_slots_from_device = bool(layout.get("show_slots_from_device", False))
+    limits_probe = {
+        "panel": panel,
+        "schedule_type": layout.get("schedule_type"),
+        "equipment_model": equipment_model,
+        "max_slot": int(schedule_slots),
+        "sort_mode": layout.get("sort_mode", SORT_MODE_PANELBOARD_ACROSS),
+        "show_slots_from_device": bool(show_slots_from_device),
+    }
+    device_slot_capacity = int(_panel_device_slot_capacity(limits_probe) or 0)
+    limits_probe["device_slot_capacity"] = int(device_slot_capacity)
+    slot_limits = _compute_option_slot_limits(limits_probe)
+
     option = PanelEquipmentOption(
         {
             "panel": panel,
@@ -1292,7 +1498,14 @@ def _panel_option_from_panel_and_view(doc, panel, schedule_view=None):
             "profile": profile,
             "sort_mode": layout.get("sort_mode", SORT_MODE_PANELBOARD_ACROSS),
             "board_type": board_type,
-            "max_slot": int(layout.get("max_slot", 0) or 0),
+            "max_slot": int(schedule_slots),
+            "show_slots_from_device": bool(show_slots_from_device),
+            "device_slot_capacity": int(slot_limits.get("device_slot_capacity", 0) or 0),
+            "usable_slot_count": int(slot_limits.get("usable_slot_count", 0) or 0),
+            "has_excess_slots": bool(slot_limits.get("has_excess_slots", False)),
+            "valid_slots": [int(x) for x in list(slot_limits.get("valid_slots") or []) if int(x) > 0],
+            "invalid_slots": [int(x) for x in list(slot_limits.get("invalid_slots") or []) if int(x) > 0],
+            "slot_limits": dict(slot_limits),
             "schedule_type": layout.get("schedule_type"),
             "schedule_type_name": _to_text(layout.get("schedule_type_name", ""), ""),
             "part_type": part_type,
@@ -1611,6 +1824,8 @@ def _build_circuit_row(option, circuit, doc=None, panel_id_set=None):
         "is_slot_locked": False,
         "edited_by": _to_text(edited_by, ""),
         "is_editable": True,
+        "is_valid_slot": True,
+        "is_excess_slot": False,
         "fed_panel_ids": list(fed_panel_ids),
     }
 
@@ -1619,6 +1834,7 @@ def build_empty_row(option, slot, metadata=None):
     """Build a normalized empty slot row for planning UIs."""
     slot_value = int(slot or 0)
     meta = dict(metadata or {})
+    is_valid_slot = bool(is_slot_valid_for_option(option, slot_value))
     return {
         "row_key": "panel:{0}|slot:{1}|empty".format(option.get("panel_id", 0), slot_value),
         "panel_id": option.get("panel_id", 0),
@@ -1645,7 +1861,9 @@ def build_empty_row(option, slot, metadata=None):
         "is_space_removable": False,
         "is_slot_locked": bool(meta.get("is_slot_locked", False)),
         "edited_by": "",
-        "is_editable": True,
+        "is_editable": bool(is_valid_slot),
+        "is_valid_slot": bool(is_valid_slot),
+        "is_excess_slot": bool(not is_valid_slot),
         "fed_panel_ids": [],
     }
 
@@ -1792,8 +2010,13 @@ def build_panel_rows(doc, option, panel_id_set=None, all_circuits=None):
     panel = option.get("panel")
     max_slot = int(option.get("max_slot") or 0)
     sort_mode = option.get("sort_mode") or SORT_MODE_PANELBOARD_ACROSS
-    slot_order = get_slot_order(max_slot, sort_mode)
+    slot_order = list(get_option_slot_order(option, include_excess=True) or [])
+    if not slot_order and max_slot > 0:
+        slot_order = get_slot_order(max_slot, sort_mode)
     slot_set = set(slot_order)
+    valid_slot_set = set([int(x) for x in list(get_option_valid_slots(option) or []) if int(x) > 0])
+    if not valid_slot_set and max_slot > 0:
+        valid_slot_set = set(range(1, int(max_slot) + 1))
     metadata_map = _collect_slot_metadata(doc, option)
     known_panel_ids = set()
     for candidate_id in list(panel_id_set or []):
@@ -1861,7 +2084,10 @@ def build_panel_rows(doc, option, panel_id_set=None, all_circuits=None):
         row["is_space_removable"] = bool(meta.get("is_space_removable", False))
         row["is_slot_locked"] = bool(meta.get("is_slot_locked", False))
         row["edited_by"] = _to_text(meta.get("edited_by", row.get("edited_by", "")), "")
-        row["is_editable"] = True
+        row_is_valid = bool(covered_slots) and all(int(x) in valid_slot_set for x in list(covered_slots or []))
+        row["is_valid_slot"] = bool(row_is_valid)
+        row["is_excess_slot"] = bool(not row_is_valid)
+        row["is_editable"] = bool(row_is_valid)
         rows.append(row)
         for covered in covered_slots:
             consumed.add(int(covered))
@@ -1873,6 +2099,8 @@ def evaluate_transferability(row, target_option, tolerance=1.0):
     """Return (is_transferable, reason) for moving a circuit row to target panel."""
     if not row:
         return False, "Invalid row."
+    if not bool(row.get("is_valid_slot", True)):
+        return False, "Slot exceeds equipment-supported capacity."
     kind = _to_text(row.get("kind", ""), "").strip().lower()
     if kind in ("spare", "space"):
         return True, ""

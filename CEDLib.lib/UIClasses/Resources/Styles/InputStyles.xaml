@@ -6,10 +6,185 @@
     <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="Padding" Value="6,3"/>
     <Setter Property="Background" Value="{DynamicResource CED.Brush.SearchBackground}"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+  </Style>
+
+  <Style x:Key="CED.Input.TextBox.PercentCompact" TargetType="TextBox" BasedOn="{StaticResource CED.Input.TextBox}">
+    <Setter Property="Width" Value="58"/>
+    <Setter Property="Height" Value="24"/>
+    <Setter Property="HorizontalAlignment" Value="Left"/>
+    <Setter Property="HorizontalContentAlignment" Value="Center"/>
   </Style>
 
   <Style x:Key="CED.Input.CheckBox" TargetType="CheckBox">
     <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
     <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+
+  <Style x:Key="CED.Input.ComboBoxItem" TargetType="ComboBoxItem">
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.ListItemBackground}"/>
+    <Setter Property="Padding" Value="8,4"/>
+    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+    <Style.Triggers>
+      <Trigger Property="IsHighlighted" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.CircuitItemHoverBackground}"/>
+      </Trigger>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource CED.Brush.CircuitItemSelectedBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+      </Trigger>
+      <Trigger Property="IsEnabled" Value="False">
+        <Setter Property="Opacity" Value="0.55"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="CED.Input.ComboBox" TargetType="ComboBox">
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.SearchBackground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.Border}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Padding" Value="6,3"/>
+    <Setter Property="MinHeight" Value="{DynamicResource CED.Size.ControlHeight}"/>
+    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+    <Setter Property="ItemContainerStyle" Value="{DynamicResource CED.Input.ComboBoxItem}"/>
+  </Style>
+
+  <Style x:Key="CED.Input.ComboBox.ToggleOverlay" TargetType="ToggleButton">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Focusable" Value="False"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ToggleButton">
+          <Border Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"/>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="CED.Input.ComboBoxItem.Flat" TargetType="ComboBoxItem" BasedOn="{StaticResource CED.Input.ComboBoxItem}">
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+    <Setter Property="OverridesDefaultStyle" Value="True"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ComboBoxItem">
+          <Border x:Name="ItemRoot"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  SnapsToDevicePixels="True">
+            <ContentPresenter Margin="{TemplateBinding Padding}"
+                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsHighlighted" Value="True">
+              <Setter TargetName="ItemRoot" Property="Background" Value="{DynamicResource CED.Brush.CircuitItemHoverBackground}"/>
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+              <Setter TargetName="ItemRoot" Property="Background" Value="{DynamicResource CED.Brush.CircuitItemSelectedBackground}"/>
+              <Setter TargetName="ItemRoot" Property="BorderBrush" Value="{DynamicResource CED.Brush.Accent}"/>
+              <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="ItemRoot" Property="Background" Value="{DynamicResource CED.Brush.CircuitItemSelectedBackground}"/>
+              <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter Property="Opacity" Value="0.55"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <ControlTemplate x:Key="CED.Input.ComboBox.Template.Flat" TargetType="ComboBox">
+    <Grid SnapsToDevicePixels="True">
+      <Border x:Name="ComboBorder"
+              Background="{TemplateBinding Background}"
+              BorderBrush="{TemplateBinding BorderBrush}"
+              BorderThickness="{TemplateBinding BorderThickness}"
+              CornerRadius="6">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="26"/>
+          </Grid.ColumnDefinitions>
+          <ContentPresenter Grid.Column="0"
+                            Margin="8,0,4,0"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Left"
+                            Content="{TemplateBinding SelectionBoxItem}"
+                            ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                            ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"/>
+          <Path Grid.Column="1"
+                Data="{DynamicResource CED.Icon.ChevronDown}"
+                Width="8"
+                Height="6"
+                Stretch="Uniform"
+                Fill="{DynamicResource CED.Brush.IconMuted}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"/>
+          <ToggleButton Grid.ColumnSpan="2"
+                        Style="{StaticResource CED.Input.ComboBox.ToggleOverlay}"
+                        IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                        ClickMode="Press"/>
+        </Grid>
+      </Border>
+      <Popup Name="PART_Popup"
+             AllowsTransparency="True"
+             Focusable="False"
+             IsOpen="{TemplateBinding IsDropDownOpen}"
+             Placement="Bottom"
+             PopupAnimation="Slide">
+        <Border x:Name="DropDownBorder"
+                Margin="0,2,0,0"
+                Background="{DynamicResource CED.Brush.ListBackground}"
+                BorderBrush="{DynamicResource CED.Brush.ListBorder}"
+                BorderThickness="1"
+                CornerRadius="6"
+                MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+          <ScrollViewer MaxHeight="300"
+                        CanContentScroll="True"
+                        VerticalScrollBarVisibility="Auto">
+            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+          </ScrollViewer>
+        </Border>
+      </Popup>
+    </Grid>
+    <ControlTemplate.Triggers>
+      <Trigger Property="IsMouseOver" Value="True">
+        <Setter TargetName="ComboBorder" Property="BorderBrush" Value="{DynamicResource CED.Brush.Accent}"/>
+      </Trigger>
+      <Trigger Property="IsKeyboardFocusWithin" Value="True">
+        <Setter TargetName="ComboBorder" Property="BorderBrush" Value="{DynamicResource CED.Brush.Accent}"/>
+      </Trigger>
+      <Trigger Property="IsDropDownOpen" Value="True">
+        <Setter TargetName="ComboBorder" Property="BorderBrush" Value="{DynamicResource CED.Brush.Accent}"/>
+      </Trigger>
+      <Trigger Property="HasItems" Value="False">
+        <Setter TargetName="DropDownBorder" Property="MinHeight" Value="24"/>
+      </Trigger>
+      <Trigger Property="IsEnabled" Value="False">
+        <Setter TargetName="ComboBorder" Property="Opacity" Value="0.55"/>
+      </Trigger>
+    </ControlTemplate.Triggers>
+  </ControlTemplate>
+
+  <Style x:Key="CED.Input.ComboBox.Flat" TargetType="ComboBox" BasedOn="{StaticResource CED.Input.ComboBox}">
+    <Setter Property="Height" Value="24"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="ItemContainerStyle" Value="{StaticResource CED.Input.ComboBoxItem.Flat}"/>
+    <Setter Property="Template" Value="{StaticResource CED.Input.ComboBox.Template.Flat}"/>
   </Style>
 </ResourceDictionary>

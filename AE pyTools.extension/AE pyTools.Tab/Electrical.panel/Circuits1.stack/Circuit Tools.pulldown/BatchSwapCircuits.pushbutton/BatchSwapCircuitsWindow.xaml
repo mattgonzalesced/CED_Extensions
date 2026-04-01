@@ -4,7 +4,7 @@
         Height="760"
         Width="1220"
         MinHeight="560"
-        MinWidth="860"
+        MinWidth="1240"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource CED.Brush.WindowBackground}">
   <Grid Margin="{DynamicResource CED.Thickness.ContentMargin}">
@@ -53,6 +53,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
           </Grid.RowDefinitions>
           <Grid Grid.Row="0">
             <ComboBox Name="LeftPanelCombo"
@@ -235,6 +236,38 @@
               </ListBox>
             </Grid>
           </Border>
+          <Grid Grid.Row="4" Margin="0,6,0,0">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Row="0"
+                       Grid.Column="0"
+                       Text="Connected:"
+                       Style="{DynamicResource CED.Text.Secondary}"/>
+            <TextBlock Name="LeftPanelCurrentConnectedText"
+                       Grid.Row="0"
+                       Grid.Column="1"
+                       Margin="6,0,0,0"
+                       Style="{DynamicResource CED.Text.Secondary}"
+                       TextTrimming="CharacterEllipsis"
+                       Text="- (Ia: -, Ib: -, Ic: -)"/>
+            <TextBlock Grid.Row="1"
+                       Grid.Column="0"
+                       Margin="0,2,0,0"
+                       Text="Demand:"
+                       Style="{DynamicResource CED.Text.Secondary}"/>
+            <TextBlock Name="LeftPanelCurrentDemandText"
+                       Grid.Row="1"
+                       Grid.Column="1"
+                       Margin="6,2,0,0"
+                       Style="{DynamicResource CED.Text.Secondary}"
+                       Text="-"/>
+          </Grid>
         </Grid>
       </Border>
 
@@ -250,6 +283,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
           </Grid.RowDefinitions>
           <Grid Grid.Row="0">
             <ComboBox Name="RightPanelCombo"
@@ -432,6 +466,38 @@
               </ListBox>
             </Grid>
           </Border>
+          <Grid Grid.Row="4" Margin="0,6,0,0">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Row="0"
+                       Grid.Column="0"
+                       Text="Connected:"
+                       Style="{DynamicResource CED.Text.Secondary}"/>
+            <TextBlock Name="RightPanelCurrentConnectedText"
+                       Grid.Row="0"
+                       Grid.Column="1"
+                       Margin="6,0,0,0"
+                       Style="{DynamicResource CED.Text.Secondary}"
+                       TextTrimming="CharacterEllipsis"
+                       Text="- (Ia: -, Ib: -, Ic: -)"/>
+            <TextBlock Grid.Row="1"
+                       Grid.Column="0"
+                       Margin="0,2,0,0"
+                       Text="Demand:"
+                       Style="{DynamicResource CED.Text.Secondary}"/>
+            <TextBlock Name="RightPanelCurrentDemandText"
+                       Grid.Row="1"
+                       Grid.Column="1"
+                       Margin="6,2,0,0"
+                       Style="{DynamicResource CED.Text.Secondary}"
+                       Text="-"/>
+          </Grid>
         </Grid>
       </Border>
 
@@ -505,21 +571,28 @@
         <ColumnDefinition Width="Auto"/>
         <ColumnDefinition Width="Auto"/>
       </Grid.ColumnDefinitions>
-      <StackPanel Grid.Column="0" Orientation="Vertical">
+      <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,12,0">
         <CheckBox Name="AllowDiscardToggle"
                   Style="{DynamicResource CED.Input.CheckBox}"
-                  Content="Allow replacing default SPARE/SPACE rows when dropping circuits."
-                  IsChecked="False"/>
+                  IsChecked="False"
+                  ToolTip="Default spare/space definition:
+- Unlocked slot
+- No schedule notes
+- Default load name
+- Default rating">
+          <TextBlock Text="Allow replacing default SPARE/SPACE rows when dropping circuits." TextWrapping="Wrap"/>
+        </CheckBox>
         <CheckBox Name="MaintainGroupToggle"
                   Style="{DynamicResource CED.Input.CheckBox}"
                   Margin="0,2,0,0"
-                  Content="Maintain grouped circuits when moving."
-                  IsChecked="True"/>
+                  IsChecked="True">
+          <TextBlock Text="Maintain grouped circuits when moving." TextWrapping="Wrap"/>
+        </CheckBox>
       </StackPanel>
       <StackPanel Grid.Column="1"
                   Orientation="Horizontal"
-                  Margin="16,0,0,0"
-                  HorizontalAlignment="Left"
+                  Margin="0,0,12,0"
+                  HorizontalAlignment="Center"
                   VerticalAlignment="Center">
         <Border Padding="6,4"
                 BorderBrush="{DynamicResource CED.Brush.InfoPanelBorder}"
@@ -603,7 +676,7 @@
                 IsEnabled="False"
                 Click="remove_special_clicked"/>
       </StackPanel>
-      <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="10,0,0,0">
+      <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,0" VerticalAlignment="Center">
         <Button Name="ApplyButton"
                 Style="{DynamicResource CED.Button.Apply}"
                 Content="Apply"

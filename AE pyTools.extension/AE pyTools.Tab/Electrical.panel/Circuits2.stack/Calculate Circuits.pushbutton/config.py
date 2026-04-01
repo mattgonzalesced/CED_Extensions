@@ -23,16 +23,53 @@ from CEDElectrical.Model.circuit_settings import (
     WireMaterialDisplay,
     WireStringSeparator,
 )
+from UIClasses import pathing as ui_pathing
+from UIClasses import resource_loader
 
 XAML_PATH = script.get_bundle_file('settings.xaml')
 if not XAML_PATH:
     XAML_PATH = os.path.join(os.path.dirname(__file__), 'settings.xaml')
 logger = script.get_logger()
+THIS_DIR = os.path.abspath(os.path.dirname(__file__))
+LIB_ROOT = ui_pathing.ensure_lib_root_on_syspath(THIS_DIR)
+UI_RESOURCES_ROOT = ui_pathing.resolve_ui_resources_root(LIB_ROOT)
+THEME_CONFIG_SECTION = "AE-pyTools-Theme"
+THEME_CONFIG_THEME_KEY = "theme_mode"
+THEME_CONFIG_ACCENT_KEY = "accent_mode"
+VALID_THEME_MODES = ("light", "dark", "dark_alt")
+VALID_ACCENT_MODES = ("blue", "red", "green", "neutral")
+
+
+def _normalize_theme_mode(value, fallback="light"):
+    mode = str(value or fallback).strip().lower()
+    return mode if mode in VALID_THEME_MODES else fallback
+
+
+def _normalize_accent_mode(value, fallback="blue"):
+    mode = str(value or fallback).strip().lower()
+    return mode if mode in VALID_ACCENT_MODES else fallback
+
+
+def _load_theme_state(default_theme="light", default_accent="blue"):
+    theme_mode = _normalize_theme_mode(default_theme, "light")
+    accent_mode = _normalize_accent_mode(default_accent, "blue")
+    try:
+        cfg = script.get_config(THEME_CONFIG_SECTION)
+        if cfg is None:
+            return theme_mode, accent_mode
+        theme_mode = _normalize_theme_mode(cfg.get_option(THEME_CONFIG_THEME_KEY, theme_mode), theme_mode)
+        accent_mode = _normalize_accent_mode(cfg.get_option(THEME_CONFIG_ACCENT_KEY, accent_mode), accent_mode)
+    except Exception:
+        pass
+    return theme_mode, accent_mode
 
 
 class CircuitSettingsWindow(forms.WPFWindow):
     def __init__(self):
         forms.WPFWindow.__init__(self, XAML_PATH)
+        self._theme_mode, self._accent_mode = _load_theme_state("light", "blue")
+        self._apply_theme()
+        self._refresh_theme_brushes()
         self.doc = revit.doc
         if self.doc is None:
             try:
@@ -58,6 +95,24 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self._refresh_styles()
         self._set_help_context('min_conduit_size')
 
+    def _apply_theme(self):
+        resource_loader.apply_theme(
+            self,
+            resources_root=UI_RESOURCES_ROOT,
+            theme_mode=self._theme_mode,
+            accent_mode=self._accent_mode,
+        )
+
+    def _refresh_theme_brushes(self):
+        try:
+            self._primary_text_brush = self.TryFindResource("CED.Brush.PrimaryText")
+        except Exception:
+            self._primary_text_brush = None
+        try:
+            self._secondary_text_brush = self.TryFindResource("CED.Brush.SecondaryText")
+        except Exception:
+            self._secondary_text_brush = None
+
     # ------------- UI wiring -----------------
     def _bind_events(self):
         self.save_btn.Click += self._on_save
@@ -68,10 +123,16 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.min_conduit_size_cb.SelectionChanged += self._on_value_changed
         self.min_conduit_size_cb.GotFocus += lambda s, e: self._set_help_context('min_conduit_size')
         self.max_conduit_fill_tb.GotFocus += lambda s, e: self._set_help_context('max_conduit_fill')
+        self.max_conduit_fill_tb.PreviewMouseLeftButtonDown += self._percent_box_preview_mouse_down
+        self.max_conduit_fill_tb.GotKeyboardFocus += self._percent_box_got_focus
         self.max_conduit_fill_tb.LostFocus += lambda s, e: self._normalize_percent_on_blur(self.max_conduit_fill_tb, 0.1, 1.0, self.max_conduit_fill_warn, 0.4)
         self.max_branch_vd_tb.GotFocus += lambda s, e: self._set_help_context('max_branch_voltage_drop')
+        self.max_branch_vd_tb.PreviewMouseLeftButtonDown += self._percent_box_preview_mouse_down
+        self.max_branch_vd_tb.GotKeyboardFocus += self._percent_box_got_focus
         self.max_branch_vd_tb.LostFocus += lambda s, e: self._normalize_percent_on_blur(self.max_branch_vd_tb, 0.001, 1.0, self.max_branch_vd_warn, 0.05)
         self.max_feeder_vd_tb.GotFocus += lambda s, e: self._set_help_context('max_feeder_voltage_drop')
+        self.max_feeder_vd_tb.PreviewMouseLeftButtonDown += self._percent_box_preview_mouse_down
+        self.max_feeder_vd_tb.GotKeyboardFocus += self._percent_box_got_focus
         self.max_feeder_vd_tb.LostFocus += lambda s, e: self._normalize_percent_on_blur(self.max_feeder_vd_tb, 0.001, 1.0, self.max_feeder_vd_warn, 0.05)
         self.neutral_behavior_cb.SelectionChanged += self._on_value_changed
         self.neutral_behavior_cb.GotFocus += lambda s, e: self._set_help_context('neutral_behavior')
@@ -176,8 +237,16 @@ class CircuitSettingsWindow(forms.WPFWindow):
                 return False
 
     def _apply_default_style(self, control, is_default):
-        control.FontStyle = FontStyles.Italic if is_default else FontStyles.Normal
-        control.Foreground = Brushes.Gray if is_default else Brushes.Black
+        if control is None:
+            return
+        type_name = ""
+        try:
+            type_name = control.GetType().Name
+        except Exception:
+            pass
+        is_option_control = type_name in ("ComboBox", "CheckBox")
+        control.FontStyle = FontStyles.Normal if is_option_control else (FontStyles.Italic if is_default else FontStyles.Normal)
+        control.Foreground = self._primary_text_brush or Brushes.Black
 
     def _refresh_styles(self, sender=None, args=None):
         self._apply_default_style(self.min_conduit_size_cb, self._is_default('min_conduit_size', self._get_combo_tag(self.min_conduit_size_cb)))
@@ -226,7 +295,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
 
     def _describe_material_display(self, value):
         return {
-            WireMaterialDisplay.AL_ONLY: "Show material for Aluminum only",
+            WireMaterialDisplay.AL_ONLY: "Aluminum only",
             WireMaterialDisplay.ALL: "Show material for Copper and Aluminum",
         }.get(value, value)
 
@@ -276,7 +345,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
                 IsolatedGroundBehavior.MANUAL: "[Manual Isolated Ground] Isolated ground size is specified independently in manual override mode.",
             },
             'wire_material_display': {
-                WireMaterialDisplay.AL_ONLY: "[Show material for Aluminum only] Only AL circuits include the material suffix.",
+                WireMaterialDisplay.AL_ONLY: "[Aluminum only] Only AL circuits include the material suffix.",
                 WireMaterialDisplay.ALL: "[Show material for Copper and Aluminum] Both CU and AL circuits include the material suffix.",
             },
             'wire_string_separator': {
@@ -459,7 +528,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
         return round(float(decimal_value) * 100, 3)
 
     def _percent_string(self, decimal_value):
-        return u"{}%".format(self._strip_trailing_zeros(self._percent_value(decimal_value)))
+        return u"{} %".format(self._strip_trailing_zeros(self._percent_value(decimal_value)))
 
     def _strip_trailing_zeros(self, number):
         text = ("{0:.5f}".format(number)).rstrip('0').rstrip('.')
@@ -495,10 +564,10 @@ class CircuitSettingsWindow(forms.WPFWindow):
 
         decimal_value = round(decimal_value, 3)
 
-        if decimal_value < min_value or decimal_value > max_value:
-            if silent:
-                return decimal_value
-            raise ValueError("{} must be between {}% and {}%.".format(label, self._percent_value(min_value), self._percent_value(max_value)))
+        if decimal_value < min_value:
+            decimal_value = min_value
+        elif decimal_value > max_value:
+            decimal_value = max_value
 
         if warning_block and warn_threshold is not None:
             warning_block.Visibility = Visibility.Visible if decimal_value > warn_threshold else Visibility.Collapsed
@@ -522,8 +591,9 @@ class CircuitSettingsWindow(forms.WPFWindow):
         try:
             self._parse_percent_field(textbox, min_value, max_value, warning_block, warn_threshold, silent=False)
         except Exception:
-            # Leave value as-is; save flow will surface the validation
-            pass
+            self._normalize_percent_text(textbox, min_value)
+            if warning_block and warn_threshold is not None:
+                warning_block.Visibility = Visibility.Visible if min_value > warn_threshold else Visibility.Collapsed
 
     def _on_percent_value_changed(self, textbox, min_value, max_value, warning_block, warn_threshold):
         self._sanitize_percent_input(textbox)
@@ -555,6 +625,25 @@ class CircuitSettingsWindow(forms.WPFWindow):
             caret = textbox.CaretIndex
             textbox.Text = cleaned
             textbox.CaretIndex = min(caret, len(cleaned))
+
+    def _percent_box_preview_mouse_down(self, sender, args):
+        if sender is None:
+            return
+        try:
+            if not sender.IsKeyboardFocusWithin:
+                sender.Focus()
+                args.Handled = True
+                return
+            sender.SelectAll()
+            args.Handled = True
+        except Exception:
+            pass
+
+    def _percent_box_got_focus(self, sender, args):
+        try:
+            sender.SelectAll()
+        except Exception:
+            pass
 
     def _refresh_validation_state(self):
         self._update_warning(self.max_conduit_fill_tb, 0.1, 1.0, self.max_conduit_fill_warn, 0.4)

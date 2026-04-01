@@ -107,14 +107,19 @@ class AutosizeBreakerAndRecalculateOperation(object):
                 'runtime_alert_rows': [],
             }
 
+        allow_15a = bool(request.options.get('allow_15a', False))
+        calc_options = {
+            'show_output': bool(request.options.get('show_output', False)),
+            'use_existing_transaction_group': True,
+        }
+        if allow_15a:
+            calc_options['min_breaker_size_override'] = 15
+
         calc_request = OperationRequest(
             operation_key='calculate_circuits',
             circuit_ids=changed_ids,
             source=request.source,
-            options={
-                'show_output': bool(request.options.get('show_output', False)),
-                'use_existing_transaction_group': True,
-            },
+            options=calc_options,
         )
         try:
             calc_result = self._calculate_operation.execute(calc_request, doc) or {}

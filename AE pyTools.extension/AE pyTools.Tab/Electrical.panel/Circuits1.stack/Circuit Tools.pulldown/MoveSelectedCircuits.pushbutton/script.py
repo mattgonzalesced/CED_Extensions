@@ -16,6 +16,28 @@ doc = __revit__.ActiveUIDocument.Document
 logger = script.get_logger()
 output = script.get_output()
 output.close_others()
+_get_id_value = get_elementid_value_func()
+_ELECTRICAL_EQUIPMENT_CAT_ID = int(DB.BuiltInCategory.OST_ElectricalEquipment)
+
+
+def _idval(item):
+    try:
+        return int(_get_id_value(item))
+    except Exception:
+        return int(getattr(item, "IntegerValue", 0))
+
+
+def _is_electrical_equipment_instance(element):
+    try:
+        category = getattr(element, "Category", None)
+    except Exception:
+        category = None
+    if category is None:
+        return False
+    try:
+        return _idval(category.Id) == _ELECTRICAL_EQUIPMENT_CAT_ID
+    except Exception:
+        return False
 
 
 def get_sorted_filtered_panels(all_panels, doc):
@@ -99,8 +121,7 @@ def get_circuits_from_selection(include_electrical_equipment=True):
                 circuits.append(element)
 
             elif isinstance(element, DB.FamilyInstance):
-                if element.Category.Id == DB.ElementId(
-                        DB.BuiltInCategory.OST_ElectricalEquipment) and not include_electrical_equipment:
+                if _is_electrical_equipment_instance(element) and not include_electrical_equipment:
                     logger.info("Skipping electrical equipment: %s", element_id)
                     discarded_elements.append(element_id)
                     continue
@@ -140,7 +161,7 @@ def get_circuits_from_selection(include_electrical_equipment=True):
                             electrical_systems = mep_model.GetElectricalSystems()
                             if electrical_systems:
                                 for circuit in electrical_systems:
-                                    if element.Category.Id == DB.ElementId(DB.BuiltInCategory.OST_ElectricalEquipment):
+                                    if _is_electrical_equipment_instance(element):
                                         if circuit.BaseEquipment is None or circuit.BaseEquipment.Id != element_id:
                                             logger.info("Adding feeder circuit: %s", circuit.Id)
                                             circuits.append(circuit)
@@ -163,8 +184,7 @@ def get_circuits_from_selection(include_electrical_equipment=True):
     unique_circuits = []
     seen_ids = set()
     for circuit in circuits:
-        get_id_val = get_elementid_value_func()
-        cid = get_id_val(circuit.Id)
+        cid = _idval(circuit.Id)
         if cid not in seen_ids:
             unique_circuits.append(circuit)
             seen_ids.add(cid)
@@ -211,7 +231,6 @@ def find_open_slots(target_panel):
 def main():
     selected_circuits = get_circuits_from_selection()
     all_panels = get_all_panels(doc)
-    get_id_val = get_elementid_value_func()
 
     compatible_panels = []
     for idx, circuit in enumerate(selected_circuits):
@@ -219,10 +238,10 @@ def main():
         if idx == 0:
             compatible_panels = circuit_panels
         else:
-            allowed_ids = set([get_id_val(p.Id) for p in list(circuit_panels or [])])
+            allowed_ids = set([_idval(p.Id) for p in list(circuit_panels or [])])
             compatible_panels = [
                 panel for panel in list(compatible_panels or [])
-                if get_id_val(panel.Id) in allowed_ids
+                if _idval(panel.Id) in allowed_ids
             ]
 
     if not compatible_panels:
@@ -252,11 +271,13 @@ def main():
     if isinstance(move_result, dict):
         circuit_data = list(move_result.get("moved") or [])
         failed_data = list(move_result.get("failed") or [])
+        skipped_data = list(move_result.get("skipped") or [])
         partial = bool(move_result.get("partial", False))
         fallback_used = bool(move_result.get("fallback_used", False))
     else:
         circuit_data = list(move_result or [])
         failed_data = []
+        skipped_data = []
         partial = False
         fallback_used = False
 
@@ -271,6 +292,9 @@ def main():
     if failed_data:
         output.print_md("**Circuits not moved:**")
         output.print_table(failed_data, ["Circuit ID", "Previous Circuit", "Failure"])
+    if skipped_data:
+        output.print_md("**Circuits skipped:**")
+        output.print_table(skipped_data, ["Circuit ID", "Circuit", "Reason"])
 
 
 if __name__ == '__main__':
