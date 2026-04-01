@@ -1,7 +1,9 @@
 title: Add Spares/Spaces
 
-tooltip:
+tooltip: >-
+  Version 2.0 | Date 04.01.2026
+  Batch add or remove default SPARE/SPACE entries across selected panel schedules.
+  Use Quick Spare/Space for fill/remove-all behavior, or use the main table to review panels, choose mode, and apply staged actions.
 
 author: >-
   AEvelina
-

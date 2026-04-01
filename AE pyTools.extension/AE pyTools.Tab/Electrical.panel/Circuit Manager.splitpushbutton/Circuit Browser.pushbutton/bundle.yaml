@@ -1,8 +1,9 @@
-﻿title: "Circuit Browser"
+title: "Circuit Browser"
 
 tooltip: >-
-  Dockable circuit manager for search, filtering, actions, model selection, and circuit calculations.
-  Includes Actions, Filter, Theme/Accent options, list or card display, and ownership-aware blocking.
+  Version 2.0 | Date 04.01.2026
+  Dockable circuit manager for searching, filtering, selecting, and editing circuits.
+  Use Refresh to sync with the model, then run actions from checked or selected circuits (including move, alerts, and recalculation workflows).
 
 author: >-
   AEvelina

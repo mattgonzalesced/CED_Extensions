@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 __title__ = "Wire Circuited Elements"
 
-from pyrevit import script, DB, forms
+from pyrevit import script, DB, forms, revit
 from pyrevit.compat import get_elementid_value_func
 
 from Snippets.wireutils import (
@@ -297,15 +297,21 @@ def main():
     doc = __revit__.ActiveUIDocument.Document
     uidoc = __revit__.ActiveUIDocument
     config = script.get_config("wire_type_config")
+    active_view = revit.active_view
+    if not isinstance(active_view, DB.ViewPlan) or active_view.ViewType not in (DB.ViewType.FloorPlan,
+                                                                                DB.ViewType.CeilingPlan):
+        forms.alert("Active view must be a floor plan or RCP to generate wires.", exitscript=True)
 
     all_circuits = collect_selected_electrical_circuits(doc, uidoc, logger=logger)
     if not all_circuits:
         logger.warning("No electrical circuits found from selected elements.")
+        script.exit()
         return
 
     target_type = resolve_target_system_type(all_circuits)
     if target_type is None:
         logger.warning("No system type selected. Cancelled.")
+        script.exit()
         return
 
     circuits = [c for c in all_circuits if c.SystemType == target_type]
