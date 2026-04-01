@@ -1046,6 +1046,14 @@ def _run_follow_parent_for_element(doc, elem, follow_module):
 
     parent_rot_new = parent_choice.get("rotation_deg") or parent_rot_old
     target_point = parent_point_new + follow_module._rotate_xy(local_offset_old, parent_rot_new)
+    try:
+        target_point = follow_module._preserve_child_z(elem, target_point)
+    except Exception:
+        current_point = follow_module._get_point(elem)
+        if current_point is None:
+            current_point = _get_element_point(elem)
+        if current_point is not None:
+            target_point = XYZ(target_point.X, target_point.Y, current_point.Z)
     target_rot = parent_rot_new + rotation_offset_old
 
     moved, rotated = follow_module._move_and_rotate_child(doc, elem, target_point, target_rot)

@@ -621,6 +621,15 @@ def _move_and_rotate_child(doc, elem, target_point, target_rot_deg):
     return moved, rotated
 
 
+def _preserve_child_z(elem, target_point):
+    if elem is None or target_point is None:
+        return target_point
+    current_point = _get_point(elem)
+    if current_point is None:
+        return target_point
+    return XYZ(target_point.X, target_point.Y, current_point.Z)
+
+
 def main():
     doc = getattr(revit, "doc", None)
     if doc is None:
@@ -691,6 +700,7 @@ def main():
 
             parent_rot_new = parent_choice.get("rotation_deg") or parent_rot_old
             target_point = parent_point_new + _rotate_xy(local_offset_old, parent_rot_new)
+            target_point = _preserve_child_z(elem, target_point)
             target_rot = parent_rot_new + rotation_offset_old
 
             moved, rotated = _move_and_rotate_child(doc, elem, target_point, target_rot)
