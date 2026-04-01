@@ -8,6 +8,7 @@ exist as equipment profiles in the active YAML (stored in Extensible Storage).
 
 import os
 import sys
+import System
 
 from pyrevit import forms, revit, script
 from pyrevit.revit import ui
@@ -46,6 +47,7 @@ from ExtensibleStorage import ExtensibleStorage  # noqa: E402
 from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 
 TITLE = "Toggle Existing Profiles"
+BUILD_TAG = "2026-03-31-unhide-hotfix2"
 SETTING_KEY = "mep_automation.toggle_existing_profiles_hidden"
 SETTING_IDS_KEY = "mep_automation.toggle_existing_profiles_pairs"
 
@@ -60,6 +62,10 @@ def _normalize_name(value):
     if not value:
         return ""
     return " ".join(str(value).strip().lower().split())
+
+
+def _with_build(message):
+    return "{}\n\nBuild: {}".format(message, BUILD_TAG)
 
 
 def _normalize_family_type_key(value):
@@ -575,6 +581,50 @@ def _build_link_references_from_pairs(doc, pairs):
     return refs
 
 
+def _collect_root_link_ids_from_pairs(doc, pairs):
+    link_ids = []
+    seen = set()
+    if doc is None:
+        return link_ids
+    for entry in pairs or []:
+        normalized = _normalize_target_entry(entry)
+        if not normalized:
+            continue
+        chain_ids, _elem_id = normalized
+        if not chain_ids:
+            continue
+        root_id_int = int(chain_ids[0])
+        if root_id_int in seen:
+            continue
+        seen.add(root_id_int)
+        try:
+            link_id = ElementId(root_id_int)
+            if doc.GetElement(link_id) is None:
+                continue
+            link_ids.append(link_id)
+        except Exception:
+            continue
+    return link_ids
+
+
+def _unhide_via_root_links(doc, view, pairs):
+    root_link_ids = _collect_root_link_ids_from_pairs(doc, pairs)
+    if not root_link_ids:
+        return 0
+
+    success = 0
+    with revit.Transaction("Unhide Existing Profile Link Instances"):
+        for link_id in root_link_ids:
+            ids = List[ElementId]()
+            ids.Add(link_id)
+            try:
+                view.UnhideElements(ids)
+                success += 1
+            except Exception:
+                continue
+    return success
+
+
 def _build_report_records_from_pairs(doc, pairs, profile_lookup):
     records = []
     seen = set()
@@ -696,10 +746,45 @@ def _apply_visibility(view, link_element_ids, hide_mode):
     typed_ids = List[LinkElementId]()
     for item in link_element_ids:
         typed_ids.Add(item)
-    if hide_mode:
-        view.HideElements(typed_ids)
-    else:
-        view.UnhideElements(typed_ids)
+
+    def _invoke_link_overload(method_name):
+        try:
+            view_type = view.GetType()
+            methods = [m for m in view_type.GetMethods() if m.Name == method_name]
+        except Exception:
+            methods = []
+        for method in methods:
+            try:
+                params = method.GetParameters()
+                if len(params) != 1:
+                    continue
+                ptype = params[0].ParameterType
+                if not getattr(ptype, "IsGenericType", False):
+                    continue
+                gargs = ptype.GetGenericArguments()
+                if not gargs or len(gargs) != 1:
+                    continue
+                target_arg = getattr(gargs[0], "FullName", None) or ""
+                if target_arg != "Autodesk.Revit.DB.LinkElementId":
+                    continue
+                args = System.Array[System.Object]([typed_ids])
+                method.Invoke(view, args)
+                return True
+            except Exception:
+                continue
+        return False
+
+    method_name = "HideElements" if hide_mode else "UnhideElements"
+    try:
+        if hide_mode:
+            view.HideElements(typed_ids)
+        else:
+            view.UnhideElements(typed_ids)
+        return
+    except Exception as direct_exc:
+        if _invoke_link_overload(method_name):
+            return
+        raise direct_exc
 
 
 def _post_visibility_command(uidoc, refs, hide_mode):
@@ -715,22 +800,49 @@ def _post_visibility_command(uidoc, refs, hide_mode):
         typed_refs.Add(ref)
     uidoc.Selection.SetReferences(typed_refs)
 
+    def _try_post_command_id(cmd_id):
+        if cmd_id is None:
+            return False
+        can_post = getattr(__revit__, "CanPostCommand", None)
+        if callable(can_post):
+            try:
+                if not can_post(cmd_id):
+                    return False
+            except Exception:
+                return False
+        __revit__.PostCommand(cmd_id)
+        return True
+
     if hide_mode:
         cmd_enum = getattr(PostableCommand, "HideElements", None)
     else:
         cmd_enum = getattr(PostableCommand, "UnhideElements", None) or getattr(PostableCommand, "UnhideElement", None)
-    if cmd_enum is None:
-        raise RuntimeError("No postable {} command is available.".format("hide" if hide_mode else "unhide"))
-    cmd_id = RevitCommandId.LookupPostableCommandId(cmd_enum)
-    if cmd_id is None:
-        raise RuntimeError("Unable to resolve '{}' command id.".format(cmd_enum))
-    can_post = getattr(__revit__, "CanPostCommand", None)
-    if callable(can_post):
-        if not can_post(cmd_id):
-            raise RuntimeError(
-                "The '{}' command is currently unavailable in this view/context.".format(cmd_enum)
-            )
-    __revit__.PostCommand(cmd_id)
+    if cmd_enum is not None:
+        cmd_id = RevitCommandId.LookupPostableCommandId(cmd_enum)
+        if _try_post_command_id(cmd_id):
+            return
+
+    if hide_mode:
+        raise RuntimeError("No postable hide command is available.")
+
+    # Revit 2025 can omit Unhide from PostableCommand even when an internal
+    # command id exists; try known command id names directly.
+    candidate_names = [
+        "ID_VIEW_UNHIDE_ELEMENTS",
+        "ID_VIEW_UNHIDE_ELEMS",
+        "ID_UNHIDE_ELEMENTS",
+        "ID_UNHIDE_IN_VIEW_ELEMENTS",
+        "ID_VIEW_UNHIDE_IN_VIEW_ELEMENTS",
+    ]
+    for name in candidate_names:
+        try:
+            candidate_cmd = RevitCommandId.LookupCommandId(name)
+        except Exception:
+            candidate_cmd = None
+        if _try_post_command_id(candidate_cmd):
+            return
+
+    raise RuntimeError("No postable unhide command is available.")
 
 
 def _is_revit_2025_or_newer(doc):
@@ -838,25 +950,56 @@ def main():
         _set_button_icon(False)
         _print_no_match_diagnostics(profile_lookup, linked_name_samples)
         forms.alert(
-            "No linked Family : Type names matched YAML profile names.\n\n"
-            "Links scanned: {}\n"
-            "Elements scanned: {}\n"
-            "Matches: {}\n\nSee pyRevit output for mismatch diagnostics.".format(link_count, scanned, matched),
+            _with_build(
+                "No linked Family : Type names matched YAML profile names.\n\n"
+                "Links scanned: {}\n"
+                "Elements scanned: {}\n"
+                "Matches: {}\n\nSee pyRevit output for mismatch diagnostics.".format(link_count, scanned, matched)
+            ),
             title=TITLE,
         )
         return
 
     action_text = "Hide" if hide_mode else "Unhide"
     apply_mode = "ui" if prefer_ui_mode else "api"
+    already_applied = False
 
-    if prefer_ui_mode:
+    # Revit 2025/2026 can lack a postable unhide command for linked refs.
+    # Try a safe ElementId-based link-instance unhide path first.
+    if not hide_mode:
+        try:
+            unhidden_links = _unhide_via_root_links(doc, view, matched_pairs)
+            if unhidden_links > 0:
+                apply_mode = "api-link-instance"
+                already_applied = True
+        except Exception:
+            already_applied = False
+
+    if (not already_applied) and prefer_ui_mode:
         try:
             refs = _build_link_references_from_pairs(doc, matched_pairs)
             _post_visibility_command(revit.uidoc, refs, hide_mode)
         except Exception as ui_exc:
-            if LinkElementId is None:
+            if not hide_mode:
+                try:
+                    unhidden_links = _unhide_via_root_links(doc, view, matched_pairs)
+                    if unhidden_links > 0:
+                        apply_mode = "api-link-instance"
+                    else:
+                        raise RuntimeError("No matching root link instances could be unhidden.")
+                except Exception as link_unhide_exc:
+                    forms.alert(
+                        _with_build("{} failed.\n\nUI command error:\n{}\n\nLink-instance fallback error:\n{}".format(
+                            action_text,
+                            ui_exc,
+                            link_unhide_exc,
+                        )),
+                        title=TITLE,
+                    )
+                    return
+            elif LinkElementId is None:
                 forms.alert(
-                    "{} failed.\n\n{}".format(action_text, ui_exc),
+                    _with_build("{} failed.\n\n{}".format(action_text, ui_exc)),
                     title=TITLE,
                 )
                 return
@@ -870,15 +1013,15 @@ def main():
                 apply_mode = "api"
             except Exception as api_fallback_exc:
                 forms.alert(
-                    "{} failed.\n\nUI command error:\n{}\n\nAPI fallback error:\n{}".format(
+                    _with_build("{} failed.\n\nUI command error:\n{}\n\nAPI fallback error:\n{}".format(
                         action_text,
                         ui_exc,
                         api_fallback_exc,
-                    ),
+                    )),
                     title=TITLE,
                 )
                 return
-    else:
+    elif not already_applied:
         if not link_element_ids and LinkElementId is not None:
             try:
                 link_element_ids = _build_link_element_ids_from_pairs(doc, matched_pairs)
@@ -896,15 +1039,34 @@ def main():
                 _post_visibility_command(revit.uidoc, refs, hide_mode)
                 apply_mode = "ui"
             except Exception as ui_fallback_exc:
-                forms.alert(
-                    "{} failed.\n\nAPI error:\n{}\n\nUI fallback error:\n{}".format(
-                        action_text,
-                        api_exc,
-                        ui_fallback_exc,
-                    ),
-                    title=TITLE,
-                )
-                return
+                if not hide_mode:
+                    try:
+                        unhidden_links = _unhide_via_root_links(doc, view, matched_pairs)
+                        if unhidden_links > 0:
+                            apply_mode = "api-link-instance"
+                        else:
+                            raise RuntimeError("No matching root link instances could be unhidden.")
+                    except Exception as link_unhide_exc:
+                        forms.alert(
+                            _with_build("{} failed.\n\nAPI error:\n{}\n\nUI fallback error:\n{}\n\nLink-instance fallback error:\n{}".format(
+                                action_text,
+                                api_exc,
+                                ui_fallback_exc,
+                                link_unhide_exc,
+                            )),
+                            title=TITLE,
+                        )
+                        return
+                else:
+                    forms.alert(
+                        _with_build("{} failed.\n\nAPI error:\n{}\n\nUI fallback error:\n{}".format(
+                            action_text,
+                            api_exc,
+                            ui_fallback_exc,
+                        )),
+                        title=TITLE,
+                    )
+                    return
 
     _set_toggle_state(doc, hide_mode)
     if hide_mode:
@@ -919,12 +1081,13 @@ def main():
     _print_match_report(action_text, apply_mode, yaml_label, match_records, scanned, link_count, matched)
     forms.show_balloon(
         TITLE,
-        "State: {}\nMatched linked elements: {}\nElements scanned: {}\nApply mode: {}\nYAML: {}\nReport: pyRevit output panel".format(
+        "State: {}\nMatched linked elements: {}\nElements scanned: {}\nApply mode: {}\nYAML: {}\nBuild: {}\nReport: pyRevit output panel".format(
             state_text,
             matched,
             scanned,
             apply_mode.upper(),
             yaml_label,
+            BUILD_TAG,
         ),
     )
 
