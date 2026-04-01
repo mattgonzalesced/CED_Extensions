@@ -1,0 +1,82 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SUPER CIRCUIT V5 Preview"
+        Width="1500"
+        Height="820"
+        WindowStartupLocation="CenterScreen">
+  <Grid Margin="10">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <TextBlock x:Name="HeaderText"
+               TextWrapping="Wrap"
+               Margin="0,0,0,6"/>
+
+    <TextBlock x:Name="SummaryText"
+               Grid.Row="1"
+               Margin="0,0,0,6"/>
+
+    <DataGrid x:Name="PreviewGrid"
+              Grid.Row="2"
+              AutoGenerateColumns="False"
+              CanUserAddRows="False"
+              IsReadOnly="True"
+              SelectionMode="Extended"
+              SelectionUnit="FullRow"
+              Margin="0,0,0,8">
+            <DataGrid.RowStyle>
+        <Style TargetType="DataGridRow">
+          <Setter Property="Background" Value="{Binding row_background}"/>
+          <Setter Property="Foreground" Value="{Binding row_foreground}"/>
+          <Style.Triggers>
+            <DataTrigger Binding="{Binding is_spacer}" Value="True">
+              <Setter Property="Background" Value="Transparent"/>
+              <Setter Property="Foreground" Value="Transparent"/>
+              <Setter Property="Height" Value="8"/>
+              <Setter Property="IsHitTestVisible" Value="False"/>
+              <Setter Property="Focusable" Value="False"/>
+            </DataTrigger>
+          </Style.Triggers>
+        </Style>
+      </DataGrid.RowStyle>
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Circuit Batch"
+                            Width="2.5*"
+                            Binding="{Binding group_label}"/>
+        <DataGridTextColumn Header="CKT_Panel_CEDT"
+                            Width="1.2*"
+                            Binding="{Binding panel_name}"/>
+        <DataGridTextColumn Header="CKT_Circuit Number_CEDT"
+                            Width="1.3*"
+                            Binding="{Binding circuit_number}"/>
+        <DataGridTextColumn Header="Family : Type"
+                            Width="2.0*"
+                            Binding="{Binding family_type}"/>
+        <DataGridTextColumn Header="Element ID"
+                            Width="0.9*"
+                            Binding="{Binding element_id}"/>
+      </DataGrid.Columns>
+    </DataGrid>
+
+    <StackPanel Grid.Row="3"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right">
+      <Button x:Name="EditSelectedButton"
+              Content="Edit Selected"
+              Width="140"
+              Margin="0,0,8,0"/>
+      <Button x:Name="RunButton"
+              Content="Run Circuits"
+              Width="140"
+              Margin="0,0,8,0"/>
+      <Button x:Name="CancelButton"
+              Content="Cancel"
+              Width="120"/>
+    </StackPanel>
+  </Grid>
+</Window>
+
