@@ -79,12 +79,15 @@
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
               <ComboBox ItemsSource="{Binding panel_options}"
+                        SelectionChanged="OnInlineValueChanged"
+                        DropDownClosed="OnInlineValueChanged"
+                        SelectedItem="{Binding panel_name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         Text="{Binding panel_name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         IsEditable="True"
                         StaysOpenOnEdit="True"
                         BorderThickness="0"
-                        Background="Transparent"
-                        Foreground="{Binding row_foreground}">
+                        Background="White"
+                        Foreground="Black">
                 <ComboBox.Style>
                   <Style TargetType="ComboBox">
                     <Style.Triggers>
@@ -103,12 +106,42 @@
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
               <ComboBox ItemsSource="{Binding circuit_options}"
+                        SelectionChanged="OnInlineValueChanged"
+                        DropDownClosed="OnInlineValueChanged"
+                        SelectedItem="{Binding circuit_number, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         Text="{Binding circuit_number, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         IsEditable="True"
                         StaysOpenOnEdit="True"
                         BorderThickness="0"
-                        Background="Transparent"
-                        Foreground="{Binding row_foreground}">
+                        Background="White"
+                        Foreground="Black">
+                <ComboBox.Style>
+                  <Style TargetType="ComboBox">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding is_spacer}" Value="True">
+                        <Setter Property="IsEnabled" Value="False"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </ComboBox.Style>
+              </ComboBox>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+
+        <DataGridTemplateColumn Header="CKT_Load Name_CEDT" Width="1.5*">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <ComboBox ItemsSource="{Binding load_options}"
+                        SelectionChanged="OnInlineValueChanged"
+                        DropDownClosed="OnInlineValueChanged"
+                        SelectedItem="{Binding load_name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        Text="{Binding load_name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        IsEditable="True"
+                        StaysOpenOnEdit="True"
+                        BorderThickness="0"
+                        Background="White"
+                        Foreground="Black">
                 <ComboBox.Style>
                   <Style TargetType="ComboBox">
                     <Style.Triggers>
@@ -131,6 +164,28 @@
                             Width="0.9*"
                             IsReadOnly="True"
                             Binding="{Binding element_id}"/>
+
+        <DataGridTemplateColumn Header="Select" Width="0.7*">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <Button Content="Select"
+                      Click="OnSelectRowClicked"
+                      Padding="8,2"
+                      HorizontalAlignment="Center">
+                <Button.Style>
+                  <Style TargetType="Button">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding is_spacer}" Value="True">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Setter Property="IsEnabled" Value="False"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Button.Style>
+              </Button>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
       </DataGrid.Columns>
     </DataGrid>
 

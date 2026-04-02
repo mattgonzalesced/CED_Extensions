@@ -7,6 +7,8 @@ import os
 import re
 
 from pyrevit import revit, script, forms, DB
+from Autodesk.Revit.UI import ExternalEvent, IExternalEventHandler
+from System.Collections.Generic import List
 from System.Windows.Media import Color, SolidColorBrush
 
 from Snippets._elecutils import (
@@ -19,6 +21,15 @@ from Snippets._elecutils import (
 )
 
 import circuits
+
+try:
+    import importlib
+    circuits = importlib.reload(circuits)
+except Exception:
+    try:
+        circuits = reload(circuits)  # IronPython fallback
+    except Exception:
+        pass
 
 logger = script.get_logger()
 logger.setLevel(logging.INFO)
@@ -39,6 +50,9 @@ SCOPE_CHOICES = OrderedDict([
 ])
 
 client_helpers = None
+active_client_key = None
+_MODELLESS_PREVIEW_WINDOW = None
+_MODELLESS_PREVIEW_GATEWAY = None
 EXCLUDED_CATEGORY_IDS = {
     DB.ElementId(DB.BuiltInCategory.OST_LightingDevices).IntegerValue,
     DB.ElementId(DB.BuiltInCategory.OST_LightingFixtures).IntegerValue,
@@ -76,6 +90,7 @@ class PreviewRow(object):
         group_label,
         panel_name,
         circuit_number,
+        load_name,
         family_type,
         element_id,
         source_item,
@@ -84,11 +99,13 @@ class PreviewRow(object):
         is_spacer=False,
         panel_options=None,
         circuit_options=None,
+        load_options=None,
     ):
         self.group_index = group_index
         self.group_label = group_label
         self.panel_name = panel_name or ""
         self.circuit_number = circuit_number or ""
+        self.load_name = load_name or ""
         self.family_type = family_type or ""
         self.element_id = str(element_id) if element_id is not None else ""
         self.source_item = source_item
@@ -97,32 +114,227 @@ class PreviewRow(object):
         self.is_spacer = bool(is_spacer)
         self.panel_options = list(panel_options or [])
         self.circuit_options = list(circuit_options or [])
+        self.load_options = list(load_options or [])
+
+class _SuperCircuitPreviewExternalEventHandler(IExternalEventHandler):
+    def __init__(self, gateway):
+        self._gateway = gateway
+
+    def Execute(self, uiapp):
+        self._gateway._execute(uiapp)
+
+    def GetName(self):
+        return "Super Circuit V5 Preview External Event"
+
+
+class SuperCircuitPreviewExternalEventGateway(object):
+    def __init__(self, logger_obj=None):
+        self._logger = logger_obj or logger
+        self._busy = False
+        self._payload = None
+        self._handler = _SuperCircuitPreviewExternalEventHandler(self)
+        self._event = ExternalEvent.Create(self._handler)
+
+    def _raise(self, payload):
+        if self._busy:
+            return False
+        self._busy = True
+        self._payload = payload or {}
+        try:
+            self._event.Raise()
+            return True
+        except Exception as ex:
+            self._busy = False
+            self._payload = None
+            self._logger.warning("SuperCircuitV5 external event raise failed: {}".format(ex))
+            return False
+
+    def request_run(self, window):
+        return self._raise({"action": "run", "window": window})
+
+    def request_select(self, window, row):
+        return self._raise({"action": "select", "window": window, "row": row})
+
+    def _execute(self, uiapp):
+        payload = self._payload or {}
+        self._payload = None
+        try:
+            action = (payload.get("action") or "").strip().lower()
+            if action == "run":
+                self._execute_run(uiapp, payload)
+            elif action == "select":
+                self._execute_select(uiapp, payload)
+        except Exception as ex:
+            self._logger.exception("SuperCircuitV5 external event execution failed: {}".format(ex))
+            try:
+                forms.alert("SUPER CIRCUIT V5 action failed:\n{}".format(ex), title=__title__)
+            except Exception:
+                pass
+        finally:
+            self._busy = False
+
+    @staticmethod
+    def _resolve_row_element_id(row):
+        if not row:
+            return None
+        item = getattr(row, "source_item", None)
+        if item:
+            element = item.get("element")
+            elem_id = getattr(getattr(element, "Id", None), "IntegerValue", None)
+            if elem_id is not None:
+                return int(elem_id)
+
+        raw = getattr(row, "element_id", None)
+        if raw in (None, ""):
+            return None
+        try:
+            return int(str(raw).strip())
+        except Exception:
+            return None
+
+    @staticmethod
+    def _same_document(doc_a, doc_b):
+        if doc_a is None or doc_b is None:
+            return False
+        try:
+            return bool(doc_a.Equals(doc_b))
+        except Exception:
+            pass
+
+        try:
+            title_a = getattr(doc_a, "Title", None)
+            title_b = getattr(doc_b, "Title", None)
+            if title_a and title_b and title_a == title_b:
+                return True
+        except Exception:
+            pass
+        return False
+
+    def _execute_select(self, uiapp, payload):
+        window = payload.get("window")
+        row = payload.get("row")
+        uidoc = getattr(uiapp, "ActiveUIDocument", None) if uiapp is not None else None
+        if uidoc is None:
+            return
+
+        doc = getattr(uidoc, "Document", None)
+        source_doc = getattr(window, "source_doc", None)
+        if source_doc is not None and doc is not None and (not self._same_document(doc, source_doc)):
+            forms.alert(
+                "Active document changed. Switch back to the original document before using Select.",
+                title=__title__,
+            )
+            return
+
+        elem_id_val = self._resolve_row_element_id(row)
+        if elem_id_val is None:
+            return
+
+        _select_and_focus_element(uidoc, elem_id_val)
+
+    def _execute_run(self, uiapp, payload):
+        window = payload.get("window")
+        if window is None:
+            return
+
+        uidoc = getattr(uiapp, "ActiveUIDocument", None) if uiapp is not None else None
+        doc = getattr(uidoc, "Document", None) if uidoc is not None else None
+
+        if doc is None:
+            forms.alert("No active Revit document found.", title=__title__)
+            try:
+                window._on_modeless_run_finished(False)
+            except Exception:
+                pass
+            return
+
+        source_doc = getattr(window, "source_doc", None)
+        if source_doc is not None and (not self._same_document(doc, source_doc)):
+            forms.alert(
+                "Active document changed. Switch back to the original document before running circuits.",
+                title=__title__,
+            )
+            try:
+                window._on_modeless_run_finished(False)
+            except Exception:
+                pass
+            return
+
+        try:
+            groups = window.build_groups_for_run()
+            if not groups:
+                forms.alert("Grouping produced no circuit batches.", title=__title__)
+                window._on_modeless_run_finished(False)
+                return
+
+            created_systems = _run_creation(doc, groups)
+            if not created_systems:
+                forms.alert("No circuits were created.", title=__title__)
+                window._on_modeless_run_finished(False)
+                return
+
+            _run_apply_data(doc, created_systems)
+            self._logger.info("Created {} circuits.".format(len(created_systems)))
+            window._on_modeless_run_finished(True)
+        except Exception as ex:
+            self._logger.exception("SuperCircuitV5 run failed: {}".format(ex))
+            forms.alert(
+                "SUPER CIRCUIT V5 failed while creating circuits:\n{}".format(ex),
+                title=__title__,
+            )
+            try:
+                window._on_modeless_run_finished(False)
+            except Exception:
+                pass
+
 
 class SuperCircuitPreviewWindow(forms.WPFWindow):
-    def __init__(self, xaml_path, rows):
+    def __init__(
+        self,
+        xaml_path,
+        rows,
+        info_items,
+        panel_lookup,
+        client_key=None,
+        client_module=None,
+        gateway=None,
+        source_doc=None,
+    ):
         forms.WPFWindow.__init__(self, xaml_path)
         self.rows = rows or []
+        self.info_items = list(info_items or [])
+        self.panel_lookup = panel_lookup or {}
+        self.client_key = client_key
+        self.client_module = client_module
         self.accepted = False
+        self._is_refreshing = False
+        self._is_closing = False
+        self._is_running = False
+        self._gateway = gateway
+        self._modeless = bool(gateway is not None)
+        self.source_doc = source_doc
 
         header = self.FindName("HeaderText")
         if header is not None:
-            header.Text = (
-                "Preview of circuits to be created. Rows are grouped by circuit batch and panel. "
-                "Edit panel and circuit directly in the combo boxes in this window, then click Run Circuits. "
-                "Use the Color Key at the top (1=No Color, 2=Green, 3=Blue, 4-7=Indigo, 8+=Red). Blank rows separate each circuit batch."
-            )
-
-        summary = self.FindName("SummaryText")
-        if summary is not None:
-            data_rows = [row for row in self.rows if not getattr(row, "is_spacer", False)]
-            summary.Text = "{} element(s) in {} circuit batch(es).".format(
-                len(data_rows),
-                len({row.group_index for row in data_rows}),
-            )
+            if self._modeless:
+                header.Text = (
+                    "Modeless preview of circuits to be created. Rows are grouped by circuit batch and panel. "
+                    "Edit panel and circuit inline, use Select to jump to a fixture, and click Run Circuits when ready. "
+                    "Use the Color Key at the top (1=No Color, 2=Green, 3=Blue, 4-7=Indigo, 8+=Red). "
+                    "Blank rows separate each circuit batch."
+                )
+            else:
+                header.Text = (
+                    "Preview of circuits to be created. Rows are grouped by circuit batch and panel. "
+                    "Edit panel and circuit directly in the combo boxes in this window, then click Run Circuits. "
+                    "Use the Color Key at the top (1=No Color, 2=Green, 3=Blue, 4-7=Indigo, 8+=Red). Blank rows separate each circuit batch."
+                )
 
         grid = self.FindName("PreviewGrid")
         if grid is not None:
             grid.ItemsSource = self.rows
+
+        self._update_summary()
 
         edit_btn = self.FindName("EditSelectedButton")
         run_btn = self.FindName("RunButton")
@@ -134,6 +346,18 @@ class SuperCircuitPreviewWindow(forms.WPFWindow):
             run_btn.Click += self._on_run
         if cancel_btn is not None:
             cancel_btn.Click += self._on_cancel
+            if self._modeless:
+                cancel_btn.Content = "Close"
+
+    def _update_summary(self):
+        summary = self.FindName("SummaryText")
+        if summary is None:
+            return
+        data_rows = [row for row in self.rows if not getattr(row, "is_spacer", False)]
+        summary.Text = "{} element(s) in {} circuit batch(es).".format(
+            len(data_rows),
+            len({row.group_index for row in data_rows}),
+        )
 
     def _selected_rows(self):
         grid = self.FindName("PreviewGrid")
@@ -151,18 +375,117 @@ class SuperCircuitPreviewWindow(forms.WPFWindow):
             pass
         return selected
 
-    def _apply_row_values(self, rows, panel_value, circuit_value):
-        for row in rows:
+    def _sync_rows_to_items(self):
+        upper_lookup = _build_panel_lookup_upper(self.panel_lookup)
+        for row in self.rows:
             if getattr(row, "is_spacer", False):
                 continue
-            row.panel_name = panel_value
-            row.circuit_number = circuit_value
-        grid = self.FindName("PreviewGrid")
-        if grid is not None:
-            try:
-                grid.Items.Refresh()
-            except Exception:
-                pass
+            item = getattr(row, "source_item", None)
+            if not item:
+                continue
+
+            old_panel = (item.get("panel_name") or "").strip()
+            old_circuit = (item.get("circuit_number") or "").strip()
+            old_load = (item.get("load_name") or "").strip()
+            new_panel = (row.panel_name or "").strip() or old_panel
+            new_circuit = (row.circuit_number or "").strip() or old_circuit
+            new_load = (row.load_name or "").strip() or old_load
+
+            row.panel_name = new_panel
+            row.circuit_number = new_circuit
+            row.load_name = new_load
+            item["panel_name"] = new_panel
+            item["circuit_number"] = new_circuit
+            item["load_name"] = new_load
+            _apply_panel_bindings(item, self.panel_lookup, upper_lookup)
+
+        _update_panel_choice_counts(self.info_items)
+
+    def _refresh_preview_grouping(self):
+        if self._is_refreshing:
+            return
+
+        self._is_refreshing = True
+        try:
+            self._sync_rows_to_items()
+
+            groups = circuits.assemble_groups(self.info_items, self.client_module, logger)
+            if not groups:
+                return
+            groups = _sort_groups(groups, self.client_module)
+
+            panel_options = _collect_panel_combo_options(groups, self.panel_lookup)
+            circuit_options = _collect_circuit_combo_options(groups, self.client_key, self.client_module)
+            load_options = _collect_load_combo_options(groups)
+            self.rows = _build_preview_rows(groups, panel_options, circuit_options, load_options)
+
+            grid = self.FindName("PreviewGrid")
+            if grid is not None:
+                grid.ItemsSource = self.rows
+                try:
+                    grid.Items.Refresh()
+                except Exception:
+                    pass
+
+            self._update_summary()
+        finally:
+            self._is_refreshing = False
+
+    def build_groups_for_run(self):
+        self._sync_rows_to_items()
+        groups = circuits.assemble_groups(self.info_items, self.client_module, logger)
+        if not groups:
+            return []
+        return _sort_groups(groups, self.client_module)
+
+    def _on_modeless_run_finished(self, success):
+        self._is_running = False
+        run_btn = self.FindName("RunButton")
+        if run_btn is not None:
+            run_btn.IsEnabled = True
+
+        if success:
+            self._is_closing = True
+            self.accepted = True
+            self.Close()
+
+    def OnInlineValueChanged(self, sender, args):
+        if getattr(self, "_is_refreshing", False) or getattr(self, "_is_closing", False):
+            return
+
+        row = getattr(sender, "DataContext", None)
+        if not row or getattr(row, "is_spacer", False):
+            return
+
+        item = getattr(row, "source_item", None)
+        if not item:
+            return
+
+        old_panel = (item.get("panel_name") or "").strip()
+        old_circuit = (item.get("circuit_number") or "").strip()
+        old_load = (item.get("load_name") or "").strip()
+        new_panel = (row.panel_name or "").strip() or old_panel
+        new_circuit = (row.circuit_number or "").strip() or old_circuit
+        new_load = (row.load_name or "").strip() or old_load
+
+        if new_panel == old_panel and new_circuit == old_circuit and new_load == old_load:
+            return
+
+        self._refresh_preview_grouping()
+
+    def OnSelectRowClicked(self, sender, args):
+        if not self._modeless or self._gateway is None:
+            return
+        row = getattr(sender, "DataContext", None)
+        if not row or getattr(row, "is_spacer", False):
+            return
+
+        queued = self._gateway.request_select(self, row)
+        if not queued:
+            forms.alert(
+                "Preview action is busy. Wait a moment and try Select again.",
+                title=__title__,
+            )
 
     def _on_edit_selected(self, sender, args):
         grid = self.FindName("PreviewGrid")
@@ -175,7 +498,18 @@ class SuperCircuitPreviewWindow(forms.WPFWindow):
             pass
 
     def _close_with_result(self, accepted):
+        self._is_closing = True
+        if accepted:
+            try:
+                self._sync_rows_to_items()
+            except Exception:
+                pass
         self.accepted = bool(accepted)
+
+        if self._modeless:
+            self.Close()
+            return
+
         try:
             self.DialogResult = bool(accepted)
         except Exception:
@@ -183,6 +517,28 @@ class SuperCircuitPreviewWindow(forms.WPFWindow):
         self.Close()
 
     def _on_run(self, sender, args):
+        if self._modeless:
+            if self._is_running:
+                return
+            if self._gateway is None:
+                return
+            try:
+                self._sync_rows_to_items()
+            except Exception:
+                pass
+            queued = self._gateway.request_run(self)
+            if not queued:
+                forms.alert(
+                    "Preview action is busy. Wait a moment and try Run Circuits again.",
+                    title=__title__,
+                )
+                return
+            self._is_running = True
+            run_btn = self.FindName("RunButton")
+            if run_btn is not None:
+                run_btn.IsEnabled = False
+            return
+
         self._close_with_result(True)
 
     def _on_cancel(self, sender, args):
@@ -444,28 +800,50 @@ def _run_apply_data(doc, created_systems):
     )
 
 
+def _select_and_focus_element(uidoc, element_id_value):
+    if uidoc is None or element_id_value in (None, ""):
+        return
+    try:
+        element_id = DB.ElementId(int(element_id_value))
+    except Exception:
+        return
+
+    ids = List[DB.ElementId]()
+    ids.Add(element_id)
+
+    try:
+        uidoc.Selection.SetElementIds(ids)
+    except Exception:
+        return
+
+    try:
+        uidoc.ShowElements(ids)
+    except Exception:
+        pass
+
+
 def _group_priority(group_type):
     priority_map = {
         "dedicated": 0,
-        "nongrouped": 1,
         "special": 2,
         "position": 2,
     }
     return priority_map.get(group_type or "normal", 3)
 
 
-def _load_priority(group, group_priority_value):
+def _load_priority(group, group_priority_value, client_module=None):
     if group_priority_value < 3:
         return 0
-    if client_helpers and hasattr(client_helpers, "get_load_priority"):
+    module = client_module or client_helpers
+    if module and hasattr(module, "get_load_priority"):
         try:
-            return client_helpers.get_load_priority(group)
+            return module.get_load_priority(group)
         except Exception as ex:
             logger.warning("Client load priority lookup failed: {}".format(ex))
     return 99
 
 
-def _sort_groups(groups):
+def _sort_groups(groups, client_module=None):
     def sort_key(group):
         members = group.get("members") or []
         choice_counts = [m.get("panel_choice_count") for m in members if m.get("panel_choice_count") is not None]
@@ -474,7 +852,7 @@ def _sort_groups(groups):
 
         priority = _group_priority(group.get("group_type"))
         panel = (group.get("panel_name") or "").lower()
-        load_priority = _load_priority(group, priority)
+        load_priority = _load_priority(group, priority, client_module)
         circuit_number = group.get("circuit_number")
         circuit_sort = circuits.try_parse_int(circuit_number)
         if circuit_sort is None:
@@ -560,7 +938,48 @@ def _collect_panel_combo_options(groups, panel_lookup):
     return options
 
 
-def _collect_circuit_combo_options(groups):
+def _client_default_circuit_keywords(client_key, client_module=None):
+    defaults = [
+        "DEDICATED",
+        "BYPARENT",
+        "SECONDBYPARENT",
+    ]
+
+    module = client_module or client_helpers
+    if module:
+        rules = getattr(module, "_POSITION_RULES", None) or []
+        for rule in rules:
+            if not isinstance(rule, dict):
+                continue
+            keyword = (rule.get("keyword") or "").strip()
+            if keyword:
+                defaults.append(keyword)
+
+        token = (getattr(module, "_CASECONTROLLER_TOKEN", None) or "").strip()
+        if token:
+            defaults.append(token)
+
+    key = (client_key or "").strip().lower()
+    if key == "heb":
+        defaults.extend(["EMERGENCY", "CASECONTROLLER", "TVTRUSS"])
+    elif key == "planet_fitness":
+        defaults.extend(["STANDARD", "TVTRUSS"])
+
+    unique = []
+    seen = set()
+    for value in defaults:
+        token = (value or "").strip()
+        if not token:
+            continue
+        upper = token.upper()
+        if upper in seen:
+            continue
+        seen.add(upper)
+        unique.append(token)
+    return unique
+
+
+def _collect_circuit_combo_options(groups, client_key=None, client_module=None):
     options = []
     seen = set()
 
@@ -579,16 +998,7 @@ def _collect_circuit_combo_options(groups):
         for member in group.get("members") or []:
             add_option(member.get("circuit_number"))
 
-    defaults = [
-        "DEDICATED",
-        "BYPARENT",
-        "SECONDBYPARENT",
-        "NONGROUPEDBLOCK",
-        "TVTRUSS",
-        "EMERGENCY",
-        "STANDARD",
-    ]
-    for value in defaults:
+    for value in _client_default_circuit_keywords(client_key, client_module):
         add_option(value)
 
     def sort_key(value):
@@ -600,7 +1010,61 @@ def _collect_circuit_combo_options(groups):
     return sorted(options, key=sort_key)
 
 
-def _build_preview_rows(groups, panel_options, circuit_options):
+def _collect_load_combo_options(groups):
+    options = []
+    seen = set()
+
+    def add_option(value):
+        name = (value or "").strip()
+        if not name:
+            return
+        key = name.upper()
+        if key in seen:
+            return
+        seen.add(key)
+        options.append(name)
+
+    for group in groups or []:
+        add_option(group.get("load_name"))
+        for member in group.get("members") or []:
+            add_option(member.get("load_name"))
+
+    return sorted(options, key=lambda v: (v or "").upper())
+
+
+def _build_row_panel_options(member, fallback_panel_options):
+    options = []
+    seen = set()
+
+    def add_option(value):
+        name = (value or "").strip()
+        if not name:
+            return
+        key = name.upper()
+        if key in seen:
+            return
+        seen.add(key)
+        options.append(name)
+
+    # Preferred candidates from parsed panel choices for this specific element.
+    for choice in member.get("panel_choices") or []:
+        if isinstance(choice, dict):
+            add_option(choice.get("name"))
+        else:
+            add_option(choice)
+
+    # Preserve raw multi-panel tokens when available.
+    for token in _split_panel_choices(member.get("panel_name")):
+        add_option(token)
+
+    # Keep global options available for manual override.
+    for name in fallback_panel_options or []:
+        add_option(name)
+
+    return options
+
+
+def _build_preview_rows(groups, panel_options, circuit_options, load_options):
     rows = []
     group_index = 0
 
@@ -616,6 +1080,7 @@ def _build_preview_rows(groups, panel_options, circuit_options):
                     group_label="",
                     panel_name="",
                     circuit_number="",
+                    load_name="",
                     family_type="",
                     element_id="",
                     source_item=None,
@@ -624,6 +1089,7 @@ def _build_preview_rows(groups, panel_options, circuit_options):
                     is_spacer=True,
                     panel_options=[],
                     circuit_options=[],
+                    load_options=[],
                 )
             )
 
@@ -644,27 +1110,49 @@ def _build_preview_rows(groups, panel_options, circuit_options):
         for member in members:
             element = member.get("element")
             elem_id = getattr(getattr(element, "Id", None), "IntegerValue", None)
+            selected_panel = member.get("panel_name") or panel_name
+            row_panel_options = _build_row_panel_options(member, panel_options)
+            if selected_panel and selected_panel not in row_panel_options:
+                row_panel_options.insert(0, selected_panel)
+
+            selected_load = member.get("load_name") or group.get("load_name") or ""
+            row_load_options = list(load_options or [])
+            if selected_load and selected_load not in row_load_options:
+                row_load_options.insert(0, selected_load)
+
             row = PreviewRow(
                 group_index=group_index,
                 group_label=group_label,
-                panel_name=member.get("panel_name") or panel_name,
+                panel_name=selected_panel,
                 circuit_number=member.get("circuit_number") or circuit_number,
+                load_name=selected_load,
                 family_type=_family_type_text(element),
                 element_id=elem_id,
                 source_item=member,
                 row_background=row_background,
                 row_foreground=row_foreground,
-                panel_options=panel_options,
+                panel_options=row_panel_options,
                 circuit_options=circuit_options,
+                load_options=row_load_options,
             )
             rows.append(row)
 
     return rows
 
-def _show_preview_dialog(groups, panel_lookup):
+def _show_preview_dialog(
+    groups,
+    panel_lookup,
+    info_items,
+    client_key=None,
+    client_module=None,
+    modeless=False,
+    gateway=None,
+    source_doc=None,
+):
     panel_options = _collect_panel_combo_options(groups, panel_lookup)
-    circuit_options = _collect_circuit_combo_options(groups)
-    rows = _build_preview_rows(groups, panel_options, circuit_options)
+    circuit_options = _collect_circuit_combo_options(groups, client_key, client_module)
+    load_options = _collect_load_combo_options(groups)
+    rows = _build_preview_rows(groups, panel_options, circuit_options, load_options)
     if not rows:
         return None
 
@@ -676,11 +1164,84 @@ def _show_preview_dialog(groups, panel_lookup):
         forms.alert("Preview UI XAML not found:\n{}".format(xaml_path), title=__title__)
         return None
 
-    window = SuperCircuitPreviewWindow(xaml_path, rows)
+    window = SuperCircuitPreviewWindow(
+        xaml_path,
+        rows,
+        info_items,
+        panel_lookup,
+        client_key,
+        client_module,
+        gateway=gateway,
+        source_doc=source_doc,
+    )
+
+    if modeless:
+        return window
+
     result = window.show_dialog()
     if not result or not window.accepted:
         return False
-    return rows
+    return window.rows
+
+
+def _show_preview_modeless(groups, panel_lookup, info_items, client_key=None, client_module=None, source_doc=None):
+    global _MODELLESS_PREVIEW_WINDOW
+    global _MODELLESS_PREVIEW_GATEWAY
+
+    if _MODELLESS_PREVIEW_GATEWAY is None:
+        try:
+            _MODELLESS_PREVIEW_GATEWAY = SuperCircuitPreviewExternalEventGateway(logger)
+        except Exception as ex:
+            logger.warning("Unable to initialize modeless external event gateway: {}".format(ex))
+            forms.alert("Could not initialize modeless run handler.", title=__title__)
+            return None
+
+    if _MODELLESS_PREVIEW_WINDOW is not None:
+        try:
+            if bool(_MODELLESS_PREVIEW_WINDOW.IsVisible):
+                _MODELLESS_PREVIEW_WINDOW.Close()
+        except Exception:
+            pass
+        _MODELLESS_PREVIEW_WINDOW = None
+
+    window = _show_preview_dialog(
+        groups,
+        panel_lookup,
+        info_items,
+        client_key=client_key,
+        client_module=client_module,
+        modeless=True,
+        gateway=_MODELLESS_PREVIEW_GATEWAY,
+        source_doc=source_doc,
+    )
+    if not window:
+        return None
+
+    def _on_closed(sender, args):
+        global _MODELLESS_PREVIEW_WINDOW
+        try:
+            if sender == _MODELLESS_PREVIEW_WINDOW:
+                _MODELLESS_PREVIEW_WINDOW = None
+        except Exception:
+            _MODELLESS_PREVIEW_WINDOW = None
+
+    _MODELLESS_PREVIEW_WINDOW = window
+    try:
+        window.Closed += _on_closed
+    except Exception:
+        pass
+
+    try:
+        window.Show()
+    except Exception:
+        window.show()
+
+    try:
+        window.Activate()
+    except Exception:
+        pass
+
+    return window
 
 
 def _build_panel_lookup_upper(panel_lookup):
@@ -782,15 +1343,18 @@ def _apply_preview_edits(rows, panel_lookup):
 
         new_panel = (row.panel_name or "").strip()
         new_circuit = (row.circuit_number or "").strip()
+        new_load = (row.load_name or "").strip()
 
         old_panel = (item.get("panel_name") or "").strip()
         old_circuit = (item.get("circuit_number") or "").strip()
+        old_load = (item.get("load_name") or "").strip()
 
-        if new_panel == old_panel and new_circuit == old_circuit:
+        if new_panel == old_panel and new_circuit == old_circuit and new_load == old_load:
             continue
 
         item["panel_name"] = new_panel
         item["circuit_number"] = new_circuit
+        item["load_name"] = new_load
         _apply_panel_bindings(item, panel_lookup, upper_lookup)
         edited_count += 1
 
@@ -832,6 +1396,8 @@ def main():
         return
 
     global client_helpers
+    global active_client_key
+    active_client_key = client_key
     client_helpers = _load_client_helpers(client_key)
     if client_helpers:
         logger.info(
@@ -877,41 +1443,28 @@ def main():
         logger.info("Grouping produced no circuit batches.")
         return
 
-    groups = _sort_groups(groups)
+    groups = _sort_groups(groups, client_helpers)
 
-    preview_rows = _show_preview_dialog(groups, panel_lookup)
-    if preview_rows is False:
-        logger.info("Preview cancelled; no circuits created.")
-        return
-    if preview_rows is None:
+    window = _show_preview_modeless(
+        groups,
+        panel_lookup,
+        info_items,
+        client_key=client_key,
+        client_module=client_helpers,
+        source_doc=doc,
+    )
+    if not window:
         logger.info("Preview could not be shown; no circuits created.")
         return
 
-    edited_count = _apply_preview_edits(preview_rows, panel_lookup)
-    if edited_count:
-        logger.info("Applied {} edit(s) from preview.".format(edited_count))
-        _update_panel_choice_counts(info_items)
-        info_items = _run_client_preprocess(info_items, doc, panel_lookup)
-        _update_panel_choice_counts(info_items)
-
-        groups = circuits.assemble_groups(info_items, client_helpers, logger)
-        if not groups:
-            logger.info("Grouping produced no circuit batches after edits.")
-            return
-        groups = _sort_groups(groups)
-
-    created_systems = _run_creation(doc, groups)
-    if not created_systems:
-        logger.info("No circuits were created.")
-        return
-
-    _run_apply_data(doc, created_systems)
-
-    logger.info("Created {} circuits.".format(len(created_systems)))
+    logger.info("Opened modeless SUPER CIRCUIT V5 preview. Run Circuits from the preview window when ready.")
 
 
 if __name__ == "__main__":
     main()
+
+
+
 
 
 

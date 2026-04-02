@@ -47,7 +47,6 @@ def _normalize_casecontroller_circuit(circuit_number):
 
 def classify_items(items):
     dedicated = []
-    nongrouped = []
     tvtruss = []
     normal = []
 
@@ -56,14 +55,12 @@ def classify_items(items):
 
         if circuit_upper == "DEDICATED":
             dedicated.append(item)
-        elif circuit_upper == "NONGROUPEDBLOCK":
-            nongrouped.append(item)
         elif circuit_upper == "TVTRUSS":
             tvtruss.append(item)
         else:
             normal.append(item)
 
-    return dedicated, nongrouped, tvtruss, normal
+    return dedicated, [], tvtruss, normal
 
 
 def split_combined_circuit(panel_name, circuit_number, members, make_group, logger=None, parse_int=None):
@@ -146,8 +143,6 @@ _POSITION_RULES = [
     {"keyword": "DESK QUAD", "group_size": 3, "label": "Grouped Desks - Quad"},
     {"keyword": "DESK DUPLEX", "group_size": 3, "label": "Grouped Desks - Duplex"},
     {"keyword": "ARTISAN BREAD", "group_size": 3},
-    {"keyword": "MADIX CLEAN", "group_size": 3},
-    {"keyword": "MADIX DIRTY", "group_size": 3},
     {
         "keyword": "ELECTRIC CARTS",
         "cluster_radius": 5.0,

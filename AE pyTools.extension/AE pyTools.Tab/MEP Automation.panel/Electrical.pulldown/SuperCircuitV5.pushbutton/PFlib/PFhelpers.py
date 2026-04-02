@@ -34,7 +34,6 @@ def _normalize(value):
 
 def classify_items(items):
     dedicated = []
-    nongrouped = []
     normal = []
 
     for item in items:
@@ -42,13 +41,11 @@ def classify_items(items):
 
         if circuit_upper == "DEDICATED":
             dedicated.append(item)
-        elif circuit_upper == "NONGROUPEDBLOCK":
-            nongrouped.append(item)
         else:
             # TVTRUSS now handled by position rules in create_position_groups()
             normal.append(item)
 
-    return dedicated, nongrouped, [], normal
+    return dedicated, [], [], normal
 
 
 def split_combined_circuit(panel_name, circuit_number, members, make_group, logger=None, parse_int=None):

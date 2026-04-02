@@ -125,6 +125,114 @@ def iterate_collection(collection):
             yield collection
 
 
+def _get_element_linker_text(element):
+    if not element:
+        return None
+
+    for param_name in ("Element_Linker", "Element_Linker Parameter"):
+        try:
+            linker_param = element.LookupParameter(param_name)
+        except Exception:
+            linker_param = None
+        if not linker_param or not linker_param.HasValue:
+            continue
+        try:
+            text = linker_param.AsString()
+        except Exception:
+            text = None
+        if text:
+            return text
+    return None
+
+
+def _normalize_linker_key(value):
+    if value is None:
+        return ""
+    try:
+        text = str(value).strip().lower()
+    except Exception:
+        return ""
+    text = text.replace("_", " ")
+    text = re.sub(r"\s+", " ", text)
+    return text.strip(" :")
+
+
+def _parse_linker_entries(linker_text):
+    entries = {}
+    if not linker_text:
+        return entries
+
+    try:
+        text = str(linker_text)
+    except Exception:
+        return entries
+
+    if "\n" in text or "\r" in text:
+        for raw_line in text.splitlines():
+            line = (raw_line or "").strip()
+            if not line:
+                continue
+            if ":" in line:
+                key, _, value = line.partition(":")
+            elif "=" in line:
+                key, _, value = line.partition("=")
+            else:
+                continue
+            normalized = _normalize_linker_key(key)
+            if normalized:
+                entries[normalized] = (value or "").strip()
+        return entries
+
+    try:
+        pattern = re.compile(r"([A-Za-z][A-Za-z0-9 _()\-]*?)\s*[:=]\s*")
+        matches = list(pattern.finditer(text))
+    except Exception:
+        matches = []
+
+    if not matches:
+        return entries
+
+    for idx, match in enumerate(matches):
+        key = _normalize_linker_key(match.group(1))
+        start = match.end()
+        end = matches[idx + 1].start() if idx + 1 < len(matches) else len(text)
+        value = (text[start:end] or "").strip().strip(",")
+        if key:
+            entries[key] = value.strip()
+
+    return entries
+
+
+def _parse_parent_id_value(value):
+    if value is None:
+        return None
+    try:
+        text = str(value).strip()
+    except Exception:
+        return None
+    if not text:
+        return None
+
+    try:
+        direct = int(text)
+        return direct if direct > 0 else None
+    except Exception:
+        pass
+
+    try:
+        match = re.search(r"[-]?\d+", text)
+    except Exception:
+        match = None
+    if not match:
+        return None
+
+    try:
+        parsed = int(match.group(0))
+        return parsed if parsed > 0 else None
+    except Exception:
+        return None
+
+
 def extract_parent_location(element):
     """Extract parent location coordinates from Element_Linker parameter."""
     if not element:
@@ -158,30 +266,27 @@ def extract_parent_location(element):
 
 
 def extract_parent_element_id(element):
-    """Extract parent element id from Element_Linker parameter."""
+    """Extract parent element id from Element_Linker payload using exact key parsing."""
     if not element:
         return None
 
-    linker_text = None
-    for param_name in ("Element_Linker", "Element_Linker Parameter"):
-        try:
-            linker_param = element.LookupParameter(param_name)
-        except Exception:
-            linker_param = None
-        if linker_param and linker_param.HasValue:
-            try:
-                linker_text = linker_param.AsString()
-            except Exception:
-                linker_text = None
-            if linker_text:
-                break
-
+    linker_text = _get_element_linker_text(element)
     if not linker_text:
         return None
 
+    entries = _parse_linker_entries(linker_text)
+    if entries:
+        for key, value in entries.items():
+            compact = (key or "").replace(" ", "")
+            if compact == "parentelementid":
+                parsed = _parse_parent_id_value(value)
+                if parsed is not None:
+                    return parsed
+
+    # Fallback for malformed payloads; use a strict parent-element-id token match.
     try:
         match = re.search(
-            r"parent\s*elementid\s*[:=]\s*([-]?\d+)",
+            r"\bparent\s*element\s*id\b\s*[:=]\s*([-]?\d+)",
             linker_text,
             re.IGNORECASE,
         )
@@ -189,17 +294,11 @@ def extract_parent_element_id(element):
         match = None
     if match:
         try:
-            return int(match.group(1))
+            parsed = int(match.group(1))
+            return parsed if parsed > 0 else None
         except Exception:
             return None
-    for line in linker_text.split('\n'):
-        line = line.strip()
-        if line.lower().startswith("parent elementid:"):
-            value = line.split(":", 1)[1].strip()
-            try:
-                return int(value)
-            except Exception:
-                return None
+
     return None
 
 
@@ -889,40 +988,30 @@ def create_dedicated_groups(items):
     return groups
 
 
-def create_nongroupedblock_groups(items):
-    groups_by_panel = defaultdict(list)
-    for item in items:
-        panel_name = item.get("panel_name") or "NO_PANEL"
-        groups_by_panel[panel_name].append(item)
-
-    groups = []
-    for panel_name in sorted(groups_by_panel.keys(), key=lambda x: x or ""):
-        members = groups_by_panel[panel_name]
-        key = "{}NONGROUPEDBLOCK".format(panel_name)
-        groups.append(make_group(key, members, group_type="nongrouped"))
-    return groups
-
-
 def create_circuitbyparent_groups(items, keyword_suffix=""):
-    """Group items by parent_element_id from Element_Linker parameter."""
+    """Group BYPARENT items by both panel and parent-linked element id."""
     buckets = defaultdict(list)
 
     for item in items:
+        panel_name = item.get("panel_name") or "NO_PANEL"
+
         parent_element_id = item.get("parent_element_id")
         if parent_element_id is None:
             element = item.get("element")
             elem_id = getattr(getattr(element, "Id", None), "IntegerValue", None)
             parent_element_id = "NO_PARENT_{}".format(elem_id if elem_id is not None else id(item))
 
-        # Group by parent_element_id only
-        key = parent_element_id
+        # BYPARENT circuits should only batch items that share BOTH panel and parent.
+        key = (panel_name, parent_element_id)
         buckets[key].append(item)
 
     groups = []
-    for parent_element_id, members in sorted(buckets.items(), key=lambda kv: str(kv[0])):
-        # Key format: BYPARENT<ParentElementId> or SECONDBYPARENT<ParentElementId>
+    for (panel_name, parent_element_id), members in sorted(
+        buckets.items(), key=lambda kv: ((kv[0][0] or "").lower(), str(kv[0][1]))
+    ):
+        # Key format: <Panel>_BYPARENT_<ParentElementId> or <Panel>_SECONDBYPARENT_<ParentElementId>
         base_name = "BYPARENT" if not keyword_suffix else keyword_suffix
-        group_key = "{}{}".format(base_name, parent_element_id)
+        group_key = "{}_{}_{}".format(panel_name, base_name, parent_element_id)
         group_type = "circuitbyparent" if not keyword_suffix else "secondcircuitbyparent"
         groups.append(make_group(group_key, members, group_type=group_type))
 
@@ -1057,16 +1146,33 @@ def assemble_groups(items, client_helpers, logger):
             if logger:
                 logger.warning("Client create_position_groups failed: {}".format(ex))
 
-    dedicated, nongrouped, tvtruss, normal = [], [], [], list(working_items)
+    dedicated, tvtruss, normal = [], [], list(working_items)
     circuitbyparent = []
     secondcircuitbyparent = []
 
     if client_helpers and hasattr(client_helpers, "classify_items"):
         try:
-            dedicated, nongrouped, tvtruss, normal = client_helpers.classify_items(working_items)
+            classified = client_helpers.classify_items(working_items)
+            if isinstance(classified, tuple) or isinstance(classified, list):
+                if len(classified) == 4:
+                    dedicated, _deprecated_secondary_bucket, tvtruss, normal = classified
+                    if _deprecated_secondary_bucket and logger:
+                        logger.warning(
+                            "Ignoring deprecated secondary classification bucket in SuperCircuitV5."
+                        )
+                elif len(classified) == 3:
+                    dedicated, tvtruss, normal = classified
+                else:
+                    raise ValueError("classify_items returned unsupported length: {}".format(len(classified)))
+            else:
+                raise ValueError("classify_items must return tuple/list")
         except Exception as ex:
             if logger:
                 logger.warning("Client classify_items failed: {}".format(ex))
+
+    dedicated = list(dedicated or [])
+    tvtruss = list(tvtruss or [])
+    normal = list(normal or [])
 
     # Extract BYPARENT and SECONDBYPARENT items from normal bucket
     filtered_normal = []
@@ -1082,9 +1188,6 @@ def assemble_groups(items, client_helpers, logger):
 
     if dedicated:
         groups.extend(create_dedicated_groups(dedicated))
-
-    if nongrouped:
-        groups.extend(create_nongroupedblock_groups(nongrouped))
 
     if circuitbyparent:
         groups.extend(create_circuitbyparent_groups(circuitbyparent))
@@ -1547,3 +1650,5 @@ def run_apply_data(doc, created_systems, apply_func, logger, transaction_label=N
                     logger.warning("Could not locate system {} for data application.".format(system_id))
                 continue
             apply_func(system, group)
+
+
