@@ -3,7 +3,8 @@ already carries Element_Linker metadata, or after changing parameter values on
 those elements. Select the target equipment first. The tool scans only the
 selection, finds their LED definitions,
 and merges the new annotations and parameter values into the active YAML.
-Proximity capture for nearby keynotes/text notes is currently disabled.
+Proximity capture is enabled (5 ft search radius). Nearby keynotes and text
+notes are captured only when those annotation elements are selected/highlighted.
 
 Once saved, rerun Place Linked Elements or Place Annotations so new views pick
 up the updated definitions.

@@ -642,9 +642,12 @@ def equipment_defs_to_legacy(equipment_defs):
             params = dict(params)
             if "Keynote Value" in params:
                 params.pop("Key Value", None)
-                return params
-            if "Key Value" in params:
+            elif "Key Value" in params:
                 params["Keynote Value"] = params.pop("Key Value")
+            if "Keynote Description" in params:
+                params.pop("Keynote Text", None)
+            elif "Keynote Text" in params:
+                params["Keynote Description"] = params.pop("Keynote Text")
             return params
 
         def _split_label(label):

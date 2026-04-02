@@ -5,6 +5,7 @@ Update Profiles
 Scans selected elements with Element_Linker metadata and merges hosted annotations
 (tags/keynotes/text notes) plus parameter changes back into the active YAML.
 Also captures nearby keynotes and text notes within a 5 ft radius.
+Keynote/text note proximity capture is restricted to selected elements.
 """
 
 import imp
@@ -44,8 +45,8 @@ PROXIMITY_CELL_SIZE_FT = 5.0
 NOTE_KEY_PRECISION = 3
 TIE_DISTANCE_TOLERANCE_FT = 1e-4
 MAX_SELECTION_COUNT = 50
-# Keep proximity capture code available, but disabled for now.
-ENABLE_PROXIMITY_CAPTURE = False
+# Keep proximity capture code available behind a single flag.
+ENABLE_PROXIMITY_CAPTURE = True
 
 _MANAGE_MODULE = None
 _UI_MODULE = None
@@ -765,6 +766,36 @@ def _text_note_key(entry):
     return (_normalize_key(text_value), _normalize_key(type_name))
 
 
+def _is_keynote_description_param(name):
+    key_name = (name or "").strip().lower()
+    return "keynote description" in key_name or "keynote text" in key_name
+
+
+def _merge_keynote_params(existing_params, incoming_params):
+    existing_params = existing_params if isinstance(existing_params, dict) else {}
+    incoming_params = incoming_params if isinstance(incoming_params, dict) else {}
+    merged = dict(incoming_params)
+
+    incoming_has_desc = False
+    for key, value in incoming_params.items():
+        if _is_keynote_description_param(key) and value not in (None, ""):
+            incoming_has_desc = True
+            break
+
+    if not incoming_has_desc:
+        for key, value in existing_params.items():
+            if _is_keynote_description_param(key) and value not in (None, ""):
+                merged["Keynote Description"] = value
+                break
+
+    if "Keynote Description" in merged and merged.get("Keynote Description") not in (None, ""):
+        merged.pop("Keynote Text", None)
+    elif "Keynote Text" in merged and merged.get("Keynote Text") not in (None, ""):
+        merged["Keynote Description"] = merged.pop("Keynote Text")
+
+    return merged
+
+
 def _update_tag_entry(existing, incoming):
     changed = False
     for key in ("family_name", "type_name", "category_name"):
@@ -775,9 +806,15 @@ def _update_tag_entry(existing, incoming):
     if "offsets" in incoming and existing.get("offsets") != incoming.get("offsets"):
         existing["offsets"] = incoming.get("offsets") or {}
         changed = True
-    if "parameters" in incoming and existing.get("parameters") != incoming.get("parameters"):
-        existing["parameters"] = incoming.get("parameters") or {}
-        changed = True
+    if "parameters" in incoming:
+        incoming_params = incoming.get("parameters") or {}
+        if _is_keynote_entry(existing) or _is_keynote_entry(incoming):
+            merged_params = _merge_keynote_params(existing.get("parameters"), incoming_params)
+        else:
+            merged_params = incoming_params if isinstance(incoming_params, dict) else {}
+        if existing.get("parameters") != merged_params:
+            existing["parameters"] = merged_params
+            changed = True
     return changed
 
 
@@ -1244,24 +1281,16 @@ def _select_host_for_note(note_elem, candidates, manage, kind):
     return None
 
 
-def _assign_proximity_notes(doc, host_records, assigned_keys, observations, led_index, led_meta, manage):
+def _assign_proximity_notes(doc, host_records, assigned_keys, observations, led_index, led_meta, manage, selected_elements=None):
     if doc is None or not host_records:
         return
     index = _build_host_spatial_index(host_records, PROXIMITY_CELL_SIZE_FT)
     radius_sq = PROXIMITY_RADIUS_FT * PROXIMITY_RADIUS_FT
 
-    try:
-        keynote_candidates = list(
-            FilteredElementCollector(doc).OfClass(FamilyInstance).WhereElementIsNotElementType()
-        )
-    except Exception:
-        keynote_candidates = []
+    selected_pool = list(selected_elements or [])
+    keynote_candidates = [elem for elem in selected_pool if isinstance(elem, FamilyInstance)]
     keynotes = [elem for elem in keynote_candidates if manage._is_ga_keynote_symbol_element(elem)]
-
-    try:
-        text_notes = list(FilteredElementCollector(doc).OfClass(TextNote))
-    except Exception:
-        text_notes = []
+    text_notes = [elem for elem in selected_pool if isinstance(elem, TextNote)]
 
     def _ensure_obs(led_id):
         obs = observations.get(led_id)
@@ -1477,7 +1506,16 @@ def main():
                 assigned_note_keys.add(note_key)
 
     if ENABLE_PROXIMITY_CAPTURE:
-        _assign_proximity_notes(doc, host_records, assigned_note_keys, observations, led_index, led_meta, manage)
+        _assign_proximity_notes(
+            doc,
+            host_records,
+            assigned_note_keys,
+            observations,
+            led_index,
+            led_meta,
+            manage,
+            selected_elements=selected_elements,
+        )
 
     discrepancies = []
     any_tag_conflicts = False
