@@ -238,9 +238,10 @@ class ConduitRun(object):
 # CircuitBranch main class
 # ---------------------------------------------------------------------
 class CircuitBranch(object):
-    def __init__(self, circuit, settings=None):
+    def __init__(self, circuit, settings=None, preview_values=None):
         self.circuit = circuit
         self.settings = settings if settings else CircuitSettings()
+        self._preview_values_by_guid = self._build_preview_value_map(preview_values)
 
         self.circuit_id = get_elementid(circuit.Id)
         self.panel = getattr(circuit.BaseEquipment, "Name", None) if circuit.BaseEquipment else ""
@@ -301,6 +302,51 @@ class CircuitBranch(object):
         self._base_conduit_defaults = ConduitRun.from_defaults(self._wire_info)
         self._validate_overrides()
         self._setup_structural_quantities()
+
+    def _build_preview_value_map(self, preview_values):
+        value_map = {}
+        raw = dict(preview_values or {})
+        if not raw:
+            return value_map
+        alias_names = {
+            "Wire Temparature Rating_CEDT": "Wire Temperature Rating_CEDT",
+            "Wire Hot Size_CEDT": "CKT_Wire Hot Size_CEDT",
+        }
+        for key, value in list(raw.items()):
+            guid_text = None
+            try:
+                key_text = str(key or "").strip()
+            except Exception:
+                key_text = ""
+            if not key_text:
+                continue
+            if key_text in alias_names:
+                key_text = alias_names.get(key_text)
+            if key_text in SHARED_PARAMS:
+                try:
+                    guid_text = str((SHARED_PARAMS.get(key_text) or {}).get("GUID") or "").strip()
+                except Exception:
+                    guid_text = ""
+            elif len(key_text) == 36 and key_text.count("-") == 4:
+                guid_text = key_text
+            if not guid_text:
+                continue
+            value_map[str(guid_text).strip().lower()] = value
+        return value_map
+
+    def _try_get_preview_value(self, guid):
+        try:
+            key = str(guid or "").strip().lower()
+        except Exception:
+            key = ""
+        if not key:
+            return False, None
+        data = self._preview_values_by_guid
+        if not data:
+            return False, None
+        if key not in data:
+            return False, None
+        return True, data.get(key)
 
     # -----------------------------------------------------------------
     # Logging helpers
@@ -1057,6 +1103,13 @@ class CircuitBranch(object):
 
     @property
     def rating(self):
+        try:
+            preview_guid = SHARED_PARAMS['CKT_Rating_CED']['GUID']
+            has_preview, preview_value = self._try_get_preview_value(preview_guid)
+            if has_preview and preview_value is not None:
+                return float(preview_value)
+        except Exception:
+            pass
         try:
             if self.is_power_circuit and not self.is_space:
                 return self.circuit.Rating
@@ -2061,6 +2114,21 @@ class CircuitBranch(object):
     # Utility helpers
     # -----------------------------------------------------------------
     def _get_yesno(self, guid):
+        has_preview, preview_value = self._try_get_preview_value(guid)
+        if has_preview:
+            try:
+                if isinstance(preview_value, bool):
+                    return bool(preview_value)
+                if isinstance(preview_value, (int, float)):
+                    return bool(int(preview_value))
+                text = str(preview_value or "").strip().lower()
+                if text in ("1", "true", "yes", "y", "on"):
+                    return True
+                if text in ("0", "false", "no", "n", "off", ""):
+                    return False
+                return bool(int(float(text)))
+            except Exception:
+                return False
         try:
             param = self.circuit.get_Parameter(Guid(guid))
             if not param:
@@ -2071,6 +2139,9 @@ class CircuitBranch(object):
             return False
 
     def _get_param_value(self, guid):
+        has_preview, preview_value = self._try_get_preview_value(guid)
+        if has_preview:
+            return preview_value
         try:
             param = self.circuit.get_Parameter(Guid(guid))
             if not param:

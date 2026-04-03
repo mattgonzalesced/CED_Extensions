@@ -1,0 +1,9 @@
+title: Edit Circuit Properties
+
+tooltip: >-
+  Open the circuit property editor for selected circuits.
+  If no circuits are preselected, choose circuits from a list first.
+  Stage edits per circuit, preview recalculated values, then apply all changes.
+
+author: >-
+  AEvelina

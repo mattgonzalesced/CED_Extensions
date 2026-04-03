@@ -66,6 +66,7 @@ from CEDElectrical.refdata.standard_ocp_table import BREAKER_FRAME_SWITCH_TABLE
 from CEDElectrical.Infrastructure.Revit.external_events.circuit_operation_event import (
     CircuitOperationExternalEventGateway,
 )
+from CEDElectrical.ui.circuit_properties_editor import CircuitPropertiesEditorWindow
 from CEDElectrical.Infrastructure.Revit.repositories.revit_circuit_repository import RevitCircuitRepository
 from Snippets.circuit_ui_actions import (
     clear_revit_selection,
@@ -3472,6 +3473,12 @@ class CircuitBrowserPanel(forms.WPFPanel):
         mark_existing_item.Click += self.action_mark_existing_clicked
         menu.Items.Add(mark_existing_item)
 
+        edit_properties_item = MenuItem()
+        _set_if_resource(self, edit_properties_item, "Style", "CED.MenuItem.Base")
+        edit_properties_item.Header = "Edit Circuit Properties"
+        edit_properties_item.Click += self.action_edit_properties_clicked
+        menu.Items.Add(edit_properties_item)
+
         sep = Separator()
         _set_if_resource(self, sep, "Style", "CED.Separator.Menu")
         menu.Items.Add(sep)
@@ -3762,19 +3769,28 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
         if output is not None:
             if partial:
-                output.print_md("**Partial move accepted. Successful moves are listed below.**")
+                output.print_md("**Partial move accepted.**")
             elif fallback_used:
                 output.print_md("**Circuits transferred successfully (with default SPARE/SPACE replacement workflow).**")
             else:
                 output.print_md("**Circuits transferred successfully.**")
-
-            output.print_table(moved_rows, ["Circuit ID", "Previous Circuit", "New Circuit"])
-            if failed_rows:
-                output.print_md("**Circuits not moved:**")
-                output.print_table(failed_rows, ["Circuit ID", "Previous Circuit", "Failure"])
-            if skipped_rows:
-                output.print_md("**Circuits skipped:**")
-                output.print_table(skipped_rows, ["Circuit ID", "Circuit", "Reason"])
+            if partial:
+                result_rows = []
+                for row in list(moved_rows or []):
+                    cid = row[0] if len(row) > 0 else "-"
+                    prev = row[1] if len(row) > 1 else "-"
+                    result_rows.append([cid, prev, "Moved"])
+                for row in list(failed_rows or []):
+                    cid = row[0] if len(row) > 0 else "-"
+                    prev = row[1] if len(row) > 1 else "-"
+                    reason = row[2] if len(row) > 2 else "Move failed."
+                    result_rows.append([cid, prev, "Failed: {0}".format(reason)])
+                for row in list(skipped_rows or []):
+                    cid = row[0] if len(row) > 0 else "-"
+                    prev = row[1] if len(row) > 1 else "-"
+                    reason = row[2] if len(row) > 2 else "Skipped."
+                    result_rows.append([cid, prev, "Skipped: {0}".format(reason)])
+                output.print_table(result_rows, ["Circuit ID", "Previous Circuit", "Result"])
 
         if failed_rows:
             return "Moved {} circuits ({} failed)".format(len(moved_rows), len(failed_rows))
@@ -3796,10 +3812,12 @@ class CircuitBrowserPanel(forms.WPFPanel):
         if isinstance(move_result, dict):
             moved_rows = list(move_result.get("moved") or [])
             failed_rows = list(move_result.get("failed") or [])
+            partial = bool(move_result.get("partial", False))
         else:
             moved_rows = list(move_result or [])
+            partial = False
 
-        show_output = bool(failed_rows)
+        show_output = bool(partial)
         output = None
         if show_output:
             output = script.get_output()
@@ -3813,12 +3831,6 @@ class CircuitBrowserPanel(forms.WPFPanel):
                     buffered_output.flush_to(output)
                 except Exception:
                     pass
-            forms.alert(
-                "{} circuit(s) could not be moved. Review the results table for details.".format(
-                    int(len(failed_rows or []))
-                ),
-                title=TITLE,
-            )
 
         summary = self._print_move_results(output, move_result)
         recalc_error = payload.get("recalc_error")
@@ -4589,6 +4601,76 @@ class CircuitBrowserPanel(forms.WPFPanel):
             window.ShowDialog()
         except Exception as ex:
             forms.alert("Failed to open breaker autosize window:\n\n{}".format(ex), title=TITLE)
+
+    def action_edit_properties_clicked(self, sender, args):
+        targets = self._collect_action_targets()
+        if not targets:
+            forms.alert("Check one or more circuits first.", title=TITLE)
+            return
+        if len(targets) > 300:
+            choice = forms.alert(
+                "{} circuits will be loaded for this action.\n\nContinue?".format(len(targets)),
+                title="Large Action Selection",
+                options=["Continue", "Cancel"],
+            )
+            if choice != "Continue":
+                return
+
+        doc = self._get_active_doc()
+        if doc is None:
+            forms.alert("Open a model document first.", title=TITLE)
+            return
+        try:
+            settings = settings_manager.load_circuit_settings(doc)
+        except Exception as ex:
+            forms.alert("Unable to load circuit settings:\n\n{}".format(ex), title=TITLE)
+            return
+
+        xaml_path = os.path.abspath(os.path.join(_THIS_DIR, "CircuitEditPropertiesWindow.xaml"))
+        try:
+            window = CircuitPropertiesEditorWindow(
+                xaml_path=xaml_path,
+                targets=targets,
+                settings=settings,
+                theme_mode=self._theme_mode,
+                accent_mode=self._accent_mode,
+                resources_root=UI_RESOURCES_ROOT,
+            )
+            window.ShowDialog()
+        except Exception as ex:
+            forms.alert("Failed to open Edit Circuit Properties window:\n\n{}".format(ex), title=TITLE)
+            return
+
+        if not bool(getattr(window, "apply_requested", False)):
+            self._set_status("Edit Circuit Properties cancelled")
+            return
+
+        payload = dict(getattr(window, "apply_payload", {}) or {})
+        updates = list(payload.get("updates") or [])
+        if not updates:
+            self._set_status("No circuit property edits were staged.")
+            return
+
+        circuit_ids = []
+        for row in list(updates or []):
+            try:
+                cid = int((row or {}).get("circuit_id") or 0)
+            except Exception:
+                cid = 0
+            if cid > 0:
+                circuit_ids.append(cid)
+        if not circuit_ids:
+            self._set_status("No valid staged circuit edits found.")
+            return
+
+        self._raise_action_operation(
+            "edit_circuit_properties_and_recalculate",
+            circuit_ids,
+            {
+                "updates": updates,
+                "show_output": False,
+            },
+        )
 
     def action_move_checked_clicked(self, sender, args):
         self._run_move_selected_circuits(self._collect_action_targets(), checked_only=True)

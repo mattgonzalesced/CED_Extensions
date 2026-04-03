@@ -279,6 +279,108 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
         return "N/A"
 
     def _run_select_panel_moves(allow_partial=False, sort_by_poles=False, phase="primary"):
+        def _resolve_start_slot_on_target(circuit, hint_slot=0):
+            slot_hint = int(hint_slot or 0)
+            if slot_hint > 0 and target_option is not None and bool(ps_repo.is_slot_valid_for_option(target_option, slot_hint)):
+                return slot_hint
+            if schedule_view is None:
+                return slot_hint
+            cid_target = int(_elid_value(getattr(circuit, "Id", None)))
+            if cid_target <= 0:
+                return slot_hint
+            slot_scan = []
+            if target_option is not None:
+                slot_scan = list(ps_repo.get_option_slot_order(target_option, include_excess=True) or [])
+            elif slot_hint > 0:
+                slot_scan = [slot_hint]
+            if slot_hint > 0 and int(slot_hint) not in [int(x) for x in list(slot_scan or [])]:
+                slot_scan.insert(0, int(slot_hint))
+            for slot in list(slot_scan or []):
+                slot_value = int(slot or 0)
+                if slot_value <= 0:
+                    continue
+                cells = list(ps_repo.get_cells_by_slot_number(schedule_view, slot_value) or [])
+                if not cells:
+                    continue
+                for row, col in list(cells or []):
+                    try:
+                        cell_id = schedule_view.GetCircuitIdByCell(int(row), int(col))
+                    except Exception:
+                        cell_id = DB.ElementId.InvalidElementId
+                    if cell_id is None or cell_id == DB.ElementId.InvalidElementId:
+                        continue
+                    if int(_elid_value(cell_id)) == int(cid_target):
+                        return int(slot_value)
+            return slot_hint
+
+        def _validate_target_assignment(circuit):
+            if target_option is None:
+                return True, 0, []
+            start_slot = int(ps_repo.get_circuit_start_slot(circuit) or 0)
+            start_slot = int(_resolve_start_slot_on_target(circuit, hint_slot=start_slot))
+            poles = int(max(1, _get_circuit_poles(circuit)))
+            covered_valid = list(
+                ps_repo.get_slot_span_slots_for_option(
+                    target_option,
+                    start_slot=int(start_slot),
+                    pole_count=int(poles),
+                    require_valid=True,
+                )
+                or []
+            )
+            if covered_valid:
+                return True, int(start_slot), [int(x) for x in covered_valid if int(x) > 0]
+            covered_all = list(
+                ps_repo.get_slot_span_slots_for_option(
+                    target_option,
+                    start_slot=int(start_slot),
+                    pole_count=int(poles),
+                    require_valid=False,
+                )
+                or []
+            )
+            return False, int(start_slot), [int(x) for x in covered_all if int(x) > 0]
+
+        def _try_revert_to_original_panel(snap):
+            try:
+                old_panel = snap.get("old_panel_element")
+                if old_panel is None:
+                    return False
+                result = snap["circuit"].SelectPanel(old_panel)
+                if isinstance(result, bool) and not result:
+                    return False
+                base_after = getattr(snap["circuit"], "BaseEquipment", None)
+                return bool(int(_panel_id(base_after)) == int(_panel_id(old_panel)))
+            except Exception:
+                return False
+
+        planner_available = None
+        planner_slot_order = []
+        if target_option is not None:
+            planner_slot_order = [int(x) for x in list(ps_repo.get_option_slot_order(target_option, include_excess=False) or []) if int(x) > 0]
+            planner_available = set([int(x) for x in list(_collect_empty_slots(target_option) or []) if int(x) > 0])
+
+        def _plan_next_span(circuit):
+            if planner_available is None or not planner_slot_order:
+                return 0, []
+            pole_count = int(max(1, _get_circuit_poles(circuit)))
+            for start in list(planner_slot_order or []):
+                covered = list(
+                    ps_repo.get_slot_span_slots_for_option(
+                        target_option,
+                        start_slot=int(start),
+                        pole_count=int(pole_count),
+                        require_valid=True,
+                    )
+                    or []
+                )
+                covered = [int(x) for x in list(covered or []) if int(x) > 0]
+                if not covered:
+                    continue
+                if all(int(slot) in planner_available for slot in list(covered or [])):
+                    return int(start), list(covered)
+            return 0, []
+
         move_list = list(circuits or [])
         if bool(sort_by_poles):
             move_list = sorted(move_list, key=lambda c: int(_get_circuit_poles(c)), reverse=True)
@@ -297,29 +399,55 @@ def move_circuits_to_panel(circuits, target_panel, doc, output):
             pass
         snapshots = []
         for ckt in move_list:
+            old_panel_element = getattr(ckt, "BaseEquipment", None)
             snapshots.append({
                 "circuit": ckt,
                 "old_panel": _safe_panel_name(ckt),
                 "old_circuit_number": _safe_circuit_number(ckt),
+                "old_panel_element": old_panel_element,
             })
         data_rows = []
         failed_rows = []
         for snap in snapshots:
             try:
+                _, planned_span = _plan_next_span(snap["circuit"])
+                if planner_available is not None and not planned_span:
+                    raise Exception(
+                        "Insufficient valid slot capacity on target panel for this circuit."
+                    )
                 result = snap["circuit"].SelectPanel(target_panel)
                 if isinstance(result, bool) and not result:
                     raise Exception("SelectPanel returned False.")
                 base_after = getattr(snap["circuit"], "BaseEquipment", None)
                 if int(_panel_id(base_after)) != int(target_id):
                     raise Exception("SelectPanel did not place circuit on target panel.")
+                is_valid, start_slot, covered_slots = _validate_target_assignment(snap["circuit"])
+                if not bool(is_valid):
+                    raise Exception(
+                        "SelectPanel placed circuit outside usable target capacity. start_slot={0} covered_slots={1}".format(
+                            int(start_slot),
+                            ",".join([str(int(x)) for x in list(covered_slots or [])]) or "-",
+                        )
+                    )
+                if planner_available is not None:
+                    for slot in list(planned_span or []):
+                        planner_available.discard(int(slot))
             except Exception as ex:
                 if not bool(allow_partial):
                     raise
+                reverted = _try_revert_to_original_panel(snap)
+                if not bool(reverted):
+                    raise Exception(
+                        "{0} (revert to original panel failed)".format(
+                            _safe_text(ex, "Move failed.")
+                        )
+                    )
                 prev_circuit = "{} / {}".format(snap["old_panel"], snap["old_circuit_number"])
+                err_text = _safe_text(ex, "Move failed.")
                 failed_rows.append([
                     output.linkify(snap["circuit"].Id),
                     prev_circuit,
-                    _safe_text(ex, "Move failed."),
+                    err_text,
                 ])
                 continue
             new_circuit_number = _safe_circuit_number(snap["circuit"])

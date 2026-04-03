@@ -44,18 +44,9 @@ def _safe_int(value, default=0):
 
 
 def _circuit_poles(circuit):
-    for attr in ("PolesNumber", "NumberOfPoles"):
-        value = getattr(circuit, attr, None)
-        if value is None:
-            continue
-        poles = int(value)
-        if poles > 0:
-            return poles
-    param = circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES)
-    if param and param.HasValue:
-        poles = int(param.AsInteger() or 0)
-        if poles > 0:
-            return poles
+    _, poles = ps_repo.get_circuit_voltage_poles(circuit)
+    if poles and int(poles) > 0:
+        return int(poles)
     return 1
 
 
@@ -147,7 +138,8 @@ def count_open_slots_fast(option, usage_by_panel):
         return 0
     capacity = int(max(0, _panel_capacity(option)))
     consumed = usage_by_panel.get(panel_id, {"circuits": 0, "poles": 0})
-    if option.get("schedule_type") == ps_repo.PSTYPE_SWITCHBOARD:
+    schedule_type = option.get("schedule_type")
+    if schedule_type == ps_repo.PSTYPE_SWITCHBOARD or schedule_type == ps_repo.PSTYPE_DATA:
         used = int(max(0, _safe_int(consumed.get("circuits", 0), 0)))
     else:
         used = int(max(0, _safe_int(consumed.get("poles", 0), 0)))
