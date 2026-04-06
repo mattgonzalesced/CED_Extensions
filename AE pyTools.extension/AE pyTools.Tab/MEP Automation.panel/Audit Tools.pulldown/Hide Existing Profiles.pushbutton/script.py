@@ -90,6 +90,28 @@ def _normalize_family_type_key(value):
     return text
 
 
+def _family_type_key_variants(value):
+    normalized = _normalize_family_type_key(value)
+    if not normalized:
+        return []
+    variants = [normalized]
+    if ":" in normalized:
+        head, type_name = normalized.split(":", 1)
+        head = head.strip()
+        type_name = type_name.strip()
+        # Treat "<name>" and "<name> : Default" as equivalent keys.
+        if head and type_name == "default":
+            variants.append(head)
+    else:
+        # Bare names should also match explicit default types.
+        variants.append("{}:default".format(normalized))
+    deduped = []
+    for key in variants:
+        if key and key not in deduped:
+            deduped.append(key)
+    return deduped
+
+
 def _element_id_value(elem_id, default=None):
     if elem_id is None:
         return default
@@ -141,9 +163,9 @@ def _linked_name_candidates(elem):
     candidates = []
     family_type = _family_type_label(elem)
     if family_type:
-        key = _normalize_family_type_key(family_type)
-        if key:
-            candidates.append(("family_type", family_type, key))
+        for index, key in enumerate(_family_type_key_variants(family_type)):
+            basis = "family_type" if index == 0 else "family_type_default_equivalent"
+            candidates.append((basis, family_type, key))
     return candidates
 
 
@@ -162,12 +184,10 @@ def _collect_profile_name_lookup(data):
         raw_text = (raw_value or "").strip()
         if not raw_text:
             return
-        normalized = _normalize_family_type_key(raw_text)
-        if not normalized:
-            return
-        existing = lookup.setdefault(normalized, [])
-        if raw_text not in existing:
-            existing.append(raw_text)
+        for normalized in _family_type_key_variants(raw_text):
+            existing = lookup.setdefault(normalized, [])
+            if raw_text not in existing:
+                existing.append(raw_text)
 
     for eq in data.get("equipment_definitions") or []:
         if not isinstance(eq, dict):
@@ -863,7 +883,10 @@ def _print_match_report(action_text, apply_mode, yaml_label, records, scanned, l
         )
     )
     output.print_md(
-        "- Scope: YAML profile **name** compared against linked **Family : Type** only."
+        "- Scope: YAML profile **name** compared against linked **Family : Type**."
+    )
+    output.print_md(
+        "- Matching treats `Name` and `Name : Default` as equivalent."
     )
     output.print_md("- Note: YAML lookup includes equipment profile names and linked definition labels.")
     output.print_md(
@@ -902,7 +925,7 @@ def _print_no_match_diagnostics(yaml_lookup, linked_name_samples):
     only_linked = sorted(list(linked_keys - yaml_keys))
 
     output.print_md("### {} Diagnostics".format(TITLE))
-    output.print_md("- No matches found for strict linked `Family : Type` vs profile `name` matching.")
+    output.print_md("- No matches found for linked `Family : Type` vs profile `name` matching (with `Name`/`Name : Default` equivalence).")
     output.print_md("- YAML profile names loaded: **{}**".format(len(yaml_keys)))
     output.print_md("- Unique linked Family : Type names scanned: **{}**".format(len(linked_keys)))
 
