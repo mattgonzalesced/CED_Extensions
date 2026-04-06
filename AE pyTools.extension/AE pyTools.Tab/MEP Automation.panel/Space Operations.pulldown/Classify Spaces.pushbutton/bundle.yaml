@@ -1,0 +1,5 @@
+﻿title: "Classify\nSpaces"
+tooltip: |
+  Classify MEP spaces into operational buckets and review results before saving.
+  You can reassign any space in the report table before storing the final mapping.
+is_beta: false

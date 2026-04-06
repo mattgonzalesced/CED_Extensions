@@ -1,0 +1,5 @@
+﻿title: "Manage Space\nProfiles"
+tooltip: |
+  Manage reusable family-type and model-group templates by space bucket,
+  and add space-specific overrides for individual spaces.
+is_beta: false

@@ -1,0 +1,103 @@
+﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Classify Spaces"
+        Width="1320"
+        Height="820"
+        WindowStartupLocation="CenterScreen"
+        MinWidth="980"
+        MinHeight="620">
+  <Grid Margin="10">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <TextBlock Text="Review initial space classifications and adjust bucket assignments before saving."
+               TextWrapping="Wrap"
+               Margin="0,0,0,8"/>
+
+    <TextBlock x:Name="SummaryText"
+               Grid.Row="1"
+               Margin="0,0,0,8"
+               FontFamily="Consolas"
+               TextWrapping="Wrap"/>
+
+    <StackPanel Grid.Row="2"
+                Orientation="Horizontal"
+                Margin="0,0,0,8"
+                VerticalAlignment="Center">
+      <TextBlock Text="Filter Suggested Bucket:"
+                 VerticalAlignment="Center"
+                 Margin="0,0,8,0"/>
+      <ComboBox x:Name="SuggestedFilterCombo"
+                Width="220"
+                SelectionChanged="OnSuggestedFilterChanged"/>
+    </StackPanel>
+
+    <DataGrid x:Name="ClassificationsGrid"
+              Grid.Row="3"
+              AutoGenerateColumns="False"
+              CanUserAddRows="False"
+              CanUserDeleteRows="False"
+              IsReadOnly="False"
+              SelectionMode="Extended"
+              SelectionUnit="FullRow"
+              Margin="0,0,0,8">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Space #"
+                            Width="0.8*"
+                            IsReadOnly="True"
+                            Binding="{Binding space_number}"/>
+
+        <DataGridTextColumn Header="Space Name"
+                            Width="2.2*"
+                            IsReadOnly="True"
+                            Binding="{Binding space_name}"/>
+
+        <DataGridTextColumn Header="Suggested"
+                            Width="1.0*"
+                            IsReadOnly="True"
+                            Binding="{Binding suggested_bucket}"/>
+
+        <DataGridTemplateColumn Header="Final Bucket" Width="1.1*">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <ComboBox ItemsSource="{Binding bucket_options}"
+                        SelectedItem="{Binding bucket, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        SelectionChanged="OnBucketChanged"
+                        DropDownClosed="OnBucketChanged"
+                        IsEditable="False"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+
+        <DataGridTextColumn Header="Reason"
+                            Width="2.4*"
+                            IsReadOnly="True"
+                            Binding="{Binding reason}"/>
+
+        <DataGridTextColumn Header="Element ID"
+                            Width="0.8*"
+                            IsReadOnly="True"
+                            Binding="{Binding space_id}"/>
+      </DataGrid.Columns>
+    </DataGrid>
+
+    <StackPanel Grid.Row="4"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right">
+      <Button x:Name="SaveButton"
+              Content="Save Classifications"
+              Width="170"
+              Margin="0,0,8,0"
+              Click="OnSaveClicked"/>
+      <Button x:Name="CancelButton"
+              Content="Cancel"
+              Width="120"
+              Click="OnCancelClicked"/>
+    </StackPanel>
+  </Grid>
+</Window>

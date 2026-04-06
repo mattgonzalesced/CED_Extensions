@@ -1,0 +1,119 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Manage Space Profiles"
+        Width="1460"
+        Height="860"
+        MinWidth="1180"
+        MinHeight="700"
+        WindowStartupLocation="CenterScreen">
+  <Grid Margin="10">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <TextBlock Text="Manage template elements by space bucket and per-space overrides."
+               TextWrapping="Wrap"
+               Margin="0,0,0,8"/>
+
+    <TextBlock x:Name="SummaryText"
+               Grid.Row="1"
+               Margin="0,0,0,8"
+               FontFamily="Consolas"
+               TextWrapping="Wrap"/>
+
+    <StackPanel Grid.Row="2"
+                Orientation="Horizontal"
+                Margin="0,0,0,8"
+                VerticalAlignment="Center">
+      <TextBlock Text="Space Type:"
+                 VerticalAlignment="Center"
+                 Margin="0,0,8,0"/>
+      <ComboBox x:Name="SpaceTypeCombo"
+                Width="230"
+                SelectionChanged="OnSpaceTypeChanged"/>
+      <TextBlock x:Name="SelectedSpaceText"
+                 Margin="16,0,0,0"
+                 VerticalAlignment="Center"
+                 Text="Selected Space: &lt;none&gt;"/>
+    </StackPanel>
+
+    <Grid Grid.Row="3">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="1.0*"/>
+        <ColumnDefinition Width="1.0*"/>
+        <ColumnDefinition Width="1.25*"/>
+      </Grid.ColumnDefinitions>
+
+      <GroupBox Header="1) Spaces In Selected Type" Margin="0,0,8,0">
+        <Grid Margin="8">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          <ListBox x:Name="SpacesList"
+                   SelectionChanged="OnSpaceSelectionChanged"/>
+          <TextBlock Grid.Row="1"
+                     Margin="0,8,0,0"
+                     Text="Pick a space here to manage per-space overrides in panel 3."
+                     TextWrapping="Wrap"/>
+        </Grid>
+      </GroupBox>
+
+      <GroupBox Grid.Column="1" Header="2) Space Type Elements" Margin="0,0,8,0">
+        <Grid Margin="8">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          <ListBox x:Name="TypeElementsList"/>
+          <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+            <Button x:Name="TypeAddButton" Content="Add" Width="82" Margin="0,0,8,0" Click="OnTypeAddClicked"/>
+            <Button x:Name="TypeEditParamsButton" Content="Edit Params" Width="95" Margin="0,0,8,0" Click="OnTypeEditParamsClicked"/>
+            <Button x:Name="TypeEditPlacementButton" Content="Edit Placement" Width="112" Margin="0,0,8,0" Click="OnTypeEditPlacementClicked"/>
+            <Button x:Name="TypeRemoveButton" Content="Remove" Width="82" Click="OnTypeRemoveClicked"/>
+          </StackPanel>
+        </Grid>
+      </GroupBox>
+
+      <GroupBox Grid.Column="2" Header="3) Selected Space Effective Elements (Type + Overrides)">
+        <Grid Margin="8">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          <ListBox x:Name="EffectiveElementsList"/>
+          <TextBlock Grid.Row="1"
+                     Margin="0,8,0,0"
+                     Text="Use Add/Remove for per-space overrides. Type-level items are inherited and can be removed in panel 2."
+                     TextWrapping="Wrap"/>
+          <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+            <Button x:Name="SpaceAddButton" Content="Add" Width="82" Margin="0,0,8,0" Click="OnSpaceAddClicked"/>
+            <Button x:Name="SpaceEditParamsButton" Content="Edit Params" Width="95" Margin="0,0,8,0" Click="OnSpaceEditParamsClicked"/>
+            <Button x:Name="SpaceEditPlacementButton" Content="Edit Placement" Width="112" Margin="0,0,8,0" Click="OnSpaceEditPlacementClicked"/>
+            <Button x:Name="SpaceRemoveButton" Content="Remove" Width="82" Click="OnSpaceRemoveClicked"/>
+          </StackPanel>
+        </Grid>
+      </GroupBox>
+    </Grid>
+
+    <StackPanel Grid.Row="4"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right"
+                Margin="0,8,0,0">
+      <Button x:Name="SaveButton"
+              Content="Save Space Profiles"
+              Width="170"
+              Margin="0,0,8,0"
+              Click="OnSaveClicked"/>
+      <Button x:Name="CancelButton"
+              Content="Cancel"
+              Width="120"
+              Click="OnCancelClicked"/>
+    </StackPanel>
+  </Grid>
+</Window>

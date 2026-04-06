@@ -77,6 +77,7 @@ class ExtensibleStorage(object):
     CHUNK_SIZE = 8 * 1024 * 1024
 
     USER_SETTINGS_KEY = "user_settings"
+    PROJECT_DATA_KEY = "project_data"
     STRING_MAP_FIELD_NAME = "StringMap"
     BOOL_MAP_FIELD_NAME = "BoolMap"
     INT_MAP_FIELD_NAME = "IntMap"
@@ -197,6 +198,40 @@ class ExtensibleStorage(object):
             return False
         setting_map[normalized_user] = value
         txn_name = transaction_name or "USER_SETTING::{}".format(setting_key)
+        cls._write_storage(doc, payload, txn_name)
+        return True
+
+    @classmethod
+    def get_project_data(cls, doc, storage_id, default=None):
+        """
+        Read project-scoped payload stored under a logical storage ID.
+        """
+        if doc is None or not storage_id:
+            return default
+        payload = cls._read_storage(doc)
+        meta = payload.get("meta", {})
+        project_data = meta.get(cls.PROJECT_DATA_KEY) or {}
+        if not isinstance(project_data, dict):
+            return default
+        if storage_id not in project_data:
+            return default
+        return project_data.get(storage_id)
+
+    @classmethod
+    def set_project_data(cls, doc, storage_id, value, transaction_name=None):
+        """
+        Write project-scoped payload under a logical storage ID.
+        """
+        if doc is None or not storage_id:
+            return False
+        payload = cls._read_storage(doc)
+        meta = payload.setdefault("meta", {})
+        project_data = meta.get(cls.PROJECT_DATA_KEY)
+        if not isinstance(project_data, dict):
+            project_data = {}
+            meta[cls.PROJECT_DATA_KEY] = project_data
+        project_data[storage_id] = value
+        txn_name = transaction_name or "PROJECT_DATA::{}".format(storage_id)
         cls._write_storage(doc, payload, txn_name)
         return True
 

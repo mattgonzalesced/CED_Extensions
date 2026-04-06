@@ -1,0 +1,5 @@
+title: "Import Space\nConfigs"
+tooltip: |
+  Import a previously exported Space Configs YAML file and load its
+  space-type templates into project data.
+is_beta: false

@@ -1,0 +1,5 @@
+title: "Export Space\nConfigs"
+tooltip: |
+  Export saved space-type family/model-group templates from project data
+  to a YAML file for reuse in other projects.
+is_beta: false
