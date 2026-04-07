@@ -11,13 +11,13 @@ from pyrevit import forms, revit, script
 
 from Snippets import revit_helpers
 
-TITLE = "Alerts Browser"
+TITLE = "Alerts Manager"
 ALERT_DATA_PARAM = "Circuit Data_CED"
 THEME_CONFIG_SECTION = "AE-pyTools-Theme"
 THEME_CONFIG_THEME_KEY = "theme_mode"
 THEME_CONFIG_ACCENT_KEY = "accent_mode"
 VALID_THEME_MODES = ("light", "dark", "dark_alt")
-VALID_ACCENT_MODES = ("blue", "red", "green", "neutral")
+VALID_ACCENT_MODES = ("blue", "neutral")
 _WINDOW_MARKER = "_ae_alerts_browser_window"
 
 def _idval(item):
@@ -88,7 +88,7 @@ def _find_workspace_root(start_dir):
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 WORKSPACE_ROOT = _find_workspace_root(THIS_DIR)
 if not WORKSPACE_ROOT:
-    forms.alert("Could not locate workspace root for Alerts Browser.", title=TITLE)
+    forms.alert("Could not locate workspace root for Alerts Manager.", title=TITLE)
     raise SystemExit
 
 LIB_ROOT = os.path.abspath(os.path.join(WORKSPACE_ROOT, "CEDLib.lib"))
@@ -105,6 +105,7 @@ from UIClasses import pathing as ui_pathing
 from UIClasses import resource_loader
 from alerts_browser_services import build_snapshot
 from alerts_browser_services import recalculate_and_snapshot
+from alerts_browser_services import update_hidden_alert_types_and_snapshot
 
 UI_RESOURCES_ROOT = ui_pathing.resolve_ui_resources_root(LIB_ROOT)
 _LOCK_REPOSITORY = RevitCircuitRepository()
@@ -152,7 +153,7 @@ class AlertsBrowserExternalEventGateway(object):
         except Exception as ex:
             self._pending = None
             if self._logger:
-                self._logger.warning("Alerts Browser ExternalEvent raise failed: %s", ex)
+                self._logger.warning("Alerts Manager ExternalEvent raise failed: %s", ex)
             return False
 
     def raise_refresh(self, callback):
@@ -167,6 +168,13 @@ class AlertsBrowserExternalEventGateway(object):
             "circuit_id": int(circuit_id or 0),
         }
         return self._raise("select", payload=payload, callback=callback)
+
+    def raise_set_hidden(self, circuit_id, hidden_definition_ids, callback):
+        payload = {
+            "circuit_id": int(circuit_id or 0),
+            "hidden_definition_ids": list(hidden_definition_ids or []),
+        }
+        return self._raise("set_hidden", payload=payload, callback=callback)
 
     def _consume_pending(self):
         pending = self._pending
@@ -214,13 +222,28 @@ class _AlertsBrowserExternalEventHandler(IExternalEventHandler):
                     targets = collect_circuit_targets(circuit, mode)
                     set_revit_selection(targets, uidoc=uidoc)
                 result = {"selected": True}
+            elif op_name == "set_hidden":
+                if doc is None:
+                    raise Exception("No active document.")
+                circuit_id = int(payload.get("circuit_id") or 0)
+                if circuit_id <= 0:
+                    raise Exception("No circuit selected.")
+                hidden_definition_ids = list(payload.get("hidden_definition_ids") or [])
+                result = update_hidden_alert_types_and_snapshot(
+                    doc,
+                    circuit_id,
+                    hidden_definition_ids,
+                    ALERT_DATA_PARAM,
+                    _idval,
+                    _LOCK_REPOSITORY,
+                )
             else:
                 raise Exception("Unknown operation: {}".format(op_name))
         except Exception as ex:
             status = "error"
             error = ex
             if self._gateway._logger:
-                self._gateway._logger.exception("Alerts Browser external operation failed: %s", ex)
+                self._gateway._logger.exception("Alerts Manager external operation failed: %s", ex)
 
         if callback:
             try:
@@ -229,7 +252,7 @@ class _AlertsBrowserExternalEventHandler(IExternalEventHandler):
                 pass
 
     def GetName(self):  # noqa: N802
-        return "CED Alerts Browser External Event"
+        return "CED Alerts Manager External Event"
 
 
 class AlertsBrowserWindow(forms.WPFWindow):
@@ -252,6 +275,10 @@ class AlertsBrowserWindow(forms.WPFWindow):
         self._selected_counts_text = self.FindName("SelectedCountsText")
         self._status_text = self.FindName("StatusText")
         self._refresh_button = self.FindName("RefreshButton")
+        self._tabs = self.FindName("AlertsTabs")
+        self._hide_unhide_button = self.FindName("HideUnhideButton")
+        if self._tabs is not None:
+            self._tabs.SelectionChanged += self.tabs_selection_changed
         self._apply_snapshot(snapshot, preferred_circuit_id=None)
 
     def _apply_theme(self):
@@ -269,6 +296,76 @@ class AlertsBrowserWindow(forms.WPFWindow):
             self._status_text.Text = str(text or "")
         except Exception:
             pass
+
+    def _current_tab_index(self):
+        if self._tabs is None:
+            return 0
+        try:
+            return int(getattr(self._tabs, "SelectedIndex", 0) or 0)
+        except Exception:
+            return 0
+
+    def _selected_alert_row(self):
+        idx = self._current_tab_index()
+        target_list = self._hidden_list if idx == 1 else self._active_list
+        if target_list is None:
+            return None
+        try:
+            return getattr(target_list, "SelectedItem", None)
+        except Exception:
+            return None
+
+    def _build_hidden_ids_for_item(self, item):
+        if item is None:
+            return []
+        hidden_ids = set()
+        for row in list(getattr(item, "rows", []) or []):
+            definition_id = str(getattr(row, "definition_id", "") or "").strip()
+            if not definition_id or definition_id == "-":
+                continue
+            if not bool(getattr(row, "can_hide", False)):
+                continue
+            if bool(getattr(row, "is_hidden", False)):
+                hidden_ids.add(definition_id)
+        return sorted(list(hidden_ids))
+
+    def _sync_hide_unhide_state(self):
+        btn = self._hide_unhide_button
+        if btn is None:
+            return
+        hidden_tab = self._current_tab_index() == 1
+        btn.Content = "Unhide Type" if hidden_tab else "Hide Type"
+
+        if self._gateway is not None and self._gateway.is_busy():
+            btn.IsEnabled = False
+            btn.ToolTip = "Operation is running..."
+            return
+
+        item = self._selected_item()
+        if item is None:
+            btn.IsEnabled = False
+            btn.ToolTip = "Select a circuit first."
+            return
+
+        row = self._selected_alert_row()
+        if row is None:
+            btn.IsEnabled = False
+            btn.ToolTip = "Select an alert type first."
+            return
+
+        definition_id = str(getattr(row, "definition_id", "") or "").strip()
+        if not definition_id or definition_id == "-":
+            btn.IsEnabled = False
+            btn.ToolTip = "Only mapped alert types can be changed."
+            return
+
+        if (not hidden_tab) and (not bool(getattr(row, "can_hide", False))):
+            btn.IsEnabled = False
+            btn.ToolTip = "This alert type can not be hidden."
+            return
+
+        btn.IsEnabled = True
+        btn.ToolTip = "Toggle visibility for this alert type on the selected circuit."
 
     def _selected_item(self):
         try:
@@ -319,9 +416,12 @@ class AlertsBrowserWindow(forms.WPFWindow):
                 self._selected_counts_text.Text = "Alerts: 0"
             if self._active_list is not None:
                 self._active_list.ItemsSource = []
+                self._active_list.SelectedItem = None
             if self._hidden_list is not None:
                 self._hidden_list.ItemsSource = []
+                self._hidden_list.SelectedItem = None
             self._update_refresh_state(None)
+            self._sync_hide_unhide_state()
             return
         if self._selected_circuit_text is not None:
             self._selected_circuit_text.Text = "{} - {}".format(item.panel_ckt_text, item.load_name or "-")
@@ -329,9 +429,12 @@ class AlertsBrowserWindow(forms.WPFWindow):
             self._selected_counts_text.Text = item.counts_text
         if self._active_list is not None:
             self._active_list.ItemsSource = list(item.active_rows or [])
+            self._active_list.SelectedItem = None
         if self._hidden_list is not None:
             self._hidden_list.ItemsSource = list(item.hidden_rows or [])
+            self._hidden_list.SelectedItem = None
         self._update_refresh_state(item)
+        self._sync_hide_unhide_state()
 
     def _update_refresh_state(self, item):
         if self._refresh_button is None:
@@ -339,23 +442,27 @@ class AlertsBrowserWindow(forms.WPFWindow):
         if self._gateway is not None and self._gateway.is_busy():
             self._refresh_button.IsEnabled = False
             self._refresh_button.ToolTip = "Operation is running..."
+            self._sync_hide_unhide_state()
             return
         if item is None:
             self._refresh_button.IsEnabled = False
             self._refresh_button.ToolTip = "Select a circuit first."
+            self._sync_hide_unhide_state()
             return
         if bool(getattr(item, "recalc_blocked", False)):
             self._refresh_button.IsEnabled = False
             reason = getattr(item, "recalc_block_reason", "") or "Calculation blocked by ownership constraints."
             self._refresh_button.ToolTip = reason
+            self._sync_hide_unhide_state()
             return
         self._refresh_button.IsEnabled = True
         self._refresh_button.ToolTip = "Recalculate selected circuit and refresh alerts."
+        self._sync_hide_unhide_state()
 
     def _handle_external_complete(self, status, op_name, result, error):
         if status == "error":
             self._set_status("Operation failed")
-            forms.alert("Alerts Browser operation failed:\n\n{}".format(error), title=TITLE)
+            forms.alert("Alerts Manager operation failed:\n\n{}".format(error), title=TITLE)
             self._update_refresh_state(self._selected_item())
             return
         if op_name == "refresh":
@@ -373,6 +480,18 @@ class AlertsBrowserWindow(forms.WPFWindow):
             else:
                 reason = operation_result.get("reason") or "cancelled"
                 self._set_status("Recalculate cancelled ({})".format(reason))
+            return
+        if op_name == "set_hidden":
+            data = dict(result or {})
+            operation_result = dict(data.get("operation_result") or {})
+            snapshot = data.get("snapshot") or {}
+            circuit_id = data.get("circuit_id")
+            self._apply_snapshot(snapshot, preferred_circuit_id=circuit_id)
+            if operation_result.get("status") == "ok":
+                self._set_status("Updated hidden alert types.")
+            else:
+                reason = operation_result.get("reason") or "cancelled"
+                self._set_status("Hide/unhide cancelled ({})".format(reason))
             return
         if op_name == "select":
             self._set_status("Selection updated.")
@@ -394,6 +513,9 @@ class AlertsBrowserWindow(forms.WPFWindow):
 
     def circuit_selection_changed(self, sender, args):
         self._set_selected(self._selected_item())
+
+    def tabs_selection_changed(self, sender, args):
+        self._sync_hide_unhide_state()
 
     def _clear_alert_grid_selection(self):
         try:
@@ -426,6 +548,16 @@ class AlertsBrowserWindow(forms.WPFWindow):
             sender.SelectedItem = None
         except Exception:
             pass
+        self._sync_hide_unhide_state()
+
+    def alerts_grid_selection_changed(self, sender, args):
+        if sender == self._active_list and self._active_list is not None:
+            if getattr(self._active_list, "SelectedItem", None) is not None and self._hidden_list is not None:
+                self._hidden_list.SelectedItem = None
+        elif sender == self._hidden_list and self._hidden_list is not None:
+            if getattr(self._hidden_list, "SelectedItem", None) is not None and self._active_list is not None:
+                self._active_list.SelectedItem = None
+        self._sync_hide_unhide_state()
 
     def select_equipment_clicked(self, sender, args):
         self._raise_select("panel")
@@ -438,6 +570,49 @@ class AlertsBrowserWindow(forms.WPFWindow):
 
     def clear_selection_clicked(self, sender, args):
         self._raise_select("clear")
+
+    def hide_unhide_clicked(self, sender, args):
+        item = self._selected_item()
+        if item is None:
+            self._set_status("No circuit selected.")
+            self._sync_hide_unhide_state()
+            return
+        row = self._selected_alert_row()
+        if row is None:
+            self._set_status("No alert type selected.")
+            self._sync_hide_unhide_state()
+            return
+        definition_id = str(getattr(row, "definition_id", "") or "").strip()
+        if not definition_id or definition_id == "-":
+            self._set_status("Only mapped alert types can be changed.")
+            self._sync_hide_unhide_state()
+            return
+
+        hidden_tab = self._current_tab_index() == 1
+        if (not hidden_tab) and (not bool(getattr(row, "can_hide", False))):
+            self._set_status("This alert type can not be hidden.")
+            self._sync_hide_unhide_state()
+            return
+
+        for item_row in list(getattr(item, "rows", []) or []):
+            if str(getattr(item_row, "definition_id", "") or "").strip() != definition_id:
+                continue
+            item_row.is_hidden = not hidden_tab
+
+        hidden_ids = self._build_hidden_ids_for_item(item)
+        if self._gateway is None:
+            return
+        raised = self._gateway.raise_set_hidden(
+            getattr(item, "circuit_id", 0),
+            hidden_ids,
+            callback=self._handle_external_complete,
+        )
+        if not raised:
+            self._set_status("Unable to queue hide/unhide update.")
+            self._sync_hide_unhide_state()
+            return
+        self._set_status("Updating hidden alert types...")
+        self._sync_hide_unhide_state()
 
     def refresh_clicked(self, sender, args):
         selected = self._selected_item()

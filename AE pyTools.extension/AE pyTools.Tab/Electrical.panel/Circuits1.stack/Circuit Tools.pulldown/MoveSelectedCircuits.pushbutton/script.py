@@ -278,19 +278,39 @@ def main():
         fallback_used = False
 
     if partial:
-        output.print_md("**Partial move accepted. Successful moves are listed below.**")
-    elif fallback_used:
-        output.print_md("**Circuits transferred successfully (with default SPARE/SPACE replacement workflow).**")
+        output.print_md("**Partial move accepted.**")
+        result_rows = []
+        for row in list(circuit_data or []):
+            cid = row[0] if len(row) > 0 else "-"
+            prev = row[1] if len(row) > 1 else "-"
+            result_rows.append([cid, prev, "Moved"])
+        for row in list(failed_data or []):
+            cid = row[0] if len(row) > 0 else "-"
+            prev = row[1] if len(row) > 1 else "-"
+            reason = row[2] if len(row) > 2 else "Move failed."
+            result_rows.append([cid, prev, "Failed: {0}".format(reason)])
+        for row in list(skipped_data or []):
+            cid = row[0] if len(row) > 0 else "-"
+            prev = row[1] if len(row) > 1 else "-"
+            reason = row[2] if len(row) > 2 else "Skipped."
+            result_rows.append([cid, prev, "Skipped: {0}".format(reason)])
+        output.print_table(result_rows, ["Circuit ID", "Previous Circuit", "Result"])
     else:
-        output.print_md("**Circuits transferred successfully.**")
-
-    output.print_table(circuit_data, ["Circuit ID", "Previous Circuit", "New Circuit"])
-    if failed_data:
-        output.print_md("**Circuits not moved:**")
-        output.print_table(failed_data, ["Circuit ID", "Previous Circuit", "Failure"])
-    if skipped_data:
-        output.print_md("**Circuits skipped:**")
-        output.print_table(skipped_data, ["Circuit ID", "Circuit", "Reason"])
+        moved_count = int(len(circuit_data or []))
+        failed_count = int(len(failed_data or []))
+        skipped_count = int(len(skipped_data or []))
+        if fallback_used:
+            msg = "Circuits transferred successfully (default SPARE/SPACE replacement workflow)."
+        else:
+            msg = "Circuits transferred successfully."
+        if moved_count or failed_count or skipped_count:
+            msg = "{0}\n\nMoved: {1}   Failed: {2}   Skipped: {3}".format(
+                msg,
+                moved_count,
+                failed_count,
+                skipped_count,
+            )
+        forms.alert(msg, title="Move Selected Circuits")
 
 
 if __name__ == '__main__':

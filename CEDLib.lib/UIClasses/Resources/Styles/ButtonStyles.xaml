@@ -47,20 +47,20 @@
   </Style>
 
   <Style x:Key="CED.Button.Primary" TargetType="Button" BasedOn="{StaticResource CED.Button.Base}">
-    <Setter Property="Background" Value="{DynamicResource CED.Brush.PrimaryBlue}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.PrimaryBlue}"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.AccentBlue}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.AccentBlue}"/>
     <Setter Property="Foreground" Value="{DynamicResource CED.Brush.ButtonForegroundOnAccent}"/>
   </Style>
 
   <Style x:Key="CED.Button.AccentRed" TargetType="Button" BasedOn="{StaticResource CED.Button.Base}">
-    <Setter Property="Background" Value="{DynamicResource CED.Brush.SecondaryRed}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.SecondaryRed}"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.AccentRed}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.AccentRed}"/>
     <Setter Property="Foreground" Value="{DynamicResource CED.Brush.ButtonForegroundOnAccent}"/>
   </Style>
 
   <Style x:Key="CED.Button.Apply" TargetType="Button" BasedOn="{StaticResource CED.Button.Base}">
-    <Setter Property="Background" Value="{DynamicResource CED.Brush.TertiaryGreen}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.TertiaryGreen}"/>
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.AccentGreen}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.AccentGreen}"/>
     <Setter Property="Foreground" Value="{DynamicResource CED.Brush.ButtonForegroundOnAccent}"/>
   </Style>
 

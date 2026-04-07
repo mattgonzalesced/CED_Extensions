@@ -1029,6 +1029,12 @@ def _panel_device_slot_capacity(option):
     panel = (option or {}).get("panel")
     schedule_type = (option or {}).get("schedule_type")
     model = (option or {}).get("equipment_model")
+    schedule_slots = _int_or_zero((option or {}).get("max_slot", 0))
+
+    # Data panel capacity is based on the schedule slot count.
+    if _is_data_panel_schedule_type(schedule_type):
+        if schedule_slots > 0:
+            return int(schedule_slots)
 
     # Prefer the already-built distribution equipment model value.
     if model is not None:

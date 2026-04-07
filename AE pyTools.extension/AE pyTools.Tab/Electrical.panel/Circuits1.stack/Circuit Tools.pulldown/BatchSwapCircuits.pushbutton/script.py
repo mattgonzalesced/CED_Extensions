@@ -17,8 +17,10 @@ from pyrevit import DB, forms, revit, script
 
 TITLE = "Batch Swap Circuits"
 THEME_CONFIG_SECTION = "AE-pyTools-Theme"
+THEME_CONFIG_THEME_KEY = "theme_mode"
 THEME_CONFIG_ACCENT_KEY = "accent_mode"
-VALID_ACCENT_MODES = ("blue", "red", "green", "neutral")
+VALID_THEME_MODES = ("light", "dark", "dark_alt")
+VALID_ACCENT_MODES = ("blue", "neutral")
 _WINDOW_MARKER = "_ae_batch_swap_window"
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -74,16 +76,23 @@ def _normalize_accent_mode(value, fallback="blue"):
     return mode if mode in VALID_ACCENT_MODES else fallback
 
 
-def _load_accent_mode(default_accent="blue"):
+def _normalize_theme_mode(value, fallback="light"):
+    mode = str(value or fallback).strip().lower()
+    return mode if mode in VALID_THEME_MODES else fallback
+
+
+def _load_theme_state(default_theme="light", default_accent="blue"):
+    theme_mode = _normalize_theme_mode(default_theme, "light")
     accent_mode = _normalize_accent_mode(default_accent, "blue")
     try:
         cfg = script.get_config(THEME_CONFIG_SECTION)
         if cfg is None:
-            return accent_mode
+            return theme_mode, accent_mode
+        theme_mode = _normalize_theme_mode(cfg.get_option(THEME_CONFIG_THEME_KEY, theme_mode), theme_mode)
         accent_mode = _normalize_accent_mode(cfg.get_option(THEME_CONFIG_ACCENT_KEY, accent_mode), accent_mode)
     except Exception:
         pass
-    return accent_mode
+    return theme_mode, accent_mode
 
 
 def operation_key_for_action(action):
@@ -298,8 +307,9 @@ class SwapRowItem(object):
 class BatchSwapWindow(forms.WPFWindow):
     """Window controller for staged batch swap planning."""
 
-    def __init__(self, accent_mode):
+    def __init__(self, theme_mode, accent_mode):
         xaml_path = os.path.abspath(os.path.join(THIS_DIR, "BatchSwapCircuitsWindow.xaml"))
+        self._theme_mode = _normalize_theme_mode(theme_mode, "light")
         self._accent_mode = _normalize_accent_mode(accent_mode, "blue")
         self._panel_options = []
         self._panel_option_by_id = {}
@@ -345,11 +355,11 @@ class BatchSwapWindow(forms.WPFWindow):
         return revit.doc
 
     def _apply_theme(self):
-        """Apply forced light theme and configured accent."""
+        """Apply configured theme and accent."""
         resource_loader.apply_theme(
             self,
             resources_root=UI_RESOURCES_ROOT,
-            theme_mode="light",
+            theme_mode=self._theme_mode,
             accent_mode=self._accent_mode,
         )
 
@@ -426,22 +436,36 @@ class BatchSwapWindow(forms.WPFWindow):
         self._normalize_amp_textbox(self.SpareRatingTextBox, 20)
         self._normalize_amp_textbox(self.SpareFrameTextBox, 20)
 
-        self._brushes["empty_bg"] = self._resource("CED.Brush.InfoPanelBackground")
-        self._brushes["spare_bg"] = self._resource("CED.Brush.DataGridReadOnlyBackground")
-        self._brushes["space_bg"] = self._resource("CED.Brush.DataGridReadOnlyBackground")
-        self._brushes["circuit_bg"] = self._resource("CED.Brush.ListItemBackground")
-        self._brushes["slot_bg"] = self._resource("CED.Brush.ListBackground")
-        self._brushes["slot_col1_bg"] = self._make_brush("FFEAF1FF") or self._brushes["slot_bg"]
-        self._brushes["slot_col2_bg"] = self._make_brush("FFF7F1E6") or self._brushes["slot_bg"]
-        self._brushes["staged_bg"] = self._make_brush("FFFFF2A6") or self._resource("CED.Brush.WarningBackground") or self._brushes["circuit_bg"]
-        self._brushes["preview_bg"] = self._resource("CED.Brush.InfoPanelBackground") or self._make_brush("FFF5E7")
-        self._brushes["slot_preview_bg"] = self._resource("CED.Brush.DataGridReadOnlyBackground") or self._make_brush("FFEFD5")
-        self._brushes["slot_preview_col1_bg"] = self._make_brush("FFCFE3FF") or self._brushes["slot_preview_bg"]
-        self._brushes["slot_preview_col2_bg"] = self._make_brush("FFFFDFB8") or self._brushes["slot_preview_bg"]
-        self._brushes["log_pending_bg"] = self._make_brush("00FFFFFF")
-        self._brushes["log_warning_bg"] = self._make_brush("FFFFF4CC")
-        self._brushes["log_success_bg"] = self._make_brush("FFDFF5DF")
-        self._brushes["log_failed_bg"] = self._make_brush("FFF8D7D7")
+        base_item_bg = self._resource("CED.Brush.ListItemBackground")
+        list_bg = self._resource("CED.Brush.ListBackground")
+        readonly_bg = self._resource("CED.Brush.DataGridReadOnlyBackground")
+        selected_bg = self._resource("CED.Brush.CircuitItemSelectedBackground")
+        hover_bg = self._resource("CED.Brush.CircuitItemHoverBackground")
+        changed_bg = self._resource("CED.Brush.DataGridChangedBackground")
+        info_accent_bg = self._resource("CED.Brush.InfoAccentBackground")
+        warning_bg = self._resource("CED.Brush.DataGridWarningBackground")
+        error_bg = self._resource("CED.Brush.DataGridErrorBackground")
+        status_staged_bg = self._resource("CED.Brush.StatusStagedBackground")
+        status_warning_bg = self._resource("CED.Brush.StatusWarningBackground")
+        status_success_bg = self._resource("CED.Brush.StatusSuccessBackground")
+        status_error_bg = self._resource("CED.Brush.StatusErrorBackground")
+
+        self._brushes["empty_bg"] = base_item_bg or list_bg
+        self._brushes["spare_bg"] = base_item_bg or readonly_bg or list_bg
+        self._brushes["space_bg"] = base_item_bg or readonly_bg or list_bg
+        self._brushes["circuit_bg"] = base_item_bg or list_bg
+        self._brushes["slot_bg"] = list_bg or base_item_bg
+        self._brushes["slot_col1_bg"] = info_accent_bg or base_item_bg or self._brushes["slot_bg"]
+        self._brushes["slot_col2_bg"] = warning_bg or readonly_bg or self._brushes["slot_bg"]
+        self._brushes["staged_bg"] = status_staged_bg or changed_bg or selected_bg or base_item_bg
+        self._brushes["preview_bg"] = selected_bg or hover_bg or base_item_bg
+        self._brushes["slot_preview_bg"] = hover_bg or self._brushes["preview_bg"]
+        self._brushes["slot_preview_col1_bg"] = selected_bg or self._brushes["slot_preview_bg"]
+        self._brushes["slot_preview_col2_bg"] = info_accent_bg or self._brushes["slot_preview_bg"]
+        self._brushes["log_pending_bg"] = base_item_bg or list_bg
+        self._brushes["log_warning_bg"] = status_warning_bg or warning_bg or changed_bg or self._brushes["staged_bg"]
+        self._brushes["log_success_bg"] = status_success_bg or self._resource("CED.Brush.ApplyBackground") or self._make_brush("FF2E7D32") or self._brushes["preview_bg"]
+        self._brushes["log_failed_bg"] = status_error_bg or error_bg or warning_bg or self._brushes["staged_bg"]
 
     def _set_panel_combo_mode(self, show_full):
         """Toggle panel combo label text between compact and full descriptor."""
@@ -3656,7 +3680,8 @@ class BatchSwapWindow(forms.WPFWindow):
 
 def _show_modal():
     """Show BatchSwap window modally to keep a valid API context."""
-    window = BatchSwapWindow(accent_mode=_load_accent_mode("blue"))
+    theme_mode, accent_mode = _load_theme_state("light", "blue")
+    window = BatchSwapWindow(theme_mode=theme_mode, accent_mode=accent_mode)
     try:
         window.ShowDialog()
     except Exception:

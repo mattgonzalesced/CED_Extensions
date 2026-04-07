@@ -3,12 +3,13 @@
 
 
 class AlertRow(object):
-    def __init__(self, severity, group, definition_id, message):
+    def __init__(self, severity, group, definition_id, message, can_hide=True):
         self.severity = str(severity or "NONE")
         self.group = str(group or "Other")
         self.definition_id = str(definition_id or "-")
         self.message = str(message or "")
         self.is_hidden = False
+        self.can_hide = bool(can_hide)
 
 
 class AlertCircuitItem(object):

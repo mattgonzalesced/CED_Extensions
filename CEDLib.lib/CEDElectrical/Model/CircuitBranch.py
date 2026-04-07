@@ -8,6 +8,7 @@ from CEDElectrical.Model.alerts import Alerts, NoticeCollector
 from CEDElectrical.Model.circuit_settings import (
     CircuitSettings,
     FeederVDMethod,
+    MultiPoleBranchNeutralBehavior,
     NeutralBehavior,
     IsolatedGroundBehavior,
 )
@@ -238,9 +239,10 @@ class ConduitRun(object):
 # CircuitBranch main class
 # ---------------------------------------------------------------------
 class CircuitBranch(object):
-    def __init__(self, circuit, settings=None):
+    def __init__(self, circuit, settings=None, preview_values=None):
         self.circuit = circuit
         self.settings = settings if settings else CircuitSettings()
+        self._preview_values_by_guid = self._build_preview_value_map(preview_values)
 
         self.circuit_id = get_elementid(circuit.Id)
         self.panel = getattr(circuit.BaseEquipment, "Name", None) if circuit.BaseEquipment else ""
@@ -262,6 +264,7 @@ class CircuitBranch(object):
         # override flags
         self._auto_calculate_override = False
         self._include_neutral = False
+        self._include_neutral_explicit = False
         self._include_isolated_ground = False
 
         # overrides (raw values from Revit)
@@ -301,6 +304,52 @@ class CircuitBranch(object):
         self._base_conduit_defaults = ConduitRun.from_defaults(self._wire_info)
         self._validate_overrides()
         self._setup_structural_quantities()
+        self._check_panel_load_alerts()
+
+    def _build_preview_value_map(self, preview_values):
+        value_map = {}
+        raw = dict(preview_values or {})
+        if not raw:
+            return value_map
+        alias_names = {
+            "Wire Temperature Rating_CEDT": "Wire Temparature Rating_CEDT",
+            "Wire Hot Size_CEDT": "CKT_Wire Hot Size_CEDT",
+        }
+        for key, value in list(raw.items()):
+            guid_text = None
+            try:
+                key_text = str(key or "").strip()
+            except Exception:
+                key_text = ""
+            if not key_text:
+                continue
+            if key_text in alias_names:
+                key_text = alias_names.get(key_text)
+            if key_text in SHARED_PARAMS:
+                try:
+                    guid_text = str((SHARED_PARAMS.get(key_text) or {}).get("GUID") or "").strip()
+                except Exception:
+                    guid_text = ""
+            elif len(key_text) == 36 and key_text.count("-") == 4:
+                guid_text = key_text
+            if not guid_text:
+                continue
+            value_map[str(guid_text).strip().lower()] = value
+        return value_map
+
+    def _try_get_preview_value(self, guid):
+        try:
+            key = str(guid or "").strip().lower()
+        except Exception:
+            key = ""
+        if not key:
+            return False, None
+        data = self._preview_values_by_guid
+        if not data:
+            return False, None
+        if key not in data:
+            return False, None
+        return True, data.get(key)
 
     # -----------------------------------------------------------------
     # Logging helpers
@@ -405,6 +454,23 @@ class CircuitBranch(object):
                 self.log_warning(Alerts.UndersizedOCP(load, rating))
         except Exception:
             pass
+
+    def _check_panel_load_alerts(self):
+        if not self.is_power_circuit or self.is_spare or self.is_space:
+            return
+        has_panel = bool(getattr(self.circuit, "BaseEquipment", None))
+        try:
+            load_current = float(self.circuit_load_current or 0.0)
+        except Exception:
+            load_current = 0.0
+
+        if has_panel:
+            if abs(load_current) <= 1e-9:
+                self.log_warning(Alerts.CircuitLoadsNull())
+            return
+
+        if load_current > 1e-9:
+            self.log_warning(Alerts.CircuitPanelsNull())
 
     # -----------------------------------------------------------------
     # Basic classification
@@ -511,13 +577,24 @@ class CircuitBranch(object):
 
         # override flags (yes/no)
         try:
-            self._include_neutral = self._get_yesno(SHARED_PARAMS['CKT_Include Neutral_CED']['GUID'])
+            self._include_neutral_explicit, self._include_neutral = self._get_yesno_with_state(
+                SHARED_PARAMS['CKT_Include Neutral_CED']['GUID']
+            )
             self._include_isolated_ground = self._get_yesno(
                 SHARED_PARAMS['CKT_Include Isolated Ground_CED']['GUID']
             )
             self._auto_calculate_override = self._get_yesno(
                 SHARED_PARAMS['CKT_User Override_CED']['GUID']
             )
+            if self._should_apply_default_multipole_branch_neutral():
+                behavior = getattr(
+                    self.settings,
+                    "multi_pole_branch_neutral_behavior",
+                    MultiPoleBranchNeutralBehavior.INCLUDE_BY_DEFAULT,
+                )
+                self._include_neutral = bool(
+                    behavior == MultiPoleBranchNeutralBehavior.INCLUDE_BY_DEFAULT
+                )
         except Exception as e:
             logger.debug("_load_core_inputs flags failed for {}: {}".format(self.name, e))
 
@@ -608,7 +685,7 @@ class CircuitBranch(object):
                 SHARED_PARAMS['Wire Material_CEDT']['GUID']
             )
             self._wire_temp_rating_override = self._get_param_value(
-                SHARED_PARAMS['Wire Temperature Rating_CEDT']['GUID']
+                SHARED_PARAMS['Wire Temparature Rating_CEDT']['GUID']
             )
             self._wire_insulation_override = self._get_param_value(
                 SHARED_PARAMS['Wire Insulation_CEDT']['GUID']
@@ -959,6 +1036,41 @@ class CircuitBranch(object):
             logger.debug("Feeder neutral check failed on {}: {}".format(self.name, e))
         return 0
 
+    def _should_apply_default_multipole_branch_neutral(self):
+        if not self.is_power_circuit or self.is_spare or self.is_space:
+            return False
+        if self._is_feeder:
+            return False
+        try:
+            pole_count = int(self.poles or 0)
+        except Exception:
+            pole_count = 0
+        if pole_count <= 1:
+            return False
+        if self._include_neutral_explicit:
+            return False
+        if self._has_existing_branch_results():
+            return False
+        return True
+
+    def _has_existing_branch_results(self):
+        keys = (
+            "CKT_Circuit Type_CEDT",
+            "CKT_Wire Hot Size_CEDT",
+            "Wire Size_CEDT",
+        )
+        for key in keys:
+            guid = str((SHARED_PARAMS.get(key) or {}).get("GUID") or "").strip()
+            if not guid:
+                continue
+            value = self._get_param_value(guid)
+            if isinstance(value, str):
+                if value.strip():
+                    return True
+            elif value not in (None, 0, 0.0):
+                return True
+        return False
+
     def _apply_set_constraints(self, sets_value, source="override", enforce_design=False):
         """Clamp number of sets to breaker/pole/lug limits when requested."""
         if sets_value is None:
@@ -1057,6 +1169,13 @@ class CircuitBranch(object):
 
     @property
     def rating(self):
+        try:
+            preview_guid = SHARED_PARAMS['CKT_Rating_CED']['GUID']
+            has_preview, preview_value = self._try_get_preview_value(preview_guid)
+            if has_preview and preview_value is not None:
+                return float(preview_value)
+        except Exception:
+            pass
         try:
             if self.is_power_circuit and not self.is_space:
                 return self.circuit.Rating
@@ -2060,17 +2179,42 @@ class CircuitBranch(object):
     # -----------------------------------------------------------------
     # Utility helpers
     # -----------------------------------------------------------------
-    def _get_yesno(self, guid):
+    def _parse_yesno_value(self, value, default_value=False):
+        try:
+            if isinstance(value, bool):
+                return bool(value)
+            if isinstance(value, (int, float)):
+                return bool(int(value))
+            text = str(value or "").strip().lower()
+            if text in ("1", "true", "yes", "y", "on"):
+                return True
+            if text in ("0", "false", "no", "n", "off", ""):
+                return False
+            return bool(int(float(text)))
+        except Exception:
+            return bool(default_value)
+
+    def _get_yesno_with_state(self, guid):
+        has_preview, preview_value = self._try_get_preview_value(guid)
+        if has_preview:
+            return True, self._parse_yesno_value(preview_value, default_value=False)
         try:
             param = self.circuit.get_Parameter(Guid(guid))
             if not param:
-                return False
-            return bool(param.AsInteger())
+                return False, False
+            return False, bool(param.AsInteger())
         except Exception as e:
             logger.debug("Failed to read yes/no {} on {}: {}".format(guid, self.name, e))
-            return False
+            return False, False
+
+    def _get_yesno(self, guid):
+        _, value = self._get_yesno_with_state(guid)
+        return bool(value)
 
     def _get_param_value(self, guid):
+        has_preview, preview_value = self._try_get_preview_value(guid)
+        if has_preview:
+            return preview_value
         try:
             param = self.circuit.get_Parameter(Guid(guid))
             if not param:

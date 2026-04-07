@@ -11,6 +11,7 @@ class SetHiddenAlertTypesOperation(object):
         'Design.NonStandardOCPRating',
         'Design.BreakerLugSizeLimitOverride',
         'Design.BreakerLugQuantityLimitOverride',
+        'Design.CircuitLoadsNull',
         'Calculations.BreakerLugSizeLimit',
         'Calculations.BreakerLugQuantityLimit',
     ])

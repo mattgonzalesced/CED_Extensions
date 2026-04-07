@@ -2,6 +2,7 @@ layout:
   - CreateDedicatedCircuits
   - BatchSwapCircuits
   - MoveSelectedCircuits
+  - Edit Circuit Properties
   - Add Spares and Spaces
   - MergeCircuits
   - RenameCircuitsByDeviceParameter

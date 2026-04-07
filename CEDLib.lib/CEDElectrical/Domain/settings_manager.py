@@ -1,10 +1,31 @@
 # -*- coding: utf-8 -*-
+import os
+
 from System.Collections.Generic import List
 from pyrevit import DB, script
 
 from CEDElectrical.Model.circuit_settings import CircuitSettings
 
 GP_NAME = "CED_Circuit_Settings"
+AUTO_PARAM_PROBE_NAME = "Circuit Data_CED"
+
+LOAD_PARAMS_COLUMNS = (
+    "GUID",
+    "UniqueId",
+    "Parameter Name",
+    "Discipline",
+    "Type of Parameter",
+    "Group Under",
+    "Instance/Type",
+    "Categories",
+    "Groups",
+)
+LOAD_PARAMS_GROUP_MAP = {
+    "Electrical": DB.GroupTypeId.Electrical,
+    "Identity Data": DB.GroupTypeId.IdentityData,
+    "Electrical - Circuiting": DB.GroupTypeId.ElectricalCircuiting,
+    "Other": DB.GroupTypeId.Data,
+}
 
 RESULT_PARAM_NAMES = [
     'CKT_Circuit Type_CEDT',
@@ -106,6 +127,233 @@ def save_circuit_settings(doc, settings):
     t.Start()
     gp.SetValue(spv)
     t.Commit()
+
+
+def has_project_parameter_binding(doc, parameter_name):
+    """Return True when a project parameter binding exists by name."""
+    name_text = str(parameter_name or "").strip()
+    if not name_text:
+        return False
+    iterator = doc.ParameterBindings.ForwardIterator()
+    iterator.Reset()
+    while iterator.MoveNext():
+        key = iterator.Key
+        if key and str(getattr(key, "Name", "") or "") == name_text:
+            return True
+    return False
+
+
+def ensure_electrical_parameters_for_calculate(doc, logger=None):
+    """
+    Ensure required electrical shared parameters are available before calculate.
+    This is silent (no alerts/output) and runs once per calculate call.
+    """
+    if has_project_parameter_binding(doc, AUTO_PARAM_PROBE_NAME):
+        return {"status": "present", "updated": 0, "unchanged": 0, "skipped": 0}
+
+    logger = logger or script.get_logger()
+    app = doc.Application
+    shared_txt, table_xlsx = _resolve_load_params_files()
+    if not shared_txt or not table_xlsx:
+        return {
+            "status": "failed",
+            "reason": "missing_files",
+            "updated": 0,
+            "unchanged": 0,
+            "skipped": 0,
+        }
+
+    rows = _load_parameter_rows(table_xlsx)
+    updated = 0
+    unchanged = 0
+    skipped = 0
+
+    original_shared_file = app.SharedParametersFilename
+    shared_param_file = None
+    tx = None
+    try:
+        app.SharedParametersFilename = shared_txt
+        shared_param_file = app.OpenSharedParameterFile()
+        if not shared_param_file:
+            return {
+                "status": "failed",
+                "reason": "shared_file_open_failed",
+                "updated": 0,
+                "unchanged": 0,
+                "skipped": len(rows),
+            }
+
+        tx = DB.Transaction(doc, "Auto-Load Electrical Parameters")
+        tx.Start()
+        bindmap = doc.ParameterBindings
+
+        for row in rows:
+            name = row.get("Parameter Name")
+            if not name:
+                skipped += 1
+                continue
+
+            definition = _get_shared_definition(shared_param_file, name)
+            if definition is None:
+                skipped += 1
+                continue
+
+            category_names = [c.strip() for c in str(row.get("Categories") or "").split(",") if c and c.strip()]
+            category_set, inserted = _category_set_from_names(doc, category_names)
+            if inserted <= 0:
+                skipped += 1
+                continue
+
+            is_instance = str(row.get("Instance/Type") or "").strip().lower() == "instance"
+            group_label = str(row.get("Group Under") or "").strip()
+            group_id = LOAD_PARAMS_GROUP_MAP.get(group_label, DB.GroupTypeId.ElectricalCircuiting)
+
+            existing_binding = _get_existing_binding(doc, definition.Name)
+            if existing_binding:
+                current_is_instance = isinstance(existing_binding, DB.InstanceBinding)
+                current_categories = _category_id_set(existing_binding.Categories)
+                target_categories = _category_id_set(category_set)
+                needs_update = not (current_is_instance == is_instance and current_categories == target_categories)
+            else:
+                needs_update = True
+
+            if not needs_update:
+                unchanged += 1
+                continue
+
+            binding = _create_binding(app, category_set, is_instance)
+            if existing_binding:
+                bindmap.ReInsert(definition, binding, group_id)
+            else:
+                bindmap.Insert(definition, binding, group_id)
+            updated += 1
+
+        tx.Commit()
+        return {
+            "status": "loaded",
+            "updated": updated,
+            "unchanged": unchanged,
+            "skipped": skipped,
+        }
+    except Exception as ex:
+        try:
+            if tx and tx.HasStarted():
+                tx.RollBack()
+        except Exception:
+            pass
+        try:
+            logger.warning("Auto-load electrical parameters failed: {}".format(ex))
+        except Exception:
+            pass
+        return {
+            "status": "failed",
+            "reason": str(ex),
+            "updated": 0,
+            "unchanged": 0,
+            "skipped": len(rows) if rows else 0,
+        }
+    finally:
+        try:
+            app.SharedParametersFilename = original_shared_file or ""
+        except Exception:
+            pass
+
+
+def _extensions_root():
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
+
+def _default_load_params_content_dir():
+    return os.path.join(
+        _extensions_root(),
+        "AE pyTools.extension",
+        "AE pyTools.Tab",
+        "Electrical.panel",
+        "Circuits1.stack",
+        "Circuit Tools.pulldown",
+        "Load Electrical Parameters.pushbutton",
+        "Content",
+    )
+
+
+def _resolve_load_params_files():
+    content_dir = _default_load_params_content_dir()
+    shared_txt = os.path.join(content_dir, "ELEC SHARED PARAMS.txt")
+    table_xlsx = os.path.join(content_dir, "ELEC SHARED PARAM TABLE.xlsx")
+    if os.path.exists(shared_txt) and os.path.exists(table_xlsx):
+        return shared_txt, table_xlsx
+
+    root = _extensions_root()
+    try:
+        for current_root, dirs, files in os.walk(root):
+            if os.path.basename(current_root) != "Content":
+                continue
+            parent = os.path.basename(os.path.dirname(current_root))
+            if parent != "Load Electrical Parameters.pushbutton":
+                continue
+            candidate_txt = os.path.join(current_root, "ELEC SHARED PARAMS.txt")
+            candidate_xlsx = os.path.join(current_root, "ELEC SHARED PARAM TABLE.xlsx")
+            if os.path.exists(candidate_txt) and os.path.exists(candidate_xlsx):
+                return candidate_txt, candidate_xlsx
+    except Exception:
+        pass
+    return None, None
+
+
+def _load_parameter_rows(config_path):
+    from pyrevit.interop import xl as pyxl
+
+    xldata = pyxl.load(config_path, headers=False)
+    sheet = xldata.get("Parameter List")
+    if not sheet:
+        raise Exception("Sheet 'Parameter List' not found in ELEC SHARED PARAM TABLE.xlsx.")
+    rows = [dict(zip(LOAD_PARAMS_COLUMNS, row)) for row in sheet["rows"][1:] if len(row) >= len(LOAD_PARAMS_COLUMNS)]
+    return sorted(rows, key=lambda row: row.get("UniqueId", ""))
+
+
+def _get_shared_definition(shared_param_file, name):
+    for group in shared_param_file.Groups:
+        definition = group.Definitions.get_Item(name)
+        if definition:
+            return definition
+    return None
+
+
+def _get_existing_binding(doc, definition_name):
+    iterator = doc.ParameterBindings.ForwardIterator()
+    iterator.Reset()
+    while iterator.MoveNext():
+        key = iterator.Key
+        if key and str(getattr(key, "Name", "") or "") == str(definition_name or ""):
+            return iterator.Current
+    return None
+
+
+def _category_set_from_names(doc, names):
+    category_set = DB.CategorySet()
+    category_map = {cat.Name: cat for cat in doc.Settings.Categories}
+    inserted = 0
+    for name in list(names or []):
+        cat = category_map.get(name)
+        if cat is None:
+            continue
+        category_set.Insert(cat)
+        inserted += 1
+    return category_set, inserted
+
+
+def _category_id_set(categories):
+    return set([int(getattr(cat.Id, "IntegerValue", -1)) for cat in list(categories or []) if cat is not None])
+
+
+def _create_binding(app, category_set, is_instance):
+    try:
+        return DB.InstanceBinding(category_set) if is_instance else DB.TypeBinding(category_set)
+    except Exception:
+        creator = getattr(app, "Create", None)
+        if creator is None:
+            raise
+        return creator.NewInstanceBinding(category_set) if is_instance else creator.NewTypeBinding(category_set)
 
 
 def _clear_param(param):

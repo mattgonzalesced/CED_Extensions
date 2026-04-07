@@ -4,20 +4,20 @@
     <Setter Property="Background" Value="{DynamicResource CED.Brush.IconMuted}"/>
     <Setter Property="MinHeight" Value="8"/>
     <Setter Property="MinWidth" Value="8"/>
-    <Setter Property="Opacity" Value="0.68"/>
+    <Setter Property="Opacity" Value="0.45"/>
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="Thumb">
           <Border x:Name="Pill"
                   Background="{TemplateBinding Background}"
-                  CornerRadius="2"
+                  CornerRadius="4"
                   Margin="0"/>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="Pill" Property="Opacity" Value="0.8"/>
+              <Setter TargetName="Pill" Property="Opacity" Value="0.68"/>
             </Trigger>
             <Trigger Property="IsDragging" Value="True">
-              <Setter TargetName="Pill" Property="Opacity" Value="0.95"/>
+              <Setter TargetName="Pill" Property="Opacity" Value="0.86"/>
             </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
@@ -79,31 +79,35 @@
               Width="8"
               Height="6"/>
       </RepeatButton>
-      <Border Grid.Row="1"
+      <Border x:Name="TrackChrome"
+              Grid.Row="1"
               Margin="0,1,0,1"
-              Background="{DynamicResource CED.Brush.WindowBackground}"
+              Background="{DynamicResource CED.Brush.SearchBackground}"
               BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
               BorderThickness="1"
-              CornerRadius="2">
-        <Track x:Name="PART_Track"
-               IsDirectionReversed="True"
-               HorizontalAlignment="Center"
-               Width="8"
-               Margin="1"
-               Minimum="{TemplateBinding Minimum}"
-               Maximum="{TemplateBinding Maximum}"
-               Value="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
-               ViewportSize="{TemplateBinding ViewportSize}">
-          <Track.DecreaseRepeatButton>
-            <RepeatButton Style="{StaticResource CED.ScrollBar.Menu.TrackButton}" Command="ScrollBar.PageUpCommand"/>
-          </Track.DecreaseRepeatButton>
-          <Track.Thumb>
-            <Thumb Style="{StaticResource CED.ScrollBar.Menu.Thumb}"/>
-          </Track.Thumb>
-          <Track.IncreaseRepeatButton>
-            <RepeatButton Style="{StaticResource CED.ScrollBar.Menu.TrackButton}" Command="ScrollBar.PageDownCommand"/>
-          </Track.IncreaseRepeatButton>
-        </Track>
+              CornerRadius="4">
+        <Grid>
+          <Border x:Name="TrackStateOverlay" Background="Transparent" CornerRadius="4"/>
+          <Track x:Name="PART_Track"
+                 IsDirectionReversed="True"
+                 HorizontalAlignment="Center"
+                 Width="8"
+                 Margin="1"
+                 Minimum="{TemplateBinding Minimum}"
+                 Maximum="{TemplateBinding Maximum}"
+                 Value="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                 ViewportSize="{TemplateBinding ViewportSize}">
+            <Track.DecreaseRepeatButton>
+              <RepeatButton Style="{StaticResource CED.ScrollBar.Menu.TrackButton}" Command="ScrollBar.PageUpCommand"/>
+            </Track.DecreaseRepeatButton>
+            <Track.Thumb>
+              <Thumb Style="{StaticResource CED.ScrollBar.Menu.Thumb}"/>
+            </Track.Thumb>
+            <Track.IncreaseRepeatButton>
+              <RepeatButton Style="{StaticResource CED.ScrollBar.Menu.TrackButton}" Command="ScrollBar.PageDownCommand"/>
+            </Track.IncreaseRepeatButton>
+          </Track>
+        </Grid>
       </Border>
       <RepeatButton Grid.Row="2"
                     Style="{StaticResource CED.ScrollBar.Menu.EndButton}"
@@ -115,6 +119,11 @@
               Height="6"/>
       </RepeatButton>
     </Grid>
+    <ControlTemplate.Triggers>
+      <Trigger SourceName="PART_Track" Property="IsMouseOver" Value="True">
+        <Setter TargetName="TrackStateOverlay" Property="Background" Value="{DynamicResource CED.Brush.ButtonStateOverlayHover}"/>
+      </Trigger>
+    </ControlTemplate.Triggers>
   </ControlTemplate>
 
   <ControlTemplate x:Key="CED.ScrollBar.Menu.Template.Horizontal" TargetType="ScrollBar">
@@ -133,31 +142,35 @@
               Width="6"
               Height="8"/>
       </RepeatButton>
-      <Border Grid.Column="1"
+      <Border x:Name="TrackChrome"
+              Grid.Column="1"
               Margin="1,0,1,0"
-              Background="{DynamicResource CED.Brush.WindowBackground}"
+              Background="{DynamicResource CED.Brush.SearchBackground}"
               BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
               BorderThickness="1"
-              CornerRadius="2">
-        <Track x:Name="PART_Track"
-               IsDirectionReversed="False"
-               VerticalAlignment="Center"
-               Height="8"
-               Margin="1"
-               Minimum="{TemplateBinding Minimum}"
-               Maximum="{TemplateBinding Maximum}"
-               Value="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
-               ViewportSize="{TemplateBinding ViewportSize}">
-          <Track.DecreaseRepeatButton>
-            <RepeatButton Style="{StaticResource CED.ScrollBar.Menu.TrackButton}" Command="ScrollBar.PageLeftCommand"/>
-          </Track.DecreaseRepeatButton>
-          <Track.Thumb>
-            <Thumb Style="{StaticResource CED.ScrollBar.Menu.Thumb}"/>
-          </Track.Thumb>
-          <Track.IncreaseRepeatButton>
-            <RepeatButton Style="{StaticResource CED.ScrollBar.Menu.TrackButton}" Command="ScrollBar.PageRightCommand"/>
-          </Track.IncreaseRepeatButton>
-        </Track>
+              CornerRadius="4">
+        <Grid>
+          <Border x:Name="TrackStateOverlay" Background="Transparent" CornerRadius="4"/>
+          <Track x:Name="PART_Track"
+                 IsDirectionReversed="False"
+                 VerticalAlignment="Center"
+                 Height="8"
+                 Margin="1"
+                 Minimum="{TemplateBinding Minimum}"
+                 Maximum="{TemplateBinding Maximum}"
+                 Value="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                 ViewportSize="{TemplateBinding ViewportSize}">
+            <Track.DecreaseRepeatButton>
+              <RepeatButton Style="{StaticResource CED.ScrollBar.Menu.TrackButton}" Command="ScrollBar.PageLeftCommand"/>
+            </Track.DecreaseRepeatButton>
+            <Track.Thumb>
+              <Thumb Style="{StaticResource CED.ScrollBar.Menu.Thumb}"/>
+            </Track.Thumb>
+            <Track.IncreaseRepeatButton>
+              <RepeatButton Style="{StaticResource CED.ScrollBar.Menu.TrackButton}" Command="ScrollBar.PageRightCommand"/>
+            </Track.IncreaseRepeatButton>
+          </Track>
+        </Grid>
       </Border>
       <RepeatButton Grid.Column="2"
                     Style="{StaticResource CED.ScrollBar.Menu.EndButton}"
@@ -169,6 +182,11 @@
               Height="8"/>
       </RepeatButton>
     </Grid>
+    <ControlTemplate.Triggers>
+      <Trigger SourceName="PART_Track" Property="IsMouseOver" Value="True">
+        <Setter TargetName="TrackStateOverlay" Property="Background" Value="{DynamicResource CED.Brush.ButtonStateOverlayHover}"/>
+      </Trigger>
+    </ControlTemplate.Triggers>
   </ControlTemplate>
 
   <Style x:Key="CED.ScrollBar.Menu" TargetType="ScrollBar">

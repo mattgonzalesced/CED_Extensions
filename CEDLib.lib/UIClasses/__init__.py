@@ -10,6 +10,7 @@ from UIClasses.ui_bases import (
     THEME_CONFIG_SECTION,
     THEME_CONFIG_THEME_KEY,
     load_theme_state_from_config,
+    wire_textbox_select_all,
 )
 
 __all__ = [
@@ -25,4 +26,5 @@ __all__ = [
     "THEME_CONFIG_THEME_KEY",
     "THEME_CONFIG_ACCENT_KEY",
     "load_theme_state_from_config",
+    "wire_textbox_select_all",
 ]

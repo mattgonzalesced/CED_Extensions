@@ -19,6 +19,7 @@ from CEDElectrical.Domain import settings_manager
 from CEDElectrical.Model.circuit_settings import (
     CircuitSettings,
     FeederVDMethod,
+    MultiPoleBranchNeutralBehavior,
     NeutralBehavior,
     IsolatedGroundBehavior,
     WireMaterialDisplay,
@@ -39,7 +40,7 @@ THEME_CONFIG_SECTION = "AE-pyTools-Theme"
 THEME_CONFIG_THEME_KEY = "theme_mode"
 THEME_CONFIG_ACCENT_KEY = "accent_mode"
 VALID_THEME_MODES = ("light", "dark", "dark_alt")
-VALID_ACCENT_MODES = ("blue", "red", "green", "neutral")
+VALID_ACCENT_MODES = ("blue", "neutral")
 ELECTRICAL_PANEL_ROOT = (
     ui_pathing.find_named_ancestor(THIS_DIR, "Electrical.panel")
     or os.path.abspath(os.path.join(THIS_DIR, "..", ".."))
@@ -68,6 +69,7 @@ LOAD_PARAMS_GROUP_MAP = {
     "Electrical": DB.GroupTypeId.Electrical,
     "Identity Data": DB.GroupTypeId.IdentityData,
     "Electrical - Circuiting": DB.GroupTypeId.ElectricalCircuiting,
+    "Other":DB.GroupTypeId.Data
 }
 
 
@@ -319,6 +321,8 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self.max_feeder_vd_tb.PreviewMouseLeftButtonDown += self._percent_box_preview_mouse_down
         self.max_feeder_vd_tb.GotKeyboardFocus += self._percent_box_got_focus
         self.max_feeder_vd_tb.LostFocus += lambda s, e: self._normalize_percent_on_blur(self.max_feeder_vd_tb, 0.001, 1.0, self.max_feeder_vd_warn, 0.05)
+        self.multi_pole_branch_neutral_behavior_cb.SelectionChanged += self._on_value_changed
+        self.multi_pole_branch_neutral_behavior_cb.GotFocus += lambda s, e: self._set_help_context('multi_pole_branch_neutral_behavior')
         self.neutral_behavior_cb.SelectionChanged += self._on_value_changed
         self.neutral_behavior_cb.GotFocus += lambda s, e: self._set_help_context('neutral_behavior')
         self.isolated_ground_behavior_cb.SelectionChanged += self._on_value_changed
@@ -350,6 +354,9 @@ class CircuitSettingsWindow(forms.WPFWindow):
     def _load_defaults_panel(self):
         self.min_conduit_default.Text = u"(Default: {})".format(self.defaults.min_conduit_size)
         self.max_conduit_fill_default.Text = u"(Default: {}%)".format(self._percent_value(self.defaults.max_conduit_fill))
+        self.multi_pole_branch_neutral_behavior_default.Text = u"(Default: {})".format(
+            self._describe_multipole_branch_neutral(self.defaults.multi_pole_branch_neutral_behavior)
+        )
         self.neutral_behavior_default.Text = u"(Default: {})".format(self._describe_neutral(self.defaults.neutral_behavior))
         self.isolated_ground_behavior_default.Text = u"(Default: {})".format(
             self._describe_isolated_ground(self.defaults.isolated_ground_behavior)
@@ -373,6 +380,10 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self._set_percent_field(self.max_branch_vd_tb, self.settings.max_branch_voltage_drop)
         self._set_percent_field(self.max_feeder_vd_tb, self.settings.max_feeder_voltage_drop)
 
+        self._select_combo_by_tag(
+            self.multi_pole_branch_neutral_behavior_cb,
+            self.settings.multi_pole_branch_neutral_behavior,
+        )
         self._select_combo_by_tag(self.neutral_behavior_cb, self.settings.neutral_behavior)
         self._select_combo_by_tag(self.isolated_ground_behavior_cb, self.settings.isolated_ground_behavior)
         self._select_combo_by_tag(self.wire_material_display_cb, self.settings.wire_material_display)
@@ -405,6 +416,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
         updated = CircuitSettings.from_json(self.settings.to_json())
         updated.set('min_conduit_size', self._get_combo_tag(self.min_conduit_size_cb))
         updated.set('max_conduit_fill', self._parse_percent_field(self.max_conduit_fill_tb, 0.1, 1.0, self.max_conduit_fill_warn, 0.4))
+        updated.set('multi_pole_branch_neutral_behavior', self._get_combo_tag(self.multi_pole_branch_neutral_behavior_cb))
         updated.set('neutral_behavior', self._get_combo_tag(self.neutral_behavior_cb))
         updated.set('isolated_ground_behavior', self._get_combo_tag(self.isolated_ground_behavior_cb))
         updated.set('wire_material_display', self._get_combo_tag(self.wire_material_display_cb))
@@ -449,6 +461,13 @@ class CircuitSettingsWindow(forms.WPFWindow):
         self._apply_default_style(self.max_branch_vd_tb, self._is_default('max_branch_voltage_drop', self._parse_percent_field(self.max_branch_vd_tb, 0.001, 1.0, self.max_branch_vd_warn, 0.05, silent=True)))
         self._apply_default_style(self.max_feeder_vd_tb, self._is_default('max_feeder_voltage_drop', self._parse_percent_field(self.max_feeder_vd_tb, 0.001, 1.0, self.max_feeder_vd_warn, 0.05, silent=True)))
 
+        self._apply_default_style(
+            self.multi_pole_branch_neutral_behavior_cb,
+            self._is_default(
+                'multi_pole_branch_neutral_behavior',
+                self._get_combo_tag(self.multi_pole_branch_neutral_behavior_cb),
+            ),
+        )
         nb_value = self._get_combo_tag(self.neutral_behavior_cb)
         fd_value = self._get_combo_tag(self.feeder_vd_method_cb)
         self._apply_default_style(self.neutral_behavior_cb, self._is_default('neutral_behavior', nb_value))
@@ -499,6 +518,12 @@ class CircuitSettingsWindow(forms.WPFWindow):
             NeutralBehavior.MANUAL: "Manual neutral",
         }.get(value, value)
 
+    def _describe_multipole_branch_neutral(self, value):
+        return {
+            MultiPoleBranchNeutralBehavior.INCLUDE_BY_DEFAULT: "Include by default",
+            MultiPoleBranchNeutralBehavior.EXCLUDE_BY_DEFAULT: "Exclude by default",
+        }.get(value, value)
+
     def _describe_isolated_ground(self, value):
         return {
             IsolatedGroundBehavior.MATCH_GROUND: "Match ground conductors",
@@ -535,8 +560,6 @@ class CircuitSettingsWindow(forms.WPFWindow):
     def _describe_accent_mode(self, value):
         return {
             "blue": "Blue",
-            "red": "Red",
-            "green": "Green",
             "neutral": "Neutral",
         }.get(str(value or "").strip().lower(), value)
 
@@ -544,6 +567,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
         return {
             'min_conduit_size': "Smallest conduit size proposed during automatic calculations (has no effect on manual user overrides).",
             'max_conduit_fill': "Maximum allowable conduit fill as a percentage. In automatic mode, the conduit will be upsized until this fill is not exceeded. In manual override mode, the tool will alert the user if this value is exceeded.",
+            'multi_pole_branch_neutral_behavior': "For first-time calculations on 2/3-pole branch circuits, choose whether neutral is included or excluded by default.",
             'neutral_behavior': "Determines how neutrals are sized when in manual override mode (in automatic mode, neutral size always matches the hot size).",
             'isolated_ground_behavior': "Determines how isolated grounds are sized when in manual override mode (in automatic mode, isolated ground size always matches the ground size).",
             'wire_material_display': "Controls when the material suffix (CU/AL) is shown in wire string outputs.",
@@ -570,6 +594,10 @@ class CircuitSettingsWindow(forms.WPFWindow):
                 NeutralBehavior.MATCH_HOT: "[Match hot conductors] Neutral size will always match hot size.",
                 NeutralBehavior.MANUAL: "[Manual Neutral] Neutral size is specified independently in manual override mode.",
             },
+            'multi_pole_branch_neutral_behavior': {
+                MultiPoleBranchNeutralBehavior.INCLUDE_BY_DEFAULT: "[Include by Default] First-time 2/3-pole branch calculations include neutral.",
+                MultiPoleBranchNeutralBehavior.EXCLUDE_BY_DEFAULT: "[Exclude by Default] First-time 2/3-pole branch calculations exclude neutral.",
+            },
             'isolated_ground_behavior': {
                 IsolatedGroundBehavior.MATCH_GROUND: "[Match ground conductors] Isolated ground size will always match ground size.",
                 IsolatedGroundBehavior.MANUAL: "[Manual Isolated Ground] Isolated ground size is specified independently in manual override mode.",
@@ -593,8 +621,6 @@ class CircuitSettingsWindow(forms.WPFWindow):
             },
             'accent_mode': {
                 'blue': "[Blue] Uses blue as the tool accent color.",
-                'red': "[Red] Uses red as the tool accent color.",
-                'green': "[Green] Uses green as the tool accent color.",
                 'neutral': "[Neutral] Uses neutral gray as the tool accent color.",
             },
         }
@@ -609,6 +635,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
         option_detail = None
         if key in (
             'feeder_vd_method',
+            'multi_pole_branch_neutral_behavior',
             'neutral_behavior',
             'isolated_ground_behavior',
             'wire_material_display',
@@ -656,7 +683,7 @@ class CircuitSettingsWindow(forms.WPFWindow):
         elif level == "warn":
             brush = self.TryFindResource("CED.Brush.BadgeWarningText")
         elif level == "error":
-            brush = self.TryFindResource("CED.Brush.SecondaryRed")
+            brush = self.TryFindResource("CED.Brush.AccentRed")
         else:
             brush = self._primary_text_brush
         self.verify_parameters_status.Foreground = brush or self._primary_text_brush or Brushes.Black

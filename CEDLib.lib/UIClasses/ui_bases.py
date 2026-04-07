@@ -4,7 +4,7 @@
 import os
 
 from System.Windows.Controls import ScrollViewer, TextBox
-from System.Windows.Input import Keyboard, ModifierKeys
+from System.Windows.Input import Keyboard, ModifierKeys, MouseButton
 from System.Windows.Media import VisualTreeHelper
 from pyrevit import forms, script
 
@@ -14,6 +14,8 @@ from UIClasses import resource_loader
 THEME_CONFIG_SECTION = "AE-pyTools-Theme"
 THEME_CONFIG_THEME_KEY = "theme_mode"
 THEME_CONFIG_ACCENT_KEY = "accent_mode"
+TEXTBOX_MODE_DEFAULT = "default"
+TEXTBOX_MODE_SELECT_ALL_ON_FIRST_CLICK = "select_all_on_first_click"
 
 try:
     import ConfigParser as _configparser  # IronPython / Py2
@@ -395,9 +397,52 @@ def _resolve_textbox_targets_for_instance(instance, textbox_names=None):
     return list(_find_visual_descendants(instance, TextBox) or [])
 
 
+def _normalize_textbox_mode(mode_value):
+    mode = str(mode_value or "").strip().lower()
+    if mode in (
+        "select_all_on_first_click",
+        "select-all-on-first-click",
+        "select_all_first_click",
+        "select-all-first-click",
+        "mode2",
+    ):
+        return TEXTBOX_MODE_SELECT_ALL_ON_FIRST_CLICK
+    return TEXTBOX_MODE_DEFAULT
+
+
+def _textbox_instance_key(textbox):
+    try:
+        return int(textbox.GetHashCode())
+    except Exception:
+        return id(textbox)
+
+
+def _is_left_mouse_button(event_args):
+    try:
+        return event_args.ChangedButton == MouseButton.Left
+    except Exception:
+        return True
+
+
+def _ensure_textbox_state_for_instance(instance):
+    if not hasattr(instance, "_ced_tb_click_select_map"):
+        instance._ced_tb_click_select_map = {}
+    if not hasattr(instance, "_ced_tb_focus_select_map"):
+        instance._ced_tb_focus_select_map = {}
+    if not hasattr(instance, "_ced_tb_mode_map"):
+        instance._ced_tb_mode_map = {}
+    if not hasattr(instance, "_ced_tb_arm_set"):
+        instance._ced_tb_arm_set = set()
+    if not hasattr(instance, "_ced_tb_event_bound_set"):
+        instance._ced_tb_event_bound_set = set()
+    return instance
+
+
 def _bind_textbox_behavior_for_instance(instance, textbox, select_all_on_click=None, select_all_on_focus=None):
     if not isinstance(textbox, TextBox):
         return False
+    _ensure_textbox_state_for_instance(instance)
+    key = _textbox_instance_key(textbox)
     click_enabled = (
         getattr(instance, "_text_select_all_on_click", False)
         if select_all_on_click is None
@@ -408,17 +453,32 @@ def _bind_textbox_behavior_for_instance(instance, textbox, select_all_on_click=N
         if select_all_on_focus is None
         else bool(select_all_on_focus)
     )
-    try:
-        setattr(textbox, "_ced_select_all_on_click", bool(click_enabled))
-        setattr(textbox, "_ced_select_all_on_focus", bool(focus_enabled))
-    except Exception:
-        pass
-    if bool(getattr(textbox, "_ced_behavior_bound", False)):
+    instance._ced_tb_click_select_map[key] = bool(click_enabled)
+    instance._ced_tb_focus_select_map[key] = bool(focus_enabled)
+    if key in instance._ced_tb_event_bound_set:
         return True
     try:
-        textbox.PreviewMouseLeftButtonDown += instance._textbox_preview_mouse_down
+        textbox.PreviewMouseDown += instance._textbox_preview_mouse_down
         textbox.GotKeyboardFocus += instance._textbox_got_keyboard_focus
-        textbox._ced_behavior_bound = True
+        instance._ced_tb_event_bound_set.add(key)
+        return True
+    except Exception:
+        return False
+
+
+def _bind_textbox_mode_for_instance(instance, textbox, mode=None):
+    if not isinstance(textbox, TextBox):
+        return False
+    _ensure_textbox_state_for_instance(instance)
+    key = _textbox_instance_key(textbox)
+    normalized_mode = _normalize_textbox_mode(mode)
+    instance._ced_tb_mode_map[key] = normalized_mode
+    if key in instance._ced_tb_event_bound_set:
+        return True
+    try:
+        textbox.PreviewMouseDown += instance._textbox_preview_mouse_down
+        textbox.GotKeyboardFocus += instance._textbox_got_keyboard_focus
+        instance._ced_tb_event_bound_set.add(key)
         return True
     except Exception:
         return False
@@ -440,6 +500,116 @@ def _apply_textbox_behaviors_for_instance(
         ):
             count += 1
     return count
+
+
+def _apply_textbox_modes_for_instance(
+    instance,
+    textbox_mode_map=None,
+    default_mode=TEXTBOX_MODE_DEFAULT,
+):
+    count = 0
+    if textbox_mode_map:
+        for key, mode in list(dict(textbox_mode_map or {}).items()):
+            if isinstance(key, (list, tuple, set)):
+                names = list(key)
+            else:
+                names = [key]
+            for name in names:
+                try:
+                    textbox = instance.FindName(str(name))
+                except Exception:
+                    textbox = None
+                if textbox is None:
+                    continue
+                if _bind_textbox_mode_for_instance(instance, textbox, mode=mode):
+                    count += 1
+        return count
+    for textbox in list(_resolve_textbox_targets_for_instance(instance, textbox_names=None) or []):
+        if _bind_textbox_mode_for_instance(instance, textbox, mode=default_mode):
+            count += 1
+    return count
+
+
+def wire_textbox_select_all(
+    instance,
+    textbox_names=None,
+    select_all_on_click=True,
+    select_all_on_focus=True,
+):
+    """Public helper to wire click/focus select-all behavior on TextBox controls."""
+    return _apply_textbox_behaviors_for_instance(
+        instance,
+        textbox_names=textbox_names,
+        select_all_on_click=select_all_on_click,
+        select_all_on_focus=select_all_on_focus,
+    )
+
+
+def wire_textbox_interaction_modes(
+    instance,
+    textbox_mode_map=None,
+    default_mode=TEXTBOX_MODE_DEFAULT,
+):
+    """Public helper to wire textbox interaction modes.
+
+    Modes:
+    - default: native WPF behavior
+    - select_all_on_first_click: first click while unfocused focuses + selects all
+    """
+    return _apply_textbox_modes_for_instance(
+        instance,
+        textbox_mode_map=textbox_mode_map,
+        default_mode=default_mode,
+    )
+
+
+def _handle_textbox_preview_mouse_down_for_instance(instance, sender, args):
+    if not _is_left_mouse_button(args):
+        return
+    _ensure_textbox_state_for_instance(instance)
+    key = _textbox_instance_key(sender)
+    mode = _normalize_textbox_mode((instance._ced_tb_mode_map or {}).get(key, TEXTBOX_MODE_DEFAULT))
+    if mode == TEXTBOX_MODE_SELECT_ALL_ON_FIRST_CLICK:
+        try:
+            if sender.IsKeyboardFocusWithin:
+                return
+            instance._ced_tb_arm_set.add(key)
+            sender.Focus()
+            args.Handled = True
+        except Exception:
+            pass
+        return
+    if not bool((instance._ced_tb_click_select_map or {}).get(key, False)):
+        return
+    try:
+        if not sender.IsKeyboardFocusWithin:
+            sender.Focus()
+            args.Handled = True
+            return
+        sender.SelectAll()
+        args.Handled = True
+    except Exception:
+        pass
+
+
+def _handle_textbox_got_keyboard_focus_for_instance(instance, sender, args):
+    _ensure_textbox_state_for_instance(instance)
+    key = _textbox_instance_key(sender)
+    mode = _normalize_textbox_mode((instance._ced_tb_mode_map or {}).get(key, TEXTBOX_MODE_DEFAULT))
+    if mode == TEXTBOX_MODE_SELECT_ALL_ON_FIRST_CLICK:
+        try:
+            if key in (instance._ced_tb_arm_set or set()):
+                instance._ced_tb_arm_set.discard(key)
+                sender.SelectAll()
+        except Exception:
+            pass
+        return
+    if not bool((instance._ced_tb_focus_select_map or {}).get(key, False)):
+        return
+    try:
+        sender.SelectAll()
+    except Exception:
+        pass
 
 
 class CEDWindowBase(forms.WPFWindow):
@@ -551,29 +721,24 @@ class CEDWindowBase(forms.WPFWindow):
             select_all_on_focus=select_all_on_focus,
         )
 
+    def bind_textbox_interaction_mode(self, textbox, mode=None):
+        return _bind_textbox_mode_for_instance(self, textbox, mode=mode)
+
+    def apply_textbox_interaction_modes(self, textbox_mode_map=None, default_mode=TEXTBOX_MODE_DEFAULT):
+        return _apply_textbox_modes_for_instance(
+            self,
+            textbox_mode_map=textbox_mode_map,
+            default_mode=default_mode,
+        )
+
     def _on_loaded_wire_textboxes(self, sender, args):
         self.apply_textbox_behaviors()
 
     def _textbox_preview_mouse_down(self, sender, args):
-        if not bool(getattr(sender, "_ced_select_all_on_click", False)):
-            return
-        try:
-            if not sender.IsKeyboardFocusWithin:
-                sender.Focus()
-                args.Handled = True
-                return
-            sender.SelectAll()
-            args.Handled = True
-        except Exception:
-            pass
+        _handle_textbox_preview_mouse_down_for_instance(self, sender, args)
 
     def _textbox_got_keyboard_focus(self, sender, args):
-        if not bool(getattr(sender, "_ced_select_all_on_focus", False)):
-            return
-        try:
-            sender.SelectAll()
-        except Exception:
-            pass
+        _handle_textbox_got_keyboard_focus_for_instance(self, sender, args)
 
     def _on_preview_mouse_wheel(self, sender, event_args):
         _shift_wheel_to_horizontal(event_args)
@@ -678,29 +843,24 @@ class CEDPanelBase(forms.WPFPanel):
             select_all_on_focus=select_all_on_focus,
         )
 
+    def bind_textbox_interaction_mode(self, textbox, mode=None):
+        return _bind_textbox_mode_for_instance(self, textbox, mode=mode)
+
+    def apply_textbox_interaction_modes(self, textbox_mode_map=None, default_mode=TEXTBOX_MODE_DEFAULT):
+        return _apply_textbox_modes_for_instance(
+            self,
+            textbox_mode_map=textbox_mode_map,
+            default_mode=default_mode,
+        )
+
     def _on_loaded_wire_textboxes(self, sender, args):
         self.apply_textbox_behaviors()
 
     def _textbox_preview_mouse_down(self, sender, args):
-        if not bool(getattr(sender, "_ced_select_all_on_click", False)):
-            return
-        try:
-            if not sender.IsKeyboardFocusWithin:
-                sender.Focus()
-                args.Handled = True
-                return
-            sender.SelectAll()
-            args.Handled = True
-        except Exception:
-            pass
+        _handle_textbox_preview_mouse_down_for_instance(self, sender, args)
 
     def _textbox_got_keyboard_focus(self, sender, args):
-        if not bool(getattr(sender, "_ced_select_all_on_focus", False)):
-            return
-        try:
-            sender.SelectAll()
-        except Exception:
-            pass
+        _handle_textbox_got_keyboard_focus_for_instance(self, sender, args)
 
     def _on_preview_mouse_wheel(self, sender, event_args):
         _shift_wheel_to_horizontal(event_args)
