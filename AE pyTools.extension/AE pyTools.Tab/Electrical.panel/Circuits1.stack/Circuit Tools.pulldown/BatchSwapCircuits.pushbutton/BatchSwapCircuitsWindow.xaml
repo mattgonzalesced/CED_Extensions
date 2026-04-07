@@ -4,9 +4,55 @@
         Height="760"
         Width="1220"
         MinHeight="560"
-        MinWidth="1240"
+        MinWidth="1180"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource CED.Brush.WindowBackground}">
+  <Window.Resources>
+    <Style x:Key="BatchSwap.TemplateList" TargetType="ListBox">
+      <Setter Property="Background" Value="{DynamicResource CED.Brush.ListBackground}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.ListBorder}"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+      <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+      <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+      <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+    </Style>
+    <Style x:Key="BatchSwap.TemplateListItem" TargetType="ListBoxItem">
+      <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+      <Setter Property="Background" Value="{DynamicResource CED.Brush.ListItemBackground}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridCellBorder}"/>
+      <Setter Property="BorderThickness" Value="0,0,0,1"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Border x:Name="ItemRoot"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    SnapsToDevicePixels="True">
+              <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                Margin="{TemplateBinding Padding}"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="ItemRoot" Property="Background" Value="{DynamicResource CED.Brush.CircuitItemHoverBackground}"/>
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="ItemRoot" Property="Background" Value="{DynamicResource CED.Brush.CircuitItemSelectedBackground}"/>
+                <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="ItemRoot" Property="Opacity" Value="0.55"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
   <Grid Margin="{DynamicResource CED.Thickness.ContentMargin}">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
@@ -57,6 +103,7 @@
           </Grid.RowDefinitions>
           <Grid Grid.Row="0">
             <ComboBox Name="LeftPanelCombo"
+                      Style="{DynamicResource CED.Input.ComboBox.Flat.Compact}"
                       MinHeight="26"
                       DropDownOpened="panel_dropdown_opened"
                       DropDownClosed="panel_dropdown_closed"
@@ -71,6 +118,7 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0"
                                Text="{Binding left_text}"
+                               Style="{DynamicResource CED.Text.Primary}"
                                TextTrimming="CharacterEllipsis"/>
                     <TextBlock Grid.Column="1"
                                Margin="8,0,0,0"
@@ -157,6 +205,14 @@
                         DragLeave="list_drag_leave"
                         Drop="list_drop"
                         AllowDrop="True">
+              <ListView.Resources>
+                <Style TargetType="{x:Type ScrollViewer}">
+                  <Setter Property="Background" Value="{DynamicResource CED.Brush.ListBackground}"/>
+                  <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.ListBorder}"/>
+                  <Setter Property="BorderThickness" Value="0"/>
+                  <Setter Property="Template" Value="{DynamicResource CED.ScrollViewer.Themed.Template}"/>
+                </Style>
+              </ListView.Resources>
               <ListView.ItemTemplate>
                 <DataTemplate>
                   <Grid Margin="0" Height="{Binding row_height}" MinWidth="340">
@@ -165,24 +221,25 @@
                       <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Border Grid.ColumnSpan="2"
-                            Height="1"
+                            Height="0"
                             VerticalAlignment="Top"
-                            Background="{DynamicResource CED.Brush.DataGridCellBorder}"
+                            Background="{DynamicResource CED.Brush.CardBorder}"
                             Visibility="{Binding divider_visibility}"/>
                     <Border Grid.Column="0"
-                            BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
-                            BorderThickness="1,1,0,1"
+                            BorderBrush="{DynamicResource CED.Brush.CardBorder}"
+                            BorderThickness="1,0,0,1"
                             Padding="0">
                       <ItemsControl ItemsSource="{Binding slot_cells}">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate>
                             <Border Height="{Binding height}"
                                     Background="{Binding background}"
-                                    BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
+                                    BorderBrush="{DynamicResource CED.Brush.CardBorder}"
                                     BorderThickness="0,0,0,1">
                               <TextBlock Text="{Binding label}"
                                          VerticalAlignment="Center"
                                          HorizontalAlignment="Center"
+                                         Foreground="{DynamicResource CED.Brush.PrimaryText}"
                                          FontWeight="Bold"
                                          FontSize="11"/>
                             </Border>
@@ -192,9 +249,9 @@
                     </Border>
                     <Border Grid.Column="1"
                             Margin="0"
-                            Padding="2,0"
-                            BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
-                            BorderThickness="1"
+                            Padding="1,0"
+                            BorderBrush="{DynamicResource CED.Brush.CardBorder}"
+                            BorderThickness="1,0,1,1"
                             Background="{Binding row_background}"
                             Opacity="{Binding row_opacity}"
                             ToolTip="{Binding row_tooltip}">
@@ -204,9 +261,9 @@
                           <ColumnDefinition Width="36"/>
                           <ColumnDefinition Width="114"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding load_text}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                        <TextBlock Grid.Column="1" Text="{Binding indicator_text}" VerticalAlignment="Center" HorizontalAlignment="Left" FontSize="10"/>
-                        <TextBlock Grid.Column="2" Text="{Binding meta_text}" VerticalAlignment="Center" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Column="0" Text="{Binding load_text}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Style="{DynamicResource CED.Text.Primary}"/>
+                        <TextBlock Grid.Column="1" Text="{Binding indicator_text}" VerticalAlignment="Center" HorizontalAlignment="Left" FontSize="10" Style="{DynamicResource CED.Text.Secondary}"/>
+                        <TextBlock Grid.Column="2" Text="{Binding meta_text}" VerticalAlignment="Center" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" Style="{DynamicResource CED.Text.Secondary}"/>
                       </Grid>
                     </Border>
                   </Grid>
@@ -221,15 +278,15 @@
               </ListView.ItemContainerStyle>
               </ListView>
               <ListBox Name="LeftTemplateList"
+                       Style="{StaticResource BatchSwap.TemplateList}"
+                       ItemContainerStyle="{StaticResource BatchSwap.TemplateListItem}"
                        Visibility="Collapsed"
                        SelectionChanged="left_template_changed"
-                       ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                       ScrollViewer.VerticalScrollBarVisibility="Auto"
                        BorderThickness="0">
                 <ListBox.ItemTemplate>
                   <DataTemplate>
                     <Border Padding="6,3">
-                      <TextBlock Text="{Binding display_name}" TextWrapping="Wrap"/>
+                      <TextBlock Text="{Binding display_name}" TextWrapping="Wrap" Style="{DynamicResource CED.Text.Primary}"/>
                     </Border>
                   </DataTemplate>
                 </ListBox.ItemTemplate>
@@ -287,6 +344,7 @@
           </Grid.RowDefinitions>
           <Grid Grid.Row="0">
             <ComboBox Name="RightPanelCombo"
+                      Style="{DynamicResource CED.Input.ComboBox.Flat.Compact}"
                       MinHeight="26"
                       DropDownOpened="panel_dropdown_opened"
                       DropDownClosed="panel_dropdown_closed"
@@ -301,6 +359,7 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0"
                                Text="{Binding left_text}"
+                               Style="{DynamicResource CED.Text.Primary}"
                                TextTrimming="CharacterEllipsis"/>
                     <TextBlock Grid.Column="1"
                                Margin="8,0,0,0"
@@ -387,6 +446,14 @@
                         DragLeave="list_drag_leave"
                         Drop="list_drop"
                         AllowDrop="True">
+              <ListView.Resources>
+                <Style TargetType="{x:Type ScrollViewer}">
+                  <Setter Property="Background" Value="{DynamicResource CED.Brush.ListBackground}"/>
+                  <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.ListBorder}"/>
+                  <Setter Property="BorderThickness" Value="0"/>
+                  <Setter Property="Template" Value="{DynamicResource CED.ScrollViewer.Themed.Template}"/>
+                </Style>
+              </ListView.Resources>
               <ListView.ItemTemplate>
                 <DataTemplate>
                   <Grid Margin="0" Height="{Binding row_height}" MinWidth="340">
@@ -395,24 +462,25 @@
                       <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Border Grid.ColumnSpan="2"
-                            Height="1"
+                            Height="0"
                             VerticalAlignment="Top"
-                            Background="{DynamicResource CED.Brush.DataGridCellBorder}"
+                            Background="{DynamicResource CED.Brush.CardBorder}"
                             Visibility="{Binding divider_visibility}"/>
                     <Border Grid.Column="0"
-                            BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
-                            BorderThickness="1,1,0,1"
+                            BorderBrush="{DynamicResource CED.Brush.CardBorder}"
+                            BorderThickness="1,0,0,1"
                             Padding="0">
                       <ItemsControl ItemsSource="{Binding slot_cells}">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate>
                             <Border Height="{Binding height}"
                                     Background="{Binding background}"
-                                    BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
+                                    BorderBrush="{DynamicResource CED.Brush.CardBorder}"
                                     BorderThickness="0,0,0,1">
                               <TextBlock Text="{Binding label}"
                                          VerticalAlignment="Center"
                                          HorizontalAlignment="Center"
+                                         Foreground="{DynamicResource CED.Brush.PrimaryText}"
                                          FontWeight="Bold"
                                          FontSize="11"/>
                             </Border>
@@ -422,9 +490,9 @@
                     </Border>
                     <Border Grid.Column="1"
                             Margin="0"
-                            Padding="2,0"
-                            BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
-                            BorderThickness="1"
+                            Padding="1,0"
+                            BorderBrush="{DynamicResource CED.Brush.CardBorder}"
+                            BorderThickness="1,0,1,1"
                             Background="{Binding row_background}"
                             Opacity="{Binding row_opacity}"
                             ToolTip="{Binding row_tooltip}">
@@ -434,9 +502,9 @@
                           <ColumnDefinition Width="36"/>
                           <ColumnDefinition Width="114"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding load_text}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                        <TextBlock Grid.Column="1" Text="{Binding indicator_text}" VerticalAlignment="Center" HorizontalAlignment="Left" FontSize="10"/>
-                        <TextBlock Grid.Column="2" Text="{Binding meta_text}" VerticalAlignment="Center" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Column="0" Text="{Binding load_text}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Style="{DynamicResource CED.Text.Primary}"/>
+                        <TextBlock Grid.Column="1" Text="{Binding indicator_text}" VerticalAlignment="Center" HorizontalAlignment="Left" FontSize="10" Style="{DynamicResource CED.Text.Secondary}"/>
+                        <TextBlock Grid.Column="2" Text="{Binding meta_text}" VerticalAlignment="Center" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" Style="{DynamicResource CED.Text.Secondary}"/>
                       </Grid>
                     </Border>
                   </Grid>
@@ -451,15 +519,15 @@
               </ListView.ItemContainerStyle>
               </ListView>
               <ListBox Name="RightTemplateList"
+                       Style="{StaticResource BatchSwap.TemplateList}"
+                       ItemContainerStyle="{StaticResource BatchSwap.TemplateListItem}"
                        Visibility="Collapsed"
                        SelectionChanged="right_template_changed"
-                       ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                       ScrollViewer.VerticalScrollBarVisibility="Auto"
                        BorderThickness="0">
                 <ListBox.ItemTemplate>
                   <DataTemplate>
                     <Border Padding="6,3">
-                      <TextBlock Text="{Binding display_name}" TextWrapping="Wrap"/>
+                      <TextBlock Text="{Binding display_name}" TextWrapping="Wrap" Style="{DynamicResource CED.Text.Primary}"/>
                     </Border>
                   </DataTemplate>
                 </ListBox.ItemTemplate>
@@ -521,13 +589,23 @@
                   BorderThickness="1"
                   Background="{DynamicResource CED.Brush.ListBackground}">
               <ListBox Name="ChangeLogList"
+                      Style="{StaticResource BatchSwap.TemplateList}"
+                      ItemContainerStyle="{StaticResource BatchSwap.TemplateListItem}"
                       ScrollViewer.CanContentScroll="True"
                       FontSize="11"
                       BorderThickness="0">
               <ListBox.ItemTemplate>
                 <DataTemplate>
-                  <Border Background="{Binding background}" Padding="4,2">
-                    <TextBlock Text="{Binding text}" TextWrapping="Wrap" ToolTip="{Binding text}"/>
+                  <Border Background="{Binding background}"
+                          BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
+                          BorderThickness="0,0,0,1"
+                          CornerRadius="0"
+                          Margin="0"
+                          Padding="4,2">
+                    <TextBlock Text="{Binding text}"
+                               TextWrapping="Wrap"
+                               ToolTip="{Binding text}"
+                               Style="{DynamicResource CED.Text.Primary}"/>
                   </Border>
                 </DataTemplate>
               </ListBox.ItemTemplate>
@@ -591,7 +669,7 @@
       </StackPanel>
       <StackPanel Grid.Column="1"
                   Orientation="Horizontal"
-                  Margin="0,0,12,0"
+                  Margin="0,0,26,0"
                   HorizontalAlignment="Center"
                   VerticalAlignment="Center">
         <Border Padding="6,4"
@@ -606,17 +684,20 @@
                          Margin="0,0,8,0"
                          Style="{DynamicResource CED.Text.Secondary}"/>
               <RadioButton Name="AddPole1Radio"
+                           Style="{DynamicResource CED.Input.RadioButton}"
                            Content="1P"
                            IsChecked="True"
                            VerticalAlignment="Center"
                            Margin="0,0,8,0"
                            Checked="add_poles_changed"/>
               <RadioButton Name="AddPole2Radio"
+                           Style="{DynamicResource CED.Input.RadioButton}"
                            Content="2P"
                            VerticalAlignment="Center"
                            Margin="0,0,8,0"
                            Checked="add_poles_changed"/>
               <RadioButton Name="AddPole3Radio"
+                           Style="{DynamicResource CED.Input.RadioButton}"
                            Content="3P"
                            VerticalAlignment="Center"
                            Checked="add_poles_changed"/>
@@ -627,8 +708,10 @@
                          Margin="0,0,8,0"
                          Style="{DynamicResource CED.Text.Secondary}"/>
               <TextBox Name="SpareRatingTextBox"
+                       Style="{DynamicResource CED.Input.TextBox}"
                        Width="56"
                        Height="24"
+                       HorizontalContentAlignment="Center"
                        VerticalContentAlignment="Center"
                        Text="20 A"
                        GotKeyboardFocus="amp_input_focus"
@@ -639,8 +722,10 @@
                          Margin="8,0,8,0"
                          Style="{DynamicResource CED.Text.Secondary}"/>
               <TextBox Name="SpareFrameTextBox"
+                       Style="{DynamicResource CED.Input.TextBox}"
                        Width="56"
                        Height="24"
+                       HorizontalContentAlignment="Center"
                        VerticalContentAlignment="Center"
                        Text="20 A"
                        GotKeyboardFocus="amp_input_focus"

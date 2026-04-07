@@ -60,13 +60,13 @@ ALERT_DEFINITIONS = {
     ),
     "calculation_breaker_lug_size_limit": AlertDefinition(
         "Calculations.BreakerLugSizeLimit",
-        "Calculated Hot Size #{hot_size} exceeds recommended maximum for breaker size {breaker_size}A. Review feeder lengths, connected loads, and breaker size!",
+        "Calculated Hot Size #{hot_size} exceeds recommended maximum for breaker size {breaker_size}A.",
         group="Calculation",
         severity="MEDIUM",
     ),
     "calculation_breaker_lug_quantity_limit": AlertDefinition(
         "Calculations.BreakerLugQuantityLimit",
-        "Calculated wire sets ({wire_sets} sets) exceeds recommended maximum for breaker size {breaker_size}A. Review feeder lengths, connected loads, and breaker size!",
+        "Calculated wire sets ({wire_sets} sets) exceeds recommended maximum for breaker size {breaker_size}A.",
         group="Calculation",
         severity="MEDIUM",
     ),
@@ -78,19 +78,19 @@ ALERT_DEFINITIONS = {
     ),
     "design_undersized_wire_egc": AlertDefinition(
         "Design.UndersizedWireEGC",
-        "User-specified ground size ({ground_size} {wire_material}) does not meet required size per NEC 250.122!",
+        "User-specified ground size ({ground_size} {wire_material}) does not meet required size per NEC 250.122.",
         group="Design",
         severity="HIGH",
     ),
     "design_undersized_wire_service_ground": AlertDefinition(
         "Design.UndersizedWireServiceGround",
-        "User-specified ground size ({ground_size} {wire_material}) does not meet required size per NEC 250.102!",
+        "User-specified ground size ({ground_size} {wire_material}) does not meet required size per NEC 250.102.",
         group="Design",
         severity="HIGH",
     ),
     "design_excessive_volt_drop": AlertDefinition(
         "Design.ExcessiveVoltDrop",
-        "User-specified wire ({wire_sets} set(s) x {wire_size}) fails volt drop check ({vd_percent}%). Review feeder lengths, connected loads and wire sizes!",
+        "User-specified wire ({wire_sets} set(s) x {wire_size}) fails volt drop check ({vd_percent}%).",
         group="Design",
         severity="MEDIUM",
     ),
@@ -109,6 +109,18 @@ ALERT_DEFINITIONS = {
     "design_undersized_ocp": AlertDefinition(
         "Design.UndersizedOCP",
         "Circuit load current ({circuit_load_current}A) exceeds User-specified breaker rating ({breaker_rating}A)",
+        group="Design",
+        severity="HIGH",
+    ),
+    "design_circuit_loads_null": AlertDefinition(
+        "Design.CircuitLoadsNull",
+        "Power Circuit Connected to a panel has a 0 A load.",
+        group="Design",
+        severity="MEDIUM",
+    ),
+    "design_circuit_panels_null": AlertDefinition(
+        "Design.CircuitPanelsNull",
+        "Circuit with a non-zero load is NOT connected to a panel.",
         group="Design",
         severity="HIGH",
     ),

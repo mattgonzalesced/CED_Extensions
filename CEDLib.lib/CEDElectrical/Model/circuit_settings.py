@@ -30,6 +30,15 @@ class IsolatedGroundBehavior(object):
         return [cls.MATCH_GROUND, cls.MANUAL]
 
 
+class MultiPoleBranchNeutralBehavior(object):
+    INCLUDE_BY_DEFAULT = "include_by_default"
+    EXCLUDE_BY_DEFAULT = "exclude_by_default"
+
+    @classmethod
+    def all(cls):
+        return [cls.INCLUDE_BY_DEFAULT, cls.EXCLUDE_BY_DEFAULT]
+
+
 class WireMaterialDisplay(object):
     AL_ONLY = "al_only"
     ALL = "all"
@@ -61,6 +70,7 @@ class CircuitSettings(object):
         # USER-EXPOSED settings:
         "min_conduit_size": '3/4"',
         "max_conduit_fill": 0.36,
+        "multi_pole_branch_neutral_behavior": MultiPoleBranchNeutralBehavior.INCLUDE_BY_DEFAULT,
         "neutral_behavior": NeutralBehavior.MATCH_HOT,
         "isolated_ground_behavior": IsolatedGroundBehavior.MATCH_GROUND,
         "wire_material_display": WireMaterialDisplay.AL_ONLY,
@@ -105,6 +115,12 @@ class CircuitSettings(object):
         if key == "neutral_behavior":
             if value not in NeutralBehavior.all():
                 raise ValueError("Invalid neutral_behavior: {}".format(value))
+
+        if key == "multi_pole_branch_neutral_behavior":
+            if value not in MultiPoleBranchNeutralBehavior.all():
+                raise ValueError(
+                    "Invalid multi_pole_branch_neutral_behavior: {}".format(value)
+                )
 
         if key == "isolated_ground_behavior":
             if value not in IsolatedGroundBehavior.all():
@@ -196,6 +212,10 @@ class CircuitSettings(object):
     @property
     def neutral_behavior(self):
         return self._values["neutral_behavior"]
+
+    @property
+    def multi_pole_branch_neutral_behavior(self):
+        return self._values["multi_pole_branch_neutral_behavior"]
 
     @property
     def isolated_ground_behavior(self):

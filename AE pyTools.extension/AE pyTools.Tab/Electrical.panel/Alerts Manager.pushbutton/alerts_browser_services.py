@@ -14,6 +14,15 @@ from Snippets.circuit_ui_actions import format_writeback_lock_reason
 from alerts_browser_view_models import AlertCircuitItem
 from alerts_browser_view_models import AlertRow
 
+HIDABLE_ALERT_IDS = set([
+    "Design.NonStandardOCPRating",
+    "Design.BreakerLugSizeLimitOverride",
+    "Design.BreakerLugQuantityLimitOverride",
+    "Design.CircuitLoadsNull",
+    "Calculations.BreakerLugSizeLimit",
+    "Calculations.BreakerLugQuantityLimit",
+])
+
 
 def _lookup_param_text(element, name):
     param = element.LookupParameter(name)
@@ -77,7 +86,8 @@ def _alert_rows_from_payload(payload):
             text = definition_id
         else:
             text = "Unmapped alert"
-        row = AlertRow(severity, group, definition_id or "-", text)
+        can_hide = bool(definition_id and definition_id in HIDABLE_ALERT_IDS)
+        row = AlertRow(severity, group, definition_id or "-", text, can_hide=can_hide)
         row.is_hidden = bool(is_hidden)
         rows.append(row)
     return rows
@@ -149,6 +159,22 @@ def recalculate_and_snapshot(doc, circuit_id, alert_data_param, idval_fn, lock_r
         circuit_ids=[int(circuit_id)],
         source="alerts_browser",
         options={"show_output": False},
+    )
+    runner = build_default_runner(alert_parameter_name=alert_data_param)
+    operation_result = runner.run(request, doc) or {}
+    return {
+        "operation_result": operation_result,
+        "snapshot": build_snapshot(doc, alert_data_param, idval_fn, lock_repository),
+        "circuit_id": int(circuit_id),
+    }
+
+
+def update_hidden_alert_types_and_snapshot(doc, circuit_id, hidden_ids, alert_data_param, idval_fn, lock_repository):
+    request = OperationRequest(
+        operation_key="set_hidden_alert_types",
+        circuit_ids=[int(circuit_id)],
+        source="alerts_browser",
+        options={"hidden_definition_ids": list(hidden_ids or [])},
     )
     runner = build_default_runner(alert_parameter_name=alert_data_param)
     operation_result = runner.run(request, doc) or {}

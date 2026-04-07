@@ -115,7 +115,7 @@ SHARED_PARAMS = {
         'Categories': 'Electrical Circuits, Electrical Equipment, Electrical Fixtures',
         'Groups': 'Values are aligned per group type'
     },
-    'Wire Temperature Rating_CEDT': {
+    'Wire Temparature Rating_CEDT': {
         'GUID': 'd56f2166-4031-4e91-a954-b3fba24f55af',
         'Discipline': 'Common', 'Type of Parameter': 'Text',
         'Group Under': 'Electrical - Circuiting',

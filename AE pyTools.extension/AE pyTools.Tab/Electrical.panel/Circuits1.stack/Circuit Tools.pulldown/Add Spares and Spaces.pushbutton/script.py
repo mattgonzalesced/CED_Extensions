@@ -13,7 +13,7 @@ THEME_CONFIG_SECTION = "AE-pyTools-Theme"
 THEME_CONFIG_THEME_KEY = "theme_mode"
 THEME_CONFIG_ACCENT_KEY = "accent_mode"
 VALID_THEME_MODES = ("light", "dark", "dark_alt")
-VALID_ACCENT_MODES = ("blue", "red", "green", "neutral")
+VALID_ACCENT_MODES = ("blue", "neutral")
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 _FALLBACK_LIB_ROOT = os.path.abspath(os.path.join(THIS_DIR, "..", "..", "..", "..", "..", "CEDLib.lib"))

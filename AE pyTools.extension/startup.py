@@ -275,8 +275,7 @@ def _circuit_browser_panel_path():
             os.path.dirname(__file__),
             "AE pyTools.Tab",
             "Electrical.panel",
-            "Circuit Manager.splitpushbutton",
-            "Circuit Browser.pushbutton",
+            "Circuit Manager.pushbutton",
             "CircuitBrowserPanel.py",
         )
     )
@@ -286,30 +285,30 @@ def _register_circuit_browser_panel():
     global _CIRCUIT_BROWSER_REGISTERED
     logger = script.get_logger()
     if _CIRCUIT_BROWSER_REGISTERED:
-        logger.info("Circuit Browser panel registration skipped (already registered in this startup run).")
+        logger.info("Circuit Manager panel registration skipped (already registered in this startup run).")
         return
     panel_path = _circuit_browser_panel_path()
     if not os.path.exists(panel_path):
-        logger.warning("Circuit Browser panel file not found: %s", panel_path)
+        logger.warning("Circuit Manager panel file not found: %s", panel_path)
         return
     try:
         panel_module = imp.load_source("ced_circuit_browser_panel", panel_path)
     except Exception as exc:
-        logger.warning("Failed to load Circuit Browser panel: %s", exc)
+        logger.warning("Failed to load Circuit Manager panel: %s", exc)
         return
     panel_cls = getattr(panel_module, "CircuitBrowserPanel", None)
     if panel_cls is None:
-        logger.warning("Circuit Browser panel class not found in: %s", panel_path)
+        logger.warning("Circuit Manager panel class not found in: %s", panel_path)
         return
     try:
         if not forms.is_registered_dockable_panel(panel_cls):
             forms.register_dockable_panel(panel_cls, default_visible=False)
-            logger.info("Circuit Browser panel registered successfully.")
+            logger.info("Circuit Manager panel registered successfully.")
         else:
-            logger.info("Circuit Browser panel already registered.")
+            logger.info("Circuit Manager panel already registered.")
         _CIRCUIT_BROWSER_REGISTERED = True
     except Exception as exc:
-        logger.warning("Failed to register Circuit Browser panel: %s", exc)
+        logger.warning("Failed to register Circuit Manager panel: %s", exc)
 
 
 _register_sync_handler()

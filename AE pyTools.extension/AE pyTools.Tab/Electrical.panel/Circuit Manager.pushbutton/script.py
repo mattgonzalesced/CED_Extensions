@@ -26,9 +26,9 @@ def _ensure_registered():
         try:
             if not forms.is_registered_dockable_panel(panel_cls):
                 forms.register_dockable_panel(panel_cls, default_visible=False)
-                logger.info("Circuit Browser panel registered from button command.")
+                logger.info("Circuit Manager panel registered from button command.")
         except Exception as reg_exc:
-            logger.warning("Circuit Browser register from button failed: %s", reg_exc)
+            logger.warning("Circuit Manager register from button failed: %s", reg_exc)
     return panel_cls
 
 
@@ -41,12 +41,12 @@ try:
         if panel and hasattr(panel, "refresh_on_open"):
             panel.refresh_on_open()
 except Exception as open_exc:
-    logger.warning("Circuit Browser open by id failed: %s", open_exc)
+    logger.warning("Circuit Manager open by id failed: %s", open_exc)
     panel_class = _ensure_registered()
     if not panel_class:
         forms.alert(
-            "Circuit Browser panel class could not be loaded.\n\n{}".format(open_exc),
-            title="Circuit Browser",
+            "Circuit Manager panel class could not be loaded.\n\n{}".format(open_exc),
+            title="Circuit Manager",
         )
     else:
         try:
@@ -56,9 +56,9 @@ except Exception as open_exc:
                 if panel and hasattr(panel, "refresh_on_open"):
                     panel.refresh_on_open()
         except Exception as open_exc2:
-            logger.warning("Circuit Browser open by id after register failed: %s", open_exc2)
+            logger.warning("Circuit Manager open by id after register failed: %s", open_exc2)
             forms.alert(
-                "Circuit Browser pane is still not available.\n\n{}\n\n{}"
+                "Circuit Manager pane is still not available.\n\n{}\n\n{}"
                 .format(open_exc, open_exc2),
-                title="Circuit Browser",
+                title="Circuit Manager",
             )

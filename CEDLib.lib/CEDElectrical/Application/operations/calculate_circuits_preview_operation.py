@@ -47,6 +47,7 @@ class CalculateCircuitsPreviewOperation(object):
             "status": "ok",
             "previews": previews,
             "settings": {
+                "multi_pole_branch_neutral_behavior": settings.multi_pole_branch_neutral_behavior,
                 "neutral_behavior": settings.neutral_behavior,
                 "isolated_ground_behavior": settings.isolated_ground_behavior,
             },

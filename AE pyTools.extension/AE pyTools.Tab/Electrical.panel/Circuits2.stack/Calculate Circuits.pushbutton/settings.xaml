@@ -259,7 +259,7 @@
                                 <TextBlock Grid.Column="0" Text="Max Conduit Fill" Style="{StaticResource SettingsLabel}"/>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,10,0">
                                     <TextBox x:Name="max_conduit_fill_tb" Style="{StaticResource SettingsPercentTextBox}" Tag="Max Conduit Fill"/>
-                                    <TextBlock x:Name="max_conduit_fill_warn" Text="!" Foreground="{DynamicResource CED.Brush.SecondaryRed}" VerticalAlignment="Center" Visibility="Collapsed" Margin="8,0,0,0" FontWeight="Bold"/>
+                                    <TextBlock x:Name="max_conduit_fill_warn" Text="!" Foreground="{DynamicResource CED.Brush.AccentRed}" VerticalAlignment="Center" Visibility="Collapsed" Margin="8,0,0,0" FontWeight="Bold"/>
                                 </StackPanel>
                                 <TextBlock x:Name="max_conduit_fill_default" Grid.Column="2" Style="{StaticResource SettingsDefaultText}" Margin="0"/>
                             </Grid>
@@ -269,6 +269,7 @@
                     <Border Style="{StaticResource SettingsSectionCard}">
                         <StackPanel>
                             <TextBlock Text="Wires" Style="{DynamicResource CED.Text.SectionHeader}" Margin="0,0,0,8"/>
+                            <TextBlock Text="Wire overrides" Style="{StaticResource SettingsDefaultText}" Margin="0,0,0,10"/>
 
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -276,7 +277,21 @@
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsValueCol"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Neutral Behavior" Style="{StaticResource SettingsLabel}"/>
+                                <TextBlock Grid.Column="0" Text="Multi-Pole Branch Neutrals" Style="{StaticResource SettingsLabel}"/>
+                                <ComboBox x:Name="multi_pole_branch_neutral_behavior_cb" Grid.Column="1" Style="{StaticResource SettingsCombo}">
+                                    <ComboBoxItem Content="Include by Default" Tag="include_by_default"/>
+                                    <ComboBoxItem Content="Exclude by Default" Tag="exclude_by_default"/>
+                                </ComboBox>
+                                <TextBlock x:Name="multi_pole_branch_neutral_behavior_default" Grid.Column="2" Style="{StaticResource SettingsDefaultText}"/>
+                            </Grid>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsLabelCol"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsValueCol"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Neutral Sizing" Style="{StaticResource SettingsLabel}"/>
                                 <ComboBox x:Name="neutral_behavior_cb" Grid.Column="1" Style="{StaticResource SettingsCombo}">
                                     <ComboBoxItem Content="Match hot conductors" Tag="match_hot"/>
                                     <ComboBoxItem Content="Manual neutral" Tag="manual"/>
@@ -290,7 +305,7 @@
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsValueCol"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Isolated Ground Behavior" Style="{StaticResource SettingsLabel}"/>
+                                <TextBlock Grid.Column="0" Text="Isolated Ground Sizing" Style="{StaticResource SettingsLabel}"/>
                                 <ComboBox x:Name="isolated_ground_behavior_cb" Grid.Column="1" Style="{StaticResource SettingsCombo}">
                                     <ComboBoxItem Content="Match ground conductors" Tag="match_ground"/>
                                     <ComboBoxItem Content="Manual isolated ground" Tag="manual"/>
@@ -347,7 +362,7 @@
                                 <TextBlock Grid.Column="0" Text="Max Branch Voltage Drop" Style="{StaticResource SettingsLabel}"/>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,10,8">
                                     <TextBox x:Name="max_branch_vd_tb" Style="{StaticResource SettingsPercentTextBox}" Tag="Max Branch Voltage Drop"/>
-                                    <TextBlock x:Name="max_branch_vd_warn" Text="!" Foreground="{DynamicResource CED.Brush.SecondaryRed}" VerticalAlignment="Center" Visibility="Collapsed" Margin="8,0,0,0" FontWeight="Bold"/>
+                                    <TextBlock x:Name="max_branch_vd_warn" Text="!" Foreground="{DynamicResource CED.Brush.AccentRed}" VerticalAlignment="Center" Visibility="Collapsed" Margin="8,0,0,0" FontWeight="Bold"/>
                                 </StackPanel>
                                 <TextBlock x:Name="max_branch_vd_default" Grid.Column="2" Style="{StaticResource SettingsDefaultText}"/>
                             </Grid>
@@ -361,7 +376,7 @@
                                 <TextBlock Grid.Column="0" Text="Max Feeder Voltage Drop" Style="{StaticResource SettingsLabel}"/>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,10,8">
                                     <TextBox x:Name="max_feeder_vd_tb" Style="{StaticResource SettingsPercentTextBox}" Tag="Max Feeder Voltage Drop"/>
-                                    <TextBlock x:Name="max_feeder_vd_warn" Text="!" Foreground="{DynamicResource CED.Brush.SecondaryRed}" VerticalAlignment="Center" Visibility="Collapsed" Margin="8,0,0,0" FontWeight="Bold"/>
+                                    <TextBlock x:Name="max_feeder_vd_warn" Text="!" Foreground="{DynamicResource CED.Brush.AccentRed}" VerticalAlignment="Center" Visibility="Collapsed" Margin="8,0,0,0" FontWeight="Bold"/>
                                 </StackPanel>
                                 <TextBlock x:Name="max_feeder_vd_default" Grid.Column="2" Style="{StaticResource SettingsDefaultText}"/>
                             </Grid>
@@ -398,7 +413,7 @@
                                     <CheckBox x:Name="write_equipment_cb" Content="Electrical Equipment" Style="{DynamicResource CED.Input.CheckBox}" IsChecked="True" Margin="0,0,0,4"/>
                                     <CheckBox x:Name="write_fixtures_cb" Content="Fixtures and Devices" Style="{DynamicResource CED.Input.CheckBox}" IsChecked="False"/>
                                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                        <TextBlock x:Name="clear_writeback_alert" Text="!" Foreground="{DynamicResource CED.Brush.SecondaryRed}" Visibility="Collapsed" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="Bold"/>
+                                        <TextBlock x:Name="clear_writeback_alert" Text="!" Foreground="{DynamicResource CED.Brush.AccentRed}" Visibility="Collapsed" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="Bold"/>
                                         <Button x:Name="clear_writeback_btn" Content="Clear persistent write-back data" Style="{DynamicResource CED.Button.Base}" Padding="10,6"/>
                                     </StackPanel>
                                 </StackPanel>
@@ -435,8 +450,6 @@
                                 <TextBlock Grid.Column="0" Text="Accent" Style="{StaticResource SettingsLabel}"/>
                                 <ComboBox x:Name="accent_mode_cb" Grid.Column="1" Style="{StaticResource SettingsCombo}">
                                     <ComboBoxItem Content="Blue" Tag="blue"/>
-                                    <ComboBoxItem Content="Red" Tag="red"/>
-                                    <ComboBoxItem Content="Green" Tag="green"/>
                                     <ComboBoxItem Content="Neutral" Tag="neutral"/>
                                 </ComboBox>
                                 <TextBlock x:Name="accent_mode_default" Grid.Column="2" Style="{StaticResource SettingsDefaultText}" Margin="0"/>

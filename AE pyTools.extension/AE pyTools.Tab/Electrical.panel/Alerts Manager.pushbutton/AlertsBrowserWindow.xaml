@@ -1,7 +1,7 @@
 ﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:sw="clr-namespace:System.Windows;assembly=PresentationFramework"
-        Title="Alerts Browser"
+        Title="Alerts Manager"
         Height="620"
         Width="1240"
         MinHeight="440"
@@ -28,7 +28,7 @@
         <ColumnDefinition Width="Auto"/>
       </Grid.ColumnDefinitions>
       <StackPanel Grid.Column="0" Orientation="Vertical">
-        <TextBlock Text="Alerts Browser" Style="{DynamicResource CED.Text.Title}"/>
+                    <TextBlock Text="Alerts Manager" Style="{DynamicResource CED.Text.Title}"/>
         <TextBlock Name="DocumentText" Text="Document: -" Style="{DynamicResource CED.Text.Secondary}" Margin="0,2,0,0"/>
       </StackPanel>
       <TextBlock Grid.Column="1" Name="CircuitCountText" Text="0 circuits with alerts" Style="{DynamicResource CED.Text.Secondary}" VerticalAlignment="Bottom"/>
@@ -116,6 +116,7 @@
                         VirtualizingPanel.IsVirtualizing="True"
                         VirtualizingPanel.VirtualizationMode="Recycling"
                         ScrollViewer.CanContentScroll="True"
+                        SelectionChanged="alerts_grid_selection_changed"
                         PreviewMouseDown="alerts_list_preview_mouse_down">
                 <DataGrid.Columns>
                   <DataGridTextColumn Header="Severity" Width="0.9*" Binding="{Binding severity}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}" ElementStyle="{DynamicResource CenterTextCell}"/>
@@ -158,6 +159,7 @@
                         VirtualizingPanel.IsVirtualizing="True"
                         VirtualizingPanel.VirtualizationMode="Recycling"
                         ScrollViewer.CanContentScroll="True"
+                        SelectionChanged="alerts_grid_selection_changed"
                         PreviewMouseDown="alerts_list_preview_mouse_down">
                 <DataGrid.Columns>
                   <DataGridTextColumn Header="Severity" Width="0.9*" Binding="{Binding severity}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}" ElementStyle="{DynamicResource CenterTextCell}"/>
@@ -198,6 +200,7 @@
 
       <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
         <TextBlock Name="StatusText" Text="Ready" Style="{DynamicResource CED.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+        <Button Name="HideUnhideButton" Style="{DynamicResource CED.Button.Base}" Content="Hide Type" Width="96" Height="28" Margin="0,0,6,0" Click="hide_unhide_clicked"/>
         <Button Name="RefreshButton" Style="{DynamicResource CED.Button.Apply}" Content="Refresh" Width="84" Height="28" Click="refresh_clicked"/>
         <Button Style="{DynamicResource CED.Button.Base}" Content="Close" Width="84" Height="28" Margin="6,0,0,0" Click="close_clicked"/>
       </StackPanel>

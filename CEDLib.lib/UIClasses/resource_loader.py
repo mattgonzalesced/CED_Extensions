@@ -42,8 +42,6 @@ THEME_RELATIVE_PATHS = {
 
 ACCENT_BRUSH_KEY_MAP = {
     "blue": "CED.Brush.AccentBlue",
-    "red": "CED.Brush.AccentRed",
-    "green": "CED.Brush.AccentGreen",
     "neutral": "CED.Brush.AccentNeutral",
 }
 

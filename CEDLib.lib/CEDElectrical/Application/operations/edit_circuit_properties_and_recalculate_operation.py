@@ -7,6 +7,9 @@ from pyrevit import DB
 from CEDElectrical.Application.dto.operation_request import OperationRequest
 from Snippets import revit_helpers
 
+CIRCUIT_NOTES_KEY = "__bip_circuit_notes__"
+CIRCUIT_NAME_KEY = "__bip_circuit_name__"
+
 
 def _elid_value(item):
     return int(revit_helpers.get_elementid_value(item))
@@ -132,12 +135,43 @@ class EditCircuitPropertiesAndRecalculateOperation(object):
         return circuits
 
     def _set_param_value(self, circuit, param_name, value):
-        try:
-            param = circuit.LookupParameter(str(param_name or ""))
-        except Exception:
-            param = None
+        key_text = str(param_name or "")
+        changed = False
+
+        # Rating/Frame edits must update true circuit properties + built-ins,
+        # not just shared parameter mirrors.
+        if key_text == "CKT_Rating_CED":
+            changed = self._set_circuit_numeric(
+                circuit,
+                "Rating",
+                DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM,
+                value,
+            ) or changed
+        elif key_text == "CKT_Frame_CED":
+            changed = self._set_circuit_numeric(
+                circuit,
+                "Frame",
+                DB.BuiltInParameter.RBS_ELEC_CIRCUIT_FRAME_PARAM,
+                value,
+            ) or changed
+
+        if key_text == CIRCUIT_NOTES_KEY:
+            try:
+                param = circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NOTES_PARAM)
+            except Exception:
+                param = None
+        elif key_text == CIRCUIT_NAME_KEY:
+            try:
+                param = circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NAME)
+            except Exception:
+                param = None
+        else:
+            try:
+                param = circuit.LookupParameter(key_text)
+            except Exception:
+                param = None
         if not param:
-            return False
+            return changed
 
         try:
             storage_type = param.StorageType
@@ -148,29 +182,65 @@ class EditCircuitPropertiesAndRecalculateOperation(object):
                 current = param.AsDouble()
                 target = float(value or 0.0)
                 if abs(float(current) - float(target)) < 0.000001:
-                    return False
+                    return changed
             elif storage_type == DB.StorageType.String:
                 current = param.AsString() or ""
                 target = str(value or "")
             else:
-                return False
+                return changed
         except Exception:
-            return False
+            return changed
 
         try:
             if storage_type == DB.StorageType.Integer:
                 if int(current) == int(target):
-                    return False
-                return bool(param.Set(int(target)))
+                    return changed
+                return bool(param.Set(int(target))) or changed
             if storage_type == DB.StorageType.Double:
-                return bool(param.Set(float(target)))
+                return bool(param.Set(float(target))) or changed
             if storage_type == DB.StorageType.String:
                 if str(current or "") == str(target or ""):
-                    return False
-                return bool(param.Set(str(target)))
+                    return changed
+                return bool(param.Set(str(target))) or changed
+        except Exception:
+            return changed
+        return changed
+
+    def _set_circuit_numeric(self, circuit, prop_name, bip, value):
+        try:
+            numeric = float(value)
         except Exception:
             return False
-        return False
+
+        changed = False
+        try:
+            current = getattr(circuit, prop_name)
+            if current is None or abs(float(current) - numeric) > 0.0001:
+                setattr(circuit, prop_name, numeric)
+                changed = True
+        except Exception:
+            pass
+
+        try:
+            param = circuit.get_Parameter(bip)
+        except Exception:
+            param = None
+        if param:
+            try:
+                if param.StorageType == DB.StorageType.Double:
+                    cur = param.AsDouble()
+                    if cur is None or abs(float(cur) - numeric) > 0.0001:
+                        param.Set(float(numeric))
+                        changed = True
+                elif param.StorageType == DB.StorageType.Integer:
+                    iv = int(round(numeric))
+                    cur = param.AsInteger()
+                    if cur != iv:
+                        param.Set(iv)
+                        changed = True
+            except Exception:
+                pass
+        return changed
 
     def _is_locked(self, doc, eid):
         if not getattr(doc, "IsWorkshared", False):
@@ -204,4 +274,3 @@ class EditCircuitPropertiesAndRecalculateOperation(object):
             "device_owner": "",
             "sync_writeback": False,
         }
-

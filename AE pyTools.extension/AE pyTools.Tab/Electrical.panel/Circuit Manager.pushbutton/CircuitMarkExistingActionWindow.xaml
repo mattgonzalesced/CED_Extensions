@@ -149,6 +149,7 @@
 
       <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
         <TextBlock Name="ChangedStatusText" Margin="0,0,12,0" VerticalAlignment="Center" Style="{DynamicResource CED.Text.Secondary}" Text="0 of 0 circuits to be modified"/>
+        <Button Name="ResetSelectedButton" Style="{DynamicResource CED.Button.Base}" Content="Reset Selected" Width="104" Height="28" Margin="0,0,6,0" Click="reset_selected_clicked"/>
         <Button Style="{DynamicResource CED.Button.Base}" Content="Cancel" Width="80" Height="28" Click="cancel_clicked"/>
         <Button Name="ApplyButton" Style="{DynamicResource CED.Button.Apply}" Content="Apply" Width="80" Height="28" Margin="6,0,0,0" Click="apply_clicked"/>
       </StackPanel>

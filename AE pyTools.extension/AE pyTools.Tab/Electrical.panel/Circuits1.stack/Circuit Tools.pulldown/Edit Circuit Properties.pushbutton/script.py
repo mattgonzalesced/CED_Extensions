@@ -44,7 +44,7 @@ THEME_CONFIG_THEME_KEY = "theme_mode"
 THEME_CONFIG_ACCENT_KEY = "accent_mode"
 ALERT_DATA_PARAM = "Circuit Data_CED"
 VALID_THEME_MODES = ("light", "dark", "dark_alt")
-VALID_ACCENT_MODES = ("blue", "red", "green", "neutral")
+VALID_ACCENT_MODES = ("blue", "neutral")
 
 
 def _idval(item):
@@ -79,8 +79,7 @@ def _editor_xaml_path():
     return os.path.abspath(
         os.path.join(
             panel_root,
-            "Circuit Manager.splitpushbutton",
-            "Circuit Browser.pushbutton",
+            "Circuit Manager.pushbutton",
             "CircuitEditPropertiesWindow.xaml",
         )
     )
@@ -201,7 +200,7 @@ def _run_apply_operation(doc, updates):
         source="ribbon",
         options={
             "updates": list(updates or []),
-            "show_output": True,
+            "show_output": False,
         },
     )
     runner = build_default_runner(alert_parameter_name=ALERT_DATA_PARAM)
@@ -244,4 +243,3 @@ def main():
 
 
 main()
-
