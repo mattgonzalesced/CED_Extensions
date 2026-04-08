@@ -243,6 +243,11 @@ def _curve_component_lengths(pipe):
         dz = float(p1.Z - p0.Z)
         horizontal = math.sqrt((dx * dx) + (dy * dy))
         vertical = abs(dz)
+        # Classify by dominant direction (3x factor threshold).
+        if vertical >= 3.0 * horizontal:
+            return 0.0, vertical
+        if horizontal >= 3.0 * vertical:
+            return horizontal, 0.0
         return horizontal, vertical
     except Exception:
         return 0.0, 0.0

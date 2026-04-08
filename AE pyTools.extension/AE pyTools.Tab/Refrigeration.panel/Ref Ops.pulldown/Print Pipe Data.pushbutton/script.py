@@ -4,6 +4,7 @@ __doc__ = "Collect pipes by selected worksets, summarize PipeSegment totals, and
 
 import csv
 import io
+import math
 import os
 import re
 import sys
@@ -287,35 +288,66 @@ def _direct_identity_mark(pipe):
     return None
 
 
-class _WorksetOption(forms.TemplateListItem):
+class _SystemTypeOption(forms.TemplateListItem):
     @property
     def name(self):
-        ws = self.item
-        if ws is None:
-            return "<Unknown Workset>"
-        return "{} (Id {})".format(ws.Name, ws.Id.IntegerValue)
+        return self.item or "<Unknown System Type>"
 
 
-def _collect_user_worksets():
-    worksets = []
+def _get_pipe_system_type_name(pipe):
     try:
-        for ws in DB.FilteredWorksetCollector(doc).OfKind(DB.WorksetKind.UserWorkset):
-            worksets.append(ws)
+        param = pipe.get_Parameter(DB.BuiltInParameter.RBS_PIPING_SYSTEM_TYPE_PARAM)
+        if param is not None:
+            type_id = param.AsElementId()
+            if type_id is not None:
+                sys_type_elem = doc.GetElement(type_id)
+                if sys_type_elem is not None:
+                    return sys_type_elem.Name
     except Exception:
-        try:
-            for ws in DB.FilteredWorksetCollector(doc):
-                if ws.Kind == DB.WorksetKind.UserWorkset:
-                    worksets.append(ws)
-        except Exception:
-            pass
-    return sorted(worksets, key=lambda w: (w.Name or "").lower())
+        pass
+    try:
+        param = pipe.get_Parameter(DB.BuiltInParameter.RBS_SYSTEM_CLASSIFICATION_PARAM)
+        if param is not None:
+            value = param.AsString() or param.AsValueString()
+            if value:
+                return value
+    except Exception:
+        pass
+    return None
 
 
-def _prompt_worksets(worksets):
-    options = [_WorksetOption(ws, checked=True) for ws in worksets]
+def _collect_all_pipes():
+    categories = _collect_pipe_categories()
+    pipe_elems = []
+    seen = set()
+    for bic in categories:
+        collector = DB.FilteredElementCollector(doc).OfCategory(bic).WhereElementIsNotElementType()
+        for elem in collector:
+            try:
+                elem_id = elem.Id.IntegerValue
+            except Exception:
+                continue
+            if elem_id in seen:
+                continue
+            seen.add(elem_id)
+            pipe_elems.append(elem)
+    return pipe_elems
+
+
+def _collect_system_type_names(pipe_elements):
+    names = set()
+    for pipe in pipe_elements:
+        name = _get_pipe_system_type_name(pipe)
+        if name:
+            names.add(name)
+    return sorted(names, key=lambda n: (n or "").lower())
+
+
+def _prompt_system_types(system_type_names):
+    options = [_SystemTypeOption(name, checked=True) for name in system_type_names]
     selected = forms.SelectFromList.show(
         options,
-        title="Select Pipe Worksets",
+        title="Select Pipe System Types",
         button_name="Collect Pipe Data",
         multiselect=True,
         return_all=True,
@@ -331,10 +363,15 @@ def _prompt_worksets(worksets):
             is_checked = False
         if not is_checked:
             continue
-        ws = getattr(option, "item", None)
-        if ws is not None:
-            picked.append(ws)
+        name = getattr(option, "item", None)
+        if name is not None:
+            picked.append(name)
     return picked
+
+
+def _filter_pipes_by_system_types(pipe_elements, selected_type_names):
+    name_set = set(selected_type_names)
+    return [p for p in pipe_elements if _get_pipe_system_type_name(p) in name_set]
 
 
 def _collect_pipe_categories():
@@ -349,25 +386,6 @@ def _collect_pipe_categories():
     return out
 
 
-def _collect_pipes_for_worksets(workset_id_values):
-    categories = _collect_pipe_categories()
-    pipe_elems = []
-    seen = set()
-    for bic in categories:
-        collector = DB.FilteredElementCollector(doc).OfCategory(bic).WhereElementIsNotElementType()
-        for elem in collector:
-            try:
-                ws_id = elem.WorksetId.IntegerValue
-                elem_id = elem.Id.IntegerValue
-            except Exception:
-                continue
-            if ws_id not in workset_id_values:
-                continue
-            if elem_id in seen:
-                continue
-            seen.add(elem_id)
-            pipe_elems.append(elem)
-    return pipe_elems
 
 
 def _iter_connectors(element):
@@ -1075,12 +1093,20 @@ def _rows_from_totals(pipe_segments, ordered_ids=None):
         # last fallback only
         ordered_keys = sorted(keys, key=_natural_sort_key)
 
+    _MIN_LENGTH = 0.5 / 12.0  # 0.5 inches in feet (Revit internal units)
+
+    def _threshold(value):
+        v = _safe_float(value, 0.0)
+        if v < _MIN_LENGTH:
+            return 0.0
+        return float(math.ceil(v))
+
     rows = []
     for sid in ordered_keys:
         rows.append({
             "System ID": sid,
-            "Vertical Length Total": _safe_float(vertical.get(sid, 0.0), 0.0),
-            "Horizontal Length Total": _safe_float(horizontal.get(sid, 0.0), 0.0),
+            "Vertical Length Total": _threshold(vertical.get(sid, 0.0)),
+            "Horizontal Length Total": _threshold(horizontal.get(sid, 0.0)),
             "Evaporation Capacity Total": _safe_float(evap.get(sid, 0.0), 0.0),
         })
     return rows
@@ -1185,29 +1211,24 @@ def main():
     if doc.IsFamilyDocument:
         forms.alert("This tool requires a project document.", title=__title__, exitscript=True)
 
-    worksets = _collect_user_worksets()
-    if not worksets:
-        forms.alert("No user worksets were found in this model.", title=__title__, exitscript=True)
+    all_pipe_elements = _collect_all_pipes()
+    if not all_pipe_elements:
+        forms.alert("No pipes were found in this model.", title=__title__, exitscript=True)
 
-    selected_worksets = _prompt_worksets(worksets)
-    if selected_worksets is None:
+    system_type_names = _collect_system_type_names(all_pipe_elements)
+    if not system_type_names:
+        forms.alert("No system types were found on the pipe elements.", title=__title__, exitscript=True)
+
+    selected_type_names = _prompt_system_types(system_type_names)
+    if selected_type_names is None:
         return
-    if not selected_worksets:
-        forms.alert("No worksets were selected.", title=__title__, exitscript=True)
+    if not selected_type_names:
+        forms.alert("No system types were selected.", title=__title__, exitscript=True)
 
-    selected_ws_ids = set()
-    selected_ws_names = []
-    for ws in selected_worksets:
-        try:
-            selected_ws_ids.add(ws.Id.IntegerValue)
-            selected_ws_names.append(ws.Name)
-        except Exception:
-            continue
-
-    pipe_elements = _collect_pipes_for_worksets(selected_ws_ids)
+    pipe_elements = _filter_pipes_by_system_types(all_pipe_elements, selected_type_names)
     if not pipe_elements:
         forms.alert(
-            "No pipes were found on the selected worksets:\n{}".format(", ".join(sorted(selected_ws_names))),
+            "No pipes were found for the selected system types:\n{}".format(", ".join(sorted(selected_type_names))),
             title=__title__,
             exitscript=True,
         )
@@ -1273,7 +1294,7 @@ def main():
     preview_ids = ", ".join([str(x) for x in ordered_ids[:12]]) if ordered_ids else "<none>"
 
     output.print_md("# Print Pipe Data")
-    output.print_md("Selected worksets: {}".format(", ".join(sorted(selected_ws_names))))
+    output.print_md("Selected system types: {}".format(", ".join(sorted(selected_type_names))))
     output.print_md("Pipes collected: {}".format(len(pipe_elements)))
     output.print_md("Direct Identity Mark values found: {}".format(direct_assigned_count))
     output.print_md("System IDs exported: {}".format(len(rows)))
@@ -1285,14 +1306,14 @@ def main():
 
     forms.alert(
         "Pipe data export complete.\n\n"
-        "Worksets: {}\n"
+        "System Types: {}\n"
         "Pipes: {}\n"
         "Direct Identity Values: {}\n"
         "System IDs: {}\n"
         "Assigned IDs: {}\n"
         "Unassigned Bucket: {}\n"
         "File: {}".format(
-            len(selected_ws_ids),
+            len(selected_type_names),
             len(pipe_elements),
             direct_assigned_count,
             len(rows),
