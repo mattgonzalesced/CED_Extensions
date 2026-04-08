@@ -86,16 +86,23 @@
       <GroupBox Grid.Column="2" Header="3) Selected Space Effective Elements (Type + Overrides)">
         <Grid Margin="8">
           <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
           </Grid.RowDefinitions>
-          <ListBox x:Name="EffectiveElementsList"/>
-          <TextBlock Grid.Row="1"
+          <Button x:Name="PlacePickedSpaceButton"
+                  Content="Pick Point + Place This Space's Elements"
+                  HorizontalAlignment="Left"
+                  Width="250"
+                  Margin="0,0,0,8"
+                  Click="OnPlaceInPickedSpaceClicked"/>
+          <ListBox x:Name="EffectiveElementsList" Grid.Row="1"/>
+          <TextBlock Grid.Row="2"
                      Margin="0,8,0,0"
                      Text="Use Add/Remove for per-space overrides. Type-level items are inherited and can be removed in panel 2."
                      TextWrapping="Wrap"/>
-          <WrapPanel Grid.Row="2" HorizontalAlignment="Right" Margin="0,8,0,0" ItemHeight="28">
+          <WrapPanel Grid.Row="3" HorizontalAlignment="Right" Margin="0,8,0,0" ItemHeight="28">
             <Button x:Name="SpaceAddButton" Content="Add" Width="82" Margin="0,0,8,0" Click="OnSpaceAddClicked"/>
             <Button x:Name="SpaceEditParamsButton" Content="Edit Params" Width="95" Margin="0,0,8,0" Click="OnSpaceEditParamsClicked"/>
             <Button x:Name="SpaceEditPlacementButton" Content="Edit Placement" Width="112" Margin="0,0,8,0" Click="OnSpaceEditPlacementClicked"/>

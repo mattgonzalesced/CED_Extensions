@@ -1,4 +1,4 @@
-
+﻿
 # -*- coding: utf-8 -*-
 """
 Manage Space Profiles
@@ -6,8 +6,10 @@ Manage Space Profiles
 Manage per-space-type element templates and per-space overrides for classified spaces.
 """
 
+import imp
 import os
 import sys
+import traceback
 import uuid
 from collections import OrderedDict
 from datetime import datetime
@@ -82,6 +84,21 @@ try:
     from ExtensibleStorage import ExtensibleStorage  # noqa: E402
 except Exception:
     ExtensibleStorage = None
+
+
+def _load_place_elements_helper():
+    pulldown_dir = os.path.dirname(os.path.dirname(__file__))
+    helper_path = os.path.join(pulldown_dir, "Place Space Elements.pushbutton", "script.py")
+    if not os.path.exists(helper_path):
+        return None, "Place Space Elements script was not found."
+
+    module_name = "place_space_elements_helper_{}".format(uuid.uuid4().hex)
+    try:
+        helper = imp.load_source(module_name, helper_path)
+    except Exception as exc:
+        return None, "Failed to load Place Space Elements helper:\n\n{}".format(exc)
+
+    return helper, ""
 
 
 def _element_id_value(elem_id, default=""):
@@ -206,14 +223,24 @@ def _collect_classified_spaces(doc, assignments):
         if not space_key:
             continue
 
+        try:
+            level_id = getattr(space, "LevelId", None)
+            host_level = doc.GetElement(level_id) if level_id else None
+        except Exception:
+            host_level = None
+
         rows.append(
             {
+                "space": space,
                 "space_key": space_key,
                 "space_id": space_id,
                 "unique_id": unique_id,
                 "space_number": number,
                 "space_name": name,
                 "bucket": bucket,
+                "source_label": "Host Spaces",
+                "source_transform": None,
+                "host_level": host_level,
             }
         )
 
@@ -2071,6 +2098,307 @@ class ManageSpaceProfilesWindow(forms.WPFWindow):
         self._refresh_effective_panel()
         self._refresh_summary()
 
+    @staticmethod
+    def _source_point_from_host(point, source_transform):
+        if point is None:
+            return None
+        if source_transform is None:
+            return point
+        try:
+            return source_transform.Inverse.OfPoint(point)
+        except Exception:
+            return None
+
+    def _collect_place_context(self, helper, assignments):
+        sources = helper._collect_all_space_sources(self.doc)
+        spaces = []
+        door_points_by_source = {}
+        door_rows_by_source = {}
+        source_transform_by_label = {}
+
+        for source in sources:
+            source_doc = source.get("source_doc")
+            if source_doc is None:
+                continue
+
+            source_transform = source.get("source_transform")
+            source_label = source.get("source_label") or "Host Spaces"
+            source_transform_by_label[source_label] = source_transform
+
+            source_spaces = helper._collect_classified_spaces(
+                self.doc,
+                source_doc,
+                assignments,
+                source_transform=source_transform,
+                source_label=source_label,
+            )
+            if source_spaces:
+                spaces.extend(source_spaces)
+
+            if source_label not in door_points_by_source:
+                door_points_by_source[source_label] = helper._collect_door_points(source_doc)
+            if source_label not in door_rows_by_source:
+                door_rows_by_source[source_label] = helper._collect_door_rows(source_doc)
+
+            door_points_by_source[source_label] = helper._clean_origin_points(door_points_by_source.get(source_label) or [])
+            door_rows_by_source[source_label] = helper._clean_origin_rows(door_rows_by_source.get(source_label) or [])
+
+        host_door_points = list(door_points_by_source.get("Host Spaces") or [])
+        if host_door_points:
+            for source in sources:
+                source_label_key = source.get("source_label") or "Host Spaces"
+                if source_label_key == "Host Spaces":
+                    continue
+
+                existing = door_points_by_source.get(source_label_key) or []
+                if existing:
+                    continue
+
+                source_transform = source.get("source_transform")
+                transformed = helper._transform_points_to_source(host_door_points, source_transform)
+                if transformed:
+                    door_points_by_source[source_label_key] = helper._clean_origin_points(transformed)
+
+        host_door_rows = helper._clean_origin_rows(door_rows_by_source.get("Host Spaces") or [])
+        for source in sources:
+            source_label_key = source.get("source_label") or "Host Spaces"
+            if source_label_key == "Host Spaces":
+                continue
+
+            source_rows = helper._clean_origin_rows(door_rows_by_source.get(source_label_key) or [])
+            if source_rows:
+                door_rows_by_source[source_label_key] = source_rows
+                continue
+
+            source_transform = source.get("source_transform")
+            if host_door_rows:
+                transformed_rows = helper._clean_origin_rows(helper._transform_door_rows_to_source(host_door_rows, source_transform))
+                if transformed_rows:
+                    door_rows_by_source[source_label_key] = transformed_rows
+                    continue
+
+            source_points = helper._clean_origin_points(door_points_by_source.get(source_label_key) or [])
+            if source_points:
+                door_rows_by_source[source_label_key] = helper._door_rows_from_points(source_points)
+
+        all_host_door_points = []
+        for source_label_key, source_points in list(door_points_by_source.items()):
+            if not source_points:
+                continue
+
+            if source_label_key == "Host Spaces":
+                host_points = list(source_points)
+            else:
+                host_points = []
+                source_transform = source_transform_by_label.get(source_label_key)
+                for source_pt in source_points:
+                    host_pt = helper._to_host_point(source_pt, source_transform)
+                    if host_pt is not None:
+                        host_points.append(host_pt)
+
+            if not host_points:
+                continue
+
+            door_points_by_source["__host::" + source_label_key] = host_points
+            all_host_door_points.extend(host_points)
+
+        if all_host_door_points:
+            door_points_by_source["__all_host__"] = all_host_door_points
+
+        return spaces, sources, door_points_by_source, door_rows_by_source
+
+    def _space_row_from_point(self, point, helper, spaces):
+        matches = []
+        for row in spaces or []:
+            source_space = row.get("space")
+            source_point = self._source_point_from_host(point, row.get("source_transform"))
+            if source_space is None or source_point is None:
+                continue
+            try:
+                inside = helper._point_in_space(source_space, source_point)
+            except Exception:
+                inside = False
+            if inside:
+                matches.append(row)
+
+        pool = matches if matches else list(spaces or [])
+        if not pool:
+            return None
+        if len(pool) == 1:
+            return pool[0]
+
+        def _score(row):
+            center_source = helper._space_center_robust(row.get("space"))
+            center_host = helper._to_host_point(center_source, row.get("source_transform")) if center_source is not None else None
+            if center_host is None:
+                return float("inf")
+            return helper._distance_xy(center_host, point)
+
+        return sorted(pool, key=_score)[0]
+    def _space_rows_match(self, row_a, row_b):
+        if not isinstance(row_a, dict) or not isinstance(row_b, dict):
+            return False
+
+        source_a = str(row_a.get("source_label") or "Host Spaces")
+        source_b = str(row_b.get("source_label") or "Host Spaces")
+        if source_a != source_b:
+            return False
+
+        key_a = str(row_a.get("space_key") or "").strip()
+        key_b = str(row_b.get("space_key") or "").strip()
+        if key_a and key_b and key_a == key_b:
+            return True
+
+        uid_a = str(row_a.get("unique_id") or "").strip()
+        uid_b = str(row_b.get("unique_id") or "").strip()
+        if uid_a and uid_b and uid_a == uid_b:
+            return True
+
+        sid_a = str(row_a.get("space_id") or "").strip()
+        sid_b = str(row_b.get("space_id") or "").strip()
+        if sid_a and sid_b and sid_a == sid_b:
+            return True
+
+        return False
+
+    def _place_elements_for_picked_space(self):
+        helper, helper_error = _load_place_elements_helper()
+        if helper is None:
+            forms.alert(helper_error or "Failed to load placement helper.", title=TITLE)
+            return
+
+        hidden = False
+        target_row = None
+        try:
+            try:
+                self.Hide()
+                hidden = True
+            except Exception:
+                hidden = False
+
+            picked_point = revit.uidoc.Selection.PickPoint("Pick a point inside the target space.")
+            if picked_point is None:
+                return
+
+            payload = helper._load_latest_space_payload(self.doc)
+            if not isinstance(payload, dict):
+                forms.alert("No saved space data found.\n\nRun Classify Spaces and save first.", title=TITLE)
+                return
+
+            assignments = payload.get("space_assignments")
+            if not isinstance(assignments, dict) or not assignments:
+                forms.alert("No saved space assignments were found.", title=TITLE)
+                return
+
+            spaces, sources, door_points_by_source, door_rows_by_source = self._collect_place_context(helper, assignments)
+            if not spaces:
+                forms.alert("No spaces were found in host or loaded linked models.", title=TITLE)
+                return
+
+            target_row = self._space_row_from_point(picked_point, helper, spaces)
+            if not target_row:
+                forms.alert("No classified space was found near the picked point.", title=TITLE)
+                return
+
+            try:
+                all_requests = helper._request_rows(spaces, self.type_elements, self.space_overrides)
+            except Exception as exc:
+                forms.alert("Failed to resolve placement requests:\n\n{}".format(exc), title=TITLE)
+                return
+
+            requests = []
+            for req_space_row, entry in all_requests or []:
+                if self._space_rows_match(req_space_row, target_row):
+                    requests.append((req_space_row, entry))
+
+            if not requests:
+                try:
+                    fallback_entries, fallback_bucket = helper._effective_entries(target_row, self.type_elements, self.space_overrides)
+                except Exception:
+                    fallback_entries = []
+                    fallback_bucket = target_row.get("bucket")
+                req_row = dict(target_row)
+                if fallback_bucket in BUCKETS:
+                    req_row["bucket"] = fallback_bucket
+                for entry in fallback_entries or []:
+                    if isinstance(entry, dict):
+                        requests.append((req_row, entry))
+
+            if not requests:
+                forms.alert("No placeable entries were resolved for the picked space.", title=TITLE)
+                return
+
+            linked_count = max(0, len(sources) - 1)
+            source_label = "Host + {} linked model{}".format(linked_count, "" if linked_count == 1 else "s") if linked_count > 0 else "Host Spaces"
+
+            placed_count, failures, param_totals, placed_rows = helper._run_placement(
+                self.doc,
+                requests,
+                door_points_by_source,
+                door_rows_by_source,
+            )
+
+            host_door_count = len(door_points_by_source.get("Host Spaces") or [])
+            linked_door_count = sum(
+                len(points or [])
+                for key, points in door_points_by_source.items()
+                if (not str(key).startswith("__")) and str(key) != "Host Spaces"
+            )
+            linked_models_with_doors = sum(
+                1
+                for key, points in door_points_by_source.items()
+                if (not str(key).startswith("__")) and str(key) != "Host Spaces" and len(points or []) > 0
+            )
+            total_door_count = host_door_count + linked_door_count
+
+            door_stats = {
+                "host": host_door_count,
+                "linked": linked_door_count,
+                "linked_models_with_doors": linked_models_with_doors,
+            }
+
+            try:
+                lines = helper._summary_lines(
+                    [target_row],
+                    requests,
+                    placed_count,
+                    failures,
+                    param_totals,
+                    total_door_count,
+                    source_label,
+                    placed_rows=placed_rows,
+                    door_stats=door_stats,
+                )
+            except Exception:
+                lines = [
+                    "Placed picked-space elements.",
+                    "Space: {}".format(self._space_label(target_row)),
+                    "Placement requests: {}".format(len(requests)),
+                    "Successfully placed: {}".format(placed_count),
+                    "Failed placements: {}".format(len(failures)),
+                ]
+
+            forms.alert("\n".join(lines), title=TITLE)
+        except Exception as exc:
+            forms.alert(
+                "Picked-space placement failed unexpectedly:\n\n{}\n\n{}".format(exc, traceback.format_exc()),
+                title=TITLE,
+            )
+        finally:
+            if hidden:
+                try:
+                    self.Show()
+                    self.Focus()
+                except Exception:
+                    pass
+
+            if target_row is not None:
+                try:
+                    self._sync_ui_to_space_row(target_row)
+                except Exception:
+                    pass
+    def OnPlaceInPickedSpaceClicked(self, sender, args):
+        self._place_elements_for_picked_space()
     def OnSpaceTypeChanged(self, sender, args):
         self._refresh_all()
 
@@ -2311,6 +2639,12 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
 
 
 
