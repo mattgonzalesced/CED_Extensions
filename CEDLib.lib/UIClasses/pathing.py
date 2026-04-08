@@ -5,8 +5,29 @@ import os
 import sys
 
 
+def _get_runtime_envvar(name):
+    key = str(name or "").strip()
+    if not key:
+        return None
+    try:
+        from pyrevit import script as pyrevit_script  # type: ignore
+
+        value = pyrevit_script.get_envvar(key)
+    except Exception:
+        value = None
+    if value in (None, ""):
+        value = os.environ.get(key)
+    return value
+
+
 def find_workspace_root(start_dir, marker_dir="CEDLib.lib"):
     """Walk ancestors until a directory containing marker_dir is found."""
+    seeded_workspace = _get_runtime_envvar("CED_WORKSPACE_ROOT")
+    if seeded_workspace and os.path.isdir(str(seeded_workspace)):
+        marker_path = os.path.join(str(seeded_workspace), str(marker_dir or "CEDLib.lib"))
+        if os.path.isdir(marker_path):
+            return os.path.abspath(str(seeded_workspace))
+
     current = os.path.abspath(start_dir)
     marker_name = str(marker_dir or "CEDLib.lib")
     while True:
@@ -33,6 +54,10 @@ def find_named_ancestor(start_dir, folder_name):
 
 def resolve_lib_root(start_dir, marker_dir="CEDLib.lib"):
     """Resolve absolute path to CEDLib.lib from a script directory."""
+    seeded_lib = _get_runtime_envvar("CED_LIB_ROOT")
+    if seeded_lib and os.path.isdir(str(seeded_lib)):
+        return os.path.abspath(str(seeded_lib))
+
     workspace_root = find_workspace_root(start_dir, marker_dir=marker_dir)
     if workspace_root:
         return os.path.abspath(os.path.join(workspace_root, marker_dir))

@@ -1,0 +1,20 @@
+title: 
+  en_us: >-
+  Set Piping 
+  
+  System
+tooltip: 
+  en_us: >-
+
+    ________________________________________________________________
+    Description:
+    
+    Force a piping or duct system upon selected segments. This tool will also create systems on items that do not yet have a system assigned.
+    
+    
+    ________________________________________________________________
+
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: false
+  full_frame: false

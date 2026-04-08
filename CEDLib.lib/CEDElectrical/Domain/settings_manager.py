@@ -263,25 +263,37 @@ def _extensions_root():
     return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 
-def _default_load_params_content_dir():
-    return os.path.join(
-        _extensions_root(),
-        "AE pyTools.extension",
-        "AE pyTools.Tab",
+def _candidate_load_params_content_dirs():
+    root = _extensions_root()
+    suffix = (
         "Electrical.panel",
         "Circuits1.stack",
         "Circuit Tools.pulldown",
         "Load Electrical Parameters.pushbutton",
         "Content",
     )
+    candidates = []
+    try:
+        for entry in os.listdir(root):
+            ext_path = os.path.join(root, entry)
+            if not os.path.isdir(ext_path):
+                continue
+            if not str(entry or "").lower().endswith(".extension"):
+                continue
+            for tab_name in ("AE pyTools.tab", "AE pyTools.Tab"):
+                candidates.append(os.path.join(ext_path, tab_name, *suffix))
+    except Exception:
+        pass
+
+    return candidates
 
 
 def _resolve_load_params_files():
-    content_dir = _default_load_params_content_dir()
-    shared_txt = os.path.join(content_dir, "ELEC SHARED PARAMS.txt")
-    table_xlsx = os.path.join(content_dir, "ELEC SHARED PARAM TABLE.xlsx")
-    if os.path.exists(shared_txt) and os.path.exists(table_xlsx):
-        return shared_txt, table_xlsx
+    for content_dir in _candidate_load_params_content_dirs():
+        shared_txt = os.path.join(content_dir, "ELEC SHARED PARAMS.txt")
+        table_xlsx = os.path.join(content_dir, "ELEC SHARED PARAM TABLE.xlsx")
+        if os.path.exists(shared_txt) and os.path.exists(table_xlsx):
+            return shared_txt, table_xlsx
 
     root = _extensions_root()
     try:

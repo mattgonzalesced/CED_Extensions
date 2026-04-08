@@ -29,14 +29,33 @@ class MarkExistingAndRecalculateOperation(object):
         if not circuits:
             return {'status': 'cancelled', 'reason': 'no_circuits'}
 
+        updates_by_id = {}
+        raw_updates = list(request.options.get('updates') or [])
+        for raw in raw_updates:
+            if not isinstance(raw, dict):
+                continue
+            try:
+                cid = int(raw.get('circuit_id') or 0)
+            except Exception:
+                cid = 0
+            if cid <= 0:
+                continue
+            mode_val = str(raw.get('mode', 'existing') or 'existing').strip().lower()
+            if mode_val not in ('existing', 'new'):
+                mode_val = 'existing'
+            updates_by_id[cid] = {
+                'mode': mode_val,
+                'set_notes': bool(raw.get('set_notes', True)),
+                'clear_wire': bool(raw.get('clear_wire', False)),
+                'clear_conduit': bool(raw.get('clear_conduit', False)),
+            }
+
         mode = str(request.options.get('mode', 'existing') or 'existing').strip().lower()
         if mode not in ('existing', 'new'):
             mode = 'existing'
         set_notes = bool(request.options.get('set_notes', True))
-        notes_text = '' if mode == 'new' else 'EX'
         clear_wire = bool(request.options.get('clear_wire', False))
         clear_conduit = bool(request.options.get('clear_conduit', False))
-        user_override_value = 0 if mode == 'new' else 1
 
         changed_ids = []
         locked_rows = []
@@ -50,22 +69,36 @@ class MarkExistingAndRecalculateOperation(object):
                     locked_rows.append(self._locked_row(circuit, doc))
                     continue
 
+                circuit_id = _elid_value(circuit.Id)
+                per = updates_by_id.get(circuit_id)
+                circuit_mode = per.get('mode') if per else mode
+                if circuit_mode not in ('existing', 'new'):
+                    circuit_mode = 'existing'
+                circuit_set_notes = bool(per.get('set_notes', set_notes)) if per else bool(set_notes)
+                circuit_clear_wire = bool(per.get('clear_wire', clear_wire)) if per else bool(clear_wire)
+                circuit_clear_conduit = bool(per.get('clear_conduit', clear_conduit)) if per else bool(clear_conduit)
+                if circuit_mode == 'new':
+                    circuit_clear_wire = False
+                    circuit_clear_conduit = False
+
+                notes_text = '' if circuit_mode == 'new' else 'EX'
+                user_override_value = 0 if circuit_mode == 'new' else 1
                 did_change = False
                 did_change = self._set_int_param(circuit, 'CKT_User Override_CED', user_override_value) or did_change
 
-                if set_notes:
+                if circuit_set_notes:
                     did_change = self._set_schedule_notes(circuit, notes_text) or did_change
                     did_change = self._set_str_param(circuit, 'CKT_Schedule Notes_CEDT', notes_text) or did_change
 
-                if mode == 'existing' and clear_wire:
+                if circuit_mode == 'existing' and circuit_clear_wire:
                     did_change = self._set_str_param(circuit, 'CKT_Wire Hot Size_CEDT', '-') or did_change
                     did_change = self._set_str_param(circuit, 'Wire Hot Size_CEDT', '-') or did_change
 
-                if mode == 'existing' and clear_conduit:
+                if circuit_mode == 'existing' and circuit_clear_conduit:
                     did_change = self._set_str_param(circuit, 'Conduit Size_CEDT', '-') or did_change
 
                 if did_change:
-                    changed_ids.append(_elid_value(circuit.Id))
+                    changed_ids.append(circuit_id)
 
             tx.Commit()
         except Exception:
