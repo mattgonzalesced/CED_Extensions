@@ -9,6 +9,7 @@ import math
 import os
 import re
 import sys
+import uuid
 from collections import OrderedDict
 
 from pyrevit import forms, revit, script
@@ -781,8 +782,13 @@ def _sanitize_template_entry(entry):
     if placement_rule not in PLACEMENT_OPTIONS:
         placement_rule = DEFAULT_PLACEMENT_OPTION
 
+    entry_uid = str(entry.get("entry_uid") or "").strip()
+    if not entry_uid:
+        entry_uid = uuid.uuid4().hex
+
     return {
         "id": entry_id,
+        "entry_uid": entry_uid,
         "kind": kind,
         "element_type_id": element_type_id,
         "name": name,
@@ -807,15 +813,10 @@ def _sanitize_template_list(raw_list):
         source_entries = _as_list(raw_list)
 
     clean = []
-    seen = set()
     for raw in source_entries or []:
         entry = _sanitize_template_entry(raw)
         if not entry:
             continue
-        key = entry.get("id")
-        if key in seen:
-            continue
-        seen.add(key)
         clean.append(entry)
     return clean
 
@@ -831,15 +832,6 @@ def _sanitize_type_elements(raw_map):
         if not bucket:
             continue
         data[bucket].extend(_sanitize_template_list(raw_entries))
-
-    for bucket in BUCKETS:
-        deduped = OrderedDict()
-        for entry in data.get(bucket) or []:
-            key = str((entry or {}).get("id") or "").strip()
-            if not key:
-                continue
-            deduped[key] = entry
-        data[bucket] = list(deduped.values())
 
     return data
 
@@ -932,13 +924,17 @@ def _effective_entries(space_row, type_elements, space_overrides):
     type_entries = type_elements.get(bucket) or []
     override_entries = space_overrides.get(space_row.get("space_key")) or []
 
-    combined = OrderedDict()
+    combined = []
     for entry in type_entries:
-        combined[entry.get("id")] = _sanitize_template_entry(entry)
+        sanitized = _sanitize_template_entry(entry)
+        if sanitized:
+            combined.append(sanitized)
     for entry in override_entries:
-        combined[entry.get("id")] = _sanitize_template_entry(entry)
+        sanitized = _sanitize_template_entry(entry)
+        if sanitized:
+            combined.append(sanitized)
 
-    return [entry for entry in combined.values() if entry], bucket
+    return combined, bucket
 
 def _distance_xy(a, b):
     if a is None or b is None:
@@ -2862,7 +2858,7 @@ class _ProfileSelectionOption(forms.TemplateListItem):
         kind = "Family Type" if str(data.get("kind") or "") == "family_type" else "Model Group"
         count = int(data.get("request_count") or 0)
         plural = "" if count == 1 else "s"
-        return "[{}] {} [{}] - {} request{}".format(
+        base = "[{}] {} [{}] - {} request{}".format(
             data.get("bucket") or "Other",
             data.get("name") or data.get("id") or "<Profile>",
             kind,
@@ -2870,9 +2866,26 @@ class _ProfileSelectionOption(forms.TemplateListItem):
             plural,
         )
 
+        space_labels = list(data.get("space_labels") or [])
+        if not space_labels:
+            return base
 
+        lines = [base, "    Spaces:"]
+        for label in space_labels:
+            lines.append("      - {}".format(label))
+        return "\n".join(lines)
+
+
+def _space_request_label(space_row):
+    number = str(space_row.get("space_number") or "<No Number>").strip()
+    name = str(space_row.get("space_name") or "<Unnamed Space>").strip()
+    return "{} - {}".format(number, name)
 def _request_profile_key(space_row, entry):
     bucket = _normalize_bucket(space_row.get("bucket"), default="Other")
+    entry_uid = str(entry.get("entry_uid") or "").strip()
+    if entry_uid:
+        return "{}|{}".format(bucket, entry_uid)
+
     entry_id = str(entry.get("id") or "").strip()
     if not entry_id:
         return ""
@@ -2891,12 +2904,18 @@ def _build_profile_selection_options(requests):
                 "key": key,
                 "bucket": space_row.get("bucket") or "Other",
                 "id": entry.get("id") or "",
+                "entry_uid": entry.get("entry_uid") or "",
                 "name": entry.get("name") or entry.get("id") or "<Profile>",
                 "kind": _normalize_entry_kind(entry.get("kind"), entry.get("id")) or "family_type",
                 "request_count": 0,
+                "space_labels": [],
             }
 
         stats[key]["request_count"] += 1
+
+        label = _space_request_label(space_row)
+        if label and label not in stats[key]["space_labels"]:
+            stats[key]["space_labels"].append(label)
 
     ordered = sorted(
         stats.values(),
@@ -2908,8 +2927,6 @@ def _build_profile_selection_options(requests):
     )
 
     return [_ProfileSelectionOption(item, checked=True) for item in ordered]
-
-
 def _prompt_profile_selection(requests):
     options = _build_profile_selection_options(requests)
     if not options:
@@ -3564,6 +3581,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 

@@ -8,6 +8,7 @@ Manage per-space-type element templates and per-space overrides for classified s
 
 import os
 import sys
+import uuid
 from collections import OrderedDict
 from datetime import datetime
 
@@ -59,6 +60,7 @@ PLACEMENT_OPTIONS = [
 ]
 
 DEFAULT_PLACEMENT_OPTION = "Center of Room"
+KEYNOTE_FAMILY_TOKEN = "ga keynote symbol ced"
 def _resolve_lib_root():
     cursor = os.path.abspath(os.path.dirname(__file__))
     for _ in range(12):
@@ -480,6 +482,525 @@ def _sanitize_parameter_map(parameters):
     return ordered
 
 
+def _as_float(value, default=0.0):
+    try:
+        return float(str(value).strip())
+    except Exception:
+        return float(default)
+
+
+def _sanitize_keynote_offset(offset):
+    if not isinstance(offset, dict):
+        offset = {}
+    return {
+        "x": _as_float(offset.get("x"), 0.0),
+        "y": _as_float(offset.get("y"), 0.0),
+        "z": _as_float(offset.get("z"), 0.0),
+    }
+
+
+def _sanitize_annotation_entry(annotation):
+    if not isinstance(annotation, dict):
+        return None
+
+    ann_uid = str(annotation.get("annotation_uid") or "").strip()
+    if not ann_uid:
+        ann_uid = uuid.uuid4().hex
+
+    kind = str(annotation.get("kind") or "").strip().lower()
+    if kind == "tag":
+        name = str(annotation.get("name") or "Tag").strip() or "Tag"
+        symbol_id = str(annotation.get("symbol_id") or annotation.get("element_type_id") or "").strip()
+        return {
+            "annotation_uid": ann_uid,
+            "kind": "tag",
+            "name": name,
+            "symbol_id": symbol_id,
+            "offset": _sanitize_keynote_offset(annotation.get("offset") or {}),
+        }
+
+    if kind == "keynote":
+        symbol_id = str(annotation.get("symbol_id") or annotation.get("element_type_id") or "").strip()
+        if not symbol_id:
+            return None
+        name = str(annotation.get("name") or "GA_Keynote Symbol_CED").strip() or "GA_Keynote Symbol_CED"
+        return {
+            "annotation_uid": ann_uid,
+            "kind": "keynote",
+            "name": name,
+            "symbol_id": symbol_id,
+            "offset": _sanitize_keynote_offset(annotation.get("offset") or {}),
+            "parameters": _sanitize_parameter_map(annotation.get("parameters") or {}),
+        }
+
+    return None
+
+
+def _sanitize_annotation_list(raw_list):
+    clean = []
+    for raw in raw_list or []:
+        ann = _sanitize_annotation_entry(raw)
+        if ann:
+            clean.append(ann)
+    return clean
+
+
+def _normalize_lookup_text(value):
+    text = str(value or "").lower()
+    parts = []
+    for ch in text:
+        parts.append(ch if ch.isalnum() else " ")
+    return " ".join("".join(parts).split())
+
+
+def _is_ga_keynote_symbol(symbol):
+    if symbol is None:
+        return False
+
+    family_name = ""
+    type_name = ""
+    full_name = ""
+    try:
+        family_name = str(getattr(getattr(symbol, "Family", None), "Name", "") or "")
+    except Exception:
+        family_name = ""
+    try:
+        type_name = str(getattr(symbol, "Name", "") or "")
+    except Exception:
+        type_name = ""
+    try:
+        full_name = _family_type_name(symbol)
+    except Exception:
+        full_name = ""
+
+    token = KEYNOTE_FAMILY_TOKEN
+    for candidate in (family_name, type_name, full_name):
+        if token in _normalize_lookup_text(candidate):
+            return True
+    return False
+
+
+def _collect_keynote_symbol_choices(doc):
+    options = OrderedDict()
+    try:
+        symbols = list(FilteredElementCollector(doc).OfClass(FamilySymbol).WhereElementIsElementType())
+    except Exception:
+        symbols = []
+
+    for symbol in symbols:
+        if not _is_ga_keynote_symbol(symbol):
+            continue
+        type_id = _element_id_value(getattr(symbol, "Id", None), default="")
+        if not type_id:
+            continue
+        label = "{} [{}]".format(_family_type_name(symbol), type_id)
+        options[label] = symbol
+
+    ordered = OrderedDict()
+    for label in sorted(options.keys(), key=lambda x: x.lower()):
+        ordered[label] = options[label]
+    return ordered
+def _is_tag_symbol(symbol):
+    if symbol is None:
+        return False
+    try:
+        category_name = str(getattr(getattr(symbol, "Category", None), "Name", "") or "")
+    except Exception:
+        category_name = ""
+    return "tag" in _normalize_lookup_text(category_name)
+
+
+def _entry_target_symbol(doc, entry):
+    if doc is None or not isinstance(entry, dict):
+        return None
+
+    kind = str(entry.get("kind") or "").strip().lower()
+    type_id = str(entry.get("element_type_id") or "").strip()
+    if not type_id:
+        return None
+
+    try:
+        elem = doc.GetElement(ElementId(int(type_id)))
+    except Exception:
+        elem = None
+
+    if kind == "family_type" and isinstance(elem, FamilySymbol):
+        return elem
+    if kind == "model_group" and isinstance(elem, GroupType):
+        return elem
+    return None
+
+
+def _entry_target_category_tokens(doc, entry):
+    symbol = _entry_target_symbol(doc, entry)
+    if symbol is None:
+        return set()
+
+    phrases = []
+    try:
+        phrases.append(str(getattr(getattr(symbol, "Category", None), "Name", "") or ""))
+    except Exception:
+        pass
+
+    try:
+        family = getattr(symbol, "Family", None)
+        phrases.append(str(getattr(family, "Name", "") or ""))
+    except Exception:
+        pass
+
+    text = _normalize_lookup_text(" ".join([p for p in phrases if p]))
+    tokens = set()
+    for token in text.split():
+        if token in ("tag", "tags", "family", "symbol", "model", "group"):
+            continue
+        if len(token) < 3:
+            continue
+        tokens.add(token)
+    return tokens
+
+
+def _collect_tag_symbol_choices_for_entry(doc, entry):
+    options = OrderedDict()
+    try:
+        all_symbols = list(FilteredElementCollector(doc).OfClass(FamilySymbol).WhereElementIsElementType())
+    except Exception:
+        all_symbols = []
+
+    tag_symbols = []
+    for symbol in all_symbols:
+        if not _is_tag_symbol(symbol):
+            continue
+        if _is_ga_keynote_symbol(symbol):
+            continue
+        tag_symbols.append(symbol)
+
+    target_tokens = _entry_target_category_tokens(doc, entry)
+
+    scored = []
+    for symbol in tag_symbols:
+        type_id = _element_id_value(getattr(symbol, "Id", None), default="")
+        if not type_id:
+            continue
+
+        display = _family_type_name(symbol)
+        category_name = ""
+        try:
+            category_name = str(getattr(getattr(symbol, "Category", None), "Name", "") or "")
+        except Exception:
+            category_name = ""
+
+        search_text = _normalize_lookup_text("{} {}".format(display, category_name))
+
+        score = 0
+        if target_tokens:
+            for token in target_tokens:
+                if token in search_text:
+                    score += 1
+        if "multi category" in search_text:
+            score += 1
+
+        label = "{} [{}]".format(display, type_id)
+        scored.append((score, label, symbol))
+
+    if target_tokens and any(score > 0 for score, _, _ in scored):
+        scored = [row for row in scored if row[0] > 0]
+
+    scored.sort(key=lambda row: row[1].lower())
+    for _, label, symbol in scored:
+        options[label] = symbol
+    return options
+
+def _prompt_float_value(prompt_text, default_value):
+    current = str(default_value)
+    while True:
+        value = forms.ask_for_string(
+            default=current,
+            prompt=prompt_text,
+            title=TITLE,
+        )
+        if value is None:
+            return None
+        text = str(value).strip()
+        if not text:
+            text = "0"
+        try:
+            return float(text)
+        except Exception:
+            forms.alert("Enter a numeric value.", title=TITLE)
+            current = text
+
+
+def _prompt_keynote_offset(initial_offset=None):
+    current = _sanitize_keynote_offset(initial_offset or {})
+    x_val = _prompt_float_value("Keynote X offset from fixture (feet):", current.get("x", 0.0))
+    if x_val is None:
+        return None
+    y_val = _prompt_float_value("Keynote Y offset from fixture (feet):", current.get("y", 0.0))
+    if y_val is None:
+        return None
+    z_val = _prompt_float_value("Keynote Z offset from fixture (feet):", current.get("z", 0.0))
+    if z_val is None:
+        return None
+    return {"x": x_val, "y": y_val, "z": z_val}
+
+
+def _choose_keynote_annotation(entry):
+    annotations = _sanitize_annotation_list((entry or {}).get("annotations") or [])
+    keynote_items = [a for a in annotations if a.get("kind") == "keynote"]
+    if not keynote_items:
+        forms.alert("No keynote annotation is saved on this entry.", title=TITLE)
+        return None
+    if len(keynote_items) == 1:
+        return keynote_items[0]
+
+    options = OrderedDict()
+    for ann in keynote_items:
+        label = "{} [{}]".format(ann.get("name") or "Keynote", ann.get("symbol_id") or "")
+        options[label] = ann
+    return _choose_single_option(options, title="Select Keynote Annotation", button_name="Adjust")
+
+
+
+def _choose_tag_annotation(entry):
+    annotations = _sanitize_annotation_list((entry or {}).get("annotations") or [])
+    tag_items = [a for a in annotations if a.get("kind") == "tag"]
+    if not tag_items:
+        forms.alert("No tag annotation is saved on this entry.", title=TITLE)
+        return None
+    if len(tag_items) == 1:
+        return tag_items[0]
+
+    options = OrderedDict()
+    for ann in tag_items:
+        options[_annotation_label(ann)] = ann
+    return _choose_single_option(options, title="Select Tag Annotation", button_name="Adjust")
+
+
+def _edit_tag_annotation(annotation):
+    if not isinstance(annotation, dict):
+        return False
+
+    updated_offset = _prompt_keynote_offset(annotation.get("offset") or {})
+    if updated_offset is None:
+        return False
+
+    annotation["offset"] = _sanitize_keynote_offset(updated_offset)
+    return True
+
+
+def _adjust_tag_for_entry(entry):
+    if not isinstance(entry, dict):
+        return False
+
+    selected = _choose_tag_annotation(entry)
+    if not selected:
+        return False
+
+    changed = _edit_tag_annotation(selected)
+    if not changed:
+        return False
+
+    entry["annotations"] = _sanitize_annotation_list(entry.get("annotations") or [])
+    return True
+
+def _edit_keynote_annotation(doc, annotation, param_editor_xaml_path):
+    if not isinstance(annotation, dict):
+        return False
+
+    keynote_xaml_path = os.path.join(os.path.dirname(param_editor_xaml_path), "KeynoteEditorWindow.xaml")
+    if not os.path.exists(keynote_xaml_path):
+        forms.alert("Keynote editor XAML is missing.", title=TITLE)
+        return False
+
+    available_params = _collect_available_parameters(doc, "family_type", annotation.get("symbol_id"))
+    if not isinstance(available_params, OrderedDict):
+        available_params = OrderedDict(available_params or {})
+
+    existing = _sanitize_parameter_map(annotation.get("parameters") or {})
+    for name, data in existing.items():
+        if name in available_params:
+            continue
+        available_params[name] = {
+            "storage_type": str(data.get("storage_type") or "String"),
+            "current_value": str(data.get("value") or ""),
+            "read_only": bool(data.get("read_only")),
+        }
+
+    editor = KeynoteEditorWindow(
+        keynote_xaml_path,
+        annotation.get("name") or "Keynote",
+        available_params,
+        initial_params=existing,
+        initial_offset=annotation.get("offset") or {},
+    )
+    editor.ShowDialog()
+    if not editor.accepted:
+        return False
+
+    annotation["offset"] = _sanitize_keynote_offset(editor.offset)
+    annotation["parameters"] = _sanitize_parameter_map(editor.selected_params)
+    return True
+
+
+def _add_annotation_to_entry(doc, entry, param_editor_xaml_path):
+    if not isinstance(entry, dict):
+        return False
+
+    mode = forms.CommandSwitchWindow.show(
+        ["Tag", "GA_Keynote Symbol_CED"],
+        message="Select annotation type to add",
+    )
+    if not mode:
+        return False
+
+    annotations = _sanitize_annotation_list(entry.get("annotations") or [])
+
+    if mode == "Tag":
+        choices = _collect_tag_symbol_choices_for_entry(doc, entry)
+        if not choices:
+            forms.alert(
+                "No compatible tag family types were found for this element.",
+                title=TITLE,
+            )
+            return False
+
+        selection = forms.SelectFromList.show(
+            list(choices.keys()),
+            title="Select Tag Types",
+            button_name="Add Selected Tags",
+            multiselect=True,
+        )
+        if not selection:
+            return False
+
+        selected_labels = selection if isinstance(selection, list) else [selection]
+        for selected_label in selected_labels:
+            symbol = choices.get(selected_label)
+            if symbol is None:
+                continue
+            ann = _sanitize_annotation_entry(
+                {
+                    "annotation_uid": uuid.uuid4().hex,
+                    "kind": "tag",
+                    "name": _family_type_name(symbol),
+                    "symbol_id": _element_id_value(getattr(symbol, "Id", None), default=""),
+                    "offset": {"x": 0.0, "y": 0.0, "z": 0.0},
+                }
+            )
+            if ann:
+                annotations.append(ann)
+
+        entry["annotations"] = _sanitize_annotation_list(annotations)
+        return len(selected_labels) > 0
+
+    choices = _collect_keynote_symbol_choices(doc)
+    if not choices:
+        forms.alert(
+            "Could not find family types matching 'GA_Keynote Symbol_CED'.",
+            title=TITLE,
+        )
+        return False
+
+    symbol = _choose_single_option(choices, title="Select GA_Keynote Symbol_CED Type", button_name="Use")
+    if symbol is None:
+        return False
+
+    symbol_id = _element_id_value(getattr(symbol, "Id", None), default="")
+    ann = _sanitize_annotation_entry(
+        {
+            "annotation_uid": uuid.uuid4().hex,
+            "kind": "keynote",
+            "name": _family_type_name(symbol),
+            "symbol_id": symbol_id,
+            "offset": {"x": 0.0, "y": 0.0, "z": 0.0},
+            "parameters": OrderedDict(),
+        }
+    )
+    if not ann:
+        return False
+
+    configure = forms.alert(
+        "Adjust keynote offset/parameters now?",
+        title=TITLE,
+        yes=True,
+        no=True,
+    )
+    if configure:
+        changed = _edit_keynote_annotation(doc, ann, param_editor_xaml_path)
+        if not changed:
+            return False
+
+    annotations.append(ann)
+    entry["annotations"] = _sanitize_annotation_list(annotations)
+    return True
+
+
+def _adjust_keynote_for_entry(doc, entry, param_editor_xaml_path):
+    if not isinstance(entry, dict):
+        return False
+
+    selected = _choose_keynote_annotation(entry)
+    if not selected:
+        return False
+
+    changed = _edit_keynote_annotation(doc, selected, param_editor_xaml_path)
+    if not changed:
+        return False
+
+    entry["annotations"] = _sanitize_annotation_list(entry.get("annotations") or [])
+    return True
+
+
+def _annotation_label(annotation):
+    ann = _sanitize_annotation_entry(annotation)
+    if not ann:
+        return "<Invalid Annotation>"
+
+    kind = ann.get("kind")
+    if kind == "tag":
+        name = ann.get("name") or "Tag"
+        symbol_id = str(ann.get("symbol_id") or "").strip()
+        return "Tag: {}{}".format(name, " [{}]".format(symbol_id) if symbol_id else "")
+
+    name = ann.get("name") or "Keynote"
+    symbol_id = str(ann.get("symbol_id") or "").strip()
+    return "Keynote: {}{}".format(name, " [{}]".format(symbol_id) if symbol_id else "")
+
+
+def _remove_annotations_from_entry(entry):
+    if not isinstance(entry, dict):
+        return False
+
+    annotations = _sanitize_annotation_list(entry.get("annotations") or [])
+    if not annotations:
+        forms.alert("No annotations are saved on this element.", title=TITLE)
+        return False
+
+    rows = []
+    labels = []
+    for idx, ann in enumerate(annotations, 1):
+        label = "{} ({})".format(_annotation_label(ann), idx)
+        rows.append((label, ann))
+        labels.append(label)
+
+    selected = forms.SelectFromList.show(
+        labels,
+        title="Remove Annotations",
+        button_name="Remove Selected",
+        multiselect=True,
+    )
+    if not selected:
+        return False
+
+    selected_labels = set(selected if isinstance(selected, list) else [selected])
+    kept = [ann for label, ann in rows if label not in selected_labels]
+    if len(kept) == len(annotations):
+        return False
+
+    entry["annotations"] = _sanitize_annotation_list(kept)
+    return True
+
+
 def _sanitize_template_entry(entry):
     if not isinstance(entry, dict):
         return None
@@ -507,27 +1028,28 @@ def _sanitize_template_entry(entry):
     if placement_rule not in PLACEMENT_OPTIONS:
         placement_rule = DEFAULT_PLACEMENT_OPTION
 
+    entry_uid = str(entry.get("entry_uid") or "").strip()
+    if not entry_uid:
+        entry_uid = uuid.uuid4().hex
+
     return {
         "id": entry_id,
+        "entry_uid": entry_uid,
         "kind": kind,
         "element_type_id": element_type_id,
         "name": name,
         "placement_rule": placement_rule,
         "parameters": _sanitize_parameter_map(entry.get("parameters") or {}),
+        "annotations": _sanitize_annotation_list(entry.get("annotations") or []),
     }
 
 
 def _sanitize_template_list(raw_list):
     clean = []
-    seen = set()
     for raw in raw_list or []:
         entry = _sanitize_template_entry(raw)
         if not entry:
             continue
-        key = entry.get("id")
-        if key in seen:
-            continue
-        seen.add(key)
         clean.append(entry)
     return clean
 
@@ -559,16 +1081,59 @@ def _sanitize_space_overrides(raw_map):
 def _template_display(entry):
     if not isinstance(entry, dict):
         return "<Invalid>"
+
     name = entry.get("name") or "<Unnamed>"
     kind = entry.get("kind") or "unknown"
     kind_text = "Family Type" if kind == "family_type" else "Model Group"
-    params = entry.get("parameters") or {}
+    params = _sanitize_parameter_map(entry.get("parameters") or {})
     count = len(params)
     suffix = "{} param{}".format(count, "" if count == 1 else "s")
     placement = str(entry.get("placement_rule") or DEFAULT_PLACEMENT_OPTION)
     if placement not in PLACEMENT_OPTIONS:
         placement = DEFAULT_PLACEMENT_OPTION
-    return "{} [{} | {} | Place: {}]".format(name, kind_text, suffix, placement)
+
+    lines = ["{} [{} | {} | Place: {}]".format(name, kind_text, suffix, placement)]
+
+    if params:
+        lines.append("    Params:")
+        for key in sorted(params.keys(), key=lambda x: x.lower()):
+            data = params.get(key) or {}
+            value = str(data.get("value") or "")
+            lines.append("      - {} = {}".format(key, value))
+
+    annotations = _sanitize_annotation_list(entry.get("annotations") or [])
+    if annotations:
+        lines.append("    Annotations:")
+        for ann in annotations:
+            kind_name = ann.get("kind")
+            if kind_name == "tag":
+                tag_name = ann.get("name") or "Tag"
+                tag_symbol_id = str(ann.get("symbol_id") or "").strip()
+                tag_offset = _sanitize_keynote_offset(ann.get("offset") or {})
+                if tag_symbol_id:
+                    lines.append("      - Tag: {} [{}] [dX={:.3f}ft, dY={:.3f}ft, dZ={:.3f}ft]".format(tag_name, tag_symbol_id, tag_offset.get("x", 0.0), tag_offset.get("y", 0.0), tag_offset.get("z", 0.0)))
+                else:
+                    lines.append("      - Tag: {} [dX={:.3f}ft, dY={:.3f}ft, dZ={:.3f}ft]".format(tag_name, tag_offset.get("x", 0.0), tag_offset.get("y", 0.0), tag_offset.get("z", 0.0)))
+                continue
+            if kind_name == "keynote":
+                offset = _sanitize_keynote_offset(ann.get("offset") or {})
+                lines.append(
+                    "      - Keynote: {} [dX={:.3f}ft, dY={:.3f}ft, dZ={:.3f}ft]".format(
+                        ann.get("name") or "GA_Keynote Symbol_CED",
+                        offset.get("x", 0.0),
+                        offset.get("y", 0.0),
+                        offset.get("z", 0.0),
+                    )
+                )
+                keynote_params = _sanitize_parameter_map(ann.get("parameters") or {})
+                if keynote_params:
+                    lines.append("        Keynote Params:")
+                    for key in sorted(keynote_params.keys(), key=lambda x: x.lower()):
+                        data = keynote_params.get(key) or {}
+                        value = str(data.get("value") or "")
+                        lines.append("          - {} = {}".format(key, value))
+
+    return "\n".join(lines)
 
 
 def _clone_template_entry(entry):
@@ -577,27 +1142,22 @@ def _clone_template_entry(entry):
         return None
     return {
         "id": sanitized.get("id"),
+        "entry_uid": sanitized.get("entry_uid"),
         "kind": sanitized.get("kind"),
         "element_type_id": sanitized.get("element_type_id"),
         "name": sanitized.get("name"),
         "placement_rule": sanitized.get("placement_rule") or DEFAULT_PLACEMENT_OPTION,
         "parameters": _sanitize_parameter_map(sanitized.get("parameters") or {}),
+        "annotations": _sanitize_annotation_list(sanitized.get("annotations") or []),
     }
 
 
-def _upsert_template_entry(target_list, entry):
+def _append_template_entry(target_list, entry):
     if target_list is None:
         return "skipped"
     candidate = _clone_template_entry(entry)
     if not candidate:
         return "skipped"
-
-    key = candidate.get("id")
-    for idx, existing in enumerate(target_list):
-        if isinstance(existing, dict) and existing.get("id") == key:
-            target_list[idx] = candidate
-            return "updated"
-
     target_list.append(candidate)
     return "added"
 
@@ -758,6 +1318,162 @@ class ParameterEditorWindow(forms.WPFWindow):
         self.Close()
 
 
+
+class KeynoteEditorWindow(forms.WPFWindow):
+    def __init__(self, xaml_path, keynote_name, available_params, initial_params=None, initial_offset=None):
+        forms.WPFWindow.__init__(self, xaml_path)
+        self.accepted = False
+
+        self.available_params = OrderedDict(available_params or {})
+        self.selected_params = _sanitize_parameter_map(initial_params or {})
+        self.offset = _sanitize_keynote_offset(initial_offset or {})
+
+        prompt = self.FindName("PromptText")
+        if prompt is not None:
+            prompt.Text = "Adjust keynote offsets and parameter overrides for: {}".format(keynote_name or "Keynote")
+
+        self._offset_x = self.FindName("OffsetXText")
+        self._offset_y = self.FindName("OffsetYText")
+        self._offset_z = self.FindName("OffsetZText")
+
+        if self._offset_x is not None:
+            self._offset_x.Text = str(self.offset.get("x", 0.0))
+        if self._offset_y is not None:
+            self._offset_y.Text = str(self.offset.get("y", 0.0))
+        if self._offset_z is not None:
+            self._offset_z.Text = str(self.offset.get("z", 0.0))
+
+        self._available_combo = self.FindName("AvailableParamsCombo")
+        self._selected_list = self.FindName("SelectedParamsList")
+        self._value_text = self.FindName("ParamValueText")
+
+        if self._available_combo is not None:
+            self._available_combo.ItemsSource = list(self.available_params.keys())
+            if self._available_combo.Items.Count > 0:
+                self._available_combo.SelectedIndex = 0
+
+        self._refresh_selected_params_list()
+
+    def _selected_param_name(self):
+        if self._selected_list is None:
+            return None
+        idx = int(getattr(self._selected_list, "SelectedIndex", -1))
+        if idx < 0 or idx >= len(self._selected_param_names):
+            return None
+        return self._selected_param_names[idx]
+
+    def _refresh_selected_params_list(self):
+        self._selected_param_names = list(self.selected_params.keys())
+        labels = []
+        for name in self._selected_param_names:
+            data = self.selected_params.get(name) or {}
+            labels.append(
+                "{} [{}{}] = {}".format(
+                    name,
+                    data.get("storage_type") or "String",
+                    " | RO" if bool(data.get("read_only")) else "",
+                    data.get("value") or "",
+                )
+            )
+
+        if self._selected_list is not None:
+            self._selected_list.ItemsSource = labels
+            try:
+                self._selected_list.Items.Refresh()
+            except Exception:
+                pass
+
+        if self._value_text is not None:
+            selected_name = self._selected_param_name()
+            if selected_name and selected_name in self.selected_params:
+                self._value_text.Text = self.selected_params[selected_name].get("value") or ""
+            else:
+                self._value_text.Text = ""
+
+    def _read_offsets(self):
+        def parse(text_box, label):
+            if text_box is None:
+                return 0.0
+            text = str(getattr(text_box, "Text", "") or "").strip()
+            if not text:
+                text = "0"
+            try:
+                return float(text)
+            except Exception:
+                forms.alert("{} must be numeric.".format(label), title=TITLE)
+                return None
+
+        x_val = parse(self._offset_x, "X Offset")
+        if x_val is None:
+            return None
+        y_val = parse(self._offset_y, "Y Offset")
+        if y_val is None:
+            return None
+        z_val = parse(self._offset_z, "Z Offset")
+        if z_val is None:
+            return None
+        return {"x": x_val, "y": y_val, "z": z_val}
+
+    def OnAddParamClicked(self, sender, args):
+        if self._available_combo is None:
+            return
+        name = getattr(self._available_combo, "SelectedItem", None)
+        if not name:
+            return
+
+        key = str(name)
+        if key in self.selected_params:
+            self._refresh_selected_params_list()
+            return
+
+        available = self.available_params.get(key) or {}
+        self.selected_params[key] = {
+            "storage_type": str(available.get("storage_type") or "String"),
+            "value": str(available.get("current_value") or ""),
+            "read_only": bool(available.get("read_only")),
+        }
+        self._refresh_selected_params_list()
+
+    def OnSelectedParamChanged(self, sender, args):
+        if self._value_text is None:
+            return
+        key = self._selected_param_name()
+        if key and key in self.selected_params:
+            self._value_text.Text = self.selected_params[key].get("value") or ""
+        else:
+            self._value_text.Text = ""
+
+    def OnApplyValueClicked(self, sender, args):
+        key = self._selected_param_name()
+        if not key or key not in self.selected_params:
+            return
+        value = ""
+        if self._value_text is not None:
+            value = getattr(self._value_text, "Text", "") or ""
+        self.selected_params[key]["value"] = str(value)
+        self._refresh_selected_params_list()
+
+    def OnRemoveParamClicked(self, sender, args):
+        key = self._selected_param_name()
+        if not key or key not in self.selected_params:
+            return
+        self.selected_params.pop(key, None)
+        self._refresh_selected_params_list()
+
+    def OnSaveClicked(self, sender, args):
+        self.OnApplyValueClicked(sender, args)
+        offset = self._read_offsets()
+        if offset is None:
+            return
+        self.offset = _sanitize_keynote_offset(offset)
+        self.accepted = True
+        self.Close()
+
+    def OnCancelClicked(self, sender, args):
+        self.accepted = False
+        self.Close()
+
+
 def _build_template_entry_from_element(element, kind):
     type_id = _element_id_value(getattr(element, "Id", None), default="")
     if not type_id:
@@ -775,6 +1491,7 @@ def _build_template_entry_from_element(element, kind):
         "name": name,
         "placement_rule": DEFAULT_PLACEMENT_OPTION,
         "parameters": OrderedDict(),
+        "annotations": [],
     }
 
 
@@ -1005,19 +1722,25 @@ class ManageSpaceProfilesWindow(forms.WPFWindow):
         space_key = selected_space.get("space_key")
         override_entries = self.space_overrides.get(space_key) or []
 
-        effective = OrderedDict()
-        for entry in type_entries:
-            effective[entry.get("id")] = {
+        effective = []
+        for idx, entry in enumerate(type_entries):
+            if not isinstance(entry, dict):
+                continue
+            effective.append({
                 "source": "type",
+                "source_index": idx,
                 "entry": entry,
-            }
-        for entry in override_entries:
-            effective[entry.get("id")] = {
+            })
+        for idx, entry in enumerate(override_entries):
+            if not isinstance(entry, dict):
+                continue
+            effective.append({
                 "source": "override",
+                "source_index": idx,
                 "entry": entry,
-            }
+            })
 
-        self._visible_effective_entries = [value for value in effective.values() if value.get("entry")]
+        self._visible_effective_entries = [value for value in effective if value.get("entry")]
         labels = []
         for wrapped in self._visible_effective_entries:
             source = wrapped.get("source")
@@ -1070,20 +1793,19 @@ class ManageSpaceProfilesWindow(forms.WPFWindow):
             return
 
         target = self.type_elements.setdefault(bucket, [])
-        _upsert_template_entry(target, entry)
+        _append_template_entry(target, entry)
         self._refresh_type_elements_panel()
         self._refresh_effective_panel()
         self._refresh_summary()
 
     def _remove_template_from_type(self):
         bucket = self._selected_bucket()
-        selected = self._selected_type_entry()
-        if not selected:
+        target = self.type_elements.setdefault(bucket, [])
+        idx = int(getattr(self._type_elements_list, "SelectedIndex", -1)) if self._type_elements_list is not None else -1
+        if idx < 0 or idx >= len(target):
             return
 
-        target = self.type_elements.setdefault(bucket, [])
-        key = selected.get("id")
-        self.type_elements[bucket] = [entry for entry in target if entry.get("id") != key]
+        target.pop(idx)
         self._refresh_type_elements_panel()
         self._refresh_effective_panel()
         self._refresh_summary()
@@ -1100,7 +1822,7 @@ class ManageSpaceProfilesWindow(forms.WPFWindow):
 
         space_key = selected_space.get("space_key")
         target = self.space_overrides.setdefault(space_key, [])
-        _upsert_template_entry(target, entry)
+        _append_template_entry(target, entry)
         self._refresh_effective_panel()
         self._refresh_summary()
 
@@ -1115,8 +1837,6 @@ class ManageSpaceProfilesWindow(forms.WPFWindow):
             return
 
         source = wrapped.get("source")
-        entry = wrapped.get("entry") or {}
-        entry_id = entry.get("id")
         if source != "override":
             forms.alert(
                 "Type-level inherited items cannot be removed from panel 3.\n"
@@ -1127,9 +1847,32 @@ class ManageSpaceProfilesWindow(forms.WPFWindow):
 
         space_key = selected_space.get("space_key")
         existing = self.space_overrides.get(space_key) or []
-        updated = [item for item in existing if item.get("id") != entry_id]
-        if updated:
-            self.space_overrides[space_key] = updated
+
+        source_index = wrapped.get("source_index")
+        try:
+            source_index = int(source_index)
+        except Exception:
+            source_index = -1
+
+        if 0 <= source_index < len(existing):
+            existing.pop(source_index)
+        else:
+            entry = wrapped.get("entry") or {}
+            entry_uid = str(entry.get("entry_uid") or "").strip()
+            if entry_uid:
+                removed = False
+                for idx, item in enumerate(existing):
+                    if str((item or {}).get("entry_uid") or "").strip() == entry_uid:
+                        existing.pop(idx)
+                        removed = True
+                        break
+                if not removed:
+                    return
+            else:
+                return
+
+        if existing:
+            self.space_overrides[space_key] = existing
         else:
             self.space_overrides.pop(space_key, None)
 
@@ -1200,6 +1943,134 @@ class ManageSpaceProfilesWindow(forms.WPFWindow):
         self._refresh_effective_panel()
         self._refresh_summary()
 
+    def _add_annotations_in_type(self):
+        selected = self._selected_type_entry()
+        if not selected:
+            forms.alert("Select an element in panel 2 first.", title=TITLE)
+            return
+
+        changed = _add_annotation_to_entry(self.doc, selected, self.param_editor_xaml_path)
+        if not changed:
+            return
+
+        self._refresh_type_elements_panel()
+        self._refresh_effective_panel()
+        self._refresh_summary()
+
+    def _adjust_tag_in_type(self):
+        selected = self._selected_type_entry()
+        if not selected:
+            forms.alert("Select an element in panel 2 first.", title=TITLE)
+            return
+
+        changed = _adjust_tag_for_entry(selected)
+        if not changed:
+            return
+
+        self._refresh_type_elements_panel()
+        self._refresh_effective_panel()
+        self._refresh_summary()
+
+    def _adjust_keynote_in_type(self):
+        selected = self._selected_type_entry()
+        if not selected:
+            forms.alert("Select an element in panel 2 first.", title=TITLE)
+            return
+
+        changed = _adjust_keynote_for_entry(self.doc, selected, self.param_editor_xaml_path)
+        if not changed:
+            return
+
+        self._refresh_type_elements_panel()
+        self._refresh_effective_panel()
+        self._refresh_summary()
+
+    def _add_annotations_in_space(self):
+        wrapped = self._selected_effective_entry()
+        if not wrapped:
+            forms.alert("Select an element in panel 3 first.", title=TITLE)
+            return
+
+        entry = wrapped.get("entry")
+        if not isinstance(entry, dict):
+            return
+
+        changed = _add_annotation_to_entry(self.doc, entry, self.param_editor_xaml_path)
+        if not changed:
+            return
+
+        self._refresh_type_elements_panel()
+        self._refresh_effective_panel()
+        self._refresh_summary()
+
+    def _adjust_tag_in_space(self):
+        wrapped = self._selected_effective_entry()
+        if not wrapped:
+            forms.alert("Select an element in panel 3 first.", title=TITLE)
+            return
+
+        entry = wrapped.get("entry")
+        if not isinstance(entry, dict):
+            return
+
+        changed = _adjust_tag_for_entry(entry)
+        if not changed:
+            return
+
+        self._refresh_type_elements_panel()
+        self._refresh_effective_panel()
+        self._refresh_summary()
+
+    def _adjust_keynote_in_space(self):
+        wrapped = self._selected_effective_entry()
+        if not wrapped:
+            forms.alert("Select an element in panel 3 first.", title=TITLE)
+            return
+
+        entry = wrapped.get("entry")
+        if not isinstance(entry, dict):
+            return
+
+        changed = _adjust_keynote_for_entry(self.doc, entry, self.param_editor_xaml_path)
+        if not changed:
+            return
+
+        self._refresh_type_elements_panel()
+        self._refresh_effective_panel()
+        self._refresh_summary()
+
+    def _remove_annotations_in_type(self):
+        selected = self._selected_type_entry()
+        if not selected:
+            forms.alert("Select an element in panel 2 first.", title=TITLE)
+            return
+
+        changed = _remove_annotations_from_entry(selected)
+        if not changed:
+            return
+
+        self._refresh_type_elements_panel()
+        self._refresh_effective_panel()
+        self._refresh_summary()
+
+    def _remove_annotations_in_space(self):
+        wrapped = self._selected_effective_entry()
+        if not wrapped:
+            forms.alert("Select an element in panel 3 first.", title=TITLE)
+            return
+
+        entry = wrapped.get("entry")
+        if not isinstance(entry, dict):
+            return
+
+        changed = _remove_annotations_from_entry(entry)
+        if not changed:
+            return
+
+        self._refresh_type_elements_panel()
+        self._refresh_effective_panel()
+        self._refresh_summary()
+
     def OnSpaceTypeChanged(self, sender, args):
         self._refresh_all()
 
@@ -1216,6 +2087,18 @@ class ManageSpaceProfilesWindow(forms.WPFWindow):
     def OnTypeEditPlacementClicked(self, sender, args):
         self._edit_template_placement_in_type()
 
+    def OnTypeAddAnnotationsClicked(self, sender, args):
+        self._add_annotations_in_type()
+
+    def OnTypeAdjustTagClicked(self, sender, args):
+        self._adjust_tag_in_type()
+
+    def OnTypeAdjustKeynoteClicked(self, sender, args):
+        self._adjust_keynote_in_type()
+
+    def OnTypeRemoveAnnotationClicked(self, sender, args):
+        self._remove_annotations_in_type()
+
     def OnTypeRemoveClicked(self, sender, args):
         self._remove_template_from_type()
 
@@ -1227,6 +2110,18 @@ class ManageSpaceProfilesWindow(forms.WPFWindow):
 
     def OnSpaceEditPlacementClicked(self, sender, args):
         self._edit_template_placement_in_space()
+
+    def OnSpaceAddAnnotationsClicked(self, sender, args):
+        self._add_annotations_in_space()
+
+    def OnSpaceAdjustTagClicked(self, sender, args):
+        self._adjust_tag_in_space()
+
+    def OnSpaceAdjustKeynoteClicked(self, sender, args):
+        self._adjust_keynote_in_space()
+
+    def OnSpaceRemoveAnnotationClicked(self, sender, args):
+        self._remove_annotations_in_space()
 
     def OnSpaceRemoveClicked(self, sender, args):
         self._remove_template_from_space()
@@ -1261,14 +2156,47 @@ def _plain_parameter_map(parameters):
     return out
 
 
+def _plain_annotation_entry(annotation):
+    ann = _sanitize_annotation_entry(annotation)
+    if not ann:
+        return None
+    if ann.get("kind") == "tag":
+        return {
+            "annotation_uid": str(ann.get("annotation_uid") or ""),
+            "kind": "tag",
+            "name": str(ann.get("name") or "Tag"),
+            "symbol_id": str(ann.get("symbol_id") or ""),
+            "offset": _sanitize_keynote_offset(ann.get("offset") or {}),
+        }
+    return {
+        "annotation_uid": str(ann.get("annotation_uid") or ""),
+        "kind": "keynote",
+        "name": str(ann.get("name") or "GA_Keynote Symbol_CED"),
+        "symbol_id": str(ann.get("symbol_id") or ""),
+        "offset": _sanitize_keynote_offset(ann.get("offset") or {}),
+        "parameters": _plain_parameter_map(ann.get("parameters") or {}),
+    }
+
+
+def _plain_annotation_list(annotations):
+    out = []
+    for annotation in annotations or []:
+        plain = _plain_annotation_entry(annotation)
+        if plain:
+            out.append(plain)
+    return out
+
+
 def _plain_template_entry(entry):
     return {
         "id": str(entry.get("id") or ""),
+        "entry_uid": str(entry.get("entry_uid") or ""),
         "kind": str(entry.get("kind") or ""),
         "element_type_id": str(entry.get("element_type_id") or ""),
         "name": str(entry.get("name") or ""),
         "placement_rule": str(entry.get("placement_rule") or DEFAULT_PLACEMENT_OPTION),
         "parameters": _plain_parameter_map(entry.get("parameters") or {}),
+        "annotations": _plain_annotation_list(entry.get("annotations") or []),
     }
 
 

@@ -3,7 +3,7 @@
 Optimize
 --------
 Optimizes the physical placement of elements by category and family:type.
-Only operates on elements that have a non-blank Element_Linker parameter.
+Default behavior operates on elements that have a non-blank Element_Linker parameter.
 
 Five optimization modes:
   Wall    - Snap element to the face of a nearby wall, facing outward.
@@ -19,8 +19,9 @@ Five optimization modes:
             Parent elements are searched in host + linked models (default: lower-left).
             Door-aware in-body placement is applied when door-side geometry is found.
 
-If any elements are selected, optimization runs only on the selected elements
-that have a non-blank Element_Linker parameter. Otherwise it runs on all.
+If any elements are selected, optimization runs only on selected FamilyInstances.
+Selected elements without Element_Linker info are allowed in safe mode (selection-only).
+Without a selection, it runs on all FamilyInstances with non-blank Element_Linker only.
 """
 
 import imp
@@ -1066,21 +1067,27 @@ def _collect_linked_elements(doc):
 
 def _collect_selected_linked_elements(doc):
     """
-    Return selected host-model FamilyInstances with non-blank Element_Linker.
+    Return selected host-model FamilyInstances split by linker status.
+
     Returns:
-      (elements, had_selection)
+      (with_linker, without_linker, had_selection)
+
+    Safety behavior:
+      - Elements without linker info are only ever returned from explicit selection.
+      - No global scan path includes unlinked elements.
     """
-    selected = []
+    with_linker = []
+    without_linker = []
     had_selection = False
     uidoc = getattr(revit, "uidoc", None)
     if uidoc is None:
-        return selected, had_selection
+        return with_linker, without_linker, had_selection
     try:
         sel_ids = list(uidoc.Selection.GetElementIds())
     except Exception:
         sel_ids = []
     if not sel_ids:
-        return selected, had_selection
+        return with_linker, without_linker, had_selection
 
     had_selection = True
     for eid in sel_ids:
@@ -1092,10 +1099,13 @@ def _collect_selected_linked_elements(doc):
             continue
         if not isinstance(elem, FamilyInstance):
             continue
-        if _get_linker_text(elem):
-            selected.append(elem)
-    return selected, had_selection
 
+        if _get_linker_text(elem):
+            with_linker.append(elem)
+        else:
+            without_linker.append(elem)
+
+    return with_linker, without_linker, had_selection
 
 def _build_category_map(elements):
     """Return {category_name: [unique_family_type_label, ...]}."""
@@ -2283,12 +2293,18 @@ def main():
         forms.alert("No active document detected.", title=TITLE)
         return
 
-    selected_elements, had_selection = _collect_selected_linked_elements(doc)
-    elements = selected_elements if had_selection else _collect_linked_elements(doc)
+    selected_linked, selected_unlinked, had_selection = _collect_selected_linked_elements(doc)
+    safe_selection_unlinked_mode = bool(had_selection and selected_unlinked)
+
+    if had_selection:
+        elements = list(selected_linked) + list(selected_unlinked)
+    else:
+        elements = _collect_linked_elements(doc)
+
     if not elements:
         if had_selection:
             forms.alert(
-                "Selection contains no FamilyInstances with a non-blank Element_Linker parameter.",
+                "Selection contains no FamilyInstances to optimize.",
                 title=TITLE,
             )
         else:
@@ -2300,10 +2316,16 @@ def main():
 
     category_map = _build_category_map(elements)
     if not category_map:
-        forms.alert(
-            "No categorized elements with Element_Linker found.",
-            title=TITLE,
-        )
+        if had_selection:
+            forms.alert(
+                "No categorized FamilyInstances were found in the current selection.",
+                title=TITLE,
+            )
+        else:
+            forms.alert(
+                "No categorized elements with Element_Linker found.",
+                title=TITLE,
+            )
         return
 
     # Load YAML profile data to check for Optimization=NO on any LED.
@@ -2449,6 +2471,20 @@ def main():
         "Failed: {failed}".format(**stats),
         "Skipped: {skipped_no_opt}".format(**stats),
     ]
+
+    if had_selection:
+        summary_lines.extend([
+            "",
+            "Selection mode: Yes",
+            "Selected with Element_Linker: {}".format(len(selected_linked)),
+            "Selected without Element_Linker info: {}".format(len(selected_unlinked)),
+            "Selection-only unlinked safe mode: {}".format("Enabled" if safe_selection_unlinked_mode else "Disabled"),
+        ])
+    else:
+        summary_lines.extend([
+            "",
+            "Selection mode: No (project-wide linked elements only)",
+        ])
     _append_reason_lines(summary_lines, "Skip reasons:", skip_reasons, skip_samples)
     _append_reason_lines(summary_lines, "Failure reasons:", fail_reasons, fail_samples)
     forms.alert("\n".join(summary_lines), title=TITLE)
@@ -2456,3 +2492,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+

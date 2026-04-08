@@ -1,6 +1,7 @@
-layout:
+﻿layout:
   - Classify Spaces
   - Manage Space Profiles
   - Place Space Elements
+  - Place Space Annotations
   - Export Space Configs
   - Import Space Configs
