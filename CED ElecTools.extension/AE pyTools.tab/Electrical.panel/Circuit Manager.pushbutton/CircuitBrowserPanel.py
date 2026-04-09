@@ -705,8 +705,6 @@ class CircuitListItem(object):
                 rating_value = int(round(circuit.Rating, 0))
             except Exception:
                 rating_value = None
-        if rating_value is None:
-            rating_value = _lookup_param_value(circuit, "CKT_Rating_CED")
 
         if circuit.CircuitType == DBE.CircuitType.Space:
             self.rating_poles = "/{}P".format(poles)
