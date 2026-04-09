@@ -2431,6 +2431,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         self._uniform_item_width = 0.0
         self._compress_item_width = False
         self._compress_hide_load_name = False
+        self._skip_width_measure_on_next_refresh = False
         self._browser_compress_item = None
         self._applying_scroll_policy = False
         self._edit_properties_reselect_ids = []
@@ -3261,7 +3262,11 @@ class CircuitBrowserPanel(forms.WPFPanel):
             self._apply_uniform_item_width_to_realized_rows()
             self._reset_horizontal_offset_for_compress(viewer)
         else:
-            self._uniform_item_width = self._compute_uniform_item_width()
+            if bool(self._skip_width_measure_on_next_refresh):
+                self._skip_width_measure_on_next_refresh = False
+                self._uniform_item_width = 0.0
+            else:
+                self._uniform_item_width = self._compute_uniform_item_width()
             self._apply_uniform_item_width_to_realized_rows()
         self._set_status("Showing {} of {} circuits".format(len(items), len(self._all_items)))
 
@@ -3702,7 +3707,8 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
     def refresh_clicked(self, sender, args):
         # Manual refresh should reflect latest circuit metadata (name/number/panel/type).
-        self._sync_theme_from_config(apply_if_changed=True)
+        self._skip_width_measure_on_next_refresh = True
+        self._sync_theme_from_config(apply_if_changed=False)
         self._safe_load_items()
 
     def filter_button_clicked(self, sender, args):
