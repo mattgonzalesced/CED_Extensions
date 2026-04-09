@@ -1,0 +1,12 @@
+title: >-
+  Let There
+  
+  Be Light
+
+tooltip: >-
+  Version 2.0 | Date 04.09.2026
+  Place lighting fixtures from either CSV (CAD export) or a linked Revit model.
+  Map source fixture types (and link levels) to host project types, validate mappings, and place in the active model.
+
+author: >-
+  AEvelina

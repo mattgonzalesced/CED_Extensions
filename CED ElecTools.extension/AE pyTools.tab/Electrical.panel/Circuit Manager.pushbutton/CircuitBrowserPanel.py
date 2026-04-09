@@ -715,7 +715,14 @@ class CircuitListItem(object):
         else:
             self.rating_poles = "{}A / {}P".format(int(round(float(rating_value), 0)), poles)
 
-        self.device_line = "# Devices: {}".format(len(list(circuit.Elements or [])))
+        device_count = 0
+        try:
+            count_param = circuit.get_Parameter(DB.BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER_OF_ELEMENTS_PARAM)
+            if count_param is not None:
+                device_count = int(count_param.AsInteger() or 0)
+        except Exception:
+            device_count = 0
+        self.device_line = "# Devices: {}".format(device_count)
 
         load_current = _lookup_param_value(circuit, "Circuit Load Current_CED")
         self.load_line = "Load: {} A".format(_fmt_number(load_current, 1))

@@ -3,7 +3,7 @@
         xmlns:sw="clr-namespace:System.Windows;assembly=PresentationFramework"
         Title="Circuit Alerts"
         Height="520"
-        Width="980"
+        Width="760"
         MinHeight="360"
         MinWidth="760"
         WindowStartupLocation="CenterOwner"

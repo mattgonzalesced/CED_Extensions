@@ -80,20 +80,26 @@
     </Border>
   </ControlTemplate>
 
-  <ControlTemplate x:Key="CED.DataGrid.Cell.Template.Flat" TargetType="DataGridCell">
-    <Border x:Name="CellRoot"
-            Background="{TemplateBinding Background}"
-            BorderBrush="{TemplateBinding BorderBrush}"
-            BorderThickness="{TemplateBinding BorderThickness}"
-            SnapsToDevicePixels="True">
-      <ContentPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
-    </Border>
-    <ControlTemplate.Triggers>
-      <Trigger Property="IsKeyboardFocusWithin" Value="True">
-        <Setter TargetName="CellRoot" Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridSelectionBackground}"/>
-      </Trigger>
-    </ControlTemplate.Triggers>
-  </ControlTemplate>
+<ControlTemplate x:Key="CED.DataGrid.Cell.Template.Flat" TargetType="DataGridCell">
+  <Border x:Name="CellRoot"
+          Background="{TemplateBinding Background}"
+          BorderBrush="{TemplateBinding BorderBrush}"
+          BorderThickness="{TemplateBinding BorderThickness}"
+          SnapsToDevicePixels="True">
+    <ContentPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+  </Border>
+
+  <ControlTemplate.Triggers>
+    <Trigger Property="IsKeyboardFocusWithin" Value="True">
+      <Setter TargetName="CellRoot" Property="BorderBrush" Value="Transparent"/>
+    </Trigger>
+
+    <Trigger Property="IsSelected" Value="True">
+      <Setter TargetName="CellRoot" Property="BorderThickness" Value="0"/>
+      <Setter TargetName="CellRoot" Property="BorderBrush" Value="Transparent"/>
+    </Trigger>
+  </ControlTemplate.Triggers>
+</ControlTemplate>
 
   <Style x:Key="BaseCell" TargetType="DataGridCell">
     <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridCellBorder}"/>
