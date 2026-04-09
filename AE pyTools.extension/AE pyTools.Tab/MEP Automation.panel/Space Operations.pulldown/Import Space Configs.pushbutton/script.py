@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Import Space Configs
 --------------------
@@ -150,6 +150,16 @@ def _sanitize_parameter_map(parameters):
     return ordered
 
 
+def _valid_profile_duplicate_id(value):
+    try:
+        pid = int(str(value).strip())
+    except Exception:
+        return None
+    if pid <= 0:
+        return None
+    return pid
+
+
 def _sanitize_template_entry(entry):
     if not isinstance(entry, dict):
         return None
@@ -177,8 +187,12 @@ def _sanitize_template_entry(entry):
     if placement_rule not in PLACEMENT_OPTIONS:
         placement_rule = DEFAULT_PLACEMENT_OPTION
 
+
+    profile_duplicate_id = _valid_profile_duplicate_id(entry.get("profile_duplicate_id") or entry.get("duplicate_id"))
+
     return {
         "id": entry_id,
+        "profile_duplicate_id": profile_duplicate_id,
         "kind": kind,
         "element_type_id": element_type_id,
         "name": name,
@@ -189,15 +203,10 @@ def _sanitize_template_entry(entry):
 
 def _sanitize_template_list(raw_list):
     clean = []
-    seen = set()
     for raw in raw_list or []:
         entry = _sanitize_template_entry(raw)
         if not entry:
             continue
-        key = entry.get("id")
-        if key in seen:
-            continue
-        seen.add(key)
         clean.append(entry)
     return clean
 
@@ -238,6 +247,7 @@ def _plain_parameter_map(parameters):
 def _plain_template_entry(entry):
     return {
         "id": str(entry.get("id") or ""),
+        "profile_duplicate_id": _valid_profile_duplicate_id(entry.get("profile_duplicate_id")),
         "kind": str(entry.get("kind") or ""),
         "element_type_id": str(entry.get("element_type_id") or ""),
         "name": str(entry.get("name") or ""),

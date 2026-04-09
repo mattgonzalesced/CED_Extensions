@@ -7,6 +7,7 @@ Place saved tag/keynote annotations for resolved space-profile elements.
 
 import imp
 import os
+import re
 import uuid
 from collections import OrderedDict
 
@@ -51,6 +52,10 @@ BUCKETS = [
     "Storage",
     "Other",
 ]
+
+ELEMENT_LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
+SPACE_BASED_LINKER_PATTERN = re.compile(r"SPACE\s*BASED\s*,?\s*ID\s*NUMBER\s*=\s*(\d+)", re.IGNORECASE)
+
 
 
 def _load_helper():
@@ -98,6 +103,42 @@ def _as_float(value, default=0.0):
     except Exception:
         return float(default)
 
+
+
+def _read_element_linker_text(element):
+    if element is None:
+        return ""
+    for param_name in ELEMENT_LINKER_PARAM_NAMES:
+        try:
+            param = element.LookupParameter(param_name)
+        except Exception:
+            param = None
+        if not param:
+            continue
+        for getter_name in ("AsString", "AsValueString"):
+            try:
+                getter = getattr(param, getter_name)
+                value = getter()
+            except Exception:
+                value = None
+            if value is not None:
+                text = str(value).strip()
+                if text:
+                    return text
+    return ""
+
+
+def _read_space_based_duplicate_id(element):
+    text = _read_element_linker_text(element)
+    if not text:
+        return None
+    match = SPACE_BASED_LINKER_PATTERN.search(text)
+    if not match:
+        return None
+    try:
+        return int(match.group(1))
+    except Exception:
+        return None
 
 def _sanitize_offset(offset):
     offset = offset if isinstance(offset, dict) else {}
@@ -228,6 +269,7 @@ def _resolve_template_bucket(helper, space_row, type_elements):
 
 def _request_rows(helper, spaces, type_elements, space_overrides):
     rows = []
+
     for space_row in spaces:
         bucket = _resolve_template_bucket(helper, space_row, type_elements)
         type_entries = type_elements.get(bucket) or []
@@ -245,10 +287,10 @@ def _request_rows(helper, spaces, type_elements, space_overrides):
             if annotations:
                 e = dict(entry)
                 e["annotations"] = annotations
+                e["profile_duplicate_id"] = _try_int(entry.get("profile_duplicate_id") or entry.get("duplicate_id"), default=None)
+                e["_request_uid"] = uuid.uuid4().hex
                 rows.append((req_space, e))
     return rows
-
-
 def _collect_space_context(helper, doc, assignments):
     sources = helper._collect_all_space_sources(doc)
     spaces = []
@@ -385,6 +427,219 @@ def _compute_target_point(helper, space_row, entry, door_points_by_source, door_
     return host_point, ""
 
 
+
+def _request_row_key(space_row, entry):
+    source_label = str(space_row.get("source_label") or "Host Spaces")
+    space_key = str(space_row.get("space_key") or space_row.get("unique_id") or space_row.get("space_id") or "").strip()
+    entry_key = str(entry.get("_request_uid") or entry.get("entry_uid") or entry.get("id") or "").strip()
+    return "{}|{}|{}".format(source_label, space_key, entry_key)
+
+
+def _host_point_in_space_row(helper, space_row, host_point):
+    if host_point is None:
+        return False
+
+    source_space = space_row.get("space")
+    if source_space is None:
+        return False
+
+    source_transform = space_row.get("source_transform")
+    if source_transform is None:
+        source_point = host_point
+    else:
+        try:
+            source_point = source_transform.Inverse.OfPoint(host_point)
+        except Exception:
+            source_point = None
+    if source_point is None:
+        return False
+
+    try:
+        return bool(helper._point_in_space(source_space, source_point))
+    except Exception:
+        return False
+
+
+def _entry_target_host_point(helper, space_row, entry, door_points_by_source, door_rows_by_source):
+    target_point, _reason = _compute_target_point(helper, space_row, entry, door_points_by_source, door_rows_by_source)
+    if target_point is not None:
+        return target_point
+
+    source_center = helper._space_center_robust(space_row.get("space"))
+    if source_center is None:
+        return None
+    return helper._to_host_point(source_center, space_row.get("source_transform"))
+
+
+def _assign_entries_to_candidates(helper, entry_rows, candidate_rows, target_points):
+    assignment = {}
+    if not candidate_rows:
+        return assignment
+
+    remaining_entries = list(range(len(entry_rows)))
+    remaining_candidates = list(range(len(candidate_rows)))
+
+    while remaining_entries and remaining_candidates:
+        best = None
+        for ei in remaining_entries:
+            target = target_points.get(ei)
+            for ci in remaining_candidates:
+                cand_point = candidate_rows[ci][1]
+                dist = helper._distance_xy(cand_point, target) if target is not None else float("inf")
+                if best is None or dist < best[0]:
+                    best = (dist, ei, ci)
+
+        if best is None:
+            break
+
+        _dist, ei, ci = best
+        assignment[ei] = candidate_rows[ci]
+        remaining_entries.remove(ei)
+        remaining_candidates.remove(ci)
+
+    return assignment
+
+
+def _build_entry_assignment_map(
+        helper,
+        doc,
+        all_requests,
+        door_points_by_source,
+        door_rows_by_source):
+    grouped = OrderedDict()
+
+    for idx, pair in enumerate(all_requests or []):
+        space_row, entry = pair
+        kind = str(entry.get("kind") or "").strip().lower()
+        type_id = str(entry.get("element_type_id") or "").strip()
+        if kind not in ("family_type", "model_group") or not type_id:
+            continue
+
+        source_label = str(space_row.get("source_label") or "Host Spaces")
+        space_key = str(space_row.get("space_key") or space_row.get("unique_id") or space_row.get("space_id") or "").strip()
+        group_key = "{}|{}|{}|{}".format(source_label, space_key, kind, type_id)
+        grouped.setdefault(group_key, []).append((idx, space_row, entry))
+
+    assignment_map = {}
+    candidate_cache = {}
+
+    for _group_key, rows in grouped.items():
+        if not rows:
+            continue
+
+        probe_entry = rows[0][2]
+        all_candidates = _candidate_rows_for_entry(helper, doc, probe_entry, candidate_cache)
+        if not all_candidates:
+            for _idx, space_row, entry in rows:
+                assignment_map[_request_row_key(space_row, entry)] = {
+                    "element": None,
+                    "point": None,
+                    "target": _entry_target_host_point(helper, space_row, entry, door_points_by_source, door_rows_by_source),
+                }
+            continue
+
+        group_space_row = rows[0][1]
+        in_space_candidates = []
+        for cand in all_candidates:
+            cand_point = cand[1]
+            if _host_point_in_space_row(helper, group_space_row, cand_point):
+                in_space_candidates.append(cand)
+        if in_space_candidates and len(in_space_candidates) >= len(rows):
+            candidate_rows = in_space_candidates
+        else:
+            candidate_rows = all_candidates
+
+        entry_rows = []
+        target_points = {}
+        for local_i, (_idx, space_row, entry) in enumerate(rows):
+            entry_rows.append((space_row, entry))
+            target_points[local_i] = _entry_target_host_point(helper, space_row, entry, door_points_by_source, door_rows_by_source)
+
+        local_assignment = {}
+        used_candidate_indexes = set()
+
+        # First pass: exact match by SPACE BASED duplicate id from Element Linker.
+        for local_i, (_idx, _space_row, entry) in enumerate(rows):
+            expected_dup = _try_int((entry or {}).get("profile_duplicate_id"), default=None)
+            if expected_dup is None:
+                continue
+
+            target_pt = target_points.get(local_i)
+            best_ci = None
+            best_dist = None
+            for ci, cand in enumerate(candidate_rows):
+                if ci in used_candidate_indexes:
+                    continue
+
+                cand_dup = _try_int(cand[2], default=None) if len(cand) > 2 else None
+                if cand_dup != expected_dup:
+                    continue
+
+                cand_point = cand[1]
+                dist = helper._distance_xy(cand_point, target_pt) if target_pt is not None else 0.0
+                if best_ci is None or dist < best_dist:
+                    best_ci = ci
+                    best_dist = dist
+
+            if best_ci is not None:
+                local_assignment[local_i] = candidate_rows[best_ci]
+                used_candidate_indexes.add(best_ci)
+
+        # Second pass: nearest one-to-one for rows without a duplicate-id match.
+        remaining_entry_rows = []
+        remaining_target_points = {}
+        remaining_index_map = {}
+        for local_i, wrapped in enumerate(rows):
+            if local_i in local_assignment:
+                continue
+            sub_i = len(remaining_entry_rows)
+            remaining_entry_rows.append((wrapped[1], wrapped[2]))
+            remaining_target_points[sub_i] = target_points.get(local_i)
+            remaining_index_map[sub_i] = local_i
+
+        remaining_candidate_rows = [cand for ci, cand in enumerate(candidate_rows) if ci not in used_candidate_indexes]
+        if remaining_entry_rows and remaining_candidate_rows:
+            secondary_assignment = _assign_entries_to_candidates(
+                helper,
+                remaining_entry_rows,
+                remaining_candidate_rows,
+                remaining_target_points,
+            )
+            for sub_i, cand in secondary_assignment.items():
+                local_i = remaining_index_map.get(sub_i)
+                if local_i is not None:
+                    local_assignment[local_i] = cand
+
+        for local_i, (_idx, space_row, entry) in enumerate(rows):
+            req_key = _request_row_key(space_row, entry)
+            assigned = local_assignment.get(local_i)
+            if assigned is None:
+                expected_dup = _try_int((entry or {}).get("profile_duplicate_id"), default=None)
+                seen_ids = []
+                for cand in candidate_rows:
+                    cand_dup = _try_int(cand[2], default=None) if len(cand) > 2 else None
+                    if cand_dup is not None and cand_dup not in seen_ids:
+                        seen_ids.append(cand_dup)
+                id_note = "Expected SPACE BASED ID {}. Candidate IDs in scope: {}".format(
+                    expected_dup if expected_dup is not None else "<none>",
+                    seen_ids if seen_ids else "<none>",
+                )
+                assignment_map[req_key] = {
+                    "element": None,
+                    "point": None,
+                    "target": target_points.get(local_i),
+                    "reason": "No unique placed element match was found for this profile entry in the space. " + id_note,
+                }
+            else:
+                cand_elem = assigned[0]
+                cand_point = assigned[1]
+                assignment_map[req_key] = {
+                    "element": cand_elem,
+                    "point": cand_point,
+                    "target": target_points.get(local_i),
+                }
+
+    return assignment_map
 def _candidate_rows_for_entry(helper, doc, entry, cache):
     kind = str(entry.get("kind") or "").strip().lower()
     type_id = str(entry.get("element_type_id") or "").strip()
@@ -406,7 +661,7 @@ def _candidate_rows_for_entry(helper, doc, entry, cache):
             point = helper._element_location_point(element, fallback_point=None)
             if point is None:
                 continue
-            rows.append((element, point))
+            rows.append((element, point, _read_space_based_duplicate_id(element)))
 
     elif kind == "model_group":
         try:
@@ -421,7 +676,7 @@ def _candidate_rows_for_entry(helper, doc, entry, cache):
             point = helper._element_location_point(element, fallback_point=None)
             if point is None:
                 continue
-            rows.append((element, point))
+            rows.append((element, point, _read_space_based_duplicate_id(element)))
 
     cache[key] = rows
     return rows
@@ -437,7 +692,9 @@ def _pick_target_element(helper, space_row, entry, target_point, cache):
     source_space = space_row.get("space")
     source_transform = space_row.get("source_transform")
 
-    for element, point in rows:
+    for row in rows:
+        element = row[0]
+        point = row[1]
         score = helper._distance_xy(point, target_point) if target_point is not None else 0.0
         if source_space is not None:
             if source_transform is None:
@@ -680,6 +937,11 @@ def main():
         forms.alert("No spaces were found in host or loaded linked models.", title=TITLE)
         return
 
+    all_profile_requests = helper._request_rows(spaces, type_elements, space_overrides)
+    if not all_profile_requests:
+        forms.alert("No profile entries were resolved for current spaces.", title=TITLE)
+        return
+
     requests = _request_rows(helper, spaces, type_elements, space_overrides)
     if not requests:
         forms.alert("No profile entries with saved annotations were resolved for current spaces.", title=TITLE)
@@ -723,6 +985,13 @@ def main():
     ):
         return
 
+    assignment_map = _build_entry_assignment_map(
+        helper,
+        doc,
+        selected_requests,
+        door_points_by_source,
+        door_rows_by_source,
+    )
     candidate_cache = {}
     placed_rows = []
     failures = []
@@ -731,12 +1000,24 @@ def main():
     tx.Start()
     try:
         for space_row, entry in selected_requests:
-            target_point, point_reason = _compute_target_point(helper, space_row, entry, door_points_by_source, door_rows_by_source)
-            if target_point is None:
-                source_center = helper._space_center_robust(space_row.get("space"))
-                target_point = helper._to_host_point(source_center, space_row.get("source_transform")) if source_center is not None else None
+            req_key = _request_row_key(space_row, entry)
+            has_assignment = req_key in assignment_map
+            assigned = assignment_map.get(req_key) or {}
 
-            target_element, target_element_point, target_reason = _pick_target_element(helper, space_row, entry, target_point, candidate_cache)
+            target_point = assigned.get("target")
+            point_reason = ""
+            if target_point is None:
+                target_point, point_reason = _compute_target_point(helper, space_row, entry, door_points_by_source, door_rows_by_source)
+                if target_point is None:
+                    source_center = helper._space_center_robust(space_row.get("space"))
+                    target_point = helper._to_host_point(source_center, space_row.get("source_transform")) if source_center is not None else None
+
+            target_element = assigned.get("element")
+            target_element_point = assigned.get("point")
+            target_reason = str(assigned.get("reason") or "")
+            if (target_element is None or target_element_point is None) and (not has_assignment):
+                target_element, target_element_point, target_reason = _pick_target_element(helper, space_row, entry, target_point, candidate_cache)
+
             if target_element is None:
                 failures.append(
                     {
@@ -812,4 +1093,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
 

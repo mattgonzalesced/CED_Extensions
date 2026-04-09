@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Place Space Elements
 --------------------
@@ -29,8 +29,11 @@ from Autodesk.Revit.DB import (
     SpatialElementBoundaryLocation,
     SpatialElementBoundaryOptions,
     Transaction,
+    FilteredWorksetCollector,
+    WorksetKind,
     XYZ,
 )
+
 
 try:
     from Autodesk.Revit.DB.Structure import StructuralType as RevitStructuralType  # type: ignore
@@ -75,6 +78,8 @@ DOOR_WALL_CLEARANCE_FT = 0.08
 FLOOR_Z_OFFSET_FT = 0.1
 CEILING_Z_OFFSET_FT = 0.1
 HINGE_INTERIOR_NUDGE_FT = 0.15
+DEFAULT_WALL_RULE_ELEV_FROM_LEVEL_FT = 44.0 / 12.0
+WALL_RULES_DEFAULT_44IN = ("One Foot off doorway wall", "Center of Furthest wall")
 
 
 def _resolve_lib_root():
@@ -125,6 +130,13 @@ def _try_int(value, default=None):
         return int(str(value).strip())
     except Exception:
         return default
+
+
+def _valid_profile_duplicate_id(value):
+    pid = _try_int(value, default=None)
+    if pid is None or pid <= 0:
+        return None
+    return pid
 
 
 def _normalize_text(value):
@@ -684,6 +696,9 @@ def _as_list(value):
         return []
 
 
+
+def _is_workset_param_name(name):
+    return _normalize_text(name) == "workset"
 def _sanitize_parameter_map(parameters):
     clean = OrderedDict()
     parameters = _as_dict(parameters)
@@ -696,19 +711,26 @@ def _sanitize_parameter_map(parameters):
             continue
 
         data_map = _as_dict(data)
+        data_map = _as_dict(data)
         if data_map:
             storage_type = str(data_map.get("storage_type") or "String")
             value = data_map.get("value")
             read_only = bool(data_map.get("read_only"))
+            value_mode = str(data_map.get("value_mode") or "").strip().lower()
         else:
             storage_type = "String"
             value = data
             read_only = False
+            value_mode = ""
+
+        if (not value_mode) and (("ElementId" in storage_type) or ("Integer" in storage_type)) and _is_workset_param_name(key):
+            value_mode = "workset_name"
 
         clean[key] = {
             "storage_type": storage_type,
             "value": "" if value is None else str(value),
             "read_only": read_only,
+            "value_mode": value_mode,
         }
 
     ordered = OrderedDict()
@@ -2168,6 +2190,20 @@ def _level_elevation(level):
         return None
 
 
+
+def _apply_default_rule_elevation(point, level, rule):
+    if point is None:
+        return None
+
+    if str(rule or "").strip() not in WALL_RULES_DEFAULT_44IN:
+        return point
+
+    level_z = _level_elevation(level)
+    if level_z is None:
+        return point
+
+    return XYZ(point.X, point.Y, level_z + DEFAULT_WALL_RULE_ELEV_FROM_LEVEL_FT)
+
 def _is_numeric_level_name(level):
     if level is None:
         return False
@@ -2761,7 +2797,135 @@ def _try_set_instance_elevation(instance, target_z):
             pass
 
 
-def _set_parameter_value(param, storage_type_name, value_text):
+
+
+def _try_overwrite_elevation_from_level(instance, elevation_ft):
+    if instance is None or elevation_ft is None:
+        return False
+
+    params = []
+
+    for param_name in ("Elevation from Level", "Offset from Level"):
+        try:
+            p = instance.LookupParameter(param_name)
+        except Exception:
+            p = None
+        if p is not None:
+            params.append(p)
+
+    for bip_name in ("INSTANCE_ELEVATION_PARAM", "INSTANCE_FREE_HOST_OFFSET_PARAM"):
+        try:
+            bip = getattr(BuiltInParameter, bip_name)
+        except Exception:
+            bip = None
+        if bip is None:
+            continue
+        try:
+            p = instance.get_Parameter(bip)
+        except Exception:
+            p = None
+        if p is not None:
+            params.append(p)
+
+    seen = set()
+    for param in params:
+        if param is None:
+            continue
+
+        pid = _element_id_value(getattr(param, "Id", None), default="")
+        if pid and pid in seen:
+            continue
+        if pid:
+            seen.add(pid)
+
+        try:
+            if bool(getattr(param, "IsReadOnly", False)):
+                continue
+        except Exception:
+            continue
+
+        try:
+            if str(getattr(param, "StorageType", "")) != "Double":
+                continue
+        except Exception:
+            continue
+
+        try:
+            if bool(param.Set(float(elevation_ft))):
+                return True
+        except Exception:
+            pass
+
+    return False
+def _collect_workset_name_lookup(doc):
+    lookup = {}
+    if doc is None:
+        return lookup
+
+    try:
+        collector = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset)
+        worksets = list(collector)
+    except Exception:
+        worksets = []
+
+    for workset in worksets:
+        name = ""
+        try:
+            name = str(getattr(workset, "Name", "") or "").strip()
+        except Exception:
+            name = ""
+        if not name:
+            continue
+
+        ws_id = _try_int(_element_id_value(getattr(workset, "Id", None), default=""), default=None)
+        if ws_id is None:
+            continue
+
+        lookup[name.lower()] = ws_id
+        normalized = _normalize_text(name)
+        if normalized:
+            lookup[normalized] = ws_id
+
+    return lookup
+
+
+def _is_workset_parameter(param, param_name):
+    if _is_workset_param_name(param_name):
+        return True
+
+    try:
+        param_id = getattr(param, "Id", None)
+        pid = int(getattr(param_id, "IntegerValue", 0) or 0)
+        return pid == int(BuiltInParameter.ELEM_PARTITION_PARAM)
+    except Exception:
+        return False
+
+
+def _resolve_workset_id(doc, value_text):
+    text = str(value_text or "").strip()
+    if not text:
+        return None
+
+    int_id = _try_int(text, default=None)
+    if int_id is not None:
+        return int_id
+
+    lookup = _collect_workset_name_lookup(doc)
+    if not lookup:
+        return None
+
+    lowered = text.lower()
+    if lowered in lookup:
+        return lookup[lowered]
+
+    normalized = _normalize_text(text)
+    if normalized in lookup:
+        return lookup[normalized]
+
+    return None
+
+
+def _set_parameter_value(doc, param, param_name, storage_type_name, value_text, value_mode=""):
     if param is None:
         return False
 
@@ -2779,6 +2943,11 @@ def _set_parameter_value(param, storage_type_name, value_text):
             return bool(param.Set(text))
 
         if "Integer" in storage:
+            mode = str(value_mode or "").strip().lower()
+            if mode == "workset_name" or _is_workset_parameter(param, param_name):
+                ws_id = _resolve_workset_id(doc, text)
+                if ws_id is not None:
+                    return bool(param.Set(int(ws_id)))
             try:
                 return bool(param.Set(int(float(text))))
             except Exception:
@@ -2791,6 +2960,12 @@ def _set_parameter_value(param, storage_type_name, value_text):
                 return bool(param.SetValueString(text))
 
         if "ElementId" in storage:
+            mode = str(value_mode or "").strip().lower()
+            if mode == "workset_name" or _is_workset_parameter(param, param_name):
+                ws_id = _resolve_workset_id(doc, text)
+                if ws_id is not None:
+                    return bool(param.Set(ElementId(int(ws_id))))
+
             int_id = _try_int(text, default=None)
             if int_id is None:
                 return False
@@ -2811,6 +2986,7 @@ def _apply_parameter_overrides(element, parameters):
         "readonly": 0,
         "failed": 0,
     }
+    doc = getattr(element, "Document", None)
 
     for param_name, data in (parameters or {}).items():
         key = str(param_name or "").strip()
@@ -2836,19 +3012,64 @@ def _apply_parameter_overrides(element, parameters):
 
         storage_type = "String"
         value = ""
+        value_mode = ""
         if isinstance(data, dict):
             storage_type = str(data.get("storage_type") or "String")
             value = data.get("value")
+            value_mode = str(data.get("value_mode") or "").strip().lower()
         else:
             value = data
 
-        if _set_parameter_value(param, storage_type, value):
+        if _set_parameter_value(doc, param, key, storage_type, value, value_mode=value_mode):
             result["set"] += 1
         else:
             result["failed"] += 1
 
     return result
 
+ELEMENT_LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
+SPACE_BASED_LINKER_FORMAT = "SPACE BASED, ID NUMBER = {}"
+
+
+def _find_element_linker_parameter(element):
+    for name in ELEMENT_LINKER_PARAM_NAMES:
+        try:
+            param = element.LookupParameter(name)
+        except Exception:
+            param = None
+        if param is not None:
+            return param
+    return None
+
+
+def _set_space_based_element_linker(element, duplicate_id):
+    dup_int = _try_int(duplicate_id, default=None)
+    if element is None or dup_int is None:
+        return False
+
+    param = _find_element_linker_parameter(element)
+    if not param:
+        return False
+
+    try:
+        if param.IsReadOnly:
+            return False
+    except Exception:
+        return False
+
+    value_text = SPACE_BASED_LINKER_FORMAT.format(int(dup_int))
+
+    try:
+        storage_type = str(param.StorageType)
+    except Exception:
+        storage_type = ""
+
+    try:
+        if "String" in storage_type:
+            return bool(param.Set(value_text))
+        return bool(param.SetValueString(value_text))
+    except Exception:
+        return False
 
 
 class _ProfileSelectionOption(forms.TemplateListItem):
@@ -2959,6 +3180,8 @@ def _prompt_profile_selection(requests):
 
 def _request_rows(spaces, type_elements, space_overrides):
     rows = []
+    fallback_duplicate_id = 0
+
     for space_row in spaces:
         entries, resolved_bucket = _effective_entries(space_row, type_elements, space_overrides)
         request_space_row = space_row
@@ -2970,7 +3193,14 @@ def _request_rows(spaces, type_elements, space_overrides):
             request_space_row["resolved_from_saved_bucket"] = original_bucket
 
         for entry in entries:
-            rows.append((request_space_row, entry))
+            copied = dict(entry or {})
+            pid = _valid_profile_duplicate_id(copied.get("profile_duplicate_id"))
+            if pid is None:
+                fallback_duplicate_id += 1
+                pid = fallback_duplicate_id
+            copied["profile_duplicate_id"] = pid
+            rows.append((request_space_row, copied))
+
     return rows
 
 def _bucket_counts(spaces):
@@ -3142,6 +3372,8 @@ def _run_placement(doc, rows, door_points_by_source, door_rows_by_source):
                     failures.append((space_row, entry, "Host level is non-numeric '{}'".format(level_name), point))
                     continue
 
+
+                point = _apply_default_rule_elevation(point, level, rule)
                 if rule == "One Foot off doorway wall":
                     placement_type = str(getattr(symbol, "FamilyPlacementType", "<unknown>") or "<unknown>")
                     element = _place_family_instance(doc, symbol, point, level, None)
@@ -3163,8 +3395,12 @@ def _run_placement(doc, rows, door_points_by_source, door_rows_by_source):
                     center_host = _to_host_point(center_source, space_row.get("source_transform")) if center_source is not None else None
                     _rotate_instance_facing_perpendicular_to_door(element, source_door_row, space_row.get("source_transform"), center_host=center_host)
 
-                if rule not in ("Center of Room", "One Foot off doorway wall"):
-                    _try_set_instance_elevation(element, point.Z)
+                if rule != "Center of Room":
+                    if str(rule or "").strip() in WALL_RULES_DEFAULT_44IN:
+                        if not _try_overwrite_elevation_from_level(element, DEFAULT_WALL_RULE_ELEV_FROM_LEVEL_FT):
+                            _try_set_instance_elevation(element, point.Z)
+                    else:
+                        _try_set_instance_elevation(element, point.Z)
 
             elif kind == "model_group":
                 group_type = _get_group_type(doc, entry.get("element_type_id"), entry.get("name"))
@@ -3178,11 +3414,18 @@ def _run_placement(doc, rows, door_points_by_source, door_rows_by_source):
                     failures.append((space_row, entry, "Host level is non-numeric '{}'".format(level_name), point))
                     continue
 
+
+                point = _apply_default_rule_elevation(point, level, rule)
                 level_z = _level_elevation(level)
                 attempted_points = []
-                if level_z is not None:
-                    attempted_points.append(XYZ(point.X, point.Y, level_z))
-                attempted_points.append(point)
+                if str(rule or "").strip() in WALL_RULES_DEFAULT_44IN:
+                    attempted_points.append(point)
+                    if level_z is not None and abs(point.Z - level_z) > 1e-6:
+                        attempted_points.append(XYZ(point.X, point.Y, level_z))
+                else:
+                    if level_z is not None:
+                        attempted_points.append(XYZ(point.X, point.Y, level_z))
+                    attempted_points.append(point)
 
                 element = None
                 place_errors = []
@@ -3204,6 +3447,7 @@ def _run_placement(doc, rows, door_points_by_source, door_rows_by_source):
                 failures.append((space_row, entry, "Unsupported template kind '{}'".format(kind), point))
                 continue
 
+            _set_space_based_element_linker(element, entry.get("profile_duplicate_id"))
             stats = _apply_parameter_overrides(element, entry.get("parameters") or {})
             for key in param_totals.keys():
                 param_totals[key] += int(stats.get(key, 0) or 0)
@@ -3581,6 +3825,14 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
+
+
 
 
 

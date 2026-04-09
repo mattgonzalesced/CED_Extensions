@@ -1,4 +1,4 @@
-﻿
+
 # -*- coding: utf-8 -*-
 """
 Manage Space Profiles
@@ -24,6 +24,8 @@ from Autodesk.Revit.DB import (
     FamilyInstance,
     Group,
     GroupType,
+    FilteredWorksetCollector,
+    WorksetKind,
 )
 
 output = script.get_output()
@@ -280,11 +282,51 @@ def _param_value_to_text(param):
     return ""
 
 
+
+def _is_workset_param_name(name):
+    return str(name or "").strip().lower() == "workset"
+
+
+def _collect_user_workset_data(doc):
+    id_to_name = {}
+    names = []
+
+    if doc is None:
+        return id_to_name, names
+
+    try:
+        collector = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset)
+        worksets = list(collector)
+    except Exception:
+        worksets = []
+
+    for workset in worksets:
+        try:
+            name = str(getattr(workset, "Name", "") or "").strip()
+        except Exception:
+            name = ""
+        if not name:
+            continue
+
+        ws_id = ""
+        try:
+            ws_id = _element_id_value(getattr(workset, "Id", None), default="")
+        except Exception:
+            ws_id = ""
+        if ws_id:
+            id_to_name[ws_id] = name
+
+        names.append(name)
+
+    names = sorted(list(set(names)), key=lambda x: x.lower())
+    return id_to_name, names
 def _collect_available_parameters(doc, kind, element_type_id):
     result = {}
     target_id = str(element_type_id or "").strip()
     if doc is None or not target_id:
         return OrderedDict()
+
+    workset_id_to_name, workset_names = _collect_user_workset_data(doc)
 
     instances = []
     if kind == "family_type":
@@ -342,16 +384,42 @@ def _collect_available_parameters(doc, kind, element_type_id):
                 storage_type = "String"
 
             value = _param_value_to_text(param)
+            value_mode = ""
+            options = []
+            if (("ElementId" in storage_type) or ("Integer" in storage_type)) and _is_workset_param_name(key):
+                ws_id = ""
+                if "ElementId" in storage_type:
+                    try:
+                        ws_id = _element_id_value(param.AsElementId(), default="")
+                    except Exception:
+                        ws_id = ""
+                else:
+                    try:
+                        ws_id = str(int(param.AsInteger()))
+                    except Exception:
+                        ws_id = ""
+                ws_name = workset_id_to_name.get(ws_id)
+                if ws_name:
+                    value = ws_name
+                value_mode = "workset_name"
+                options = list(workset_names)
+
             existing = result.get(key)
             if not existing:
                 result[key] = {
                     "storage_type": storage_type,
                     "current_value": value,
                     "read_only": False,
+                    "value_mode": value_mode,
+                    "options": options,
                 }
             else:
                 if (not existing.get("current_value")) and value:
                     existing["current_value"] = value
+                if value_mode and not existing.get("value_mode"):
+                    existing["value_mode"] = value_mode
+                if options and not existing.get("options"):
+                    existing["options"] = options
 
     ordered = OrderedDict()
     for key in sorted(result.keys(), key=lambda x: x.lower()):
@@ -493,14 +561,21 @@ def _sanitize_parameter_map(parameters):
             storage_type = str(data.get("storage_type") or "String")
             value = data.get("value")
             read_only = bool(data.get("read_only"))
+            value_mode = str(data.get("value_mode") or "").strip().lower()
         else:
             storage_type = "String"
             value = data
             read_only = False
+            value_mode = ""
+
+        if (not value_mode) and (("ElementId" in storage_type) or ("Integer" in storage_type)) and _is_workset_param_name(key):
+            value_mode = "workset_name"
+
         clean[key] = {
             "storage_type": storage_type,
             "value": "" if value is None else str(value),
             "read_only": read_only,
+            "value_mode": value_mode,
         }
 
     ordered = OrderedDict()
@@ -1028,6 +1103,37 @@ def _remove_annotations_from_entry(entry):
     return True
 
 
+
+def _as_int(value, default=None):
+    try:
+        return int(str(value).strip())
+    except Exception:
+        return default
+
+
+def _valid_profile_duplicate_id(value):
+    pid = _as_int(value, default=None)
+    if pid is None or pid <= 0:
+        return None
+    return pid
+
+
+def _next_profile_duplicate_id(type_elements, space_overrides):
+    max_id = 0
+
+    for bucket in BUCKETS:
+        for entry in (type_elements.get(bucket) or []):
+            pid = _valid_profile_duplicate_id((entry or {}).get("profile_duplicate_id"))
+            if pid and pid > max_id:
+                max_id = pid
+
+    for entries in (space_overrides or {}).values():
+        for entry in entries or []:
+            pid = _valid_profile_duplicate_id((entry or {}).get("profile_duplicate_id"))
+            if pid and pid > max_id:
+                max_id = pid
+
+    return max_id + 1
 def _sanitize_template_entry(entry):
     if not isinstance(entry, dict):
         return None
@@ -1059,9 +1165,12 @@ def _sanitize_template_entry(entry):
     if not entry_uid:
         entry_uid = uuid.uuid4().hex
 
+    profile_duplicate_id = _valid_profile_duplicate_id(entry.get("profile_duplicate_id") or entry.get("duplicate_id"))
+
     return {
         "id": entry_id,
         "entry_uid": entry_uid,
+        "profile_duplicate_id": profile_duplicate_id,
         "kind": kind,
         "element_type_id": element_type_id,
         "name": name,
@@ -1119,7 +1228,10 @@ def _template_display(entry):
     if placement not in PLACEMENT_OPTIONS:
         placement = DEFAULT_PLACEMENT_OPTION
 
-    lines = ["{} [{} | {} | Place: {}]".format(name, kind_text, suffix, placement)]
+    pid = _valid_profile_duplicate_id(entry.get("profile_duplicate_id"))
+    id_text = "ID: {}".format(pid if pid is not None else "Unassigned")
+
+    lines = ["{} [{} | {} | {} | Place: {}]".format(name, kind_text, id_text, suffix, placement)]
 
     if params:
         lines.append("    Params:")
@@ -1170,6 +1282,7 @@ def _clone_template_entry(entry):
     return {
         "id": sanitized.get("id"),
         "entry_uid": sanitized.get("entry_uid"),
+        "profile_duplicate_id": sanitized.get("profile_duplicate_id"),
         "kind": sanitized.get("kind"),
         "element_type_id": sanitized.get("element_type_id"),
         "name": sanitized.get("name"),
@@ -1179,12 +1292,21 @@ def _clone_template_entry(entry):
     }
 
 
-def _append_template_entry(target_list, entry):
+def _append_template_entry(target_list, entry, next_duplicate_id_fn=None):
     if target_list is None:
         return "skipped"
     candidate = _clone_template_entry(entry)
     if not candidate:
         return "skipped"
+
+    pid = _valid_profile_duplicate_id(candidate.get("profile_duplicate_id"))
+    if pid is None and next_duplicate_id_fn is not None:
+        try:
+            pid = _valid_profile_duplicate_id(next_duplicate_id_fn())
+        except Exception:
+            pid = None
+    candidate["profile_duplicate_id"] = pid
+
     target_list.append(candidate)
     return "added"
 
@@ -1261,17 +1383,62 @@ class ParameterEditorWindow(forms.WPFWindow):
             return None
         return self._selected_param_names[idx]
 
+    def _param_value_mode(self, param_name):
+        data = self.selected_params.get(param_name) or self.available_params.get(param_name) or {}
+        mode = str(data.get("value_mode") or "").strip().lower()
+        if mode:
+            return mode
+
+        storage_type = str(data.get("storage_type") or "")
+        if (("ElementId" in storage_type) or ("Integer" in storage_type)) and _is_workset_param_name(param_name):
+            return "workset_name"
+
+        return ""
+
+    def _workset_options(self, param_name):
+        data = self.available_params.get(param_name) or self.selected_params.get(param_name) or {}
+        options = list(data.get("options") or [])
+        if options:
+            return options
+
+        # Fallback to current user worksets if options are not embedded.
+        _id_to_name, names = _collect_user_workset_data(revit.doc)
+        return names
+
+    def _pick_workset_name(self, param_name, current_value):
+        options = self._workset_options(param_name)
+        if current_value and current_value not in options:
+            options = [current_value] + options
+        options = [v for i, v in enumerate(options) if v and v not in options[:i]]
+
+        if not options:
+            return current_value
+
+        selected = forms.SelectFromList.show(
+            options,
+            title="Select Workset for {}".format(param_name),
+            button_name="Use Workset",
+            multiselect=False,
+        )
+        if not selected:
+            return None
+
+        return selected[0] if isinstance(selected, list) else selected
+
     def _refresh_selected_params_list(self):
         self._selected_param_names = list(self.selected_params.keys())
         labels = []
         for name in self._selected_param_names:
             data = self.selected_params.get(name) or {}
             read_only = bool(data.get("read_only"))
+            mode = self._param_value_mode(name)
+            mode_suffix = " | by-name" if mode == "workset_name" else ""
             labels.append(
-                "{} [{}{}] = {}".format(
+                "{} [{}{}{}] = {}".format(
                     name,
                     data.get("storage_type") or "String",
                     " | RO" if read_only else "",
+                    mode_suffix,
                     data.get("value") or "",
                 )
             )
@@ -1306,6 +1473,8 @@ class ParameterEditorWindow(forms.WPFWindow):
             "storage_type": str(available.get("storage_type") or "String"),
             "value": str(available.get("current_value") or ""),
             "read_only": bool(available.get("read_only")),
+            "value_mode": str(available.get("value_mode") or ""),
+            "options": list(available.get("options") or []),
         }
         self._refresh_selected_params_list()
 
@@ -1325,7 +1494,16 @@ class ParameterEditorWindow(forms.WPFWindow):
         value = ""
         if self._value_text is not None:
             value = getattr(self._value_text, "Text", "") or ""
+
+        mode = self._param_value_mode(key)
+        if mode == "workset_name":
+            picked_name = self._pick_workset_name(key, str(value).strip())
+            if picked_name is None:
+                return
+            value = picked_name
+
         self.selected_params[key]["value"] = str(value)
+        self.selected_params[key]["value_mode"] = mode
         self._refresh_selected_params_list()
 
     def OnRemoveParamClicked(self, sender, args):
@@ -1389,16 +1567,59 @@ class KeynoteEditorWindow(forms.WPFWindow):
             return None
         return self._selected_param_names[idx]
 
+    def _param_value_mode(self, param_name):
+        data = self.selected_params.get(param_name) or self.available_params.get(param_name) or {}
+        mode = str(data.get("value_mode") or "").strip().lower()
+        if mode:
+            return mode
+
+        storage_type = str(data.get("storage_type") or "")
+        if (("ElementId" in storage_type) or ("Integer" in storage_type)) and _is_workset_param_name(param_name):
+            return "workset_name"
+
+        return ""
+
+    def _workset_options(self, param_name):
+        data = self.available_params.get(param_name) or self.selected_params.get(param_name) or {}
+        options = list(data.get("options") or [])
+        if options:
+            return options
+        _id_to_name, names = _collect_user_workset_data(revit.doc)
+        return names
+
+    def _pick_workset_name(self, param_name, current_value):
+        options = self._workset_options(param_name)
+        if current_value and current_value not in options:
+            options = [current_value] + options
+        options = [v for i, v in enumerate(options) if v and v not in options[:i]]
+
+        if not options:
+            return current_value
+
+        selected = forms.SelectFromList.show(
+            options,
+            title="Select Workset for {}".format(param_name),
+            button_name="Use Workset",
+            multiselect=False,
+        )
+        if not selected:
+            return None
+
+        return selected[0] if isinstance(selected, list) else selected
+
     def _refresh_selected_params_list(self):
         self._selected_param_names = list(self.selected_params.keys())
         labels = []
         for name in self._selected_param_names:
             data = self.selected_params.get(name) or {}
+            mode = self._param_value_mode(name)
+            mode_suffix = " | by-name" if mode == "workset_name" else ""
             labels.append(
-                "{} [{}{}] = {}".format(
+                "{} [{}{}{}] = {}".format(
                     name,
                     data.get("storage_type") or "String",
                     " | RO" if bool(data.get("read_only")) else "",
+                    mode_suffix,
                     data.get("value") or "",
                 )
             )
@@ -1458,6 +1679,8 @@ class KeynoteEditorWindow(forms.WPFWindow):
             "storage_type": str(available.get("storage_type") or "String"),
             "value": str(available.get("current_value") or ""),
             "read_only": bool(available.get("read_only")),
+            "value_mode": str(available.get("value_mode") or ""),
+            "options": list(available.get("options") or []),
         }
         self._refresh_selected_params_list()
 
@@ -1477,7 +1700,16 @@ class KeynoteEditorWindow(forms.WPFWindow):
         value = ""
         if self._value_text is not None:
             value = getattr(self._value_text, "Text", "") or ""
+
+        mode = self._param_value_mode(key)
+        if mode == "workset_name":
+            picked_name = self._pick_workset_name(key, str(value).strip())
+            if picked_name is None:
+                return
+            value = picked_name
+
         self.selected_params[key]["value"] = str(value)
+        self.selected_params[key]["value_mode"] = mode
         self._refresh_selected_params_list()
 
     def OnRemoveParamClicked(self, sender, args):
@@ -1514,6 +1746,7 @@ def _build_template_entry_from_element(element, kind):
     return {
         "id": "{}:{}".format(kind, type_id),
         "kind": kind,
+        "profile_duplicate_id": None,
         "element_type_id": type_id,
         "name": name,
         "placement_rule": DEFAULT_PLACEMENT_OPTION,
@@ -1638,6 +1871,9 @@ class ManageSpaceProfilesWindow(forms.WPFWindow):
         self.space_overrides = _sanitize_space_overrides(space_overrides)
         self.param_editor_xaml_path = param_editor_xaml_path
 
+        self._next_profile_duplicate_id = _next_profile_duplicate_id(self.type_elements, self.space_overrides)
+        self._assign_missing_profile_duplicate_ids()
+
         self.accepted = False
 
         self._space_type_combo = self.FindName("SpaceTypeCombo")
@@ -1664,6 +1900,27 @@ class ManageSpaceProfilesWindow(forms.WPFWindow):
 
         self._refresh_all()
 
+
+    def _next_profile_duplicate_id_value(self):
+        value = int(self._next_profile_duplicate_id or 1)
+        if value <= 0:
+            value = 1
+        self._next_profile_duplicate_id = value + 1
+        return value
+
+    def _assign_missing_profile_duplicate_ids(self):
+        for bucket in BUCKETS:
+            entries = self.type_elements.get(bucket) or []
+            for entry in entries:
+                pid = _valid_profile_duplicate_id((entry or {}).get("profile_duplicate_id"))
+                if pid is None:
+                    entry["profile_duplicate_id"] = self._next_profile_duplicate_id_value()
+
+        for space_key, entries in (self.space_overrides or {}).items():
+            for entry in entries or []:
+                pid = _valid_profile_duplicate_id((entry or {}).get("profile_duplicate_id"))
+                if pid is None:
+                    entry["profile_duplicate_id"] = self._next_profile_duplicate_id_value()
     def _selected_bucket(self):
         if self._space_type_combo is None:
             return BUCKETS[0]
@@ -1820,7 +2077,7 @@ class ManageSpaceProfilesWindow(forms.WPFWindow):
             return
 
         target = self.type_elements.setdefault(bucket, [])
-        _append_template_entry(target, entry)
+        _append_template_entry(target, entry, next_duplicate_id_fn=self._next_profile_duplicate_id_value)
         self._refresh_type_elements_panel()
         self._refresh_effective_panel()
         self._refresh_summary()
@@ -1849,7 +2106,7 @@ class ManageSpaceProfilesWindow(forms.WPFWindow):
 
         space_key = selected_space.get("space_key")
         target = self.space_overrides.setdefault(space_key, [])
-        _append_template_entry(target, entry)
+        _append_template_entry(target, entry, next_duplicate_id_fn=self._next_profile_duplicate_id_value)
         self._refresh_effective_panel()
         self._refresh_summary()
 
@@ -2468,21 +2725,28 @@ def _plain_parameter_map(parameters):
         key = str(name or "").strip()
         if not key:
             continue
+
         if isinstance(data, dict):
             storage_type = str(data.get("storage_type") or "String")
             value = data.get("value")
             read_only = bool(data.get("read_only"))
+            value_mode = str(data.get("value_mode") or "").strip().lower()
         else:
             storage_type = "String"
             value = data
             read_only = False
+            value_mode = ""
+
+        if (not value_mode) and (("ElementId" in storage_type) or ("Integer" in storage_type)) and _is_workset_param_name(key):
+            value_mode = "workset_name"
+
         out[key] = {
             "storage_type": storage_type,
             "value": "" if value is None else str(value),
             "read_only": read_only,
+            "value_mode": value_mode,
         }
     return out
-
 
 def _plain_annotation_entry(annotation):
     ann = _sanitize_annotation_entry(annotation)
@@ -2519,6 +2783,7 @@ def _plain_template_entry(entry):
     return {
         "id": str(entry.get("id") or ""),
         "entry_uid": str(entry.get("entry_uid") or ""),
+        "profile_duplicate_id": _valid_profile_duplicate_id(entry.get("profile_duplicate_id")),
         "kind": str(entry.get("kind") or ""),
         "element_type_id": str(entry.get("element_type_id") or ""),
         "name": str(entry.get("name") or ""),
@@ -2639,6 +2904,14 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
+
+
 
 
 
