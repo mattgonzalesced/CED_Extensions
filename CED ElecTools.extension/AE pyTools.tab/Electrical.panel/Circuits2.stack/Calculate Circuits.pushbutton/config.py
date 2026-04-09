@@ -29,11 +29,22 @@ from Snippets.revit_helpers import get_elementid_value
 from UIClasses import pathing as ui_pathing
 from UIClasses import resource_loader
 
-XAML_PATH = script.get_bundle_file('settings.xaml')
-if not XAML_PATH:
-    XAML_PATH = os.path.join(os.path.dirname(__file__), 'settings.xaml')
-logger = script.get_logger()
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
+
+
+def _resolve_bundle_or_local_path(file_name):
+    path = None
+    try:
+        path = script.get_bundle_file(file_name)
+    except Exception:
+        path = None
+    if path and os.path.exists(path):
+        return path
+    return os.path.join(THIS_DIR, file_name)
+
+
+XAML_PATH = _resolve_bundle_or_local_path("settings.xaml")
+logger = script.get_logger()
 LIB_ROOT = ui_pathing.ensure_lib_root_on_syspath(THIS_DIR)
 UI_RESOURCES_ROOT = ui_pathing.resolve_ui_resources_root(LIB_ROOT)
 THEME_CONFIG_SECTION = "AE-pyTools-Theme"
@@ -777,7 +788,10 @@ class CircuitSettingsWindow(forms.WPFWindow):
 
     def _on_help(self,sender, args):
         output = script.get_output()
-        md_path = script.get_bundle_file("CalculateCircuits_UserManual.md")
+        md_path = _resolve_bundle_or_local_path("CalculateCircuits_UserManual.md")
+        if not os.path.exists(md_path):
+            forms.alert("User manual not found.")
+            return
         with open(md_path, "r") as f:
             text = f.read().decode("utf-8")
             output.print_md(text)

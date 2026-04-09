@@ -87,7 +87,7 @@
               BorderThickness="1"
               CornerRadius="4">
         <Grid>
-          <Border x:Name="TrackStateOverlay" Background="Transparent" CornerRadius="4"/>
+          <Border x:Name="TrackStateOverlay" Background="Transparent" CornerRadius="6"/>
           <Track x:Name="PART_Track"
                  IsDirectionReversed="True"
                  HorizontalAlignment="Center"
@@ -101,8 +101,9 @@
               <RepeatButton Style="{StaticResource CED.ScrollBar.Menu.TrackButton}" Command="ScrollBar.PageUpCommand"/>
             </Track.DecreaseRepeatButton>
             <Track.Thumb>
-              <Thumb Style="{StaticResource CED.ScrollBar.Menu.Thumb}"/>
-            </Track.Thumb>
+  <Thumb x:Name="ThumbElement"
+         Style="{StaticResource CED.ScrollBar.Menu.Thumb}"/>
+</Track.Thumb>
             <Track.IncreaseRepeatButton>
               <RepeatButton Style="{StaticResource CED.ScrollBar.Menu.TrackButton}" Command="ScrollBar.PageDownCommand"/>
             </Track.IncreaseRepeatButton>
@@ -120,9 +121,13 @@
       </RepeatButton>
     </Grid>
     <ControlTemplate.Triggers>
-      <Trigger SourceName="PART_Track" Property="IsMouseOver" Value="True">
-        <Setter TargetName="TrackStateOverlay" Property="Background" Value="{DynamicResource CED.Brush.ButtonStateOverlayHover}"/>
-      </Trigger>
+<MultiTrigger>
+  <MultiTrigger.Conditions>
+    <Condition SourceName="PART_Track" Property="IsMouseOver" Value="True"/>
+    <Condition SourceName="ThumbElement" Property="IsMouseOver" Value="False"/>
+  </MultiTrigger.Conditions>
+  <Setter TargetName="TrackStateOverlay" Property="Background" Value="{DynamicResource CED.Brush.ButtonStateOverlayHover}"/>
+</MultiTrigger>
     </ControlTemplate.Triggers>
   </ControlTemplate>
 
@@ -148,7 +153,7 @@
               Background="{DynamicResource CED.Brush.SearchBackground}"
               BorderBrush="{DynamicResource CED.Brush.DataGridCellBorder}"
               BorderThickness="1"
-              CornerRadius="4">
+              CornerRadius="6">
         <Grid>
           <Border x:Name="TrackStateOverlay" Background="Transparent" CornerRadius="4"/>
           <Track x:Name="PART_Track"
@@ -164,7 +169,8 @@
               <RepeatButton Style="{StaticResource CED.ScrollBar.Menu.TrackButton}" Command="ScrollBar.PageLeftCommand"/>
             </Track.DecreaseRepeatButton>
             <Track.Thumb>
-              <Thumb Style="{StaticResource CED.ScrollBar.Menu.Thumb}"/>
+              <Thumb x:Name="ThumbElement"
+                     Style="{StaticResource CED.ScrollBar.Menu.Thumb}"/>
             </Track.Thumb>
             <Track.IncreaseRepeatButton>
               <RepeatButton Style="{StaticResource CED.ScrollBar.Menu.TrackButton}" Command="ScrollBar.PageRightCommand"/>
@@ -183,9 +189,13 @@
       </RepeatButton>
     </Grid>
     <ControlTemplate.Triggers>
-      <Trigger SourceName="PART_Track" Property="IsMouseOver" Value="True">
-        <Setter TargetName="TrackStateOverlay" Property="Background" Value="{DynamicResource CED.Brush.ButtonStateOverlayHover}"/>
-      </Trigger>
+<MultiTrigger>
+  <MultiTrigger.Conditions>
+    <Condition SourceName="PART_Track" Property="IsMouseOver" Value="True"/>
+    <Condition SourceName="ThumbElement" Property="IsMouseOver" Value="False"/>
+  </MultiTrigger.Conditions>
+  <Setter TargetName="TrackStateOverlay" Property="Background" Value="{DynamicResource CED.Brush.ButtonStateOverlayHover}"/>
+</MultiTrigger>
     </ControlTemplate.Triggers>
   </ControlTemplate>
 

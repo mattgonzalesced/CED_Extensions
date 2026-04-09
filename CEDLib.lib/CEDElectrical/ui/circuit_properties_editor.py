@@ -101,6 +101,26 @@ def _lookup_builtin_text(element, bip, default_value=""):
         return default_value
 
 
+def _lookup_builtin_numeric(element, bip):
+    if element is None:
+        return None
+    try:
+        param = element.get_Parameter(bip)
+    except Exception:
+        param = None
+    if not param:
+        return None
+    try:
+        st = param.StorageType
+        if st == DB.StorageType.Double:
+            return param.AsDouble()
+        if st == DB.StorageType.Integer:
+            return param.AsInteger()
+    except Exception:
+        return None
+    return None
+
+
 def _as_int(value, default_value=0):
     try:
         return int(round(float(value or 0)))
@@ -424,13 +444,13 @@ class CircuitPropertyEditorViewModel(object):
         return True, "Blocked - Locked by another user"
 
     def _collect_base_values(self, circuit):
-        rating_value = _lookup_param_value(circuit, "CKT_Rating_CED")
+        rating_value = _lookup_builtin_numeric(circuit, DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM)
         if rating_value is None:
             try:
                 rating_value = float(circuit.Rating)
             except Exception:
                 rating_value = 0.0
-        frame_value = _lookup_param_value(circuit, "CKT_Frame_CED")
+        frame_value = _lookup_builtin_numeric(circuit, DB.BuiltInParameter.RBS_ELEC_CIRCUIT_FRAME_PARAM)
         if frame_value is None:
             try:
                 frame_value = float(circuit.Frame)

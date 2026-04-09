@@ -147,6 +147,7 @@ class EditCircuitPropertiesAndRecalculateOperation(object):
                 DB.BuiltInParameter.RBS_ELEC_CIRCUIT_RATING_PARAM,
                 value,
             ) or changed
+            return changed
         elif key_text == "CKT_Frame_CED":
             changed = self._set_circuit_numeric(
                 circuit,
@@ -154,6 +155,7 @@ class EditCircuitPropertiesAndRecalculateOperation(object):
                 DB.BuiltInParameter.RBS_ELEC_CIRCUIT_FRAME_PARAM,
                 value,
             ) or changed
+            return changed
 
         if key_text == CIRCUIT_NOTES_KEY:
             try:

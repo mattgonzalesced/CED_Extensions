@@ -378,10 +378,97 @@
     </ControlTemplate.Triggers>
   </ControlTemplate>
 
+  <ControlTemplate x:Key="CED.Input.ComboBox.Template.Flat.Compact.Editable" TargetType="ComboBox">
+    <Grid SnapsToDevicePixels="True">
+      <Border x:Name="ComboBorder"
+              Background="{TemplateBinding Background}"
+              BorderBrush="{TemplateBinding BorderBrush}"
+              BorderThickness="{TemplateBinding BorderThickness}"
+              CornerRadius="6">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="26"/>
+          </Grid.ColumnDefinitions>
+          <TextBox x:Name="PART_EditableTextBox"
+                   Grid.Column="0"
+                   Margin="8,0,4,0"
+                   Background="Transparent"
+                   BorderThickness="0"
+                   VerticalAlignment="Center"
+                   Foreground="{TemplateBinding Foreground}"
+                   IsReadOnly="{TemplateBinding IsReadOnly}"
+                   Text="{Binding Path=Text, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+          <Path Grid.Column="1"
+                Data="{DynamicResource CED.Icon.ChevronDown}"
+                Width="8"
+                Height="6"
+                Stretch="Uniform"
+                Fill="{DynamicResource CED.Brush.IconMuted}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"/>
+          <ToggleButton Grid.Column="1"
+                        Style="{StaticResource CED.Input.ComboBox.ToggleOverlay}"
+                        IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                        ClickMode="Press"/>
+        </Grid>
+      </Border>
+      <Popup Name="PART_Popup"
+             AllowsTransparency="True"
+             Focusable="False"
+             IsOpen="{TemplateBinding IsDropDownOpen}"
+             Placement="Bottom"
+             PopupAnimation="Slide">
+        <Border x:Name="DropDownBorder"
+                Margin="0,2,0,0"
+                Background="{DynamicResource CED.Brush.ListBackground}"
+                BorderBrush="{DynamicResource CED.Brush.Border}"
+                BorderThickness="1"
+                CornerRadius="6"
+                MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+          <ScrollViewer MaxHeight="300"
+                        CanContentScroll="True"
+                        VerticalScrollBarVisibility="Auto">
+            <ScrollViewer.Resources>
+              <Style TargetType="ScrollBar" BasedOn="{StaticResource CED.ScrollBar.Combo}"/>
+            </ScrollViewer.Resources>
+            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+          </ScrollViewer>
+        </Border>
+      </Popup>
+    </Grid>
+    <ControlTemplate.Triggers>
+      <Trigger Property="IsMouseOver" Value="True">
+        <Setter TargetName="ComboBorder" Property="BorderBrush" Value="{DynamicResource CED.Brush.Accent}"/>
+      </Trigger>
+      <Trigger Property="IsKeyboardFocusWithin" Value="True">
+        <Setter TargetName="ComboBorder" Property="BorderBrush" Value="{DynamicResource CED.Brush.Accent}"/>
+      </Trigger>
+      <Trigger Property="IsDropDownOpen" Value="True">
+        <Setter TargetName="ComboBorder" Property="BorderBrush" Value="{DynamicResource CED.Brush.Accent}"/>
+      </Trigger>
+      <Trigger Property="HasItems" Value="False">
+        <Setter TargetName="DropDownBorder" Property="MinHeight" Value="24"/>
+      </Trigger>
+      <Trigger Property="IsEnabled" Value="False">
+        <Setter TargetName="ComboBorder" Property="Opacity" Value="0.55"/>
+      </Trigger>
+    </ControlTemplate.Triggers>
+  </ControlTemplate>
+
   <Style x:Key="CED.Input.ComboBox.Flat.Compact" TargetType="ComboBox" BasedOn="{StaticResource CED.Input.ComboBox.Flat}">
     <Setter Property="Height" Value="22"/>
     <Setter Property="MinHeight" Value="22"/>
     <Setter Property="ItemContainerStyle" Value="{StaticResource CED.Input.ComboBoxItem.Flat.Compact}"/>
     <Setter Property="Template" Value="{StaticResource CED.Input.ComboBox.Template.Flat.Compact}"/>
+  </Style>
+
+  <Style x:Key="CED.Input.ComboBox.Flat.Compact.Editable"
+         TargetType="ComboBox"
+         BasedOn="{StaticResource CED.Input.ComboBox.Flat.Compact}">
+    <Setter Property="IsEditable" Value="True"/>
+    <Setter Property="IsTextSearchEnabled" Value="False"/>
+    <Setter Property="StaysOpenOnEdit" Value="True"/>
+    <Setter Property="Template" Value="{StaticResource CED.Input.ComboBox.Template.Flat.Compact.Editable}"/>
   </Style>
 </ResourceDictionary>
