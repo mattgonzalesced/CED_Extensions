@@ -1,0 +1,87 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Audit Circuits - Changed Element Details"
+        Height="900"
+        Width="1700"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="SummaryText"
+                   Grid.Row="0"
+                   FontSize="13"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,8"
+                   Text="Showing 0 of 0 changed rows."/>
+
+        <ScrollViewer Grid.Row="1"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Disabled"
+                      Margin="0,0,0,8">
+            <WrapPanel>
+                <StackPanel Margin="0,0,8,6">
+                    <TextBlock Text="Host Element" FontSize="11"/>
+                    <TextBox x:Name="FilterHostElement" Width="160" Tag="host_id" TextChanged="OnFilterChanged"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,8,6">
+                    <TextBlock Text="Circuit Element" FontSize="11"/>
+                    <TextBox x:Name="FilterCircuitElement" Width="160" Tag="circuit_elem_id" TextChanged="OnFilterChanged"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,8,6">
+                    <TextBlock Text="SuperCircuitV5 Panel/Load" FontSize="11"/>
+                    <TextBox x:Name="FilterExpected" Width="220" Tag="expected_ref" TextChanged="OnFilterChanged"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,8,6">
+                    <TextBlock Text="CKT_Panel_CEDT Raw" FontSize="11"/>
+                    <TextBox x:Name="FilterPanelCedt" Width="220" Tag="ckt_panel_cedt_raw" TextChanged="OnFilterChanged"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,8,6">
+                    <TextBlock Text="CKT_Circuit Number_CEDT Raw" FontSize="11"/>
+                    <TextBox x:Name="FilterCircuitCedt" Width="220" Tag="ckt_circuit_raw" TextChanged="OnFilterChanged"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,8,6">
+                    <TextBlock Text="Actual Panel/Load" FontSize="11"/>
+                    <TextBox x:Name="FilterActual" Width="220" Tag="actual_ref" TextChanged="OnFilterChanged"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,8,6">
+                    <TextBlock Text="Reason" FontSize="11"/>
+                    <TextBox x:Name="FilterReason" Width="240" Tag="reason" TextChanged="OnFilterChanged"/>
+                </StackPanel>
+            </WrapPanel>
+        </ScrollViewer>
+
+        <DataGrid x:Name="DetailsGrid"
+                  Grid.Row="2"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  CanUserSortColumns="True"
+                  Sorting="OnGridSorting"
+                  GridLinesVisibility="All"
+                  HeadersVisibility="All"
+                  SelectionMode="Extended"
+                  SelectionUnit="FullRow"
+                  Margin="0,0,0,8">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Host Element" Binding="{Binding [host_id]}" SortMemberPath="host_id" Width="140"/>
+                <DataGridTextColumn Header="Circuit Element" Binding="{Binding [circuit_elem_id]}" SortMemberPath="circuit_elem_id" Width="140"/>
+                <DataGridTextColumn Header="SuperCircuitV5 Panel/Load" Binding="{Binding [expected_ref]}" SortMemberPath="expected_ref" Width="230"/>
+                <DataGridTextColumn Header="CKT_Panel_CEDT Raw" Binding="{Binding [ckt_panel_cedt_raw]}" SortMemberPath="ckt_panel_cedt_raw" Width="210"/>
+                <DataGridTextColumn Header="CKT_Circuit Number_CEDT Raw" Binding="{Binding [ckt_circuit_raw]}" SortMemberPath="ckt_circuit_raw" Width="210"/>
+                <DataGridTextColumn Header="Actual Panel/Load" Binding="{Binding [actual_ref]}" SortMemberPath="actual_ref" Width="230"/>
+                <DataGridTextColumn Header="Reason" Binding="{Binding [reason]}" SortMemberPath="reason" Width="280"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Clear Filters" Width="120" Margin="0,0,8,0" Click="OnClearFilters"/>
+            <Button Content="Close" Width="90" Click="OnCloseWindow"/>
+        </StackPanel>
+    </Grid>
+</Window>

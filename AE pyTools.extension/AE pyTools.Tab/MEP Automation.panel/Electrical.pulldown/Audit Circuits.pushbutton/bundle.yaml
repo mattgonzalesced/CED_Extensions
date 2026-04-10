@@ -1,0 +1,4 @@
+title: "Audit Circuits"
+tooltip: >-
+  Audits model circuits against what SuperCircuitV5 would create from current
+  CKT_* parameters and reports matched vs changed circuits.
