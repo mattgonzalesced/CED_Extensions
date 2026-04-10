@@ -1,0 +1,12 @@
+title:
+  en_us: Batch Swap Circuits
+tooltip: 
+  en_us: >-
+    Version 2.0 | Date 04.01.2026
+    Stage and apply multiple slot-level circuit transfers between panel schedules.
+    Choose source and target slots, review sequence order, then apply to move circuits, default SPARE/SPACE entries, or both in one workflow.
+
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: false
+  full_frame: false

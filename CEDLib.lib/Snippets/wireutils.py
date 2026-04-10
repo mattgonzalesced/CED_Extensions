@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 from pyrevit import DB
-from pyrevit.compat import get_elementid_value_func
 
-_get_elid_value = get_elementid_value_func()
+from Snippets import revit_helpers
 
 
 def _elid_value(item):
-    try:
-        return int(_get_elid_value(item))
-    except Exception:
-        return int(getattr(item, "IntegerValue", 0))
+    return int(revit_helpers.get_elementid_value(item))
 
 
 def wire_connected_unconnected_connectors(wire):
@@ -221,3 +217,4 @@ def delete_element_ids(doc, element_ids):
         except Exception:
             pass
     return deleted
+

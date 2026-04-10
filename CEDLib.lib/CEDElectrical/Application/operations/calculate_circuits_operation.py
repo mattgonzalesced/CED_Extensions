@@ -5,24 +5,19 @@
 from datetime import datetime
 
 from pyrevit import DB, forms, script
-from pyrevit.compat import get_elementid_value_func, get_elementid_from_value_func
 
 from CEDElectrical.Domain import settings_manager
 from CEDElectrical.Model.CircuitBranch import CircuitBranch
-
-_get_elid_value = get_elementid_value_func()
-_get_elid_from_value = get_elementid_from_value_func()
+from CEDElectrical.Model.circuit_settings import CircuitSettings
+from Snippets import revit_helpers
 
 
 def _elid_value(item):
-    try:
-        return int(_get_elid_value(item))
-    except Exception:
-        return int(getattr(item, 'IntegerValue', 0))
+    return int(revit_helpers.get_elementid_value(item))
 
 
 def _elid_from_value(value):
-    return _get_elid_from_value(int(value))
+    return revit_helpers.elementid_from_value(value)
 
 
 class CalculateCircuitsOperation(object):
@@ -37,30 +32,46 @@ class CalculateCircuitsOperation(object):
 
     def execute(self, request, doc):
         """Run calculation workflow for target circuits in the active document."""
+        param_bootstrap = settings_manager.ensure_electrical_parameters_for_calculate(doc, logger=self.logger)
+        status = str((param_bootstrap or {}).get('status') or '').lower()
+        if status == 'loaded':
+            self.logger.info(
+                'Auto-loaded electrical parameters for calculate. updated={} unchanged={} skipped={}'.format(
+                    int((param_bootstrap or {}).get('updated') or 0),
+                    int((param_bootstrap or {}).get('unchanged') or 0),
+                    int((param_bootstrap or {}).get('skipped') or 0),
+                )
+            )
+        elif status == 'failed':
+            self.logger.warning(
+                'Auto-load electrical parameters before calculate failed: {}'.format(
+                    (param_bootstrap or {}).get('reason') or 'unknown'
+                )
+            )
+
         settings = settings_manager.load_circuit_settings(doc)
+        min_breaker_size_override = request.options.get('min_breaker_size_override')
+        if min_breaker_size_override is not None:
+            try:
+                override_value = int(min_breaker_size_override)
+                if override_value > 0:
+                    settings = CircuitSettings.from_json(settings.to_json())
+                    settings.set('min_breaker_size', override_value)
+            except Exception:
+                pass
         circuits = self.repository.get_target_circuits(doc, request.circuit_ids)
 
         circuits, locked_ids, locked_rows = self.repository.partition_locked_elements(doc, circuits, settings)
         if locked_ids:
             summary = self.repository.summarize_locked(doc, locked_ids)
-            msg_lines = [
-                'Some elements are owned by others and will be skipped:',
-                '- Circuits: {}'.format(summary['circuits']),
-            ]
-            if settings.write_fixture_results:
-                msg_lines.append('- Fixtures: {}'.format(summary['fixtures']))
-            if settings.write_equipment_results:
-                msg_lines.append('- Electrical Equipment: {}'.format(summary['equipment']))
-            if summary['other']:
-                msg_lines.append('- Other: {}'.format(summary['other']))
-
-            choice = forms.CommandSwitchWindow.show(
-                ['Continue with Unlocked', 'Cancel'],
-                message='\n'.join(msg_lines),
-                default='Continue with Unlocked',
+            self.logger.info(
+                'Locked elements detected; proceeding with editable set only. circuits={} fixtures={} equipment={} other={}'.format(
+                    int(summary.get('circuits') or 0),
+                    int(summary.get('fixtures') or 0),
+                    int(summary.get('equipment') or 0),
+                    int(summary.get('other') or 0),
+                )
             )
-            if choice != 'Continue with Unlocked':
-                return {'status': 'cancelled', 'reason': 'locked_elements'}
 
         if not circuits:
             forms.alert('No editable circuits found to process.')
@@ -338,3 +349,4 @@ class CalculateCircuitsOperation(object):
                 self.alert_store.write_alert_payload(circuit, payload)
             except Exception:
                 continue
+

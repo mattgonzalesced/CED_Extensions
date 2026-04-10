@@ -19,14 +19,26 @@
 from UIClasses.ui_bases import CEDWindowBase
 
 class MyWindow(CEDWindowBase):
-    def __init__(self, xaml_path, resources_root):
+    theme_aware = True
+    auto_wire_textboxes = True
+    text_select_all_on_click = True
+    text_select_all_on_focus = True
+
+    def __init__(self):
         CEDWindowBase.__init__(
             self,
-            xaml_path=xaml_path,
-            resources_root=resources_root,
-            theme_mode="light",
-            accent_mode="blue",
+            xaml_source="MyWindow.xaml",  # optional when class-name xaml exists
         )
 ```
 
-For existing tools, migration can be incremental: keep tool logic as-is and move only resource/theme wiring into these bases first.
+### What is automatic now
+
+- Resolves module-relative XAML path (e.g. `"MyWindow.xaml"`).
+- Infers XAML automatically (`<ClassName>.xaml` / `<ModuleName>.xaml`) if `xaml_source` is omitted.
+- Resolves workspace/lib/resources paths and appends `CEDLib.lib` to `sys.path`.
+- Loads theme/accent from `AE-pyTools-Theme` config when `theme_aware = True`.
+- Falls back to Light/Blue when `theme_aware = False`.
+- Optional shift+mousewheel horizontal scroll handling.
+- Optional textbox select-all behavior (click/focus) via class flags.
+
+For existing tools, migration can stay incremental: move to these base classes first, then remove duplicated local path/theme/input wiring per tool.

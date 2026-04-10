@@ -1,0 +1,14 @@
+title: 
+  en_us: Move Selected Circuits
+tooltip: 
+  en_us: >-
+    Version 2.0 | Date 04.01.2026
+    Move selected circuits to a target panel from model selection, panel schedules, or circuit browser workflow.
+    The tool handles slot availability and restores default SPARE/SPACE entries after transfer when possible.
+
+
+
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: false
+  full_frame: false

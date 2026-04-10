@@ -3,9 +3,11 @@
 Startup hook for after-sync parent parameter conflict checks.
 """
 
+import getpass
 import imp
 import json
 import os
+import shutil
 import time
 
 from pyrevit import forms, script
@@ -41,7 +43,6 @@ _REF_MODULE = None
 _REF_IS_RUNNING = False
 
 _DOCKABLE_REGISTERED = False
-_CIRCUIT_BROWSER_REGISTERED = False
 
 ENV_HANDLER_KEY = "ced_parent_param_sync_handler_registered"
 ENV_LAST_RUN_KEY = "ced_parent_param_sync_last_run"
@@ -585,50 +586,96 @@ def _register_place_single_profile_panel():
         logger = script.get_logger()
         logger.warning("Failed to register Place Single Profile panel: %s", exc)
 
+def _on_app_closing(sender, args):
 
-def _circuit_browser_panel_path():
-    return os.path.abspath(
-        os.path.join(
-            os.path.dirname(__file__),
-            "AE pyTools.Tab",
-            "Electrical.panel",
-            "Circuit Manager.splitpushbutton",
-            "Circuit Browser.pushbutton",
-            "CircuitBrowserPanel.py",
-        )
-    )
+    log_data = {
+        "username": None,
+        "files_found": 0,
+        "files_moved": 0,
+        "files_failed": 0,
+        "status": "unknown",
+        "error": None
+    }
 
-
-def _register_circuit_browser_panel():
-    global _CIRCUIT_BROWSER_REGISTERED
-    logger = script.get_logger()
-    if _CIRCUIT_BROWSER_REGISTERED:
-        logger.info("Circuit Browser panel registration skipped (already registered in this startup run).")
-        return
-    panel_path = _circuit_browser_panel_path()
-    if not os.path.exists(panel_path):
-        logger.warning("Circuit Browser panel file not found: %s", panel_path)
-        return
     try:
-        panel_module = imp.load_source("ced_circuit_browser_panel", panel_path)
-    except Exception as exc:
-        logger.warning("Failed to load Circuit Browser panel: %s", exc)
-        return
-    panel_cls = getattr(panel_module, "CircuitBrowserPanel", None)
-    if panel_cls is None:
-        logger.warning("Circuit Browser panel class not found in: %s", panel_path)
-        return
-    try:
-        if not forms.is_registered_dockable_panel(panel_cls):
-            forms.register_dockable_panel(panel_cls, default_visible=False)
-            logger.info("Circuit Browser panel registered successfully.")
+        # Username
+        try:
+            username = getpass.getuser()
+        except:
+            username = os.environ.get("USERNAME", "UnknownUser")
+
+        log_data["username"] = username
+
+        # Destination
+        base_path = r"C:\ACC\ACCDocs\CoolSys\CED Content Collection\Project Files\03 Automations\Usage"
+        user_folder = os.path.join(base_path, username)
+
+        try:
+            if not os.path.exists(user_folder):
+                os.makedirs(user_folder)
+        except Exception as e:
+            log_data["status"] = "failed_create_user_folder"
+            log_data["error"] = str(e)
+            # from Snippets import hooks_logger
+            # hooks_logger.log_hook(__file__, log_data)
+            return
+
+        # Source
+        user_home = os.path.expanduser("~")
+        source_folder = os.path.join(user_home, "CED_pyTelemetry")
+
+        if not os.path.exists(source_folder):
+            log_data["status"] = "no_source_folder"
+            # from Snippets import hooks_logger
+            # hooks_logger.log_hook(__file__, log_data)
+            return
+
+        files = os.listdir(source_folder)
+        log_data["files_found"] = len(files)
+
+        for fname in files:
+            try:
+                src = os.path.join(source_folder, fname)
+
+                if not os.path.isfile(src):
+                    continue
+
+                dst = os.path.join(user_folder, fname)
+
+                shutil.move(src, dst)
+                log_data["files_moved"] += 1
+
+            except:
+                log_data["files_failed"] += 1
+
+        if log_data["files_failed"] > 0:
+            log_data["status"] = "partial_success"
         else:
-            logger.info("Circuit Browser panel already registered.")
-        _CIRCUIT_BROWSER_REGISTERED = True
+            log_data["status"] = "success"
+
+    except Exception as e:
+        log_data["status"] = "fatal_error"
+        log_data["error"] = str(e)
+
+    # Always log
+    # try:
+    #     from Snippets import hooks_logger
+    #     hooks_logger.log_hook(__file__, log_data)
+    # except:
+    #     pass
+
+def _register_shutdown_hook():
+    logger = script.get_logger()
+
+    try:
+        app = __revit__
+        app.ApplicationClosing += _on_app_closing
+        logger.info("ApplicationClosing hook registered.")
+
     except Exception as exc:
-        logger.warning("Failed to register Circuit Browser panel: %s", exc)
+        logger.warning("Failed to register ApplicationClosing hook: %s", exc)
 
-
+_register_shutdown_hook()
 _register_sync_handler()
 _register_proximity_sync_handler()
 _register_ref_sched_sync_handler()

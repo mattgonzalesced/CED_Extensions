@@ -1,0 +1,8 @@
+title: Print Pipe Data
+
+tooltip: >-
+  Select worksets, gather all pipe elements on those worksets, summarize
+  PipeSegment totals per System ID, and export the totals to Excel.
+
+author: >-
+  CED

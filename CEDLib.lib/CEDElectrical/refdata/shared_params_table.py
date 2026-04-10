@@ -115,7 +115,7 @@ SHARED_PARAMS = {
         'Categories': 'Electrical Circuits, Electrical Equipment, Electrical Fixtures',
         'Groups': 'Values are aligned per group type'
     },
-    'Wire Temperature Rating_CEDT': {
+    'Wire Temparature Rating_CEDT': {
         'GUID': 'd56f2166-4031-4e91-a954-b3fba24f55af',
         'Discipline': 'Common', 'Type of Parameter': 'Text',
         'Group Under': 'Electrical - Circuiting',
@@ -312,5 +312,28 @@ SHARED_PARAMS = {
         'Group Under': 'Identity Data', 'Instance/Type': 'Instance',
         'Categories': 'Electrical Fixtures',
         'Groups': 'Values are aligned per group type'
+    },
+    'Transformer %Z_CED':{
+        'GUID':'76b07259-7a21-45a3-8d23-5cb68af8fd7d',
+    },
+    'Transformer K Factor_CEDT':{
+        'GUID':'7e68099e-4c97-4f80-8058-04301d8c88f7',
+    },
+    'Transformer Primary Description_CEDT':{
+        'GUID':'9b9ec31d-5bd8-49c8-b0d5-852caea3864a',
+
+    },
+    'Transformer Primary Fault Current_CED':{
+        'GUID':'5af2e25a-14cd-47a5-bedb-f0abd89b775e',
+
+    },
+    'Transformer Rating_CED':{
+        'GUID':'1f76eb82-5f63-41c4-89d0-dd5697ae5dd6',
+
+    },
+    'Transformer Rating_CEDT':{
+        'GUID':'f44066fe-bf93-4a26-89c2-8458f0e5e532',
     }
+
+
 }

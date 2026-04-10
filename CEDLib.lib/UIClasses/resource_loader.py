@@ -42,10 +42,27 @@ THEME_RELATIVE_PATHS = {
 
 ACCENT_BRUSH_KEY_MAP = {
     "blue": "CED.Brush.AccentBlue",
-    "red": "CED.Brush.AccentRed",
-    "green": "CED.Brush.AccentGreen",
     "neutral": "CED.Brush.AccentNeutral",
 }
+
+VALID_THEME_MODES = tuple(sorted(THEME_RELATIVE_PATHS.keys()))
+VALID_ACCENT_MODES = tuple(sorted(ACCENT_BRUSH_KEY_MAP.keys()))
+
+
+def normalize_theme_mode(value, fallback="light"):
+    mode = str(value or fallback).strip().lower()
+    if mode in THEME_RELATIVE_PATHS:
+        return mode
+    fb = str(fallback or "light").strip().lower()
+    return fb if fb in THEME_RELATIVE_PATHS else "light"
+
+
+def normalize_accent_mode(value, fallback="blue"):
+    mode = str(value or fallback).strip().lower()
+    if mode in ACCENT_BRUSH_KEY_MAP:
+        return mode
+    fb = str(fallback or "blue").strip().lower()
+    return fb if fb in ACCENT_BRUSH_KEY_MAP else "blue"
 
 
 def _normalize_path(path):
@@ -156,7 +173,7 @@ def ensure_base_resources(owner, resources_root, relative_paths=None):
 
 
 def _load_theme_dictionary(resources_root, theme_mode):
-    mode = str(theme_mode or "light").strip().lower()
+    mode = normalize_theme_mode(theme_mode, "light")
     candidates = THEME_RELATIVE_PATHS.get(mode) or THEME_RELATIVE_PATHS.get("light") or ()
     for path in resolve_resource_paths(resources_root, candidates):
         dictionary = _load_dictionary(path)
@@ -170,7 +187,7 @@ def apply_accent(owner, accent_mode):
         resources = getattr(owner, "Resources", None)
         if resources is None:
             return False
-        mode = str(accent_mode or "blue").strip().lower()
+        mode = normalize_accent_mode(accent_mode, "blue")
         key = ACCENT_BRUSH_KEY_MAP.get(mode) or ACCENT_BRUSH_KEY_MAP.get("blue")
         brush = try_find_resource(owner, key)
         if brush is None:
@@ -186,7 +203,7 @@ def apply_accent(owner, accent_mode):
 def apply_theme(owner, resources_root, theme_mode="light", accent_mode="blue", base_relative_paths=None):
     try:
         ensure_base_resources(owner, resources_root, base_relative_paths)
-        dictionary = _load_theme_dictionary(resources_root, theme_mode)
+        dictionary = _load_theme_dictionary(resources_root, normalize_theme_mode(theme_mode, "light"))
         if dictionary is None:
             return False
         resources = getattr(owner, "Resources", None)
@@ -207,7 +224,7 @@ def apply_theme(owner, resources_root, theme_mode="light", accent_mode="blue", b
                     pass
         merged.Add(dictionary)
         owner._ced_theme_dictionary = dictionary
-        apply_accent(owner, accent_mode)
+        apply_accent(owner, normalize_accent_mode(accent_mode, "blue"))
         return True
     except Exception:
         return False

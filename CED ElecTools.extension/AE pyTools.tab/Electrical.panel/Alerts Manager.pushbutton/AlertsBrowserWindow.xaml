@@ -1,0 +1,228 @@
+﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sw="clr-namespace:System.Windows;assembly=PresentationFramework"
+        Title="Alerts Manager"
+        Height="620"
+        Width="1240"
+        MinHeight="440"
+        MinWidth="920"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource CED.Brush.WindowBackground}"
+        PreviewMouseDown="window_preview_mouse_down">
+  <Window.Resources>
+    <SolidColorBrush x:Key="{x:Static sw:SystemColors.HighlightBrushKey}" Color="{DynamicResource CED.Color.CircuitItemSelectedBackground}"/>
+    <SolidColorBrush x:Key="{x:Static sw:SystemColors.InactiveSelectionHighlightBrushKey}" Color="{DynamicResource CED.Color.CircuitItemSelectedBackground}"/>
+    <SolidColorBrush x:Key="{x:Static sw:SystemColors.HighlightTextBrushKey}" Color="{DynamicResource CED.Color.PrimaryText}"/>
+    <SolidColorBrush x:Key="{x:Static sw:SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="{DynamicResource CED.Color.PrimaryText}"/>
+  </Window.Resources>
+  <Grid Margin="{DynamicResource CED.Thickness.ContentMargin}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <Grid Grid.Row="0" Margin="0,0,0,8">
+      <StackPanel Orientation="Vertical">
+        <TextBlock Text="Alerts Manager" Style="{DynamicResource CED.Text.Title}"/>
+        <TextBlock Name="DocumentText" Text="Document: -" Style="{DynamicResource CED.Text.Secondary}" Margin="0,2,0,0"/>
+      </StackPanel>
+    </Grid>
+
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="320"/>
+        <ColumnDefinition Width="12"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <Grid Grid.Column="0">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid Grid.Row="0" Margin="0,0,0,6">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <CheckBox Name="ShowHiddenToggle"
+                    Grid.Column="0"
+                    Content="Show Hidden"
+                    IsChecked="True"
+                    Checked="show_hidden_toggled"
+                    Unchecked="show_hidden_toggled"/>
+          <TextBlock Name="CircuitCountText"
+                     Grid.Column="1"
+                     Text="0 circuits with alerts"
+                     Style="{DynamicResource CED.Text.Secondary}"
+                     VerticalAlignment="Center"
+                     HorizontalAlignment="Right"/>
+        </Grid>
+        <Border Grid.Row="1"
+                BorderBrush="{DynamicResource CED.Brush.DataGridBorder}"
+                BorderThickness="1"
+                Background="{DynamicResource CED.Brush.ListBackground}">
+          <ListView Name="CircuitList"
+                    Style="{DynamicResource CED.ListView.Alerts}"
+                    SelectionMode="Single"
+                    VirtualizingPanel.IsVirtualizing="True"
+                    VirtualizingPanel.VirtualizationMode="Recycling"
+                    ScrollViewer.CanContentScroll="True"
+                    SelectionChanged="circuit_selection_changed">
+            <ListView.ItemTemplate>
+              <DataTemplate>
+                <Border BorderBrush="{DynamicResource CED.Brush.CardBorder}"
+                        BorderThickness="0,0,0,1"
+                        Background="{Binding RelativeSource={RelativeSource AncestorType=ListViewItem}, Path=Background}"
+                        Padding="8,6">
+                  <StackPanel>
+                    <TextBlock Text="{Binding panel_ckt_text}"
+                               FontWeight="Bold"
+                               Foreground="{Binding RelativeSource={RelativeSource AncestorType=ListViewItem}, Path=Foreground}"/>
+                    <TextBlock Text="{Binding load_name}"
+                               TextTrimming="CharacterEllipsis"
+                               FontSize="11"
+                               Opacity="0.92"
+                               Foreground="{Binding RelativeSource={RelativeSource AncestorType=ListViewItem}, Path=Foreground}"/>
+                    <TextBlock Text="{Binding counts_text}"
+                               FontSize="10"
+                               Opacity="0.88"
+                               Foreground="{Binding RelativeSource={RelativeSource AncestorType=ListViewItem}, Path=Foreground}"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ListView.ItemTemplate>
+          </ListView>
+        </Border>
+      </Grid>
+
+      <Grid Grid.Column="2">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,8">
+          <TextBlock Name="SelectedCircuitText" Text="Select a circuit with alerts" Style="{DynamicResource CED.Text.SectionHeader}"/>
+          <TextBlock Name="SelectedCountsText" Text="Alerts: 0" Style="{DynamicResource CED.Text.Secondary}"/>
+        </StackPanel>
+
+        <TabControl Grid.Row="1" Name="AlertsTabs" Style="{DynamicResource CED.TabControl.Base}">
+          <TabItem Header="Active">
+            <Border BorderBrush="{DynamicResource CED.Brush.DataGridBorder}"
+                    BorderThickness="1"
+                    Background="{DynamicResource CED.Brush.ListBackground}"
+                    Margin="4">
+              <DataGrid Name="ActiveAlertsList"
+                        Style="{DynamicResource CED.DataGrid.Base}"
+                        ColumnHeaderStyle="{DynamicResource HeaderWrapCenter}"
+                        RowStyle="{DynamicResource CED.DataGrid.RowDisabledAware.NeutralSelection}"
+                        Focusable="False"
+                        IsTabStop="False"
+                        AutoGenerateColumns="False"
+                        IsReadOnly="True"
+                        CanUserAddRows="False"
+                        CanUserDeleteRows="False"
+                        CanUserResizeRows="False"
+                        CanUserReorderColumns="False"
+                        CanUserSortColumns="False"
+                        SelectionMode="Single"
+                        SelectionUnit="FullRow"
+                        HeadersVisibility="Column"
+                        GridLinesVisibility="Horizontal"
+                        HorizontalScrollBarVisibility="Disabled"
+                        VirtualizingPanel.IsVirtualizing="True"
+                        VirtualizingPanel.VirtualizationMode="Recycling"
+                        ScrollViewer.CanContentScroll="True"
+                        SelectionChanged="alerts_grid_selection_changed"
+                        PreviewMouseDown="alerts_list_preview_mouse_down">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="Severity" Width="0.9*" Binding="{Binding severity}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}" ElementStyle="{DynamicResource CenterTextCell}"/>
+                  <DataGridTextColumn Header="Group" Width="1.1*" Binding="{Binding group}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}" ElementStyle="{DynamicResource CenterTextCell}"/>
+                  <DataGridTextColumn Header="Alert ID" Width="1.9*" Binding="{Binding definition_id}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}"/>
+                  <DataGridTemplateColumn Header="Message" Width="3*" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding message}" TextWrapping="Wrap" Style="{DynamicResource RemarksTextCell}"/>
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                </DataGrid.Columns>
+              </DataGrid>
+            </Border>
+          </TabItem>
+          <TabItem Header="Hidden">
+            <Border BorderBrush="{DynamicResource CED.Brush.DataGridBorder}"
+                    BorderThickness="1"
+                    Background="{DynamicResource CED.Brush.ListBackground}"
+                    Margin="4">
+              <DataGrid Name="HiddenAlertsList"
+                        Style="{DynamicResource CED.DataGrid.Base}"
+                        ColumnHeaderStyle="{DynamicResource HeaderWrapCenter}"
+                        RowStyle="{DynamicResource CED.DataGrid.RowDisabledAware.NeutralSelection}"
+                        Focusable="False"
+                        IsTabStop="False"
+                        AutoGenerateColumns="False"
+                        IsReadOnly="True"
+                        CanUserAddRows="False"
+                        CanUserDeleteRows="False"
+                        CanUserResizeRows="False"
+                        CanUserReorderColumns="False"
+                        CanUserSortColumns="False"
+                        SelectionMode="Single"
+                        SelectionUnit="FullRow"
+                        HeadersVisibility="Column"
+                        GridLinesVisibility="Horizontal"
+                        HorizontalScrollBarVisibility="Disabled"
+                        VirtualizingPanel.IsVirtualizing="True"
+                        VirtualizingPanel.VirtualizationMode="Recycling"
+                        ScrollViewer.CanContentScroll="True"
+                        SelectionChanged="alerts_grid_selection_changed"
+                        PreviewMouseDown="alerts_list_preview_mouse_down">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="Severity" Width="0.9*" Binding="{Binding severity}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}" ElementStyle="{DynamicResource CenterTextCell}"/>
+                  <DataGridTextColumn Header="Group" Width="1.1*" Binding="{Binding group}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}" ElementStyle="{DynamicResource CenterTextCell}"/>
+                  <DataGridTextColumn Header="Alert ID" Width="1.9*" Binding="{Binding definition_id}" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}"/>
+                  <DataGridTemplateColumn Header="Message" Width="3*" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding message}" TextWrapping="Wrap" Style="{DynamicResource RemarksTextCell}"/>
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                </DataGrid.Columns>
+              </DataGrid>
+            </Border>
+          </TabItem>
+        </TabControl>
+      </Grid>
+    </Grid>
+
+    <Grid Grid.Row="2" Margin="0,8,0,0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+
+      <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+        <TextBlock Text="Select in Model:" Style="{DynamicResource CED.Text.CaptionStrong}" FontSize="12" VerticalAlignment="Center"/>
+        <StackPanel Orientation="Horizontal" Margin="6,0,0,0">
+          <Button Style="{DynamicResource CED.Button.Primary}" Content="Panel" Width="52" Height="22" Margin="0,0,3,0" Click="select_equipment_clicked"/>
+          <Button Style="{DynamicResource CED.Button.AccentRed}" Content="Circuit" Width="56" Height="22" Margin="0,0,3,0" Click="select_circuit_clicked"/>
+          <Button Style="{DynamicResource CED.Button.Apply}" Content="Device" Width="54" Height="22" Margin="0,0,6,0" Click="select_downstream_clicked"/>
+          <Button Style="{DynamicResource CED.Button.IconSmall}" Height="22" Padding="0" ToolTip="Clear Revit model selection" Click="clear_selection_clicked">
+            <Path Data="{DynamicResource CED.Icon.Close}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="11" Height="11" Stretch="Uniform"/>
+          </Button>
+        </StackPanel>
+      </StackPanel>
+
+      <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+        <TextBlock Name="StatusText" Text="Ready" Style="{DynamicResource CED.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+        <Button Name="HideUnhideButton" Style="{DynamicResource CED.Button.Base}" Content="Hide Type" Width="96" Height="28" Margin="0,0,6,0" Click="hide_unhide_clicked"/>
+        <Button Name="RefreshButton" Style="{DynamicResource CED.Button.Apply}" Content="Refresh" Width="84" Height="28" Click="refresh_clicked"/>
+        <Button Style="{DynamicResource CED.Button.Base}" Content="Close" Width="84" Height="28" Margin="6,0,0,0" Click="close_clicked"/>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>

@@ -10,7 +10,7 @@
 
   <DataTemplate x:Key="CED.Template.Badge.SyncBlockedIcon">
     <Path Data="{DynamicResource CED.Icon.SyncAlert}"
-          Fill="{DynamicResource CED.Brush.SecondaryRed}"
+          Fill="{DynamicResource CED.Brush.AccentRed}"
           Width="10"
           Height="10"
           Stretch="Uniform"/>

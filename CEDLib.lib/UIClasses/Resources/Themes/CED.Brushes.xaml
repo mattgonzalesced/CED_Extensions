@@ -1,13 +1,13 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <SolidColorBrush x:Key="CED.Brush.PrimaryBlue" Color="{DynamicResource CED.Color.PrimaryBlue}"/>
+  <SolidColorBrush x:Key="CED.Brush.PrimaryBlue" Color="{DynamicResource CED.Color.AccentBlue}"/>
   <SolidColorBrush x:Key="CED.Brush.Accent" Color="{DynamicResource CED.Color.Accent}"/>
   <SolidColorBrush x:Key="CED.Brush.AccentBlue" Color="{DynamicResource CED.Color.AccentBlue}"/>
   <SolidColorBrush x:Key="CED.Brush.AccentRed" Color="{DynamicResource CED.Color.AccentRed}"/>
   <SolidColorBrush x:Key="CED.Brush.AccentGreen" Color="{DynamicResource CED.Color.AccentGreen}"/>
   <SolidColorBrush x:Key="CED.Brush.AccentNeutral" Color="{DynamicResource CED.Color.AccentNeutral}"/>
-  <SolidColorBrush x:Key="CED.Brush.SecondaryRed" Color="{DynamicResource CED.Color.SecondaryRed}"/>
-  <SolidColorBrush x:Key="CED.Brush.TertiaryGreen" Color="{DynamicResource CED.Color.TertiaryGreen}"/>
+  <SolidColorBrush x:Key="CED.Brush.SecondaryRed" Color="{DynamicResource CED.Color.AccentRed}"/>
+  <SolidColorBrush x:Key="CED.Brush.TertiaryGreen" Color="{DynamicResource CED.Color.AccentGreen}"/>
   <SolidColorBrush x:Key="CED.Brush.NeutralDark" Color="{DynamicResource CED.Color.NeutralDark}"/>
 
   <SolidColorBrush x:Key="CED.Brush.Surface" Color="{DynamicResource CED.Color.Surface}"/>
@@ -78,15 +78,20 @@
   <SolidColorBrush x:Key="CED.Brush.DataGridRowForeground" Color="{DynamicResource CED.Color.DataGridRowForeground}"/>
   <SolidColorBrush x:Key="CED.Brush.DataGridReadOnlyBackground" Color="{DynamicResource CED.Color.DataGridReadOnlyBackground}"/>
   <SolidColorBrush x:Key="CED.Brush.DataGridReadOnlyForeground" Color="{DynamicResource CED.Color.DataGridReadOnlyForeground}"/>
+  <SolidColorBrush x:Key="CED.Brush.DataGridEditableBackground" Color="{DynamicResource CED.Color.DataGridEditableBackground}"/>
   <SolidColorBrush x:Key="CED.Brush.DataGridCellBorder" Color="{DynamicResource CED.Color.DataGridCellBorder}"/>
   <SolidColorBrush x:Key="CED.Brush.DataGridDividerStrong" Color="{DynamicResource CED.Color.DataGridDividerStrong}"/>
-  <SolidColorBrush x:Key="CED.Brush.DataGridSelectionBackground" Color="{DynamicResource CED.Color.DataGridSelectionBackground}"/>
-  <SolidColorBrush x:Key="CED.Brush.DataGridSelectionForeground" Color="{DynamicResource CED.Color.DataGridSelectionForeground}"/>
+  <SolidColorBrush x:Key="CED.Brush.DataGridSelectionBackground" Color="{DynamicResource CED.Color.CircuitItemSelectedBackground}"/>
+  <SolidColorBrush x:Key="CED.Brush.DataGridSelectionForeground" Color="{DynamicResource CED.Color.PrimaryText}"/>
   <SolidColorBrush x:Key="CED.Brush.DataGridDisabledForeground" Color="{DynamicResource CED.Color.DataGridDisabledForeground}"/>
   <SolidColorBrush x:Key="CED.Brush.DataGridDisabledBackground" Color="{DynamicResource CED.Color.DataGridDisabledBackground}"/>
   <SolidColorBrush x:Key="CED.Brush.DataGridChangedBackground" Color="{DynamicResource CED.Color.DataGridChangedBackground}"/>
   <SolidColorBrush x:Key="CED.Brush.DataGridWarningBackground" Color="{DynamicResource CED.Color.DataGridWarningBackground}"/>
   <SolidColorBrush x:Key="CED.Brush.DataGridErrorBackground" Color="{DynamicResource CED.Color.DataGridErrorBackground}"/>
+  <SolidColorBrush x:Key="CED.Brush.StatusSuccessBackground" Color="{DynamicResource CED.Color.StatusSuccessBackground}"/>
+  <SolidColorBrush x:Key="CED.Brush.StatusWarningBackground" Color="{DynamicResource CED.Color.StatusWarningBackground}"/>
+  <SolidColorBrush x:Key="CED.Brush.StatusErrorBackground" Color="{DynamicResource CED.Color.StatusErrorBackground}"/>
+  <SolidColorBrush x:Key="CED.Brush.StatusStagedBackground" Color="{DynamicResource CED.Color.StatusStagedBackground}"/>
 
   <SolidColorBrush x:Key="CED.Brush.InfoPanelBorder" Color="{DynamicResource CED.Color.InfoPanelBorder}"/>
   <SolidColorBrush x:Key="CED.Brush.InfoPanelBackground" Color="{DynamicResource CED.Color.InfoPanelBackground}"/>

@@ -1,27 +1,21 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """Apply breaker/frame updates and run calculate operation."""
 
 import Autodesk.Revit.DB.Electrical as DBE
 from pyrevit import DB
-from pyrevit.compat import get_elementid_value_func, get_elementid_from_value_func
 
 from CEDElectrical.Application.dto.operation_request import OperationRequest
 from CEDElectrical.Domain import settings_manager
 from CEDElectrical.Model.CircuitBranch import CircuitBranch
-
-_get_elid_value = get_elementid_value_func()
-_get_elid_from_value = get_elementid_from_value_func()
+from Snippets import revit_helpers
 
 
 def _elid_value(item):
-    try:
-        return int(_get_elid_value(item))
-    except Exception:
-        return int(getattr(item, 'IntegerValue', 0))
+    return int(revit_helpers.get_elementid_value(item))
 
 
 def _elid_from_value(value):
-    return _get_elid_from_value(int(value))
+    return revit_helpers.elementid_from_value(value)
 
 
 class AutosizeBreakerAndRecalculateOperation(object):
@@ -107,14 +101,19 @@ class AutosizeBreakerAndRecalculateOperation(object):
                 'runtime_alert_rows': [],
             }
 
+        allow_15a = bool(request.options.get('allow_15a', False))
+        calc_options = {
+            'show_output': bool(request.options.get('show_output', False)),
+            'use_existing_transaction_group': True,
+        }
+        if allow_15a:
+            calc_options['min_breaker_size_override'] = 15
+
         calc_request = OperationRequest(
             operation_key='calculate_circuits',
             circuit_ids=changed_ids,
             source=request.source,
-            options={
-                'show_output': bool(request.options.get('show_output', False)),
-                'use_existing_transaction_group': True,
-            },
+            options=calc_options,
         )
         try:
             calc_result = self._calculate_operation.execute(calc_request, doc) or {}
@@ -211,4 +210,5 @@ class AutosizeBreakerAndRecalculateOperation(object):
             'device_owner': '',
             'sync_writeback': False,
         }
+
 
