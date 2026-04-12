@@ -44,15 +44,15 @@ def _seed_runtime_paths():
 
 
 def _find_circuit_manager_panel_path():
-    root = os.path.abspath(os.path.dirname(__file__))
-    for current_root, _, files in os.walk(root):
-        if "CircuitBrowserPanel.py" not in files:
-            continue
-        path = os.path.abspath(os.path.join(current_root, "CircuitBrowserPanel.py"))
-        normalized = path.replace("/", "\\").lower()
-        if "\\electrical.panel\\circuit manager.pushbutton\\" in normalized:
-            return path
-    return None
+    return os.path.abspath(
+        os.path.join(
+            _extension_root(),
+            "AE pyTools.tab",
+            "Electrical.panel",
+            "Circuit Manager.pushbutton",
+            "CircuitBrowserPanel.py",
+        )
+    )
 
 
 def _register_circuit_manager_panel():
