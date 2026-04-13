@@ -113,7 +113,19 @@ def _extract_led_id_from_linked_def(linked_def):
         or linked_def.get_static_param("Element_Linker")
     )
     payload = _parse_linker_payload(raw)
-    return payload.get("led_id") or None
+    led_id = (payload.get("led_id") or "").strip()
+    if led_id:
+        return led_id
+    try:
+        fallback_led_id = getattr(linked_def, "_ced_led_id", None)
+    except Exception:
+        fallback_led_id = None
+    if fallback_led_id:
+        try:
+            fallback_led_id = str(fallback_led_id).strip()
+        except Exception:
+            fallback_led_id = None
+    return fallback_led_id or None
 
 
 def _collect_tag_entries(repo, tag_filter=None):
@@ -567,7 +579,7 @@ def _get_linker_payload_from_instance(inst):
     return {}
 
 
-def _filter_by_led_id(instances, led_id):
+def _filter_by_led_id(instances, led_id, allow_missing_fallback=True):
     if not led_id:
         return instances
     target = led_id.strip().lower()
@@ -584,7 +596,9 @@ def _filter_by_led_id(instances, led_id):
             filtered.append(inst)
     if filtered:
         return filtered
-    return missing_payload
+    if allow_missing_fallback:
+        return missing_payload
+    return []
 
 
 def _resolve_hosts(host_lookup, symbol_lookup, label, canonical):
@@ -726,7 +740,10 @@ def _place_text_note_entries(entries, engine, host_lookup, symbol_lookup, placed
             hosts = _filter_by_group_id(host_list, ctx.get("group_id"))
             if not hosts:
                 continue
-            hosts = _filter_by_led_id(hosts, ctx.get("led_id"))
+            led_id = (ctx.get("led_id") or "").strip()
+            if not led_id:
+                continue
+            hosts = _filter_by_led_id(hosts, led_id, allow_missing_fallback=False)
             if not hosts:
                 continue
 
