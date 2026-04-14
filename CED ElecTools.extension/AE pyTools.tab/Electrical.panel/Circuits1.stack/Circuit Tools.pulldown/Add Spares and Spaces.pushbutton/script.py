@@ -8,11 +8,6 @@ from System.Windows.Media import VisualTreeHelper
 from pyrevit import forms, revit, script
 
 TITLE = "Add / Remove Spares and Spaces"
-THEME_CONFIG_SECTION = "AE-pyTools-Theme"
-THEME_CONFIG_THEME_KEY = "theme_mode"
-THEME_CONFIG_ACCENT_KEY = "accent_mode"
-VALID_THEME_MODES = ("light", "dark", "dark_alt")
-VALID_ACCENT_MODES = ("blue", "neutral")
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 from UIClasses import pathing as ui_pathing
@@ -63,23 +58,10 @@ def _is_descendant_of_control(node, control):
     return False
 
 
-def _normalize_theme_mode(value, fallback="light"):
-    mode = str(value or fallback).strip().lower()
-    return mode if mode in VALID_THEME_MODES else fallback
-
-
-def _normalize_accent_mode(value, fallback="blue"):
-    mode = str(value or fallback).strip().lower()
-    return mode if mode in VALID_ACCENT_MODES else fallback
-
-
 def _load_theme_state(default_theme="light", default_accent="blue"):
     from UIClasses import load_theme_state_from_config
 
     return load_theme_state_from_config(
-        section_name=THEME_CONFIG_SECTION,
-        theme_key_name=THEME_CONFIG_THEME_KEY,
-        accent_key_name=THEME_CONFIG_ACCENT_KEY,
         default_theme=default_theme,
         default_accent=default_accent,
     )
@@ -208,8 +190,8 @@ class QuickPanelActionWindow(forms.WPFWindow):
 
     def __init__(self, options, theme_mode, accent_mode):
         xaml_path = os.path.abspath(os.path.join(THIS_DIR, "AddSparesSpacesQuickWindow.xaml"))
-        self._theme_mode = _normalize_theme_mode(theme_mode, "light")
-        self._accent_mode = _normalize_accent_mode(accent_mode, "blue")
+        self._theme_mode = resource_loader.normalize_theme_mode(theme_mode, "light")
+        self._accent_mode = resource_loader.normalize_accent_mode(accent_mode, "blue")
         self.options = [x for x in list(options or []) if x is not None]
         self.result = None
         forms.WPFWindow.__init__(self, xaml_path)
@@ -286,8 +268,8 @@ class AddRemoveSparesSpacesWindow(forms.WPFWindow):
 
     def __init__(self, theme_mode, accent_mode):
         xaml_path = os.path.abspath(os.path.join(THIS_DIR, "AddSparesSpacesWindow.xaml"))
-        self._theme_mode = _normalize_theme_mode(theme_mode, "light")
-        self._accent_mode = _normalize_accent_mode(accent_mode, "blue")
+        self._theme_mode = resource_loader.normalize_theme_mode(theme_mode, "light")
+        self._accent_mode = resource_loader.normalize_accent_mode(accent_mode, "blue")
         self._items = []
         self._item_by_panel_id = {}
         self._staged_actions_by_panel = {}

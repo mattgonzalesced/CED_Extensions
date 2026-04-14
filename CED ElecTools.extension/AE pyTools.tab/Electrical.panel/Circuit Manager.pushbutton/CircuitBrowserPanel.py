@@ -26,7 +26,7 @@ from System.Windows.Controls import (
     ScrollViewer,
     ScrollBarVisibility,
 )
-from System.Windows.Input import Keyboard, ModifierKeys
+from System.Windows.Input import Keyboard, ModifierKeys, Key
 from System.Windows.Media import BrushConverter, Stretch, VisualTreeHelper
 from System.Windows.Shapes import Path as ShapePath
 from pyrevit import forms, revit, DB, script, HOST_APP
@@ -1084,12 +1084,14 @@ class NeutralIGActionRow(object):
         self.new_qty_changed = False
         self.new_size_changed = False
         self.new_wire_changed = False
+        self.target_include = None
         self.is_changed = False
         self.remarks = ""
         self.recompute_state()
 
     def recompute_state(self):
-        self.is_changed = bool(self.new_qty_changed or self.new_size_changed or self.new_wire_changed)
+        # Neutral / IG actions are staged strictly off quantity transitions.
+        self.is_changed = bool(self.new_qty_changed)
         if not self.is_enabled:
             self.remarks = "Blocked - {}".format(self.reason or "Unsupported")
         elif self.is_changed:
@@ -1125,6 +1127,7 @@ class NeutralIGActionWindow(forms.WPFWindow):
         self._checked_status = self.FindName("CheckedStatusText")
         self._add_btn = self.FindName("AddButton")
         self._remove_btn = self.FindName("RemoveButton")
+        self._reset_selected_btn = self.FindName("ResetSelectedButton")
         self._show_unsupported_cb = self.FindName("ShowUnsupportedToggle")
         if self._show_unsupported_cb is not None:
             self._show_unsupported_cb.IsChecked = True
@@ -1158,11 +1161,8 @@ class NeutralIGActionWindow(forms.WPFWindow):
         self._refresh_status()
 
     def _refresh_status(self):
-        changed = len([x for x in self._rows if x.is_changed and x.is_enabled and x.is_checked])
-        if self._show_unsupported:
-            total = len(self._rows)
-        else:
-            total = len([x for x in self._rows if bool(getattr(x, "is_enabled", False))])
+        changed = len([x for x in self._rows if x.is_changed and x.is_enabled])
+        total = len(self._rows)
         if self._status is not None:
             self._status.Text = "{} of {} circuits to be modified.".format(changed, total)
         if self._checked_status is not None:
@@ -1171,12 +1171,23 @@ class NeutralIGActionWindow(forms.WPFWindow):
             self._checked_status.Text = "{} of {} checked".format(checked, checkable_total)
         self._sync_action_buttons()
 
+    def _selected_rows(self):
+        if self._grid is None:
+            return []
+        try:
+            return list(self._grid.SelectedItems or [])
+        except Exception:
+            return []
+
     def _sync_action_buttons(self):
         checked_count = len([x for x in self._rows if x.is_enabled and x.is_checked])
+        selected_changed = len([x for x in self._selected_rows() if x.is_enabled and x.is_changed])
         if self._add_btn is not None:
             self._add_btn.IsEnabled = checked_count > 0
         if self._remove_btn is not None:
             self._remove_btn.IsEnabled = checked_count > 0
+        if self._reset_selected_btn is not None:
+            self._reset_selected_btn.IsEnabled = selected_changed > 0
 
     def _apply_checkbox_to_selected(self, sender, state):
         if not self._is_ready or self._is_syncing_checks or self._suppress_check_events:
@@ -1246,11 +1257,42 @@ class NeutralIGActionWindow(forms.WPFWindow):
     def add_clicked(self, sender, args):
         self._mode = "add"
         self._preview_callback(self._rows, "add")
+        self._is_syncing_checks = True
+        try:
+            for row in self._rows:
+                row.is_checked = False
+        finally:
+            self._is_syncing_checks = False
         self._refresh_grid(refresh_items=False)
 
     def remove_clicked(self, sender, args):
         self._mode = "remove"
         self._preview_callback(self._rows, "remove")
+        self._is_syncing_checks = True
+        try:
+            for row in self._rows:
+                row.is_checked = False
+        finally:
+            self._is_syncing_checks = False
+        self._refresh_grid(refresh_items=False)
+
+    def reset_selected_clicked(self, sender, args):
+        targets = self._selected_rows()
+        if not targets:
+            self._sync_action_buttons()
+            return
+        for row in targets:
+            if not bool(getattr(row, "is_enabled", False)):
+                continue
+            row.new_qty = row.current_qty
+            row.new_size = row.current_size
+            row.new_wire = "no change"
+            row.new_wire_font_style = "Italic"
+            row.new_qty_changed = False
+            row.new_size_changed = False
+            row.new_wire_changed = False
+            row.target_include = None
+            row.recompute_state()
         self._refresh_grid(refresh_items=False)
 
     def apply_clicked(self, sender, args):
@@ -1271,6 +1313,7 @@ class NeutralIGActionWindow(forms.WPFWindow):
             selected = []
         if selected:
             self._last_selected_rows = selected
+        self._sync_action_buttons()
 
     def _clear_grid_selection(self):
         if self._grid is None:
@@ -1295,6 +1338,7 @@ class NeutralIGActionWindow(forms.WPFWindow):
             return
         if _find_visual_ancestor(source, DataGridRow) is None:
             self._clear_grid_selection()
+            self._sync_action_buttons()
 
 
 class BreakerActionRow(object):
@@ -4410,6 +4454,36 @@ class CircuitBrowserPanel(forms.WPFPanel):
         branch.calculate_conduit_size()
         return branch
 
+    def _resolve_action_branch_type(self, circuit, fallback_type="", settings=None):
+        try:
+            use_settings = settings
+            if use_settings is None:
+                use_settings = settings_manager.load_circuit_settings(circuit.Document)
+            branch = CircuitBranch(circuit, settings=use_settings)
+            return str(getattr(branch, "branch_type", "") or "").strip().upper()
+        except Exception:
+            return str(fallback_type or "").strip().upper()
+
+    def _validate_include_param(self, circuit, param_name):
+        param = None
+        try:
+            param = circuit.LookupParameter(param_name)
+        except Exception:
+            param = None
+        if not param:
+            return False, "Missing parameter: {}".format(param_name)
+        try:
+            if param.StorageType != DB.StorageType.Integer:
+                return False, "Invalid parameter type: {}".format(param_name)
+        except Exception:
+            return False, "Invalid parameter type: {}".format(param_name)
+        try:
+            if bool(getattr(param, "IsReadOnly", False)):
+                return False, "Parameter is read-only: {}".format(param_name)
+        except Exception:
+            pass
+        return True, ""
+
     def _next_ocp_size(self, amps, min_ocp=20):
         try:
             value = float(amps)
@@ -4457,7 +4531,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         lock_map = self._build_writeback_lock_map([getattr(x, "circuit", None) for x in list(targets or [])], doc=doc, settings=settings)
         for item in targets:
             circuit = item.circuit
-            btype = (item.branch_type or "").upper()
+            btype = self._resolve_action_branch_type(circuit, fallback_type=getattr(item, "branch_type", ""), settings=settings)
             reason = ""
             is_enabled = True
 
@@ -4475,6 +4549,12 @@ class CircuitBrowserPanel(forms.WPFPanel):
                     poles = 0
                 if poles <= 1:
                     reason = "Blocked: 1-pole circuits require neutral."
+                    is_enabled = False
+
+            if is_enabled:
+                ok_param, param_reason = self._validate_include_param(circuit, "CKT_Include Neutral_CED")
+                if not ok_param:
+                    reason = param_reason
                     is_enabled = False
 
             lock_row = lock_map.get(_elid_value(circuit.Id))
@@ -4508,6 +4588,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
             row.new_qty_changed = False
             row.new_size_changed = False
             row.new_wire_changed = False
+            row.target_include = None
 
             try:
                 branch = self._simulate_branch(row.circuit, include_neutral=include_neutral)
@@ -4518,28 +4599,40 @@ class CircuitBrowserPanel(forms.WPFPanel):
                 row.recompute_state()
                 continue
 
-            changed = (new_qty != int(row.current_qty or 0)) or (str(new_size or "") != str(row.current_size or "")) or (
-                str(new_wire or "") != str(row.current_wire or "")
-            )
-            if changed:
+            qty_changed = new_qty != int(row.current_qty or 0)
+            if qty_changed:
                 row.new_qty = new_qty
                 row.new_size = new_size
                 row.new_wire = new_wire or "-"
                 row.new_wire_font_style = "Normal"
-                row.new_qty_changed = new_qty != int(row.current_qty or 0)
+                row.new_qty_changed = True
                 row.new_size_changed = str(new_size or "") != str(row.current_size or "")
                 row.new_wire_changed = str(new_wire or "") != str(row.current_wire or "")
+                row.target_include = 1 if int(new_qty or 0) > 0 else 0
             row.recompute_state()
 
     def _apply_neutral_rows(self, rows, mode):
-        changed_ids = [x.circuit_id for x in rows if x.is_enabled and x.is_checked and x.is_changed]
+        updates = []
+        for row in list(rows or []):
+            if not (row.is_enabled and row.is_changed):
+                continue
+            include_value = getattr(row, "target_include", None)
+            if include_value not in (0, 1):
+                continue
+            updates.append(
+                {
+                    "circuit_id": int(row.circuit_id or 0),
+                    "include": int(include_value),
+                }
+            )
+        changed_ids = [x.get("circuit_id") for x in updates if int(x.get("circuit_id") or 0) > 0]
         if not changed_ids:
             forms.alert("No circuits are marked for modification.", title=TITLE)
             return False
         return self._raise_action_operation(
             "set_neutral_and_recalculate",
             changed_ids,
-            {"mode": mode, "show_output": False},
+            {"mode": mode, "updates": updates, "show_output": False},
         )
 
     def _build_ig_rows(self, targets):
@@ -4554,7 +4647,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
         lock_map = self._build_writeback_lock_map([getattr(x, "circuit", None) for x in list(targets or [])], doc=doc, settings=settings)
         for item in targets:
             circuit = item.circuit
-            btype = (item.branch_type or "").upper()
+            btype = self._resolve_action_branch_type(circuit, fallback_type=getattr(item, "branch_type", ""), settings=settings)
             reason = ""
             is_enabled = True
 
@@ -4570,6 +4663,12 @@ class CircuitBrowserPanel(forms.WPFPanel):
                 ground_size = self._param_text(circuit, "CKT_Wire Ground Size_CEDT", "")
                 if override_yes and ground_size.strip() == "-":
                     reason = "Blocked: user override with cleared ground size."
+                    is_enabled = False
+
+            if is_enabled:
+                ok_param, param_reason = self._validate_include_param(circuit, "CKT_Include Isolated Ground_CED")
+                if not ok_param:
+                    reason = param_reason
                     is_enabled = False
 
             lock_row = lock_map.get(_elid_value(circuit.Id))
@@ -4603,6 +4702,7 @@ class CircuitBrowserPanel(forms.WPFPanel):
             row.new_qty_changed = False
             row.new_size_changed = False
             row.new_wire_changed = False
+            row.target_include = None
 
             try:
                 branch = self._simulate_branch(row.circuit, include_ig=include_ig)
@@ -4613,28 +4713,40 @@ class CircuitBrowserPanel(forms.WPFPanel):
                 row.recompute_state()
                 continue
 
-            changed = (new_qty != int(row.current_qty or 0)) or (str(new_size or "") != str(row.current_size or "")) or (
-                str(new_wire or "") != str(row.current_wire or "")
-            )
-            if changed:
+            qty_changed = new_qty != int(row.current_qty or 0)
+            if qty_changed:
                 row.new_qty = new_qty
                 row.new_size = new_size
                 row.new_wire = new_wire or "-"
                 row.new_wire_font_style = "Normal"
-                row.new_qty_changed = new_qty != int(row.current_qty or 0)
+                row.new_qty_changed = True
                 row.new_size_changed = str(new_size or "") != str(row.current_size or "")
                 row.new_wire_changed = str(new_wire or "") != str(row.current_wire or "")
+                row.target_include = 1 if int(new_qty or 0) > 0 else 0
             row.recompute_state()
 
     def _apply_ig_rows(self, rows, mode):
-        changed_ids = [x.circuit_id for x in rows if x.is_enabled and x.is_checked and x.is_changed]
+        updates = []
+        for row in list(rows or []):
+            if not (row.is_enabled and row.is_changed):
+                continue
+            include_value = getattr(row, "target_include", None)
+            if include_value not in (0, 1):
+                continue
+            updates.append(
+                {
+                    "circuit_id": int(row.circuit_id or 0),
+                    "include": int(include_value),
+                }
+            )
+        changed_ids = [x.get("circuit_id") for x in updates if int(x.get("circuit_id") or 0) > 0]
         if not changed_ids:
             forms.alert("No circuits are marked for modification.", title=TITLE)
             return False
         return self._raise_action_operation(
             "set_ig_and_recalculate",
             changed_ids,
-            {"mode": mode, "show_output": False},
+            {"mode": mode, "updates": updates, "show_output": False},
         )
 
     def _build_breaker_rows(self, targets):
@@ -5311,6 +5423,28 @@ class CircuitBrowserPanel(forms.WPFPanel):
             return
         if not _is_descendant_of_control(source, self._list):
             self._clear_list_selection()
+
+    def panel_preview_key_down(self, sender, args):
+        try:
+            key = getattr(args, "Key", None)
+        except Exception:
+            key = None
+        if key != Key.F:
+            return
+        try:
+            modifiers = Keyboard.Modifiers
+        except Exception:
+            modifiers = getattr(ModifierKeys, "None")
+        if (modifiers & ModifierKeys.Control) != ModifierKeys.Control:
+            return
+        if self._search is None:
+            return
+        try:
+            self._search.Focus()
+            self._search.SelectAll()
+            args.Handled = True
+        except Exception:
+            pass
 
     def list_preview_mouse_down(self, sender, args):
         source = getattr(args, "OriginalSource", None)

@@ -2,7 +2,7 @@
 """Reusable bridge between Revit UI theme and WPF tool surfaces."""
 
 DOCK_PANE_FRAME_DARK = "#2E3440"
-DOCK_PANE_FRAME_LIGHT = "#EEEEEE"
+DOCK_PANE_FRAME_LIGHT = "#D9D9D9"
 
 try:
     from Autodesk.Revit.UI import UIThemeManager, UITheme

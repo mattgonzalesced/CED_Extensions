@@ -461,7 +461,7 @@
             BorderThickness="1"
             CornerRadius="{DynamicResource CED.CornerRadius.Panel}"
             Padding="{DynamicResource CED.Thickness.PanelMargin}">
-      <Grid PreviewMouseDown="panel_preview_mouse_down" Grid.IsSharedSizeScope="True">
+  <Grid PreviewMouseDown="panel_preview_mouse_down" PreviewKeyDown="panel_preview_key_down" Grid.IsSharedSizeScope="True">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>

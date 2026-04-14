@@ -33,12 +33,16 @@ class SetIncludeAndRecalculateOperation(object):
         if not circuits:
             return {'status': 'cancelled', 'reason': 'no_circuits'}
 
+        updates_by_id = self._build_updates_map(request.options.get('updates'))
         mode = str(request.options.get('mode') or '').lower()
-        if mode not in ('add', 'remove'):
+        include_value = None
+        if mode in ('add', 'remove'):
+            include_value = 1 if mode == 'add' else 0
+        if include_value is None and not updates_by_id:
             return {'status': 'cancelled', 'reason': 'invalid_mode'}
-        include_value = 1 if mode == 'add' else 0
 
         target_ids = []
+        target_id_set = set()
         locked_rows = []
         tg = DB.TransactionGroup(doc, '{} + Calculate Circuits'.format(self._mode_name))
         tg.Start()
@@ -62,19 +66,36 @@ class SetIncludeAndRecalculateOperation(object):
                 if not param or param.StorageType != DB.StorageType.Integer:
                     continue
 
+                circuit_id = _elid_value(circuit.Id)
+                requested_include = updates_by_id.get(circuit_id, include_value)
+                if requested_include not in (0, 1):
+                    continue
+
                 current = None
                 try:
                     current = param.AsInteger()
                 except Exception:
                     current = None
-                if current == include_value:
+                include_matches = current == requested_include
+                explicit_update = circuit_id in updates_by_id
+                applied_or_confirmed = False
+
+                if include_matches:
+                    applied_or_confirmed = True
+                else:
+                    try:
+                        param.Set(requested_include)
+                        applied_or_confirmed = True
+                    except Exception:
+                        continue
+
+                if not applied_or_confirmed:
                     continue
 
-                try:
-                    param.Set(include_value)
-                    target_ids.append(_elid_value(circuit.Id))
-                except Exception:
-                    continue
+                if explicit_update or (not include_matches):
+                    if circuit_id not in target_id_set:
+                        target_id_set.add(circuit_id)
+                        target_ids.append(circuit_id)
 
             tx.Commit()
         except Exception:
@@ -130,6 +151,25 @@ class SetIncludeAndRecalculateOperation(object):
             if isinstance(el, DBE.ElectricalSystem):
                 circuits.append(el)
         return circuits
+
+    def _build_updates_map(self, updates):
+        mapping = {}
+        for row in list(updates or []):
+            item = dict(row or {})
+            try:
+                cid = int(item.get('circuit_id') or 0)
+            except Exception:
+                cid = 0
+            if cid <= 0:
+                continue
+            try:
+                include_value = int(item.get('include'))
+            except Exception:
+                include_value = None
+            if include_value not in (0, 1):
+                continue
+            mapping[cid] = include_value
+        return mapping
 
     def _block_reason(self, circuit):
         try:

@@ -9,6 +9,7 @@
 
   <Style x:Key="CED.SearchBox.Input" TargetType="TextBox">
     <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+    <Setter Property="CaretBrush" Value="{DynamicResource CED.Brush.PrimaryText}"/>
     <Setter Property="Padding" Value="6,3"/>
     <Setter Property="Height" Value="22"/>
     <Setter Property="VerticalContentAlignment" Value="Center"/>

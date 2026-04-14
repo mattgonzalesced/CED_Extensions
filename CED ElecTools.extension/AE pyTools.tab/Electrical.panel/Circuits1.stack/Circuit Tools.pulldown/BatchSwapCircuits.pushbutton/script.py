@@ -15,11 +15,6 @@ from System.Windows.Media import Color, SolidColorBrush, VisualTreeHelper
 from pyrevit import DB, forms, revit, script
 
 TITLE = "Batch Swap Circuits"
-THEME_CONFIG_SECTION = "AE-pyTools-Theme"
-THEME_CONFIG_THEME_KEY = "theme_mode"
-THEME_CONFIG_ACCENT_KEY = "accent_mode"
-VALID_THEME_MODES = ("light", "dark", "dark_alt")
-VALID_ACCENT_MODES = ("blue", "neutral")
 _WINDOW_MARKER = "_ae_batch_swap_window"
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -66,28 +61,13 @@ def _build_panel_schedule_operation_runner():
     return OperationRunner(registry)
 
 
-def _normalize_accent_mode(value, fallback="blue"):
-    mode = str(value or fallback).strip().lower()
-    return mode if mode in VALID_ACCENT_MODES else fallback
-
-
-def _normalize_theme_mode(value, fallback="light"):
-    mode = str(value or fallback).strip().lower()
-    return mode if mode in VALID_THEME_MODES else fallback
-
-
 def _load_theme_state(default_theme="light", default_accent="blue"):
-    theme_mode = _normalize_theme_mode(default_theme, "light")
-    accent_mode = _normalize_accent_mode(default_accent, "blue")
-    try:
-        cfg = script.get_config(THEME_CONFIG_SECTION)
-        if cfg is None:
-            return theme_mode, accent_mode
-        theme_mode = _normalize_theme_mode(cfg.get_option(THEME_CONFIG_THEME_KEY, theme_mode), theme_mode)
-        accent_mode = _normalize_accent_mode(cfg.get_option(THEME_CONFIG_ACCENT_KEY, accent_mode), accent_mode)
-    except Exception:
-        pass
-    return theme_mode, accent_mode
+    from UIClasses import load_theme_state_from_config
+
+    return load_theme_state_from_config(
+        default_theme=default_theme,
+        default_accent=default_accent,
+    )
 
 
 def operation_key_for_action(action):
@@ -304,8 +284,8 @@ class BatchSwapWindow(forms.WPFWindow):
 
     def __init__(self, theme_mode, accent_mode):
         xaml_path = os.path.abspath(os.path.join(THIS_DIR, "BatchSwapCircuitsWindow.xaml"))
-        self._theme_mode = _normalize_theme_mode(theme_mode, "light")
-        self._accent_mode = _normalize_accent_mode(accent_mode, "blue")
+        self._theme_mode = resource_loader.normalize_theme_mode(theme_mode, "light")
+        self._accent_mode = resource_loader.normalize_accent_mode(accent_mode, "blue")
         self._panel_options = []
         self._panel_option_by_id = {}
         self._template_items_by_panel = {}
