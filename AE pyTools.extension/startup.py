@@ -3,12 +3,17 @@
 Startup hook for after-sync parent parameter conflict checks.
 """
 
+import clr
 import getpass
 import imp
 import json
 import os
 import shutil
 import time
+
+clr.AddReference("PresentationFramework")
+clr.AddReference("PresentationCore")
+clr.AddReference("WindowsBase")
 
 from pyrevit import forms, script
 
@@ -289,8 +294,12 @@ def _on_app_closing(sender, args):
 
         log_data["username"] = username
 
-        # Destination
-        base_path = r"C:\ACC\ACCDocs\CoolSys\CED Content Collection\Project Files\03 Automations\Usage"
+        # Destination — only proceed if ACC is actually synced
+        acc_root = r"C:\ACC\ACCDocs\CoolSys\CED Content Collection"
+        if not os.path.exists(acc_root):
+            log_data["status"] = "acc_not_synced"
+            return
+        base_path = os.path.join(acc_root, "Project Files", "03 Automations", "Usage")
         user_folder = os.path.join(base_path, username)
 
         try:
@@ -304,8 +313,8 @@ def _on_app_closing(sender, args):
             return
 
         # Source
-        user_home = os.path.expanduser("~")
-        source_folder = os.path.join(user_home, "CED_pyTelemetry")
+        appdata = os.environ.get("APPDATA", os.path.join(os.path.expanduser("~"), "AppData", "Roaming"))
+        source_folder = os.path.join(appdata, "pyRevit", "Extensions", "CED_pyTelemetry")
 
         if not os.path.exists(source_folder):
             log_data["status"] = "no_source_folder"
@@ -358,6 +367,89 @@ def _register_shutdown_hook():
     except Exception as exc:
         logger.warning("Failed to register ApplicationClosing hook: %s", exc)
 
+def _check_acc_sync():
+    acc_path = r"C:\ACC\ACCDocs\CoolSys\CED Content Collection"
+    if os.path.exists(acc_path):
+        return
+    from System.Windows import Window, SizeToContent, WindowStartupLocation, Thickness, TextWrapping, HorizontalAlignment
+    from System.Windows.Controls import StackPanel, Image, TextBlock, Button, ScrollViewer
+    from System.Windows.Media.Imaging import BitmapImage
+    from System import Uri, UriKind
+
+    img_dir = os.path.normpath(os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), os.pardir,
+        "WM Tools.extension", "AE pyTools.Tab", "WM Tools.panel",
+        "WM Tools.pulldown", "Load Electrical Content.pushbutton",
+    ))
+    sync_img = os.path.join(img_dir, "sync_instruction.png")
+    explorer_img = os.path.join(img_dir, "file_explorer_instruction.png")
+
+    win = Window()
+    win.Title = "ACC Sync Required"
+    win.SizeToContent = SizeToContent.Width
+    win.Height = 700
+    win.WindowStartupLocation = WindowStartupLocation.CenterScreen
+
+    scroll = ScrollViewer()
+    panel = StackPanel()
+    panel.Margin = Thickness(15)
+
+    req = TextBlock()
+    req.Text = "REQUIRED FOR COOLSYS EMPLOYEES:"
+    req.FontSize = 14
+    req.FontWeight = __import__("System.Windows", fromlist=["FontWeights"]).FontWeights.Bold
+    req.Margin = Thickness(0, 0, 0, 5)
+    panel.Children.Add(req)
+
+    header = TextBlock()
+    header.Text = "CED Content Collection is not synced"
+    header.FontSize = 16
+    header.FontWeight = __import__("System.Windows", fromlist=["FontWeights"]).FontWeights.Bold
+    header.Margin = Thickness(0, 0, 0, 10)
+    panel.Children.Add(header)
+
+    msg = TextBlock()
+    msg.TextWrapping = TextWrapping.Wrap
+    msg.MaxWidth = 620
+    msg.Text = (
+        "This extension requires the CED Content Collection ACC project "
+        "to be synced via Autodesk Desktop Connector.\n\n"
+        "1. Click the Desktop Connector tray icon on your taskbar.\n"
+        "2. Click 'Select Projects' and check 'CED Content Collection' "
+        "from the CoolSys directory.\n"
+        "3. Once synced, restart Revit."
+    )
+    msg.Margin = Thickness(0, 0, 0, 15)
+    panel.Children.Add(msg)
+
+    for img_path, caption, max_w in [(sync_img, "Select Projects in Desktop Connector", 620),
+                                      (explorer_img, "ACC folder in File Explorer", 310)]:
+        if os.path.exists(img_path):
+            lbl = TextBlock()
+            lbl.Text = caption
+            lbl.FontWeight = __import__("System.Windows", fromlist=["FontWeights"]).FontWeights.SemiBold
+            lbl.Margin = Thickness(0, 0, 0, 5)
+            panel.Children.Add(lbl)
+            img = Image()
+            img.Source = BitmapImage(Uri(img_path, UriKind.Absolute))
+            img.MaxWidth = max_w
+            img.HorizontalAlignment = HorizontalAlignment.Left
+            img.Margin = Thickness(0, 0, 0, 15)
+            panel.Children.Add(img)
+
+    btn = Button()
+    btn.Content = "OK"
+    btn.Width = 80
+    btn.Height = 28
+    btn.HorizontalAlignment = HorizontalAlignment.Center
+    btn.Click += lambda s, e: win.Close()
+    panel.Children.Add(btn)
+
+    scroll.Content = panel
+    win.Content = scroll
+    win.ShowDialog()
+
+_check_acc_sync()
 _register_shutdown_hook()
 _register_sync_handler()
 # Temporarily disabled to prevent startup-time dockable panel activity.
