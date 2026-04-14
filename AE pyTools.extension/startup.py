@@ -39,6 +39,16 @@ _IS_RUNNING = False
 
 _DOCKABLE_REGISTERED = False
 
+def _find_acc_root():
+    candidates = [
+        r"C:\ACC\ACCDocs\CoolSys\CED Content Collection",
+        os.path.join(os.path.expanduser("~"), "DC", "ACCDocs", "CoolSys", "CED Content Collection"),
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            return path
+    return None
+
 ENV_HANDLER_KEY = "ced_parent_param_sync_handler_registered"
 ENV_LAST_RUN_KEY = "ced_parent_param_sync_last_run"
 ENV_RUNNING_KEY = "ced_parent_param_sync_running"
@@ -295,8 +305,8 @@ def _on_app_closing(sender, args):
         log_data["username"] = username
 
         # Destination — only proceed if ACC is actually synced
-        acc_root = r"C:\ACC\ACCDocs\CoolSys\CED Content Collection"
-        if not os.path.exists(acc_root):
+        acc_root = _find_acc_root()
+        if acc_root is None:
             log_data["status"] = "acc_not_synced"
             return
         base_path = os.path.join(acc_root, "Project Files", "03 Automations", "Usage")
@@ -368,8 +378,7 @@ def _register_shutdown_hook():
         logger.warning("Failed to register ApplicationClosing hook: %s", exc)
 
 def _check_acc_sync():
-    acc_path = r"C:\ACC\ACCDocs\CoolSys\CED Content Collection"
-    if os.path.exists(acc_path):
+    if _find_acc_root() is not None:
         return
     from System.Windows import Window, SizeToContent, WindowStartupLocation, Thickness, TextWrapping, HorizontalAlignment
     from System.Windows.Controls import StackPanel, Image, TextBlock, Button, ScrollViewer
