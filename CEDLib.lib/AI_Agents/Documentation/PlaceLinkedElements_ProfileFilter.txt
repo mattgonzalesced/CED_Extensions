@@ -1,0 +1,38 @@
+Documentation outline (based on current plan)
+
+Overview
+- Goal: Add a "Place Linked Elements" workflow that lets users select host profile names (from the active YAML) via checkboxes so only those profiles are placed.
+- Background: Current flow appears to place every profile in storage; new workflow should allow opt-in selection per run.
+
+Scope
+- In scope: Locate Place Linked Elements entry point; surface profile names from active YAML equipment definitions; provide checkbox list with search and select-all/none; decide UI entry point; map displayed names to placement keys; filter placement inputs and summaries; validate messaging including no YAML mutations and handling no matches.
+- Out of scope: Not defined in the plan; confirm if any related features are excluded.
+
+Plan summary
+- Steps:
+  1) Locate current Place Linked Elements entry point and confirm profile name source.
+  2) Add a new button entry point ("Place Linked Elements (Profile Filter)") and a checkbox dialog listing truth-source groups, defaulting to none checked, with search and select-all/none actions.
+  3) Map selected truth-source groups back to concrete CAD/profile names used by placement.
+  4) Filter placement inputs (equipment_names, selection_map, rows) and summaries to selected profiles.
+  5) Validate messaging: no YAML mutations, clear output on skipped profiles, graceful handling of no matches.
+- Dependencies: Active YAML equipment definitions; existing Place Linked Elements workflow; UI dialog framework for selection list.
+- Milestones: UX decision; mapping rule confirmed; filtered placement implemented; messaging/edge cases validated.
+
+Implementation notes
+- Key decisions:
+  - New button entry point: "Place Linked Elements (Profile Filter)".
+  - Selection list shows truth-source groups; default selection state is none checked.
+  - Mapping uses truth-source groups to resolve concrete CAD/profile names.
+  - Search and select-all/none actions are included in the dialog.
+- Risks:
+  - Name/grouping ambiguity could place unintended profiles or skip merged/child entries.
+  - Large profile sets may make the checkbox UI sluggish without search/bulk actions.
+  - Behavioral drift vs existing Place Linked Elements or category-filter behavior could confuse users.
+- Open questions: None listed in the plan.
+
+Validation
+- Tests or checks: Verify only selected profiles are placed; verify no YAML mutations; verify clear messaging for skipped or unmatched profiles; verify empty selection or no matches is handled gracefully.
+- Acceptance criteria: Users can select profile names from active YAML and only those profiles are placed; UI supports search and select-all/none; summaries reflect selected profiles only; messaging is clear when no matches exist.
+
+Assumptions
+- None beyond the stated plan; out-of-scope items and UX entry point remain to be confirmed.

@@ -1,0 +1,5 @@
+1. If one valid circuit is selected, it is used as the main circuit.
+2. If multiple circuits are selected, main circuit is chosen from that selected set.
+3. Remaining selected circuits are auto-used as merge sources when compatible.
+4. If selected sources are not compatible (or none exist), it falls back to the existing circuit picker.
+5. If nothing valid is selected, it behaves exactly like before (full picker flow).

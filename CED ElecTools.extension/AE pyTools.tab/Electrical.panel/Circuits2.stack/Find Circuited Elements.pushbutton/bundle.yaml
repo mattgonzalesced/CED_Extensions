@@ -1,0 +1,27 @@
+title: "Find Circuited Elements"
+
+tooltip: >-
+  Version = 1.0
+  
+  Date    = 01.01.2025
+  ________________________________________________________________
+  Description:
+  
+  Finds model elements associated with selected circuits and updates Revit
+  selection in one step.
+
+  Pick circuits (or use current selection), then choose:
+  
+  - Only Circuits
+  
+  - Connected Elements
+  
+  - Both
+
+  Useful for quickly isolating circuit systems and downstream devices in model.
+  ________________________________________________________________
+  
+
+author: >-
+  AEvelina
+

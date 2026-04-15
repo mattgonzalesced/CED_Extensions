@@ -5,6 +5,8 @@ __title__ = "Title"
 __author__ = "Cyril Waechter"
 __doc__ = "Description"
 
-doc = __revit__.ActiveUIDocument.Document  # type: Document
+def get_active_doc():
+    uidoc = getattr(__revit__, "ActiveUIDocument", None)
+    return getattr(uidoc, "Document", None)
 
 logger = script.get_logger()

@@ -1,0 +1,36 @@
+title: 
+  en_us: Wire Circuited Elements
+tooltip: 
+  en_us: >-
+    Version = 1.0
+
+    Date    = 01.01.2025
+    ________________________________________________________________
+    Description:
+    
+    Connect selected electrical elements with wires based on circuit assignments. After all elements of a given circuit are connected,
+    the tool will generate a home run wire on the final element.
+
+
+    SHIFT+Click:
+    
+    Configure:
+    - Default Wire Type
+    - Branch Wiring Type (Arc/Chamfer)
+    - Home Run Wiring Type (Arc/Chamfer)
+    - Reference Home Run shape from selected home run wire
+    - Reset reference shape to auto home run generator
+    
+    
+    Notes:
+    
+    - If Wire Type used by the tool is not available in the active document, SHIFT+Click to pick a new wire type.
+    
+    - Branch wires are created with ElectricalSystem.NewWires().
+    - Home runs are replaced with tool-configured logic and style.
+    ________________________________________________________________
+
+author: Anthony Evelina - CoolSys (2025)
+engine:
+  persistent: false
+  full_frame: false

@@ -1,10 +1,7 @@
+# -*- coding: utf-8 -*-
 """ Module to load Family into project """
 #pylint: disable=import-error,invalid-name,broad-except,superfluous-parens
-import os
-import re
 
-from pyrevit.framework import clr
-from pyrevit import forms, revit, DB, script
 # pylint: disable=import-error,invalid-name,broad-except,superfluous-parens
 import os
 import re

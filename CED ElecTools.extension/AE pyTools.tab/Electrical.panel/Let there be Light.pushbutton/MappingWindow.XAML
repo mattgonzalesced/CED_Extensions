@@ -1,0 +1,480 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Let There Be Light"
+        Width="900"
+        Height="900"
+        MinWidth="900"
+        MinHeight="720"
+        Background="{DynamicResource CED.Brush.WindowBackground}">
+  <Window.Resources>
+    <Style x:Key="CED.DataGrid.Header.WrapCompact"
+           TargetType="DataGridColumnHeader">
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Height" Value="28"/>
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Padding" Value="4,2,4,2"/>
+      <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridHeaderBackground}"/>
+      <Setter Property="Foreground" Value="{DynamicResource CED.Brush.DataGridHeaderForeground}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.DataGridHeaderBorder}"/>
+      <Setter Property="BorderThickness" Value="0,0,1,1"/>
+    </Style>
+  </Window.Resources>
+
+  <Grid Margin="{DynamicResource CED.Thickness.ContentMargin}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <Border Grid.Row="0"
+            BorderBrush="{DynamicResource CED.Brush.CardBorder}"
+            BorderThickness="1"
+            CornerRadius="{DynamicResource CED.CornerRadius.Panel}"
+            Background="{DynamicResource CED.Brush.InfoPanelBackground}"
+            Padding="12"
+            Margin="0,0,0,10">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="0">
+          <TextBlock Text="Let There Be Light" Style="{DynamicResource CED.Text.Title}"/>
+          <TextBlock Name="SubHeaderText"
+                     Text="Select a source, map fixture types and levels, then place fixtures in the active model."
+                     Style="{DynamicResource CED.Text.Secondary}"
+                     Margin="0,4,0,0"/>
+        </StackPanel>
+        <TextBlock Grid.Column="1"
+                   Name="LoadedCountText"
+                   Text="No source loaded"
+                   Style="{DynamicResource CED.Text.CaptionStrong}"
+                   VerticalAlignment="Center"
+                   Margin="14,0,0,0"/>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1"
+            BorderBrush="{DynamicResource CED.Brush.CardBorder}"
+            BorderThickness="1"
+            CornerRadius="{DynamicResource CED.CornerRadius.Panel}"
+            Background="{DynamicResource CED.Brush.InfoPanelBackground}"
+            Padding="10"
+            Margin="0,0,0,10">
+      <Grid Grid.IsSharedSizeScope="True">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" SharedSizeGroup="SourceOptionsLabelCol"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="8"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="8"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="7"
+                   Text="Source Options"
+                   Style="{DynamicResource CED.Text.SectionHeader}"
+                   Margin="0,0,0,6"/>
+
+        <TextBlock Grid.Row="1" Grid.Column="0"
+                   Text="Source:"
+                   Style="{DynamicResource CED.Text.CaptionStrong}"
+                   VerticalAlignment="Center"
+                   Margin="0,0,8,0"/>
+        <ComboBox Grid.Row="1" Grid.Column="1"
+                  Name="SourceModeCombo"
+                  Style="{DynamicResource CED.Input.ComboBox.Flat.Compact}"
+                  VerticalAlignment="Center"
+                  Width="360"
+                  HorizontalAlignment="Left">
+          <ComboBoxItem Content="CSV (CAD Export)" Tag="csv"/>
+          <ComboBoxItem Content="Linked Revit Model" Tag="link"/>
+        </ComboBox>
+        <TextBlock Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="4"
+                   Name="ModeWarningText"
+                   Text="Switching source mode clears in-progress mappings."
+                   Style="{DynamicResource CED.Text.Caption}"
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Left"
+                   Margin="0,0,0,0"/>
+
+        <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="7" Name="CsvOptionsBorder" Margin="0,6,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="SourceOptionsLabelCol"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="8"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="8"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+
+          <TextBlock Grid.Row="0" Grid.Column="0"
+                     Text="CSV File:"
+                     Style="{DynamicResource CED.Text.CaptionStrong}"
+                     VerticalAlignment="Center"
+                     Margin="0,0,8,0"/>
+          <TextBox Grid.Row="0" Grid.Column="1"
+                   Name="CsvPathTextBox"
+                   Style="{DynamicResource CED.Input.TextBox}"
+                   IsReadOnly="True"
+                   VerticalAlignment="Center"
+                   Width="520"
+                   HorizontalAlignment="Left"/>
+          <Button Grid.Row="0" Grid.Column="3"
+                  Name="BrowseCsvButton"
+                  Content="Browse..."
+                  Width="84"
+                  Height="28"
+                  Style="{DynamicResource CED.Button.Base}"
+                  HorizontalAlignment="Center"/>
+          <Button Grid.Row="0" Grid.Column="5"
+                  Name="LoadCsvButton"
+                  Content="Load CSV"
+                  Width="94"
+                  Height="28"
+                  Style="{DynamicResource CED.Button.Apply}"
+                  HorizontalAlignment="Center"/>
+
+          <TextBlock Grid.Row="1" Grid.Column="0"
+                     Text="Host Level:"
+                     Style="{DynamicResource CED.Text.CaptionStrong}"
+                     VerticalAlignment="Center"
+                     Margin="0,4,8,0"/>
+          <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="6" Margin="0,4,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="260"/>
+              <ColumnDefinition Width="20"/>
+              <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="8"/>
+              <ColumnDefinition Width="76"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <ComboBox Grid.Column="0"
+                      Name="CsvLevelCombo"
+                      Style="{DynamicResource CED.Input.ComboBox.Flat.Compact}"
+                      DisplayMemberPath="label"
+                      ToolTip="Host level used for CSV placement."
+                      MinWidth="240"/>
+            <TextBlock Grid.Column="2"
+                       Text="Scale Factor:"
+                       Style="{DynamicResource CED.Text.CaptionStrong}"
+                       VerticalAlignment="Center"/>
+            <TextBox Grid.Column="4"
+                     Name="DivisorTextBox"
+                     Style="{DynamicResource CED.Input.TextBox}"
+                     Text="12"
+                     ToolTipService.InitialShowDelay="250"
+                     ToolTipService.ShowDuration="20000"
+                     Width="76"
+                     VerticalAlignment="Center"/>
+          </Grid>
+        </Grid>
+
+        <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="7" Name="LinkOptionsBorder" Margin="0,6,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="SourceOptionsLabelCol"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="8"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="8"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+
+          <TextBlock Grid.Row="0" Grid.Column="0"
+                     Text="Revit Link:"
+                     Style="{DynamicResource CED.Text.CaptionStrong}"
+                     VerticalAlignment="Center"
+                     Margin="0,0,8,0"/>
+          <ComboBox Grid.Row="0" Grid.Column="1"
+                    Name="LinkCombo"
+                    Style="{DynamicResource CED.Input.ComboBox.Flat.Compact}"
+                    DisplayMemberPath="display_name"
+                    MinWidth="320"
+                    MaxWidth="700"
+                    HorizontalAlignment="Left"/>
+          <Button Grid.Row="0" Grid.Column="3"
+                  Name="LoadLinkButton"
+                  Content="Load Link Fixtures"
+                  Width="Auto"
+                  Height="28"
+                  Style="{DynamicResource CED.Button.Apply}"
+                  HorizontalAlignment="Left"/>
+          <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="5"
+                     Name="LinkSummaryText"
+                     Text="Select a loaded link and click Load Link Fixtures."
+                     Style="{DynamicResource CED.Text.Caption}"
+                     VerticalAlignment="Center"
+                     Margin="0,6,0,0"
+                     TextWrapping="Wrap"/>
+        </Grid>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="2">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+
+      <Grid Grid.Row="0">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+
+          <TextBlock Grid.Row="0"
+                     Text="Fixture Type Mapping"
+                     Style="{DynamicResource CED.Text.SectionHeader}"
+                     Margin="2,0,0,6"/>
+
+          <Border Grid.Row="1"
+                  BorderBrush="{DynamicResource CED.Brush.DataGridBorder}"
+                  BorderThickness="1"
+                  Background="{DynamicResource CED.Brush.ListBackground}"
+                  Margin="0">
+            <DataGrid Name="FixtureGrid"
+                      Style="{DynamicResource CED.DataGrid.Display}"
+                      RowStyle="{DynamicResource CED.DataGrid.RowDisabledAware.NeutralSelection}"
+                      ColumnHeaderStyle="{DynamicResource CED.DataGrid.Header.WrapCompact}"
+                      AutoGenerateColumns="False"
+                      HeadersVisibility="Column"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      CanUserReorderColumns="False"
+                      CanUserResizeRows="False"
+                      SelectionUnit="FullRow"
+                      SelectionMode="Extended"
+                      IsReadOnly="False"
+                      AlternationCount="2"
+                      Margin="0">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Source Fixture / Block"
+                                    Width="2.4*"
+                                    Binding="{Binding source_label}"
+                                    IsReadOnly="True"
+                                    CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly.NeutralSelection}"/>
+                <DataGridTextColumn Header="Count"
+                                    Width="0.3*"
+                                    Binding="{Binding count}"
+                                    IsReadOnly="True"
+                                    CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly.NeutralSelection}"
+                                    ElementStyle="{DynamicResource CenterTextCell}"/>
+                <DataGridTemplateColumn Header="Target Family / Type" Width="2.5*" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <ComboBox Style="{DynamicResource CED.Input.ComboBox.Flat.Compact.Editable}"
+                                Height="24"
+                                Padding="4,1"
+                                Margin="2,1,2,1"
+                                ItemsSource="{Binding target_options}"
+                                Text="{Binding target_label, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+          </Border>
+
+          <Border Grid.Row="2"
+                  Name="FixtureBulkBorder"
+                  BorderBrush="{DynamicResource CED.Brush.CardBorder}"
+                  BorderThickness="1"
+                  CornerRadius="{DynamicResource CED.CornerRadius.Panel}"
+                  Background="{DynamicResource CED.Brush.InfoPanelBackground}"
+                  Padding="8"
+                  Margin="0,8,0,0">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="320"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="12"/>   <!-- Divider spacing -->
+                <ColumnDefinition Width="1"/>    <!-- Divider line -->
+                <ColumnDefinition Width="12"/>   <!-- Divider spacing -->
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0"
+                         Text="Bulk map selected rows:"
+                         Style="{DynamicResource CED.Text.CaptionStrong}"
+                         VerticalAlignment="Center"
+                         Margin="0,0,8,0"/>
+              <ComboBox Grid.Column="1"
+                        Name="BulkFixtureCombo"
+                        Style="{DynamicResource CED.Input.ComboBox.Flat.Compact}"
+                        Height="24"
+                        Padding="4,1"
+                        Margin="0,0,8,0"/>
+              <Button Grid.Column="2"
+                      Name="ApplyBulkFixtureButton"
+                      Content="Apply to Selected"
+                      Width="128"
+                      Height="24"
+                      Style="{DynamicResource CED.Button.Base}"
+                      Margin="0,0,8,0"/>
+              <Button Grid.Column="3"
+                      Name="ClearBulkFixtureButton"
+                      Content="Clear Selected"
+                      Width="104"
+                      Height="24"
+                      Style="{DynamicResource CED.Button.Base}"
+                      Margin="0,0,0,0"/>
+              <Border Grid.Column="5"
+        Width="1"
+        Background="{DynamicResource CED.Brush.SectionDivider}"
+        VerticalAlignment="Stretch"
+        Margin="0,2"/>
+             <Button Grid.Column="7"
+               Name="AutoMapButton"
+               Content="Auto-Match..."
+               Width="108"
+               Height="24"
+               Style="{DynamicResource CED.Button.Base}"
+               ToolTip="Open fixture auto-match to map source values to host fixture types."/>
+            </Grid>
+          </Border>
+        </Grid>
+      </Grid>
+
+      <Grid Grid.Row="1"
+            Name="LevelMappingSection"
+            Margin="0,10,0,0">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          <TextBlock Grid.Row="0"
+                     Text="Level Mapping (Link Mode)"
+                     Style="{DynamicResource CED.Text.SectionHeader}"
+                     Margin="2,0,0,6"/>
+          <TextBlock Grid.Row="1"
+                     Text="&lt;No Level Assigned in Link&gt; means those linked fixtures do not have a valid level assignment."
+                     Style="{DynamicResource CED.Text.Caption}"
+                     Margin="2,0,0,6"/>
+          <Border Grid.Row="2"
+                  BorderBrush="{DynamicResource CED.Brush.DataGridBorder}"
+                  BorderThickness="1"
+                  Background="{DynamicResource CED.Brush.ListBackground}"
+                  Margin="0"
+                  Height="126"
+                  VerticalAlignment="Top">
+            <DataGrid Name="LevelGrid"
+                      Style="{DynamicResource CED.DataGrid.Display}"
+                      RowStyle="{DynamicResource CED.DataGrid.RowDisabledAware.NeutralSelection}"
+                      ColumnHeaderStyle="{DynamicResource CED.DataGrid.Header.WrapCompact}"
+                      AutoGenerateColumns="False"
+                      HeadersVisibility="Column"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      CanUserReorderColumns="False"
+                      CanUserResizeRows="False"
+                      SelectionUnit="FullRow"
+                      SelectionMode="Extended"
+                      IsReadOnly="False"
+                      AlternationCount="2"
+                      Margin="0">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Source Level"
+                                    Width="1.7*"
+                                    Binding="{Binding source_level_name}"
+                                    IsReadOnly="True"
+                                    CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly.NeutralSelection}"/>
+                <DataGridTextColumn Header="Count"
+                                    Width="0.6*"
+                                    Binding="{Binding count}"
+                                    IsReadOnly="True"
+                                    CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly.NeutralSelection}"
+                                    ElementStyle="{DynamicResource CenterTextCell}"/>
+                <DataGridTextColumn Header="Elevation"
+                                    Width="0.8*"
+                                    Binding="{Binding source_elevation_display}"
+                                    IsReadOnly="True"
+                                    CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayReadonly.NeutralSelection}"
+                                    ElementStyle="{DynamicResource CenterTextCell}"/>
+                <DataGridTemplateColumn Header="Target Level" Width="1.9*" CellStyle="{DynamicResource CED.DataGrid.Cell.DisplayEditable}">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <ComboBox Style="{DynamicResource CED.Input.ComboBox.Flat.Compact}"
+                                Height="24"
+                                Padding="4,1"
+                                Margin="2,1,2,1"
+                                ItemsSource="{Binding target_options}"
+                                SelectedItem="{Binding target_label, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+          </Border>
+        </Grid>
+      </Grid>
+    </Grid>
+
+    <Border Grid.Row="3"
+            BorderBrush="{DynamicResource CED.Brush.CardBorder}"
+            BorderThickness="1"
+            CornerRadius="{DynamicResource CED.CornerRadius.Panel}"
+            Background="{DynamicResource CED.Brush.InfoPanelBackground}"
+            Padding="10"
+            Margin="0,10,0,0">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <CheckBox Grid.Column="0"
+                  Name="SkipDuplicatesCheck"
+                  Content="Skip probable duplicates (same mapped type + location)"
+                  IsChecked="False"
+                  Visibility="Collapsed"
+                  Style="{DynamicResource CED.Input.CheckBox}"/>
+        <TextBlock Grid.Column="0"
+                   Name="ValidationText"
+                   Text="Load a source to begin."
+                   Style="{DynamicResource CED.Text.Secondary}"
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Left"/>
+
+        <Button Grid.Column="1"
+                Name="CancelButton"
+                Content="Cancel"
+                Width="86"
+                Height="28"
+                Style="{DynamicResource CED.Button.Base}"
+                Margin="0,0,6,0"/>
+        <Button Grid.Column="2"
+                Name="PlaceButton"
+                Content="Place Fixtures"
+                Width="118"
+                Height="28"
+                Style="{DynamicResource CED.Button.Apply}"/>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

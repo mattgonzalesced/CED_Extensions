@@ -5,12 +5,13 @@
 class AlertDefinition(object):
     """Lightweight alert definition similar to Revit failure definitions."""
 
-    def __init__(self, alert_id, message, group, severity="NONE", resolutions=None):
+    def __init__(self, alert_id, message, group, severity="NONE", resolutions=None, persistent=True):
         self._id = alert_id
         self._message = message
         self._group = group
         self._severity = severity
         self._resolutions = resolutions or []
+        self._persistent = bool(persistent)
 
     # Accessor-style methods mirroring Revit's API naming
     def GetApplicableResolutionTypes(self):
@@ -42,6 +43,10 @@ class AlertDefinition(object):
     @property
     def severity(self):
         return self._severity
+
+    @property
+    def persistent(self):
+        return self._persistent
 
     def format(self, **kwargs):
         try:
@@ -159,7 +164,7 @@ class Alerts(object):
     def NonStandardOCPRating(breaker_size, next_size):
         return {
             "definition": get_alert_definition("design_non_standard_ocp_rating"),
-            "data": {"breaker_size": breaker_size, "next_size": next_size},
+            "data": {"breaker_size": int(round(breaker_size)), "next_size": int(round(next_size))},
         }
 
     @staticmethod
@@ -168,7 +173,7 @@ class Alerts(object):
             "definition": get_alert_definition("design_breaker_lug_size_limit_override"),
             "data": {
                 "hot_size": hot_size,
-                "breaker_size": breaker_size,
+                "breaker_size": int(round(breaker_size)),
                 "max_lug_size": max_lug_size,
             },
         }
@@ -179,7 +184,7 @@ class Alerts(object):
             "definition": get_alert_definition("design_breaker_lug_quantity_limit_override"),
             "data": {
                 "wire_sets": wire_sets,
-                "breaker_size": breaker_size,
+                "breaker_size": int(round(breaker_size)),
                 "max_lug_qty": max_lug_qty,
             },
         }
@@ -188,14 +193,14 @@ class Alerts(object):
     def BreakerLugSizeLimitCalc(hot_size, breaker_size):
         return {
             "definition": get_alert_definition("calculation_breaker_lug_size_limit"),
-            "data": {"hot_size": hot_size, "breaker_size": breaker_size},
+            "data": {"hot_size": hot_size, "breaker_size": int(round(breaker_size))},
         }
 
     @staticmethod
     def BreakerLugQuantityLimitCalc(wire_sets, breaker_size):
         return {
             "definition": get_alert_definition("calculation_breaker_lug_quantity_limit"),
-            "data": {"wire_sets": wire_sets, "breaker_size": breaker_size},
+            "data": {"wire_sets": wire_sets, "breaker_size": int(round(breaker_size))},
         }
 
     @staticmethod
@@ -263,9 +268,23 @@ class Alerts(object):
         return {
             "definition": get_alert_definition("design_undersized_ocp"),
             "data": {
-                "circuit_load_current": circuit_load_current,
+                "circuit_load_current": round(circuit_load_current,1),
                 "breaker_rating": int(round(breaker_rating)),
             },
+        }
+
+    @staticmethod
+    def CircuitLoadsNull():
+        return {
+            "definition": get_alert_definition("design_circuit_loads_null"),
+            "data": {},
+        }
+
+    @staticmethod
+    def CircuitPanelsNull():
+        return {
+            "definition": get_alert_definition("design_circuit_panels_null"),
+            "data": {},
         }
 
     @staticmethod

@@ -1,0 +1,19 @@
+title: "Edit Schedule Headers"
+
+tooltip: >-
+  Version = 1.0
+  
+  Date    = 01.01.2025
+  ________________________________________________________________
+  Description:
+  
+  Cleans schedule header text for sheet readability.
+
+  Converts header labels to title case and removes parameter-style prefixes
+  so schedule columns read as clean, presentation-ready names.
+  ________________________________________________________________
+  
+
+author: >-
+  AEvelina
+

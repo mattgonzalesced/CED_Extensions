@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 WIRE_AMPACITY_TABLE = {
     'CU': {
         60: [

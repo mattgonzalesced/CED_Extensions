@@ -1,0 +1,65 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style x:Key="CED.Badge.Base" TargetType="Border">
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource CED.CornerRadius.Badge}"/>
+    <Setter Property="Padding" Value="3,0"/>
+    <Setter Property="Background" Value="Transparent"/>
+  </Style>
+
+  <Style x:Key="CED.Badge.Info" TargetType="Border" BasedOn="{StaticResource CED.Badge.Base}">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.BadgeInfoBackground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.BadgeInfoBorder}"/>
+  </Style>
+
+  <Style x:Key="CED.Badge.Warning" TargetType="Border" BasedOn="{StaticResource CED.Badge.Base}">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.BadgeWarningBackground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.BadgeWarningBorder}"/>
+  </Style>
+
+  <Style x:Key="CED.Badge.Success" TargetType="Border" BasedOn="{StaticResource CED.Badge.Base}">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.BadgeStd02Background}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.BadgeStd02Border}"/>
+  </Style>
+
+  <Style x:Key="CED.Badge.Neutral" TargetType="Border" BasedOn="{StaticResource CED.Badge.Base}">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.BadgeStd04Background}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.BadgeStd04Border}"/>
+  </Style>
+
+  <Style x:Key="CED.Badge.Danger" TargetType="Border" BasedOn="{StaticResource CED.Badge.Base}">
+    <Setter Property="Background" Value="{DynamicResource CED.Brush.DataGridErrorBackground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.AccentRed}"/>
+  </Style>
+
+  <Style x:Key="CED.Badge.Alert" TargetType="Border" BasedOn="{StaticResource CED.Badge.Base}">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CED.Brush.SelectionBadge}"/>
+  </Style>
+
+  <Style x:Key="CED.Badge.Text" TargetType="TextBlock">
+    <Setter Property="FontWeight" Value="Bold"/>
+    <Setter Property="FontSize" Value="10"/>
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.PrimaryText}"/>
+  </Style>
+
+  <Style x:Key="CED.Badge.Text.Info" TargetType="TextBlock" BasedOn="{StaticResource CED.Badge.Text}">
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.BadgeInfoText}"/>
+  </Style>
+
+  <Style x:Key="CED.Badge.Text.Warning" TargetType="TextBlock" BasedOn="{StaticResource CED.Badge.Text}">
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.BadgeWarningText}"/>
+  </Style>
+
+  <Style x:Key="CED.Badge.Text.Success" TargetType="TextBlock" BasedOn="{StaticResource CED.Badge.Text}">
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.BadgeStd02Text}"/>
+  </Style>
+
+  <Style x:Key="CED.Badge.Text.Neutral" TargetType="TextBlock" BasedOn="{StaticResource CED.Badge.Text}">
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.BadgeStd04Text}"/>
+  </Style>
+
+  <Style x:Key="CED.Badge.Text.Danger" TargetType="TextBlock" BasedOn="{StaticResource CED.Badge.Text}">
+    <Setter Property="Foreground" Value="{DynamicResource CED.Brush.AccentRed}"/>
+  </Style>
+</ResourceDictionary>
