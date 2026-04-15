@@ -3485,6 +3485,29 @@ class CircuitBrowserPanel(forms.WPFPanel):
     def _set_revit_selection(self, elements):
         set_revit_selection(elements, uidoc=revit.uidoc)
 
+    def _show_and_select_revit_targets(self, elements):
+        uidoc = getattr(revit, "uidoc", None)
+        if uidoc is None:
+            return
+        ids = List[DB.ElementId]()
+        seen = set()
+        for element in list(elements or []):
+            element_id = getattr(element, "Id", None)
+            if element_id is None:
+                continue
+            value = _elid_value(element_id)
+            if value <= 0 or value in seen:
+                continue
+            seen.add(value)
+            ids.Add(element_id)
+        if ids.Count <= 0:
+            return
+        try:
+            uidoc.ShowElements(ids)
+        except Exception:
+            pass
+        set_revit_selection(elements, uidoc=uidoc)
+
     def _apply_check_state(self, sender, state):
         clicked_item = None
         try:
@@ -5562,6 +5585,20 @@ class CircuitBrowserPanel(forms.WPFPanel):
         select_menu.Items.Add(device_item)
         menu.Items.Add(select_menu)
 
+        show_devices_item = MenuItem()
+        _set_if_resource(self, show_devices_item, "Style", "CED.MenuItem.Base")
+        show_devices_item.Header = "Show Devices in Model"
+        show_devices_item.IsEnabled = bool(selected_rows)
+        show_devices_item.Click += self.show_rows_devices_in_model_clicked
+        menu.Items.Add(show_devices_item)
+
+        show_panel_item = MenuItem()
+        _set_if_resource(self, show_panel_item, "Style", "CED.MenuItem.Base")
+        show_panel_item.Header = "Show Panel in Model"
+        show_panel_item.IsEnabled = bool(selected_rows)
+        show_panel_item.Click += self.show_rows_panel_in_model_clicked
+        menu.Items.Add(show_panel_item)
+
         sep_select_edit = Separator()
         _set_if_resource(self, sep_select_edit, "Style", "CED.Separator.Menu")
         menu.Items.Add(sep_select_edit)
@@ -5678,6 +5715,24 @@ class CircuitBrowserPanel(forms.WPFPanel):
             except Exception:
                 continue
         self._set_revit_selection(targets)
+
+    def show_rows_devices_in_model_clicked(self, sender, args):
+        targets = []
+        for item in self._collect_selected_row_targets():
+            try:
+                targets.extend(collect_circuit_targets(item.circuit, "device"))
+            except Exception:
+                continue
+        self._show_and_select_revit_targets(targets)
+
+    def show_rows_panel_in_model_clicked(self, sender, args):
+        targets = []
+        for item in self._collect_selected_row_targets():
+            try:
+                targets.extend(collect_circuit_targets(item.circuit, "panel"))
+            except Exception:
+                continue
+        self._show_and_select_revit_targets(targets)
 
     def clear_revit_selection_clicked(self, sender, args):
         clear_revit_selection(uidoc=revit.uidoc)
