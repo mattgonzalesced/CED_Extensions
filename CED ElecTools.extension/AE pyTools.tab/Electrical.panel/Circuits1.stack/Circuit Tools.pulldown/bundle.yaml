@@ -1,10 +1,13 @@
 layout:
-  - CreateDedicatedCircuits
+  - Edit Circuit Properties
+  - Circuit Element Finder
+  - ----
   - BatchSwapCircuits
   - MoveSelectedCircuits
-  - Edit Circuit Properties
-  - Add Spares and Spaces
   - MergeCircuits
   - RenameCircuitsByDeviceParameter
+  - ----
+  - CreateDedicatedCircuits
+  - Add Spares and Spaces
   - -----
   - Load Electrical Parameters
