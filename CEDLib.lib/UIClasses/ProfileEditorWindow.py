@@ -17,6 +17,7 @@ Changes are written back into the existing InstanceConfig objects in memory.
 import copy
 import re
 
+import clr
 from pyrevit import forms, script
 from LogicClasses.Element_Linker import OffsetConfig, TagConfig
 
@@ -26,6 +27,12 @@ except NameError:
     basestring = str
 
 # WPF controls for building parameter rows dynamically
+for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
+    try:
+        clr.AddReference(_wpf_asm)
+    except Exception:
+        pass
+
 from System.Windows.Controls import StackPanel, TextBlock, TextBox, Orientation, ListBoxItem, ComboBox
 from System.Windows import Thickness, TextWrapping, Visibility
 

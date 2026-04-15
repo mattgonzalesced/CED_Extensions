@@ -4,7 +4,15 @@
 import copy
 import os
 
+import clr
 from System import Math
+
+for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
+    try:
+        clr.AddReference(_wpf_asm)
+    except Exception:
+        pass
+
 from System.Windows import DataObject, DragDrop, DragDropEffects
 from System.Windows import FontWeights
 from System.Windows import Visibility

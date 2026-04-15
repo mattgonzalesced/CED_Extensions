@@ -2,6 +2,14 @@
 
 import os
 
+import clr
+
+for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
+    try:
+        clr.AddReference(_wpf_asm)
+    except Exception:
+        pass
+
 from Autodesk.Revit.UI import ExternalEvent, IExternalEventHandler
 from System.Windows import Application, WindowState
 from System.Windows.Controls import Button, DataGridRow
