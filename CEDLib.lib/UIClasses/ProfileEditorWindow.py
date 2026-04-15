@@ -17,6 +17,14 @@ Changes are written back into the existing InstanceConfig objects in memory.
 import copy
 import re
 
+import clr
+
+for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
+    try:
+        clr.AddReference(_wpf_asm)
+    except Exception:
+        pass
+
 from pyrevit import forms, script
 from LogicClasses.Element_Linker import OffsetConfig, TagConfig
 

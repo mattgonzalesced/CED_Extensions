@@ -1,6 +1,14 @@
 # coding: utf8
 import os
 
+import clr
+
+for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
+    try:
+        clr.AddReference(_wpf_asm)
+    except Exception:
+        pass
+
 from Autodesk.Revit import Exceptions
 from Autodesk.Revit.ApplicationServices import Application
 from Autodesk.Revit.DB import Document, BindingMap, ElementBinding, CategorySet

@@ -3,6 +3,14 @@
 
 import os
 
+import clr
+
+for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
+    try:
+        clr.AddReference(_wpf_asm)
+    except Exception:
+        pass
+
 from System import Uri
 from System.Windows import ResourceDictionary
 

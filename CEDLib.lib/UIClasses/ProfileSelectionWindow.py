@@ -6,6 +6,14 @@ Simple WPF window that shows profile group choices with search and
 select-all/none actions.
 """
 
+import clr
+
+for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
+    try:
+        clr.AddReference(_wpf_asm)
+    except Exception:
+        pass
+
 from pyrevit import forms
 from System.Windows import Thickness, Visibility
 from System.Windows.Controls import CheckBox

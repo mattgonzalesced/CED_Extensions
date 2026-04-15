@@ -4,6 +4,14 @@ import imp
 import json
 import os
 
+import clr
+
+for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
+    try:
+        clr.AddReference(_wpf_asm)
+    except Exception:
+        pass
+
 import Autodesk.Revit.DB.Electrical as DBE
 from Autodesk.Revit.DB.Events import (
     DocumentOpenedEventArgs,

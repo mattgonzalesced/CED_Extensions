@@ -4,6 +4,14 @@
 import os
 import re
 
+import clr
+
+for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
+    try:
+        clr.AddReference(_wpf_asm)
+    except Exception:
+        pass
+
 import Autodesk.Revit.DB.Electrical as DBE
 from System.Windows import Visibility, Thickness
 from System.Windows.Controls import Border, Control, ScrollViewer

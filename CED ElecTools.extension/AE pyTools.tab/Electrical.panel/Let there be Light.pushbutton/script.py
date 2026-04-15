@@ -14,6 +14,14 @@ import re
 from collections import defaultdict
 from difflib import SequenceMatcher
 
+import clr
+
+for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
+    try:
+        clr.AddReference(_wpf_asm)
+    except Exception:
+        pass
+
 from Autodesk.Revit.DB import (
     BuiltInCategory,
     BuiltInParameter,
