@@ -3,7 +3,6 @@
 Startup hook for after-sync parent parameter conflict checks.
 """
 
-import clr
 import getpass
 import imp
 import json
@@ -11,11 +10,14 @@ import os
 import shutil
 import time
 
+import clr
+
 clr.AddReference("PresentationFramework")
 clr.AddReference("PresentationCore")
 clr.AddReference("WindowsBase")
 
 from pyrevit import forms, script
+from pyrevit.userconfig import user_config
 
 try:
     from Autodesk.Revit.UI.Events import DocumentSynchronizedWithCentralEventArgs as UiSyncArgs
@@ -39,6 +41,45 @@ _IS_RUNNING = False
 
 _DOCKABLE_REGISTERED = False
 
+
+def _telemetry_source_folder():
+    appdata = os.environ.get("APPDATA", os.path.join(os.path.expanduser("~"), "AppData", "Roaming"))
+    return os.path.join(appdata, "pyRevit", "Extensions", "CED_pyTelemetry")
+
+
+def _ensure_telemetry_source_folder():
+    source_folder = _telemetry_source_folder()
+    if os.path.exists(source_folder):
+        return source_folder, True, None
+    try:
+        os.makedirs(source_folder)
+        return source_folder, True, None
+    except Exception as exc:
+        return source_folder, False, exc
+
+
+def _configure_pyrevit_telemetry():
+    logger = script.get_logger()
+    source_folder, folder_ok, folder_error = _ensure_telemetry_source_folder()
+    if not folder_ok:
+        logger.warning("Telemetry folder not available: %s", folder_error)
+        return
+
+    try:
+        # pyRevit telemetry reads from global user_config telemetry properties.
+        user_config.telemetry_utc_timestamp = True
+        user_config.telemetry_status = True
+        user_config.telemetry_file_dir = source_folder
+        user_config.telemetry_server_url = ""
+        user_config.telemetry_include_hooks = True
+        user_config.apptelemetry_status = False
+        user_config.apptelemetry_server_url = ""
+        user_config.apptelemetry_event_flags = "0x0"
+        user_config.save_changes()
+        logger.info("pyRevit telemetry config ensured. telemetry_file_dir=%s", source_folder)
+    except Exception as exc:
+        logger.warning("Failed to configure pyRevit telemetry: %s", exc)
+
 def _find_acc_root():
     candidates = [
         r"C:\ACC\ACCDocs\CoolSys\CED Content Collection",
@@ -52,6 +93,7 @@ def _find_acc_root():
 ENV_HANDLER_KEY = "ced_parent_param_sync_handler_registered"
 ENV_LAST_RUN_KEY = "ced_parent_param_sync_last_run"
 ENV_RUNNING_KEY = "ced_parent_param_sync_running"
+ENV_APP_CLOSING_HANDLER_KEY = "ced_app_closing_handler_registered"
 
 
 def _module_path():
@@ -323,8 +365,7 @@ def _on_app_closing(sender, args):
             return
 
         # Source
-        appdata = os.environ.get("APPDATA", os.path.join(os.path.expanduser("~"), "AppData", "Roaming"))
-        source_folder = os.path.join(appdata, "pyRevit", "Extensions", "CED_pyTelemetry")
+        source_folder = _telemetry_source_folder()
 
         if not os.path.exists(source_folder):
             log_data["status"] = "no_source_folder"
@@ -368,10 +409,17 @@ def _on_app_closing(sender, args):
 
 def _register_shutdown_hook():
     logger = script.get_logger()
+    if _get_env(ENV_APP_CLOSING_HANDLER_KEY):
+        logger.info("ApplicationClosing hook already registered; skipping.")
+        return
 
     try:
         app = __revit__
+        if app is None:
+            logger.warning("ApplicationClosing hook not registered: UIApplication unavailable.")
+            return
         app.ApplicationClosing += _on_app_closing
+        _set_env(ENV_APP_CLOSING_HANDLER_KEY, "1")
         logger.info("ApplicationClosing hook registered.")
 
     except Exception as exc:
@@ -458,8 +506,9 @@ def _check_acc_sync():
     win.Content = scroll
     win.ShowDialog()
 
+_configure_pyrevit_telemetry()
 _check_acc_sync()
 _register_shutdown_hook()
-_register_sync_handler()
+#_register_sync_handler()
 # Temporarily disabled to prevent startup-time dockable panel activity.
 # _register_place_single_profile_panel()

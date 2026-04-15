@@ -5899,12 +5899,6 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
 def ensure_panel_visible():
     try:
-        if not forms.is_registered_dockable_panel(CircuitBrowserPanel):
-            forms.register_dockable_panel(CircuitBrowserPanel, default_visible=False)
-    except Exception:
-        pass
-
-    try:
         forms.open_dockable_panel(CircuitBrowserPanel.panel_id)
     except Exception:
         try:
