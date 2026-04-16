@@ -203,8 +203,6 @@ class ProfileRepository(object):
                         continue
                     if _is_builtin_keynote_tag(tag_data):
                         continue
-                    if _is_builtin_keynote_tag(tag_data):
-                        continue
                     offsets_dict = tag_data.get("offsets") or {}
                     if not isinstance(offsets_dict, dict):
                         offsets_dict = {}

@@ -1,0 +1,15 @@
+Place Linked Elements now consumes the exact offsets, parent rotation, tags,
+and parameters stored in Extensible Storage. After selecting the active YAML,
+the tool scans the project (and linked models) for matching host names, then
+creates every Linked Element Definition at the saved location relative to its
+parent’s frame.
+
+Because Element_Linker payloads are written during placement, Undo/Redo,
+Update Vector, Tag Equipment, and QA/QC can immediately track each instance by
+its LED ID. If a host is missing, the summary callout lets you know so you can
+fix the naming before rerunning the command.
+
+Run this after Select Parent Element or Update Vector to push the refreshed
+layouts back into the model. Once the pass completes, feel free to launch QAQC
+or Tag Equipment—both tools read the same metadata and require no additional
+manual work.

@@ -1,0 +1,28 @@
+QA/QC – Code Explained
+======================
+
+Mission
+-------
+Provide a snapshot of how well the automation is covering the project.  It
+counts host elements found versus elements actually placed (by reading
+Element_Linker metadata) and prints Markdown output summarizing progress.
+
+Mechanics
+---------
+1. **Load YAML** – `load_active_yaml_data` supplies the definitions so the script
+   knows which names to look for and how many linked element definitions each
+   equipment definition contains.
+2. **Host Counting** – `_collect_placeholder_counts` scans models and linked
+   docs, producing counts keyed by normalized definition names.
+3. **Placement Counting** – `_collect_placed_counts` iterates all instances with
+   Element_Linker payloads, mapping them back to LEDs and definitions.
+4. **Report Generation** – Results are printed via `script.get_output().print_md`
+   so Revit’s output panel displays bold/italic entries, placed type totals, and
+   configuration counts per definition.
+
+Usage Notes
+-----------
+* Because the script divides placed counts by LED count per definition, you see
+  a “configurations placed” number, giving a realistic view of how many full
+  setups exist in the model.
+* No data modifications occur; this is read-only analysis.

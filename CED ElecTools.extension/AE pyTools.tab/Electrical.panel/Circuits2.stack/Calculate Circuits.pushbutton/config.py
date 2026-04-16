@@ -50,11 +50,8 @@ UI_RESOURCES_ROOT = ui_pathing.resolve_ui_resources_root(LIB_ROOT)
 THEME_CONFIG_SECTION = "AE-pyTools-Theme"
 THEME_CONFIG_THEME_KEY = "theme_mode"
 THEME_CONFIG_ACCENT_KEY = "accent_mode"
-<<<<<<< HEAD
 VALID_THEME_MODES = ("light", "dark", "dark_alt")
 VALID_ACCENT_MODES = ("blue", "neutral")
-=======
->>>>>>> main
 ELECTRICAL_PANEL_ROOT = (
     ui_pathing.find_named_ancestor(THIS_DIR, "Electrical.panel")
     or os.path.abspath(os.path.join(THIS_DIR, "..", ".."))
@@ -87,7 +84,6 @@ LOAD_PARAMS_GROUP_MAP = {
 }
 
 
-<<<<<<< HEAD
 def _normalize_theme_mode(value, fallback="light"):
     mode = str(value or fallback).strip().lower()
     return mode if mode in VALID_THEME_MODES else fallback
@@ -110,28 +106,14 @@ def _load_theme_state(default_theme="light", default_accent="blue"):
     except Exception:
         pass
     return theme_mode, accent_mode
-=======
-def _load_theme_state(default_theme="light", default_accent="blue"):
-    from UIClasses import load_theme_state_from_config
-
-    return load_theme_state_from_config(
-        default_theme=default_theme,
-        default_accent=default_accent,
-    )
->>>>>>> main
 
 
 def _save_theme_state(theme_mode, accent_mode):
     cfg = script.get_config(THEME_CONFIG_SECTION)
     if cfg is None:
         return
-<<<<<<< HEAD
     cfg.set_option(THEME_CONFIG_THEME_KEY, _normalize_theme_mode(theme_mode, "light"))
     cfg.set_option(THEME_CONFIG_ACCENT_KEY, _normalize_accent_mode(accent_mode, "blue"))
-=======
-    cfg.set_option(THEME_CONFIG_THEME_KEY, resource_loader.normalize_theme_mode(theme_mode, "light"))
-    cfg.set_option(THEME_CONFIG_ACCENT_KEY, resource_loader.normalize_accent_mode(accent_mode, "blue"))
->>>>>>> main
     script.save_config()
 
 
@@ -528,13 +510,8 @@ class CircuitSettingsWindow(forms.WPFWindow):
     def _on_theme_value_changed(self, sender, args):
         if self._is_loading_ui:
             return
-<<<<<<< HEAD
         theme_mode = _normalize_theme_mode(self._get_combo_tag(self.theme_mode_cb), self._theme_mode)
         accent_mode = _normalize_accent_mode(self._get_combo_tag(self.accent_mode_cb), self._accent_mode)
-=======
-        theme_mode = resource_loader.normalize_theme_mode(self._get_combo_tag(self.theme_mode_cb), self._theme_mode)
-        accent_mode = resource_loader.normalize_accent_mode(self._get_combo_tag(self.accent_mode_cb), self._accent_mode)
->>>>>>> main
         if theme_mode == self._theme_mode and accent_mode == self._accent_mode:
             return
         self._theme_mode = theme_mode
@@ -787,13 +764,8 @@ class CircuitSettingsWindow(forms.WPFWindow):
 
         settings_manager.save_circuit_settings(self.doc, updated)
         self.settings = updated
-<<<<<<< HEAD
         self._theme_mode = _normalize_theme_mode(self._get_combo_tag(self.theme_mode_cb), self._theme_mode)
         self._accent_mode = _normalize_accent_mode(self._get_combo_tag(self.accent_mode_cb), self._accent_mode)
-=======
-        self._theme_mode = resource_loader.normalize_theme_mode(self._get_combo_tag(self.theme_mode_cb), self._theme_mode)
-        self._accent_mode = resource_loader.normalize_accent_mode(self._get_combo_tag(self.accent_mode_cb), self._accent_mode)
->>>>>>> main
         _save_theme_state(self._theme_mode, self._accent_mode)
         self._previous_equipment_write = bool(self.settings.write_equipment_results)
         self._previous_fixture_write = bool(self.settings.write_fixture_results)

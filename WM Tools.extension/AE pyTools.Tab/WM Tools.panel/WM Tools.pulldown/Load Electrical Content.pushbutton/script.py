@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
-
-import Autodesk.Revit.DB.Electrical as DBE
 import System
-from System.Collections.Generic import List
+from pyrevit import revit, DB, script, UI
 from pyrevit import forms
-from pyrevit import revit, DB, script
 from pyrevit.interop import xl as pyxl
 from pyrevit.revit import create
-
+from System.Collections.Generic import List
+import Autodesk.Revit.DB.Electrical as DBE
+from pyrevit.framework import clr
 # Setup
 uidoc = revit.uidoc
 doc = revit.doc
@@ -28,61 +27,20 @@ script_dir = os.path.dirname(__file__)
 
 # --- Content Folder Path Resolution ---
 def resolve_content_folder():
-    tail = os.path.join(
-        "CED Content Collection",
-        "Project Files",
-        "03 Automations",
-        "Walmart",
-        "Content"
-    )
-
     candidates = [
         os.path.join(user_folder, content_folder),
-        r"C:\ACC\ACCDocs\CoolSys\{}".format(tail),
-        r"C:\DC\ACCDocs\CoolSys\{}".format(tail),
+
     ]
 
-    # --- 1. Known paths ---
     for path in candidates:
-        path = os.path.normpath(path)
-
-        logger.debug("Checking candidate: {}".format(path))
-
         if os.path.exists(path):
             logger.info("✅ Found content folder at: {}".format(path))
             return path
-
-    # --- 2. Scan for ACCDocs ---
-    try:
-        for folder in os.listdir(r"C:\\"):
-            root_path = os.path.join(r"C:\\", folder)
-
-            if not os.path.isdir(root_path):
-                continue
-
-            logger.debug("Scanning root: {}".format(root_path))
-
-            accdocs = os.path.join(root_path, "ACCDocs")
-
-            if not os.path.isdir(accdocs):
-                continue
-
-            test_path = os.path.join(accdocs, "CoolSys", tail)
-
-            if os.path.exists(test_path):
-                logger.info("✅ Found content folder via scan: {}".format(test_path))
-                return test_path
-
-    except Exception as e:
-        logger.warning("⚠️ Error scanning C drive: {}".format(e))
-
-    # --- 3. Failure ---
-    example_path = r"C:\ACC\ACCDocs\CoolSys\{}".format(tail)
-
-    logger.warning("❌ Could not find content folder in any known location.")
+    example_path = os.path.join(user_folder, content_folder)
+    logger.warning("❌ Could not find content folder in either known OneDrive path.")
     show_sharepoint_sync_instructions(example_path)
-
     script.exit()
+
 
 def safely_load_shared_parameter_file(app, shared_param_txt):
     """

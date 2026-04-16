@@ -14,10 +14,6 @@ import re
 from collections import defaultdict
 from difflib import SequenceMatcher
 
-<<<<<<< HEAD
-=======
-import clr
->>>>>>> main
 from Autodesk.Revit.DB import (
     BuiltInCategory,
     BuiltInParameter,
@@ -38,16 +34,6 @@ from Autodesk.Revit.DB import (
 )
 from Autodesk.Revit.Exceptions import InvalidOperationException
 from System import TimeSpan
-<<<<<<< HEAD
-=======
-
-for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
-    try:
-        clr.AddReference(_wpf_asm)
-    except Exception:
-        pass
-
->>>>>>> main
 from System.Windows import MessageBox, MessageBoxButton, MessageBoxImage, MessageBoxResult, Visibility
 from System.Windows.Controls import ComboBox, ComboBoxItem, TextBox
 from System.Windows.Media import VisualTreeHelper

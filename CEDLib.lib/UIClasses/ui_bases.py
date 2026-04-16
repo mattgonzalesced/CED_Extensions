@@ -3,14 +3,6 @@
 
 import os
 
-import clr
-
-for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
-    try:
-        clr.AddReference(_wpf_asm)
-    except Exception:
-        pass
-
 from System.Windows.Controls import ScrollViewer, TextBox
 from System.Windows.Input import Keyboard, ModifierKeys, MouseButton
 from System.Windows.Media import VisualTreeHelper
@@ -255,30 +247,27 @@ def _load_theme_state_from_config(
     default_theme="light",
     default_accent="blue",
 ):
-    theme_mode = resource_loader.normalize_theme_mode(default_theme, "light")
-    accent_mode = resource_loader.normalize_accent_mode(default_accent, "blue")
-    try:
-        cfg = script.get_config(str(section_name or THEME_CONFIG_SECTION))
-        if cfg is not None:
-            theme_mode = resource_loader.normalize_theme_mode(
-                _strip_wrapping_quotes(cfg.get_option(str(theme_key_name or THEME_CONFIG_THEME_KEY), theme_mode)),
-                theme_mode,
-            )
-            accent_mode = resource_loader.normalize_accent_mode(
-                _strip_wrapping_quotes(cfg.get_option(str(accent_key_name or THEME_CONFIG_ACCENT_KEY), accent_mode)),
-                accent_mode,
-            )
-    except Exception:
-        pass
-    # File config is the source of truth for cross-tool persistence.
-    # Read it last so stale in-memory script config does not override recent saves.
     theme_mode, accent_mode = _read_theme_state_from_config_file(
         section_name=section_name,
         theme_key_name=theme_key_name,
         accent_key_name=accent_key_name,
-        default_theme=theme_mode,
-        default_accent=accent_mode,
+        default_theme=default_theme,
+        default_accent=default_accent,
     )
+    try:
+        cfg = script.get_config(str(section_name or THEME_CONFIG_SECTION))
+        if cfg is None:
+            return theme_mode, accent_mode
+        theme_mode = resource_loader.normalize_theme_mode(
+            _strip_wrapping_quotes(cfg.get_option(str(theme_key_name or THEME_CONFIG_THEME_KEY), theme_mode)),
+            theme_mode,
+        )
+        accent_mode = resource_loader.normalize_accent_mode(
+            _strip_wrapping_quotes(cfg.get_option(str(accent_key_name or THEME_CONFIG_ACCENT_KEY), accent_mode)),
+            accent_mode,
+        )
+    except Exception:
+        pass
     return theme_mode, accent_mode
 
 

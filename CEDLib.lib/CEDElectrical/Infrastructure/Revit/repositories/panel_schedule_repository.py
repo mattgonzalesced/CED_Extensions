@@ -8,10 +8,7 @@ from System.Collections.Generic import List
 from pyrevit import DB, forms
 
 from Snippets import revit_helpers
-<<<<<<< HEAD
 from . import distribution_equipment_repository as de_repo
-=======
->>>>>>> main
 
 SORT_MODE_SWITCHBOARD = "switchboard"
 SORT_MODE_PANELBOARD_ACROSS = "panelboard_two_columns_across"
@@ -23,38 +20,12 @@ _PANEL_SORT_MODES = (
     SORT_MODE_PANELBOARD_ONE_COLUMN,
 )
 _DESIGN_OPTION_MAIN_MODEL_FILTER = DB.ElementDesignOptionFilter(DB.ElementId.InvalidElementId)
-<<<<<<< HEAD
 PART_TYPE_MAP = dict(de_repo.PART_TYPE_MAP)
 PSTYPE_UNKNOWN = de_repo.PSTYPE_UNKNOWN
 PSTYPE_BRANCH = de_repo.PSTYPE_BRANCH
 PSTYPE_SWITCHBOARD = de_repo.PSTYPE_SWITCHBOARD
 PSTYPE_DATA = de_repo.PSTYPE_DATA
 _PART_TYPE_TO_SCHEDULE_TYPE = de_repo.PART_TYPE_TO_PANEL_SCHEDULE_TYPE
-=======
-PART_TYPE_MAP = {
-    14: "Panelboard",
-    15: "Transformer",
-    16: "Switchboard",
-    17: "Other Panel",
-    18: "Equipment Switch",
-}
-PSTYPE_UNKNOWN = DBE.PanelScheduleType.Unknown
-PSTYPE_BRANCH = DBE.PanelScheduleType.Branch
-PSTYPE_SWITCHBOARD = DBE.PanelScheduleType.Switchboard
-PSTYPE_DATA = DBE.PanelScheduleType.Data
-_PART_TYPE_TO_SCHEDULE_TYPE = {
-    14: PSTYPE_BRANCH,
-    16: PSTYPE_SWITCHBOARD,
-    17: PSTYPE_DATA,
-}
-
-
-def _distribution_equipment_repo():
-    """Lazy import to avoid CEDElectrical.Model import cycles at module load."""
-    from . import distribution_equipment_repository
-
-    return distribution_equipment_repository
->>>>>>> main
 
 
 class PanelLayoutInfo(dict):
@@ -327,20 +298,12 @@ def get_panel_board_type(panel):
 
 def get_panel_family_part_type(panel):
     """Return family part type integer from panel family definition."""
-<<<<<<< HEAD
     return de_repo.get_family_part_type(panel)
-=======
-    return _distribution_equipment_repo().get_family_part_type(panel)
->>>>>>> main
 
 
 def get_expected_panel_schedule_type(panel):
     """Return expected PanelScheduleType from family part type."""
-<<<<<<< HEAD
     expected = de_repo.expected_panel_schedule_type_for_equipment(panel)
-=======
-    expected = _distribution_equipment_repo().expected_panel_schedule_type_for_equipment(panel)
->>>>>>> main
     if expected is None:
         return PSTYPE_UNKNOWN
     return expected
@@ -1442,13 +1405,7 @@ def is_removable_space(schedule_view, row, col, circuit):
 def _panel_option_from_panel_and_view(doc, panel, schedule_view=None):
     """Build a normalized panel option from equipment and optional schedule view."""
     panel_id = _idval(getattr(panel, "Id", None))
-<<<<<<< HEAD
     equipment_model = de_repo.build_distribution_equipment(doc, panel, schedule_view=schedule_view)
-=======
-    equipment_model = _distribution_equipment_repo().build_distribution_equipment(
-        doc, panel, schedule_view=schedule_view
-    )
->>>>>>> main
     part_type = get_panel_family_part_type(panel)
     part_type_name = PART_TYPE_MAP.get(part_type, "Unknown")
     if equipment_model is not None and _to_text(getattr(equipment_model, "equipment_type", ""), ""):

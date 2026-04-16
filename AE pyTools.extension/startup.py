@@ -11,14 +11,6 @@ import shutil
 import time
 
 from pyrevit import forms, script
-import clr
-
-clr.AddReference("PresentationFramework")
-clr.AddReference("PresentationCore")
-clr.AddReference("WindowsBase")
-
-from pyrevit import forms, script
-from pyrevit.userconfig import user_config
 
 try:
     from Autodesk.Revit.UI.Events import DocumentSynchronizedWithCentralEventArgs as UiSyncArgs
@@ -63,61 +55,6 @@ PROX_ENV_RUNNING_KEY = "ced_proximity_lights_coils_sync_running"
 REF_ENV_HANDLER_KEY = "ced_ref_sched_change_sync_handler_registered"
 REF_ENV_LAST_RUN_KEY = "ced_ref_sched_change_sync_last_run"
 REF_ENV_RUNNING_KEY = "ced_ref_sched_change_sync_running"
-_DOCKABLE_REGISTERED = False
-
-
-def _telemetry_source_folder():
-    appdata = os.environ.get("APPDATA", os.path.join(os.path.expanduser("~"), "AppData", "Roaming"))
-    return os.path.join(appdata, "pyRevit", "Extensions", "CED_pyTelemetry")
-
-
-def _ensure_telemetry_source_folder():
-    source_folder = _telemetry_source_folder()
-    if os.path.exists(source_folder):
-        return source_folder, True, None
-    try:
-        os.makedirs(source_folder)
-        return source_folder, True, None
-    except Exception as exc:
-        return source_folder, False, exc
-
-
-def _configure_pyrevit_telemetry():
-    logger = script.get_logger()
-    source_folder, folder_ok, folder_error = _ensure_telemetry_source_folder()
-    if not folder_ok:
-        logger.warning("Telemetry folder not available: %s", folder_error)
-        return
-
-    try:
-        # pyRevit telemetry reads from global user_config telemetry properties.
-        user_config.telemetry_utc_timestamp = True
-        user_config.telemetry_status = True
-        user_config.telemetry_file_dir = source_folder
-        user_config.telemetry_server_url = ""
-        user_config.telemetry_include_hooks = True
-        user_config.apptelemetry_status = False
-        user_config.apptelemetry_server_url = ""
-        user_config.apptelemetry_event_flags = "0x0"
-        user_config.save_changes()
-        logger.info("pyRevit telemetry config ensured. telemetry_file_dir=%s", source_folder)
-    except Exception as exc:
-        logger.warning("Failed to configure pyRevit telemetry: %s", exc)
-
-def _find_acc_root():
-    candidates = [
-        r"C:\ACC\ACCDocs\CoolSys\CED Content Collection",
-        os.path.join(os.path.expanduser("~"), "DC", "ACCDocs", "CoolSys", "CED Content Collection"),
-    ]
-    for path in candidates:
-        if os.path.exists(path):
-            return path
-    return None
-
-ENV_HANDLER_KEY = "ced_parent_param_sync_handler_registered"
-ENV_LAST_RUN_KEY = "ced_parent_param_sync_last_run"
-ENV_RUNNING_KEY = "ced_parent_param_sync_running"
-ENV_APP_CLOSING_HANDLER_KEY = "ced_app_closing_handler_registered"
 
 
 def _module_path():
@@ -150,7 +87,6 @@ def _load_checker():
 
 def _on_doc_sync(sender, args):
     global _IS_RUNNING, _MODULE
-    global _IS_RUNNING
     doc = None
     try:
         doc = getattr(args, "Document", None)
@@ -185,7 +121,6 @@ def _on_doc_sync(sender, args):
             checker = _load_checker()
             if checker is not None:
                 checker.run_sync_check(doc, modeless=True)
-        checker.run_sync_check(doc)
     except Exception as exc:
         logger = script.get_logger()
         logger.warning("Parent param conflict check failed: %s", exc)
@@ -668,16 +603,11 @@ def _on_app_closing(sender, args):
             username = getpass.getuser()
         except:
             username = os.environ.get("USERNAME", "UnknownUser")
+
         log_data["username"] = username
 
         # Destination
         base_path = r"C:\ACC\ACCDocs\CoolSys\CED Content Collection\Project Files\03 Automations\Usage"
-        # Destination — only proceed if ACC is actually synced
-        acc_root = _find_acc_root()
-        if acc_root is None:
-            log_data["status"] = "acc_not_synced"
-            return
-        base_path = os.path.join(acc_root, "Project Files", "03 Automations", "Usage")
         user_folder = os.path.join(base_path, username)
 
         try:
@@ -693,7 +623,6 @@ def _on_app_closing(sender, args):
         # Source
         user_home = os.path.expanduser("~")
         source_folder = os.path.join(user_home, "CED_pyTelemetry")
-        source_folder = _telemetry_source_folder()
 
         if not os.path.exists(source_folder):
             log_data["status"] = "no_source_folder"
@@ -741,17 +670,6 @@ def _register_shutdown_hook():
     try:
         app = __revit__
         app.ApplicationClosing += _on_app_closing
-    if _get_env(ENV_APP_CLOSING_HANDLER_KEY):
-        logger.info("ApplicationClosing hook already registered; skipping.")
-        return
-
-    try:
-        app = __revit__
-        if app is None:
-            logger.warning("ApplicationClosing hook not registered: UIApplication unavailable.")
-            return
-        app.ApplicationClosing += _on_app_closing
-        _set_env(ENV_APP_CLOSING_HANDLER_KEY, "1")
         logger.info("ApplicationClosing hook registered.")
 
     except Exception as exc:
@@ -763,90 +681,5 @@ _register_proximity_sync_handler()
 _register_ref_sched_sync_handler()
 _register_place_single_profile_panel()
 _register_circuit_browser_panel()
-def _check_acc_sync():
-    if _find_acc_root() is not None:
-        return
-    from System.Windows import Window, SizeToContent, WindowStartupLocation, Thickness, TextWrapping, HorizontalAlignment
-    from System.Windows.Controls import StackPanel, Image, TextBlock, Button, ScrollViewer
-    from System.Windows.Media.Imaging import BitmapImage
-    from System import Uri, UriKind
-
-    img_dir = os.path.normpath(os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), os.pardir,
-        "WM Tools.extension", "AE pyTools.Tab", "WM Tools.panel",
-        "WM Tools.pulldown", "Load Electrical Content.pushbutton",
-    ))
-    sync_img = os.path.join(img_dir, "sync_instruction.png")
-    explorer_img = os.path.join(img_dir, "file_explorer_instruction.png")
-
-    win = Window()
-    win.Title = "ACC Sync Required"
-    win.SizeToContent = SizeToContent.Width
-    win.Height = 700
-    win.WindowStartupLocation = WindowStartupLocation.CenterScreen
-
-    scroll = ScrollViewer()
-    panel = StackPanel()
-    panel.Margin = Thickness(15)
-
-    req = TextBlock()
-    req.Text = "REQUIRED FOR COOLSYS EMPLOYEES:"
-    req.FontSize = 14
-    req.FontWeight = __import__("System.Windows", fromlist=["FontWeights"]).FontWeights.Bold
-    req.Margin = Thickness(0, 0, 0, 5)
-    panel.Children.Add(req)
-
-    header = TextBlock()
-    header.Text = "CED Content Collection is not synced"
-    header.FontSize = 16
-    header.FontWeight = __import__("System.Windows", fromlist=["FontWeights"]).FontWeights.Bold
-    header.Margin = Thickness(0, 0, 0, 10)
-    panel.Children.Add(header)
-
-    msg = TextBlock()
-    msg.TextWrapping = TextWrapping.Wrap
-    msg.MaxWidth = 620
-    msg.Text = (
-        "This extension requires the CED Content Collection ACC project "
-        "to be synced via Autodesk Desktop Connector.\n\n"
-        "1. Click the Desktop Connector tray icon on your taskbar.\n"
-        "2. Click 'Select Projects' and check 'CED Content Collection' "
-        "from the CoolSys directory.\n"
-        "3. Once synced, restart Revit."
-    )
-    msg.Margin = Thickness(0, 0, 0, 15)
-    panel.Children.Add(msg)
-
-    for img_path, caption, max_w in [(sync_img, "Select Projects in Desktop Connector", 620),
-                                      (explorer_img, "ACC folder in File Explorer", 310)]:
-        if os.path.exists(img_path):
-            lbl = TextBlock()
-            lbl.Text = caption
-            lbl.FontWeight = __import__("System.Windows", fromlist=["FontWeights"]).FontWeights.SemiBold
-            lbl.Margin = Thickness(0, 0, 0, 5)
-            panel.Children.Add(lbl)
-            img = Image()
-            img.Source = BitmapImage(Uri(img_path, UriKind.Absolute))
-            img.MaxWidth = max_w
-            img.HorizontalAlignment = HorizontalAlignment.Left
-            img.Margin = Thickness(0, 0, 0, 15)
-            panel.Children.Add(img)
-
-    btn = Button()
-    btn.Content = "OK"
-    btn.Width = 80
-    btn.Height = 28
-    btn.HorizontalAlignment = HorizontalAlignment.Center
-    btn.Click += lambda s, e: win.Close()
-    panel.Children.Add(btn)
-
-    scroll.Content = panel
-    win.Content = scroll
-    win.ShowDialog()
-
-_configure_pyrevit_telemetry()
-_check_acc_sync()
-_register_shutdown_hook()
-#_register_sync_handler()
 # Temporarily disabled to prevent startup-time dockable panel activity.
 # _register_place_single_profile_panel()

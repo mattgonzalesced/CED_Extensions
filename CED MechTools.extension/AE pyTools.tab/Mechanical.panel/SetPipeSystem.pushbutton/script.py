@@ -1279,7 +1279,6 @@ def _create_open_branch_stubs_from_selection(pipes, target_system_type):
     open_connectors = []
     seen = set()
 
-<<<<<<< HEAD
     # 1) Any directly selected open pipe ends should always get stubs first.
     for pipe in pipes:
         for conn in iter_piping_connectors(pipe):
@@ -1293,44 +1292,6 @@ def _create_open_branch_stubs_from_selection(pipes, target_system_type):
             if key not in seen:
                 seen.add(key)
                 open_connectors.append((pipe, conn))
-=======
-    single_pipe_two_open_special = False
-    if len(pipes) == 1:
-        single_pipe = pipes[0]
-        single_pipe_open_connectors = []
-        for conn in iter_piping_connectors(single_pipe):
-            try:
-                if not conn.IsConnected:
-                    single_pipe_open_connectors.append(conn)
-            except:
-                continue
-
-        # Isolated edge case: one selected pipe with two open ends.
-        # Create only one stub so we do not seed competing temporary systems
-        # from both ends of the same straight segment.
-        if len(single_pipe_open_connectors) == 2:
-            chosen_conn = single_pipe_open_connectors[0]
-            key = _connector_key(chosen_conn)
-            seen.add(key)
-            open_connectors.append((single_pipe, chosen_conn))
-            single_pipe_two_open_special = True
-            logger.info("Single-pipe two-open-end special case: creating one stub only.")
-
-    if not single_pipe_two_open_special:
-        # 1) Any directly selected open pipe ends should always get stubs first.
-        for pipe in pipes:
-            for conn in iter_piping_connectors(pipe):
-                try:
-                    if conn.IsConnected:
-                        continue
-                except:
-                    continue
-
-                key = _connector_key(conn)
-                if key not in seen:
-                    seen.add(key)
-                    open_connectors.append((pipe, conn))
->>>>>>> main
 
     # 2) For selected pipes touching tees/crosses/wyes, walk each touched branch
     #    out to an open end and include that open connector as well.

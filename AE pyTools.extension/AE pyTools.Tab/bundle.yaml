@@ -3,7 +3,6 @@ layout:
   - Orientation
   - Selection
   - Tags
-<<<<<<< HEAD
   - QualityChecks
   - Electrical
   - Mechanical
@@ -11,6 +10,3 @@ layout:
   - MEP Automation
   - Refrigeration
   - FamilyOperations
-=======
-  - Miscellaneous
->>>>>>> main

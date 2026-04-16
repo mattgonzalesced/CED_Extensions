@@ -1,0 +1,45 @@
+﻿Select Parent Element – Code Explained
+=====================================
+
+Purpose
+-------
+`Select Parent Element` is the authoring entry point for new equipment
+definitions. Instead of manually editing YAML, the script captures live Revit
+geometry, parameters, and hosted tags, then writes the result straight into the
+active profile stored in Extensible Storage.
+
+Core Workflow
+-------------
+1. **Bootstrap** – Load the active YAML (`load_active_yaml_data`), repair any
+   duplicate `SET-###` identifiers, and either locate or create the equipment
+   definition via `ensure_equipment_definition`. Each definition keeps a
+   special anchor LED (`…-LED-000`) that records the parent family, so all
+   children inherit the correct frame of reference.
+2. **Capture** – The selected child instances are normalized into dictionaries
+   (`_build_child_entries`). For each element we read location, orientation,
+   dev-group / circuit parameters, and hosted tag positions. Offsets are
+   computed with `compute_offsets_from_points`, and we build a complete
+   `Element_Linker` payload which now includes the parent rotation. This makes
+   the data resilient when Update Vector or Place Linked Elements reconstruct
+   placements later.
+3. **Persist** – The newly minted linked element definitions are appended to
+   the YAML tree, placeholders/anchors are pruned when no longer needed, and
+   `save_active_yaml_data` pushes the snapshot back into Extensible Storage.
+   The script also writes the Element_Linker text back onto the live elements
+   inside the document so QA/QC, Tag Equipment, and Update Vector can discover
+   the instances immediately.
+
+Notable Behaviors
+-----------------
+* Offsets, rotations, tags, and parameter dictionaries are all captured in the
+  exact format expected by the placement engine, so a subsequent `Place Linked
+  Elements` run reproduces the layout verbatim.
+* When the parent element lives inside a Revit link, transforms are applied to
+  convert all coordinates into project space before the offsets are stored.
+* Diagnostic popups summarize which child labels were added and how many types
+  were created, giving the designer quick feedback without opening the raw YAML.
+
+This script is therefore the canonical bridge between reality in the model and
+automation in YAML—every other tool (Update Vector, Tag Equipment, QA/QC,
+placer) consumes the metadata that Select Parent Element authoritatively
+creates.

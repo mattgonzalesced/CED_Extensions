@@ -1,0 +1,37 @@
+﻿Delete YAML Profiles – Code Explained
+===================================
+
+Purpose
+-------
+Remove one or more linked element definitions (LEDs) from the active YAML and
+cascade the change through dependent equipment definitions. The script cleans up
+anchors, child relations, and Extensible Storage state so no orphan records
+remain.
+
+Major Components
+----------------
+1. **Data Load** – `load_active_yaml_data` returns both the normalized path and a
+   writeable Python dict representing `equipment_definitions`.
+2. **Definition/LED Indexing** – `_build_definition_index` and
+   `_collect_type_entries` build selection lists showing human-friendly labels
+   (`Family : Type [LED-ID]`). Anchors (LED-000) are hidden unless they are the
+   only entry.
+3. **Deletion** – `_erase_entries` removes the chosen LEDs. If the remaining set
+   only contains anchors, `_prune_anchor_only_definitions` drops the definition
+   entirely. Child relationships stored under `linked_relations.children` are
+   scanned so any references to the removed LEDs disappear as well.
+4. **Cascade** – `_cascade_remove_children` looks for downstream definitions that
+   were anchored to the deleted parent and removes them to avoid dangling
+   hierarchies. `_cleanup_relations` finalizes the sweep.
+5. **Persistence** – `save_active_yaml_data` writes the new dataset back into
+   Extensible Storage with the action name “Delete YAML Profiles” so history and
+   undo/redo remain accurate.
+
+Highlights
+----------
+* Works with definitions produced by Select Parent Element, Add Profiles, or the
+  legacy JSON importer because everything is normalized before deletion.
+* Automatically strips the placeholder anchor (LED-000) when the last real LED
+  is removed, preventing QA/QC from reporting phantom definitions.
+* Provides a summary of LEDs and definitions deleted so crews can document the
+  change set.
