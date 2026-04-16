@@ -1,0 +1,6 @@
+title: Bulk Merge Profiles
+tooltip: |
+  Bulk merge profile names from an Excel/CSV sheet by shared ID.
+  Reads ID in column A, checks B-D counts, and inspects names in H-P.
+  For eligible IDs, missing names can be cloned from an existing YAML profile in the same ID group.
+is_beta: false
