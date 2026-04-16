@@ -1,0 +1,40 @@
+Update Profiles - Replace vs Add-Only Option
+
+Overview
+- Goal: Add a replace vs add-only option so tags, keynotes, and text notes can either overwrite existing profile data or only append new items.
+- Background: Update Profiles currently merges items; the plan introduces an explicit global toggle and replacement choices.
+
+Scope
+- In scope: Review merge behavior for tags/keynotes/text notes; define a global toggle (default add-only) and global replacement set choices; update UI to surface choices; carry choices through the decision payload; implement replace logic; ensure keynotes use GA_Keynote Symbol_CED family; validate and update messaging.
+- Out of scope: None specified in the plan.
+
+Plan summary
+- Steps:
+  1) Review Update Profiles pipeline to confirm current merge behavior and decision points.
+  2) Define user-facing behavior: global add-only vs replace toggle (default add-only) and global replacement set choices.
+  3) Update the Update Profiles UI to present the toggle and separate union/common choices for tags and keynotes, then pass through the existing decision payload.
+  4) Implement merge logic that clears existing items before replace; keep add-only as current behavior; ensure keynotes use GA_Keynote Symbol_CED family.
+  5) Validate with sample profiles and update success messaging if needed.
+
+Behavior details
+- Default behavior remains add-only; replace explicitly clears prior items before applying selected sets.
+- UI exposes separate union/common choices for tags and keynotes.
+- Keynotes must use the GA_Keynote Symbol_CED family during placement/merge.
+
+Risks
+- Replace may discard curated data not present on instances.
+- Tags and keynotes may be stored on separate paths; missing one path can cause inconsistencies.
+- Mixed per-row decisions can be confusing without clear UI scope and defaults.
+
+Open questions
+- None.
+
+Validation checklist
+- Add-only preserves existing items while appending new ones.
+- Replace removes prior items and applies only the selected set.
+- Keynotes resolve through GA_Keynote Symbol_CED family.
+- Success messaging reflects the chosen mode and outcomes.
+
+Assumptions
+- The Update Profiles decision payload can carry the new global toggle and replacement choices.
+- The UI framework supports adding the global toggle and union/common choices for tags and keynotes.

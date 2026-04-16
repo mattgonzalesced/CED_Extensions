@@ -22,18 +22,23 @@ from UIClasses import load_theme_state_from_config
 
 
 TITLE = "Edit Circuit Properties"
+<<<<<<< HEAD
 THEME_CONFIG_SECTION = "AE-pyTools-Theme"
 THEME_CONFIG_THEME_KEY = "theme_mode"
 THEME_CONFIG_ACCENT_KEY = "accent_mode"
 ALERT_DATA_PARAM = "Circuit Data_CED"
 VALID_THEME_MODES = ("light", "dark", "dark_alt")
 VALID_ACCENT_MODES = ("blue", "neutral")
+=======
+ALERT_DATA_PARAM = "Circuit Data_CED"
+>>>>>>> main
 
 
 def _idval(item):
     return int(revit_helpers.get_elementid_value(item))
 
 
+<<<<<<< HEAD
 def _normalize_theme_mode(value, fallback="light"):
     mode = str(value or fallback).strip().lower()
     return mode if mode in VALID_THEME_MODES else fallback
@@ -44,6 +49,8 @@ def _normalize_accent_mode(value, fallback="blue"):
     return mode if mode in VALID_ACCENT_MODES else fallback
 
 
+=======
+>>>>>>> main
 def _electrical_panel_root(start_dir):
     current = os.path.abspath(start_dir)
     while True:
@@ -131,6 +138,7 @@ def _to_editor_targets(circuits):
 
 def _theme_state():
     theme_mode, accent_mode = load_theme_state_from_config(
+<<<<<<< HEAD
         section_name=THEME_CONFIG_SECTION,
         theme_key_name=THEME_CONFIG_THEME_KEY,
         accent_key_name=THEME_CONFIG_ACCENT_KEY,
@@ -138,6 +146,12 @@ def _theme_state():
         default_accent="blue",
     )
     return _normalize_theme_mode(theme_mode, "light"), _normalize_accent_mode(accent_mode, "blue")
+=======
+        default_theme="light",
+        default_accent="blue",
+    )
+    return theme_mode, accent_mode
+>>>>>>> main
 
 
 def _open_editor(doc, targets):

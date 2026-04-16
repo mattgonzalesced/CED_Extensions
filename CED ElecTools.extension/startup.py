@@ -53,6 +53,15 @@ def _find_circuit_manager_panel_path():
         if "\\electrical.panel\\circuit manager.pushbutton\\" in normalized:
             return path
     return None
+    return os.path.abspath(
+        os.path.join(
+            _extension_root(),
+            "AE pyTools.tab",
+            "Electrical.panel",
+            "Circuit Manager.pushbutton",
+            "CircuitBrowserPanel.py",
+        )
+    )
 
 
 def _register_circuit_manager_panel():

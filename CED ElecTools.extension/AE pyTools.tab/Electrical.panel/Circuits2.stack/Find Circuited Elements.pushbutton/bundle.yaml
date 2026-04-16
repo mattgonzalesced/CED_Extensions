@@ -7,9 +7,24 @@ tooltip: >-
   ________________________________________________________________
   Description:
   
+<<<<<<< HEAD
   DESCRIPTION TEXT
   
   MORE TEXT HERE
+=======
+  Finds model elements associated with selected circuits and updates Revit
+  selection in one step.
+
+  Pick circuits (or use current selection), then choose:
+  
+  - Only Circuits
+  
+  - Connected Elements
+  
+  - Both
+
+  Useful for quickly isolating circuit systems and downstream devices in model.
+>>>>>>> main
   ________________________________________________________________
   
 

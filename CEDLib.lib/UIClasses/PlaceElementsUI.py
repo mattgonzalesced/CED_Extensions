@@ -5,7 +5,15 @@ PlaceElementsUI
 Simple WPF window to map CAD names to YAML profile labels for placement.
 """
 
+import clr
 from pyrevit import forms
+
+for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
+    try:
+        clr.AddReference(_wpf_asm)
+    except Exception:
+        pass
+
 from System.Windows import Thickness, HorizontalAlignment, GridLength, GridUnitType
 from System.Windows.Controls import StackPanel, TextBlock, ComboBox, Button, Grid, ColumnDefinition
 from System.Windows.Controls import Orientation

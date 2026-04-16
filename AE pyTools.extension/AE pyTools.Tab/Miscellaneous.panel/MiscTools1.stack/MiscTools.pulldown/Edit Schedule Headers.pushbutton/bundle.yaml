@@ -7,9 +7,10 @@ tooltip: >-
   ________________________________________________________________
   Description:
   
-  DESCRIPTION TEXT
-  
-  MORE TEXT HERE
+  Cleans schedule header text for sheet readability.
+
+  Converts header labels to title case and removes parameter-style prefixes
+  so schedule columns read as clean, presentation-ready names.
   ________________________________________________________________
   
 

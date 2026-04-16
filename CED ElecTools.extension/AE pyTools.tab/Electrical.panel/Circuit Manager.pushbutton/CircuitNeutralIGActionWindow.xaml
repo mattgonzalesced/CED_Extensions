@@ -104,6 +104,10 @@
           <Border Width="1" Height="20" Margin="14,2,14,0" Background="{DynamicResource CED.Brush.SectionDivider}" VerticalAlignment="Top"/>
           <Button Name="AddButton" Style="{DynamicResource CED.Button.Base}" Content="Add" Width="72" Height="24" VerticalAlignment="Top" Click="add_clicked"/>
           <Button Name="RemoveButton" Style="{DynamicResource CED.Button.Base}" Content="Remove" Width="72" Height="24" Margin="6,0,0,0" VerticalAlignment="Top" Click="remove_clicked"/>
+<<<<<<< HEAD
+=======
+          <Button Name="ResetSelectedButton" Style="{DynamicResource CED.Button.Base}" Content="Reset Selected" Width="106" Height="24" Margin="6,0,0,0" VerticalAlignment="Top" Click="reset_selected_clicked"/>
+>>>>>>> main
         </StackPanel>
         <TextBlock Name="CheckedStatusText" Margin="2,4,0,0" Style="{DynamicResource CED.Text.Secondary}" Text="0 of 0 checked"/>
       </StackPanel>

@@ -5,6 +5,7 @@
   - SchemaViewer
   - Place Annotations
   - Update Profiles
+<<<<<<< HEAD
   - Normalize Truth Groups
   - Write Element Linker
   - Place Spaces CSV
@@ -13,4 +14,9 @@
   - Optimize
   - Update Vector
 
+=======
+  - Write Element Linker
+  - Place Spaces CSV
+  - Copy Import layers
+>>>>>>> main
 

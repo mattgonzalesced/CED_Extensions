@@ -2,8 +2,21 @@
 
 import os
 
+<<<<<<< HEAD
 from Autodesk.Revit.UI import ExternalEvent, IExternalEventHandler
 from System.Windows import Application
+=======
+import clr
+
+for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
+    try:
+        clr.AddReference(_wpf_asm)
+    except Exception:
+        pass
+
+from Autodesk.Revit.UI import ExternalEvent, IExternalEventHandler
+from System.Windows import Application, WindowState
+>>>>>>> main
 from System.Windows.Controls import Button, DataGridRow
 from System.Windows.Media import VisualTreeHelper
 from pyrevit import forms, revit, script
@@ -13,11 +26,14 @@ from UIClasses import pathing as ui_pathing
 
 TITLE = "Alerts Manager"
 ALERT_DATA_PARAM = "Circuit Data_CED"
+<<<<<<< HEAD
 THEME_CONFIG_SECTION = "AE-pyTools-Theme"
 THEME_CONFIG_THEME_KEY = "theme_mode"
 THEME_CONFIG_ACCENT_KEY = "accent_mode"
 VALID_THEME_MODES = ("light", "dark", "dark_alt")
 VALID_ACCENT_MODES = ("blue", "neutral")
+=======
+>>>>>>> main
 _WINDOW_MARKER = "_ae_alerts_browser_window"
 
 def _idval(item):
@@ -52,6 +68,7 @@ def _is_descendant_of_control(start, control):
     return False
 
 
+<<<<<<< HEAD
 def _normalize_theme_mode(value, fallback="light"):
     mode = str(value or fallback).strip().lower()
     return mode if mode in VALID_THEME_MODES else fallback
@@ -62,13 +79,18 @@ def _normalize_accent_mode(value, fallback="blue"):
     return mode if mode in VALID_ACCENT_MODES else fallback
 
 
+=======
+>>>>>>> main
 def _load_theme_state_from_config(default_theme="light", default_accent="blue"):
     from UIClasses import load_theme_state_from_config
 
     return load_theme_state_from_config(
+<<<<<<< HEAD
         section_name=THEME_CONFIG_SECTION,
         theme_key_name=THEME_CONFIG_THEME_KEY,
         accent_key_name=THEME_CONFIG_ACCENT_KEY,
+=======
+>>>>>>> main
         default_theme=default_theme,
         default_accent=default_accent,
     )
@@ -242,14 +264,28 @@ class _AlertsBrowserExternalEventHandler(IExternalEventHandler):
 class AlertsBrowserWindow(forms.WPFWindow):
     def __init__(self, theme_mode, accent_mode, snapshot, gateway):
         xaml = os.path.abspath(os.path.join(THIS_DIR, "AlertsBrowserWindow.xaml"))
+<<<<<<< HEAD
         self._theme_mode = theme_mode or "light"
         self._accent_mode = accent_mode or "blue"
+=======
+        self._theme_mode = resource_loader.normalize_theme_mode(theme_mode, "light")
+        self._accent_mode = resource_loader.normalize_accent_mode(accent_mode, "blue")
+>>>>>>> main
         self._gateway = gateway
         self._items = []
         self._doc_title = "-"
         forms.WPFWindow.__init__(self, xaml)
+<<<<<<< HEAD
         self._apply_theme()
         setattr(self, _WINDOW_MARKER, True)
+=======
+        # Use CLR Tag for cross-runtime singleton detection.
+        try:
+            self.Tag = _WINDOW_MARKER
+        except Exception:
+            pass
+        self._apply_theme()
+>>>>>>> main
 
         self._circuit_list = self.FindName("CircuitList")
         self._active_list = self.FindName("ActiveAlertsList")
@@ -668,13 +704,21 @@ def _find_existing_window():
         windows = []
     for win in windows:
         try:
+<<<<<<< HEAD
             if bool(getattr(win, _WINDOW_MARKER, False)):
+=======
+            tag = str(getattr(win, "Tag", "") or "")
+            if tag == _WINDOW_MARKER:
+                return win
+            if str(getattr(win, "Title", "") or "") == TITLE:
+>>>>>>> main
                 return win
         except Exception:
             continue
     return None
 
 
+<<<<<<< HEAD
 def _show_or_focus_window():
     existing = _find_existing_window()
     if existing is not None:
@@ -692,6 +736,47 @@ def _show_or_focus_window():
             return
         except Exception:
             pass
+=======
+def _focus_existing_window(existing):
+    try:
+        theme_mode, accent_mode = _load_theme_state_from_config(
+            default_theme=getattr(existing, "_theme_mode", "light"),
+            default_accent=getattr(existing, "_accent_mode", "blue"),
+        )
+        existing._theme_mode = resource_loader.normalize_theme_mode(theme_mode, getattr(existing, "_theme_mode", "light"))
+        existing._accent_mode = resource_loader.normalize_accent_mode(accent_mode, getattr(existing, "_accent_mode", "blue"))
+        if hasattr(existing, "_apply_theme"):
+            existing._apply_theme()
+    except Exception as ex:
+        try:
+            _LOGGER.debug("Alerts Manager focus theme sync failed: %s", ex)
+        except Exception:
+            pass
+    try:
+        if getattr(existing, "WindowState", None) == WindowState.Minimized:
+            existing.WindowState = WindowState.Normal
+    except Exception:
+        pass
+    try:
+        existing.Show()
+    except Exception:
+        pass
+    try:
+        existing.Activate()
+    except Exception:
+        pass
+    try:
+        existing.Focus()
+    except Exception:
+        pass
+
+
+def _show_or_focus_window():
+    existing = _find_existing_window()
+    if existing is not None:
+        _focus_existing_window(existing)
+        return
+>>>>>>> main
     theme_mode, accent_mode = _load_theme_state_from_config("light", "blue")
     snapshot = build_snapshot(_active_doc(), ALERT_DATA_PARAM, _idval, _LOCK_REPOSITORY)
     gateway = AlertsBrowserExternalEventGateway(logger=_LOGGER)

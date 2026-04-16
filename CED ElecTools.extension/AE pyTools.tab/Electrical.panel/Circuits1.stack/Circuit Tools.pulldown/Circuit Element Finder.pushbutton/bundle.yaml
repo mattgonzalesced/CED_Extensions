@@ -1,0 +1,8 @@
+title: Circuited Device Finder
+
+tooltip: >-
+  Select circuits, find their connected devices, then open and select those devices in model.
+  If no circuits are preselected, this tool prompts you with the circuit picker.
+
+author: >-
+  AEvelina

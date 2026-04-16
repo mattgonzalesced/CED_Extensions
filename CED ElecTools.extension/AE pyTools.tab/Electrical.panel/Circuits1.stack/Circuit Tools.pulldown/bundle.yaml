@@ -1,8 +1,17 @@
 layout:
-  - CreateDedicatedCircuits
+  - Edit Circuit Properties
+  - Circuit Element Finder
+  - ----
   - BatchSwapCircuits
   - MoveSelectedCircuits
+<<<<<<< HEAD
   - Edit Circuit Properties
+=======
+  - MergeCircuits
+  - RenameCircuitsByDeviceParameter
+  - ----
+  - CreateDedicatedCircuits
+>>>>>>> main
   - Add Spares and Spaces
   - MergeCircuits
   - RenameCircuitsByDeviceParameter
