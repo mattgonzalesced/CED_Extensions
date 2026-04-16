@@ -29,6 +29,11 @@ from Autodesk.Revit.DB import (
 TITLE = "Place Spaces from CSV"
 LOG = script.get_logger()
 
+# Marker column added to the CSV after cleanup so we can detect future runs
+# without re-scanning row contents. The presence of this column = already cleaned.
+CLEANED_FLAG_COLUMN = 'CSV_CLEANED'
+CLEANED_FLAG_VALUE = 'true'
+
 
 def parse_feet_inches(value_str):
     """
@@ -126,6 +131,99 @@ def select_csv_file():
     if dialog.ShowDialog() == DialogResult.OK:
         return dialog.FileName
     return None
+
+
+def is_csv_cleaned(csv_path):
+    """
+    Determine if the CSV has already been cleaned up.
+
+    Detection is based on the presence of the CLEANED_FLAG_COLUMN marker column
+    that clean_csv() adds after it runs. If that column exists in the header,
+    the CSV has already been processed and should NOT be cleaned again
+    (running the cleanup twice would duplicate '#' values into Name).
+    """
+    try:
+        with open(csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            fieldnames = reader.fieldnames or []
+
+            if CLEANED_FLAG_COLUMN in fieldnames:
+                return True
+
+            # No marker present. If the '#' columns also aren't there, there's
+            # nothing the cleanup would do anyway, so treat as cleaned.
+            has_hash_cols = any(c in fieldnames for c in ('#', '#(1)', '#(2)'))
+            if not has_hash_cols:
+                return True
+
+            return False
+    except Exception as e:
+        LOG.warning("Could not determine CSV cleanup state: {}".format(e))
+        # Be conservative: if we can't tell, skip cleanup so we don't corrupt data.
+        return True
+
+
+def clean_csv(csv_path):
+    """
+    Clean the CSV in place by concatenating the Name column with the '#',
+    '#(1)', '#(2)' columns for every row where any of those has a value,
+    then append a CLEANED_FLAG_COLUMN marker column so future runs can detect
+    that cleanup has already happened.
+
+    This mirrors the exact logic from the standalone 'csv cleanup.py' script,
+    but uses the stdlib csv module so it works under pyRevit (IronPython 2.7).
+
+    Original pandas logic:
+        mask = df[['#', '#(1)', '#(2)']].notna().any(axis=1)
+        df.loc[mask, 'Name'] = (
+            df.loc[mask, 'Name'].fillna('').astype(str) + ' ' +
+            df.loc[mask, '#'].fillna('').astype(str) + ' ' +
+            df.loc[mask, '#(1)'].fillna('').astype(str) + ' ' +
+            df.loc[mask, '#(2)'].fillna('').astype(str)
+        ).str.strip()
+    """
+    rows = []
+    fieldnames = None
+
+    with open(csv_path, 'r') as f:
+        reader = csv.DictReader(f)
+        fieldnames = list(reader.fieldnames) if reader.fieldnames else []
+        for row in reader:
+            hash_val = row.get('#') or ''
+            h1_val = row.get('#(1)') or ''
+            h2_val = row.get('#(2)') or ''
+
+            # Mask equivalent: any of '#', '#(1)', '#(2)' has a value.
+            if hash_val.strip() or h1_val.strip() or h2_val.strip():
+                name_val = row.get('Name') or ''
+                # Preserve the exact order and spacing from the pandas version:
+                #   Name + ' ' + # + ' ' + #(1) + ' ' + #(2), then .strip()
+                combined = '{} {} {} {}'.format(
+                    name_val, hash_val, h1_val, h2_val
+                ).strip()
+                row['Name'] = combined
+
+            rows.append(row)
+
+    if not fieldnames:
+        return
+
+    # Append the marker column so subsequent runs can see this file was cleaned.
+    if CLEANED_FLAG_COLUMN not in fieldnames:
+        fieldnames.append(CLEANED_FLAG_COLUMN)
+    for row in rows:
+        row[CLEANED_FLAG_COLUMN] = CLEANED_FLAG_VALUE
+
+    # Overwrite the same file. Binary mode keeps csv.DictWriter happy on IronPython.
+    with open(csv_path, 'wb') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+
+    LOG.info("CSV cleaned and flagged with '{}' column: {}".format(
+        CLEANED_FLAG_COLUMN, csv_path
+    ))
 
 
 def read_csv_spaces(csv_path):
@@ -434,6 +532,16 @@ def main():
 
     if not os.path.exists(csv_path):
         forms.alert("CSV file not found:\n{}".format(csv_path), title=TITLE, exitscript=True)
+
+    # Step 1b: Clean the CSV if it hasn't been cleaned yet.
+    if is_csv_cleaned(csv_path):
+        LOG.info("CSV already cleaned - skipping cleanup step.")
+    else:
+        LOG.info("CSV not yet cleaned - running cleanup...")
+        try:
+            clean_csv(csv_path)
+        except Exception as e:
+            forms.alert("Error cleaning CSV:\n{}".format(e), title=TITLE, exitscript=True)
 
     # Step 2: Read CSV
     LOG.info("Reading CSV: {}".format(csv_path))
