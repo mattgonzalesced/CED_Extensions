@@ -3,7 +3,15 @@
 
 import os
 
+import clr
 from System import Uri
+
+for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
+    try:
+        clr.AddReference(_wpf_asm)
+    except Exception:
+        pass
+
 from System.Windows import ResourceDictionary
 
 DEFAULT_BASE_RESOURCE_RELATIVE_PATHS = (

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from .distribution_equipment import DistributionEquipment, PowerBus, Transformer
-from .panel_schedule_manager import PanelScheduleManager
 from .panel_slot import PanelSlot
 
 __all__ = (
@@ -9,5 +8,4 @@ __all__ = (
     "PowerBus",
     "Transformer",
     "PanelSlot",
-    "PanelScheduleManager",
 )

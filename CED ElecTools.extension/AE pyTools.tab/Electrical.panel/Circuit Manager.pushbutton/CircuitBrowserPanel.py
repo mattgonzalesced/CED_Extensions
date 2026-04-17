@@ -4,6 +4,7 @@ import imp
 import json
 import os
 
+import clr
 import Autodesk.Revit.DB.Electrical as DBE
 from Autodesk.Revit.DB.Events import (
     DocumentOpenedEventArgs,
@@ -14,6 +15,13 @@ from Autodesk.Revit.UI.Events import ViewActivatedEventArgs
 from System import EventHandler, Action
 from System.Collections.Generic import List
 from System.Collections.ObjectModel import ObservableCollection
+
+for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
+    try:
+        clr.AddReference(_wpf_asm)
+    except Exception:
+        pass
+
 from System.Windows import Visibility
 from System.Windows.Controls import (
     ContextMenu,
@@ -5898,12 +5906,6 @@ class CircuitBrowserPanel(forms.WPFPanel):
 
 
 def ensure_panel_visible():
-    try:
-        if not forms.is_registered_dockable_panel(CircuitBrowserPanel):
-            forms.register_dockable_panel(CircuitBrowserPanel, default_visible=False)
-    except Exception:
-        pass
-
     try:
         forms.open_dockable_panel(CircuitBrowserPanel.panel_id)
     except Exception:

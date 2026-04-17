@@ -5,9 +5,17 @@ import locale
 import os
 import re
 
+import clr
 from Autodesk.Revit import Exceptions
 from System.Collections.ObjectModel import ObservableCollection
 from System.ComponentModel import ListSortDirection, SortDescription
+
+for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
+    try:
+        clr.AddReference(_wpf_asm)
+    except Exception:
+        pass
+
 from System.Windows.Controls import DataGrid
 from pyrevit.forms import WPFWindow, SelectFromList, alert, utils
 from pyrevit.script import get_logger
