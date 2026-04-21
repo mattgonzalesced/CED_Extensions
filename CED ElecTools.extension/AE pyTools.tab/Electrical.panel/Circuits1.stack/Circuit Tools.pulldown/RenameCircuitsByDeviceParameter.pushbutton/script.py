@@ -13,7 +13,7 @@ uidoc = revit.uidoc
 output = script.get_output()
 output.close_others()
 def _elid_value(item, default=0):
-    return int(revit_helpers.get_elementid_value(item, default=default))
+    return revit_helpers.get_elementid_value(item, default=default)
 
 XAML_PATH = os.path.join(os.path.dirname(__file__), "ParameterSelectionWindow.xaml")
 CONFIG_KEY = "rename_circuit_builder_config"

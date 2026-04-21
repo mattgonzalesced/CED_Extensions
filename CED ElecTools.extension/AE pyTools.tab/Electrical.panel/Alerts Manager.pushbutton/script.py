@@ -24,7 +24,7 @@ ALERT_DATA_PARAM = "Circuit Data_CED"
 _WINDOW_MARKER = "_ae_alerts_browser_window"
 
 def _idval(item):
-    return int(revit_helpers.get_elementid_value(item))
+    return revit_helpers.get_elementid_value(item)
 
 
 def _idfrom(value):

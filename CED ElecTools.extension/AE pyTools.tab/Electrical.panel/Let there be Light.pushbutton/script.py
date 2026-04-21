@@ -52,6 +52,7 @@ TITLE = "Let There Be Light"
 CSV_SOURCE_MODE = "csv"
 LINK_SOURCE_MODE = "link"
 MAPPING_CONFIG_SECTION = "let_there_be_light_mapping"
+SKIP_MAPPING_LABEL = "<Skip Mapping>"
 DUPLICATE_TOLERANCE_FT = 0.02
 CSV_MARKER_START = "LUMINAIRE-"
 CSV_MARKER_END = "_Symbol"
@@ -82,6 +83,7 @@ if not LIB_ROOT or not os.path.isdir(LIB_ROOT):
 
 from UIClasses import load_theme_state_from_config
 from UIClasses.ui_bases import CEDWindowBase, TEXTBOX_MODE_SELECT_ALL_ON_FIRST_CLICK
+from Snippets import revit_helpers
 
 
 # -----------------------------------------------------------------------------
@@ -95,15 +97,17 @@ def _safe_text(value):
         return ""
 
 
-def _idval(value):
-    try:
-        return int(value.IntegerValue)
-    except Exception:
-        pass
-    try:
-        return int(value.Id.IntegerValue)
-    except Exception:
-        return -1
+def _is_unmapped_label(label):
+    text = _safe_text(label)
+    return (not text) or (text == SKIP_MAPPING_LABEL)
+
+
+def _idval(value, default=-1):
+    fallback = int(default)
+    direct_value = revit_helpers.get_elementid_value(value, default=fallback)
+    if direct_value != fallback:
+        return direct_value
+    return revit_helpers.get_elementid_value(getattr(value, "Id", None), default=fallback)
 
 
 def _compact_norm(value):
@@ -481,7 +485,7 @@ class FixtureMappingRow(object):
         self.source_label = _safe_text(source_label)
         self.count = int(count or 0)
         self.target_options = list(target_options or [])
-        self._target_label = ""
+        self._target_label = SKIP_MAPPING_LABEL if SKIP_MAPPING_LABEL in self.target_options else ""
         self.on_target_changed = None
 
         self.source_family_name = _safe_text(source_family_name)
@@ -535,7 +539,7 @@ class LevelMappingRow(object):
         self.count = int(source_count or 0)
         self.source_elevation_display = _format_elevation(self.source_elevation)
         self.target_options = list(target_options or [])
-        self._target_label = ""
+        self._target_label = SKIP_MAPPING_LABEL if SKIP_MAPPING_LABEL in self.target_options else ""
         self.on_target_changed = None
 
         self.source_name_norm = _compact_norm(self.source_level_name)
@@ -765,22 +769,13 @@ class RevitLinkLightSource(object):
                 return None
         except Exception:
             pass
+        int_id = _idval(element_id, default=-1)
+        if int_id <= 0:
+            return None
         try:
-            int_id = int(element_id.IntegerValue)
-            if int_id <= 0:
-                return None
+            element_id = revit_helpers.elementid_from_value(int_id)
         except Exception:
-            int_id = -1
-            try:
-                int_id = int(element_id)
-            except Exception:
-                int_id = -1
-            if int_id <= 0:
-                return None
-            try:
-                element_id = ElementId(int_id)
-            except Exception:
-                return None
+            return None
 
         try:
             candidate = link_doc.GetElement(element_id)
@@ -1152,11 +1147,8 @@ class PlacementEngine(object):
                 return None
             point = XYZ(point.X / divisor, point.Y / divisor, point.Z / divisor)
 
-        if data.source_level_key and data.source_level_offset is not None and target_level is not None:
-            try:
-                point = XYZ(point.X, point.Y, float(target_level.Elevation) + float(data.source_level_offset))
-            except Exception:
-                pass
+        # Keep geometric Z from source coordinates (CSV converted, link transformed).
+        # Level mapping is organizational and must not rebase fixture elevation.
         return point
 
     def _create_instance(self, point, symbol, level):
@@ -1167,6 +1159,92 @@ class PlacementEngine(object):
         except Exception:
             # Some fixture families can still place without explicit level.
             return self.doc.Create.NewFamilyInstance(point, symbol, Structure.StructuralType.NonStructural)
+
+    def _try_set_level_offset(self, instance, target_level, desired_z):
+        if instance is None or target_level is None:
+            return False
+        try:
+            target_offset = float(desired_z) - float(target_level.Elevation)
+        except Exception:
+            return False
+
+        for bip_name in ("INSTANCE_ELEVATION_PARAM", "INSTANCE_FREE_HOST_OFFSET_PARAM"):
+            try:
+                bip = getattr(BuiltInParameter, bip_name, None)
+            except Exception:
+                bip = None
+            if bip is None:
+                continue
+            try:
+                param = instance.get_Parameter(bip)
+            except Exception:
+                param = None
+            if param is None:
+                continue
+            try:
+                if bool(param.IsReadOnly):
+                    continue
+            except Exception:
+                pass
+            try:
+                if param.StorageType != StorageType.Double:
+                    continue
+            except Exception:
+                continue
+            try:
+                param.Set(float(target_offset))
+                return True
+            except Exception:
+                continue
+        return False
+
+    def _normalize_instance_world_z(self, instance, target_point, target_level):
+        if instance is None or target_point is None:
+            return
+        try:
+            desired_z = float(target_point.Z)
+        except Exception:
+            return
+
+        location = _as_location_point(instance)
+        if location is None:
+            return
+        try:
+            actual_z = float(location.Point.Z)
+        except Exception:
+            return
+
+        if abs(desired_z - actual_z) <= 1e-6:
+            return
+
+        if self._try_set_level_offset(instance, target_level, desired_z):
+            try:
+                self.doc.Regenerate()
+            except Exception:
+                pass
+            location = _as_location_point(instance)
+            if location is not None:
+                try:
+                    actual_z = float(location.Point.Z)
+                except Exception:
+                    actual_z = None
+                if actual_z is not None and abs(desired_z - actual_z) <= 1e-6:
+                    return
+
+        location = _as_location_point(instance)
+        if location is None:
+            return
+        try:
+            actual_z = float(location.Point.Z)
+        except Exception:
+            return
+        delta = float(desired_z) - float(actual_z)
+        if abs(delta) <= 1e-6:
+            return
+        try:
+            ElementTransformUtils.MoveElement(self.doc, instance.Id, XYZ(0.0, 0.0, delta))
+        except Exception:
+            pass
 
     def place(
         self,
@@ -1229,8 +1307,16 @@ class PlacementEngine(object):
 
                 try:
                     instance = self._create_instance(point, symbol, target_level)
+                    self._normalize_instance_world_z(instance, point, target_level)
+                    axis_origin = point
+                    loc_after = _as_location_point(instance)
+                    if loc_after is not None:
+                        try:
+                            axis_origin = loc_after.Point
+                        except Exception:
+                            pass
                     if abs(float(data.rotation or 0.0)) > 1e-9:
-                        axis = Line.CreateBound(point, point + XYZ(0.0, 0.0, 1.0))
+                        axis = Line.CreateBound(axis_origin, axis_origin + XYZ(0.0, 0.0, 1.0))
                         ElementTransformUtils.RotateElement(self.doc, instance.Id, axis, float(data.rotation))
                     report.placed += 1
                     if skip_duplicates:
@@ -1376,7 +1462,7 @@ class AutoMatchRow(object):
 
         self.source_fixture_code = _safe_text(getattr(fixture_row, "fixture_code", ""))
         self.target_label = _safe_text(getattr(fixture_row, "target_label", ""))
-        self.is_complete = bool(self.target_label)
+        self.is_complete = not _is_unmapped_label(self.target_label)
         self.source_value_display = ""
 
     def source_param_value_by_norm(self, norm_name):
@@ -1740,7 +1826,7 @@ class AutoMatchWindow(CEDWindowBase):
         self.result_map = {}
         for row in self.rows:
             label = _safe_text(row.target_label)
-            if label:
+            if not _is_unmapped_label(label):
                 self.result_map[row.source_id] = label
         self.DialogResult = True
         self.Close()
@@ -1845,8 +1931,10 @@ class LightMappingWindow(CEDWindowBase):
     def _initialize_host_data(self):
         self.host_fixture_options, self.host_fixture_by_label = collect_host_fixture_options(self.doc)
         self.host_fixture_labels = [option.label for option in self.host_fixture_options]
+        self.host_fixture_mapping_labels = [SKIP_MAPPING_LABEL] + list(self.host_fixture_labels or [])
         self.host_level_options, self.host_level_by_label = collect_host_levels(self.doc)
         self.host_level_labels = [option.label for option in self.host_level_options]
+        self.host_level_mapping_labels = [SKIP_MAPPING_LABEL] + list(self.host_level_labels or [])
         self.link_options = collect_link_options(self.doc)
 
         self._fixture_matcher = FixtureMatcher(self.host_fixture_options)
@@ -1974,13 +2062,14 @@ class LightMappingWindow(CEDWindowBase):
                 row.target_label = typed
             return
 
-        row.target_label = ""
+        fallback_label = SKIP_MAPPING_LABEL if SKIP_MAPPING_LABEL in valid_options else ""
+        row.target_label = fallback_label
         try:
-            combo.SelectedItem = None
+            combo.SelectedItem = fallback_label if fallback_label else None
         except Exception:
             pass
         try:
-            combo.Text = ""
+            combo.Text = fallback_label
         except Exception:
             pass
 
@@ -2331,7 +2420,7 @@ class LightMappingWindow(CEDWindowBase):
 
         if self._current_mode == LINK_SOURCE_MODE:
             self.ValidationText.Text = (
-                "Fixture mappings: {0}/{1} (optional) | Level mappings: {2}/{3} (required)".format(
+                "Fixture mappings: {0}/{1} (optional) | Level mappings: {2}/{3} (optional; unmapped levels are skipped)".format(
                     int(fixture_mapped),
                     int(fixture_total),
                     int(level_mapped),
@@ -2404,7 +2493,7 @@ class LightMappingWindow(CEDWindowBase):
                 source_id=group.source_id,
                 source_label=source_label,
                 count=group.count,
-                target_options=self.host_fixture_labels,
+                target_options=self.host_fixture_mapping_labels,
                 source_family_name=group.family_name,
                 source_type_name=group.type_name,
                 source_type_params=getattr(group, "source_type_params", {}),
@@ -2418,7 +2507,7 @@ class LightMappingWindow(CEDWindowBase):
                 source_level_name=level_info.level_name,
                 source_elevation=level_info.elevation_host,
                 source_count=level_info.count,
-                target_options=self.host_level_labels,
+                target_options=self.host_level_mapping_labels,
             )
             level_row.on_target_changed = self._on_mapping_target_changed
             self._level_rows.append(level_row)
@@ -2471,14 +2560,14 @@ class LightMappingWindow(CEDWindowBase):
             return
 
         for row in self._fixture_rows:
-            if overwrite_existing or not _safe_text(row.target_label):
+            if overwrite_existing or _is_unmapped_label(row.target_label):
                 guess = self._fixture_matcher.match(row)
                 if guess:
                     row.target_label = guess
 
         if self._current_mode == LINK_SOURCE_MODE:
             for row in self._level_rows:
-                if overwrite_existing or not _safe_text(row.target_label):
+                if overwrite_existing or _is_unmapped_label(row.target_label):
                     guess = self._level_matcher.match(row)
                     if guess:
                         row.target_label = guess
@@ -2564,7 +2653,7 @@ class LightMappingWindow(CEDWindowBase):
             return
         for row in selected_rows:
             if isinstance(row, FixtureMappingRow):
-                row.target_label = ""
+                row.target_label = SKIP_MAPPING_LABEL
         try:
             self.FixtureGrid.Items.Refresh()
         except Exception:
@@ -2585,7 +2674,7 @@ class LightMappingWindow(CEDWindowBase):
         invalid = []
         for row in self._fixture_rows:
             label = _safe_text(row.target_label)
-            if not label:
+            if _is_unmapped_label(label):
                 unmapped.append(row.source_label)
                 continue
             option = self.host_fixture_by_label.get(label)
@@ -2603,7 +2692,7 @@ class LightMappingWindow(CEDWindowBase):
         invalid = []
         for row in self._level_rows:
             label = _safe_text(row.target_label)
-            if not label:
+            if _is_unmapped_label(label):
                 unmapped.append(row.source_level_name)
                 continue
             option = self.host_level_by_label.get(label)
@@ -2666,11 +2755,23 @@ class LightMappingWindow(CEDWindowBase):
             level_map, level_unmapped, level_invalid = self._build_level_map()
             if level_unmapped:
                 sample = "\n".join(["- {}".format(name) for name in level_unmapped[:12]])
-                forms.alert(
-                    "Unmapped source levels found (map all before placing):\n\n{}".format(sample),
-                    title=TITLE,
+                remaining = int(len(level_unmapped)) - min(12, int(len(level_unmapped)))
+                if remaining > 0:
+                    sample = "{}\n- ...and {} more".format(sample, int(remaining))
+                message = (
+                    "Some source levels are not mapped.\n\n"
+                    "{}\n\n"
+                    "Fixtures on unmapped levels will be skipped.\n"
+                    "Do you want to continue?"
+                ).format(sample)
+                decision = MessageBox.Show(
+                    message,
+                    TITLE,
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning,
                 )
-                return None
+                if decision != MessageBoxResult.Yes:
+                    return None
             if level_invalid:
                 sample = "\n".join(["- {}".format(name) for name in level_invalid[:12]])
                 forms.alert("Invalid level mappings found:\n\n{}".format(sample), title=TITLE)

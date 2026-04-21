@@ -506,7 +506,7 @@ class PanelScheduleManager(object):
     # Internal helpers
     # -------------------------------------------------------------------------
     def _idval(self, item):
-        return int(revit_helpers.get_elementid_value(item))
+        return revit_helpers.get_elementid_value(item)
 
     def _option_for_panel_id(self, panel_id):
         panel_key = int(panel_id or 0)

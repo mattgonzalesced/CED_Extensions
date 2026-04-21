@@ -8,7 +8,7 @@ from Snippets import revit_helpers
 
 
 def _idval(item):
-    return int(revit_helpers.get_elementid_value(item))
+    return revit_helpers.get_elementid_value(item)
 
 
 def set_revit_selection(elements, uidoc=None):

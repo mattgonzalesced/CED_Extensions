@@ -5,22 +5,22 @@ from pyrevit import HOST_APP
 from pyrevit import forms
 from pyrevit import script
 
+from CEDElectrical.Application.dto.operation_request import OperationRequest
+from CEDElectrical.Application.services.operation_runner import build_default_runner
 from Snippets import revit_helpers
 # Import reusable utilities
-from Snippets._elecutils import get_panel_dist_system, get_compatible_panels, move_circuits_to_panel, \
-    get_all_panels
+from Snippets._elecutils import get_panel_dist_system, get_compatible_panels, \
+    get_all_panels, panel_has_schedule_view
 
 # Get the current document
 doc = __revit__.ActiveUIDocument.Document
 
 logger = script.get_logger()
-output = script.get_output()
-output.close_others()
 _ELECTRICAL_EQUIPMENT_CAT_ID = int(DB.BuiltInCategory.OST_ElectricalEquipment)
 
 
 def _idval(item):
-    return int(revit_helpers.get_elementid_value(item))
+    return revit_helpers.get_elementid_value(item)
 
 
 def _is_electrical_equipment_instance(element):
@@ -34,6 +34,48 @@ def _is_electrical_equipment_instance(element):
         return _idval(category.Id) == _ELECTRICAL_EQUIPMENT_CAT_ID
     except Exception:
         return False
+
+
+def _show_output_window(output_window):
+    if output_window is None:
+        return False
+    for method_name in (
+        "show",
+        "Show",
+        "focus",
+        "Focus",
+        "activate",
+        "Activate",
+        "bring_to_front",
+        "BringToFront",
+    ):
+        method = getattr(output_window, method_name, None)
+        if method is None:
+            continue
+        try:
+            method()
+            return True
+        except Exception:
+            continue
+    return False
+
+
+def _run_move_selected_circuits_operation(doc, selected_circuits, target_panel):
+    runner = build_default_runner(alert_parameter_name="Circuit Data_CED")
+    request = OperationRequest(
+        operation_key="move_selected_circuits",
+        circuit_ids=[_idval(circuit.Id) for circuit in list(selected_circuits or [])],
+        source="ribbon",
+        options={
+            "target_panel_id": _idval(getattr(target_panel, "Id", None)),
+            "recalculate": False,
+            "show_recalc_output": False,
+        },
+    )
+    payload = runner.run(request, doc)
+    if not isinstance(payload, dict):
+        payload = {}
+    return payload
 
 
 def get_sorted_filtered_panels(all_panels, doc):
@@ -241,7 +283,11 @@ def main():
             ]
 
     if not compatible_panels:
-        forms.alert("No compatible panels found.", exitscript=True)
+        forms.alert(
+            "No common compatible target panel was found across all selected circuits.\n\n"
+            "Select circuits with compatible panel requirements (voltage/poles), or move them in smaller groups.",
+            exitscript=True,
+        )
 
     # Sort and filter compatible panels
     # Prompt the user to select a target panel
@@ -258,9 +304,23 @@ def main():
     if not target_panel:
         forms.alert("Panel not found.", exitscript=True)
 
+    if not panel_has_schedule_view(doc, target_panel):
+        forms.alert(
+            "The selected target panel does not have a panel schedule view yet.\n\n"
+            "Create the panel schedule first, then run Move Selected Circuits again.",
+            title="Move Selected Circuits",
+            exitscript=True,
+        )
+
+    output = script.get_output()
+    output.close_others()
+
     try:
-        move_result = move_circuits_to_panel(selected_circuits, target_panel, doc, output)
+        payload = _run_move_selected_circuits_operation(doc, selected_circuits, target_panel)
+        move_result = payload.get("move_result")
+        buffered_output = payload.get("buffered_output")
     except Exception as e:
+        _show_output_window(output)
         output.print_md("**Error occurred while transferring circuits: {}**".format(str(e)))
         return
 
@@ -278,6 +338,12 @@ def main():
         fallback_used = False
 
     if partial:
+        _show_output_window(output)
+        if buffered_output is not None:
+            try:
+                buffered_output.flush_to(output)
+            except Exception:
+                pass
         output.print_md("**Partial move accepted.**")
         result_rows = []
         for row in list(circuit_data or []):

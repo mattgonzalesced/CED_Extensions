@@ -70,7 +70,7 @@ class CircuitSettings(object):
         # USER-EXPOSED settings:
         "min_conduit_size": '3/4"',
         "max_conduit_fill": 0.36,
-        "multi_pole_branch_neutral_behavior": MultiPoleBranchNeutralBehavior.INCLUDE_BY_DEFAULT,
+        "multi_pole_branch_neutral_behavior": MultiPoleBranchNeutralBehavior.EXCLUDE_BY_DEFAULT,
         "neutral_behavior": NeutralBehavior.MATCH_HOT,
         "isolated_ground_behavior": IsolatedGroundBehavior.MATCH_GROUND,
         "wire_material_display": WireMaterialDisplay.AL_ONLY,
@@ -248,6 +248,13 @@ class CircuitSettings(object):
     @property
     def write_fixture_results(self):
         return bool(self._values["write_fixture_results"])
+
+    def get_binding_writeback_flags(self):
+        """Return writeback flags used for parameter category binding decisions."""
+        return {
+            "write_equipment_results": bool(self.write_equipment_results),
+            "write_fixture_results": bool(self.write_fixture_results),
+        }
 
     @property
     def pending_clear_failed(self):
