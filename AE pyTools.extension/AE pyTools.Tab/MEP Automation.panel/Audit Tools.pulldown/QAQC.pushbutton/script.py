@@ -13,6 +13,7 @@ import sys
 
 from pyrevit import forms, revit, script
 from Autodesk.Revit.DB import (
+    BuiltInCategory,
     ElementId,
     FamilyInstance,
     FilteredElementCollector,
@@ -34,6 +35,8 @@ _FOLLOW_PARENT_MODULE = None
 _OPTIMIZE_MODULE = None
 _ADJUST_HANDLER = None
 _ADJUST_EXTERNAL_EVENT = None
+_FIX_ID_HANDLER = None
+_FIX_ID_EXTERNAL_EVENT = None
 
 LIB_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib")
@@ -46,6 +49,7 @@ from LogicClasses.yaml_path_cache import get_yaml_display_name  # noqa: E402
 
 LINKER_PARAM_NAMES = ("Element_Linker", "Element_Linker Parameter")
 PARENT_ID_KEYS = ("Parent ElementId", "Parent Element ID")
+LINKER_ELEMENT_ID_KEYS = ("ElementId", "Element ID", "Element Id")
 TRUTH_SOURCE_ID_KEY = "ced_truth_source_id"
 
 INLINE_LINKER_PATTERN = re.compile(
@@ -120,6 +124,47 @@ def _try_int(value):
             return int(float(value))
         except Exception:
             return None
+
+
+def _category_id_value(category):
+    if category is None:
+        return None
+    try:
+        cat_id = category.Id
+    except Exception:
+        cat_id = None
+    return _element_id_value(cat_id)
+
+
+def _is_fixture_element(elem):
+    if elem is None:
+        return False
+    try:
+        category = getattr(elem, "Category", None)
+    except Exception:
+        category = None
+
+    cat_id_val = _category_id_value(category)
+    fixture_ids = set()
+    for bic in (
+        BuiltInCategory.OST_ElectricalFixtures,
+        BuiltInCategory.OST_LightingFixtures,
+        BuiltInCategory.OST_PlumbingFixtures,
+    ):
+        try:
+            fixture_ids.add(int(bic))
+        except Exception:
+            continue
+    if cat_id_val in fixture_ids:
+        return True
+
+    try:
+        cat_name = getattr(category, "Name", None)
+    except Exception:
+        cat_name = None
+    if cat_name and "fixture" in str(cat_name).strip().lower():
+        return True
+    return False
 
 
 def _parse_xyz(value):
@@ -357,26 +402,83 @@ def _collect_family_and_group_instances(doc):
 def _get_linker_text(elem):
     if elem is None:
         return ""
+    param = _find_linker_parameter(elem)
+    if not param:
+        return ""
+    text = None
+    try:
+        text = param.AsString()
+    except Exception:
+        text = None
+    if not text:
+        try:
+            text = param.AsValueString()
+        except Exception:
+            text = None
+    if text and str(text).strip():
+        return str(text)
+    return ""
+
+
+def _find_linker_parameter(elem):
+    if elem is None:
+        return None
     for name in LINKER_PARAM_NAMES:
         try:
             param = elem.LookupParameter(name)
         except Exception:
             param = None
-        if not param:
-            continue
-        text = None
-        try:
-            text = param.AsString()
-        except Exception:
-            text = None
-        if not text:
-            try:
-                text = param.AsValueString()
-            except Exception:
-                text = None
-        if text and str(text).strip():
-            return str(text)
-    return ""
+        if param:
+            return param
+    return None
+
+
+def _set_linker_text(elem, text):
+    if elem is None:
+        return False
+    param = _find_linker_parameter(elem)
+    if not param:
+        return False
+    try:
+        return bool(param.Set(str(text or "")))
+    except Exception:
+        return False
+
+
+def _replace_linker_element_id(payload_text, target_element_id):
+    text = str(payload_text or "")
+    if not text.strip():
+        return text, False
+    target_text = str(int(target_element_id))
+
+    multiline_pattern = re.compile(r"^(\s*Element(?:\s+)?Id\s*:\s*).*$", re.IGNORECASE)
+    lines = text.splitlines(True)
+    if lines:
+        replaced = False
+        new_lines = []
+        for raw_line in lines:
+            line_ending = ""
+            if raw_line.endswith("\r\n"):
+                body = raw_line[:-2]
+                line_ending = "\r\n"
+            elif raw_line.endswith("\n"):
+                body = raw_line[:-1]
+                line_ending = "\n"
+            else:
+                body = raw_line
+            match = multiline_pattern.match(body)
+            if match:
+                body = "{}{}".format(match.group(1), target_text)
+                replaced = True
+            new_lines.append(body + line_ending)
+        if replaced:
+            return "".join(new_lines), True
+
+    inline_pattern = re.compile(r"(Element(?:\s+)?Id\s*:\s*)([^,\n\r]+)", re.IGNORECASE)
+    updated_text, count = inline_pattern.subn(r"\g<1>{}".format(target_text), text, count=1)
+    if count > 0:
+        return updated_text, True
+    return text, False
 
 
 def _parse_linker_payload(payload_text):
@@ -400,11 +502,30 @@ def _parse_linker_payload(payload_text):
             value = text[start:end].strip().rstrip(",")
             entries[key.strip()] = value.strip(" ,")
 
+    entries_lower = {}
+    for key, value in entries.items():
+        norm_key = str(key or "").strip().lower()
+        if norm_key and norm_key not in entries_lower:
+            entries_lower[norm_key] = value
+
     parent_element_id = None
     for key in PARENT_ID_KEYS:
-        if key in entries:
-            parent_element_id = _try_int(entries.get(key))
+        value = entries.get(key)
+        if value is None:
+            value = entries_lower.get(str(key).strip().lower())
+        if value is not None:
+            parent_element_id = _try_int(value)
             if parent_element_id is not None:
+                break
+
+    linker_element_id = None
+    for key in LINKER_ELEMENT_ID_KEYS:
+        value = entries.get(key)
+        if value is None:
+            value = entries_lower.get(str(key).strip().lower())
+        if value is not None:
+            linker_element_id = _try_int(value)
+            if linker_element_id is not None:
                 break
 
     return {
@@ -412,6 +533,7 @@ def _parse_linker_payload(payload_text):
         "set_id": (entries.get("Set Definition ID") or "").strip(),
         "host_name": (entries.get("Host Name") or "").strip(),
         "parent_element_id": parent_element_id,
+        "linker_element_id": linker_element_id,
         "location": _parse_xyz(entries.get("Location XYZ (ft)")),
         "parent_location": _parse_xyz(entries.get("Parent_location")),
     }
@@ -565,11 +687,14 @@ def _collect_placed_instances(doc, yaml_maps):
             "child_id": child_id,
             "child_label": _element_label(elem),
             "child_point": child_point,
+            "is_fixture": _is_fixture_element(elem),
             "profile_name": profile_name,
             "set_id": payload.get("set_id"),
             "led_id": payload.get("led_id"),
             "host_name": payload.get("host_name"),
             "parent_element_id": payload.get("parent_element_id"),
+            "linker_element_id": payload.get("linker_element_id"),
+            "payload_text": payload_text,
             "payload_location": payload.get("location"),
             "payload_parent_location": payload.get("parent_location"),
         })
@@ -601,6 +726,7 @@ def _build_row(
     parent_id=None,
     snap_point=None,
     adjust_enabled=False,
+    fix_id_enabled=False,
 ):
     return {
         "profile": profile or "",
@@ -611,6 +737,7 @@ def _build_row(
         "parent_id": parent_id,
         "snap_point": snap_point,
         "adjust_enabled": bool(adjust_enabled),
+        "fix_id_enabled": bool(fix_id_enabled),
     }
 
 
@@ -653,6 +780,7 @@ def _build_issue_tabs(doc, data):
     tab4_rows = []
     tab5_rows = []
     tab6_rows = []
+    tab7_rows = []
 
     for profile_name in profiles:
         group_key = profile_to_group.get(profile_name) or profile_name
@@ -828,6 +956,40 @@ def _build_issue_tabs(doc, data):
             )
         )
 
+    for record in placed_records:
+        if not bool(record.get("is_fixture")):
+            continue
+        child_id = record.get("child_id")
+        linker_element_id = record.get("linker_element_id")
+        if child_id is None or linker_element_id is None:
+            continue
+        if int(linker_element_id) == int(child_id):
+            continue
+
+        profile_name = record.get("profile_name") or (record.get("host_name") or "<unknown profile>")
+        parent_id = record.get("parent_element_id")
+        selectable_parent_id = parent_id if parent_id in host_parent_elements else None
+        parent_text = ""
+        if parent_id is not None:
+            parent_candidates = by_parent_id.get(parent_id) or []
+            chosen_parent = _pick_candidate(parent_candidates)
+            parent_text = _candidate_text(chosen_parent) or "Parent Id: {}".format(parent_id)
+
+        tab7_rows.append(
+            _build_row(
+                profile=profile_name,
+                description=(
+                    "Element_Linker ElementId is {}, but the actual element Id is {}."
+                ).format(int(linker_element_id), int(child_id)),
+                parent_text=parent_text,
+                child_text=record.get("child_label") or "",
+                child_id=child_id,
+                parent_id=selectable_parent_id,
+                snap_point=record.get("child_point") or record.get("payload_location"),
+                fix_id_enabled=True,
+            )
+        )
+
     tabs = {
         "tab1": tab1_rows,
         "tab2": tab2_rows,
@@ -835,6 +997,7 @@ def _build_issue_tabs(doc, data):
         "tab4": tab4_rows,
         "tab5": tab5_rows,
         "tab6": tab6_rows,
+        "tab7": tab7_rows,
     }
     meta = {
         "total_profiles": len(profiles),
@@ -956,6 +1119,51 @@ def _ensure_adjust_external_event():
         _ADJUST_HANDLER = None
         _ADJUST_EXTERNAL_EVENT = None
         LOG.warning("Failed to create QAQC adjust external event: %s", exc)
+        return False
+
+
+class _FixIdExternalEventHandler(IExternalEventHandler):
+    def __init__(self):
+        self.child_id = None
+
+    def GetName(self):
+        return "QAQC Fix ElementId External Event"
+
+    def request(self, child_id):
+        self.child_id = child_id
+
+    def Execute(self, uiapp):
+        child_id = self.child_id
+        self.child_id = None
+        uidoc = getattr(uiapp, "ActiveUIDocument", None)
+        doc = getattr(uidoc, "Document", None) if uidoc else None
+        ok, message = _fix_element_linker_element_id(doc, child_id)
+        try:
+            forms.alert(message, title="{} - Fix ID".format(TITLE))
+        except Exception:
+            LOG.warning("[QAQC Fix ID] %s", message)
+        if ok and uidoc is not None and child_id not in (None, ""):
+            try:
+                ids = List[ElementId]()
+                ids.Add(ElementId(int(child_id)))
+                uidoc.Selection.SetElementIds(ids)
+                uidoc.ShowElements(ids)
+            except Exception:
+                pass
+
+
+def _ensure_fix_id_external_event():
+    global _FIX_ID_HANDLER, _FIX_ID_EXTERNAL_EVENT
+    if _FIX_ID_HANDLER is not None and _FIX_ID_EXTERNAL_EVENT is not None:
+        return True
+    try:
+        _FIX_ID_HANDLER = _FixIdExternalEventHandler()
+        _FIX_ID_EXTERNAL_EVENT = ExternalEvent.Create(_FIX_ID_HANDLER)
+        return True
+    except Exception as exc:
+        _FIX_ID_HANDLER = None
+        _FIX_ID_EXTERNAL_EVENT = None
+        LOG.warning("Failed to create QAQC fix-id external event: %s", exc)
         return False
 
 
@@ -1084,6 +1292,54 @@ def _run_optimize_for_element(doc, elem, optimize_module, mode):
     return False, "optimize {} did not move element".format(mode)
 
 
+def _fix_element_linker_element_id(doc, child_id):
+    if doc is None:
+        return False, "No active document available for ElementId fix."
+    if child_id in (None, ""):
+        return False, "Child element id is missing."
+    try:
+        child_id_int = int(child_id)
+    except Exception:
+        return False, "Child element id is invalid: {}".format(child_id)
+
+    try:
+        elem = doc.GetElement(ElementId(child_id_int))
+    except Exception:
+        elem = None
+    if elem is None:
+        return False, "Child element no longer exists."
+
+    payload_text = _get_linker_text(elem)
+    if not payload_text:
+        return False, "Element_Linker payload is blank."
+    payload = _parse_linker_payload(payload_text)
+    linker_element_id = payload.get("linker_element_id")
+    if linker_element_id is None:
+        return False, "ElementId was not found in Element_Linker payload."
+    if int(linker_element_id) == child_id_int:
+        return True, "Element_Linker ElementId already matches actual element Id {}.".format(child_id_int)
+
+    updated_text, replaced = _replace_linker_element_id(payload_text, child_id_int)
+    if not replaced:
+        return False, "Could not update ElementId in Element_Linker payload."
+
+    txn = Transaction(doc, "QAQC Fix Element_Linker ElementId {}".format(child_id_int))
+    try:
+        txn.Start()
+        set_ok = _set_linker_text(elem, updated_text)
+        if not set_ok:
+            raise Exception("Failed to write Element_Linker parameter.")
+        txn.Commit()
+    except Exception as exc:
+        try:
+            txn.RollBack()
+        except Exception:
+            pass
+        return False, "ElementId fix failed: {}".format(exc)
+
+    return True, "Updated Element_Linker ElementId from {} to {}.".format(int(linker_element_id), child_id_int)
+
+
 def _adjust_element(doc, child_id):
     if doc is None:
         return False, "No active document available for adjust."
@@ -1126,7 +1382,7 @@ def _adjust_element(doc, child_id):
 
 
 def main():
-    global _MODELLESS_WINDOW, _ADJUST_HANDLER, _ADJUST_EXTERNAL_EVENT
+    global _MODELLESS_WINDOW, _ADJUST_HANDLER, _ADJUST_EXTERNAL_EVENT, _FIX_ID_HANDLER, _FIX_ID_EXTERNAL_EVENT
     doc = getattr(revit, "doc", None)
     if doc is None:
         forms.alert("No active document detected.", title=TITLE)
@@ -1137,6 +1393,11 @@ def main():
     if not _ensure_adjust_external_event():
         forms.alert(
             "Could not initialize modeless adjust event. Adjust actions will be unavailable.",
+            title=TITLE,
+        )
+    if not _ensure_fix_id_external_event():
+        forms.alert(
+            "Could not initialize modeless ElementId-fix event. Fix ID actions will be unavailable.",
             title=TITLE,
         )
 
@@ -1156,6 +1417,7 @@ def main():
         + len(tabs.get("tab4") or [])
         + len(tabs.get("tab5") or [])
         + len(tabs.get("tab6") or [])
+        + len(tabs.get("tab7") or [])
     )
     yaml_label = get_yaml_display_name(data_path)
 
@@ -1182,6 +1444,7 @@ def main():
             "4) Parent changed type and matching profile exists: {}".format(len(tabs.get("tab4") or [])),
             "5) Parent changed type and matching profile missing: {}".format(len(tabs.get("tab5") or [])),
             "6) Far from Parent: {}".format(len(tabs.get("tab6") or [])),
+            "7) ID Discrepancies: {}".format(len(tabs.get("tab7") or [])),
         ]
         forms.alert("\n".join(lines), title=TITLE)
         return
@@ -1222,6 +1485,23 @@ def main():
         except Exception as exc:
             forms.alert("Failed to queue adjust request:\n\n{}".format(exc), title="{} - Adjust".format(TITLE))
 
+    def _on_fix_id(row):
+        child_id = (row or {}).get("child_id")
+        if child_id in (None, ""):
+            forms.alert("No child element id found for this row.", title="{} - Fix ID".format(TITLE))
+            return
+        if _FIX_ID_HANDLER is None or _FIX_ID_EXTERNAL_EVENT is None:
+            ok, message = _fix_element_linker_element_id(doc, child_id)
+            forms.alert(message, title="{} - Fix ID".format(TITLE))
+            if ok:
+                _select_element(child_id)
+            return
+        try:
+            _FIX_ID_HANDLER.request(child_id)
+            _FIX_ID_EXTERNAL_EVENT.Raise()
+        except Exception as exc:
+            forms.alert("Failed to queue ElementId fix request:\n\n{}".format(exc), title="{} - Fix ID".format(TITLE))
+
     window = ui_module.QAQCReportWindow(
         xaml_path=xaml_path,
         tab_rows=tabs,
@@ -1230,6 +1510,7 @@ def main():
         select_parent_callback=_on_select_parent,
         snap_callback=_on_snap,
         adjust_callback=_on_adjust,
+        fix_id_callback=_on_fix_id,
     )
     # Keep a module-level reference so the modeless window stays alive.
     if _MODELLESS_WINDOW is not None:

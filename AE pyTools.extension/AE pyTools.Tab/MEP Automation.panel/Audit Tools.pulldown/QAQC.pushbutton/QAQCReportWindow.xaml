@@ -58,6 +58,13 @@
           <Grid Name="Tab6Grid" Margin="0,4,0,0"/>
         </ScrollViewer>
       </TabItem>
+
+      <TabItem Name="Tab7Item" Header="7. ID Discrepancies">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+          <Grid Name="Tab7Grid" Margin="0,4,0,0"/>
+        </ScrollViewer>
+      </TabItem>
     </TabControl>
 
     <StackPanel Grid.Row="2"
