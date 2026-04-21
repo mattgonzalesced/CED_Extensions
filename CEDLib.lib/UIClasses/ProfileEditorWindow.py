@@ -63,6 +63,8 @@ class ProfileEditorWindow(forms.WPFWindow):
         self._in_edit_mode = False
         self._force_read_only = False
         self._profile_filter = u""
+        self._profile_content_filter = u""
+        self._profile_content_index = {}
         self._header_entries = {}
         self._child_entries = {}
         self._group_order = []
@@ -75,7 +77,7 @@ class ProfileEditorWindow(forms.WPFWindow):
 
         forms.WPFWindow.__init__(self, xaml_path)
 
-        self._apply_profile_filter(u"")
+        self._apply_profile_filter(search_text=u"", content_text=u"")
         if not getattr(self.ProfileList, "Items", None) or not self.ProfileList.Items.Count:
             self._clear_fields()
         self._set_edit_mode(False)
@@ -1132,6 +1134,82 @@ class ProfileEditorWindow(forms.WPFWindow):
                 entries.append(child_entry)
             self._child_entries[root_key] = child_list
         self._display_entries = list(entries)
+        self._rebuild_profile_content_index()
+
+    def _normalize_search_text(self, value):
+        if value is None:
+            return u""
+        try:
+            return u"{}".format(value).strip().lower()
+        except Exception:
+            return u""
+
+    def _search_terms(self, value):
+        normalized = self._normalize_search_text(value)
+        if not normalized:
+            return []
+        return [term for term in normalized.split() if term]
+
+    def _build_profile_content_text(self, profile_name):
+        profile = self._profiles.get(profile_name)
+        if not profile:
+            return u""
+        terms = []
+        seen = set()
+
+        def _add_term(raw_value):
+            normalized = self._normalize_search_text(raw_value)
+            if not normalized or normalized in seen:
+                return
+            seen.add(normalized)
+            terms.append(normalized)
+
+        for type_cfg in self._discover_type_configs(profile):
+            label = getattr(type_cfg, "label", None)
+            category_name = getattr(type_cfg, "category_name", None)
+            is_group = bool(getattr(type_cfg, "is_group", False))
+
+            _add_term(label)
+            _add_term(category_name)
+
+            label_text = u"{}".format(label) if label not in (None, u"") else u""
+            if ":" in label_text:
+                for part in label_text.split(":"):
+                    _add_term(part)
+
+            if is_group:
+                _add_term("model group")
+                _add_term("model groups")
+
+            category_norm = self._normalize_search_text(category_name)
+            if "model group" in category_norm:
+                _add_term("model group")
+                _add_term("model groups")
+
+        return u" | ".join(terms)
+
+    def _rebuild_profile_content_index(self):
+        index = {}
+        for profile_name in self._profiles.keys():
+            key = profile_name or u""
+            index[key] = self._build_profile_content_text(profile_name)
+        self._profile_content_index = index
+
+    def _entry_matches_content_filter(self, entry):
+        if not self._profile_content_filter:
+            return True
+        if not entry:
+            return False
+        profile_name = entry.get("profile_name")
+        if not profile_name:
+            return False
+        search_blob = self._profile_content_index.get(profile_name, u"")
+        if not search_blob:
+            return False
+        for term in self._search_terms(self._profile_content_filter):
+            if term not in search_blob:
+                return False
+        return True
 
     def _mirror_group_profiles(self, root_key):
         if not root_key:
@@ -1196,32 +1274,43 @@ class ProfileEditorWindow(forms.WPFWindow):
             selected_item = self.ProfileList.Items[0]
         self.ProfileList.SelectedItem = selected_item
 
-    def _apply_profile_filter(self, search_text):
+    def _apply_profile_filter(self, search_text=None, content_text=None):
         if not hasattr(self, "ProfileList"):
             return
-        normalized = (search_text or u"").strip().lower()
-        self._profile_filter = normalized
-        if not normalized:
+        if search_text is not None:
+            self._profile_filter = self._normalize_search_text(search_text)
+        if content_text is not None:
+            self._profile_content_filter = self._normalize_search_text(content_text)
+
+        name_filter = self._profile_filter
+        if not name_filter:
             filtered = list(self._display_entries)
+            if self._profile_content_filter:
+                filtered = [entry for entry in filtered if self._entry_matches_content_filter(entry)]
         else:
             filtered = []
             for root_key in self._group_order:
                 header_entry = self._header_entries.get(root_key)
                 child_entries = self._child_entries.get(root_key, [])
                 header_label = (header_entry.get("display") if header_entry else self._root_display_name(root_key) or "")
-                header_matches = normalized in header_label.lower()
+                header_matches = name_filter in header_label.lower()
                 matching_children = [
                     entry for entry in child_entries
-                    if normalized in (entry.get("profile_name") or "").lower()
+                    if name_filter in (entry.get("profile_name") or "").lower()
                 ]
                 if not header_matches and not matching_children:
                     continue
-                if header_entry:
-                    filtered.append(header_entry)
+
                 if header_matches:
-                    filtered.extend(child_entries)
+                    candidate_children = child_entries
                 else:
-                    filtered.extend(matching_children)
+                    candidate_children = matching_children
+
+                if header_entry and self._entry_matches_content_filter(header_entry):
+                    filtered.append(header_entry)
+                filtered.extend(
+                    [entry for entry in candidate_children if self._entry_matches_content_filter(entry)]
+                )
         preferred = None
         current_selected = getattr(self.ProfileList, "SelectedItem", None)
         if current_selected is not None:
@@ -1263,7 +1352,13 @@ class ProfileEditorWindow(forms.WPFWindow):
         text = u""
         if sender is not None:
             text = getattr(sender, "Text", u"") or u""
-        self._apply_profile_filter(text)
+        self._apply_profile_filter(search_text=text)
+
+    def ProfileContainsBox_TextChanged(self, sender, args):
+        text = u""
+        if sender is not None:
+            text = getattr(sender, "Text", u"") or u""
+        self._apply_profile_filter(content_text=text)
 
     def _fmt_float(self, val):
         try:
