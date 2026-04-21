@@ -19,6 +19,7 @@ from CEDElectrical.Domain.circuit_element_finder_bounds import (
     show_elements,
 )
 from Snippets import _elecutils as eu
+from Snippets import revit_helpers
 from Snippets.circuit_ui_actions import collect_circuit_targets, set_revit_selection
 
 OPTION_EXISTING_PLAN = "Open in Existing Plan View"
@@ -36,20 +37,14 @@ VALID_SELECTION_BICS = (
 
 
 def _id_value(item):
-    try:
-        return int(item.IntegerValue)
-    except Exception:
-        return -1
+    return revit_helpers.get_elementid_value(item, default=-1)
 
 
 def _bic_id_value(bic):
     try:
-        return int(DB.ElementId(bic).IntegerValue)
+        return revit_helpers.get_elementid_value(revit_helpers.elementid_from_value(int(bic)), default=0)
     except Exception:
-        try:
-            return int(bic)
-        except Exception:
-            return 0
+        return 0
 
 
 def _is_valid_level_id(doc, level_id):
@@ -363,7 +358,7 @@ def run_circuited_device_finder(uidoc=None, logger=None):
             continue
         seen.add(circuit_id)
         try:
-            circuit = doc.GetElement(DB.ElementId(int(circuit_id)))
+            circuit = doc.GetElement(revit_helpers.elementid_from_value(int(circuit_id)))
         except Exception:
             circuit = None
         if isinstance(circuit, DBE.ElectricalSystem):

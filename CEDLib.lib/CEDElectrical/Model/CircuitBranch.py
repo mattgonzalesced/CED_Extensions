@@ -12,6 +12,12 @@ from CEDElectrical.Model.circuit_settings import (
     NeutralBehavior,
     IsolatedGroundBehavior,
 )
+from CEDElectrical.part_types import (
+    PART_TYPE_OTHER_PANEL,
+    PART_TYPE_PANELBOARD,
+    PART_TYPE_SWITCHBOARD,
+    PART_TYPE_TRANSFORMER,
+)
 from CEDElectrical.refdata.alert_definitions import ALERT_DEFINITIONS
 from CEDElectrical.refdata.ampacity_table import WIRE_AMPACITY_TABLE
 from CEDElectrical.refdata.conductor_area_table import CONDUCTOR_AREA_TABLE
@@ -590,7 +596,7 @@ class CircuitBranch(object):
                 behavior = getattr(
                     self.settings,
                     "multi_pole_branch_neutral_behavior",
-                    MultiPoleBranchNeutralBehavior.INCLUDE_BY_DEFAULT,
+                    MultiPoleBranchNeutralBehavior.EXCLUDE_BY_DEFAULT,
                 )
                 self._include_neutral = bool(
                     behavior == MultiPoleBranchNeutralBehavior.INCLUDE_BY_DEFAULT

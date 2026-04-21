@@ -11,7 +11,7 @@ logger = script.get_logger()
 output = script.get_output()
 output.close_others()
 def _idval(item):
-    return int(revit_helpers.get_elementid_value(item))
+    return revit_helpers.get_elementid_value(item)
 
 
 def _idfrom(value):
