@@ -1,6 +1,8 @@
 ﻿# -*- coding: utf-8 -*-
 from pyrevit import script, revit, forms, DB
 
+from CEDElectrical.part_types import PART_TYPE_MAP
+
 logger = script.get_logger()
 import csv
 from Snippets import revit_helpers
@@ -40,13 +42,7 @@ class TreeBranch(object):
         }
 
 class TreeNode(object):
-    PART_TYPE_MAP = {
-        14: "Panelboard",
-        15: "Transformer",
-        16: "Switchboard",
-        17: "Other Panel",
-        18: "Equipment Switch"
-    }
+    PART_TYPE_MAP = PART_TYPE_MAP
 
     def __init__(self, element):
         self.element = element

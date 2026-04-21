@@ -573,7 +573,7 @@ class BatchSwapWindow(forms.WPFWindow):
         self._known_panel_ids = set()
         for panel in list(self._all_panels_cache or []):
             try:
-                self._known_panel_ids.add(int(revit_helpers.get_elementid_value(panel.Id)))
+                self._known_panel_ids.add(revit_helpers.get_elementid_value(panel.Id))
             except Exception:
                 continue
         try:

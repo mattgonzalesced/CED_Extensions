@@ -5,6 +5,8 @@ from System.Collections.Generic import List
 from pyrevit import DB, script
 
 from CEDElectrical.Model.circuit_settings import CircuitSettings
+from Snippets import categories as category_utils
+from Snippets import revit_helpers
 
 GP_NAME = "CED_Circuit_Settings"
 AUTO_PARAM_PROBE_NAME = "Circuit Data_CED"
@@ -59,17 +61,6 @@ RESULT_PARAM_NAMES = [
     'Circuit Ampacity_CED',
     'CKT_Length Makeup_CED',
 ]
-
-FIXTURE_CATEGORY_IDS = [
-    DB.ElementId(DB.BuiltInCategory.OST_ElectricalFixtures),
-    DB.ElementId(DB.BuiltInCategory.OST_LightingDevices),
-    DB.ElementId(DB.BuiltInCategory.OST_LightingFixtures),
-    DB.ElementId(DB.BuiltInCategory.OST_SecurityDevices),
-    DB.ElementId(DB.BuiltInCategory.OST_FireAlarmDevices),
-    DB.ElementId(DB.BuiltInCategory.OST_DataDevices),
-    DB.ElementId(DB.BuiltInCategory.OST_MechanicalControlDevices),
-]
-
 
 # ---------------------------
 # INTERNAL HELPERS
@@ -143,16 +134,206 @@ def has_project_parameter_binding(doc, parameter_name):
     return False
 
 
-def ensure_electrical_parameters_for_calculate(doc, logger=None):
-    """
-    Ensure required electrical shared parameters are available before calculate.
-    This is silent (no alerts/output) and runs once per calculate call.
-    """
-    if has_project_parameter_binding(doc, AUTO_PARAM_PROBE_NAME):
-        return {"status": "present", "updated": 0, "unchanged": 0, "skipped": 0}
+def _elementid_value(item, default=0):
+    return revit_helpers.get_elementid_value(item, default=default)
 
+
+def _is_valid_element_id(item):
+    return _elementid_value(item, default=-1) > 0
+
+
+def _definition_element_id(doc, definition):
+    if definition is None:
+        return DB.ElementId.InvalidElementId
+
+    try:
+        definition_id = getattr(definition, "Id", None)
+    except Exception:
+        definition_id = None
+    if _is_valid_element_id(definition_id):
+        return definition_id
+
+    try:
+        definition_guid = getattr(definition, "GUID", None)
+    except Exception:
+        definition_guid = None
+    if definition_guid:
+        try:
+            shared_param_element = DB.SharedParameterElement.Lookup(doc, definition_guid)
+        except Exception:
+            shared_param_element = None
+        if shared_param_element is not None and _is_valid_element_id(getattr(shared_param_element, "Id", None)):
+            return shared_param_element.Id
+
+    return DB.ElementId.InvalidElementId
+
+
+def _parameter_definition_owned_by_other(doc, definition):
+    if not getattr(doc, "IsWorkshared", False):
+        return False, ""
+
+    definition_id = _definition_element_id(doc, definition)
+    if not _is_valid_element_id(definition_id):
+        return False, ""
+
+    try:
+        status = DB.WorksharingUtils.GetCheckoutStatus(doc, definition_id)
+    except Exception:
+        status = None
+    if status != DB.CheckoutStatus.OwnedByOtherUser:
+        return False, ""
+
+    owner = ""
+    try:
+        tooltip = DB.WorksharingUtils.GetWorksharingTooltipInfo(doc, definition_id)
+        owner = str(getattr(tooltip, "Owner", "") or "")
+    except Exception:
+        owner = ""
+    return True, owner
+
+
+def _resolve_target_category_set(doc, row, settings):
+    category_text = str((row or {}).get("Categories") or "").strip()
+    category_ids, missing_tokens = category_utils.resolve_binding_category_ids(doc, category_text)
+
+    writeback_flags = {}
+    try:
+        writeback_flags = dict(getattr(settings, "get_binding_writeback_flags")() or {})
+    except Exception:
+        writeback_flags = {}
+
+    write_equipment = bool(writeback_flags.get("write_equipment_results", getattr(settings, "write_equipment_results", True)))
+    write_fixtures = bool(writeback_flags.get("write_fixture_results", getattr(settings, "write_fixture_results", False)))
+    filtered_ids = category_utils.apply_writeback_filter(
+        doc,
+        category_ids,
+        write_equipment_results=write_equipment,
+        write_fixture_results=write_fixtures,
+    )
+
+    category_set, inserted, missing_ids = category_utils.build_category_set(doc, filtered_ids)
+    return category_set, inserted, missing_tokens, missing_ids
+
+
+def _binding_needs_update(existing_binding, target_category_set, is_instance):
+    if existing_binding is None:
+        return True, set()
+    current_is_instance = isinstance(existing_binding, DB.InstanceBinding)
+    current_categories = category_utils.category_id_values_from_categories(getattr(existing_binding, "Categories", []))
+    target_categories = category_utils.category_id_values_from_categories(target_category_set)
+    # Conservative mode: never unbind existing categories automatically.
+    removed = set()
+    needs_update = not (current_is_instance == is_instance and target_categories.issubset(current_categories))
+    return bool(needs_update), removed
+
+
+def _sync_parameter_bindings(doc, app, rows, shared_param_file, settings, logger, check_ownership=True):
+    bindmap = doc.ParameterBindings
+    updated = 0
+    unchanged = 0
+    skipped = 0
+    locked = []
+    warnings = []
+    errors = []
+    unbound = 0
+
+    for row in list(rows or []):
+        name = str((row or {}).get("Parameter Name") or "").strip()
+        if not name:
+            skipped += 1
+            continue
+
+        definition = _get_shared_definition(shared_param_file, name)
+        if definition is None:
+            warnings.append("Missing shared definition: {}".format(name))
+            skipped += 1
+            continue
+
+        category_set, inserted, missing_tokens, missing_ids = _resolve_target_category_set(doc, row, settings)
+        if missing_tokens:
+            warnings.append("{}: unresolved category token(s): {}".format(name, ", ".join(list(missing_tokens))))
+        if missing_ids:
+            warnings.append("{}: category id(s) not found in project: {}".format(name, ", ".join(list(missing_ids))))
+        if inserted <= 0:
+            warnings.append("{}: no valid categories after writeback filtering; skipped.".format(name))
+            skipped += 1
+            continue
+
+        is_instance = str((row or {}).get("Instance/Type") or "").strip().lower() == "instance"
+        group_label = str((row or {}).get("Group Under") or "").strip()
+        group_id = LOAD_PARAMS_GROUP_MAP.get(group_label, DB.GroupTypeId.ElectricalCircuiting)
+
+        existing_binding = _get_existing_binding(doc, definition.Name)
+        if existing_binding is not None:
+            merged_set, merged_inserted, merged_missing_ids = category_utils.merge_category_sets(
+                doc,
+                category_set,
+                getattr(existing_binding, "Categories", []),
+            )
+            if merged_missing_ids:
+                warnings.append("{}: category id(s) not found in project: {}".format(name, ", ".join(list(merged_missing_ids))))
+            if merged_inserted > 0:
+                category_set = merged_set
+                inserted = int(merged_inserted)
+
+        needs_update, removed_categories = _binding_needs_update(existing_binding, category_set, is_instance)
+        if not needs_update:
+            unchanged += 1
+            continue
+
+        if removed_categories:
+            unbound += 1
+
+        if check_ownership and existing_binding is not None:
+            owned_by_other, owner_name = _parameter_definition_owned_by_other(doc, definition)
+            if owned_by_other:
+                skipped += 1
+                locked.append({"parameter": name, "owner": owner_name})
+                warnings.append(
+                    "{}: skipped binding update because parameter definition is owned by '{}'.".format(
+                        name, owner_name or "another user"
+                    )
+                )
+                continue
+
+        try:
+            binding = _create_binding(app, category_set, is_instance)
+            if existing_binding is not None:
+                success = bindmap.ReInsert(definition, binding, group_id)
+            else:
+                success = bindmap.Insert(definition, binding, group_id)
+            if isinstance(success, bool) and not success:
+                errors.append("{}: Revit returned False when updating binding.".format(name))
+                skipped += 1
+                continue
+            updated += 1
+        except Exception as ex:
+            errors.append("{}: {}".format(name, ex))
+            skipped += 1
+
+    return {
+        "updated": int(updated),
+        "unchanged": int(unchanged),
+        "skipped": int(skipped),
+        "locked": list(locked),
+        "warnings": list(warnings),
+        "errors": list(errors),
+        "unbound": int(unbound),
+    }
+
+
+def sync_electrical_parameter_bindings(
+    doc,
+    logger=None,
+    settings=None,
+    check_ownership=True,
+    transaction_name="Load Electrical Parameters",
+):
+    """Load and reconcile electrical shared parameter bindings using current writeback settings."""
     logger = logger or script.get_logger()
     app = doc.Application
+    settings = settings or load_circuit_settings(doc)
+
     shared_txt, table_xlsx = _resolve_load_params_files()
     if not shared_txt or not table_xlsx:
         return {
@@ -161,15 +342,15 @@ def ensure_electrical_parameters_for_calculate(doc, logger=None):
             "updated": 0,
             "unchanged": 0,
             "skipped": 0,
+            "warnings": [],
+            "errors": [],
+            "locked": [],
+            "unbound": 0,
+            "total": 0,
         }
 
     rows = _load_parameter_rows(table_xlsx)
-    updated = 0
-    unchanged = 0
-    skipped = 0
-
     original_shared_file = app.SharedParametersFilename
-    shared_param_file = None
     tx = None
     try:
         app.SharedParametersFilename = shared_txt
@@ -181,60 +362,31 @@ def ensure_electrical_parameters_for_calculate(doc, logger=None):
                 "updated": 0,
                 "unchanged": 0,
                 "skipped": len(rows),
+                "warnings": [],
+                "errors": ["Failed to open shared parameter file."],
+                "locked": [],
+                "unbound": 0,
+                "total": len(rows),
             }
 
-        tx = DB.Transaction(doc, "Auto-Load Electrical Parameters")
+        tx = DB.Transaction(doc, str(transaction_name or "Load Electrical Parameters"))
         tx.Start()
-        bindmap = doc.ParameterBindings
-
-        for row in rows:
-            name = row.get("Parameter Name")
-            if not name:
-                skipped += 1
-                continue
-
-            definition = _get_shared_definition(shared_param_file, name)
-            if definition is None:
-                skipped += 1
-                continue
-
-            category_names = [c.strip() for c in str(row.get("Categories") or "").split(",") if c and c.strip()]
-            category_set, inserted = _category_set_from_names(doc, category_names)
-            if inserted <= 0:
-                skipped += 1
-                continue
-
-            is_instance = str(row.get("Instance/Type") or "").strip().lower() == "instance"
-            group_label = str(row.get("Group Under") or "").strip()
-            group_id = LOAD_PARAMS_GROUP_MAP.get(group_label, DB.GroupTypeId.ElectricalCircuiting)
-
-            existing_binding = _get_existing_binding(doc, definition.Name)
-            if existing_binding:
-                current_is_instance = isinstance(existing_binding, DB.InstanceBinding)
-                current_categories = _category_id_set(existing_binding.Categories)
-                target_categories = _category_id_set(category_set)
-                needs_update = not (current_is_instance == is_instance and current_categories == target_categories)
-            else:
-                needs_update = True
-
-            if not needs_update:
-                unchanged += 1
-                continue
-
-            binding = _create_binding(app, category_set, is_instance)
-            if existing_binding:
-                bindmap.ReInsert(definition, binding, group_id)
-            else:
-                bindmap.Insert(definition, binding, group_id)
-            updated += 1
-
+        summary = _sync_parameter_bindings(
+            doc,
+            app,
+            rows,
+            shared_param_file,
+            settings=settings,
+            logger=logger,
+            check_ownership=check_ownership,
+        )
         tx.Commit()
-        return {
-            "status": "loaded",
-            "updated": updated,
-            "unchanged": unchanged,
-            "skipped": skipped,
-        }
+
+        status = "loaded" if int(summary.get("updated", 0)) > 0 else "present"
+        summary["status"] = status
+        summary["reason"] = ""
+        summary["total"] = int(len(rows))
+        return summary
     except Exception as ex:
         try:
             if tx and tx.HasStarted():
@@ -242,7 +394,7 @@ def ensure_electrical_parameters_for_calculate(doc, logger=None):
         except Exception:
             pass
         try:
-            logger.warning("Auto-load electrical parameters failed: {}".format(ex))
+            logger.warning("Load electrical parameters failed: {}".format(ex))
         except Exception:
             pass
         return {
@@ -251,12 +403,47 @@ def ensure_electrical_parameters_for_calculate(doc, logger=None):
             "updated": 0,
             "unchanged": 0,
             "skipped": len(rows) if rows else 0,
+            "warnings": [],
+            "errors": [str(ex)],
+            "locked": [],
+            "unbound": 0,
+            "total": len(rows) if rows else 0,
         }
     finally:
         try:
             app.SharedParametersFilename = original_shared_file or ""
         except Exception:
             pass
+
+
+def ensure_electrical_parameters_for_calculate(doc, logger=None):
+    """
+    Ensure required electrical shared parameters are available before calculate.
+    This silently reconciles category bindings against current writeback settings.
+    """
+    settings = load_circuit_settings(doc)
+    return sync_electrical_parameter_bindings(
+        doc,
+        logger=logger,
+        settings=settings,
+        check_ownership=True,
+        transaction_name="Auto-Load Electrical Parameters",
+    )
+
+
+def unbind_disabled_writeback_categories(doc, logger=None, settings=None, check_ownership=True):
+    """
+    Compatibility wrapper for callers expecting category reconciliation.
+    Current conservative mode does not unbind categories automatically.
+    """
+    active_settings = settings or load_circuit_settings(doc)
+    return sync_electrical_parameter_bindings(
+        doc,
+        logger=logger,
+        settings=active_settings,
+        check_ownership=check_ownership,
+        transaction_name="Update Electrical Parameter Categories",
+    )
 
 
 def _extensions_root():
@@ -341,23 +528,6 @@ def _get_existing_binding(doc, definition_name):
     return None
 
 
-def _category_set_from_names(doc, names):
-    category_set = DB.CategorySet()
-    category_map = {cat.Name: cat for cat in doc.Settings.Categories}
-    inserted = 0
-    for name in list(names or []):
-        cat = category_map.get(name)
-        if cat is None:
-            continue
-        category_set.Insert(cat)
-        inserted += 1
-    return category_set, inserted
-
-
-def _category_id_set(categories):
-    return set([int(getattr(cat.Id, "IntegerValue", -1)) for cat in list(categories or []) if cat is not None])
-
-
 def _create_binding(app, category_set, is_instance):
     try:
         return DB.InstanceBinding(category_set) if is_instance else DB.TypeBinding(category_set)
@@ -413,10 +583,19 @@ def clear_downstream_results(doc, clear_equipment=False, clear_fixtures=False, l
     # Filter to only electrical fixtures/equipment that have an MEP model to avoid
     # grouped annotation and other non-relevant family instances.
     category_ids = []
+    fixture_category_ids = list(category_utils.get_fixture_category_ids(doc) or [])
+    fixture_category_values = set(
+        [revit_helpers.get_elementid_value(x, default=-1) for x in list(fixture_category_ids or [])]
+    )
+    equipment_category_ids = list(category_utils.get_equipment_category_ids(doc) or [])
+    equipment_category_id = equipment_category_ids[0] if equipment_category_ids else None
+    equipment_category_value = revit_helpers.get_elementid_value(equipment_category_id, default=-1)
+
     if clear_equipment:
-        category_ids.append(DB.ElementId(DB.BuiltInCategory.OST_ElectricalEquipment))
+        if equipment_category_id is not None:
+            category_ids.append(equipment_category_id)
     if clear_fixtures:
-        category_ids.extend(FIXTURE_CATEGORY_IDS)
+        category_ids.extend(fixture_category_ids)
 
     if not category_ids:
         return 0, 0, []
@@ -447,8 +626,9 @@ def clear_downstream_results(doc, clear_equipment=False, clear_fixtures=False, l
                 continue
 
             cat_id = cat.Id
-            is_fixture = cat_id in FIXTURE_CATEGORY_IDS
-            is_equipment = cat_id == DB.ElementId(DB.BuiltInCategory.OST_ElectricalEquipment)
+            cat_id_value = revit_helpers.get_elementid_value(cat_id, default=-1)
+            is_fixture = cat_id_value in fixture_category_values
+            is_equipment = cat_id_value == equipment_category_value
 
             if (is_fixture and not clear_fixtures) or (is_equipment and not clear_equipment):
                 continue

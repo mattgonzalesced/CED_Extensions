@@ -9,7 +9,7 @@ from Snippets import revit_helpers
 
 
 def _elid_value(item):
-    return int(revit_helpers.get_elementid_value(item))
+    return revit_helpers.get_elementid_value(item)
 
 
 def _elid_from_value(value):

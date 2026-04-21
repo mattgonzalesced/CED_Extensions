@@ -60,7 +60,7 @@ _LOCK_REPOSITORY = RevitCircuitRepository()
 
 
 def _idval(item):
-    return int(revit_helpers.get_elementid_value(item))
+    return revit_helpers.get_elementid_value(item)
 
 
 def _lookup_param_value(element, name):

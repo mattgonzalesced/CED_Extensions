@@ -16,8 +16,7 @@ clr.AddReference("PresentationFramework")
 clr.AddReference("PresentationCore")
 clr.AddReference("WindowsBase")
 
-from pyrevit import forms, script
-from pyrevit.userconfig import user_config
+from pyrevit import forms, script, telemetry
 
 try:
     from Autodesk.Revit.UI.Events import DocumentSynchronizedWithCentralEventArgs as UiSyncArgs
@@ -41,7 +40,6 @@ _IS_RUNNING = False
 
 _DOCKABLE_REGISTERED = False
 
-
 def _telemetry_source_folder():
     appdata = os.environ.get("APPDATA", os.path.join(os.path.expanduser("~"), "AppData", "Roaming"))
     return os.path.join(appdata, "pyRevit", "Extensions", "CED_pyTelemetry")
@@ -57,6 +55,23 @@ def _ensure_telemetry_source_folder():
     except Exception as exc:
         return source_folder, False, exc
 
+def _normalize_path(value):
+    if value in (None, ""):
+        return ""
+    return os.path.normcase(os.path.normpath(value))
+
+
+def _event_flags_to_int(value):
+    if value in (None, ""):
+        return 0
+    try:
+        value_text = str(value).strip()
+        if value_text.lower().startswith("0x"):
+            return int(value_text, 16)
+        return int(value_text)
+    except Exception:
+        return 0
+
 
 def _configure_pyrevit_telemetry():
     logger = script.get_logger()
@@ -66,17 +81,65 @@ def _configure_pyrevit_telemetry():
         return
 
     try:
-        # pyRevit telemetry reads from global user_config telemetry properties.
-        user_config.telemetry_utc_timestamp = True
-        user_config.telemetry_status = True
-        user_config.telemetry_file_dir = source_folder
-        user_config.telemetry_server_url = ""
-        user_config.telemetry_include_hooks = True
-        user_config.apptelemetry_status = False
-        user_config.apptelemetry_server_url = ""
-        user_config.apptelemetry_event_flags = "0x0"
-        user_config.save_changes()
-        logger.info("pyRevit telemetry config ensured. telemetry_file_dir=%s", source_folder)
+        telemetry_cfg = script.get_config("telemetry")
+
+        expected_settings = {
+            "utc_timestamps": True,
+            "active": True,
+            "telemetry_file_dir": source_folder,
+            "telemetry_server_url": "",
+            "include_hooks": True,
+            "active_app": False,
+            "apptelemetry_server_url": "",
+            "apptelemetry_event_flags": "0x0",
+        }
+
+        current_settings = {
+            setting_name: telemetry_cfg.get_option(setting_name, default_value="")
+            for setting_name in expected_settings
+        }
+
+        setting_setters = {
+            "utc_timestamps": telemetry.set_telemetry_utc_timestamp,
+            "active": telemetry.set_telemetry_state,
+            "telemetry_file_dir": telemetry.set_telemetry_file_dir,
+            "telemetry_server_url": telemetry.set_telemetry_server_url,
+            "include_hooks": telemetry.set_telemetry_include_hooks,
+            "active_app": telemetry.set_apptelemetry_state,
+            "apptelemetry_server_url": telemetry.set_apptelemetry_server_url,
+            "apptelemetry_event_flags": lambda _: telemetry.set_apptelemetry_event_flags(0),
+        }
+
+        value_normalizers = {
+            "telemetry_file_dir": _normalize_path,
+            "apptelemetry_event_flags": _event_flags_to_int,
+        }
+
+        changed_settings = []
+        for setting_name, expected_value in expected_settings.items():
+            current_value = current_settings.get(setting_name)
+            normalizer = value_normalizers.get(setting_name)
+            if normalizer:
+                current_value = normalizer(current_value)
+                expected_value = normalizer(expected_value)
+            if current_value != expected_value:
+                setting_setters[setting_name](expected_settings[setting_name])
+                changed_settings.append(setting_name)
+
+        if changed_settings:
+            # setup_telemetry() applies derived runtime state (session file path,
+            # handlers, env vars) and persists the updated config once.
+            telemetry.setup_telemetry()
+            logger.info(
+                "pyRevit telemetry updated via telemetry API. changed=%s file_dir=%s",
+                ", ".join(changed_settings),
+                source_folder,
+            )
+        else:
+            logger.info(
+                "pyRevit telemetry already matched required settings. "
+                "No config write needed."
+            )
     except Exception as exc:
         logger.warning("Failed to configure pyRevit telemetry: %s", exc)
 

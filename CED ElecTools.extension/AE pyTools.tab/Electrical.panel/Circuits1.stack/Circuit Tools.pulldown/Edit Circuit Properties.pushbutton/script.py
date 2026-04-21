@@ -26,7 +26,7 @@ ALERT_DATA_PARAM = "Circuit Data_CED"
 
 
 def _idval(item):
-    return int(revit_helpers.get_elementid_value(item))
+    return revit_helpers.get_elementid_value(item)
 
 
 def _electrical_panel_root(start_dir):

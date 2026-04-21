@@ -14,7 +14,7 @@ logger = script.get_logger()
 output = script.get_output()
 doc = revit.doc
 def _idval(item):
-    return int(revit_helpers.get_elementid_value(item))
+    return revit_helpers.get_elementid_value(item)
 
 # -----------------------------------------------------------------------------
 # 0) Constants

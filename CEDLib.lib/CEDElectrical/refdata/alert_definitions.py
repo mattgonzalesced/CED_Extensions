@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Central registry for Calculate Circuits alert definitions."""
 
-from CEDElectrical.Model.alerts import AlertDefinition
+from CEDElectrical.Model.alert_definition import AlertDefinition
 
 
 ALERT_DEFINITIONS = {
