@@ -2095,9 +2095,9 @@ def _collect_tagged_pipe_ids_in_view(view):
     return pipe_ids
 
 
-def _delete_pipe_tags_for_pipe_tree(root_pipe, view):
-    tree_pipe_ids = set(_collect_pipe_tree(root_pipe).keys())
-    if not tree_pipe_ids:
+def _delete_pipe_tags_for_pipe_set(target_pipe_ids, view):
+    scope_pipe_ids = set(target_pipe_ids or [])
+    if not scope_pipe_ids:
         return 0
 
     delete_ids = []
@@ -2107,7 +2107,9 @@ def _delete_pipe_tags_for_pipe_tree(root_pipe, view):
         tagged_pipe_ids = _tagged_pipe_ids(tag)
         if not tagged_pipe_ids:
             continue
-        if not tree_pipe_ids.intersection(tagged_pipe_ids):
+        # Delete only tags that are fully scoped to this run's pipes.
+        # This prevents deleting tags that also reference pipes on other roots.
+        if not tagged_pipe_ids.issubset(scope_pipe_ids):
             continue
         try:
             iid = tag.Id.IntegerValue
@@ -2122,6 +2124,15 @@ def _delete_pipe_tags_for_pipe_tree(root_pipe, view):
         with revit.Transaction("Name Piping Systems - Delete Existing Tree Tags"):
             doc.Delete(List[DB.ElementId](delete_ids))
     return len(delete_ids)
+
+
+def _set_fixed_label_for_maps(label_map, identity_label_map, fixed_label):
+    if not fixed_label:
+        return
+    for pid in list(label_map.keys()):
+        label_map[pid] = fixed_label
+    for pid in list(identity_label_map.keys()):
+        identity_label_map[pid] = fixed_label
 
 
 def _prompt_naming_options():
@@ -2398,9 +2409,12 @@ def main():
     deleted_existing_tags = 0
     tag_target_ids = None
     if apply_mode == "Redo Tags + Identity Marks":
-        deleted_existing_tags = _delete_pipe_tags_for_pipe_tree(root_pipe, active_view)
+        delete_scope_ids = set(label_map.keys())
+        delete_scope_ids.update(suppress_label_ids)
+        deleted_existing_tags = _delete_pipe_tags_for_pipe_set(delete_scope_ids, active_view)
         marks_set = _set_identity_marks(identity_label_map, identity_pipe_map, overwrite_existing=True)
     else:
+        _set_fixed_label_for_maps(label_map, identity_label_map, start_label)
         marks_set = _set_identity_marks(identity_label_map, identity_pipe_map, overwrite_existing=False)
         existing_tagged_ids = _collect_tagged_pipe_ids_in_view(active_view)
         tag_target_ids = set(label_map.keys()) - existing_tagged_ids
