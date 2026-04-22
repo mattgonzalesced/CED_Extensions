@@ -12,6 +12,12 @@ from CEDElectrical.Model.circuit_settings import (
     NeutralBehavior,
     IsolatedGroundBehavior,
 )
+from CEDElectrical.part_types import (
+    PART_TYPE_OTHER_PANEL,
+    PART_TYPE_PANELBOARD,
+    PART_TYPE_SWITCHBOARD,
+    PART_TYPE_TRANSFORMER,
+)
 from CEDElectrical.refdata.alert_definitions import ALERT_DEFINITIONS
 from CEDElectrical.refdata.ampacity_table import WIRE_AMPACITY_TABLE
 from CEDElectrical.refdata.conductor_area_table import CONDUCTOR_AREA_TABLE
@@ -28,13 +34,6 @@ console = script.get_output()
 logger = script.get_logger()
 DEV_LOGGING = False
 get_elementid = revit_helpers.get_elementid_value
-PART_TYPE_MAP = {
-    14: "Panelboard",
-    15: "Transformer",
-    16: "Switchboard",
-    17: "Other Panel",
-    18: "Equipment Switch"
-}
 
 ALLOWED_WIRE_SIZES = [
     "12", "10", "8", "6", "4", "3", "2", "1",
@@ -43,6 +42,7 @@ ALLOWED_WIRE_SIZES = [
     "500", "600", "700", "750", "800", "1000",
 ]
 
+# TODO: add handling for tap conductors and feed thru lugs?
 
 # ---------------------------------------------------------------------
 # Cable / Conduit helper models
@@ -508,10 +508,15 @@ class CircuitBranch(object):
                         continue
                     part_value = param.AsInteger()
 
-                    if part_value == 15:
+                    if part_value == PART_TYPE_TRANSFORMER:
                         self._is_transformer_primary = True
 
-                    if part_value in [14, 15, 16, 17]:
+                    if part_value in (
+                        PART_TYPE_PANELBOARD,
+                        PART_TYPE_TRANSFORMER,
+                        PART_TYPE_SWITCHBOARD,
+                        PART_TYPE_OTHER_PANEL,
+                    ):
                         return True
         except Exception as e:
             logger.debug("is_feeder detection failed on {}: {}".format(self.name, e))
@@ -527,7 +532,7 @@ class CircuitBranch(object):
                 family = base_equipment.Symbol.Family
                 param = family.get_Parameter(DB.BuiltInParameter.FAMILY_CONTENT_PART_TYPE)
                 if param and param.StorageType == DB.StorageType.Integer:
-                    return param.AsInteger() == 15  # Transformer part type
+                    return param.AsInteger() == PART_TYPE_TRANSFORMER
         except Exception as e:
             logger.debug("transformer secondary detection failed on {}: {}".format(self.name, e))
         return False
@@ -590,7 +595,7 @@ class CircuitBranch(object):
                 behavior = getattr(
                     self.settings,
                     "multi_pole_branch_neutral_behavior",
-                    MultiPoleBranchNeutralBehavior.INCLUDE_BY_DEFAULT,
+                    MultiPoleBranchNeutralBehavior.EXCLUDE_BY_DEFAULT,
                 )
                 self._include_neutral = bool(
                     behavior == MultiPoleBranchNeutralBehavior.INCLUDE_BY_DEFAULT

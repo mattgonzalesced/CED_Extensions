@@ -12,7 +12,7 @@ CIRCUIT_NAME_KEY = "__bip_circuit_name__"
 
 
 def _elid_value(item):
-    return int(revit_helpers.get_elementid_value(item))
+    return revit_helpers.get_elementid_value(item)
 
 
 def _elid_from_value(value):

@@ -4,30 +4,18 @@ import Autodesk.Revit.DB.Mechanical as DBM
 import Autodesk.Revit.DB.Plumbing as DBP
 from System.Collections.Generic import List
 from pyrevit import revit, DB, forms, script
-from pyrevit.compat import get_elementid_value_func
 
+from Snippets import revit_helpers
 from pyrevitmep.meputils import get_connector_manager, NoConnectorManagerError
 
 doc = revit.doc
 logger = script.get_logger()
 output = script.get_output()
 output.close_others()
-_get_elid_value = get_elementid_value_func()
 
 
 def _elid_value(item, default=0):
-    if item is None:
-        return int(default or 0)
-    try:
-        return int(_get_elid_value(item))
-    except Exception:
-        try:
-            return int(getattr(item, "IntegerValue"))
-        except Exception:
-            try:
-                return int(getattr(item, "Value"))
-            except Exception:
-                return int(default or 0)
+    return revit_helpers.get_elementid_value(item, default=default)
 
 VERBOSE_LOGGING = False
 

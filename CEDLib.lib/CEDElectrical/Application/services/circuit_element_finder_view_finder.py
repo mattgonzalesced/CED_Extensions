@@ -3,6 +3,8 @@
 
 from pyrevit import DB
 
+from Snippets import revit_helpers
+
 try:
     from System.Collections.Generic import List
 except Exception:
@@ -15,10 +17,7 @@ EXCLUDED_DISCIPLINE_NAMES = set(["mechanical", "plumbing"])
 
 
 def _id_value(item):
-    try:
-        return int(item.IntegerValue)
-    except Exception:
-        return -1
+    return revit_helpers.get_elementid_value(item, default=-1)
 
 
 def _to_name(value):

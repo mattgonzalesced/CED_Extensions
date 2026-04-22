@@ -4,8 +4,8 @@ import imp
 import json
 import os
 
-import clr
 import Autodesk.Revit.DB.Electrical as DBE
+import clr
 from Autodesk.Revit.DB.Events import (
     DocumentOpenedEventArgs,
     DocumentClosedEventArgs,
@@ -63,7 +63,7 @@ from Snippets._elecutils import (
     get_all_panels,
     get_compatible_panels,
     get_panel_dist_system,
-    move_circuits_to_panel,
+    panel_has_schedule_view,
 )
 from UIClasses import Resources as UIResources
 from UIClasses import pathing as ui_pathing
@@ -143,6 +143,7 @@ CIRCUIT_TYPE_TAG_COMPACT_TEXT = {
 OCP_TABLE_KEYS = sorted([int(k) for k in BREAKER_FRAME_SWITCH_TABLE.keys()])
 _DOC_SENTINEL = object()
 DEFAULT_HIDDEN_TYPE_FILTERS = set(["SPARE", "SPACE"])
+TYPE_FILTER_NO_SHADE_TAG = "__ced_type_filter_no_shade__"
 
 
 def _normalize_theme_mode(value, fallback="light"):
@@ -151,7 +152,7 @@ def _normalize_theme_mode(value, fallback="light"):
 
 
 def _elid_value(item):
-    return int(revit_helpers.get_elementid_value(item))
+    return revit_helpers.get_elementid_value(item)
 
 
 def _elid_from_value(value):
@@ -2242,37 +2243,6 @@ class _CalculateSettingsHandler(IExternalEventHandler):
         return "CED Calculate Settings External Event"
 
 
-class _BufferedMoveOutput(object):
-    """Captures move-tool output so successful runs stay silent."""
-
-    def __init__(self):
-        self._events = []
-
-    def linkify(self, element_id):
-        return _elid_value(element_id)
-
-    def print_md(self, text):
-        self._events.append(("md", str(text or "")))
-
-    def print_table(self, table_data, columns):
-        self._events.append((
-            "table",
-            list(table_data or []),
-            list(columns or []),
-        ))
-
-    def flush_to(self, output):
-        if output is None:
-            return
-        for event in list(self._events or []):
-            kind = event[0]
-            if kind == "md":
-                output.print_md(event[1])
-                continue
-            if kind == "table":
-                output.print_table(event[1], event[2])
-
-
 class MoveCircuitsExternalEventGateway(object):
     """Runs move-selected-circuits in API context from the modeless browser pane."""
 
@@ -2339,68 +2309,18 @@ class _MoveCircuitsHandler(IExternalEventHandler):
                 raise Exception("No active Revit document available.")
 
             target_panel_id = int(pending.get("target_panel_id", 0) or 0)
-            if target_panel_id <= 0:
-                raise Exception("Target panel selection is invalid.")
-
-            target_panel = doc.GetElement(_elid_from_value(target_panel_id))
-            if target_panel is None:
-                raise Exception("Target panel was not found in the active document.")
-
-            circuits = []
-            pre_on_target_ids = set()
-            for cid in list(pending.get("circuit_ids") or []):
-                circuit = doc.GetElement(_elid_from_value(int(cid)))
-                if not isinstance(circuit, DBE.ElectricalSystem):
-                    continue
-                circuits.append(circuit)
-                base_equipment = getattr(circuit, "BaseEquipment", None)
-                if base_equipment is None:
-                    continue
-                if _elid_value(getattr(base_equipment, "Id", None)) == target_panel_id:
-                    pre_on_target_ids.add(_elid_value(circuit.Id))
-
-            if not circuits:
-                raise Exception("No valid circuits were found to move.")
-
-            buffered_output = _BufferedMoveOutput()
-            move_result = move_circuits_to_panel(circuits, target_panel, doc, buffered_output)
-
-            moved_ids = []
-            for circuit in list(circuits or []):
-                cid = _elid_value(circuit.Id)
-                if cid in pre_on_target_ids:
-                    continue
-                base_equipment = getattr(circuit, "BaseEquipment", None)
-                if base_equipment is None:
-                    continue
-                if _elid_value(getattr(base_equipment, "Id", None)) == target_panel_id:
-                    moved_ids.append(cid)
-
-            recalc_result = None
-            recalc_error = None
-            moved_ids = sorted(list(set([int(x) for x in list(moved_ids or []) if int(x) > 0])))
-            if moved_ids:
-                try:
-                    runner = build_default_runner(alert_parameter_name=self._gateway.alert_parameter_name)
-                    recalc_request = OperationRequest(
-                        operation_key="calculate_circuits",
-                        circuit_ids=moved_ids,
-                        source="pane_move",
-                        options={"show_output": False},
-                    )
-                    recalc_result = runner.run(recalc_request, doc)
-                except Exception as ex:
-                    recalc_error = ex
-                    if self._gateway.logger:
-                        self._gateway.logger.exception("Move succeeded but recalculation failed: %s", ex)
-
-            payload = {
-                "move_result": move_result,
-                "buffered_output": buffered_output,
-                "moved_ids": moved_ids,
-                "recalc_result": recalc_result,
-                "recalc_error": recalc_error,
-            }
+            runner = build_default_runner(alert_parameter_name=self._gateway.alert_parameter_name)
+            request = OperationRequest(
+                operation_key="move_selected_circuits",
+                circuit_ids=[int(x) for x in list(pending.get("circuit_ids") or []) if int(x or 0) > 0],
+                source="pane_move",
+                options={
+                    "target_panel_id": int(target_panel_id or 0),
+                    "recalculate": True,
+                    "show_recalc_output": False,
+                },
+            )
+            payload = runner.run(request, doc) or {}
         except Exception as ex:
             status = "error"
             error = ex
@@ -2858,6 +2778,11 @@ class CircuitBrowserPanel(forms.WPFPanel):
         if default_set:
             return default_set
         return set(options)
+
+    def _is_default_type_filter_state(self):
+        if bool(self._warnings_only or self._overrides_only or self._syncblocked_only or self._checked_only):
+            return False
+        return set(self._active_type_filters or []) == set(self._default_active_type_filters())
 
     def _update_filter_button_style(self):
         if self._filter_button is None:
@@ -3659,7 +3584,8 @@ class CircuitBrowserPanel(forms.WPFPanel):
             mi.IsCheckable = True
             mi.IsChecked = ctype in self._active_type_filters
             mi.StaysOpenOnClick = True
-            mi.Tag = ctype
+            mi.Uid = str(ctype or "")
+            mi.Tag = None
             mi.IsEnabled = not (
                 self._warnings_only
                 or self._overrides_only
@@ -3700,11 +3626,13 @@ class CircuitBrowserPanel(forms.WPFPanel):
                 or self._syncblocked_only
                 or self._checked_only
             )
+            is_default_type_state = self._is_default_type_filter_state()
             for ctype, item in (self._filter_type_menu_items or {}).items():
                 if item is None:
                     continue
                 item.IsEnabled = not disable_types
                 item.IsChecked = ctype in self._active_type_filters
+                item.Tag = TYPE_FILTER_NO_SHADE_TAG if (is_default_type_state and item.IsChecked) else None
         finally:
             self._suppress_filter_toggle_events = False
 
@@ -4351,12 +4279,24 @@ class CircuitBrowserPanel(forms.WPFPanel):
                 break
 
         if not compatible_panels:
-            forms.alert("No compatible target panel found for the selected circuits.", title=TITLE)
+            forms.alert(
+                "No common compatible target panel was found across all selected circuits.\n\n"
+                "Select circuits with compatible panel requirements (voltage/poles), or move them in smaller groups.",
+                title=TITLE,
+            )
             return
 
         target_panel = self._prompt_for_move_target_panel(compatible_panels, doc)
         if target_panel is None:
             self._set_status("Move cancelled")
+            return
+        if not panel_has_schedule_view(doc, target_panel):
+            forms.alert(
+                "The selected target panel does not have a panel schedule view yet.\n\n"
+                "Create the panel schedule first, then retry Move Selected Circuits.",
+                title=TITLE,
+            )
+            self._set_status("Move cancelled (target panel has no panel schedule)")
             return
 
         if self._move_gateway.is_busy() or self._operation_gateway.is_busy():
@@ -5343,15 +5283,19 @@ class CircuitBrowserPanel(forms.WPFPanel):
     def filter_type_toggled(self, sender, args):
         if self._suppress_filter_toggle_events:
             return
-        ctype = getattr(sender, "Tag", None)
+        ctype = str(getattr(sender, "Uid", "") or getattr(sender, "Tag", "")).strip()
         if not ctype:
             return
 
-        if sender.IsChecked:
-            self._active_type_filters.add(ctype)
+        # In default state, one click should isolate a single circuit type.
+        if self._is_default_type_filter_state():
+            self._active_type_filters = set([ctype])
         else:
-            if ctype in self._active_type_filters:
-                self._active_type_filters.remove(ctype)
+            if sender.IsChecked:
+                self._active_type_filters.add(ctype)
+            else:
+                if ctype in self._active_type_filters:
+                    self._active_type_filters.remove(ctype)
 
         self._update_filter_button_style()
         self._refresh_list()

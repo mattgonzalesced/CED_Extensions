@@ -13,7 +13,7 @@ LIB_ROOT = ui_pathing.ensure_lib_root_on_syspath(THIS_DIR)
 if not LIB_ROOT:
     forms.alert("Could not locate CEDLib.lib.", title=TITLE, exitscript=True)
 
-from CEDElectrical.ui.circuit_element_finder_action import run_circuit_element_finder
+from CEDElectrical.Application.operations.circuit_element_finder_action import run_circuit_element_finder
 
 
 def main():

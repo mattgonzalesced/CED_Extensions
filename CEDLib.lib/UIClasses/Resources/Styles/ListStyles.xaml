@@ -423,6 +423,14 @@
             <Trigger Property="IsChecked" Value="True">
               <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource CED.Brush.CircuitItemSelectedBackground}"/>
             </Trigger>
+            <MultiTrigger>
+              <MultiTrigger.Conditions>
+                <Condition Property="IsCheckable" Value="True"/>
+                <Condition Property="IsChecked" Value="True"/>
+                <Condition Property="Tag" Value="__ced_type_filter_no_shade__"/>
+              </MultiTrigger.Conditions>
+              <Setter TargetName="ItemBorder" Property="Background" Value="Transparent"/>
+            </MultiTrigger>
             <Trigger Property="IsHighlighted" Value="True">
               <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource CED.Brush.ButtonStateOverlayHover}"/>
             </Trigger>

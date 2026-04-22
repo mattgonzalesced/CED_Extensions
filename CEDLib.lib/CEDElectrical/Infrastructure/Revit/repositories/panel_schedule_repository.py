@@ -7,6 +7,12 @@ from System.Collections.Generic import IList
 from System.Collections.Generic import List
 from pyrevit import DB, forms
 
+from CEDElectrical.part_types import (
+    PART_TYPE_MAP,
+    PART_TYPE_OTHER_PANEL,
+    PART_TYPE_PANELBOARD,
+    PART_TYPE_SWITCHBOARD,
+)
 from Snippets import revit_helpers
 
 SORT_MODE_SWITCHBOARD = "switchboard"
@@ -19,21 +25,14 @@ _PANEL_SORT_MODES = (
     SORT_MODE_PANELBOARD_ONE_COLUMN,
 )
 _DESIGN_OPTION_MAIN_MODEL_FILTER = DB.ElementDesignOptionFilter(DB.ElementId.InvalidElementId)
-PART_TYPE_MAP = {
-    14: "Panelboard",
-    15: "Transformer",
-    16: "Switchboard",
-    17: "Other Panel",
-    18: "Equipment Switch",
-}
 PSTYPE_UNKNOWN = DBE.PanelScheduleType.Unknown
 PSTYPE_BRANCH = DBE.PanelScheduleType.Branch
 PSTYPE_SWITCHBOARD = DBE.PanelScheduleType.Switchboard
 PSTYPE_DATA = DBE.PanelScheduleType.Data
 _PART_TYPE_TO_SCHEDULE_TYPE = {
-    14: PSTYPE_BRANCH,
-    16: PSTYPE_SWITCHBOARD,
-    17: PSTYPE_DATA,
+    PART_TYPE_PANELBOARD: PSTYPE_BRANCH,
+    PART_TYPE_SWITCHBOARD: PSTYPE_SWITCHBOARD,
+    PART_TYPE_OTHER_PANEL: PSTYPE_DATA,
 }
 
 

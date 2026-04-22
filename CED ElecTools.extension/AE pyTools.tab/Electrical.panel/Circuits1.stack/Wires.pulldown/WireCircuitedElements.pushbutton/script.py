@@ -22,7 +22,7 @@ logger = script.get_logger()
 HOME_RUN_LENGTH = 4.0
 GEOM_TOL = 1e-6
 def _idval(item):
-    return int(revit_helpers.get_elementid_value(item))
+    return revit_helpers.get_elementid_value(item)
 
 WIRING_TYPE_NAMES = {
     "Arc": DB.Electrical.WiringType.Arc,

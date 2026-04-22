@@ -5,15 +5,14 @@ import Autodesk.Revit.DB.Electrical as DBE
 from pyrevit import DB
 
 from CEDElectrical.Model.distribution_equipment import DistributionEquipment, PowerBus, Transformer
+from CEDElectrical.part_types import (
+    PART_TYPE_MAP,
+    PART_TYPE_OTHER_PANEL,
+    PART_TYPE_PANELBOARD,
+    PART_TYPE_SWITCHBOARD,
+    PART_TYPE_TRANSFORMER,
+)
 from Snippets import revit_helpers
-
-PART_TYPE_MAP = {
-    14: "Panelboard",
-    15: "Transformer",
-    16: "Switchboard",
-    17: "Other Panel",
-    18: "Equipment Switch",
-}
 
 PSTYPE_UNKNOWN = DBE.PanelScheduleType.Unknown
 PSTYPE_BRANCH = DBE.PanelScheduleType.Branch
@@ -21,9 +20,9 @@ PSTYPE_SWITCHBOARD = DBE.PanelScheduleType.Switchboard
 PSTYPE_DATA = DBE.PanelScheduleType.Data
 
 PART_TYPE_TO_PANEL_SCHEDULE_TYPE = {
-    14: PSTYPE_BRANCH,
-    16: PSTYPE_SWITCHBOARD,
-    17: PSTYPE_DATA,
+    PART_TYPE_PANELBOARD: PSTYPE_BRANCH,
+    PART_TYPE_SWITCHBOARD: PSTYPE_SWITCHBOARD,
+    PART_TYPE_OTHER_PANEL: PSTYPE_DATA,
 }
 
 
@@ -170,9 +169,9 @@ def _family_parameter_from_bip(equipment, bip):
 
 def _panel_configuration_for_equipment(equipment, part_type):
     """Return panel configuration using part-type rules and family fallback."""
-    if part_type in (16, 17):
+    if part_type in (PART_TYPE_SWITCHBOARD, PART_TYPE_OTHER_PANEL):
         return PCFG_ONE_COLUMN
-    if part_type != 14:
+    if part_type != PART_TYPE_PANELBOARD:
         return PCFG_ONE_COLUMN
     param = _family_parameter_from_bip(equipment, BIP_ELEC_PANEL_CONFIGURATION)
     value = _param_value(param, default=None)
@@ -502,7 +501,7 @@ def build_distribution_equipment(doc, equipment, schedule_view=None):
         poles = max([int(x.get("poles", 0) or 0) for x in options if int(x.get("poles", 0) or 0) > 0] or [None])
 
     max_poles = None
-    if part_type in (14, 15, 17):
+    if part_type in (PART_TYPE_PANELBOARD, PART_TYPE_TRANSFORMER, PART_TYPE_OTHER_PANEL):
         max_poles = _param_from_bips(equipment, [BIP_PANEL_MAX_BREAKERS])
         try:
             max_poles = int(max_poles or 0)
@@ -523,7 +522,7 @@ def build_distribution_equipment(doc, equipment, schedule_view=None):
             max_poles = 0
         if max_poles <= 0:
             max_poles = _schedule_slot_count(schedule_view)
-    elif part_type == 16:
+    elif part_type == PART_TYPE_SWITCHBOARD:
         max_poles = 0
         mep_model = getattr(equipment, "MEPModel", None)
         if mep_model is not None:
@@ -598,7 +597,7 @@ def build_distribution_equipment(doc, equipment, schedule_view=None):
         "branch_load_phase_c": totals.get("branch_load_phase_c"),
     }
 
-    if part_type == 15:
+    if part_type == PART_TYPE_TRANSFORMER:
         base_kwargs.update(
             {
                 "xfmr_rating": _param_value(
@@ -617,7 +616,7 @@ def build_distribution_equipment(doc, equipment, schedule_view=None):
         )
         return Transformer(**base_kwargs)
 
-    if part_type in (14, 16, 17):
+    if part_type in (PART_TYPE_PANELBOARD, PART_TYPE_SWITCHBOARD, PART_TYPE_OTHER_PANEL):
         panel_configuration = _panel_configuration_for_equipment(equipment, part_type)
         base_kwargs.update(
             {
