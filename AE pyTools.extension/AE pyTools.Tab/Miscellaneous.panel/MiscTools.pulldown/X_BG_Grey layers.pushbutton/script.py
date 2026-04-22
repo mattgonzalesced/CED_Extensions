@@ -3,18 +3,22 @@
 # -*- coding: UTF-8 -*-
 from pyrevit import revit, DB, forms
 doc = revit.doc
- 
 GREY = DB.Color(128, 128, 128)
  
-def get_xbg_category(doc):
+CAD_KEYWORDS = ["x_bg", "x_base", "X_BG_Mezz" , "X_BG - Mezz"]
+ 
+def get_matching_categories(doc):
     collector = DB.FilteredElementCollector(doc).OfClass(DB.ImportInstance)
+    found = {}
     for imp in collector.ToElements():
         try:
-            if imp.IsLinked and "X_BG" in imp.Category.Name:
-                return imp.Category
+            if imp.IsLinked:
+                name_lower = imp.Category.Name.lower()
+                if any(kw in name_lower for kw in CAD_KEYWORDS):
+                    found[imp.Category.Id.IntegerValue] = imp.Category
         except:
             pass
-    return None
+    return list(found.values())
  
 def apply_grey_to_view(view, subcats):
     changed = 0
@@ -30,11 +34,15 @@ def apply_grey_to_view(view, subcats):
             pass
     return changed
  
-cat = get_xbg_category(doc)
-if not cat:
-    forms.alert("X_BG.dwg linked CAD not found in this model.", exitscript=True)
+cats = get_matching_categories(doc)
+if not cats:
+    forms.alert("No linked CAD matching X_BG or X_BASE found in this model.", exitscript=True)
  
-subcats = list(cat.SubCategories)
+subcats = []
+cat_names = []
+for cat in cats:
+    subcats.extend(list(cat.SubCategories))
+    cat_names.append(cat.Name)
  
 # Collect all views and view templates
 all_views = DB.FilteredElementCollector(doc).OfClass(DB.View).ToElements()
@@ -61,8 +69,8 @@ with revit.Transaction("Grey All X_BG Layers"):
             pass
  
 forms.alert(
-    "Done!\n\nViews/Templates updated: {}\nLayer overrides applied: {}".format(
-        views_updated, layers_updated
+    "Done!\n\nCAD links greyed: {}\nViews/Templates updated: {}\nLayer overrides applied: {}".format(
+        ", ".join(cat_names), views_updated, layers_updated
     )
 )
  
