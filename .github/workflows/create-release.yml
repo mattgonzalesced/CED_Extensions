@@ -11,7 +11,7 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout repo (AUTHENTICATED)
+      - name: Checkout repo
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -22,38 +22,62 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-      - name: Read version from about.yaml
+      - name: Read version
         id: version
         run: |
           FILE="AE pyTools.extension/AE pyTools.Tab/CED Tools.panel/About.pushbutton/about.yaml"
           VERSION=$(grep 'toolbar_version:' "$FILE" | awk '{print $2}')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
           echo "Detected version: $VERSION"
+          echo "::notice::Detected version: $VERSION"
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Fetch tags
         run: git fetch --tags
 
-      - name: Check if tag exists
+      - name: Check tag status
         id: tagcheck
         run: |
           TAG="v${{ steps.version.outputs.version }}"
+
+          echo "Checking for tag: $TAG"
+
           if git rev-parse "$TAG" >/dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
+            echo "::warning::Tag already exists: $TAG"
           else
             echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::Tag does not exist. Will create."
           fi
 
       - name: Create tag
         if: steps.tagcheck.outputs.exists == 'false'
         run: |
           TAG="v${{ steps.version.outputs.version }}"
+
+          echo "Creating tag: $TAG"
           git tag "$TAG"
           git push origin "$TAG"
 
-      - name: Create GitHub Release
-        if: steps.tagcheck.outputs.exists == 'false'
+          echo "::notice::Tag created: $TAG"
+
+      - name: Create release
+        id: release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: AE pyTools v${{ steps.version.outputs.version }}
           generate_release_notes: true
+
+      - name: Final status
+        run: |
+          TAG="v${{ steps.version.outputs.version }}"
+
+          if [ "${{ steps.tagcheck.outputs.exists }}" == "true" ]; then
+            echo "::notice::Release ensured for existing tag: $TAG"
+          else
+            echo "::notice::Release created for new tag: $TAG"
+          fi
+
+          echo "Workflow completed successfully for $TAG"
