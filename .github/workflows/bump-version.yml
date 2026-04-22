@@ -2,7 +2,7 @@ name: Bump Toolbar Version
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize, labeled]
+    types: [labeled]
     branches:
       - main
 
@@ -13,10 +13,11 @@ jobs:
     permissions:
       contents: write
 
+    # ONLY run when a release label is ADDED
     if: >
-      contains(toJson(github.event.pull_request.labels.*.name), 'release: major') ||
-      contains(toJson(github.event.pull_request.labels.*.name), 'release: minor') ||
-      contains(toJson(github.event.pull_request.labels.*.name), 'release: patch')
+      github.event.label.name == 'release: major' ||
+      github.event.label.name == 'release: minor' ||
+      github.event.label.name == 'release: patch'
 
     steps:
       - name: Checkout PR branch
@@ -32,16 +33,9 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-      - name: Skip if already bumped
-        run: |
-          if git log --grep="Auto bump toolbar_version" -n 1; then
-            echo "Already bumped in this PR. Skipping."
-            exit 0
-          fi
-
-      - name: Run version bump script
+      - name: Bump version
         env:
-          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ' ') }}
+          PR_LABELS: ${{ github.event.label.name }}
         run: python .github/scripts/bump_version.py
 
       - name: Commit and push changes
