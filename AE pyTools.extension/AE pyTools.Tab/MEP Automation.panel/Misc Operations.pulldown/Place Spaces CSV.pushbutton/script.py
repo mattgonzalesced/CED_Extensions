@@ -247,41 +247,36 @@ def read_csv_spaces(csv_path):
                 space_number = None
                 space_name = None
 
-                # Check for 'Room Name' column first (new format)
-                room_name = (row.get('Room Name') or row.get('Name') or '').strip()
+                # Prefer the explicit '#', '#(1)', '#(2)' columns
+                space_number = (row.get('#') or '').strip()
 
-                # ONLY process rows that start with "Room Name"
-                if room_name and room_name.startswith("Room Name"):
-                    # Parse "Room Name 107A ROOM ELECTRICAL" format
-                    # Pattern: "Room Name <number> <name>"
-                    remaining = room_name.replace("Room Name", "", 1).strip()
-                    # Split into number (first word) and rest
-                    remaining_parts = remaining.split(None, 1)
-                    if remaining_parts:
-                        space_number = remaining_parts[0]
-                        space_name = remaining_parts[1] if len(remaining_parts) > 1 else ""
+                if space_number:
+                    # Build name from columns: #(2) + " " + #(1)
+                    # e.g. #(1)="ROOM", #(2)="ADA CHANGING" -> "ADA CHANGING ROOM"
+                    name_part2 = (row.get('#(2)') or '').strip()
+                    name_part1 = (row.get('#(1)') or '').strip()
+
+                    if name_part2 and name_part1:
+                        space_name = "{} {}".format(name_part2, name_part1)
+                    elif name_part2:
+                        space_name = name_part2
+                    elif name_part1:
+                        space_name = name_part1
                     else:
-                        # Just "Room Name" with no number - skip
-                        continue
+                        space_name = ""
 
-                # Fall back to old format with '#', '#(1)', '#(2)' columns
-                if not space_number:
-                    space_number = (row.get('#') or '').strip()
+                else:
+                    # Fall back to parsing the 'Room Name' / 'Name' column
+                    room_name = (row.get('Room Name') or row.get('Name') or '').strip()
 
-                    if space_number:
-                        # Get name parts from '#(2)' and '#(1)' columns
-                        name_part2 = (row.get('#(2)') or '').strip()
-                        name_part1 = (row.get('#(1)') or '').strip()
-
-                        # Concatenate: #(2) + " " + #(1)
-                        if name_part2 and name_part1:
-                            space_name = "{} {}".format(name_part2, name_part1)
-                        elif name_part2:
-                            space_name = name_part2
-                        elif name_part1:
-                            space_name = name_part1
+                    if room_name and room_name.startswith("Room Name"):
+                        remaining = room_name.replace("Room Name", "", 1).strip()
+                        remaining_parts = remaining.split(None, 1)
+                        if remaining_parts:
+                            space_number = remaining_parts[0]
+                            space_name = remaining_parts[1] if len(remaining_parts) > 1 else ""
                         else:
-                            space_name = ""
+                            continue
 
                 # Skip rows without space number
                 if not space_number:
