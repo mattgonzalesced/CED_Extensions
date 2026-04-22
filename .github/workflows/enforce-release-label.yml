@@ -1,0 +1,38 @@
+name: Enforce Release Label
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, labeled, unlabeled, synchronize]
+    branches:
+      - main
+
+jobs:
+  enforce:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate release label
+        run: |
+          LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
+
+          echo "Labels JSON: $LABELS"
+
+          COUNT=0
+
+          if echo "$LABELS" | grep -q '"release: major"'; then COUNT=$((COUNT+1)); fi
+          if echo "$LABELS" | grep -q '"release: minor"'; then COUNT=$((COUNT+1)); fi
+          if echo "$LABELS" | grep -q '"release: patch"'; then COUNT=$((COUNT+1)); fi
+
+          echo "Release label count: $COUNT"
+
+          if [ "$COUNT" -eq 0 ]; then
+            echo "::error::PR must have one of: release: major, minor, patch"
+            exit 1
+          fi
+
+          if [ "$COUNT" -gt 1 ]; then
+            echo "::error::PR must have ONLY ONE release label"
+            exit 1
+          fi
+
+          echo "Release label validation passed"
