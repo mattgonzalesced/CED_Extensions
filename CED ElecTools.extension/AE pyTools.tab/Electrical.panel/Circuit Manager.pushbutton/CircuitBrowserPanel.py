@@ -4481,13 +4481,17 @@ class CircuitBrowserPanel(forms.WPFPanel):
             forms.alert("An operation is already running. Please wait.", title=TITLE)
             return False
         self._set_status("Applying action...")
-        self._operation_gateway.raise_operation(
+        raised = self._operation_gateway.raise_operation(
             operation_key=operation_key,
             circuit_ids=list(circuit_ids or []),
             source="pane",
             options=dict(options or {}),
             callback=callback or self._on_operation_complete,
         )
+        if not raised:
+            self._set_status("Unable to queue operation")
+            forms.alert("Unable to queue operation. Please try again.", title=TITLE)
+            return False
         return True
 
     def _build_neutral_rows(self, targets):
@@ -4997,6 +5001,12 @@ class CircuitBrowserPanel(forms.WPFPanel):
         if not targets:
             forms.alert("Check one or more circuits first.", title=TITLE)
             return
+        targets, removed_count = self._prune_stale_items(targets)
+        if removed_count:
+            self._set_status("Removed {} deleted circuits from list.".format(removed_count))
+        if not targets:
+            forms.alert("No valid circuits selected.", title=TITLE)
+            return
         if len(targets) > 300:
             choice = forms.alert(
                 "{} circuits will be loaded for this action.\n\nContinue?".format(len(targets)),
@@ -5023,29 +5033,11 @@ class CircuitBrowserPanel(forms.WPFPanel):
         if not targets:
             forms.alert("Check one or more circuits first.", title=TITLE)
             return
-        if len(targets) > 300:
-            choice = forms.alert(
-                "{} circuits will be loaded for this action.\n\nContinue?".format(len(targets)),
-                title="Large Action Selection",
-                options=["Continue", "Cancel"],
-            )
-            if choice != "Continue":
-                return
-        rows = self._build_neutral_rows(targets)
-        window = NeutralIGActionWindow(
-            "Add/Remove Neutral",
-            rows,
-            preview_callback=self._preview_neutral_rows,
-            apply_callback=self._apply_neutral_rows,
-            theme_mode=self._theme_mode,
-            accent_mode=self._accent_mode,
-        )
-        window.ShowDialog()
-
-    def action_ig_clicked(self, sender, args):
-        targets = self._collect_action_targets()
+        targets, removed_count = self._prune_stale_items(targets)
+        if removed_count:
+            self._set_status("Removed {} deleted circuits from list.".format(removed_count))
         if not targets:
-            forms.alert("Check one or more circuits first.", title=TITLE)
+            forms.alert("No valid circuits selected.", title=TITLE)
             return
         if len(targets) > 300:
             choice = forms.alert(
@@ -5055,21 +5047,63 @@ class CircuitBrowserPanel(forms.WPFPanel):
             )
             if choice != "Continue":
                 return
-        rows = self._build_ig_rows(targets)
-        window = NeutralIGActionWindow(
-            "Add/Remove Isolated Ground",
-            rows,
-            preview_callback=self._preview_ig_rows,
-            apply_callback=self._apply_ig_rows,
-            theme_mode=self._theme_mode,
-            accent_mode=self._accent_mode,
-        )
-        window.ShowDialog()
+        try:
+            rows = self._build_neutral_rows(targets)
+            window = NeutralIGActionWindow(
+                "Add/Remove Neutral",
+                rows,
+                preview_callback=self._preview_neutral_rows,
+                apply_callback=self._apply_neutral_rows,
+                theme_mode=self._theme_mode,
+                accent_mode=self._accent_mode,
+            )
+            window.ShowDialog()
+        except Exception as ex:
+            forms.alert("Failed to open Add/Remove Neutral window:\n\n{}".format(ex), title=TITLE)
+
+    def action_ig_clicked(self, sender, args):
+        targets = self._collect_action_targets()
+        if not targets:
+            forms.alert("Check one or more circuits first.", title=TITLE)
+            return
+        targets, removed_count = self._prune_stale_items(targets)
+        if removed_count:
+            self._set_status("Removed {} deleted circuits from list.".format(removed_count))
+        if not targets:
+            forms.alert("No valid circuits selected.", title=TITLE)
+            return
+        if len(targets) > 300:
+            choice = forms.alert(
+                "{} circuits will be loaded for this action.\n\nContinue?".format(len(targets)),
+                title="Large Action Selection",
+                options=["Continue", "Cancel"],
+            )
+            if choice != "Continue":
+                return
+        try:
+            rows = self._build_ig_rows(targets)
+            window = NeutralIGActionWindow(
+                "Add/Remove Isolated Ground",
+                rows,
+                preview_callback=self._preview_ig_rows,
+                apply_callback=self._apply_ig_rows,
+                theme_mode=self._theme_mode,
+                accent_mode=self._accent_mode,
+            )
+            window.ShowDialog()
+        except Exception as ex:
+            forms.alert("Failed to open Add/Remove Isolated Ground window:\n\n{}".format(ex), title=TITLE)
 
     def action_breaker_clicked(self, sender, args):
         targets = self._collect_action_targets()
         if not targets:
             forms.alert("Check one or more circuits first.", title=TITLE)
+            return
+        targets, removed_count = self._prune_stale_items(targets)
+        if removed_count:
+            self._set_status("Removed {} deleted circuits from list.".format(removed_count))
+        if not targets:
+            forms.alert("No valid circuits selected.", title=TITLE)
             return
         if len(targets) > 300:
             choice = forms.alert(
@@ -5172,6 +5206,12 @@ class CircuitBrowserPanel(forms.WPFPanel):
                 "Check one or more circuits first." if checked_only else "Select one or more rows first.",
                 title=TITLE,
             )
+            return
+        targets, removed_count = self._prune_stale_items(targets)
+        if removed_count:
+            self._set_status("Removed {} deleted circuits from list.".format(removed_count))
+        if not targets:
+            forms.alert("No valid circuits selected.", title=TITLE)
             return
         if len(targets) > 300:
             choice = forms.alert(

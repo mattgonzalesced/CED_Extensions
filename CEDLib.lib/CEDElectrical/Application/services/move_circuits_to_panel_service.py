@@ -21,6 +21,7 @@ def _elid_from(value):
 
 def move_circuits_to_panel(circuits, target_panel, doc, output):
     """Move selected circuits and optionally replace default spares/spaces when target is full."""
+    option_filter = DB.ElementDesignOptionFilter(DB.ElementId.InvalidElementId)
 
     def _safe_text(value, fallback=""):
         try:

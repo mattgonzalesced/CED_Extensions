@@ -1,45 +1,159 @@
-name: Bump Toolbar Version
+name: Bump Toolbar Version + Build
 
 on:
   pull_request:
-    types: [labeled]
+    types: [opened, synchronize, labeled, unlabeled]
     branches:
+      - develop
       - main
 
 jobs:
-  bump:
+  update-release-metadata:
+    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
-
     permissions:
       contents: write
-
-    # ONLY run when a release label is ADDED
-    if: >
-      github.event.label.name == 'release: major' ||
-      github.event.label.name == 'release: minor' ||
-      github.event.label.name == 'release: patch'
 
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
-
-      - name: Install dependencies
-        run: pip install pyyaml
+          fetch-depth: 0
 
       - name: Configure git
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Bump version
+      - name: Update release metadata with replaceable bot commit
         env:
-          PR_LABELS: ${{ github.event.label.name }}
-        run: python .github/scripts/bump_version.py
-
-      - name: Commit and push changes
+          TARGET_BRANCH: ${{ github.base_ref }}
+          PR_BRANCH: ${{ github.head_ref }}
+          PR_LABELS_JSON: ${{ toJson(github.event.pull_request.labels.*.name) }}
         run: |
-          git add -A
-          git diff --cached --quiet || git commit -m "Auto bump toolbar_version"
-          git push
+          set -euo pipefail
+
+          ABOUT_FILE="AE pyTools.extension/AE pyTools.Tab/CED Tools.panel/About.pushbutton/about.yaml"
+          BOT_COMMIT_MESSAGE="Bot: update release metadata"
+          BUILD_TS="$(date -u +'%Y%m%d%H%M')"
+
+          echo "::notice::Target branch: ${TARGET_BRANCH}"
+          echo "::notice::Detected labels: ${PR_LABELS_JSON}"
+          echo "::notice::Build timestamp (UTC): ${BUILD_TS}"
+
+          if [[ "${TARGET_BRANCH}" != "develop" && "${TARGET_BRANCH}" != "main" ]]; then
+            echo "::warning::Unsupported target branch '${TARGET_BRANCH}'. Skipping."
+            exit 0
+          fi
+
+          git fetch origin "${TARGET_BRANCH}" "${PR_BRANCH}"
+          git checkout "${PR_BRANCH}"
+
+          RELEASE_LABEL_COUNT=0
+          RELEASE_LABEL=""
+          for CANDIDATE in "release: major" "release: minor" "release: patch"; do
+            if echo "${PR_LABELS_JSON}" | grep -q "\"${CANDIDATE}\""; then
+              RELEASE_LABEL_COUNT=$((RELEASE_LABEL_COUNT + 1))
+              RELEASE_LABEL="${CANDIDATE}"
+            fi
+          done
+
+          NEW_VERSION=""
+          if [[ "${TARGET_BRANCH}" == "main" ]]; then
+            if [[ "${RELEASE_LABEL_COUNT}" != "1" ]]; then
+              echo "::warning::main requires exactly one release label (major/minor/patch). Found ${RELEASE_LABEL_COUNT}. Skipping."
+              exit 0
+            fi
+
+            BASE_VERSION_RAW="$(git show "origin/main:${ABOUT_FILE}" | sed -n -E 's/^toolbar_version:[[:space:]]*([^[:space:]]+).*/\1/p' | head -n1 || true)"
+            if [[ -z "${BASE_VERSION_RAW}" ]]; then
+              echo "::warning::Could not read toolbar_version from origin/main:${ABOUT_FILE}"
+              exit 1
+            fi
+            BASE_VERSION="${BASE_VERSION_RAW%%-*}"
+            echo "::notice::Base version from origin/main: ${BASE_VERSION_RAW} (normalized: ${BASE_VERSION})"
+
+            if [[ ! "${BASE_VERSION}" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+              echo "::warning::Invalid base version format: ${BASE_VERSION}"
+              exit 1
+            fi
+
+            MAJOR="${BASH_REMATCH[1]}"
+            MINOR="${BASH_REMATCH[2]}"
+            PATCH="${BASH_REMATCH[3]}"
+
+            case "${RELEASE_LABEL}" in
+              "release: major")
+                NEW_VERSION="$((MAJOR + 1)).0.0"
+                ;;
+              "release: minor")
+                NEW_VERSION="${MAJOR}.$((MINOR + 1)).0"
+                ;;
+              "release: patch")
+                NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+                ;;
+              *)
+                echo "::warning::Unexpected release label: ${RELEASE_LABEL}"
+                exit 1
+                ;;
+            esac
+
+            echo "::notice::Computed new version from base: ${NEW_VERSION}"
+          else
+            echo "::notice::develop target: toolbar_version unchanged; build only."
+          fi
+
+          BOT_REMOVED="false"
+          EXISTING_BOT_COMMITS="$(git rev-list --reverse --author='github-actions\[bot\]' --grep='^Bot: update release metadata$' "origin/${TARGET_BRANCH}..HEAD" || true)"
+          if [[ -n "${EXISTING_BOT_COMMITS}" ]]; then
+            BOT_COUNT="$(echo "${EXISTING_BOT_COMMITS}" | sed '/^$/d' | wc -l | tr -d ' ')"
+            echo "::notice::Existing bot metadata commit(s) found: ${BOT_COUNT}. Removing before recomputing."
+            while true; do
+              BOT_SHA="$(git rev-list --reverse --author='github-actions\[bot\]' --grep='^Bot: update release metadata$' "origin/${TARGET_BRANCH}..HEAD" | head -n1 || true)"
+              if [[ -z "${BOT_SHA}" ]]; then
+                break
+              fi
+              BOT_PARENT="$(git rev-parse "${BOT_SHA}^")"
+              echo "::notice::Dropping prior bot commit: ${BOT_SHA}"
+              git rebase --rebase-merges --onto "${BOT_PARENT}" "${BOT_SHA}" HEAD
+              BOT_REMOVED="true"
+            done
+            echo "::notice::Prior bot metadata commit(s) removed."
+          else
+            echo "::notice::No prior bot metadata commit found."
+          fi
+
+          if [[ ! -f "${ABOUT_FILE}" ]]; then
+            echo "::warning::Metadata file not found: ${ABOUT_FILE}"
+            exit 1
+          fi
+
+          if [[ -n "${NEW_VERSION}" ]]; then
+            python3 .github/scripts/update_release_metadata.py \
+              --file "${ABOUT_FILE}" \
+              --build "${BUILD_TS}" \
+              --toolbar-version "${NEW_VERSION}"
+          else
+            python3 .github/scripts/update_release_metadata.py \
+              --file "${ABOUT_FILE}" \
+              --build "${BUILD_TS}"
+          fi
+
+          git add "${ABOUT_FILE}"
+
+          COMMIT_CREATED="false"
+          if git diff --cached --quiet; then
+            echo "::notice::No metadata file change detected; commit skipped."
+          else
+            git commit -m "${BOT_COMMIT_MESSAGE}"
+            COMMIT_CREATED="true"
+            echo "::notice::Created metadata commit: ${BOT_COMMIT_MESSAGE}"
+          fi
+
+          if [[ "${COMMIT_CREATED}" == "true" || "${BOT_REMOVED}" == "true" ]]; then
+            git push --force-with-lease origin "HEAD:${PR_BRANCH}"
+            echo "::notice::Pushed branch with --force-with-lease."
+          else
+            echo "::notice::No push required."
+          fi
