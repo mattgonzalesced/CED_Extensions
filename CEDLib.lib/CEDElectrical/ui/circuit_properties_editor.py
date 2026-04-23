@@ -6,6 +6,7 @@ import re
 
 import Autodesk.Revit.DB.Electrical as DBE
 import clr
+from System import TimeSpan
 
 for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
     try:
@@ -14,13 +15,14 @@ for _wpf_asm in ("PresentationFramework", "PresentationCore", "WindowsBase"):
         pass
 
 from System.Windows import Visibility, Thickness
-from System.Windows.Controls import Border, Control, ScrollViewer
+from System.Windows.Controls import Border, Control, ScrollViewer, ToolTip, ToolTipService
 from System.Windows.Media import VisualTreeHelper
+from System.Windows.Threading import DispatcherTimer
 from pyrevit import DB, forms
 
 from CEDElectrical.Infrastructure.Revit.repositories.revit_circuit_repository import RevitCircuitRepository
 from CEDElectrical.Model.CircuitBranch import CircuitBranch
-from CEDElectrical.Model.circuit_settings import IsolatedGroundBehavior, NeutralBehavior
+from CEDElectrical.Model.circuit_settings import FeederVDMethod, IsolatedGroundBehavior, NeutralBehavior
 from CEDElectrical.refdata.ampacity_table import WIRE_AMPACITY_TABLE
 from CEDElectrical.refdata.conductor_area_table import CONDUCTOR_AREA_TABLE
 from CEDElectrical.refdata.conduit_area_table import CONDUIT_AREA_TABLE, CONDUIT_SIZE_INDEX
@@ -857,6 +859,26 @@ class CircuitPropertyEditorViewModel(object):
         neutral_size_raw = str(getattr(getattr(branch, "cable", None), "neutral_size", "") or "")
         ground_size_raw = str(getattr(getattr(branch, "cable", None), "ground_size", "") or "")
         ig_size_raw = str(getattr(getattr(branch, "cable", None), "ig_size", "") or "")
+        conduit_enabled = bool(toggles.get("allow_conduit", False))
+        ig_included = bool(ground_enabled and toggles.get("include_ig", False))
+
+        # Display size values must follow include/toggle state, not only calculated quantities.
+        if not hot_enabled:
+            hot_size_raw = "-"
+            neutral_size_raw = "-"
+            ground_size_raw = "-"
+            ig_size_raw = "-"
+        else:
+            if not neutral_included:
+                neutral_size_raw = "-"
+            if not ground_enabled:
+                ground_size_raw = "-"
+                ig_size_raw = "-"
+            elif not ig_included:
+                ig_size_raw = "-"
+
+        if not conduit_enabled:
+            conduit_size_raw = "-"
         if _as_int(getattr(branch, "neutral_wire_quantity", 0), 0) <= 0:
             neutral_size_raw = "-"
         if _as_int(getattr(branch, "ground_wire_quantity", 0), 0) <= 0:
@@ -879,12 +901,66 @@ class CircuitPropertyEditorViewModel(object):
         else:
             volts_poles_text = "-"
 
+        is_feeder = bool(getattr(branch, "is_feeder", False))
+        feeder_vd_method = str(getattr(self.settings, "feeder_vd_method", "") or "").strip().lower()
+        vd_method_label = "Downstream Demand Load"
+        vd_effective_basis = "connected"
+        vd_compares_breaker_demand = False
+
+        if feeder_vd_method == FeederVDMethod.CONNECTED:
+            vd_method_label = "Connected Load"
+        elif feeder_vd_method == FeederVDMethod.EIGHTY_PERCENT:
+            vd_method_label = "80% of Breaker Rating"
+            vd_compares_breaker_demand = True
+        elif feeder_vd_method == FeederVDMethod.HUNDRED_PERCENT:
+            vd_method_label = "100% of Breaker Rating"
+            vd_compares_breaker_demand = True
+
+        if is_feeder:
+            demand_current = None
+            connected_current = getattr(branch, "apparent_current", None)
+            try:
+                demand_current = branch.get_downstream_demand_current()
+            except Exception:
+                demand_current = None
+
+            base_demand = demand_current if demand_current is not None else connected_current
+            base_basis = "demand" if demand_current is not None else ("connected" if connected_current is not None else "demand")
+
+            if feeder_vd_method == FeederVDMethod.CONNECTED:
+                vd_effective_basis = "connected" if connected_current is not None else base_basis
+            elif feeder_vd_method in (FeederVDMethod.EIGHTY_PERCENT, FeederVDMethod.HUNDRED_PERCENT):
+                factor = 0.8 if feeder_vd_method == FeederVDMethod.EIGHTY_PERCENT else 1.0
+                breaker_current = None
+                try:
+                    rating = getattr(branch, "rating", None)
+                    if rating is not None:
+                        breaker_current = factor * float(rating)
+                except Exception:
+                    breaker_current = None
+
+                if breaker_current is None:
+                    vd_effective_basis = base_basis
+                elif base_demand is None:
+                    vd_effective_basis = "breaker_80" if factor < 1.0 else "breaker_100"
+                elif breaker_current > base_demand:
+                    vd_effective_basis = "breaker_80" if factor < 1.0 else "breaker_100"
+                else:
+                    vd_effective_basis = base_basis
+            else:
+                vd_effective_basis = base_basis
+
         toggles_view = dict(toggles)
         if neutral_locked_by_type and branch_neutral_qty > 0:
             toggles_view["include_neutral"] = True
 
         preview_values = {
             "circuit_type": str(getattr(branch, "branch_type", "") or "-"),
+            "is_feeder": is_feeder,
+            "feeder_vd_method": feeder_vd_method,
+            "vd_effective_basis": vd_effective_basis,
+            "vd_method_label": vd_method_label,
+            "vd_compares_breaker_demand": bool(vd_compares_breaker_demand),
             "volts_poles": volts_poles_text,
             "voltage_drop": voltage_drop_text,
             "load_current": _fmt_amp(getattr(branch, "circuit_load_current", None), 2),
@@ -1097,6 +1173,13 @@ class CircuitPropertiesEditorWindow(forms.WPFWindow):
         self.apply_requested = False
         self.apply_payload = {}
         self._vm = CircuitPropertyEditorViewModel(targets, settings=settings)
+        self._metric_tooltip_immediate_delay_ms = 75
+        self._metric_tooltip_between_show_delay_ms = 400
+        self._vd_tooltip_detail_delay_ms = 1000
+        self._vd_tooltip_base_text = ""
+        self._vd_tooltip_detail_text = ""
+        self._vd_tooltip_timer = None
+        self._vd_tooltip_objects = []
 
         forms.WPFWindow.__init__(self, os.path.abspath(xaml_path))
         self._apply_theme()
@@ -1176,6 +1259,7 @@ class CircuitPropertiesEditorWindow(forms.WPFWindow):
         if self._wire_insulation_cb is not None:
             self._wire_insulation_cb.ItemsSource = list(self._vm.insulation_options or [])
         self._bind_size_combo_wheel()
+        self._initialize_metric_tooltips()
 
         if self._list is not None:
             self._list.ItemsSource = list(self._vm.rows or [])
@@ -1239,6 +1323,14 @@ class CircuitPropertiesEditorWindow(forms.WPFWindow):
         if target in source:
             combo.SelectedItem = target
             return
+        # Show "excluded" wire/conduit states by clearing stale selection when "-" is not an option.
+        if target == "-":
+            combo.SelectedIndex = -1
+            try:
+                combo.Text = ""
+            except Exception:
+                pass
+            return
 
         norm_target = str(target or "").strip().upper()
         wire_prefix = str(getattr(self._vm.settings, "wire_size_prefix", "") or "").strip().upper()
@@ -1286,6 +1378,13 @@ class CircuitPropertiesEditorWindow(forms.WPFWindow):
         options = self._conduit_size_options_for_type(conduit_type)
         self._conduit_size_cb.ItemsSource = options
         target = str(preferred_size or "").strip()
+        if target == "-":
+            self._conduit_size_cb.SelectedIndex = -1
+            try:
+                self._conduit_size_cb.Text = ""
+            except Exception:
+                pass
+            return
         if target and target in options:
             self._conduit_size_cb.SelectedItem = target
             return
@@ -1536,6 +1635,247 @@ class CircuitPropertiesEditorWindow(forms.WPFWindow):
         except Exception:
             pass
 
+    def _initialize_metric_tooltips(self):
+        self._vd_tooltip_objects = []
+        self._vd_tooltip_base_text = ""
+        self._vd_tooltip_detail_text = ""
+        self._vd_tooltip_timer = None
+        try:
+            timer = DispatcherTimer()
+            timer.Interval = TimeSpan.FromMilliseconds(float(self._vd_tooltip_detail_delay_ms))
+            timer.Tick += self._on_vd_tooltip_timer_tick
+            self._vd_tooltip_timer = timer
+        except Exception:
+            self._vd_tooltip_timer = None
+
+        for element in (self._vd_box,):
+            if element is None:
+                continue
+            tip = None
+            try:
+                tip = ToolTip()
+                tip.Content = ""
+                tip.Opened += self._on_vd_tooltip_opened
+                tip.Closed += self._on_vd_tooltip_closed
+                element.ToolTip = tip
+            except Exception:
+                tip = None
+            self._set_tooltip_delay(element, self._metric_tooltip_immediate_delay_ms)
+            if tip is not None:
+                self._vd_tooltip_objects.append(tip)
+        if self._vd_text is not None:
+            try:
+                self._vd_text.ToolTip = None
+            except Exception:
+                pass
+        if self._load_text is not None:
+            try:
+                self._load_text.ToolTip = None
+            except Exception:
+                pass
+
+    def _set_tooltip_delay(self, element, initial_delay_ms):
+        if element is None:
+            return
+        delay_ms = _as_int(initial_delay_ms, 0)
+        if delay_ms < 0:
+            delay_ms = 0
+        try:
+            ToolTipService.SetInitialShowDelay(element, int(delay_ms))
+        except Exception:
+            pass
+        try:
+            ToolTipService.SetBetweenShowDelay(element, int(_as_int(self._metric_tooltip_between_show_delay_ms, 0)))
+        except Exception:
+            pass
+
+    def _set_control_tooltip(self, element, text, initial_delay_ms=None):
+        if element is None:
+            return
+        if initial_delay_ms is not None:
+            self._set_tooltip_delay(element, initial_delay_ms)
+        tooltip_text = str(text or "")
+        try:
+            current_tip = getattr(element, "ToolTip", None)
+        except Exception:
+            current_tip = None
+        try:
+            if isinstance(current_tip, ToolTip):
+                current_tip.Content = tooltip_text
+            else:
+                element.ToolTip = tooltip_text
+        except Exception:
+            pass
+
+    def _set_vd_tooltip_text(self, include_detail=False):
+        base_text = str(self._vd_tooltip_base_text or "")
+        detail_text = str(self._vd_tooltip_detail_text or "")
+        tooltip_text = base_text
+        if include_detail and detail_text:
+            tooltip_text = "{}\n{}".format(base_text, detail_text) if base_text else detail_text
+
+        if self._vd_tooltip_objects:
+            for tip in list(self._vd_tooltip_objects):
+                if tip is None:
+                    continue
+                try:
+                    tip.Content = tooltip_text
+                except Exception:
+                    pass
+            return
+
+        self._set_control_tooltip(self._vd_box, tooltip_text, initial_delay_ms=self._metric_tooltip_immediate_delay_ms)
+
+    def _stop_vd_tooltip_timer(self):
+        timer = self._vd_tooltip_timer
+        if timer is None:
+            return
+        try:
+            timer.Stop()
+        except Exception:
+            pass
+
+    def _restart_vd_tooltip_timer(self):
+        self._stop_vd_tooltip_timer()
+        if not str(self._vd_tooltip_detail_text or "").strip():
+            return
+        timer = self._vd_tooltip_timer
+        if timer is None:
+            return
+        try:
+            timer.Interval = TimeSpan.FromMilliseconds(float(self._vd_tooltip_detail_delay_ms))
+            timer.Start()
+        except Exception:
+            pass
+
+    def _on_vd_tooltip_opened(self, sender, args):
+        self._set_vd_tooltip_text(include_detail=False)
+        self._restart_vd_tooltip_timer()
+
+    def _on_vd_tooltip_closed(self, sender, args):
+        self._stop_vd_tooltip_timer()
+        self._set_vd_tooltip_text(include_detail=False)
+
+    def _on_vd_tooltip_timer_tick(self, sender, args):
+        self._stop_vd_tooltip_timer()
+        self._set_vd_tooltip_text(include_detail=True)
+
+    def _resolve_feeder_vd_basis(self, effective_basis_key, method_key):
+        basis_key = str(effective_basis_key or "").strip().lower()
+        if basis_key == "connected":
+            return "Based on Connected Load.", "Connected Load", False
+        if basis_key == "demand":
+            return "Based on Downstream Demand Load.", "Downstream Demand Load", False
+        if basis_key == "breaker_80":
+            return "Based on 80% of Breaker Rating.", "80% of Breaker Rating", True
+        if basis_key == "breaker_100":
+            return "Based on 100% of Breaker Rating.", "100% of Breaker Rating", True
+
+        method = str(method_key or "").strip().lower()
+        if method == FeederVDMethod.CONNECTED:
+            return "Based on Connected Load.", "Connected Load", False
+        if method == FeederVDMethod.EIGHTY_PERCENT:
+            return "Based on 80% of Breaker Rating.", "80% of Breaker Rating", True
+        if method == FeederVDMethod.HUNDRED_PERCENT:
+            return "Based on 100% of Breaker Rating.", "100% of Breaker Rating", True
+        return "Based on Downstream Demand Load.", "Downstream Demand Load", False
+
+    def _build_load_current_tooltip(self, circuit_type, is_feeder):
+        ctype = str(circuit_type or "").strip().upper()
+        if not ctype:
+            return ""
+        if ctype in ("SPACE", "SPARE", "CONDUIT ONLY", "N/A"):
+            return "Not calculated for this circuit type."
+        if ctype in ("FEEDER", "XFMR PRI"):
+            return "Based on Downstream Demand Load."
+        if ctype == "XFMR SEC":
+            if bool(is_feeder):
+                return "Based on Downstream Demand Load."
+            return "Based on Connected Load."
+        return "Based on Connected Load."
+
+    def _build_voltage_drop_tooltip(
+        self,
+        circuit_type,
+        is_feeder,
+        method_key,
+        effective_basis_key="",
+        method_label="",
+        compares_breaker_demand=False,
+    ):
+        ctype = str(circuit_type or "").strip().upper()
+        if not ctype:
+            return "", ""
+        if ctype in ("SPACE", "SPARE", "CONDUIT ONLY", "N/A"):
+            return "Not calculated for this circuit type.", ""
+
+        feeder_like = bool(
+            ctype in ("FEEDER", "XFMR PRI")
+            or (ctype == "XFMR SEC" and bool(is_feeder))
+        )
+        if not feeder_like:
+            return "Based on Connected Load.", ""
+
+        basis_text, resolved_method_label, uses_breaker_basis = self._resolve_feeder_vd_basis(
+            effective_basis_key,
+            method_key,
+        )
+        detail_label = str(method_label or resolved_method_label or "").strip()
+        lines = []
+        if detail_label:
+            lines.append("Feeder VD method in use: {}.".format(detail_label))
+        if bool(compares_breaker_demand or uses_breaker_basis):
+            lines.append("Uses the higher of downstream demand current and breaker-based current.")
+        return basis_text, "\n".join(lines)
+
+    def _apply_preview_metric_tooltips(self, preview, row):
+        preview_data = dict(preview or {})
+        circuit_type = str(preview_data.get("circuit_type", "") or "")
+        if not circuit_type and row is not None:
+            circuit_type = str(getattr(row, "branch_type", "") or "")
+
+        is_feeder = bool(preview_data.get("is_feeder", False))
+        method_key = str(preview_data.get("feeder_vd_method", "") or "").strip().lower()
+        effective_basis_key = str(preview_data.get("vd_effective_basis", "") or "").strip().lower()
+        method_label = str(preview_data.get("vd_method_label", "") or "").strip()
+        compares_breaker_demand = bool(preview_data.get("vd_compares_breaker_demand", False))
+        if not method_key:
+            try:
+                method_key = str(getattr(self._vm.settings, "feeder_vd_method", "") or "").strip().lower()
+            except Exception:
+                method_key = ""
+
+        load_tooltip = self._build_load_current_tooltip(circuit_type, is_feeder)
+        vd_tooltip_base, vd_tooltip_detail = self._build_voltage_drop_tooltip(
+            circuit_type,
+            is_feeder,
+            method_key,
+            effective_basis_key=effective_basis_key,
+            method_label=method_label,
+            compares_breaker_demand=compares_breaker_demand,
+        )
+        self._set_control_tooltip(
+            self._load_box,
+            load_tooltip,
+            initial_delay_ms=self._metric_tooltip_immediate_delay_ms,
+        )
+        if self._load_text is not None:
+            try:
+                self._load_text.ToolTip = None
+            except Exception:
+                pass
+
+        self._vd_tooltip_base_text = str(vd_tooltip_base or "")
+        self._vd_tooltip_detail_text = str(vd_tooltip_detail or "")
+        self._set_tooltip_delay(self._vd_box, self._metric_tooltip_immediate_delay_ms)
+        if self._vd_text is not None:
+            try:
+                self._vd_text.ToolTip = None
+            except Exception:
+                pass
+        self._stop_vd_tooltip_timer()
+        self._set_vd_tooltip_text(include_detail=False)
+
     def _apply_warning_styles(self, warning_flags):
         flags = dict(warning_flags or {})
         length_warn = bool(flags.get("length", False))
@@ -1598,6 +1938,7 @@ class CircuitPropertiesEditorWindow(forms.WPFWindow):
             if self._notice_text is not None:
                 self._notice_text.Text = "No warnings."
             self._set_notice_warning_state(False)
+            self._apply_preview_metric_tooltips({}, None)
             self._sync_reset_button_state(None)
             return
 
@@ -1772,6 +2113,7 @@ class CircuitPropertiesEditorWindow(forms.WPFWindow):
                 self._conduit_fill_text.Text = str(preview.get("conduit_fill", "-"))
             self._vd_text.Text = str(preview.get("voltage_drop", "-"))
             self._load_text.Text = str(preview.get("load_current", "-"))
+            self._apply_preview_metric_tooltips(preview, row)
             self._ampacity_text.Text = str(preview.get("ampacity", "-"))
             self._wire_summary_text.Text = str(preview.get("wire_summary", "-"))
             self._conduit_summary_text.Text = str(preview.get("conduit_summary", "-"))
