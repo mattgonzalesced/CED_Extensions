@@ -4,6 +4,7 @@ on:
   pull_request:
     types: [opened, reopened, synchronize, labeled, unlabeled, edited]
     branches:
+      - develop
       - main
   workflow_dispatch:
     inputs:
