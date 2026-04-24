@@ -2,6 +2,7 @@
 """CED About window."""
 
 import os
+import re
 
 from pyrevit import forms, script, versionmgr
 
@@ -16,6 +17,7 @@ TRAINING_URL = "https://productivitynow.imaginit.com/peak/libraries/cc3ea5f2-0cb
 
 def _read_about_yaml(yaml_path):
     version = None
+    build = None
     authors = []
     try:
         with open(yaml_path, "r") as yaml_file:
@@ -26,20 +28,36 @@ def _read_about_yaml(yaml_path):
                 if stripped.startswith("toolbar_version:"):
                     version = stripped.split(":", 1)[1].strip()
                     continue
+                if stripped.startswith("build:"):
+                    build = stripped.split(":", 1)[1].strip()
+                    continue
                 if stripped.startswith("- "):
                     authors.append(stripped[2:].strip())
     except Exception:
         pass
-    return version, authors
+    return version, build, authors
 
 
-def _format_toolbar_version(value):
+def _normalize_build(value):
     text = str(value or "").strip()
     if not text:
-        return "Unknown"
-    if text.lower().startswith("v"):
+        return ""
+    if re.match(r"^\d{8}\+\d{4}$", text):
         return text
-    return "v{0}".format(text)
+    if re.match(r"^\d{12}$", text):
+        return "{0}+{1}".format(text[:8], text[8:])
+    return ""
+
+
+def _format_toolbar_version(version_value, build_value):
+    version_text = str(version_value or "").strip()
+    if not version_text:
+        return "Unknown"
+    version_text = version_text.lstrip("vV")
+    build_text = _normalize_build(build_value)
+    if build_text:
+        return "v{0}.{1}".format(version_text, build_text)
+    return "v{0}".format(version_text)
 
 
 def _get_pyrevit_version_text():
@@ -59,9 +77,9 @@ def _get_pyrevit_version_text():
 
 
 class AboutWindow(forms.WPFWindow):
-    def __init__(self, xaml_path, logo_path, toolbar_version, authors):
+    def __init__(self, xaml_path, logo_path, toolbar_version, build, authors):
         forms.WPFWindow.__init__(self, xaml_path)
-        self.toolbar_version_tb.Text = _format_toolbar_version(toolbar_version)
+        self.toolbar_version_tb.Text = _format_toolbar_version(toolbar_version, build)
         self.pyrevit_version_tb.Text = _get_pyrevit_version_text()
         self.authors_tb.Text = ", ".join(list(authors or [])) or "Not listed"
         if logo_path and os.path.exists(logo_path):
@@ -99,8 +117,8 @@ def main():
         forms.alert("Could not find AboutWindow.xaml.", title=TITLE, ok=True)
         return
 
-    toolbar_version, authors = _read_about_yaml(yaml_path)
-    dlg = AboutWindow(xaml_path, logo_path, toolbar_version, authors)
+    toolbar_version, build, authors = _read_about_yaml(yaml_path)
+    dlg = AboutWindow(xaml_path, logo_path, toolbar_version, build, authors)
     dlg.ShowDialog()
 
 
