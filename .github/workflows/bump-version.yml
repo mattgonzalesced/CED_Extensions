@@ -2,17 +2,244 @@ name: Bump Toolbar Version + Build
 
 on:
   pull_request:
-    types: [opened, synchronize, labeled, unlabeled]
+    types: [opened, reopened, synchronize, labeled, unlabeled, edited]
     branches:
-      - develop
       - main
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Open PR number to bump
+        required: true
+        type: number
+
+concurrency:
+  group: bump-metadata-${{ github.event.pull_request.number || github.event.inputs.pr_number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  update-release-metadata:
-    if: ${{ github.actor != 'github-actions[bot]' }}
+  apply-release-metadata:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: read
+
+    steps:
+      - name: Resolve PR context
+        id: prctx
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ github.event.inputs.pr_number }}
+        with:
+          script: |
+            const rawPrNumber = process.env.PR_NUMBER || "";
+            const prNumber = Number(rawPrNumber);
+            if (!Number.isInteger(prNumber) || prNumber <= 0) {
+              core.setFailed(`Invalid pr_number input: ${rawPrNumber}`);
+              return;
+            }
+
+            const { owner, repo } = context.repo;
+            const { data: pr } = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: prNumber
+            });
+
+            if (pr.state !== "open") {
+              core.setFailed(`PR #${prNumber} is not open.`);
+              return;
+            }
+
+            if (pr.head.repo.full_name !== `${owner}/${repo}`) {
+              core.setFailed("PR head branch must be in this repository.");
+              return;
+            }
+
+            core.setOutput("number", String(pr.number));
+            core.setOutput("head_ref", pr.head.ref);
+            core.setOutput("base_ref", pr.base.ref);
+            core.setOutput("head_sha", pr.head.sha);
+            core.setOutput("labels_json", JSON.stringify(pr.labels.map(label => label.name)));
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.prctx.outputs.head_ref }}
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump metadata (manual)
+        env:
+          TARGET_BRANCH: ${{ steps.prctx.outputs.base_ref }}
+          PR_BRANCH: ${{ steps.prctx.outputs.head_ref }}
+          PR_NUMBER: ${{ steps.prctx.outputs.number }}
+          PR_LABELS_JSON: ${{ steps.prctx.outputs.labels_json }}
+        run: |
+          set -euo pipefail
+
+          ABOUT_FILE="AE pyTools.extension/AE pyTools.Tab/CED Tools.panel/About.pushbutton/about.yaml"
+          BUILD_TS="$(date -u +'%Y%m%d+%H%M')"
+
+          read_file_key() {
+            local key="$1"
+            sed -n -E "s/^${key}:[[:space:]]*([^[:space:]]+).*/\\1/p" "${ABOUT_FILE}" | head -n1
+          }
+
+          read_ref_key() {
+            local git_ref="$1"
+            local key="$2"
+            git show "${git_ref}:${ABOUT_FILE}" | sed -n -E "s/^${key}:[[:space:]]*([^[:space:]]+).*/\\1/p" | head -n1
+          }
+
+          is_valid_build() {
+            [[ "$1" =~ ^[0-9]{8}\+[0-9]{4}$ ]]
+          }
+
+          echo "::notice::Target branch: ${TARGET_BRANCH}"
+          echo "::notice::PR branch: ${PR_BRANCH}"
+          echo "::notice::PR number: ${PR_NUMBER}"
+          echo "::notice::Detected labels: ${PR_LABELS_JSON}"
+          echo "::notice::Build timestamp (UTC): ${BUILD_TS}"
+
+          if [[ "${TARGET_BRANCH}" != "main" ]]; then
+            echo "::error::This workflow only supports PRs targeting main. Found target: '${TARGET_BRANCH}'."
+            exit 1
+          fi
+
+          git fetch origin "${TARGET_BRANCH}" "${PR_BRANCH}"
+
+          PR_LABELS_JSON_LC="$(echo "${PR_LABELS_JSON}" | tr '[:upper:]' '[:lower:]')"
+          RELEASE_LABEL_COUNT=0
+          RELEASE_LABEL=""
+          for CANDIDATE in "release: major" "release: minor" "release: patch" "release: none"; do
+            if echo "${PR_LABELS_JSON_LC}" | grep -q "\"${CANDIDATE}\""; then
+              RELEASE_LABEL_COUNT=$((RELEASE_LABEL_COUNT + 1))
+              RELEASE_LABEL="${CANDIDATE}"
+            fi
+          done
+
+          BASE_VERSION="$(read_ref_key "origin/${TARGET_BRANCH}" "toolbar_version" || true)"
+          BASE_BUILD="$(read_ref_key "origin/${TARGET_BRANCH}" "build" || true)"
+          CURRENT_VERSION="$(read_file_key "toolbar_version" || true)"
+          CURRENT_BUILD="$(read_file_key "build" || true)"
+
+          if [[ -z "${BASE_VERSION}" || -z "${BASE_BUILD}" ]]; then
+            echo "::error::Could not read base toolbar_version/build from origin/${TARGET_BRANCH}:${ABOUT_FILE}"
+            exit 1
+          fi
+
+          if [[ -z "${CURRENT_VERSION}" || -z "${CURRENT_BUILD}" ]]; then
+            echo "::error::Could not read current toolbar_version/build from ${ABOUT_FILE}"
+            exit 1
+          fi
+
+          EXPECTED_VERSION=""
+          SHOULD_UPDATE="false"
+          if [[ "${RELEASE_LABEL_COUNT}" != "1" ]]; then
+            echo "::error::main requires exactly one release label (release: major/minor/patch/none). Found ${RELEASE_LABEL_COUNT}."
+            exit 1
+          fi
+
+          if [[ ! "${BASE_VERSION}" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Invalid base version format in origin/${TARGET_BRANCH}: ${BASE_VERSION}"
+            exit 1
+          fi
+
+          BASE_MAJOR="${BASH_REMATCH[1]}"
+          BASE_MINOR="${BASH_REMATCH[2]}"
+          BASE_PATCH="${BASH_REMATCH[3]}"
+
+          case "${RELEASE_LABEL}" in
+            "release: major")
+              EXPECTED_VERSION="$((BASE_MAJOR + 1)).0.0"
+              ;;
+            "release: minor")
+              EXPECTED_VERSION="${BASE_MAJOR}.$((BASE_MINOR + 1)).0"
+              ;;
+            "release: patch")
+              EXPECTED_VERSION="${BASE_MAJOR}.${BASE_MINOR}.$((BASE_PATCH + 1))"
+              ;;
+            "release: none")
+              EXPECTED_VERSION="${BASE_VERSION}"
+              ;;
+            *)
+              echo "::error::Unexpected release label: ${RELEASE_LABEL}"
+              exit 1
+              ;;
+          esac
+
+          echo "::notice::Expected version for main PR: ${EXPECTED_VERSION}"
+
+          if [[ "${CURRENT_VERSION}" == "${EXPECTED_VERSION}" ]] && is_valid_build "${CURRENT_BUILD}" && [[ "${CURRENT_BUILD}" != "${BASE_BUILD}" ]]; then
+            echo "::notice::Metadata already bumped for this PR. No update required."
+          else
+            SHOULD_UPDATE="true"
+          fi
+
+          if [[ ! -f "${ABOUT_FILE}" ]]; then
+            echo "::error::Metadata file not found: ${ABOUT_FILE}"
+            exit 1
+          fi
+
+          if [[ "${SHOULD_UPDATE}" == "true" ]]; then
+            python3 .github/scripts/update_release_metadata.py \
+              --file "${ABOUT_FILE}" \
+              --build "${BUILD_TS}" \
+              --toolbar-version "${EXPECTED_VERSION}"
+          fi
+
+          git add "${ABOUT_FILE}"
+
+          COMMIT_CREATED="false"
+          if git diff --cached --quiet; then
+            echo "::notice::No metadata file change detected."
+          else
+            FINAL_VERSION="$(read_file_key "toolbar_version" || true)"
+            FINAL_BUILD="$(read_file_key "build" || true)"
+            if [[ "${FINAL_VERSION}" == "${BASE_VERSION}" ]]; then
+              BOT_COMMIT_MESSAGE="Bot: version unchanged at ${FINAL_VERSION}; build bumped to ${FINAL_BUILD}"
+            else
+              BOT_COMMIT_MESSAGE="Bot: version bumped to ${FINAL_VERSION}-${FINAL_BUILD}"
+            fi
+            git commit -m "${BOT_COMMIT_MESSAGE}"
+            COMMIT_CREATED="true"
+            echo "::notice::Created metadata commit: ${BOT_COMMIT_MESSAGE}"
+          fi
+
+          if [[ "${COMMIT_CREATED}" == "true" ]]; then
+            git push origin "HEAD:${PR_BRANCH}"
+            echo "::notice::Pushed metadata commit to ${PR_BRANCH}."
+          else
+            echo "::notice::No push required."
+          fi
+
+          FINAL_VERSION="$(read_file_key "toolbar_version" || true)"
+          FINAL_BUILD="$(read_file_key "build" || true)"
+
+          if [[ "${FINAL_VERSION}" != "${EXPECTED_VERSION}" ]]; then
+            echo "::error::Validation failed: expected toolbar_version ${EXPECTED_VERSION}, found ${FINAL_VERSION}."
+            exit 1
+          fi
+          if ! is_valid_build "${FINAL_BUILD}"; then
+            echo "::error::Validation failed: build must match YYYYMMDD+hhmm. Found ${FINAL_BUILD}."
+            exit 1
+          fi
+          if [[ "${FINAL_BUILD}" == "${BASE_BUILD}" ]]; then
+            echo "::error::Validation failed: build was not bumped from base (${BASE_BUILD})."
+            exit 1
+          fi
+          echo "::notice::Validation passed: version ${FINAL_VERSION}, build ${FINAL_BUILD}."
+
+  validate-release-metadata:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout PR branch
@@ -21,12 +248,7 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
 
-      - name: Configure git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Update release metadata with replaceable bot commit
+      - name: Validate metadata status
         env:
           TARGET_BRANCH: ${{ github.base_ref }}
           PR_BRANCH: ${{ github.head_ref }}
@@ -35,125 +257,97 @@ jobs:
           set -euo pipefail
 
           ABOUT_FILE="AE pyTools.extension/AE pyTools.Tab/CED Tools.panel/About.pushbutton/about.yaml"
-          BOT_COMMIT_MESSAGE="Bot: update release metadata"
-          BUILD_TS="$(date -u +'%Y%m%d%H%M')"
 
-          echo "::notice::Target branch: ${TARGET_BRANCH}"
-          echo "::notice::Detected labels: ${PR_LABELS_JSON}"
-          echo "::notice::Build timestamp (UTC): ${BUILD_TS}"
+          read_file_key() {
+            local key="$1"
+            sed -n -E "s/^${key}:[[:space:]]*([^[:space:]]+).*/\\1/p" "${ABOUT_FILE}" | head -n1
+          }
 
-          if [[ "${TARGET_BRANCH}" != "develop" && "${TARGET_BRANCH}" != "main" ]]; then
-            echo "::warning::Unsupported target branch '${TARGET_BRANCH}'. Skipping."
+          read_ref_key() {
+            local git_ref="$1"
+            local key="$2"
+            git show "${git_ref}:${ABOUT_FILE}" | sed -n -E "s/^${key}:[[:space:]]*([^[:space:]]+).*/\\1/p" | head -n1
+          }
+
+          is_valid_build() {
+            [[ "$1" =~ ^[0-9]{8}\+[0-9]{4}$ ]]
+          }
+
+          if [[ "${TARGET_BRANCH}" != "main" ]]; then
+            echo "::notice::Unsupported target branch '${TARGET_BRANCH}'. Validation skipped."
             exit 0
           fi
 
           git fetch origin "${TARGET_BRANCH}" "${PR_BRANCH}"
-          git checkout "${PR_BRANCH}"
 
+          BASE_VERSION="$(read_ref_key "origin/${TARGET_BRANCH}" "toolbar_version" || true)"
+          BASE_BUILD="$(read_ref_key "origin/${TARGET_BRANCH}" "build" || true)"
+          CURRENT_VERSION="$(read_file_key "toolbar_version" || true)"
+          CURRENT_BUILD="$(read_file_key "build" || true)"
+
+          if [[ -z "${BASE_VERSION}" || -z "${BASE_BUILD}" ]]; then
+            echo "::error::Could not read base toolbar_version/build from origin/${TARGET_BRANCH}:${ABOUT_FILE}"
+            exit 1
+          fi
+          if [[ -z "${CURRENT_VERSION}" || -z "${CURRENT_BUILD}" ]]; then
+            echo "::error::Could not read current toolbar_version/build from ${ABOUT_FILE}"
+            exit 1
+          fi
+
+          PR_LABELS_JSON_LC="$(echo "${PR_LABELS_JSON}" | tr '[:upper:]' '[:lower:]')"
           RELEASE_LABEL_COUNT=0
           RELEASE_LABEL=""
-          for CANDIDATE in "release: major" "release: minor" "release: patch"; do
-            if echo "${PR_LABELS_JSON}" | grep -q "\"${CANDIDATE}\""; then
+          for CANDIDATE in "release: major" "release: minor" "release: patch" "release: none"; do
+            if echo "${PR_LABELS_JSON_LC}" | grep -q "\"${CANDIDATE}\""; then
               RELEASE_LABEL_COUNT=$((RELEASE_LABEL_COUNT + 1))
               RELEASE_LABEL="${CANDIDATE}"
             fi
           done
 
-          NEW_VERSION=""
-          if [[ "${TARGET_BRANCH}" == "main" ]]; then
-            if [[ "${RELEASE_LABEL_COUNT}" != "1" ]]; then
-              echo "::warning::main requires exactly one release label (major/minor/patch). Found ${RELEASE_LABEL_COUNT}. Skipping."
-              exit 0
-            fi
-
-            BASE_VERSION_RAW="$(git show "origin/main:${ABOUT_FILE}" | sed -n -E 's/^toolbar_version:[[:space:]]*([^[:space:]]+).*/\1/p' | head -n1 || true)"
-            if [[ -z "${BASE_VERSION_RAW}" ]]; then
-              echo "::warning::Could not read toolbar_version from origin/main:${ABOUT_FILE}"
-              exit 1
-            fi
-            BASE_VERSION="${BASE_VERSION_RAW%%-*}"
-            echo "::notice::Base version from origin/main: ${BASE_VERSION_RAW} (normalized: ${BASE_VERSION})"
-
-            if [[ ! "${BASE_VERSION}" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-              echo "::warning::Invalid base version format: ${BASE_VERSION}"
-              exit 1
-            fi
-
-            MAJOR="${BASH_REMATCH[1]}"
-            MINOR="${BASH_REMATCH[2]}"
-            PATCH="${BASH_REMATCH[3]}"
-
-            case "${RELEASE_LABEL}" in
-              "release: major")
-                NEW_VERSION="$((MAJOR + 1)).0.0"
-                ;;
-              "release: minor")
-                NEW_VERSION="${MAJOR}.$((MINOR + 1)).0"
-                ;;
-              "release: patch")
-                NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
-                ;;
-              *)
-                echo "::warning::Unexpected release label: ${RELEASE_LABEL}"
-                exit 1
-                ;;
-            esac
-
-            echo "::notice::Computed new version from base: ${NEW_VERSION}"
-          else
-            echo "::notice::develop target: toolbar_version unchanged; build only."
+          if ! is_valid_build "${CURRENT_BUILD}"; then
+            echo "::error::build must match YYYYMMDD+hhmm. Found ${CURRENT_BUILD}."
+            exit 1
           fi
-
-          BOT_REMOVED="false"
-          EXISTING_BOT_COMMITS="$(git rev-list --reverse --author='github-actions\[bot\]' --grep='^Bot: update release metadata$' "origin/${TARGET_BRANCH}..HEAD" || true)"
-          if [[ -n "${EXISTING_BOT_COMMITS}" ]]; then
-            BOT_COUNT="$(echo "${EXISTING_BOT_COMMITS}" | sed '/^$/d' | wc -l | tr -d ' ')"
-            echo "::notice::Existing bot metadata commit(s) found: ${BOT_COUNT}. Removing before recomputing."
-            while true; do
-              BOT_SHA="$(git rev-list --reverse --author='github-actions\[bot\]' --grep='^Bot: update release metadata$' "origin/${TARGET_BRANCH}..HEAD" | head -n1 || true)"
-              if [[ -z "${BOT_SHA}" ]]; then
-                break
-              fi
-              BOT_PARENT="$(git rev-parse "${BOT_SHA}^")"
-              echo "::notice::Dropping prior bot commit: ${BOT_SHA}"
-              git rebase --rebase-merges --onto "${BOT_PARENT}" "${BOT_SHA}" HEAD
-              BOT_REMOVED="true"
-            done
-            echo "::notice::Prior bot metadata commit(s) removed."
-          else
-            echo "::notice::No prior bot metadata commit found."
-          fi
-
-          if [[ ! -f "${ABOUT_FILE}" ]]; then
-            echo "::warning::Metadata file not found: ${ABOUT_FILE}"
+          if [[ "${CURRENT_BUILD}" == "${BASE_BUILD}" ]]; then
+            echo "::error::build was not bumped from base branch value (${BASE_BUILD}). Run workflow_dispatch for Bump Toolbar Version + Build."
             exit 1
           fi
 
-          if [[ -n "${NEW_VERSION}" ]]; then
-            python3 .github/scripts/update_release_metadata.py \
-              --file "${ABOUT_FILE}" \
-              --build "${BUILD_TS}" \
-              --toolbar-version "${NEW_VERSION}"
-          else
-            python3 .github/scripts/update_release_metadata.py \
-              --file "${ABOUT_FILE}" \
-              --build "${BUILD_TS}"
+          if [[ "${RELEASE_LABEL_COUNT}" != "1" ]]; then
+            echo "::error::main requires exactly one release label (release: major/minor/patch/none). Found ${RELEASE_LABEL_COUNT}."
+            exit 1
           fi
 
-          git add "${ABOUT_FILE}"
-
-          COMMIT_CREATED="false"
-          if git diff --cached --quiet; then
-            echo "::notice::No metadata file change detected; commit skipped."
-          else
-            git commit -m "${BOT_COMMIT_MESSAGE}"
-            COMMIT_CREATED="true"
-            echo "::notice::Created metadata commit: ${BOT_COMMIT_MESSAGE}"
+          if [[ ! "${BASE_VERSION}" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Invalid base version format in origin/${TARGET_BRANCH}: ${BASE_VERSION}"
+            exit 1
           fi
 
-          if [[ "${COMMIT_CREATED}" == "true" || "${BOT_REMOVED}" == "true" ]]; then
-            git push --force-with-lease origin "HEAD:${PR_BRANCH}"
-            echo "::notice::Pushed branch with --force-with-lease."
-          else
-            echo "::notice::No push required."
+          BASE_MAJOR="${BASH_REMATCH[1]}"
+          BASE_MINOR="${BASH_REMATCH[2]}"
+          BASE_PATCH="${BASH_REMATCH[3]}"
+
+          case "${RELEASE_LABEL}" in
+            "release: major")
+              EXPECTED_VERSION="$((BASE_MAJOR + 1)).0.0"
+              ;;
+            "release: minor")
+              EXPECTED_VERSION="${BASE_MAJOR}.$((BASE_MINOR + 1)).0"
+              ;;
+            "release: patch")
+              EXPECTED_VERSION="${BASE_MAJOR}.${BASE_MINOR}.$((BASE_PATCH + 1))"
+              ;;
+            "release: none")
+              EXPECTED_VERSION="${BASE_VERSION}"
+              ;;
+            *)
+              echo "::error::Unexpected release label: ${RELEASE_LABEL}"
+              exit 1
+              ;;
+          esac
+
+          if [[ "${CURRENT_VERSION}" != "${EXPECTED_VERSION}" ]]; then
+            echo "::error::toolbar_version mismatch. Expected ${EXPECTED_VERSION}, found ${CURRENT_VERSION}. Run workflow_dispatch for Bump Toolbar Version + Build."
+            exit 1
           fi
+          echo "::notice::Validation passed for main PR: version ${CURRENT_VERSION}, build ${CURRENT_BUILD}."
