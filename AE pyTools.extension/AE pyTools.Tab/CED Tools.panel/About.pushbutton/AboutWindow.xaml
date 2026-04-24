@@ -125,9 +125,9 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <!-- Toolbar Version -->
+                    <!-- Toolbar Version + Build -->
                     <TextBlock Grid.Row="0" Grid.Column="0"
-               Text="Toolbar Version:"
+               Text="Toolbar Version/Build:"
                FontWeight="SemiBold"
                VerticalAlignment="Center"/>
                     <TextBlock Grid.Row="0" Grid.Column="2"
