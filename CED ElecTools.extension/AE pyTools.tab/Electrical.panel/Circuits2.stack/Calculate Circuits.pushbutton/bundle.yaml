@@ -1,0 +1,18 @@
+title: "Calculate Circuits"
+
+tooltip: >-
+  Version = 1.0
+  
+  Date    = 04.28.2026
+  ________________________________________________________________
+  Description:
+  
+  Calculates selected electrical circuits and writes circuit sizing data
+  based on configured project settings.
+  
+  Use the current selection or pick circuits when prompted.
+  ________________________________________________________________
+  
+
+author: >-
+  AEvelina
