@@ -1485,6 +1485,11 @@ class ProfileEditorWindow(forms.WPFWindow):
         direct = params.get("Keynote Value") or params.get("Key Value") or params.get("Keynote")
         if direct not in (None, ""):
             return u"{}".format(direct)
+        if isinstance(tag, dict):
+            for key in ("value", "key_value", "keynote_value", "keynote"):
+                direct_tag_value = tag.get(key)
+                if direct_tag_value not in (None, ""):
+                    return u"{}".format(direct_tag_value)
         for key, value in params.items():
             if (key or "").strip().lower() in ("keynote value", "key value", "keynote"):
                 return u"{}".format(value)
@@ -1495,6 +1500,11 @@ class ProfileEditorWindow(forms.WPFWindow):
         direct = params.get("Keynote Description") or params.get("Keynote Text")
         if direct not in (None, ""):
             return u"{}".format(direct)
+        if isinstance(tag, dict):
+            for key in ("description", "key_description", "keynote_description", "keynote_text"):
+                direct_tag_desc = tag.get(key)
+                if direct_tag_desc not in (None, ""):
+                    return u"{}".format(direct_tag_desc)
         for key, value in params.items():
             key_name = (key or "").strip().lower()
             if "keynote description" in key_name or "keynote text" in key_name:

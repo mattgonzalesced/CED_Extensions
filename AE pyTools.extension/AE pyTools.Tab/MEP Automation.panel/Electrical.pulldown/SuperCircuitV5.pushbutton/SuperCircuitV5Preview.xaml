@@ -9,6 +9,7 @@
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
@@ -17,7 +18,21 @@
                TextWrapping="Wrap"
                Margin="0,0,0,6"/>
 
-    <WrapPanel Grid.Row="1"
+    <StackPanel Grid.Row="1"
+                Orientation="Horizontal"
+                VerticalAlignment="Center"
+                Margin="0,0,0,8">
+      <TextBlock Text="Run Keyword:"
+                 FontWeight="Bold"
+                 VerticalAlignment="Center"
+                 Margin="0,0,8,0"/>
+      <ComboBox x:Name="RunKeywordCombo"
+                Width="260"
+                IsEditable="False"
+                SelectionChanged="OnKeywordFilterChanged"/>
+    </StackPanel>
+
+    <WrapPanel Grid.Row="2"
                Margin="0,0,0,8"
                VerticalAlignment="Center">
       <TextBlock Text="Color Key: "
@@ -43,11 +58,11 @@
     </WrapPanel>
 
     <TextBlock x:Name="SummaryText"
-               Grid.Row="2"
+               Grid.Row="3"
                Margin="0,0,0,6"/>
 
     <DataGrid x:Name="PreviewGrid"
-              Grid.Row="3"
+              Grid.Row="4"
               AutoGenerateColumns="False"
               CanUserAddRows="False"
               IsReadOnly="False"
@@ -189,7 +204,7 @@
       </DataGrid.Columns>
     </DataGrid>
 
-    <StackPanel Grid.Row="4"
+    <StackPanel Grid.Row="5"
                 Orientation="Horizontal"
                 HorizontalAlignment="Right">
       <Button x:Name="EditSelectedButton"

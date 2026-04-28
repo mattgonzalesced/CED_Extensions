@@ -285,8 +285,141 @@ def _truth_groups(equipment_defs):
     return groups
 
 
+def _normalize_text(value):
+    if value is None:
+        return ""
+    return " ".join(str(value).strip().split()).lower()
+
+
+def _normalize_keynote_family(value):
+    if not value:
+        return ""
+    text = str(value)
+    if ":" in text:
+        text = text.split(":", 1)[0]
+    return "".join([ch for ch in text.lower() if ch.isalnum()])
+
+
+def _is_ga_keynote_entry(entry):
+    if not isinstance(entry, dict):
+        return False
+    family = entry.get("family_name") or entry.get("family") or ""
+    return _normalize_keynote_family(family) == "gakeynotesymbolced"
+
+
+def _normalize_keynote_params(params):
+    if not isinstance(params, dict):
+        return {}
+    out = dict(params)
+    if out.get("Keynote Value") not in (None, ""):
+        out.pop("Key Value", None)
+        out.pop("Keynote", None)
+    elif out.get("Key Value") not in (None, ""):
+        out["Keynote Value"] = out.pop("Key Value")
+        out.pop("Keynote", None)
+    elif out.get("Keynote") not in (None, ""):
+        out["Keynote Value"] = out.pop("Keynote")
+    if out.get("Keynote Description") not in (None, ""):
+        out.pop("Keynote Text", None)
+    elif out.get("Keynote Text") not in (None, ""):
+        out["Keynote Description"] = out.pop("Keynote Text")
+    return out
+
+
+def _coerce_float(value, default=0.0):
+    try:
+        return float(value)
+    except Exception:
+        return float(default)
+
+
+def _keynote_identity(entry):
+    family = entry.get("family_name") or entry.get("family") or ""
+    type_name = entry.get("type_name") or entry.get("type") or ""
+    category = entry.get("category_name") or entry.get("category") or ""
+    offsets = entry.get("offsets") or {}
+    return (
+        _normalize_text(family),
+        _normalize_text(type_name),
+        _normalize_text(category),
+        round(_coerce_float(offsets.get("x_inches", 0.0)), 4),
+        round(_coerce_float(offsets.get("y_inches", 0.0)), 4),
+        round(_coerce_float(offsets.get("z_inches", 0.0)), 4),
+        round(_coerce_float(offsets.get("rotation_deg", 0.0)), 4),
+    )
+
+
+def _iter_led_entries(eq_entry):
+    if not isinstance(eq_entry, dict):
+        return
+    for linked_set in eq_entry.get("linked_sets") or []:
+        if not isinstance(linked_set, dict):
+            continue
+        for led in linked_set.get("linked_element_definitions") or []:
+            if isinstance(led, dict):
+                yield led
+
+
+def _build_keynote_map(eq_entry):
+    by_led = {}
+    for led in _iter_led_entries(eq_entry):
+        led_id = (led.get("id") or "").strip()
+        if not led_id:
+            continue
+        items = {}
+        for entry in led.get("keynotes") or []:
+            if not _is_ga_keynote_entry(entry):
+                continue
+            params = _normalize_keynote_params(entry.get("parameters") or {})
+            cloned = copy.deepcopy(entry)
+            cloned["parameters"] = dict(params)
+            items[_keynote_identity(entry)] = {
+                "params": params,
+                "entry": cloned,
+            }
+        if items:
+            by_led[led_id] = items
+    return by_led
+
+
+def _preserve_keynote_params(target_before_copy, copied_target):
+    before_map = _build_keynote_map(target_before_copy)
+    if not before_map:
+        return
+    for led in _iter_led_entries(copied_target):
+        led_id = (led.get("id") or "").strip()
+        if not led_id:
+            continue
+        before_items = before_map.get(led_id) or {}
+        if not before_items:
+            continue
+
+        current_keynotes = led.get("keynotes")
+        if not isinstance(current_keynotes, list) or not current_keynotes:
+            restored = [copy.deepcopy(data.get("entry")) for data in before_items.values() if isinstance(data, dict)]
+            # Only restore full list when source had none for this LED.
+            if restored:
+                led["keynotes"] = restored
+            continue
+
+        for keynote in current_keynotes:
+            if not _is_ga_keynote_entry(keynote):
+                continue
+            match_data = before_items.get(_keynote_identity(keynote))
+            match = (match_data or {}).get("params") if isinstance(match_data, dict) else None
+            if not match:
+                continue
+            incoming = _normalize_keynote_params(keynote.get("parameters") or {})
+            if incoming.get("Keynote Value") in (None, "") and match.get("Keynote Value") not in (None, ""):
+                incoming["Keynote Value"] = match.get("Keynote Value")
+            if incoming.get("Keynote Description") in (None, "") and match.get("Keynote Description") not in (None, ""):
+                incoming["Keynote Description"] = match.get("Keynote Description")
+            keynote["parameters"] = _normalize_keynote_params(incoming)
+
+
 def _copy_fields(source_entry, target_entry):
     """Copy everything except identifying fields (name, id)."""
+    target_before_copy = copy.deepcopy(target_entry)
     keep_keys = {"name", "id"}
     for key, value in list(target_entry.items()):
         if key in keep_keys:
@@ -296,6 +429,7 @@ def _copy_fields(source_entry, target_entry):
         if key in keep_keys:
             continue
         target_entry[key] = copy.deepcopy(value)
+    _preserve_keynote_params(target_before_copy, target_entry)
 
 
 def _ensure_truth_source(entry):

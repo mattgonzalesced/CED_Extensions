@@ -519,6 +519,205 @@ def _is_tag_like(elem):
     return True
 
 
+def _normalize_keynote_family(value):
+    if not value:
+        return ""
+    text = str(value)
+    if ":" in text:
+        text = text.split(":", 1)[0]
+    return "".join([ch for ch in text.lower() if ch.isalnum()])
+
+
+def _is_ga_keynote_symbol(family_name):
+    return _normalize_keynote_family(family_name) == "gakeynotesymbolced"
+
+
+def _annotation_family_type(elem):
+    fam_name = None
+    type_name = None
+    try:
+        symbol = getattr(elem, "Symbol", None)
+        if symbol:
+            fam = getattr(symbol, "Family", None)
+            fam_name = getattr(fam, "Name", None) if fam else getattr(symbol, "FamilyName", None)
+            type_name = getattr(symbol, "Name", None)
+            if not type_name and hasattr(symbol, "get_Parameter"):
+                param = symbol.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM)
+                if param:
+                    type_name = param.AsString()
+    except Exception:
+        pass
+    if fam_name and type_name:
+        return fam_name, type_name
+    label = getattr(elem, "Name", None)
+    return label or "", type_name or ""
+
+
+def _is_ga_keynote_symbol_element(elem):
+    if elem is None:
+        return False
+    try:
+        cat = getattr(elem, "Category", None)
+        cat_name = getattr(cat, "Name", None) if cat else ""
+    except Exception:
+        cat_name = ""
+    if "generic annotation" not in (cat_name or "").lower():
+        return False
+    fam_name, _ = _annotation_family_type(elem)
+    return _is_ga_keynote_symbol(fam_name)
+
+
+def _collect_element_parameters(elem, include_read_only=True):
+    results = {}
+    if elem is None:
+        return results
+    for param in getattr(elem, "Parameters", []) or []:
+        try:
+            definition = getattr(param, "Definition", None)
+            name = getattr(definition, "Name", None)
+        except Exception:
+            name = None
+        if not name:
+            continue
+        if not include_read_only:
+            try:
+                if param.IsReadOnly:
+                    continue
+            except Exception:
+                pass
+        try:
+            storage = param.StorageType.ToString()
+        except Exception:
+            storage = ""
+        try:
+            if storage == "String":
+                value = param.AsString()
+                if value is None:
+                    try:
+                        value = param.AsValueString()
+                    except Exception:
+                        value = None
+            elif storage == "Integer":
+                value = param.AsInteger()
+            elif storage == "Double":
+                value = param.AsDouble()
+            elif storage == "ElementId":
+                elem_id = param.AsElementId()
+                value = _element_id_value(elem_id) if elem_id else None
+                if value is None:
+                    try:
+                        value = param.AsValueString()
+                    except Exception:
+                        value = None
+            else:
+                value = param.AsValueString()
+        except Exception:
+            value = None
+        if value is None:
+            continue
+        results[name] = value
+    return results
+
+
+def _normalize_keynote_params(params):
+    if not isinstance(params, dict):
+        return {}
+    out = dict(params)
+    if out.get("Keynote Value") not in (None, ""):
+        out.pop("Key Value", None)
+        out.pop("Keynote", None)
+    elif out.get("Key Value") not in (None, ""):
+        out["Keynote Value"] = out.pop("Key Value")
+        out.pop("Keynote", None)
+    elif out.get("Keynote") not in (None, ""):
+        out["Keynote Value"] = out.pop("Keynote")
+    if out.get("Keynote Description") not in (None, ""):
+        out.pop("Keynote Text", None)
+    elif out.get("Keynote Text") not in (None, ""):
+        out["Keynote Description"] = out.pop("Keynote Text")
+    return out
+
+
+def _collect_keynote_parameters(annotation_elem):
+    merged = {}
+    type_elem = None
+    try:
+        sym = getattr(annotation_elem, "Symbol", None)
+        if sym:
+            type_elem = sym
+    except Exception:
+        type_elem = None
+    if type_elem is None:
+        try:
+            doc = getattr(annotation_elem, "Document", None)
+            type_id = annotation_elem.GetTypeId()
+            if doc and type_id:
+                type_elem = doc.GetElement(type_id)
+        except Exception:
+            type_elem = None
+    if type_elem is not None:
+        merged.update(_collect_element_parameters(type_elem, include_read_only=True))
+    merged.update(_collect_element_parameters(annotation_elem, include_read_only=True))
+
+    params = {}
+    for key in ("Keynote Value", "Key Value", "Keynote"):
+        value = merged.get(key)
+        if value not in (None, ""):
+            params["Keynote Value"] = value
+            break
+    for key in ("Keynote Description", "Keynote Text"):
+        value = merged.get(key)
+        if value not in (None, ""):
+            params["Keynote Description"] = value
+            break
+    return _normalize_keynote_params(params)
+
+
+def _keynote_entry_key(keynote_entry):
+    if not isinstance(keynote_entry, dict):
+        return None
+    family = keynote_entry.get("family_name") or keynote_entry.get("family") or ""
+    type_name = keynote_entry.get("type_name") or keynote_entry.get("type") or ""
+    category = keynote_entry.get("category_name") or keynote_entry.get("category") or ""
+    params = _normalize_keynote_params(keynote_entry.get("parameters") or {})
+    key_value = params.get("Keynote Value")
+    key_desc = params.get("Keynote Description")
+    return (
+        _tag_signature(family),
+        _tag_signature(type_name),
+        _tag_signature(category),
+        "" if key_value in (None, "") else str(key_value).strip(),
+        "" if key_desc in (None, "") else str(key_desc).strip(),
+    )
+
+
+def _build_keynote_entry(annotation_elem, host_point):
+    if annotation_elem is None or host_point is None:
+        return None
+    if not _is_ga_keynote_symbol_element(annotation_elem):
+        return None
+    ann_point = _get_point(annotation_elem)
+    if ann_point is None:
+        return None
+    fam_name, type_name = _annotation_family_type(annotation_elem)
+    if not fam_name:
+        return None
+    offsets = {
+        "x_inches": _feet_to_inches(ann_point.X - host_point.X),
+        "y_inches": _feet_to_inches(ann_point.Y - host_point.Y),
+        "z_inches": _feet_to_inches(ann_point.Z - host_point.Z),
+        "rotation_deg": 0.0,
+    }
+    category_name = _get_category_name(annotation_elem) or "Generic Annotations"
+    return {
+        "family_name": fam_name,
+        "type_name": type_name or "",
+        "category_name": category_name,
+        "parameters": _collect_keynote_parameters(annotation_elem),
+        "offsets": offsets,
+    }
+
+
 def _tag_host_element_id(tag):
     if tag is None:
         return None
@@ -711,6 +910,26 @@ def _collect_hosted_tags(elem, host_point):
     return tags
 
 
+def _collect_hosted_keynotes(elem, host_point):
+    doc = getattr(elem, "Document", None)
+    if doc is None or host_point is None:
+        return []
+    try:
+        deps = list(elem.GetDependentElements(None))
+    except Exception:
+        deps = []
+    keynotes = []
+    for dep_id in deps:
+        try:
+            dep_elem = doc.GetElement(dep_id)
+        except Exception:
+            dep_elem = None
+        entry = _build_keynote_entry(dep_elem, host_point)
+        if entry:
+            keynotes.append(entry)
+    return keynotes
+
+
 def _find_closest_entry_by_point(entries, point):
     if not entries or point is None:
         return None
@@ -797,6 +1016,39 @@ def _assign_selected_tags(child_entries, tag_elems):
         tags.append(entry)
 
 
+def _assign_selected_keynotes(child_entries, keynote_elems):
+    if not child_entries or not keynote_elems:
+        return
+    for keynote_elem in keynote_elems:
+        if keynote_elem is None:
+            continue
+        keynote_point = _get_point(keynote_elem)
+        if keynote_point is None:
+            continue
+        target_idx = _find_closest_entry_by_point(child_entries, keynote_point)
+        if target_idx is None:
+            continue
+        host_point = child_entries[target_idx].get("point")
+        if host_point is None:
+            continue
+        entry = _build_keynote_entry(keynote_elem, host_point)
+        if not entry:
+            continue
+        keynotes = child_entries[target_idx].setdefault("keynotes", [])
+        entry_key = _keynote_entry_key(entry)
+        if entry_key:
+            exists = False
+            for existing in keynotes:
+                if _keynote_entry_key(existing) != entry_key:
+                    continue
+                if _tag_offsets_near(existing, entry):
+                    exists = True
+                    break
+            if exists:
+                continue
+        keynotes.append(entry)
+
+
 def _get_category_name(elem):
     try:
         cat = elem.Category
@@ -869,6 +1121,7 @@ def _build_child_entries(elements):
             "category": _get_category_name(elem),
             "parameters": _collect_params(elem),
             "tags": _collect_hosted_tags(elem, point),
+            "keynotes": _collect_hosted_keynotes(elem, point),
         }
         entries.append(entry)
     return entries
@@ -1313,6 +1566,7 @@ def _seed_parent_equipment_definition(parent_elem, data, link_transform=None):
         }],
         "parameters": params,
         "tags": _collect_hosted_tags(parent_elem, parent_point),
+        "keynotes": _collect_hosted_keynotes(parent_elem, parent_point),
         "is_parent_anchor": True,
     }
     led_list.append(led_entry)
@@ -1438,9 +1692,12 @@ def main():
         forms.alert("Could not determine the parent element's location.", title=TITLE)
         return
 
-    forms.alert("Select the elements to add to the profile.\nYou can also select tags to capture with those elements.", title=TITLE)
+    forms.alert(
+        "Select the elements to add to the profile.\nYou can also select tags/keynotes to capture with those elements.",
+        title=TITLE,
+    )
     try:
-        selection = list(revit.pick_elements(message="Select equipment and tags to add to '{}'".format(parent_name)))
+        selection = list(revit.pick_elements(message="Select equipment, tags, and keynotes to add to '{}'".format(parent_name)))
     except Exception:
         selection = []
     if not selection:
@@ -1448,12 +1705,15 @@ def main():
         return
 
     tag_elems = []
+    keynote_elems = []
     equipment_selection = []
     for elem in selection:
         if elem is None:
             continue
         if _is_tag_like(elem):
             tag_elems.append(elem)
+        elif _is_ga_keynote_symbol_element(elem):
+            keynote_elems.append(elem)
         else:
             equipment_selection.append(elem)
     if not equipment_selection:
@@ -1465,6 +1725,7 @@ def main():
         forms.alert("Selected elements could not be processed.", title=TITLE)
         return
     _assign_selected_tags(child_entries, tag_elems)
+    _assign_selected_keynotes(child_entries, keynote_elems)
 
     parent_doc = getattr(parent_elem, "Document", None)
     parent_transform = parent_info.get("link_transform")
@@ -1518,6 +1779,7 @@ def main():
                 "offsets": [offsets],
                 "parameters": params,
                 "tags": child["tags"],
+                "keynotes": child.get("keynotes") or [],
             }
             led_list.append(led_entry)
             metadata_updates.append((child["element"], payload))

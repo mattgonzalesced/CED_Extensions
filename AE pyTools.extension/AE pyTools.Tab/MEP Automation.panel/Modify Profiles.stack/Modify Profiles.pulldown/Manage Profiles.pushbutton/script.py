@@ -452,11 +452,50 @@ def _split_keynote_entries(entries):
     return normal, keynotes
 def _normalize_tag_entry(tag_entry):
     if isinstance(tag_entry, dict):
+        family_name = tag_entry.get("family_name")
+        if family_name in (None, ""):
+            family_name = tag_entry.get("family")
+        type_name = tag_entry.get("type_name")
+        if type_name in (None, ""):
+            type_name = tag_entry.get("type")
+        category_name = tag_entry.get("category_name")
+        if category_name in (None, ""):
+            category_name = tag_entry.get("category")
+        params = tag_entry.get("parameters") or {}
+        if not isinstance(params, dict):
+            params = {}
+        else:
+            params = dict(params)
+        if _is_ga_keynote_symbol(family_name):
+            keynote_value = None
+            for key in ("value", "key_value", "keynote_value", "keynote"):
+                candidate = tag_entry.get(key)
+                if candidate not in (None, ""):
+                    keynote_value = candidate
+                    break
+            if keynote_value not in (None, "") and not (
+                params.get("Keynote Value") not in (None, "")
+                or params.get("Key Value") not in (None, "")
+                or params.get("Keynote") not in (None, "")
+            ):
+                params["Keynote Value"] = keynote_value
+            keynote_description = None
+            for key in ("description", "key_description", "keynote_description", "keynote_text"):
+                candidate = tag_entry.get(key)
+                if candidate not in (None, ""):
+                    keynote_description = candidate
+                    break
+            if keynote_description not in (None, "") and not (
+                params.get("Keynote Description") not in (None, "")
+                or params.get("Keynote Text") not in (None, "")
+            ):
+                params["Keynote Description"] = keynote_description
+            params = _normalize_keynote_params(params)
         return {
-            "category_name": tag_entry.get("category_name"),
-            "family_name": tag_entry.get("family_name"),
-            "type_name": tag_entry.get("type_name"),
-            "parameters": tag_entry.get("parameters") or {},
+            "category_name": category_name,
+            "family_name": family_name,
+            "type_name": type_name,
+            "parameters": params,
             "offsets": tag_entry.get("offsets") or {},
         }
     return tag_entry

@@ -83,6 +83,94 @@ def _group_row_colors(group_size):
         return COLOR_RED, COLOR_LIGHT_TEXT
     return None, DEFAULT_ROW_FOREGROUND
 
+
+def _normalize_keyword(value):
+    return (value or "").strip().upper()
+
+
+def _keyword_has_alpha(value):
+    return bool(re.search(r"[A-Z]", _normalize_keyword(value)))
+
+
+def _group_keyword_tokens(group):
+    group = group or {}
+    tokens = []
+    seen = set()
+
+    def add_token(value):
+        token = _normalize_keyword(value)
+        if not token or token in seen:
+            return
+        seen.add(token)
+        tokens.append(token)
+
+    group_type = _normalize_keyword(group.get("group_type"))
+    if group_type == "DEDICATED":
+        add_token("DEDICATED")
+    elif group_type == "CIRCUITBYPARENT":
+        add_token("BYPARENT")
+    elif group_type == "SECONDCIRCUITBYPARENT":
+        add_token("SECONDBYPARENT")
+
+    circuit_keyword = _normalize_keyword(group.get("circuit_number"))
+    if circuit_keyword in ("CIRCUITBYPARENT", "BYPARENT"):
+        add_token("BYPARENT")
+    elif circuit_keyword in ("SECONDCIRCUITBYPARENT", "SECONDBYPARENT"):
+        add_token("SECONDBYPARENT")
+    add_token(circuit_keyword)
+
+    return tokens
+
+
+def _collect_present_run_keywords(groups):
+    present = []
+    present_alpha = []
+    seen = set()
+    seen_alpha = set()
+
+    for group in groups or []:
+        for token in _group_keyword_tokens(group):
+            if token not in seen:
+                seen.add(token)
+                present.append(token)
+            if _keyword_has_alpha(token) and token not in seen_alpha:
+                seen_alpha.add(token)
+                present_alpha.append(token)
+
+    return present_alpha if present_alpha else present
+
+
+def _collect_run_keyword_options(groups, client_key=None, client_module=None):
+    options = []
+    seen = set()
+
+    def add_option(value):
+        token = _normalize_keyword(value)
+        if not token or token in seen:
+            return
+        seen.add(token)
+        options.append(token)
+
+    for token in _collect_present_run_keywords(groups):
+        add_option(token)
+
+    for value in _client_default_circuit_keywords(client_key, client_module):
+        add_option(value)
+
+    return options
+
+
+def _filter_groups_by_keyword(groups, selected_keyword):
+    keyword = _normalize_keyword(selected_keyword)
+    if not keyword:
+        return []
+    filtered = []
+    for group in groups or []:
+        if keyword in _group_keyword_tokens(group):
+            filtered.append(group)
+    return filtered
+
+
 class PreviewRow(object):
     def __init__(
         self,
@@ -263,7 +351,18 @@ class SuperCircuitPreviewExternalEventGateway(object):
         try:
             groups = window.build_groups_for_run()
             if not groups:
-                forms.alert("Grouping produced no circuit batches.", title=__title__)
+                selected_keyword = ""
+                try:
+                    selected_keyword = window._selected_run_keyword()
+                except Exception:
+                    selected_keyword = ""
+                if selected_keyword:
+                    forms.alert(
+                        "Grouping produced no circuit batches for keyword {}.".format(selected_keyword),
+                        title=__title__,
+                    )
+                else:
+                    forms.alert("Grouping produced no circuit batches.", title=__title__)
                 window._on_modeless_run_finished(False)
                 return
 
@@ -297,6 +396,8 @@ class SuperCircuitPreviewWindow(forms.WPFWindow):
         panel_lookup,
         client_key=None,
         client_module=None,
+        keyword_options=None,
+        selected_keyword=None,
         gateway=None,
         source_doc=None,
     ):
@@ -313,6 +414,8 @@ class SuperCircuitPreviewWindow(forms.WPFWindow):
         self._gateway = gateway
         self._modeless = bool(gateway is not None)
         self.source_doc = source_doc
+        self._run_keyword_options = []
+        self.selected_run_keyword = _normalize_keyword(selected_keyword)
 
         header = self.FindName("HeaderText")
         if header is not None:
@@ -334,8 +437,6 @@ class SuperCircuitPreviewWindow(forms.WPFWindow):
         if grid is not None:
             grid.ItemsSource = self.rows
 
-        self._update_summary()
-
         edit_btn = self.FindName("EditSelectedButton")
         run_btn = self.FindName("RunButton")
         cancel_btn = self.FindName("CancelButton")
@@ -349,15 +450,72 @@ class SuperCircuitPreviewWindow(forms.WPFWindow):
             if self._modeless:
                 cancel_btn.Content = "Close"
 
+        self._set_run_keyword_options(keyword_options or [], preferred=self.selected_run_keyword)
+        self._update_summary()
+        self._update_run_button_state()
+
     def _update_summary(self):
         summary = self.FindName("SummaryText")
         if summary is None:
             return
         data_rows = [row for row in self.rows if not getattr(row, "is_spacer", False)]
+        selected_keyword = self._selected_run_keyword()
+        if selected_keyword:
+            summary.Text = "{} element(s) in {} circuit batch(es) for keyword {}.".format(
+                len(data_rows),
+                len({row.group_index for row in data_rows}),
+                selected_keyword,
+            )
+            return
         summary.Text = "{} element(s) in {} circuit batch(es).".format(
             len(data_rows),
             len({row.group_index for row in data_rows}),
         )
+
+    def _selected_run_keyword(self):
+        combo = self.FindName("RunKeywordCombo")
+        selected = getattr(combo, "SelectedItem", None) if combo is not None else self.selected_run_keyword
+        normalized = _normalize_keyword(selected)
+        self.selected_run_keyword = normalized
+        return normalized
+
+    def _set_run_keyword_options(self, options, preferred=None):
+        normalized_options = []
+        seen = set()
+        for option in options or []:
+            token = _normalize_keyword(option)
+            if not token or token in seen:
+                continue
+            seen.add(token)
+            normalized_options.append(token)
+        self._run_keyword_options = normalized_options
+
+        preferred_token = _normalize_keyword(preferred)
+        if preferred_token and preferred_token in seen:
+            selected = preferred_token
+        elif normalized_options:
+            selected = normalized_options[0]
+        else:
+            selected = ""
+
+        combo = self.FindName("RunKeywordCombo")
+        if combo is not None:
+            was_refreshing = self._is_refreshing
+            self._is_refreshing = True
+            try:
+                combo.ItemsSource = normalized_options
+                combo.SelectedItem = selected if selected else None
+            finally:
+                self._is_refreshing = was_refreshing
+
+        self.selected_run_keyword = selected
+
+    def _update_run_button_state(self):
+        run_btn = self.FindName("RunButton")
+        if run_btn is None:
+            return
+        has_rows = any(not getattr(row, "is_spacer", False) for row in (self.rows or []))
+        run_btn.IsEnabled = (not self._is_running) and has_rows
 
     def _selected_rows(self):
         grid = self.FindName("PreviewGrid")
@@ -410,9 +568,12 @@ class SuperCircuitPreviewWindow(forms.WPFWindow):
             self._sync_rows_to_items()
 
             groups = circuits.assemble_groups(self.info_items, self.client_module, logger)
-            if not groups:
-                return
-            groups = _sort_groups(groups, self.client_module)
+            groups = _sort_groups(groups, self.client_module) if groups else []
+            self._set_run_keyword_options(
+                _collect_run_keyword_options(groups, self.client_key, self.client_module),
+                preferred=self._selected_run_keyword(),
+            )
+            groups = _filter_groups_by_keyword(groups, self._selected_run_keyword())
 
             panel_options = _collect_panel_combo_options(groups, self.panel_lookup)
             circuit_options = _collect_circuit_combo_options(groups, self.client_key, self.client_module)
@@ -428,6 +589,7 @@ class SuperCircuitPreviewWindow(forms.WPFWindow):
                     pass
 
             self._update_summary()
+            self._update_run_button_state()
         finally:
             self._is_refreshing = False
 
@@ -436,13 +598,12 @@ class SuperCircuitPreviewWindow(forms.WPFWindow):
         groups = circuits.assemble_groups(self.info_items, self.client_module, logger)
         if not groups:
             return []
-        return _sort_groups(groups, self.client_module)
+        groups = _sort_groups(groups, self.client_module)
+        return _filter_groups_by_keyword(groups, self._selected_run_keyword())
 
     def _on_modeless_run_finished(self, success):
         self._is_running = False
-        run_btn = self.FindName("RunButton")
-        if run_btn is not None:
-            run_btn.IsEnabled = True
+        self._update_run_button_state()
 
         if success:
             self._is_closing = True
@@ -471,6 +632,12 @@ class SuperCircuitPreviewWindow(forms.WPFWindow):
         if new_panel == old_panel and new_circuit == old_circuit and new_load == old_load:
             return
 
+        self._refresh_preview_grouping()
+
+    def OnKeywordFilterChanged(self, sender, args):
+        if getattr(self, "_is_refreshing", False) or getattr(self, "_is_closing", False):
+            return
+        self.selected_run_keyword = _normalize_keyword(getattr(sender, "SelectedItem", None))
         self._refresh_preview_grouping()
 
     def OnSelectRowClicked(self, sender, args):
@@ -1149,10 +1316,14 @@ def _show_preview_dialog(
     gateway=None,
     source_doc=None,
 ):
-    panel_options = _collect_panel_combo_options(groups, panel_lookup)
-    circuit_options = _collect_circuit_combo_options(groups, client_key, client_module)
-    load_options = _collect_load_combo_options(groups)
-    rows = _build_preview_rows(groups, panel_options, circuit_options, load_options)
+    run_keyword_options = _collect_run_keyword_options(groups, client_key, client_module)
+    selected_keyword = run_keyword_options[0] if run_keyword_options else ""
+    filtered_groups = _filter_groups_by_keyword(groups, selected_keyword)
+
+    panel_options = _collect_panel_combo_options(filtered_groups, panel_lookup)
+    circuit_options = _collect_circuit_combo_options(filtered_groups, client_key, client_module)
+    load_options = _collect_load_combo_options(filtered_groups)
+    rows = _build_preview_rows(filtered_groups, panel_options, circuit_options, load_options)
     if not rows:
         return None
 
@@ -1171,6 +1342,8 @@ def _show_preview_dialog(
         panel_lookup,
         client_key,
         client_module,
+        keyword_options=run_keyword_options,
+        selected_keyword=selected_keyword,
         gateway=gateway,
         source_doc=source_doc,
     )
