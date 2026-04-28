@@ -9,8 +9,8 @@ from pyrevit import forms, script, versionmgr
 TITLE = "About AE pyTools"
 UPDATE_AEPYTOOLS_URL = "https://coolsysinc.sharepoint.com/:u:/s/Teams-CED-Admin/IQDes9bTY0rqQqoDO87G_HuqAS_KIZ-hlQZvO_Jof3FGlcQ?e=JK8jrC"
 UPDATE_PYREVIT_URL = "https://coolsysinc.sharepoint.com/:f:/s/Teams-CED-Admin/IgCCzGCyEpCERar1EUegCQtZAdYnru-wKl7y5QixPsg45qo?e=grdKjl"
-REPORT_BUGS_URL = "https://coolsysinc.sharepoint.com/sites/Teams-Coolsys-ToolDevelopment/_layouts/15/listforms.aspx?cid=NGFkYTZkYzUtMmI3Mi00NmQyLTlmZDYtNzczNjk2Y2ZmYjM5&nav=ZTBkMWYyOTgtMjk0ZS00ZmQzLThjOWItYTlhZjI1YmFlMzRm"
-REQUEST_FEATURES_URL = "https://coolsysinc.sharepoint.com/sites/Teams-Coolsys-ToolDevelopment/_layouts/15/listforms.aspx?cid=MTliNjNhOTktM2JkMC00NDk3LWI0NzYtYTdiNTkxZWNjNzM3&nav=NjczZmU2MzYtMGNhNC00NDI1LWE4ODYtY2U5ODE4N2U3NDli"
+REPORT_BUGS_URL = "https://coolsysinc.sharepoint.com/:l:/s/Teams-Coolsys-ToolDevelopment/JADFbdpKcivSRp_WdzaWz_s5Ac-juj4VItpGkCr8KghJd4Y?nav=ZTBkMWYyOTgtMjk0ZS00ZmQzLThjOWItYTlhZjI1YmFlMzRm"
+REQUEST_FEATURES_URL = "https://coolsysinc.sharepoint.com/:l:/s/Teams-Coolsys-ToolDevelopment/JACZOrYZ0DuXRLR2p7WR7Mc3Aemey6nPdkhK9ghcwegqDzg?nav=NjczZmU2MzYtMGNhNC00NDI1LWE4ODYtY2U5ODE4N2U3NDli"
 DESIGNER_HUB_URL = "https://coolsysinc.sharepoint.com/sites/ToolDevelopment-Public"
 TRAINING_URL = "https://productivitynow.imaginit.com/peak/libraries/cc3ea5f2-0cb5-4957-8489-2f80f08f78e8"
 
