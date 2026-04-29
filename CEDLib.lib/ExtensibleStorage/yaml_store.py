@@ -6,6 +6,7 @@ Helpers for working with the active YAML stored inside Extensible Storage.
 import json
 import io
 import hashlib
+import copy
 
 from pyrevit import revit, script
 
@@ -79,7 +80,7 @@ def load_active_yaml_data(doc=None):
     if _ACTIVE_CACHE and _ACTIVE_CACHE.get("normalized") == normalized:
         cached = _ACTIVE_CACHE.get("data")
         if cached and _ACTIVE_CACHE.get("digest") == digest:
-            data = json.loads(json.dumps(cached))
+            data = copy.deepcopy(cached)
             logger = script.get_logger()
             logger.info("[YAML Storage] loaded equipment definitions (cached): %s", [eq.get("name") or eq.get("id") for eq in data.get("equipment_definitions") or [] if isinstance(eq, dict)])
             return path, data
@@ -103,7 +104,7 @@ def load_active_yaml_data(doc=None):
     _ACTIVE_CACHE = {
         "normalized": normalized,
         "digest": digest,
-        "data": json.loads(json.dumps(data)),
+        "data": copy.deepcopy(data),
     }
     return path, data
 
@@ -114,11 +115,19 @@ def save_active_yaml_data(doc, data, action, description):
     if doc is None:
         raise RuntimeError("No active document detected.")
     path, text = load_active_yaml_text(doc)
+    normalized = ExtensibleStorage._normalize_path(path)
+    sanitized_text = _sanitize_hash_keys(text or "")
+    current_digest = _text_digest(sanitized_text)
     previous_data = None
-    try:
-        previous_data = load_data_from_text(_sanitize_hash_keys(text or ""), path)
-    except Exception:
-        previous_data = None
+    if _ACTIVE_CACHE and _ACTIVE_CACHE.get("normalized") == normalized and _ACTIVE_CACHE.get("digest") == current_digest:
+        cached_prev = _ACTIVE_CACHE.get("data")
+        if cached_prev is not None:
+            previous_data = copy.deepcopy(cached_prev)
+    if previous_data is None:
+        try:
+            previous_data = load_data_from_text(sanitized_text, path)
+        except Exception:
+            previous_data = None
     sync_report = None
     try:
         sync_report = synchronize_truth_groups(data, previous_data=previous_data)
@@ -141,13 +150,17 @@ def save_active_yaml_data(doc, data, action, description):
         sync_report,
     )
     if new_text == text:
+        _ACTIVE_CACHE = {
+            "normalized": normalized,
+            "digest": current_digest,
+            "data": copy.deepcopy(data),
+        }
         return
     ExtensibleStorage.update_active_yaml(doc, path, text, new_text, action, description)
-    ExtensibleStorage.update_active_text_only(doc, path, new_text)
     _ACTIVE_CACHE = {
-        "normalized": ExtensibleStorage._normalize_path(path),
+        "normalized": normalized,
         "digest": _text_digest(_sanitize_hash_keys(new_text or "")),
-        "data": json.loads(json.dumps(data)),
+        "data": copy.deepcopy(data),
     }
 
 
@@ -165,7 +178,7 @@ def refresh_active_yaml_snapshot(doc, yaml_path, data):
     _ACTIVE_CACHE = {
         "normalized": ExtensibleStorage._normalize_path(yaml_path),
         "digest": _text_digest(_sanitize_hash_keys(new_text or "")),
-        "data": json.loads(json.dumps(data)),
+        "data": copy.deepcopy(data),
     }
 
 

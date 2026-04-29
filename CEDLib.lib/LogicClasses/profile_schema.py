@@ -914,6 +914,103 @@ def _create_equipment_stub(cad_name, types, seq):
     }
 
 
+def _normalize_keynote_param_payload(params):
+    if not isinstance(params, Mapping):
+        return {}
+    normalized = dict(params)
+    if "Keynote Value" in normalized:
+        normalized.pop("Key Value", None)
+    elif "Key Value" in normalized:
+        normalized["Keynote Value"] = normalized.pop("Key Value")
+    if "Keynote Description" in normalized:
+        normalized.pop("Keynote Text", None)
+    elif "Keynote Text" in normalized:
+        normalized["Keynote Description"] = normalized.pop("Keynote Text")
+    return normalized
+
+
+def _has_nonempty_param_value(value):
+    if value is None:
+        return False
+    if isinstance(value, basestring):
+        return bool(value.strip())
+    return True
+
+
+def _normalize_match_text(value):
+    if value is None:
+        return ""
+    try:
+        return str(value).strip().lower()
+    except Exception:
+        return ""
+
+
+def _offset_value(offsets, key):
+    if not isinstance(offsets, Mapping):
+        return 0.0
+    try:
+        return round(float(offsets.get(key, 0.0) or 0.0), 3)
+    except Exception:
+        return 0.0
+
+
+def _keynote_signature(entry):
+    if not isinstance(entry, Mapping):
+        return None
+    offsets = entry.get("offsets") or {}
+    return (
+        _normalize_match_text(entry.get("family_name") or entry.get("family")),
+        _normalize_match_text(entry.get("type_name") or entry.get("type")),
+        _normalize_match_text(entry.get("category_name") or entry.get("category")),
+        _offset_value(offsets, "x_inches"),
+        _offset_value(offsets, "y_inches"),
+        _offset_value(offsets, "z_inches"),
+        _offset_value(offsets, "rotation_deg"),
+    )
+
+
+def _merge_keynotes_preserving_params(incoming_keynotes, existing_keynotes):
+    incoming_list = incoming_keynotes if isinstance(incoming_keynotes, list) else []
+    existing_list = existing_keynotes if isinstance(existing_keynotes, list) else []
+    if not incoming_list or not existing_list:
+        return incoming_keynotes
+    existing_by_signature = {}
+    for idx, existing in enumerate(existing_list):
+        if not isinstance(existing, Mapping):
+            continue
+        sig = _keynote_signature(existing)
+        if sig is not None and sig not in existing_by_signature:
+            existing_by_signature[sig] = existing
+        existing_by_signature.setdefault(("__index__", idx), existing)
+    merged = []
+    for idx, incoming in enumerate(incoming_list):
+        if not isinstance(incoming, Mapping):
+            merged.append(incoming)
+            continue
+        source = None
+        sig = _keynote_signature(incoming)
+        if sig is not None:
+            source = existing_by_signature.get(sig)
+        if source is None:
+            source = existing_by_signature.get(("__index__", idx))
+        if not isinstance(source, Mapping):
+            merged.append(incoming)
+            continue
+        incoming_payload = _normalize_keynote_param_payload(incoming.get("parameters") or {})
+        existing_payload = _normalize_keynote_param_payload(source.get("parameters") or {})
+        if (not _has_nonempty_param_value(incoming_payload.get("Keynote Value"))
+                and _has_nonempty_param_value(existing_payload.get("Keynote Value"))):
+            incoming_payload["Keynote Value"] = existing_payload.get("Keynote Value")
+        if (not _has_nonempty_param_value(incoming_payload.get("Keynote Description"))
+                and _has_nonempty_param_value(existing_payload.get("Keynote Description"))):
+            incoming_payload["Keynote Description"] = existing_payload.get("Keynote Description")
+        updated = dict(incoming)
+        updated["parameters"] = incoming_payload
+        merged.append(updated)
+    return merged
+
+
 def _types_to_linked_set(equipment_def, types, seq):
     existing_sets = equipment_def.get("linked_sets") or []
     if existing_sets:
@@ -923,6 +1020,21 @@ def _types_to_linked_set(equipment_def, types, seq):
     else:
         set_id = "SET-{:03d}".format(seq)
         set_name = "{} Types".format(equipment_def.get("name") or "Types")
+    existing_leds = {}
+    existing_leds_by_shape = {}
+    existing_led_list = []
+    for existing_led in (base_set.get("linked_element_definitions") or []) if existing_sets else []:
+        if isinstance(existing_led, Mapping):
+            existing_led_list.append(existing_led)
+            existing_id = existing_led.get("id")
+            if existing_id:
+                existing_leds[existing_id] = existing_led
+            shape_key = (
+                _normalize_match_text(existing_led.get("label")),
+                _normalize_match_text(existing_led.get("category")),
+                bool(existing_led.get("is_group")),
+            )
+            existing_leds_by_shape.setdefault(shape_key, []).append(existing_led)
     linked_defs = []
     for idx, t in enumerate(types or [], 1):
         inst = t.get("instance_config") or {}
@@ -931,6 +1043,24 @@ def _types_to_linked_set(equipment_def, types, seq):
         tags = inst.get("tags") or []
         keynotes = inst.get("keynotes") or []
         led_id = t.get("led_id") or "{}-LED-{:03d}".format(set_id, idx)
+        existing_led = existing_leds.get(led_id)
+        if not existing_led:
+            shape_key = (
+                _normalize_match_text(t.get("label")),
+                _normalize_match_text(t.get("category_name")),
+                bool(t.get("is_group")),
+            )
+            shape_matches = existing_leds_by_shape.get(shape_key) or []
+            if len(shape_matches) == 1:
+                existing_led = shape_matches[0]
+        if not existing_led and idx - 1 < len(existing_led_list):
+            existing_led = existing_led_list[idx - 1]
+        if not existing_led:
+            existing_led = {}
+        keynotes = _merge_keynotes_preserving_params(
+            keynotes,
+            existing_led.get("keynotes") or [],
+        )
         linked_defs.append({
             "id": led_id,
             "label": t.get("label"),

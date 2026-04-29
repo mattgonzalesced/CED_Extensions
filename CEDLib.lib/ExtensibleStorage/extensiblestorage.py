@@ -253,11 +253,18 @@ class ExtensibleStorage(object):
             raise ValueError("Active YAML path is not set.")
         payload = cls._read_storage(doc)
         meta = payload.setdefault("meta", {})
+        normalized = cls._normalize_path(yaml_path)
+        active_current = meta.get("active_yaml") or {}
+        current_path = active_current.get("path")
+        current_normalized = active_current.get("normalized") or (cls._normalize_path(current_path) if current_path else None)
+        current_text = active_current.get("text")
+        if current_normalized == normalized and (current_text or "") == (new_text or ""):
+            return
         meta.pop("base_text", None)
         meta.pop("next_seq", None)
         active = meta.setdefault("active_yaml", {})
         active["path"] = yaml_path
-        active["normalized"] = cls._normalize_path(yaml_path)
+        active["normalized"] = normalized
         active["text"] = new_text or ""
         txn_name = action or "YAML Update"
         cls._write_storage(doc, payload, txn_name)
@@ -268,11 +275,18 @@ class ExtensibleStorage(object):
             return
         payload = cls._read_storage(doc)
         meta = payload.setdefault("meta", {})
+        normalized = cls._normalize_path(yaml_path)
+        active_current = meta.get("active_yaml") or {}
+        current_path = active_current.get("path")
+        current_normalized = active_current.get("normalized") or (cls._normalize_path(current_path) if current_path else None)
+        current_text = active_current.get("text")
+        if current_normalized == normalized and (current_text or "") == (new_text or ""):
+            return
         meta.pop("base_text", None)
         meta.pop("next_seq", None)
         active = meta.setdefault("active_yaml", {})
         active["path"] = yaml_path
-        active["normalized"] = cls._normalize_path(yaml_path)
+        active["normalized"] = normalized
         active["text"] = new_text or ""
         cls._write_storage(doc, payload, "ACTIVE_YAML_REFRESH")
 
@@ -970,8 +984,8 @@ class ExtensibleStorage(object):
 
     @classmethod
     def _write_storage(cls, doc, payload, transaction_name=None):
-        history_json = json.dumps(payload.get("entries", []))
-        meta_json = json.dumps(payload.get("meta", {}))
+        history_json = json.dumps(payload.get("entries", []), separators=(",", ":"))
+        meta_json = json.dumps(payload.get("meta", {}), separators=(",", ":"))
         needs_chunking = (
             len(history_json or "") > cls.MAX_ES_STRING
             or len(meta_json or "") > cls.MAX_ES_STRING

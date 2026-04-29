@@ -157,16 +157,13 @@ def _collect_tag_entries(repo, tag_filter=None):
                     continue
                 if not _has_tag_definition(tag):
                     continue
-                key = tag_key_from_dict(tag)
+                is_keynote = _is_keynote_entry(tag)
+                key = _tag_instance_key(tag)
                 cat = tag.get("category") or tag.get("category_name") or ""
                 fam = tag.get("family") or tag.get("family_name") or "<Family?>"
                 typ = tag.get("type") or tag.get("type_name") or "<Type?>"
                 if not key:
-                    key = (
-                        cat.lower(),
-                        fam,
-                        typ,
-                    )
+                    key = ("tag", (cat.lower(), fam, typ))
                 entry = grouped.get(key)
                 if not entry:
                     entry = {
@@ -174,8 +171,14 @@ def _collect_tag_entries(repo, tag_filter=None):
                         "tag_category": cat,
                         "tag_family": fam,
                         "tag_type": typ,
+                        "is_keynote": is_keynote,
+                        "keynote_value": "",
+                        "keynote_description": "",
                         "contexts": [],
                     }
+                    if is_keynote:
+                        entry["keynote_value"] = _extract_keynote_value(tag)
+                        entry["keynote_description"] = _extract_keynote_description(tag)
                     grouped[key] = entry
                 if isinstance(tag, dict):
                     tag_copy = dict(tag)
@@ -200,14 +203,24 @@ def _collect_tag_entries(repo, tag_filter=None):
         fam = entry.get("tag_family") or "<Family?>"
         typ = entry.get("tag_type") or "<Type?>"
         cat = entry.get("tag_category") or ""
+        is_keynote = bool(entry.get("is_keynote"))
         if not cat:
             key = entry.get("key")
-            if isinstance(key, tuple) and len(key) >= 1:
-                cat = key[0] or ""
+            if isinstance(key, tuple) and len(key) >= 2 and isinstance(key[1], tuple) and len(key[1]) >= 1:
+                cat = key[1][0] or ""
         cat_display = cat if cat else "<Category?>"
+        prefix = ""
+        if is_keynote:
+            key_value = entry.get("keynote_value") or "<blank>"
+            key_desc = _shorten_preview(entry.get("keynote_description") or "", 64)
+            if key_desc:
+                prefix = u"Keynote {0} - {1} | ".format(key_value, key_desc)
+            else:
+                prefix = u"Keynote {0} | ".format(key_value)
         if len(contexts) == 1:
             ctx = contexts[0]
-            entry["display"] = u"{family} : {type} [{category}]  ({equip} :: {label})".format(
+            entry["display"] = u"{prefix}{family} : {type} [{category}]  ({equip} :: {label})".format(
+                prefix=prefix,
                 family=fam,
                 type=typ,
                 category=cat_display,
@@ -217,7 +230,8 @@ def _collect_tag_entries(repo, tag_filter=None):
         else:
             equip_count = len({ctx.get("equipment_name") for ctx in contexts if ctx.get("equipment_name")})
             label_count = len(contexts)
-            entry["display"] = u"{family} : {type} [{category}]  ({labels} labels / {defs} equipment definitions)".format(
+            entry["display"] = u"{prefix}{family} : {type} [{category}]  ({labels} labels / {defs} equipment definitions)".format(
+                prefix=prefix,
                 family=fam,
                 type=typ,
                 category=cat_display,
@@ -312,6 +326,89 @@ def _is_keynote_entry(tag_entry):
     else:
         family = getattr(tag_entry, "family_name", None) or getattr(tag_entry, "family", None) or ""
     return _is_ga_keynote_symbol(family)
+
+
+def _extract_keynote_value(tag_dict):
+    if not isinstance(tag_dict, dict):
+        return ""
+    direct = tag_dict.get("key_value")
+    if direct not in (None, ""):
+        return str(direct).strip()
+    params = tag_dict.get("parameters") or {}
+    if not isinstance(params, dict):
+        return ""
+    for key in ("Keynote Value", "Key Value", "Keynote"):
+        value = params.get(key)
+        if value not in (None, ""):
+            return str(value).strip()
+    return ""
+
+
+def _extract_keynote_description(tag_dict):
+    if not isinstance(tag_dict, dict):
+        return ""
+    direct = tag_dict.get("keynote_text")
+    if direct not in (None, ""):
+        return str(direct).strip()
+    params = tag_dict.get("parameters") or {}
+    if not isinstance(params, dict):
+        return ""
+    for key in ("Keynote Description", "Keynote Text"):
+        value = params.get(key)
+        if value not in (None, ""):
+            return str(value).strip()
+    return ""
+
+
+def _normalize_offset_key(raw_offset):
+    if isinstance(raw_offset, dict):
+        values = (
+            raw_offset.get("x_inches", raw_offset.get("x", 0.0)),
+            raw_offset.get("y_inches", raw_offset.get("y", 0.0)),
+            raw_offset.get("z_inches", raw_offset.get("z", 0.0)),
+        )
+    elif isinstance(raw_offset, (list, tuple)):
+        values = tuple(list(raw_offset)[:3] + [0.0, 0.0, 0.0])[:3]
+    else:
+        values = (0.0, 0.0, 0.0)
+    norm = []
+    for value in values:
+        try:
+            norm.append(round(float(value or 0.0), 6))
+        except Exception:
+            norm.append(0.0)
+    return tuple(norm)
+
+
+def _keynote_instance_key(tag_dict):
+    if not isinstance(tag_dict, dict):
+        return None
+    cat = (tag_dict.get("category") or tag_dict.get("category_name") or "").lower()
+    fam = tag_dict.get("family") or tag_dict.get("family_name")
+    typ = tag_dict.get("type") or tag_dict.get("type_name")
+    key_value = _extract_keynote_value(tag_dict)
+    key_desc = _extract_keynote_description(tag_dict)
+    offset_key = _normalize_offset_key(tag_dict.get("offset"))
+    try:
+        rot = round(float(tag_dict.get("rotation_deg") or 0.0), 6)
+    except Exception:
+        rot = 0.0
+    return (cat, fam, typ, key_value, key_desc, offset_key, rot)
+
+
+def _tag_instance_key(tag_dict):
+    if _is_keynote_entry(tag_dict):
+        return ("keynote", _keynote_instance_key(tag_dict))
+    return ("tag", tag_key_from_dict(tag_dict))
+
+
+def _shorten_preview(text, limit=72):
+    text = (text or "").replace("\r", " ").replace("\n", " ").strip()
+    if not text:
+        return ""
+    if limit and len(text) > limit:
+        return text[: limit - 3] + "..."
+    return text
 
 
 def _has_text_note_definition(note_dict):
@@ -705,7 +802,7 @@ def _place_tag_entries(entries, engine, host_lookup, symbol_lookup, placed_tag_p
             if not hosts:
                 continue
 
-            tag_key = tag_key_from_dict(tag_def)
+            tag_key = _tag_instance_key(tag_def)
             for inst in hosts:
                 host_id = _element_id_value(getattr(inst, "Id", None), None)
                 host_key = (host_id, tag_key)
