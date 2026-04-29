@@ -4,7 +4,6 @@ on:
   pull_request:
     types: [opened, reopened, synchronize, labeled, unlabeled, edited]
     branches:
-      - develop
       - main
   workflow_dispatch:
     inputs:
@@ -60,7 +59,6 @@ jobs:
             core.setOutput("number", String(pr.number));
             core.setOutput("head_ref", pr.head.ref);
             core.setOutput("base_ref", pr.base.ref);
-            core.setOutput("head_sha", pr.head.sha);
             core.setOutput("labels_json", JSON.stringify(pr.labels.map(label => label.name)));
 
       - name: Checkout PR branch
