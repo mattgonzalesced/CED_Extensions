@@ -14,17 +14,15 @@ import System
 from System import Activator, Type
 from System.Reflection import BindingFlags
 from System.Runtime.InteropServices import Marshal
-
 from pyrevit import DB, forms, revit, script
 
-from LogicClasses import (
+from LogicClasses.PipeSegment import (
     BuildPipeSegmentsFromRevitPipes,
     PrintPipeSegmentTotalsPerID,
     SumEvaporationCapacityPerID,
     SumHorizontalPipeLengthPerID,
     SumVerticalPipeLengthPerID,
 )
-
 
 logger = script.get_logger()
 output = script.get_output()
