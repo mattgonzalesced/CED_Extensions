@@ -1,0 +1,191 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Manage Profiles (MEPRFP 2.0)"
+        Width="1200" Height="780"
+        WindowStartupLocation="CenterScreen">
+  <Grid Margin="12">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="380"/>
+      <ColumnDefinition Width="8"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+
+    <!-- LEFT: profile list + actions -->
+    <DockPanel Grid.Column="0">
+      <TextBlock DockPanel.Dock="Top" FontWeight="Bold" Margin="0,0,0,6"
+                 Text="Profiles"/>
+      <TextBox x:Name="FilterBox" DockPanel.Dock="Top" Margin="0,0,0,6"
+               ToolTip="Filter by name"/>
+      <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,6,0,0">
+        <Button x:Name="DeleteProfileButton" Content="Delete profile" Width="120"/>
+      </StackPanel>
+      <ListBox x:Name="ProfileList" DisplayMemberPath="DisplayName"/>
+    </DockPanel>
+
+    <!-- RIGHT: editor panes -->
+    <DockPanel Grid.Column="2" x:Name="EditorPanel">
+      <!-- Top: profile fields -->
+      <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="120"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="ID:" Margin="0,4,8,4" VerticalAlignment="Center"/>
+        <TextBlock Grid.Row="0" Grid.Column="1" x:Name="IdLabel" Margin="0,4,0,4"/>
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Name:" Margin="0,4,8,4" VerticalAlignment="Center"/>
+        <TextBox x:Name="NameBox" Grid.Row="1" Grid.Column="1" Margin="0,4,0,4"/>
+
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Parent filter:" Margin="0,4,8,4" VerticalAlignment="Center"/>
+        <Grid Grid.Row="2" Grid.Column="1" Margin="0,4,0,4">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+          <TextBox x:Name="CategoryBox" Grid.Column="0" Margin="0,0,4,0" ToolTip="Category"/>
+          <TextBox x:Name="FamilyBox" Grid.Column="1" Margin="0,0,4,0" ToolTip="Family pattern"/>
+          <TextBox x:Name="TypeBox" Grid.Column="2" ToolTip="Type pattern"/>
+        </Grid>
+
+        <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,4,0,4">
+          <CheckBox x:Name="AllowParentlessCheck" Content="Allow parentless" Margin="0,0,12,0"/>
+          <CheckBox x:Name="AllowUnmatchedCheck" Content="Allow unmatched parents" Margin="0,0,12,0"/>
+          <CheckBox x:Name="PromptMismatchCheck" Content="Prompt on parent mismatch"/>
+        </StackPanel>
+      </Grid>
+
+      <!-- Profile metadata: free-form parameters stored on the profile itself -->
+      <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+            <Button x:Name="AddProfileMetaButton" Content="Add metadata"
+                    Padding="10,2" MinWidth="120" Margin="0,0,8,0"/>
+            <Button x:Name="RemoveProfileMetaButton" Content="Remove selected"
+                    Padding="10,2" MinWidth="130" Margin="0,0,8,0"/>
+            <Button x:Name="SaveProfileMetaButton" Content="Save profile metadata"
+                    Padding="10,2" MinWidth="160"/>
+          </StackPanel>
+          <TextBlock FontWeight="Bold" Text="Profile metadata"
+                     VerticalAlignment="Center"
+                     ToolTip="Free-form key/value pairs attached to the profile (separate from per-LED parameters)."/>
+        </DockPanel>
+        <DataGrid x:Name="ProfileMetaGrid" Height="110"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  HeadersVisibility="Column"
+                  RowHeight="22">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+            <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="*"/>
+          </DataGrid.Columns>
+        </DataGrid>
+      </DockPanel>
+
+      <!-- Middle: linked sets / LEDs tree -->
+      <TextBlock DockPanel.Dock="Top" FontWeight="Bold" Margin="0,0,0,6"
+                 Text="Linked sets &amp; elements"/>
+      <Grid DockPanel.Dock="Top" Height="240" Margin="0,0,0,8">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="160"/>
+        </Grid.ColumnDefinitions>
+        <TreeView x:Name="LedTree" Grid.Column="0"/>
+        <StackPanel Grid.Column="1" Margin="8,0,0,0">
+          <Button x:Name="AddLedButton" Content="Add LED..."
+                  ToolTip="Pick a fixture in the model and append it to this profile."
+                  Margin="0,0,0,4"/>
+          <Button x:Name="RemoveLedButton" Content="Remove selected"
+                  ToolTip="Remove the selected LED or annotation from the profile."
+                  Margin="0,0,0,4"/>
+        </StackPanel>
+      </Grid>
+
+      <!-- Bottom: parameters / offsets editor -->
+      <DockPanel DockPanel.Dock="Top" Margin="0,4,0,6">
+        <Button x:Name="SaveSelectedButton" DockPanel.Dock="Right"
+                Content="Save selected LED / annotation"
+                Padding="10,2" MinWidth="200"/>
+        <TextBlock x:Name="SelectedHeaderLabel" FontWeight="Bold"
+                   VerticalAlignment="Center"
+                   Text="Selected LED / annotation"/>
+      </DockPanel>
+      <Grid DockPanel.Dock="Top">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="2*"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <DockPanel Grid.Column="0" Margin="0,0,4,0">
+          <TextBlock DockPanel.Dock="Top" Text="Parameters"/>
+          <DataGrid x:Name="ParameterGrid"
+                    AutoGenerateColumns="False"
+                    CanUserAddRows="True"
+                    CanUserDeleteRows="True"
+                    HeadersVisibility="Column"
+                    RowHeight="22">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+              <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="*"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
+        <DockPanel Grid.Column="1" Margin="4,0,4,0">
+          <TextBlock DockPanel.Dock="Top" Text="Offset (first entry)"/>
+          <Grid DockPanel.Dock="Top" Margin="0,4,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="x (in):" Margin="0,2,4,2" VerticalAlignment="Center"/>
+            <TextBox  Grid.Row="0" Grid.Column="1" x:Name="OffsetXBox" Margin="0,2,8,2"/>
+            <TextBlock Grid.Row="0" Grid.Column="2" Text="y (in):" Margin="0,2,4,2" VerticalAlignment="Center"/>
+            <TextBox  Grid.Row="0" Grid.Column="3" x:Name="OffsetYBox" Margin="0,2,0,2"/>
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="z (in):" Margin="0,2,4,2" VerticalAlignment="Center"/>
+            <TextBox  Grid.Row="1" Grid.Column="1" x:Name="OffsetZBox" Margin="0,2,8,2"/>
+            <TextBlock Grid.Row="1" Grid.Column="2" Text="rot (deg):" Margin="0,2,4,2" VerticalAlignment="Center"/>
+            <TextBox  Grid.Row="1" Grid.Column="3" x:Name="OffsetRotBox" Margin="0,2,0,2"/>
+          </Grid>
+        </DockPanel>
+        <DockPanel Grid.Column="2" Margin="4,0,0,0">
+          <TextBlock DockPanel.Dock="Top"
+                     Text="Parent / directive relationship"
+                     ToolTip="Parent filter for the profile and any active BYPARENT / BYSIBLING directives on the selected LED."/>
+          <TextBox x:Name="RelationshipBox"
+                   IsReadOnly="True"
+                   AcceptsReturn="True"
+                   TextWrapping="Wrap"
+                   FontFamily="Consolas"
+                   FontSize="11"
+                   Background="#FAFAFA"
+                   VerticalScrollBarVisibility="Auto"
+                   HorizontalScrollBarVisibility="Auto"/>
+        </DockPanel>
+      </Grid>
+
+      <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+        <TextBlock x:Name="StatusLabel" VerticalAlignment="Center" Margin="0,0,16,0" Foreground="Gray"/>
+        <Button x:Name="SaveButton" Content="Save changes" Width="140" Margin="0,0,8,0" IsDefault="True"/>
+        <Button x:Name="CloseButton" Content="Close" Width="100" IsCancel="True"/>
+      </StackPanel>
+
+      <!-- spacer -->
+      <Border/>
+    </DockPanel>
+  </Grid>
+</Window>

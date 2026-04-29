@@ -1,0 +1,8 @@
+# This is a Revit shared parameter file.
+# Do not edit manually.
+*META	VERSION	MINVERSION
+META	2	1
+*GROUP	ID	NAME
+GROUP	1	MEPRFP_2_Authoring
+*PARAM	GUID	NAME	DATATYPE	DATACATEGORY	GROUP	VISIBLE	DESCRIPTION	USERMODIFIABLE	HIDEWHENNOVALUE
+PARAM	b4e5f6a7-1c2d-3e4f-5a6b-7c8d9e0f1a2b	Element_Linker	MULTILINETEXT		1	1	JSON payload linking this element back to its MEPRFP 2.0 profile	1	0

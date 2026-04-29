@@ -1,0 +1,5 @@
+title: Create Independent Profile
+tooltip: |
+  Capture a profile with no parent anchor.
+  Pick the child elements; offsets are stored relative to their centroid.
+is_beta: false

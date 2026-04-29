@@ -1,0 +1,6 @@
+title: Place Single Profile
+tooltip: |
+  Pick a single profile and place it at one or more points you click in the model.
+  Use this for independent profiles (no parent anchor) or any profile you want
+  to drop manually. Esc finishes a multi-placement run.
+is_beta: false

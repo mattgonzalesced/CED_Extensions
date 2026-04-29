@@ -1,0 +1,7 @@
+title: Bulk Merge Profiles
+tooltip: |
+  Apply many merges in one shot from a CSV.
+  CSV format: header row with 'source' (or source_id / source_name) and
+  'target' (or target_id / target_name). Each value is matched against
+  profile ids first, then names. Each row applies one merge.
+is_beta: false

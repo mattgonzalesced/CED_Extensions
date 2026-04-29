@@ -1,0 +1,6 @@
+title: Export YAML File
+tooltip: |
+  Export the MEPRFP 2.0 active YAML store to a file.
+  Reads the payload from Extensible Storage and writes it verbatim,
+  so an Import → Export round-trip preserves byte-for-byte equality.
+is_beta: false

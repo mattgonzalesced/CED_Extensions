@@ -1,0 +1,7 @@
+title: Unmerge Profile
+tooltip: |
+  Detach a merged profile from its truth-source group. The profile's
+  structural content stays as-is (it was copied from the source at merge
+  time); only the ced_truth_source_id / ced_truth_source_name fields are
+  cleared so the profile becomes free-standing again.
+is_beta: false
