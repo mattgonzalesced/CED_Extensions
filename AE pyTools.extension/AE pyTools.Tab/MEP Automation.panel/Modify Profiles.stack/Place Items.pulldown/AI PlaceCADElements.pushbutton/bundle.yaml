@@ -1,0 +1,7 @@
+title: Place CAD Elements
+tooltip: |
+  Place elements from CSV rows using definitions from the active YAML repository.
+  Each row provides placement coordinates while profile metadata drives type resolution.
+  This supports both family instances and model groups where definitions are available.
+  Use this to convert coordinate-based source data into controlled model placements.
+is_beta: false

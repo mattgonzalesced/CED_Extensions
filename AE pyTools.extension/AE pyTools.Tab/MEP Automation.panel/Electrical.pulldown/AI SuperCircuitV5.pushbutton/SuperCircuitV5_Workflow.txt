@@ -1,0 +1,44 @@
+SUPER CIRCUIT V5 Workflow Guide
+===============================
+
+Purpose: Super-circuit workflow with pre-run preview/edit and optional
+selection scope.
+
+Inputs
+------
+- Client choice (Planet Fitness or HEB).
+- Scope choice when selection exists: all eligible elements or selected only.
+- Electrical fixtures/devices including mechanical control devices.
+- Panel lookup plus optional client preprocess hooks.
+
+What It Changes
+---------------
+- Shows a preview window before creating circuits.
+- Lets user edit panel/circuit values for selected rows before creation.
+- Creates circuits and applies circuit data.
+- Prints BA/DA debug diagnostics for panel routing analysis.
+
+Run Sequence
+------------
+1. Run command and select client.
+2. If a Revit selection exists, choose scope (all or selected only).
+3. Tool gathers items and computes panel choice counts.
+4. Optional client preprocess modifies item metadata.
+5. Tool assembles groups and opens preview UI.
+6. Use Edit Selected to revise CKT_Panel_CEDT / CKT_Circuit Number_CEDT.
+7. Run Circuits to create systems and apply circuit data.
+
+Validation Checklist
+--------------------
+- Preview batches reflect expected dedicated/BYPARENT behavior.
+- Edited rows regroup and route as expected.
+- Created circuit count matches expectation.
+- BA/DA diagnostics are reasonable for affected items.
+
+Troubleshooting
+---------------
+- No client selected: command aborts.
+- Scope prompt cancelled: command aborts.
+- Preview cancelled: no circuits are created.
+- Bad panel parsing: review CKT_Panel_CEDT formatting.
+- Helper load errors: verify client helper modules.
