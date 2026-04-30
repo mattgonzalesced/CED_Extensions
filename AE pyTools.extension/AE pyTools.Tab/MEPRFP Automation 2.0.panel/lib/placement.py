@@ -841,6 +841,7 @@ class PlacementResult(object):
         self.placed_fixture_count = 0
         self.placed_annotation_count = 0
         self.element_linker_writes = 0
+        self.static_param_writes = 0
         self.warnings = []
         self.errors = []
         self.skipped_already_placed = 0
@@ -1048,7 +1049,14 @@ def _place_fixture(doc, led, anchor_world_pt, anchor_rotation_deg, level_id,
 
 def _write_linker(elem, led, profile, target):
     """Stamp the placed element with an Element_Linker payload so audit
-    and re-placement tools can find it."""
+    and re-placement tools can find it.
+
+    The CKT_Circuit Number_CEDT and CKT_Panel_CEDT values are pulled
+    from the LED's captured ``parameters`` dict and copied into the
+    payload — matches the legacy engine, which embeds those two
+    circuit-identity strings in Element_Linker so SuperCircuit and the
+    audit tools can read them without a YAML round-trip.
+    """
     if elem is None:
         return False
     set_id = None
@@ -1061,6 +1069,9 @@ def _write_linker(elem, led, profile, target):
         if target.source in (SOURCE_LINKED_REVIT, SOURCE_HOST_MODEL)
         else None
     )
+    led_params = led.get("parameters") if isinstance(led, dict) else None
+    if not isinstance(led_params, dict):
+        led_params = {}
     payload = _el.ElementLinker(
         led_id=led.get("id"),
         set_id=set_id,
@@ -1073,11 +1084,143 @@ def _write_linker(elem, led, profile, target):
         facing=_element_facing(elem),
         host_name=target.name,
         parent_location_ft=list(target.world_pt),
+        ckt_circuit_number=_param_str(led_params, "CKT_Circuit Number_CEDT"),
+        ckt_panel=_param_str(led_params, "CKT_Panel_CEDT"),
     )
     try:
         _el_io.write_to_element(elem, payload)
         return True
     except _el_io.ElementLinkerIOError:
+        return False
+
+
+def _param_str(params, name):
+    if not isinstance(params, dict):
+        return None
+    value = params.get(name)
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        # parent / sibling directive — not a static value to embed
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+# Stamping-only keys: values mirroring Element_Linker bookkeeping or the
+# placed element's identity. Skipped during _apply_static_parameters so
+# we don't try to overwrite Revit's own ElementId / Level / Position
+# from the YAML capture.
+_STAMP_ONLY_PARAM_KEYS = frozenset({
+    "Element_Linker",
+    "Element_Linker Parameter",
+    "Linked Element Definition ID",
+    "Set Definition ID",
+    "Parent ElementId",
+    "Parent Element ID",
+    "Parent ID",
+    "Parent Rotation (deg)",
+    "Parent_location",
+    "Host Name",
+    "Location XYZ (ft)",
+    "Rotation (deg)",
+    "FacingOrientation",
+    "LevelId",
+    "Level Id",
+    "ElementId",
+    "Element ID",
+    "Element Id",
+})
+
+
+def _apply_static_parameters(elem, params_dict):
+    """Write LED-captured static parameters onto the placed instance.
+
+    Mirrors the legacy ``PlaceElementsEngine._apply_parameters``: walks
+    the YAML LED's ``parameters`` dict and sets each entry on the new
+    element via ``LookupParameter`` + a storage-type aware ``Set``.
+    Skips:
+
+      * Element_Linker bookkeeping keys (those are owned by ``_write_linker``).
+      * Parameters whose value is a directive dict (``BYPARENT(...)`` /
+        ``BYSIBLING(...)``) — those resolve at audit time, not now.
+      * Read-only parameters and missing parameters (no warning, just skip).
+
+    Returns ``(written, skipped)`` counts for callers that want to log.
+    """
+    if elem is None or not params_dict:
+        return 0, 0
+    written = 0
+    skipped = 0
+    for name, value in params_dict.items():
+        if not name or name in _STAMP_ONLY_PARAM_KEYS:
+            skipped += 1
+            continue
+        if isinstance(value, dict):
+            # parent / sibling directive — defer to audit-time wiring
+            skipped += 1
+            continue
+        try:
+            param = elem.LookupParameter(name)
+        except Exception:
+            param = None
+        if param is None:
+            skipped += 1
+            continue
+        try:
+            if param.IsReadOnly:
+                skipped += 1
+                continue
+        except Exception:
+            skipped += 1
+            continue
+        if value is None or value == "":
+            # Setting empty string clears the parameter; do nothing instead.
+            skipped += 1
+            continue
+        if _set_param_value(param, value):
+            written += 1
+        else:
+            skipped += 1
+    return written, skipped
+
+
+def _set_param_value(param, value):
+    """Best-effort ``Set`` honouring the parameter's StorageType.
+
+    Falls through string -> int -> float so we recover when the YAML
+    has ``"20"`` for an integer parameter. Returns True on success.
+    """
+    try:
+        storage = param.StorageType.ToString()
+    except Exception:
+        storage = ""
+    raw = str(value).strip() if not isinstance(value, (int, float)) else value
+    try:
+        if storage == "String":
+            return bool(param.Set(str(value)))
+        if storage == "Integer":
+            try:
+                return bool(param.Set(int(float(raw))))
+            except (TypeError, ValueError):
+                return False
+        if storage == "Double":
+            try:
+                return bool(param.Set(float(raw)))
+            except (TypeError, ValueError):
+                return False
+        # ElementId or unknown — try as string fallback.
+        try:
+            return bool(param.Set(str(value)))
+        except Exception:
+            return False
+    except Exception:
+        # Final fallback chain.
+        for caster in (str, int, float):
+            try:
+                return bool(param.Set(caster(value)))
+            except Exception:
+                continue
         return False
 
 
@@ -1178,6 +1321,16 @@ def execute_placement(doc, matches, options=None):
                         (led_id, status),
                         {"label": led_label, "info": info},
                     )
+                # Apply the LED's captured static parameters (CKT_*,
+                # Voltage_CED, Number of Poles_CED, Apparent Load
+                # Input_CED, etc.) to the new instance before stamping
+                # the Element_Linker so the linker write picks up the
+                # CKT_* fields fresh from the same source. Order matters:
+                # _apply_static_parameters must run before _write_linker.
+                written, _skipped = _apply_static_parameters(
+                    placed, led.get("parameters")
+                )
+                result.static_param_writes += written
                 if _write_linker(placed, led, m.profile, m.target):
                     result.element_linker_writes += 1
 

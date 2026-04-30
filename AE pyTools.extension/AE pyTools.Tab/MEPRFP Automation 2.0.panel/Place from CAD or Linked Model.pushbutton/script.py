@@ -63,12 +63,14 @@ def main():
             "**Placement run complete**\n\n"
             "- Fixtures placed: {}\n"
             "- Element_Linker writes: {}\n"
+            "- Static parameter writes: {}\n"
             "- Already-placed (skipped): {}\n"
             "- Normalized-name matches: {}\n"
             "- Type substitutions: {}\n"
             "- Warnings: {}\n".format(
                 result.placed_fixture_count,
                 result.element_linker_writes,
+                getattr(result, "static_param_writes", 0),
                 result.skipped_already_placed,
                 getattr(result, "normalized_match_count", 0),
                 getattr(result, "substituted_type_count", 0),

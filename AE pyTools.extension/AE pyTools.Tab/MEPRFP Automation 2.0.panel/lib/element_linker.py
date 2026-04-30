@@ -49,6 +49,8 @@ _FIELDS = (
     "facing",
     "host_name",
     "parent_location_ft",
+    "ckt_circuit_number",
+    "ckt_panel",
 )
 
 
@@ -68,6 +70,8 @@ _LEGACY_FIELD_MAP = {
     "FacingOrientation": "facing",
     "Host Name": "host_name",
     "Parent_location": "parent_location_ft",
+    "CKT_Circuit Number_CEDT": "ckt_circuit_number",
+    "CKT_Panel_CEDT": "ckt_panel",
 }
 
 _TUPLE_FIELDS = {"location_ft", "facing", "parent_location_ft"}
