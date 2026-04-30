@@ -26,11 +26,20 @@ from System.Windows.Forms import (
 )
 from System.Drawing import Point, Size
 from pyrevit import revit, DB, forms, script
+from Snippets import revit_helpers
 
 
 doc = revit.doc
 uidoc = revit.uidoc
 logger = script.get_logger()
+
+
+def _elid_value(item, default=0):
+    return revit_helpers.get_elementid_value(item, default=default)
+
+
+def _elid_from_value(value):
+    return revit_helpers.elementid_from_value(value)
 
 
 PIPE_CATEGORY_IDS = set()
@@ -57,6 +66,20 @@ for _name in ("OST_PipeFitting",):
         except Exception:
             pass
 
+ACCESSORY_CATEGORY_IDS = set()
+for _name in ("OST_PipeAccessory",):
+    try:
+        _bic = getattr(DB.BuiltInCategory, _name)
+    except Exception:
+        _bic = None
+    if _bic is not None:
+        try:
+            ACCESSORY_CATEGORY_IDS.add(int(_bic))
+        except Exception:
+            pass
+
+_UNCLASSIFIED_NODE_IDS_LOGGED = set()
+
 class _PipeSelectionFilter(ISelectionFilter):
     def AllowElement(self, elem):  # noqa: N802
         return _is_pipe_like(elem)
@@ -76,12 +99,12 @@ def _is_pipe_like(elem):
     if cat is None:
         return False
     try:
-        if cat.Id.IntegerValue in PIPE_CATEGORY_IDS:
+        if _elid_value(cat.Id) in PIPE_CATEGORY_IDS:
             return True
     except Exception:
         pass
     try:
-        if _is_pipe_fitting(elem):
+        if _is_pipe_connector_node(elem):
             return False
     except Exception:
         pass
@@ -104,9 +127,28 @@ def _is_pipe_fitting(elem):
     if cat is None:
         return False
     try:
-        return cat.Id.IntegerValue in FITTING_CATEGORY_IDS
+        return _elid_value(cat.Id) in FITTING_CATEGORY_IDS
     except Exception:
         return False
+
+
+def _is_pipe_accessory(elem):
+    if elem is None:
+        return False
+    try:
+        cat = elem.Category
+    except Exception:
+        cat = None
+    if cat is None:
+        return False
+    try:
+        return _elid_value(cat.Id) in ACCESSORY_CATEGORY_IDS
+    except Exception:
+        return False
+
+
+def _is_pipe_connector_node(elem):
+    return _is_pipe_fitting(elem) or _is_pipe_accessory(elem)
 
 
 BALL_VALVE_KEYWORDS = ("BALL VALVE", "BALLVALVE", "BALL-VALVE", "BALL_VALVE")
@@ -122,7 +164,7 @@ def _mechanical_equipment_ids_in_view(view):
     if view is None:
         return None
     try:
-        vid = view.Id.IntegerValue
+        vid = _elid_value(view.Id)
     except Exception:
         return None
     cached = _MECH_EQUIP_VIEW_CACHE.get(vid)
@@ -140,7 +182,7 @@ def _mechanical_equipment_ids_in_view(view):
     try:
         for elem in collector.WhereElementIsNotElementType():
             try:
-                ids.add(elem.Id.IntegerValue)
+                ids.add(_elid_value(elem.Id))
             except Exception:
                 continue
     except Exception:
@@ -349,7 +391,7 @@ def _branch_hits_underground(start_pipe, prev_id):
         curr, back = stack.pop()
         if curr is None:
             continue
-        cid = curr.Id.IntegerValue
+        cid = _elid_value(curr.Id)
         if cid in visited:
             continue
         visited.add(cid)
@@ -518,7 +560,7 @@ def _connection_point_to_prev(pipe, prev_id):
     if pipe is None or prev_id is None:
         return None
     fitting_ids = _fittings_connecting(pipe, prev_id)
-    for conn in _get_connectors(pipe):
+    for conn in _get_piping_connectors(pipe):
         if conn is None:
             continue
         try:
@@ -532,12 +574,12 @@ def _connection_point_to_prev(pipe, prev_id):
                 owner = None
             if owner is None:
                 continue
-            if _is_pipe_like(owner) and owner.Id.IntegerValue == prev_id:
+            if _is_pipe_like(owner) and _elid_value(owner.Id) == prev_id:
                 try:
                     return conn.Origin
                 except Exception:
                     return None
-            if _is_pipe_fitting(owner) and owner.Id.IntegerValue in fitting_ids:
+            if _is_pipe_connector_node(owner) and _elid_value(owner.Id) in fitting_ids:
                 try:
                     return conn.Origin
                 except Exception:
@@ -609,7 +651,7 @@ def _equipment_label_near_point_with_id(point, direction, view=None):
             best_label = label
             best_ff_removed = ff_removed
             try:
-                best_id = elem.Id.IntegerValue
+                best_id = _elid_value(elem.Id)
             except Exception:
                 best_id = None
     return best_label, best_id, best_ff_removed
@@ -659,7 +701,7 @@ def _equipment_label_from_valve_bbox_with_id(point, view=None):
             continue
         if (min_pt.X <= point.X <= max_pt.X) and (min_pt.Y <= point.Y <= max_pt.Y):
             try:
-                return label, elem.Id.IntegerValue, ff_removed
+                return label, _elid_value(elem.Id), ff_removed
             except Exception:
                 return label, None, ff_removed
     return None, None, False
@@ -749,7 +791,7 @@ def _equipment_label_for_terminal_with_id(pipe, view=None):
                 continue
             if mech_ids is not None:
                 try:
-                    if owner.Id.IntegerValue not in mech_ids:
+                    if _elid_value(owner.Id) not in mech_ids:
                         continue
                 except Exception:
                     continue
@@ -777,7 +819,7 @@ def _equipment_label_for_terminal_with_id(pipe, view=None):
                 best_label = label
                 best_ff_removed = ff_removed
                 try:
-                    best_id = owner.Id.IntegerValue
+                    best_id = _elid_value(owner.Id)
                 except Exception:
                     best_id = None
     if best_label:
@@ -794,7 +836,7 @@ def _is_inline_fitting(fitting):
     if fitting is None:
         return False
     try:
-        ccount = len(_get_connectors(fitting))
+        ccount = _count_piping_connectors(fitting)
     except Exception:
         ccount = None
     if ccount is None:
@@ -812,11 +854,11 @@ def _pipes_through_fitting(start_fitting, max_depth=4):
         fitting, depth = stack.pop()
         if fitting is None:
             continue
-        fid = fitting.Id.IntegerValue
+        fid = _elid_value(fitting.Id)
         if fid in visited:
             continue
         visited.add(fid)
-        for conn in _get_connectors(fitting):
+        for conn in _get_piping_connectors(fitting):
             if conn is None:
                 continue
             try:
@@ -831,8 +873,8 @@ def _pipes_through_fitting(start_fitting, max_depth=4):
                 if owner is None:
                     continue
                 if _is_pipe_like(owner):
-                    pipes[owner.Id.IntegerValue] = owner
-                elif _is_pipe_fitting(owner):
+                    pipes[_elid_value(owner.Id)] = owner
+                elif _is_pipe_connector_node(owner):
                     if depth + 1 > max_depth:
                         continue
                     if _is_inline_fitting(owner):
@@ -856,11 +898,11 @@ def _fitting_connected_pipes_any(fitting, max_depth=6):
         curr, depth = stack.pop()
         if curr is None:
             continue
-        fid = curr.Id.IntegerValue
+        fid = _elid_value(curr.Id)
         if fid in visited:
             continue
         visited.add(fid)
-        for conn in _get_connectors(curr):
+        for conn in _get_piping_connectors(curr):
             if conn is None:
                 continue
             try:
@@ -875,8 +917,8 @@ def _fitting_connected_pipes_any(fitting, max_depth=6):
                 if owner is None:
                     continue
                 if _is_pipe_like(owner):
-                    pipes[owner.Id.IntegerValue] = owner
-                elif _is_pipe_fitting(owner):
+                    pipes[_elid_value(owner.Id)] = owner
+                elif _is_pipe_connector_node(owner):
                     if depth + 1 > max_depth:
                         continue
                     stack.append((owner, depth + 1))
@@ -887,7 +929,7 @@ def _fittings_connecting(pipe, prev_id):
     if pipe is None or prev_id is None:
         return set()
     fittings = set()
-    for conn in _get_connectors(pipe):
+    for conn in _get_piping_connectors(pipe):
         if conn is None:
             continue
         try:
@@ -899,12 +941,12 @@ def _fittings_connecting(pipe, prev_id):
                 owner = ref.Owner
             except Exception:
                 owner = None
-            if owner is None or not _is_pipe_fitting(owner):
+            if owner is None or not _is_pipe_connector_node(owner):
                 continue
             pipes = _fitting_connected_pipes(owner)
             for p in pipes:
-                if p.Id.IntegerValue == prev_id:
-                    fittings.add(owner.Id.IntegerValue)
+                if _elid_value(p.Id) == prev_id:
+                    fittings.add(_elid_value(owner.Id))
                     break
     return fittings
 
@@ -912,7 +954,7 @@ def _fittings_connecting(pipe, prev_id):
 def _pipe_neighbors(pipe, prev_id=None):
     neighbors = {}
     ignore_fittings = _fittings_connecting(pipe, prev_id)
-    for conn in _get_connectors(pipe):
+    for conn in _get_piping_connectors(pipe):
         if conn is None:
             continue
         try:
@@ -927,7 +969,7 @@ def _pipe_neighbors(pipe, prev_id=None):
             if owner is None or owner.Id == pipe.Id:
                 continue
             if _is_pipe_like(owner):
-                pid = owner.Id.IntegerValue
+                pid = _elid_value(owner.Id)
                 if pid not in neighbors:
                     neighbors[pid] = {
                         "pipe": owner,
@@ -936,17 +978,30 @@ def _pipe_neighbors(pipe, prev_id=None):
                         "is_branch": False,
                     }
                 continue
-            if _is_pipe_fitting(owner):
-                fid = owner.Id.IntegerValue
+            if _is_pipe_connector_node(owner):
+                fid = _elid_value(owner.Id)
                 if fid in ignore_fittings:
                     continue
                 pipes = _fitting_connected_pipes(owner)
                 pipe_count = len(pipes)
+                if pipe_count == 0:
+                    try:
+                        cat = owner.Category
+                        cat_name = cat.Name if cat is not None else "None"
+                    except Exception:
+                        cat_name = "Unknown"
+                    logger.info(
+                        "Connector node {} [{}] returned no connected pipes (piping connectors={}).".format(
+                            fid,
+                            cat_name,
+                            _count_piping_connectors(owner),
+                        )
+                    )
                 is_branch = pipe_count >= 3
                 for p in pipes:
                     if p.Id == pipe.Id:
                         continue
-                    pid = p.Id.IntegerValue
+                    pid = _elid_value(p.Id)
                     entry = neighbors.get(pid)
                     if entry is None:
                         neighbors[pid] = {
@@ -960,6 +1015,29 @@ def _pipe_neighbors(pipe, prev_id=None):
                             entry["is_branch"] = True
                             entry["fitting_id"] = fid
                             entry["fitting"] = owner
+                continue
+            try:
+                oid = _elid_value(owner.Id)
+            except Exception:
+                oid = None
+            if oid is None or oid in _UNCLASSIFIED_NODE_IDS_LOGGED:
+                continue
+            piping_conn_count = _count_piping_connectors(owner)
+            if piping_conn_count <= 0:
+                continue
+            _UNCLASSIFIED_NODE_IDS_LOGGED.add(oid)
+            try:
+                cat = owner.Category
+                cat_name = cat.Name if cat is not None else "None"
+            except Exception:
+                cat_name = "Unknown"
+            logger.info(
+                "Unclassified node {} [{}] has {} piping connectors; not treated as fitting/accessory.".format(
+                    oid,
+                    cat_name,
+                    piping_conn_count,
+                )
+            )
     return list(neighbors.values())
 
 
@@ -986,6 +1064,37 @@ def _get_connectors(elem):
         return []
 
 
+def _is_piping_connector(conn):
+    if conn is None:
+        return False
+    try:
+        if conn.Domain != DB.Domain.DomainPiping:
+            return False
+    except Exception:
+        return False
+    try:
+        ctype_name = str(conn.ConnectorType).lower()
+    except Exception:
+        ctype_name = ""
+    if "logical" in ctype_name:
+        return False
+    if "reference" in ctype_name and "end" not in ctype_name and "curve" not in ctype_name:
+        return False
+    return True
+
+
+def _get_piping_connectors(elem):
+    conns = []
+    for conn in _get_connectors(elem):
+        if _is_piping_connector(conn):
+            conns.append(conn)
+    return conns
+
+
+def _count_piping_connectors(elem):
+    return len(_get_piping_connectors(elem))
+
+
 def _open_end_points(pipe):
     points = []
     if pipe is None:
@@ -1007,7 +1116,7 @@ def _open_end_points(pipe):
                 continue
             if _is_pipe_like(owner) and owner.Id != pipe.Id:
                 return False
-            if _is_pipe_fitting(owner):
+            if _is_pipe_connector_node(owner):
                 try:
                     pipes = _fitting_connected_pipes_any(owner)
                 except Exception:
@@ -1017,7 +1126,7 @@ def _open_end_points(pipe):
                         return False
         return True
 
-    for conn in _get_connectors(pipe):
+    for conn in _get_piping_connectors(pipe):
         if conn is None:
             continue
         if _connector_is_open(conn):
@@ -1049,7 +1158,7 @@ def _leaf_label_from_open_end(pipe, view):
 
 def _connected_pipes(pipe):
     neighbors = {}
-    for conn in _get_connectors(pipe):
+    for conn in _get_piping_connectors(pipe):
         if conn is None:
             continue
         try:
@@ -1064,9 +1173,9 @@ def _connected_pipes(pipe):
             if owner is None or owner.Id == pipe.Id:
                 continue
             if _is_pipe_like(owner):
-                neighbors[owner.Id.IntegerValue] = owner
+                neighbors[_elid_value(owner.Id)] = owner
                 continue
-            for oconn in _get_connectors(owner):
+            for oconn in _get_piping_connectors(owner):
                 if oconn is None:
                     continue
                 try:
@@ -1081,7 +1190,7 @@ def _connected_pipes(pipe):
                     if oowner is None or oowner.Id == pipe.Id:
                         continue
                     if _is_pipe_like(oowner):
-                        neighbors[oowner.Id.IntegerValue] = oowner
+                        neighbors[_elid_value(oowner.Id)] = oowner
     return list(neighbors.values())
 
 
@@ -1090,7 +1199,7 @@ def _choose_trunk(pipe, candidates):
         return None
     dir_curr = _pipe_direction_xy(pipe)
     if dir_curr is None:
-        return sorted(candidates, key=lambda x: x.Id.IntegerValue)[0]
+        return sorted(candidates, key=lambda x: _elid_value(x.Id))[0]
     best = None
     best_score = -1.0
     for cand in candidates:
@@ -1106,7 +1215,7 @@ def _choose_trunk(pipe, candidates):
             best = cand
             best_score = score
         elif score == best_score and best is not None:
-            if cand.Id.IntegerValue < best.Id.IntegerValue:
+            if _elid_value(cand.Id) < _elid_value(best.Id):
                 best = cand
     return best
 
@@ -1230,7 +1339,7 @@ def _equipment_label_for_pipe_with_id(pipe, view=None):
                 continue
             if mech_ids is not None:
                 try:
-                    if owner.Id.IntegerValue not in mech_ids:
+                    if _elid_value(owner.Id) not in mech_ids:
                         continue
                 except Exception:
                     continue
@@ -1238,7 +1347,7 @@ def _equipment_label_for_pipe_with_id(pipe, view=None):
             if mark:
                 label, ff_removed = _format_identity_mark_with_meta(mark)
                 try:
-                    return label, owner.Id.IntegerValue, ff_removed
+                    return label, _elid_value(owner.Id), ff_removed
                 except Exception:
                     return label, None, ff_removed
     return None, None, False
@@ -1533,13 +1642,23 @@ def _log_pipe_connections(label_map, pipe_map):
         if pipe is None:
             continue
         neighbors = _connected_pipes(pipe)
-        neighbor_ids = [n.Id.IntegerValue for n in neighbors]
+        neighbor_ids = [_elid_value(n.Id) for n in neighbors]
         logger.info("pipe {} label {} -> connected {}".format(pid, label_map.get(pid), neighbor_ids))
 
 
 def _fitting_kind(fitting):
     if fitting is None:
-        return "Fitting"
+        return "Connector Node"
+    if _is_pipe_accessory(fitting):
+        try:
+            ccount = _count_piping_connectors(fitting)
+            if ccount >= 3:
+                return "Accessory Branch"
+            if ccount == 2:
+                return "Accessory Pass-through"
+        except Exception:
+            pass
+        return "Accessory"
     try:
         pt = fitting.MEPModel.PartType
         if pt:
@@ -1564,7 +1683,7 @@ def _fitting_kind(fitting):
     if "union" in lname:
         return "Union"
     try:
-        ccount = len(_get_connectors(fitting))
+        ccount = _count_piping_connectors(fitting)
         if ccount >= 3:
             return "Tee"
         if ccount == 2:
@@ -1577,7 +1696,7 @@ def _fitting_kind(fitting):
 def _record_fitting_connections(pipe, fitting_map, fitting_objs):
     if pipe is None:
         return
-    for conn in _get_connectors(pipe):
+    for conn in _get_piping_connectors(pipe):
         if conn is None:
             continue
         try:
@@ -1591,11 +1710,11 @@ def _record_fitting_connections(pipe, fitting_map, fitting_objs):
                 owner = None
             if owner is None or owner.Id == pipe.Id:
                 continue
-            if _is_pipe_fitting(owner):
-                fid = owner.Id.IntegerValue
+            if _is_pipe_connector_node(owner):
+                fid = _elid_value(owner.Id)
                 if fid not in fitting_map:
                     fitting_map[fid] = set()
-                fitting_map[fid].add(pipe.Id.IntegerValue)
+                fitting_map[fid].add(_elid_value(pipe.Id))
                 fitting_objs[fid] = owner
 
 
@@ -1604,7 +1723,7 @@ def _pipe_direct_connection_summary(pipe, fitting_objs):
         return [], []
     pipe_ids = set()
     fitting_ids = set()
-    for conn in _get_connectors(pipe):
+    for conn in _get_piping_connectors(pipe):
         if conn is None:
             continue
         try:
@@ -1619,10 +1738,10 @@ def _pipe_direct_connection_summary(pipe, fitting_objs):
             if owner is None or owner.Id == pipe.Id:
                 continue
             if _is_pipe_like(owner):
-                pipe_ids.add(owner.Id.IntegerValue)
-            elif _is_pipe_fitting(owner):
-                fitting_ids.add(owner.Id.IntegerValue)
-                fitting_objs[owner.Id.IntegerValue] = owner
+                pipe_ids.add(_elid_value(owner.Id))
+            elif _is_pipe_connector_node(owner):
+                fitting_ids.add(_elid_value(owner.Id))
+                fitting_objs[_elid_value(owner.Id)] = owner
     return sorted(pipe_ids), sorted(fitting_ids)
 
 
@@ -1638,7 +1757,7 @@ def _log_traversal(root_label, order_list, label_map, pipe_map, fitting_map, fit
             kind = _fitting_kind(fitting_objs.get(fid))
             fittings.append("{}({})".format(fid, kind))
         logger.info(
-            "step {} pipe {} label {} -> pipes {} fittings {}".format(
+            "step {} pipe {} label {} -> pipes {} connector nodes {}".format(
                 idx,
                 pid,
                 label_map.get(pid),
@@ -1647,12 +1766,12 @@ def _log_traversal(root_label, order_list, label_map, pipe_map, fitting_map, fit
             )
         )
     if fitting_map:
-        logger.info("Name Piping Systems - Fitting connections for root {}".format(root_label))
+        logger.info("Name Piping Systems - Connector node connections for root {}".format(root_label))
         for fid in sorted(fitting_map.keys()):
             fitting = fitting_objs.get(fid)
             kind = _fitting_kind(fitting)
             pipes = sorted(fitting_map[fid])
-            logger.info("fitting {} ({}) -> pipes {}".format(fid, kind, pipes))
+            logger.info("node {} ({}) -> pipes {}".format(fid, kind, pipes))
 
 
 def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, view, used_valve_ids):
@@ -1670,7 +1789,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
         if pipe is None or not label:
             return
         try:
-            cid = pipe.Id.IntegerValue
+            cid = _elid_value(pipe.Id)
         except Exception:
             return
         identity_label_map[cid] = label
@@ -1690,7 +1809,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
             return False
         for fid in _fittings_connecting(pipe, prev_id):
             try:
-                fitting = doc.GetElement(DB.ElementId(fid))
+                fitting = doc.GetElement(_elid_from_value(fid))
             except Exception:
                 fitting = None
             if fitting is None:
@@ -1707,7 +1826,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
         if not _is_elbow_between(curr_pipe, prev_id):
             return False
         try:
-            prev_pipe = doc.GetElement(DB.ElementId(prev_id))
+            prev_pipe = doc.GetElement(_elid_from_value(prev_id))
         except Exception:
             prev_pipe = None
         if prev_pipe is None:
@@ -1731,7 +1850,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                 return None, None, None
             if not neighbors:
                 return None, None, None
-            back = curr.Id.IntegerValue
+            back = _elid_value(curr.Id)
             curr = neighbors[0]["pipe"]
         return None, None, None
 
@@ -1745,7 +1864,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
             curr, back = stack.pop()
             if curr is None:
                 continue
-            cid = curr.Id.IntegerValue
+            cid = _elid_value(curr.Id)
             if cid in visited_local:
                 continue
             visited_local.add(cid)
@@ -1777,7 +1896,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
             curr, back = stack.pop()
             if curr is None:
                 continue
-            cid = curr.Id.IntegerValue
+            cid = _elid_value(curr.Id)
             if cid in ids:
                 continue
             ids.add(cid)
@@ -1802,7 +1921,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
         back = prev_id
         path_ids = []
         while curr is not None:
-            cid = curr.Id.IntegerValue
+            cid = _elid_value(curr.Id)
             if cid in visited:
                 return False
             visited.add(cid)
@@ -1816,7 +1935,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
 
             is_leaf_marker = (
                 marker_pipe is not None
-                and cid == marker_pipe.Id.IntegerValue
+                and cid == _elid_value(marker_pipe.Id)
                 and marker_type == "leaf"
                 and marker_info
             )
@@ -1832,7 +1951,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                     leaf_label_ids.add(cid)
                     for pid in path_ids:
                         try:
-                            p = doc.GetElement(DB.ElementId(pid))
+                            p = doc.GetElement(_elid_from_value(pid))
                         except Exception:
                             p = None
                         if p is not None:
@@ -1863,7 +1982,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
 
     def walk_trunk(curr, label, prev_id):
         while curr is not None:
-            cid = curr.Id.IntegerValue
+            cid = _elid_value(curr.Id)
             if cid in visited:
                 return
             visited.add(cid)
@@ -1887,7 +2006,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                 branch_map = {}
                 for pipes in branch_groups.values():
                     for p in pipes:
-                        branch_map[p.Id.IntegerValue] = p
+                        branch_map[_elid_value(p.Id)] = p
                 branch_pipes = list(branch_map.values())
                 trunk_candidates = []
                 leaf_candidates = []
@@ -1897,7 +2016,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                     if _branch_hits_underground(n, cid):
                         logger.info(
                             "Underground branch: pipe {} from trunk {} forced to branch labeling".format(
-                                n.Id.IntegerValue,
+                                _elid_value(n.Id),
                                 cid,
                             )
                         )
@@ -1914,33 +2033,33 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                             base_labels.append(base)
                         if base_labels and len(base_labels) == len(leaves) and len(set(base_labels)) == 1:
                             collapse_label = base_labels[0]
-                            if n.Id.IntegerValue not in leaf_label_ids:
-                                label_map[n.Id.IntegerValue] = collapse_label
-                                pipe_map[n.Id.IntegerValue] = n
-                                suppress_label_ids.discard(n.Id.IntegerValue)
+                            if _elid_value(n.Id) not in leaf_label_ids:
+                                label_map[_elid_value(n.Id)] = collapse_label
+                                pipe_map[_elid_value(n.Id)] = n
+                                suppress_label_ids.discard(_elid_value(n.Id))
                                 if any(bool(l[3]) for l in leaves):
-                                    ff_removed_label_ids.add(n.Id.IntegerValue)
+                                    ff_removed_label_ids.add(_elid_value(n.Id))
                             _set_identity_for_pipe(n, collapse_label)
                             # Remove labels downstream and prevent further labeling on this branch.
                             branch_ids = _collect_branch_pipe_ids(n, cid)
                             for pid in branch_ids:
                                 try:
-                                    p = doc.GetElement(DB.ElementId(pid))
+                                    p = doc.GetElement(_elid_from_value(pid))
                                 except Exception:
                                     p = None
                                 if p is not None:
                                     _set_identity_for_pipe(p, collapse_label)
-                                if pid == n.Id.IntegerValue:
+                                if pid == _elid_value(n.Id):
                                     continue
                                 label_map.pop(pid, None)
                                 pipe_map.pop(pid, None)
                                 suppress_label_ids.add(pid)
                                 visited.add(pid)
                                 ff_removed_label_ids.discard(pid)
-                            collapsed_branches.add(n.Id.IntegerValue)
+                            collapsed_branches.add(_elid_value(n.Id))
                             logger.info(
                                 "Leaf collapse: branch pipe {} -> {} ({} leaves)".format(
-                                    n.Id.IntegerValue,
+                                    _elid_value(n.Id),
                                     collapse_label,
                                     len(leaves),
                                 )
@@ -1949,7 +2068,7 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                     marker_pipe, marker_type, marker_info = _find_branch_leaf_marker(n, cid)
                     if marker_pipe is not None and marker_info:
                         leaf_candidates.append(n)
-                        leaf_valves[n.Id.IntegerValue] = (marker_pipe, marker_type, marker_info)
+                        leaf_valves[_elid_value(n.Id)] = (marker_pipe, marker_type, marker_info)
                     else:
                         trunk_candidates.append(n)
 
@@ -1962,34 +2081,34 @@ def _traverse_and_label(start_pipe, start_label, label_map, pipe_map, valves, vi
                     trunk_branch = _choose_trunk(curr, trunk_candidates)
                     if trunk_branch is None:
                         trunk_branch = trunk_candidates[0]
-                    for n in sorted(trunk_candidates, key=lambda x: x.Id.IntegerValue):
-                        if n.Id.IntegerValue == trunk_branch.Id.IntegerValue:
+                    for n in sorted(trunk_candidates, key=lambda x: _elid_value(x.Id)):
+                        if _elid_value(n.Id) == _elid_value(trunk_branch.Id):
                             continue
                         walk_trunk(n, next_digit, cid)
                         next_digit = _process_label(_normalize_label_for_process(next_digit))[0]
                     walk_trunk(trunk_branch, next_num, cid)
-                    for leaf in sorted(leaf_candidates, key=lambda x: x.Id.IntegerValue):
-                        marker_pipe, marker_type, marker_info = leaf_valves.get(leaf.Id.IntegerValue, (None, None, None))
+                    for leaf in sorted(leaf_candidates, key=lambda x: _elid_value(x.Id)):
+                        marker_pipe, marker_type, marker_info = leaf_valves.get(_elid_value(leaf.Id), (None, None, None))
                         _walk_leaf_branch(leaf, cid, next_digit, marker_pipe, marker_type, marker_info)
                         next_digit = _process_label(_normalize_label_for_process(next_digit))[0]
                 elif len(trunk_candidates) == 1:
                     trunk_branch = trunk_candidates[0]
                     walk_trunk(trunk_branch, next_num, cid)
-                    for leaf in sorted(leaf_candidates, key=lambda x: x.Id.IntegerValue):
-                        marker_pipe, marker_type, marker_info = leaf_valves.get(leaf.Id.IntegerValue, (None, None, None))
+                    for leaf in sorted(leaf_candidates, key=lambda x: _elid_value(x.Id)):
+                        marker_pipe, marker_type, marker_info = leaf_valves.get(_elid_value(leaf.Id), (None, None, None))
                         _walk_leaf_branch(leaf, cid, next_digit, marker_pipe, marker_type, marker_info)
                         next_digit = _process_label(_normalize_label_for_process(next_digit))[0]
                 else:
                     first_leaf = None
-                    for leaf in sorted(leaf_candidates, key=lambda x: x.Id.IntegerValue):
+                    for leaf in sorted(leaf_candidates, key=lambda x: _elid_value(x.Id)):
                         if first_leaf is None:
                             first_leaf = leaf
                             branch_label = next_num
                         else:
                             branch_label = next_digit
-                        marker_pipe, marker_type, marker_info = leaf_valves.get(leaf.Id.IntegerValue, (None, None, None))
+                        marker_pipe, marker_type, marker_info = leaf_valves.get(_elid_value(leaf.Id), (None, None, None))
                         _walk_leaf_branch(leaf, cid, branch_label, marker_pipe, marker_type, marker_info)
-                        if first_leaf is not None and leaf.Id.IntegerValue != first_leaf.Id.IntegerValue:
+                        if first_leaf is not None and _elid_value(leaf.Id) != _elid_value(first_leaf.Id):
                             next_digit = _process_label(_normalize_label_for_process(next_digit))[0]
                 for n in linear_neighbors:
                     walk_trunk(n, label, cid)
@@ -2029,7 +2148,7 @@ def _collect_pipe_tree(root_pipe):
         if pipe is None:
             continue
         try:
-            pid = pipe.Id.IntegerValue
+            pid = _elid_value(pipe.Id)
         except Exception:
             continue
         if pid in tree_pipe_map:
@@ -2039,7 +2158,7 @@ def _collect_pipe_tree(root_pipe):
             if nbr is None:
                 continue
             try:
-                nid = nbr.Id.IntegerValue
+                nid = _elid_value(nbr.Id)
             except Exception:
                 continue
             if nid not in tree_pipe_map:
@@ -2065,7 +2184,7 @@ def _tagged_pipe_ids(tag):
             if not _is_pipe_like(elem):
                 continue
             try:
-                pipe_ids.add(elem.Id.IntegerValue)
+                pipe_ids.add(_elid_value(elem.Id))
             except Exception:
                 continue
     if pipe_ids:
@@ -2074,69 +2193,147 @@ def _tagged_pipe_ids(tag):
         eid = tag.TaggedLocalElementId
     except Exception:
         eid = None
-    if eid and getattr(eid, "IntegerValue", -1) > 0:
+    if _elid_value(eid, default=-1) > 0:
         try:
             elem = doc.GetElement(eid)
         except Exception:
             elem = None
         if _is_pipe_like(elem):
             try:
-                pipe_ids.add(elem.Id.IntegerValue)
+                pipe_ids.add(_elid_value(elem.Id))
             except Exception:
                 pass
     return pipe_ids
 
 
-def _collect_tagged_pipe_ids_in_view(view):
-    pipe_ids = set()
-    tag_collector = DB.FilteredElementCollector(doc, view.Id).OfClass(DB.IndependentTag).WhereElementIsNotElementType()
-    for tag in tag_collector:
-        pipe_ids.update(_tagged_pipe_ids(tag))
-    return pipe_ids
+def get_tag_type_id(tag):
+    if tag is None:
+        return None
+    try:
+        tid = tag.GetTypeId()
+    except Exception:
+        tid = None
+    if tid and tid != DB.ElementId.InvalidElementId:
+        return tid
+    return None
 
 
-def _delete_pipe_tags_for_pipe_set(target_pipe_ids, view):
-    scope_pipe_ids = set(target_pipe_ids or [])
+def tag_references_element(tag, element_id):
+    if tag is None:
+        return False
+    target_id = _elid_value(element_id, default=-1)
+    if target_id <= 0:
+        return False
+    try:
+        local_ids = tag.GetTaggedLocalElementIds()
+    except Exception:
+        local_ids = None
+    if local_ids:
+        for eid in local_ids:
+            if _elid_value(eid, default=-1) == target_id:
+                return True
+    try:
+        legacy_id = tag.TaggedLocalElementId
+    except Exception:
+        legacy_id = None
+    return _elid_value(legacy_id, default=-1) == target_id
+
+
+def is_matching_pipe_tag(tag, pipe_id, selected_tag_type_id):
+    if tag is None:
+        return False
+    selected_type_value = _elid_value(selected_tag_type_id, default=-1)
+    if selected_type_value <= 0:
+        return False
+    tag_type_value = _elid_value(get_tag_type_id(tag), default=-1)
+    if tag_type_value != selected_type_value:
+        return False
+    return tag_references_element(tag, pipe_id)
+
+
+def collect_matching_tags_for_pipes(doc_obj, view, pipe_ids, selected_tag_type_id):
+    scope_pipe_ids = set()
+    for pid in list(pipe_ids or []):
+        try:
+            pid_val = int(pid)
+        except Exception:
+            continue
+        if pid_val > 0:
+            scope_pipe_ids.add(pid_val)
     if not scope_pipe_ids:
-        return 0
+        return []
 
-    delete_ids = []
-    queued = set()
-    tag_collector = DB.FilteredElementCollector(doc, view.Id).OfClass(DB.IndependentTag).WhereElementIsNotElementType()
-    for tag in tag_collector:
+    selected_type_value = _elid_value(selected_tag_type_id, default=-1)
+    if selected_type_value <= 0:
+        return []
+
+    matching_tags = []
+    collector = DB.FilteredElementCollector(doc_obj, view.Id).OfClass(DB.IndependentTag).WhereElementIsNotElementType()
+    for tag in collector:
+        tag_type_value = _elid_value(get_tag_type_id(tag), default=-1)
+        if tag_type_value != selected_type_value:
+            continue
         tagged_pipe_ids = _tagged_pipe_ids(tag)
         if not tagged_pipe_ids:
             continue
-        # Delete only tags that are fully scoped to this run's pipes.
-        # This prevents deleting tags that also reference pipes on other roots.
-        if not tagged_pipe_ids.issubset(scope_pipe_ids):
-            continue
-        try:
-            iid = tag.Id.IntegerValue
-        except Exception:
-            continue
-        if iid in queued:
+        if tagged_pipe_ids.intersection(scope_pipe_ids):
+            matching_tags.append(tag)
+    return matching_tags
+
+
+def pipe_has_matching_tag(doc_obj, view, pipe_id, selected_tag_type_id):
+    matches = collect_matching_tags_for_pipes(doc_obj, view, [pipe_id], selected_tag_type_id)
+    return bool(matches)
+
+
+def _collect_matching_pipe_ids_from_tags(tags, scope_pipe_ids):
+    scope = set(scope_pipe_ids or [])
+    matched = set()
+    for tag in list(tags or []):
+        for pid in _tagged_pipe_ids(tag):
+            if pid in scope:
+                matched.add(pid)
+    return matched
+
+
+def _delete_matching_pipe_tags_for_pipe_set(target_pipe_ids, view, selected_tag_type_id):
+    matching_tags = collect_matching_tags_for_pipes(doc, view, target_pipe_ids, selected_tag_type_id)
+    if not matching_tags:
+        return 0
+    delete_ids = []
+    queued = set()
+    for tag in matching_tags:
+        iid = _elid_value(getattr(tag, "Id", None), default=-1)
+        if iid <= 0 or iid in queued:
             continue
         queued.add(iid)
         delete_ids.append(tag.Id)
-
     if delete_ids:
-        with revit.Transaction("Name Piping Systems - Delete Existing Tree Tags"):
+        with revit.Transaction("Name Piping Systems - Delete Matching Pipe Tags"):
             doc.Delete(List[DB.ElementId](delete_ids))
     return len(delete_ids)
 
 
-def _set_fixed_label_for_maps(label_map, identity_label_map, fixed_label):
-    if not fixed_label:
-        return
-    for pid in list(label_map.keys()):
-        label_map[pid] = fixed_label
-    for pid in list(identity_label_map.keys()):
-        identity_label_map[pid] = fixed_label
+IDENTITY_MODE_DO_NOT_UPDATE = "Do Not Update Identity Marks"
+IDENTITY_MODE_FILL_BLANK = "Fill Blank Identity Marks Only"
+IDENTITY_MODE_REWRITE_ALL = "Rewrite All Identity Marks"
+
+TAG_MODE_DO_NOT_ADD = "Do Not Add Tags"
+TAG_MODE_TAG_UNTAGGED = "Tag Untagged Pipes Only"
+TAG_MODE_REMOVE_AND_RETAG = "Remove Matching Tags and Retag"
 
 
 def _prompt_naming_options():
-    apply_modes = ["Redo Tags + Identity Marks", "Add New Tags Only"]
+    identity_modes = [
+        IDENTITY_MODE_DO_NOT_UPDATE,
+        IDENTITY_MODE_FILL_BLANK,
+        IDENTITY_MODE_REWRITE_ALL,
+    ]
+    tag_modes = [
+        TAG_MODE_DO_NOT_ADD,
+        TAG_MODE_TAG_UNTAGGED,
+        TAG_MODE_REMOVE_AND_RETAG,
+    ]
     tag_types = _pipe_tag_types()
     if not tag_types:
         forms.alert("No pipe tag types found in this project.", exitscript=True)
@@ -2145,38 +2342,54 @@ def _prompt_naming_options():
     form = Form()
     form.Text = "Name Piping Systems"
     form.Width = 760
-    form.Height = 420
+    form.Height = 455
     form.StartPosition = FormStartPosition.CenterScreen
     form.FormBorderStyle = FormBorderStyle.Sizable
     form.MaximizeBox = True
     form.MinimizeBox = True
-    form.MinimumSize = Size(620, 420)
+    form.MinimumSize = Size(620, 455)
 
-    lbl_apply_mode = Label()
-    lbl_apply_mode.Text = "Tag Update Mode:"
-    lbl_apply_mode.Location = Point(15, 18)
-    lbl_apply_mode.Size = Size(150, 20)
-    form.Controls.Add(lbl_apply_mode)
+    lbl_identity_mode = Label()
+    lbl_identity_mode.Text = "Identity Mode:"
+    lbl_identity_mode.Location = Point(15, 18)
+    lbl_identity_mode.Size = Size(150, 20)
+    form.Controls.Add(lbl_identity_mode)
 
-    cmb_apply_mode = ComboBox()
-    cmb_apply_mode.DropDownStyle = ComboBoxStyle.DropDownList
-    cmb_apply_mode.Location = Point(180, 15)
-    cmb_apply_mode.Size = Size(560, 22)
-    cmb_apply_mode.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-    for item in apply_modes:
-        cmb_apply_mode.Items.Add(item)
-    cmb_apply_mode.SelectedIndex = 0
-    form.Controls.Add(cmb_apply_mode)
+    cmb_identity_mode = ComboBox()
+    cmb_identity_mode.DropDownStyle = ComboBoxStyle.DropDownList
+    cmb_identity_mode.Location = Point(180, 15)
+    cmb_identity_mode.Size = Size(560, 22)
+    cmb_identity_mode.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+    for item in identity_modes:
+        cmb_identity_mode.Items.Add(item)
+    cmb_identity_mode.SelectedIndex = 2
+    form.Controls.Add(cmb_identity_mode)
+
+    lbl_tag_mode = Label()
+    lbl_tag_mode.Text = "Tag Mode:"
+    lbl_tag_mode.Location = Point(15, 53)
+    lbl_tag_mode.Size = Size(150, 20)
+    form.Controls.Add(lbl_tag_mode)
+
+    cmb_tag_mode = ComboBox()
+    cmb_tag_mode.DropDownStyle = ComboBoxStyle.DropDownList
+    cmb_tag_mode.Location = Point(180, 50)
+    cmb_tag_mode.Size = Size(560, 22)
+    cmb_tag_mode.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+    for item in tag_modes:
+        cmb_tag_mode.Items.Add(item)
+    cmb_tag_mode.SelectedIndex = 2
+    form.Controls.Add(cmb_tag_mode)
 
     lbl_tag_type = Label()
     lbl_tag_type.Text = "Tag Family Type:"
-    lbl_tag_type.Location = Point(15, 53)
+    lbl_tag_type.Location = Point(15, 88)
     lbl_tag_type.Size = Size(150, 20)
     form.Controls.Add(lbl_tag_type)
 
     cmb_tag_type = ComboBox()
     cmb_tag_type.DropDownStyle = ComboBoxStyle.DropDownList
-    cmb_tag_type.Location = Point(180, 50)
+    cmb_tag_type.Location = Point(180, 85)
     cmb_tag_type.Size = Size(560, 22)
     cmb_tag_type.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
     cmb_tag_type.DropDownWidth = 1000
@@ -2187,12 +2400,12 @@ def _prompt_naming_options():
 
     lbl_number = Label()
     lbl_number.Text = "Pipe Number:"
-    lbl_number.Location = Point(15, 88)
+    lbl_number.Location = Point(15, 123)
     lbl_number.Size = Size(150, 20)
     form.Controls.Add(lbl_number)
 
     txt_number = TextBox()
-    txt_number.Location = Point(180, 85)
+    txt_number.Location = Point(180, 120)
     txt_number.Size = Size(560, 22)
     txt_number.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
     txt_number.Text = "1"
@@ -2201,12 +2414,12 @@ def _prompt_naming_options():
 
     lbl_letter = Label()
     lbl_letter.Text = "Suffix Letter:"
-    lbl_letter.Location = Point(15, 123)
+    lbl_letter.Location = Point(15, 158)
     lbl_letter.Size = Size(150, 20)
     form.Controls.Add(lbl_letter)
 
     txt_letter = TextBox()
-    txt_letter.Location = Point(180, 120)
+    txt_letter.Location = Point(180, 155)
     txt_letter.Size = Size(560, 22)
     txt_letter.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
     txt_letter.Text = "A"
@@ -2215,27 +2428,27 @@ def _prompt_naming_options():
 
     lbl_positions = Label()
     lbl_positions.Text = "Label Placement (Toggle):"
-    lbl_positions.Location = Point(15, 161)
+    lbl_positions.Location = Point(15, 196)
     lbl_positions.Size = Size(200, 20)
     form.Controls.Add(lbl_positions)
 
     chk_beginning = CheckBox()
     chk_beginning.Text = "Beginning"
-    chk_beginning.Location = Point(35, 186)
+    chk_beginning.Location = Point(35, 221)
     chk_beginning.Size = Size(110, 24)
     chk_beginning.Checked = False
     form.Controls.Add(chk_beginning)
 
     chk_middle = CheckBox()
     chk_middle.Text = "Middle"
-    chk_middle.Location = Point(35, 211)
+    chk_middle.Location = Point(35, 246)
     chk_middle.Size = Size(110, 24)
     chk_middle.Checked = True
     form.Controls.Add(chk_middle)
 
     chk_end = CheckBox()
     chk_end.Text = "End"
-    chk_end.Location = Point(35, 236)
+    chk_end.Location = Point(35, 271)
     chk_end.Size = Size(110, 24)
     chk_end.Checked = False
     form.Controls.Add(chk_end)
@@ -2263,7 +2476,8 @@ def _prompt_naming_options():
     if result != DialogResult.OK:
         return None
 
-    apply_mode = str(cmb_apply_mode.SelectedItem)
+    identity_mode = str(cmb_identity_mode.SelectedItem)
+    tag_mode = str(cmb_tag_mode.SelectedItem)
     suffix_letter = (txt_letter.Text or "").strip().upper()
     if len(suffix_letter) != 1 or not suffix_letter.isalpha():
         forms.alert("Suffix Letter must be exactly one letter (A-Z).", exitscript=True)
@@ -2290,7 +2504,8 @@ def _prompt_naming_options():
         forms.alert("Select a tag family type.", exitscript=True)
 
     return {
-        "apply_mode": apply_mode,
+        "identity_mode": identity_mode,
+        "tag_mode": tag_mode,
         "tag_type": tag_types[tag_type_idx],
         "suffix_letter": suffix_letter,
         "pipe_number": pipe_number,
@@ -2321,7 +2536,7 @@ def _prompt_root_pipe():
         except Exception:
             pass
         confirmed = forms.alert(
-            "Use pipe ID {} as the root pipe?".format(elem.Id.IntegerValue),
+            "Use pipe ID {} as the root pipe?".format(_elid_value(elem.Id)),
             title="Confirm Root Pipe",
             ok=False,
             yes=True,
@@ -2345,7 +2560,8 @@ def main():
     if root_pipe is None:
         forms.alert("No root pipe selected.", exitscript=True)
 
-    apply_mode = options["apply_mode"]
+    identity_mode = options["identity_mode"]
+    tag_mode = options["tag_mode"]
     tag_type = options["tag_type"]
     suffix_letter = options["suffix_letter"]
     pipe_number = options["pipe_number"]
@@ -2406,38 +2622,57 @@ def main():
     if not label_map:
         forms.alert("All candidate labels were removed by FF cleanup.", exitscript=True)
 
-    deleted_existing_tags = 0
+    if identity_mode == IDENTITY_MODE_REWRITE_ALL:
+        marks_set = _set_identity_marks(identity_label_map, identity_pipe_map, overwrite_existing=True)
+    elif identity_mode == IDENTITY_MODE_FILL_BLANK:
+        marks_set = _set_identity_marks(identity_label_map, identity_pipe_map, overwrite_existing=False)
+    else:
+        marks_set = 0
+
+    deleted_matching_tags = 0
+    tag_count = 0
     tag_target_ids = None
-    if apply_mode == "Redo Tags + Identity Marks":
+
+    if tag_mode == TAG_MODE_DO_NOT_ADD:
+        tag_count = 0
+    elif tag_mode == TAG_MODE_TAG_UNTAGGED:
+        candidate_pipe_ids = set(label_map.keys())
+        matching_tags = collect_matching_tags_for_pipes(doc, active_view, candidate_pipe_ids, tag_type.Id)
+        matching_pipe_ids = _collect_matching_pipe_ids_from_tags(matching_tags, candidate_pipe_ids)
+        tag_target_ids = candidate_pipe_ids - matching_pipe_ids
+        tag_count = _place_pipe_tags(
+            label_map,
+            pipe_map,
+            tag_type,
+            active_view,
+            label_positions=label_positions,
+            target_pipe_ids=tag_target_ids,
+            suppress_ids=suppress_label_ids,
+        )
+    else:
         delete_scope_ids = set(label_map.keys())
         delete_scope_ids.update(suppress_label_ids)
-        deleted_existing_tags = _delete_pipe_tags_for_pipe_set(delete_scope_ids, active_view)
-        marks_set = _set_identity_marks(identity_label_map, identity_pipe_map, overwrite_existing=True)
-    else:
-        _set_fixed_label_for_maps(label_map, identity_label_map, start_label)
-        marks_set = _set_identity_marks(identity_label_map, identity_pipe_map, overwrite_existing=False)
-        existing_tagged_ids = _collect_tagged_pipe_ids_in_view(active_view)
-        tag_target_ids = set(label_map.keys()) - existing_tagged_ids
-
-    tag_count = _place_pipe_tags(
-        label_map,
-        pipe_map,
-        tag_type,
-        active_view,
-        label_positions=label_positions,
-        target_pipe_ids=tag_target_ids,
-        suppress_ids=suppress_label_ids,
-    )
+        deleted_matching_tags = _delete_matching_pipe_tags_for_pipe_set(delete_scope_ids, active_view, tag_type.Id)
+        tag_count = _place_pipe_tags(
+            label_map,
+            pipe_map,
+            tag_type,
+            active_view,
+            label_positions=label_positions,
+            target_pipe_ids=None,
+            suppress_ids=suppress_label_ids,
+        )
 
     forms.alert(
-        "Applied {} identity mark(s). Placed {} tag(s). Existing tags removed: {}. Mode: {}.".format(
+        "Applied {} identity mark(s). Placed {} tag(s). Matching tags removed: {}. Identity Mode: {}. Tag Mode: {}.".format(
             marks_set,
             tag_count,
-            deleted_existing_tags,
-            apply_mode,
+            deleted_matching_tags,
+            identity_mode,
+            tag_mode,
         )
     )
 
-
 if __name__ == "__main__":
     main()
+
