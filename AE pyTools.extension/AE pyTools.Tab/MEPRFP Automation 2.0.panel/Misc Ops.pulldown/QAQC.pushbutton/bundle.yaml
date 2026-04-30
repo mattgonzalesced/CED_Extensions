@@ -1,0 +1,9 @@
+title: QAQC
+tooltip: |
+  Audit profile / placement health across seven categories
+  (orphan profiles, unplaced parents, missing parents, far-from-parent,
+  ID discrepancies, parent type changes, and host-name mismatches).
+  Findings show inline; per-row Select / Zoom / Fix buttons act on the
+  doc directly. Refresh re-audits in place — the window stays open
+  until you Close it.
+is_beta: false

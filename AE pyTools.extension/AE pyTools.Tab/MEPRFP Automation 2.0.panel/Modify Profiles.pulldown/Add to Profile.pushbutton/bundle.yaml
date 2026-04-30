@@ -1,0 +1,6 @@
+title: Add to Profile
+tooltip: |
+  Append children to an existing profile.
+  Pick the target profile, then pick the additional child elements.
+  Optionally define BYPARENT / BYSIBLING parameter directives.
+is_beta: false

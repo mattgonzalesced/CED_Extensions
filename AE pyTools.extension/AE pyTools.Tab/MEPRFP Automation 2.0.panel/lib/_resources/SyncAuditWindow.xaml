@@ -1,0 +1,65 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Check Synced Relationships (MEPRFP 2.0)"
+        Width="1180" Height="720"
+        WindowStartupLocation="CenterScreen">
+  <Grid Margin="12">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <DockPanel Grid.Row="0" Margin="0,0,0,8">
+      <TextBlock DockPanel.Dock="Left" FontWeight="Bold" VerticalAlignment="Center"
+                 Text="Synced-relationship audit"/>
+      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+        <Button x:Name="RefreshButton" Content="Refresh" Width="100" Margin="0,0,8,0"/>
+        <ComboBox x:Name="BulkActionCombo" Width="180" Margin="0,0,8,0">
+          <ComboBoxItem Content="Bulk action..." IsSelected="True"/>
+          <ComboBoxItem Content="Set all: Update child"/>
+          <ComboBoxItem Content="Set all: Update parent"/>
+          <ComboBoxItem Content="Set all: Skip"/>
+        </ComboBox>
+      </StackPanel>
+      <TextBlock x:Name="SummaryLabel" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="Gray"/>
+    </DockPanel>
+
+    <!-- Conflict tree on the left, comparison detail on the right -->
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="3*"/>
+        <ColumnDefinition Width="2*"/>
+      </Grid.ColumnDefinitions>
+
+      <TreeView x:Name="ConflictTree" Grid.Column="0" Margin="0,0,4,0">
+        <TreeView.Resources>
+          <Style TargetType="TreeViewItem">
+            <Setter Property="IsExpanded" Value="True"/>
+          </Style>
+        </TreeView.Resources>
+      </TreeView>
+
+      <DockPanel Grid.Column="1" Margin="4,0,0,0">
+        <TextBlock DockPanel.Dock="Top" FontWeight="Bold"
+                   Text="Conflict detail"
+                   ToolTip="Click a conflict in the tree to see the parameter comparison."/>
+        <TextBox x:Name="DetailBox"
+                 Margin="0,4,0,0"
+                 IsReadOnly="True"
+                 AcceptsReturn="True"
+                 TextWrapping="NoWrap"
+                 FontFamily="Consolas"
+                 FontSize="11"
+                 Background="#FAFAFA"
+                 VerticalScrollBarVisibility="Auto"
+                 HorizontalScrollBarVisibility="Auto"/>
+      </DockPanel>
+    </Grid>
+
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+      <Button x:Name="ApplyButton" Content="Apply selected actions" Width="180" Margin="0,0,8,0" IsDefault="True"/>
+      <Button x:Name="CloseButton" Content="Close" Width="100" IsCancel="True"/>
+    </StackPanel>
+  </Grid>
+</Window>

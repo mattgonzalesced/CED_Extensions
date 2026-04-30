@@ -1,0 +1,5 @@
+title: Manage Profiles
+tooltip: |
+  Browse, edit, and delete equipment profiles in the active store.
+  Edits affect parent_filter, parameters, offsets, and structural fields.
+is_beta: false

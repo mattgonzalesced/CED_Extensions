@@ -1,0 +1,130 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Place from CAD or Linked Model (MEPRFP 2.0)"
+        Width="1180" Height="780"
+        WindowStartupLocation="CenterScreen">
+  <Window.Resources>
+    <!-- ListBoxItem template that renders the row as a checkbox bound
+         to the item's IsSelected state. Clicking the checkbox toggles
+         selection; the underlying SelectedItems collection keeps working. -->
+    <Style x:Key="CheckListBoxItem" TargetType="ListBoxItem">
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Border Background="Transparent" Padding="2">
+              <CheckBox IsChecked="{Binding IsSelected,
+                                            RelativeSource={RelativeSource TemplatedParent},
+                                            Mode=TwoWay}"
+                        VerticalContentAlignment="Center">
+                <ContentPresenter VerticalAlignment="Center"/>
+              </CheckBox>
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
+  <Grid Margin="12">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- Source selection -->
+    <GroupBox Grid.Row="0" Header="Source" Margin="0,0,0,8" Padding="8">
+      <StackPanel Orientation="Vertical">
+        <StackPanel Orientation="Horizontal">
+          <RadioButton x:Name="SrcHostRadio" Content="Host model (active doc)"
+                       Margin="0,0,16,0" IsChecked="True" GroupName="Source"/>
+          <RadioButton x:Name="SrcLinkedRevitRadio" Content="Linked Revit model"
+                       Margin="0,0,16,0" GroupName="Source"/>
+          <RadioButton x:Name="SrcCsvRadio" Content="CSV (rebased coordinates)"
+                       Margin="0,0,16,0" GroupName="Source"/>
+          <RadioButton x:Name="SrcDwgRadio" Content="DWG link (best-effort)"
+                       Margin="0,0,16,0" GroupName="Source"/>
+        </StackPanel>
+        <Grid Margin="0,8,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock Grid.Column="0" x:Name="SrcLabel" Text="Linked model:"
+                     VerticalAlignment="Center" Margin="0,0,8,0"/>
+          <ComboBox Grid.Column="1" x:Name="SrcCombo"/>
+          <Button   Grid.Column="2" x:Name="SrcBrowseButton" Content="Browse..."
+                    Margin="8,0,0,0" Padding="8,2" Visibility="Collapsed"/>
+        </Grid>
+      </StackPanel>
+    </GroupBox>
+
+    <!-- Filters -->
+    <GroupBox Grid.Row="1" Header="Filters" Margin="0,0,0,8" Padding="8">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <DockPanel Grid.Column="0" Margin="0,0,4,0">
+          <TextBlock DockPanel.Dock="Top"
+                     Text="By LED category (any profile containing an LED of a checked category is included — all of that profile's LEDs are placed)"
+                     TextWrapping="Wrap"/>
+          <ListBox x:Name="CategoryList" Height="120"
+                   SelectionMode="Multiple"
+                   ItemContainerStyle="{StaticResource CheckListBoxItem}"/>
+        </DockPanel>
+        <DockPanel Grid.Column="1" Margin="4,0,0,0">
+          <TextBlock DockPanel.Dock="Top"
+                     Text="By profile name (check to include — leave all unchecked to include all)"/>
+          <TextBox  DockPanel.Dock="Top" x:Name="ProfileSearchBox"
+                    Margin="0,4,0,4" Padding="2"
+                    ToolTip="Filter profiles by name (case-insensitive substring)"/>
+          <ListBox x:Name="ProfileList" Height="120"
+                   SelectionMode="Multiple"
+                   ItemContainerStyle="{StaticResource CheckListBoxItem}"/>
+        </DockPanel>
+      </Grid>
+    </GroupBox>
+
+    <!-- Match preview + actions -->
+    <GroupBox Grid.Row="2" Header="Match preview" Padding="8">
+      <DockPanel>
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+          <StackPanel DockPanel.Dock="Left" Orientation="Vertical" VerticalAlignment="Center">
+            <CheckBox x:Name="SkipPlacedCheck"
+                      Content="Skip targets already placed"
+                      IsChecked="True"/>
+            <CheckBox x:Name="OneProfilePerTargetCheck"
+                      Content="One profile per target (avoid duplicate placements)"
+                      IsChecked="True" Margin="0,4,0,0"
+                      ToolTip="If multiple profiles match a single target anchor, keep only the best one — prefers exact family_name_pattern match, then highest LED count. Recommended for legacy data with duplicate profiles."/>
+            <CheckBox x:Name="AllowTypeSubCheck"
+                      Content="Allow type substitution if exact type is missing"
+                      IsChecked="False" Margin="0,4,0,0"
+                      ToolTip="If the family is loaded but the exact type isn't, fall back to the first available type from that family."/>
+          </StackPanel>
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="MatchButton" Content="Match" Width="100" Margin="0,0,8,0"/>
+            <Button x:Name="UncheckAllButton" Content="Uncheck all" Width="100" Margin="0,0,8,0"/>
+            <Button x:Name="CheckAllButton" Content="Check all" Width="100"/>
+          </StackPanel>
+          <TextBlock/>
+        </DockPanel>
+        <TextBlock DockPanel.Dock="Top" x:Name="SummaryLabel"
+                   Margin="0,0,0,6" Foreground="Gray"/>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel x:Name="MatchRowsPanel"/>
+        </ScrollViewer>
+      </DockPanel>
+    </GroupBox>
+
+    <!-- Buttons -->
+    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+      <TextBlock x:Name="StatusLabel" VerticalAlignment="Center" Margin="0,0,16,0" Foreground="Gray"/>
+      <Button x:Name="PlaceButton" Content="Place checked matches" Width="200" Margin="0,0,8,0" IsEnabled="False"/>
+      <Button x:Name="CloseButton" Content="Close" Width="100" IsCancel="True"/>
+    </StackPanel>
+  </Grid>
+</Window>

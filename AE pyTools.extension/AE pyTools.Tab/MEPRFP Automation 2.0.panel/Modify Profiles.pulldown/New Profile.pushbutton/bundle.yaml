@@ -1,0 +1,6 @@
+title: New Profile
+tooltip: |
+  Capture a new equipment profile.
+  Pick a parent element (host or linked), name the profile, then pick child elements.
+  Optionally define BYPARENT / BYSIBLING parameter directives before commit.
+is_beta: false

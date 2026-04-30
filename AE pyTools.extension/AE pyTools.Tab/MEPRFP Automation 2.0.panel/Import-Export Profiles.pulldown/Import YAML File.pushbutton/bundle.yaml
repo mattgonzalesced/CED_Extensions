@@ -1,0 +1,7 @@
+title: Import YAML File
+tooltip: |
+  Import an equipment-definition YAML into the MEPRFP 2.0 active store.
+  Validates schema_version, then writes the canonicalized payload into a
+  fresh Extensible Storage schema that is independent of the original
+  MEP Automation panel.
+is_beta: false

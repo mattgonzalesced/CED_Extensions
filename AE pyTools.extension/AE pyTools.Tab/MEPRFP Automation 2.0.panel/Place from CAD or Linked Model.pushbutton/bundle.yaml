@@ -1,0 +1,8 @@
+title: "Place from CAD\nor Linked\nModel"
+tooltip: |
+  Bulk-place equipment profiles into the active document.
+  Three sources: a linked Revit model, a CSV of rebased coordinates,
+  or a DWG link (best-effort).
+  Filter the profile pool by category and / or profile name; review the
+  per-target match list; place checked rows in one transaction.
+is_beta: false

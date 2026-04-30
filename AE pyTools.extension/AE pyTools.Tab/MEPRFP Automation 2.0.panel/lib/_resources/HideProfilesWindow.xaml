@@ -1,0 +1,67 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Hide Existing Profiles (MEPRFP 2.0)"
+        Width="980" Height="640"
+        WindowStartupLocation="CenterScreen">
+  <Window.Resources>
+    <Style x:Key="CheckListBoxItem" TargetType="ListBoxItem">
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Border Background="Transparent" Padding="2">
+              <CheckBox IsChecked="{Binding IsSelected,
+                                            RelativeSource={RelativeSource TemplatedParent},
+                                            Mode=TwoWay}"
+                        VerticalContentAlignment="Center">
+                <ContentPresenter VerticalAlignment="Center"/>
+              </CheckBox>
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
+  <Grid Margin="12">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <TextBlock Grid.Row="0" Margin="0,0,0,8" TextWrapping="Wrap">
+      Choose which profiles' linked-model elements to hide. The active view
+      will be duplicated; the matched elements will be hidden in the duplicate.
+      Switch back to the original view (or close the duplicate) to restore
+      visibility.
+    </TextBlock>
+
+    <GroupBox Grid.Row="1" Header="Filters (leave empty = include all)" Padding="8">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <DockPanel Grid.Column="0" Margin="0,0,4,0">
+          <TextBlock DockPanel.Dock="Top" Text="By category"/>
+          <ListBox x:Name="CategoryList"
+                   SelectionMode="Multiple"
+                   ItemContainerStyle="{StaticResource CheckListBoxItem}"/>
+        </DockPanel>
+        <DockPanel Grid.Column="1" Margin="4,0,0,0">
+          <TextBlock DockPanel.Dock="Top" Text="By profile name"/>
+          <ListBox x:Name="ProfileList"
+                   SelectionMode="Multiple"
+                   ItemContainerStyle="{StaticResource CheckListBoxItem}"/>
+        </DockPanel>
+      </Grid>
+    </GroupBox>
+
+    <TextBlock Grid.Row="2" x:Name="StatusLabel" Margin="0,8,0,0" Foreground="Gray"/>
+
+    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+      <Button x:Name="HideButton" Content="Duplicate view + hide" Width="200" Margin="0,0,8,0" IsDefault="True"/>
+      <Button x:Name="CloseButton" Content="Close" Width="100" IsCancel="True"/>
+    </StackPanel>
+  </Grid>
+</Window>

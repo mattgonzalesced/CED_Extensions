@@ -1,0 +1,7 @@
+title: Unmerge Profile
+tooltip: |
+  Remove an alias from a profile's merged_aliases list. The list shows
+  every alias across the active store as `source.name (id)  ->  alias`.
+  Pick one to detach it. The alias string itself is just removed from
+  the source's list — no other profile changes.
+is_beta: false

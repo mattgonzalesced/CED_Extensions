@@ -1,0 +1,8 @@
+title: "Hide Existing\nProfiles"
+tooltip: |
+  Duplicate the active view and hide every linked-model element whose
+  family name matches one of the chosen profiles. The duplicate is
+  named 'MEPRFP Hidden <view> (<timestamp>)' and the active view is
+  switched to the duplicate. Close the duplicate (or switch back) to
+  restore the original visibility.
+is_beta: false

@@ -1,0 +1,8 @@
+title: "Place\nElement\nAnnotations"
+tooltip: |
+  Place tags, keynote symbols, and text notes for placed fixtures in
+  the active view. Each placed fixture's Element_Linker payload points
+  back to its LED in the active YAML; this tool walks every annotation
+  defined under that LED and creates the corresponding tag / keynote /
+  text-note element relative to the fixture's current pose.
+is_beta: false

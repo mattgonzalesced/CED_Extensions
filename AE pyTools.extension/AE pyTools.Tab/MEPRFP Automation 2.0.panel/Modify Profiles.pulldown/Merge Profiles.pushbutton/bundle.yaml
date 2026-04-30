@@ -1,0 +1,7 @@
+title: Merge Profiles
+tooltip: |
+  Pick a source profile, then check one or more targets. Each target
+  inherits the source's structure (parent_filter, linked_sets, parameters,
+  flags) with renumbered SET / LED / ANN ids, and is tagged with the
+  source's id + name as its truth source.
+is_beta: false
