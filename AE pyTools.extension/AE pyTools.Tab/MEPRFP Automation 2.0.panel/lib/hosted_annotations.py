@@ -201,6 +201,10 @@ def annotation_descriptor(elem, kind=None):
     """Build the dict that becomes one ``annotations[*]`` entry.
 
     Caller fills in ``id`` and ``offsets`` (relative to the host fixture).
+
+    For ``text_note`` kind we also store the text content as a top-level
+    ``text`` field — that's what Place Element Annotations needs to
+    recreate the text note on placement.
     """
     if elem is None:
         return None
@@ -218,20 +222,26 @@ def annotation_descriptor(elem, kind=None):
     if elem.Category is not None:
         category_name = elem.Category.Name or ""
 
-    if family_name and type_name:
-        label = "{} : {}".format(family_name, type_name)
-    elif kind == "text_note":
+    text_content = ""
+    if kind == "text_note":
         try:
-            text = (elem.Text or "").strip()
+            text_content = (elem.Text or "").strip()
         except Exception:
-            text = ""
-        label = (text[:60] + "...") if len(text) > 60 else text
+            text_content = ""
+
+    # For text notes, the *content* is the most useful identity — show
+    # that as the label, not the TextNoteType string. The full text is
+    # also stored in a top-level ``text`` field for placement.
+    if kind == "text_note":
+        label = (text_content[:60] + "...") if len(text_content) > 60 else text_content
         if not label:
-            label = "(text note)"
+            label = "(empty text note)"
+    elif family_name and type_name:
+        label = "{} : {}".format(family_name, type_name)
     else:
         label = category_name or kind
 
-    return {
+    descriptor = {
         "kind": kind,
         "label": label,
         "category_name": category_name,
@@ -239,6 +249,9 @@ def annotation_descriptor(elem, kind=None):
         "type_name": type_name,
         "parameters": collect_element_parameters(elem),
     }
+    if kind == "text_note":
+        descriptor["text"] = text_content
+    return descriptor
 
 
 # Legacy alias kept for any external callers that still import this name.

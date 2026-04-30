@@ -69,7 +69,8 @@
         </Grid.ColumnDefinitions>
         <DockPanel Grid.Column="0" Margin="0,0,4,0">
           <TextBlock DockPanel.Dock="Top"
-                     Text="By category (check to include — leave all unchecked to include all)"/>
+                     Text="By LED category (any profile containing an LED of a checked category is included — all of that profile's LEDs are placed)"
+                     TextWrapping="Wrap"/>
           <ListBox x:Name="CategoryList" Height="120"
                    SelectionMode="Multiple"
                    ItemContainerStyle="{StaticResource CheckListBoxItem}"/>
@@ -77,6 +78,9 @@
         <DockPanel Grid.Column="1" Margin="4,0,0,0">
           <TextBlock DockPanel.Dock="Top"
                      Text="By profile name (check to include — leave all unchecked to include all)"/>
+          <TextBox  DockPanel.Dock="Top" x:Name="ProfileSearchBox"
+                    Margin="0,4,0,4" Padding="2"
+                    ToolTip="Filter profiles by name (case-insensitive substring)"/>
           <ListBox x:Name="ProfileList" Height="120"
                    SelectionMode="Multiple"
                    ItemContainerStyle="{StaticResource CheckListBoxItem}"/>
@@ -88,9 +92,19 @@
     <GroupBox Grid.Row="2" Header="Match preview" Padding="8">
       <DockPanel>
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-          <CheckBox x:Name="SkipPlacedCheck" DockPanel.Dock="Left"
-                    Content="Skip targets already placed"
-                    IsChecked="True" VerticalAlignment="Center"/>
+          <StackPanel DockPanel.Dock="Left" Orientation="Vertical" VerticalAlignment="Center">
+            <CheckBox x:Name="SkipPlacedCheck"
+                      Content="Skip targets already placed"
+                      IsChecked="True"/>
+            <CheckBox x:Name="OneProfilePerTargetCheck"
+                      Content="One profile per target (avoid duplicate placements)"
+                      IsChecked="True" Margin="0,4,0,0"
+                      ToolTip="If multiple profiles match a single target anchor, keep only the best one — prefers exact family_name_pattern match, then highest LED count. Recommended for legacy data with duplicate profiles."/>
+            <CheckBox x:Name="AllowTypeSubCheck"
+                      Content="Allow type substitution if exact type is missing"
+                      IsChecked="False" Margin="0,4,0,0"
+                      ToolTip="If the family is loaded but the exact type isn't, fall back to the first available type from that family."/>
+          </StackPanel>
           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button x:Name="MatchButton" Content="Match" Width="100" Margin="0,0,8,0"/>
             <Button x:Name="UncheckAllButton" Content="Uncheck all" Width="100" Margin="0,0,8,0"/>

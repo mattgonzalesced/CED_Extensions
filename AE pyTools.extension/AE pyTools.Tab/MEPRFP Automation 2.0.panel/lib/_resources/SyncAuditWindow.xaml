@@ -25,14 +25,37 @@
       <TextBlock x:Name="SummaryLabel" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="Gray"/>
     </DockPanel>
 
-    <!-- Tree-view: Profile -> LED -> Conflict -->
-    <TreeView x:Name="ConflictTree" Grid.Row="1">
-      <TreeView.Resources>
-        <Style TargetType="TreeViewItem">
-          <Setter Property="IsExpanded" Value="True"/>
-        </Style>
-      </TreeView.Resources>
-    </TreeView>
+    <!-- Conflict tree on the left, comparison detail on the right -->
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="3*"/>
+        <ColumnDefinition Width="2*"/>
+      </Grid.ColumnDefinitions>
+
+      <TreeView x:Name="ConflictTree" Grid.Column="0" Margin="0,0,4,0">
+        <TreeView.Resources>
+          <Style TargetType="TreeViewItem">
+            <Setter Property="IsExpanded" Value="True"/>
+          </Style>
+        </TreeView.Resources>
+      </TreeView>
+
+      <DockPanel Grid.Column="1" Margin="4,0,0,0">
+        <TextBlock DockPanel.Dock="Top" FontWeight="Bold"
+                   Text="Conflict detail"
+                   ToolTip="Click a conflict in the tree to see the parameter comparison."/>
+        <TextBox x:Name="DetailBox"
+                 Margin="0,4,0,0"
+                 IsReadOnly="True"
+                 AcceptsReturn="True"
+                 TextWrapping="NoWrap"
+                 FontFamily="Consolas"
+                 FontSize="11"
+                 Background="#FAFAFA"
+                 VerticalScrollBarVisibility="Auto"
+                 HorizontalScrollBarVisibility="Auto"/>
+      </DockPanel>
+    </Grid>
 
     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
       <Button x:Name="ApplyButton" Content="Apply selected actions" Width="180" Margin="0,0,8,0" IsDefault="True"/>

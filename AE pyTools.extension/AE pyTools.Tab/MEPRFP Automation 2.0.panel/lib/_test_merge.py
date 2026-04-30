@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Offline tests for merge_workflow.py — pure-logic eligibility +
-renumbering. Doesn't touch the Revit API."""
+"""Offline tests for the alias-based merge_workflow.py."""
 
 from __future__ import print_function
 
-import copy
 import os
 import sys
 
@@ -27,106 +25,16 @@ def _check(name, condition, detail=""):
         _FAILS.append(name)
 
 
-# ---------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------
-
 def _make_doc():
     return {
         "schema_version": 100,
         "equipment_definitions": [
-            {
-                "id": "EQ-001",
-                "name": "Foo : Master",
-                "schema_version": 100,
-                "parent_filter": {
-                    "category": "Mechanical Equipment",
-                    "family_name_pattern": "Foo",
-                    "type_name_pattern": "Master",
-                    "parameter_filters": {},
-                },
-                "linked_sets": [
-                    {
-                        "id": "SET-001",
-                        "name": "Foo : Master Types",
-                        "linked_element_definitions": [
-                            {
-                                "id": "SET-001-LED-001",
-                                "label": "X : Y",
-                                "is_group": False,
-                                "parameters": {},
-                                "offsets": [{"x_inches": 1.0, "y_inches": 0.0,
-                                             "z_inches": 0.0, "rotation_deg": 0.0}],
-                                "annotations": [
-                                    {
-                                        "id": "SET-001-LED-001-ANN-001",
-                                        "kind": "tag",
-                                        "label": "TagA",
-                                        "parameters": {},
-                                        "offsets": {"x_inches": 0.0, "y_inches": 12.0,
-                                                    "z_inches": 0.0, "rotation_deg": 0.0},
-                                    },
-                                    {
-                                        "id": "SET-001-LED-001-ANN-002",
-                                        "kind": "keynote",
-                                        "label": "Keynote",
-                                        "parameters": {},
-                                        "offsets": {"x_inches": 0.0, "y_inches": 0.0,
-                                                    "z_inches": 0.0, "rotation_deg": 0.0},
-                                    },
-                                ],
-                            },
-                            {
-                                "id": "SET-001-LED-002",
-                                "label": "X : Z",
-                                "is_group": False,
-                                "parameters": {},
-                                "offsets": [{"x_inches": 5.0, "y_inches": 0.0,
-                                             "z_inches": 0.0, "rotation_deg": 0.0}],
-                                "annotations": [],
-                            },
-                        ],
-                    },
-                ],
-                "equipment_properties": {"flag": "1"},
-                "allow_parentless": False,
-                "allow_unmatched_parents": True,
-                "prompt_on_parent_mismatch": False,
-            },
-            {
-                "id": "EQ-002",
-                "name": "Foo : Variant1",
-                "schema_version": 100,
-                "parent_filter": {"category": "", "family_name_pattern": "",
-                                  "type_name_pattern": "", "parameter_filters": {}},
-                "linked_sets": [
-                    {
-                        "id": "SET-002",
-                        "name": "Foo : Variant1 Types",
-                        "linked_element_definitions": [
-                            {"id": "SET-002-LED-001", "label": "old",
-                             "is_group": False, "parameters": {},
-                             "offsets": [{}], "annotations": []},
-                        ],
-                    },
-                ],
-                "equipment_properties": {},
-                "allow_parentless": False,
-                "allow_unmatched_parents": True,
-                "prompt_on_parent_mismatch": False,
-            },
-            {
-                "id": "EQ-003",
-                "name": "Foo : Variant2",
-                "schema_version": 100,
-                "parent_filter": {"category": "", "family_name_pattern": "",
-                                  "type_name_pattern": "", "parameter_filters": {}},
-                "linked_sets": [],
-                "equipment_properties": {},
-                "allow_parentless": False,
-                "allow_unmatched_parents": True,
-                "prompt_on_parent_mismatch": False,
-            },
+            {"id": "EQ-001", "name": "Foo : Master", "schema_version": 100,
+             "linked_sets": [{"id": "SET-001"}]},
+            {"id": "EQ-002", "name": "Foo : V1", "schema_version": 100,
+             "linked_sets": [{"id": "SET-002"}]},
+            {"id": "EQ-003", "name": "Foo : V2", "schema_version": 100,
+             "linked_sets": [{"id": "SET-003"}]},
         ],
     }
 
@@ -139,181 +47,243 @@ def _profile(doc, pid):
 
 
 # ---------------------------------------------------------------------
-# Tests
+# Alias add / remove
 # ---------------------------------------------------------------------
 
-def test_eligibility_no_existing_groups():
-    print("\n[merge] eligibility (clean state)")
+def test_add_alias_basic():
+    print("\n[merge] add_alias basic")
     doc = _make_doc()
     src = _profile(doc, "EQ-001")
-    targets = merge_workflow.eligible_targets(doc, src)
-    target_ids = {t["id"] for t in targets}
-    _check("EQ-002 + EQ-003 eligible", target_ids == {"EQ-002", "EQ-003"})
-
-    sources = merge_workflow.eligible_sources(doc)
-    _check("All three eligible as sources",
-           {p["id"] for p in sources} == {"EQ-001", "EQ-002", "EQ-003"})
+    _check("first add returns True", merge_workflow.add_alias(src, "Foo : V1") is True)
+    _check("alias in list", "Foo : V1" in merge_workflow.aliases(src))
 
 
-def test_self_merge_forbidden():
-    print("\n[merge] self-merge forbidden")
+def test_add_alias_dedup():
+    print("\n[merge] add_alias dedup (case-insensitive)")
     doc = _make_doc()
     src = _profile(doc, "EQ-001")
-    ok, reason = merge_workflow.can_be_target(doc, src, src)
-    _check("Cannot merge into self", ok is False)
+    merge_workflow.add_alias(src, "Foo : V1")
+    _check("same case skipped", merge_workflow.add_alias(src, "Foo : V1") is False)
+    _check("different case skipped", merge_workflow.add_alias(src, "FOO : v1") is False)
+    _check("trimmed-whitespace skipped",
+           merge_workflow.add_alias(src, "  Foo : V1  ") is False)
+    _check("only one entry stored", len(merge_workflow.aliases(src)) == 1)
 
 
-def test_cannot_target_existing_member():
-    print("\n[merge] target already merged")
+def test_add_alias_empty_skipped():
+    print("\n[merge] empty alias skipped")
     doc = _make_doc()
     src = _profile(doc, "EQ-001")
-    target = _profile(doc, "EQ-002")
-    merge_workflow.merge_into(doc, src, target)
-    # Now try to target EQ-002 from a different source.
-    other = _profile(doc, "EQ-003")
-    ok, reason = merge_workflow.can_be_target(doc, other, target)
-    _check("Already-member target rejected", ok is False)
+    _check("empty string -> False", merge_workflow.add_alias(src, "") is False)
+    _check("whitespace -> False", merge_workflow.add_alias(src, "   ") is False)
+    _check("None -> False", merge_workflow.add_alias(src, None) is False)
+    _check("no entries", merge_workflow.aliases(src) == [])
 
 
-def test_cannot_target_existing_source():
-    print("\n[merge] target is itself a source for others")
-    doc = _make_doc()
-    # EQ-001 -> EQ-002 makes EQ-001 a source.
-    merge_workflow.merge_into(doc, _profile(doc, "EQ-001"), _profile(doc, "EQ-002"))
-    # Try to merge EQ-001 into EQ-003. EQ-001 should be eligible as source
-    # but should NOT be eligible as a target if someone tried.
-    src = _profile(doc, "EQ-003")
-    cand = _profile(doc, "EQ-001")
-    ok, reason = merge_workflow.can_be_target(doc, src, cand)
-    _check("Source-for-others rejected as target", ok is False)
-
-
-def test_cannot_source_member():
-    print("\n[merge] member cannot be a source")
-    doc = _make_doc()
-    merge_workflow.merge_into(doc, _profile(doc, "EQ-001"), _profile(doc, "EQ-002"))
-    member = _profile(doc, "EQ-002")
-    ok, reason = merge_workflow.can_be_source(doc, member)
-    _check("Member rejected as source", ok is False)
-
-
-def test_renumber_isolation():
-    print("\n[merge] renumbered ids don't collide with anything in the doc")
+def test_remove_alias():
+    print("\n[merge] remove_alias")
     doc = _make_doc()
     src = _profile(doc, "EQ-001")
-    target = _profile(doc, "EQ-002")
-    merge_workflow.merge_into(doc, src, target)
-
-    # Collect all SET ids across the doc post-merge.
-    all_set_ids = []
-    for p in doc["equipment_definitions"]:
-        for s in p.get("linked_sets") or []:
-            all_set_ids.append(s["id"])
-    _check("All SET ids unique post-merge",
-           len(set(all_set_ids)) == len(all_set_ids),
-           "got {}".format(all_set_ids))
+    merge_workflow.add_alias(src, "Foo : V1")
+    merge_workflow.add_alias(src, "Foo : V2")
+    _check("remove existing", merge_workflow.remove_alias(src, "Foo : V1") is True)
+    _check("remove case-insensitive",
+           merge_workflow.remove_alias(src, "foo : v2") is True)
+    _check("remove missing -> False",
+           merge_workflow.remove_alias(src, "nope") is False)
+    _check("list empty", merge_workflow.aliases(src) == [])
 
 
-def test_renumber_internal_consistency():
-    """LED ids must reference the parent SET id; ANN ids must reference
-    the parent LED id."""
-    print("\n[merge] LED + ANN ids stay nested under their parent")
-    doc = _make_doc()
-    merge_workflow.merge_into(doc, _profile(doc, "EQ-001"), _profile(doc, "EQ-002"))
-    target = _profile(doc, "EQ-002")
-    for s in target.get("linked_sets") or []:
-        sid = s["id"]
-        for led in s.get("linked_element_definitions") or []:
-            lid = led["id"]
-            _check("LED {} starts with set id".format(lid),
-                   lid.startswith(sid + "-LED-"))
-            for ann in led.get("annotations") or []:
-                aid = ann["id"]
-                _check("ANN {} starts with led id".format(aid),
-                       aid.startswith(lid + "-ANN-"))
-
-
-def test_target_keeps_id_and_name():
-    print("\n[merge] target retains its own id + name")
+def test_add_aliases_bulk():
+    print("\n[merge] add_aliases (bulk)")
     doc = _make_doc()
     src = _profile(doc, "EQ-001")
-    target = _profile(doc, "EQ-002")
-    target_id = target["id"]
-    target_name = target["name"]
-    merge_workflow.merge_into(doc, src, target)
-    _check("Target id unchanged", target["id"] == target_id)
-    _check("Target name unchanged", target["name"] == target_name)
+    added, skipped = merge_workflow.add_aliases(
+        src, ["A", "B", "a", "C", "", "B"]
+    )
+    _check("3 added (A, B, C)", added == 3)
+    _check("3 skipped (a dup, empty, B dup)", skipped == 3)
 
 
-def test_target_marked_as_member():
-    print("\n[merge] target tagged with truth source")
+def test_find_alias_owner():
+    print("\n[merge] find_alias_owner")
     doc = _make_doc()
+    merge_workflow.add_alias(_profile(doc, "EQ-001"), "OnlyOnEQ001")
+    merge_workflow.add_alias(_profile(doc, "EQ-002"), "OnlyOnEQ002")
+
+    owner = merge_workflow.find_alias_owner(doc, "OnlyOnEQ002")
+    _check("found owner of OnlyOnEQ002", owner is not None and owner.get("id") == "EQ-002")
+    _check("missing alias -> None",
+           merge_workflow.find_alias_owner(doc, "Nope") is None)
+
+
+def test_all_alias_entries():
+    print("\n[merge] all_alias_entries")
+    doc = _make_doc()
+    merge_workflow.add_alias(_profile(doc, "EQ-001"), "X")
+    merge_workflow.add_alias(_profile(doc, "EQ-001"), "Y")
+    merge_workflow.add_alias(_profile(doc, "EQ-002"), "Z")
+    entries = merge_workflow.all_alias_entries(doc)
+    _check("three entries total", len(entries) == 3)
+    aliases_only = [a for _src, a in entries]
+    _check("contents", set(aliases_only) == {"X", "Y", "Z"})
+
+
+# ---------------------------------------------------------------------
+# Legacy migration
+# ---------------------------------------------------------------------
+
+def _make_legacy_doc():
+    """Doc shaped like the old data-duplication model."""
+    return {
+        "schema_version": 100,
+        "equipment_definitions": [
+            {
+                "id": "EQ-001",
+                "name": "Foo : Master",
+                "schema_version": 100,
+                "linked_sets": [{"id": "SET-001"}],
+            },
+            {
+                "id": "EQ-002",
+                "name": "Foo : V1",
+                "schema_version": 100,
+                "linked_sets": [{"id": "SET-002"}],
+                "ced_truth_source_id": "EQ-001",
+                "ced_truth_source_name": "Foo : Master",
+            },
+            {
+                "id": "EQ-003",
+                "name": "Foo : V2",
+                "schema_version": 100,
+                "linked_sets": [{"id": "SET-003"}],
+                "ced_truth_source_id": "EQ-001",
+                "ced_truth_source_name": "Foo : Master",
+            },
+        ],
+    }
+
+
+def test_has_legacy_members():
+    print("\n[merge] has_legacy_members")
+    doc = _make_doc()
+    _check("clean doc -> False", merge_workflow.has_legacy_members(doc) is False)
+    legacy = _make_legacy_doc()
+    _check("legacy doc -> True", merge_workflow.has_legacy_members(legacy) is True)
+
+
+def test_migrate_legacy_members():
+    print("\n[merge] migrate_legacy_members")
+    doc = _make_legacy_doc()
+    report = merge_workflow.migrate_legacy_members(doc)
     src = _profile(doc, "EQ-001")
-    target = _profile(doc, "EQ-002")
-    merge_workflow.merge_into(doc, src, target)
-    _check("ced_truth_source_id set",
-           truth_groups.truth_source_id(target) == "EQ-001")
-    _check("ced_truth_source_name set",
-           truth_groups.truth_source_name(target) == "Foo : Master")
-    _check("is_group_member True", truth_groups.is_group_member(target))
+    aliases_on_src = merge_workflow.aliases(src)
+    _check("two aliases added to source",
+           set(aliases_on_src) == {"Foo : V1", "Foo : V2"},
+           "got {}".format(aliases_on_src))
+    _check("members had ced_truth_source cleared",
+           not truth_groups.is_group_member(_profile(doc, "EQ-002")))
+    _check("report.aliases_added == 2", report.aliases_added == 2)
+    _check("report.members_cleared == 2", report.members_cleared == 2)
+    _check("no unresolved", report.unresolved_members == [])
 
 
-def test_unmerge_clears_lineage():
-    print("\n[merge] unmerge clears truth source")
+def test_migrate_unresolved_source():
+    """A member whose ced_truth_source_id points at a missing source
+    should still get its tag cleared but report unresolved."""
+    print("\n[merge] migrate with unresolved source")
+    doc = {
+        "schema_version": 100,
+        "equipment_definitions": [
+            {"id": "EQ-002", "name": "Member only", "schema_version": 100,
+             "ced_truth_source_id": "EQ-DOES-NOT-EXIST",
+             "ced_truth_source_name": "Ghost"},
+        ],
+    }
+    report = merge_workflow.migrate_legacy_members(doc)
+    _check("0 aliases added", report.aliases_added == 0)
+    _check("1 member cleared", report.members_cleared == 1)
+    _check("1 unresolved", len(report.unresolved_members) == 1)
+
+
+def test_delete_profiles_by_id():
+    print("\n[merge] delete_profiles_by_id")
     doc = _make_doc()
+    removed = merge_workflow.delete_profiles_by_id(doc, ["EQ-002", "EQ-XX"])
+    _check("1 removed", removed == 1)
+    ids = [p.get("id") for p in doc["equipment_definitions"]]
+    _check("EQ-002 gone", "EQ-002" not in ids)
+    _check("EQ-001 + EQ-003 still there", "EQ-001" in ids and "EQ-003" in ids)
+
+
+# ---------------------------------------------------------------------
+# Bulk CSV
+# ---------------------------------------------------------------------
+
+def test_bulk_add_aliases_from_csv(tmp_path_dir):
+    print("\n[merge] bulk_add_aliases_from_csv")
+    csv = os.path.join(tmp_path_dir, "bulk.csv")
+    with open(csv, "w", encoding="utf-8") as f:
+        f.write("source,target\n")
+        f.write("EQ-001,Foo : V1\n")
+        f.write("EQ-001,Foo : V2\n")
+        f.write("Foo : Master,DupTest\n")    # source-by-name
+        f.write("Foo : Master,DupTest\n")    # already-added dup
+        f.write("Missing : Source,X\n")     # not found
+        f.write(",empty source\n")          # skipped silently
+    doc = _make_doc()
+    results = merge_workflow.bulk_add_aliases_from_csv(doc, csv)
     src = _profile(doc, "EQ-001")
-    target = _profile(doc, "EQ-002")
-    merge_workflow.merge_into(doc, src, target)
-
-    merge_workflow.unmerge(doc, target)
-    _check("truth_source_id cleared",
-           truth_groups.truth_source_id(target) is None)
-    _check("truth_source_name cleared",
-           truth_groups.truth_source_name(target) is None)
-    # Structural content remains.
-    _check("linked_sets still present",
-           len(target.get("linked_sets") or []) > 0)
+    aliases_on_src = merge_workflow.aliases(src)
+    _check("3 distinct aliases on EQ-001",
+           set(aliases_on_src) == {"Foo : V1", "Foo : V2", "DupTest"},
+           "got {}".format(aliases_on_src))
+    ok_count = sum(1 for r in results if r.ok)
+    fail_count = sum(1 for r in results if not r.ok)
+    _check("3 ok rows", ok_count == 3)
+    _check("2 fail/skip rows", fail_count == 2)
 
 
-def test_merge_many():
-    print("\n[merge] merge_many returns succeeded + failed lists")
+def test_bulk_csv_missing_columns(tmp_path_dir):
+    print("\n[merge] bulk csv missing required columns")
+    csv = os.path.join(tmp_path_dir, "bad.csv")
+    with open(csv, "w", encoding="utf-8") as f:
+        f.write("col1,col2\n")
+        f.write("a,b\n")
     doc = _make_doc()
-    src = _profile(doc, "EQ-001")
-    targets = [_profile(doc, "EQ-002"), _profile(doc, "EQ-003")]
-    succeeded, failed = merge_workflow.merge_many(doc, src, targets)
-    _check("Both succeed", len(succeeded) == 2 and len(failed) == 0)
+    raised = False
+    try:
+        merge_workflow.bulk_add_aliases_from_csv(doc, csv)
+    except merge_workflow.MergeError:
+        raised = True
+    _check("MergeError on missing columns", raised)
 
 
-def test_renumber_uses_global_counter():
-    """The renumber base should account for ALL existing SET ids in the
-    doc, not just the source's. So merging EQ-001 (with SET-001) into
-    EQ-003 — when EQ-002 already has SET-002 — should produce SET-003,
-    not SET-002 (which is taken by EQ-002's set)."""
-    print("\n[merge] renumber respects all existing SET ids")
-    doc = _make_doc()
-    merge_workflow.merge_into(doc, _profile(doc, "EQ-001"), _profile(doc, "EQ-003"))
-    # EQ-003 should have a new SET id that's >= SET-003
-    target = _profile(doc, "EQ-003")
-    sets = target.get("linked_sets") or []
-    sid = sets[0]["id"]
-    n = int(sid.split("-")[-1])
-    _check("renumber > 2 (SET-001 in source, SET-002 in EQ-002)",
-           n >= 3, "got {}".format(sid))
-
+# ---------------------------------------------------------------------
+# Runner
+# ---------------------------------------------------------------------
 
 def run():
-    test_eligibility_no_existing_groups()
-    test_self_merge_forbidden()
-    test_cannot_target_existing_member()
-    test_cannot_target_existing_source()
-    test_cannot_source_member()
-    test_renumber_isolation()
-    test_renumber_internal_consistency()
-    test_target_keeps_id_and_name()
-    test_target_marked_as_member()
-    test_unmerge_clears_lineage()
-    test_merge_many()
-    test_renumber_uses_global_counter()
+    test_add_alias_basic()
+    test_add_alias_dedup()
+    test_add_alias_empty_skipped()
+    test_remove_alias()
+    test_add_aliases_bulk()
+    test_find_alias_owner()
+    test_all_alias_entries()
+    test_has_legacy_members()
+    test_migrate_legacy_members()
+    test_migrate_unresolved_source()
+    test_delete_profiles_by_id()
+
+    import tempfile
+    tmpdir = tempfile.mkdtemp(prefix="merge_test_")
+    try:
+        test_bulk_add_aliases_from_csv(tmpdir)
+        test_bulk_csv_missing_columns(tmpdir)
+    finally:
+        import shutil
+        shutil.rmtree(tmpdir, ignore_errors=True)
     return list(_FAILS)
 
 

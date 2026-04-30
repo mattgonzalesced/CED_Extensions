@@ -133,22 +133,95 @@ def collect_profile_aliases(profile):
 
 def profile_family_names(profile):
     """Return the set of family-name keys we'll match against for linked
-    Revit. Pulls from ``parent_filter.family_name_pattern`` and from the
-    profile's own name ("Family : Type") split."""
+    Revit. Pulls from:
+        * ``parent_filter.family_name_pattern``
+        * the profile's own name (``"Family : Type"`` -> ``"Family"``)
+        * every entry in ``merged_aliases`` (split + family part)
+
+    All keys are normalised through ``normalize_name`` (lowercase +
+    suffix-strip), so the family-name match is case-insensitive and
+    handles trailing ``_NNN`` revisions automatically.
+    """
     if not isinstance(profile, dict):
         return set()
     out = set()
+
+    def _add_family(value):
+        if not value:
+            return
+        if " : " in value:
+            family_part, _ = value.split(" : ", 1)
+        else:
+            family_part = value
+        key = normalize_name(family_part)
+        if key:
+            out.add(key)
+
     pf = profile.get("parent_filter") or {}
     if isinstance(pf, dict):
-        fam = pf.get("family_name_pattern")
-        if fam:
-            out.add(normalize_name(fam))
-    name = profile.get("name") or ""
-    if " : " in name:
-        fam, _ = name.split(" : ", 1)
-        if fam:
-            out.add(normalize_name(fam))
+        _add_family(pf.get("family_name_pattern"))
+    _add_family(profile.get("name") or "")
+    for alias in profile.get("merged_aliases") or []:
+        if isinstance(alias, str):
+            _add_family(alias)
     return {n for n in out if n}
+
+
+def profile_family_names_raw(profile):
+    """Like ``profile_family_names`` but returns family strings with
+    only case-folding applied — *no* trailing ``_NNN`` strip. Used to
+    detect exact 1:1 alignments between a target and a profile so the
+    matcher can prefer them over the suffix-stripped fallback.
+    """
+    if not isinstance(profile, dict):
+        return set()
+    out = set()
+
+    def _add(value):
+        if not value:
+            return
+        if " : " in value:
+            family_part, _ = value.split(" : ", 1)
+        else:
+            family_part = value
+        key = (family_part or "").strip().lower()
+        if key:
+            out.add(key)
+
+    pf = profile.get("parent_filter") or {}
+    if isinstance(pf, dict):
+        _add(pf.get("family_name_pattern"))
+    _add(profile.get("name") or "")
+    for alias in profile.get("merged_aliases") or []:
+        if isinstance(alias, str):
+            _add(alias)
+    return out
+
+
+def collect_profile_aliases_raw(profile):
+    """Like ``collect_profile_aliases`` but case-folded only, no suffix
+    strip. Used by the strict match tier for CAD blocks."""
+    if not isinstance(profile, dict):
+        return set()
+    props = profile.get("equipment_properties") or {}
+    if not isinstance(props, dict):
+        return set()
+    raw = props.get(CAD_ALIASES_KEY)
+    if raw is None:
+        return set()
+    items = []
+    if isinstance(raw, list):
+        items = [str(x) for x in raw if x is not None]
+    elif isinstance(raw, str):
+        items = [s for s in raw.split(",")]
+    else:
+        items = [str(raw)]
+    out = set()
+    for item in items:
+        norm = (item or "").strip().lower()
+        if norm:
+            out.add(norm)
+    return out
 
 
 def _profile_id_label(profile):
@@ -212,28 +285,56 @@ class Match(object):
 
 def _match_one_linked_revit(target, profiles):
     """A linked-Revit target's ``name`` is the element's family name.
-    Match against each profile's family_name set, both stripped."""
+
+    Two-tier match. Tier 1 looks for profiles whose raw family name is
+    a case-insensitive *exact* match to the target name (suffix included).
+    If any tier-1 hits exist they win, and the suffix-stripped fallback
+    is skipped — that's how the engine automatically resolves the
+    "three Stinger Cart_1/2/3 profiles vs. three Stinger Cart_1/2/3
+    targets" case 1:1 instead of producing a 3×3 cross-product.
+
+    Tier 2 is the legacy suffix-stripped match, used only when no
+    profile aligns exactly with the target name.
+    """
+    target_name_lower = (target.name or "").strip().lower()
     target_key = normalize_name(target.name)
     if not target_key:
         return []
-    out = []
-    for p in profiles:
-        if target_key in profile_family_names(p):
-            out.append(p)
-    return out
+
+    if target_name_lower:
+        strict = [
+            p for p in profiles
+            if target_name_lower in profile_family_names_raw(p)
+        ]
+        if strict:
+            return strict
+
+    return [
+        p for p in profiles
+        if target_key in profile_family_names(p)
+    ]
 
 
 def _match_one_cad(target, profiles):
-    """A CAD target's ``name`` is the block name. Match against each
-    profile's ``cad_aliases`` (also stripped)."""
+    """A CAD target's ``name`` is the block name. Same two-tier rule as
+    linked-Revit: prefer exact-name aliases over suffix-stripped ones."""
+    target_name_lower = (target.name or "").strip().lower()
     target_key = normalize_name(target.name)
     if not target_key:
         return []
-    out = []
-    for p in profiles:
-        if target_key in collect_profile_aliases(p):
-            out.append(p)
-    return out
+
+    if target_name_lower:
+        strict = [
+            p for p in profiles
+            if target_name_lower in collect_profile_aliases_raw(p)
+        ]
+        if strict:
+            return strict
+
+    return [
+        p for p in profiles
+        if target_key in collect_profile_aliases(p)
+    ]
 
 
 def match_targets(targets, profiles, mode):
@@ -248,6 +349,77 @@ def match_targets(targets, profiles, mode):
     for t in targets:
         for p in matcher(t, profiles):
             out.append(Match(t, p))
+    return out
+
+
+def dedupe_matches_per_target(matches):
+    """Collapse the cross-product to **one match per target anchor**.
+
+    Used to suppress legacy duplicates: when several profiles share a
+    family name (because the same family was captured/merged multiple
+    times), a single CAD/linked target ends up with N matches and the
+    placement engine stacks N fixtures on the same anchor. This filter
+    keeps exactly one match per target, choosing by:
+
+        1. Profile whose ``parent_filter.family_name_pattern`` exactly
+           equals the target name (case-insensitive). Most specific.
+        2. Profile that has the most LEDs (richest data).
+        3. Lowest profile id alphabetically — deterministic tie-break.
+
+    Returns a new list; input is not mutated.
+    """
+    if not matches:
+        return []
+
+    def _target_key(target):
+        wp = target.world_pt or (0.0, 0.0, 0.0)
+        return (
+            round(float(wp[0]), 3),
+            round(float(wp[1]), 3),
+            round(float(wp[2]), 3),
+            (target.name or "").strip().lower(),
+        )
+
+    def _led_count(profile):
+        n = 0
+        for s in profile.get("linked_sets") or []:
+            if isinstance(s, dict):
+                n += len(s.get("linked_element_definitions") or [])
+        return n
+
+    bucketed = {}
+    order = []
+    for m in matches:
+        k = _target_key(m.target)
+        if k not in bucketed:
+            bucketed[k] = []
+            order.append(k)
+        bucketed[k].append(m)
+
+    out = []
+    for k in order:
+        group = bucketed[k]
+        if len(group) == 1:
+            out.append(group[0])
+            continue
+        target_name = group[0].target.name or ""
+        target_name_lower = target_name.strip().lower()
+
+        exact = [
+            m for m in group
+            if ((m.profile.get("parent_filter") or {}).get("family_name_pattern") or "")
+                .strip().lower() == target_name_lower
+        ]
+        candidates = exact if exact else group
+
+        candidates = sorted(
+            candidates,
+            key=lambda m: (
+                -_led_count(m.profile),       # more LEDs first
+                m.profile.get("id") or "",    # then alphabetical id
+            ),
+        )
+        out.append(candidates[0])
     return out
 
 
@@ -672,6 +844,8 @@ class PlacementResult(object):
         self.warnings = []
         self.errors = []
         self.skipped_already_placed = 0
+        self.normalized_match_count = 0
+        self.substituted_type_count = 0
 
 
 class PlacementOptions(object):
@@ -680,10 +854,12 @@ class PlacementOptions(object):
     def __init__(self,
                  skip_already_placed=True,
                  default_level_id=None,
-                 transaction_action="Place from CAD or Linked Model"):
+                 transaction_action="Place from CAD or Linked Model",
+                 allow_type_substitution=False):
         self.skip_already_placed = skip_already_placed
         self.default_level_id = default_level_id
         self.transaction_action = transaction_action
+        self.allow_type_substitution = allow_type_substitution
 
 
 def _activate_symbol(symbol):
@@ -696,24 +872,76 @@ def _activate_symbol(symbol):
         pass
 
 
-def _find_family_symbol(doc, family_name, type_name):
-    """Find a FamilySymbol matching ``family_name : type_name``."""
+def _resolve_family_symbol(doc, family_name, type_name, allow_type_substitution=False):
+    """Tiered FamilySymbol lookup.
+
+    Returns ``(symbol_or_None, status, available_types)``::
+
+        status='exact'           exact match on both family and type
+        status='normalized'      case-insensitive + ``_NNN`` suffix strip
+        status='substituted'     family matched, type didn't; used the
+                                 first available type from the family
+                                 (only when ``allow_type_substitution``)
+        status='family_missing'  no family matched even with normalization
+        status='type_missing'    family matched, type didn't, and
+                                 substitution was not allowed
+
+    ``available_types`` is the list of types loaded under the matched
+    family (sorted) when the family is found; empty otherwise. The
+    caller uses it to build actionable warning messages.
+    """
+    target_family_norm = normalize_name(family_name)
+    target_type_norm = normalize_name(type_name)
+
+    # Bucket every loaded FamilySymbol by its normalized family name so
+    # we can branch on "family missing" vs "type missing" cheaply.
+    by_family_norm = {}  # norm_family -> [(family_actual, type_actual, sym)]
     for sym in FilteredElementCollector(doc).OfClass(FamilySymbol):
         family = getattr(sym, "Family", None)
         if family is None:
             continue
-        if family.Name != family_name:
-            continue
-        if sym.Name == type_name:
-            return sym
-    return None
+        fam_actual = family.Name
+        type_actual = sym.Name
+        by_family_norm.setdefault(normalize_name(fam_actual), []).append(
+            (fam_actual, type_actual, sym)
+        )
+
+    matching = by_family_norm.get(target_family_norm) or []
+    available_types = sorted({t for _, t, _ in matching})
+
+    # Tier 1 — exact match.
+    for fam_actual, type_actual, sym in matching:
+        if fam_actual == family_name and type_actual == type_name:
+            return sym, "exact", available_types
+
+    # Tier 2 — normalized match on type.
+    for fam_actual, type_actual, sym in matching:
+        if normalize_name(type_actual) == target_type_norm:
+            return sym, "normalized", available_types
+
+    if not matching:
+        return None, "family_missing", []
+
+    # Tier 3 — family matched, type didn't. Optionally substitute.
+    if allow_type_substitution:
+        _, _, sym = matching[0]
+        return sym, "substituted", available_types
+    return None, "type_missing", available_types
 
 
-def _find_group_type(doc, group_name):
+def _resolve_group_type(doc, group_name):
+    """Returns ``(group_type_or_None, status)`` where status is
+    ``'exact'``, ``'normalized'``, or ``'missing'``."""
+    target_norm = normalize_name(group_name)
+    normalized_hit = None
     for gt in FilteredElementCollector(doc).OfClass(GroupType):
         if gt.Name == group_name:
-            return gt
-    return None
+            return gt, "exact"
+        if normalized_hit is None and normalize_name(gt.Name) == target_norm:
+            normalized_hit = gt
+    if normalized_hit is not None:
+        return normalized_hit, "normalized"
+    return None, "missing"
 
 
 def _split_label(label):
@@ -727,9 +955,17 @@ def _split_label(label):
     return label.strip(), ""
 
 
-def _place_fixture(doc, led, anchor_world_pt, anchor_rotation_deg, level_id):
-    """Place one LED at the resolved world point. Returns the placed
-    Element or None if placement failed."""
+def _place_fixture(doc, led, anchor_world_pt, anchor_rotation_deg, level_id,
+                   allow_type_substitution=False):
+    """Place one LED at the resolved world point.
+
+    Returns ``(placed_elem_or_None, status, info)`` where ``status`` is
+    one of ``'exact'``, ``'normalized'``, ``'substituted'``,
+    ``'family_missing'``, ``'type_missing'``, ``'group_missing'``,
+    ``'no_label'``, or ``'create_failed'``. ``info`` is a dict with
+    extra context (available_types, requested_family, requested_type,
+    requested_group) used by the caller to build warnings.
+    """
     label = led.get("label") or ""
     is_group = bool(led.get("is_group"))
     offsets_list = led.get("offsets") or []
@@ -745,27 +981,41 @@ def _place_fixture(doc, led, anchor_world_pt, anchor_rotation_deg, level_id):
     target_pt = XYZ(target_pt_t[0], target_pt_t[1], target_pt_t[2])
 
     if is_group:
-        group_type = _find_group_type(doc, label)
-        if group_type is None:
-            return None
-        group = doc.Create.PlaceGroup(target_pt, group_type)
-        if abs(target_rot_deg) > geometry.Tolerances.ROTATION_DEG:
-            try:
-                from Autodesk.Revit.DB import ElementTransformUtils, Line
-                axis = Line.CreateBound(target_pt, XYZ(target_pt.X, target_pt.Y, target_pt.Z + 1.0))
-                ElementTransformUtils.RotateElement(
-                    doc, group.Id, axis, math.radians(target_rot_deg)
-                )
-            except Exception:
-                pass
-        return group
+        group_type, gstatus = _resolve_group_type(doc, label)
+        if group_type is not None:
+            group = doc.Create.PlaceGroup(target_pt, group_type)
+            if abs(target_rot_deg) > geometry.Tolerances.ROTATION_DEG:
+                try:
+                    from Autodesk.Revit.DB import ElementTransformUtils, Line
+                    axis = Line.CreateBound(target_pt, XYZ(target_pt.X, target_pt.Y, target_pt.Z + 1.0))
+                    ElementTransformUtils.RotateElement(
+                        doc, group.Id, axis, math.radians(target_rot_deg)
+                    )
+                except Exception:
+                    pass
+            return group, gstatus, {"requested_group": label}
+        # Group lookup failed. If the label looks like a Family : Type
+        # marker, fall through to the family-symbol path — the legacy
+        # data set ``is_group: true`` indiscriminately, so we can't trust
+        # that flag alone.
+        if " : " not in label:
+            return None, "group_missing", {"requested_group": label}
 
     family_name, type_name = _split_label(label)
     if not family_name:
-        return None
-    symbol = _find_family_symbol(doc, family_name, type_name)
+        return None, "no_label", {}
+    symbol, status, available_types = _resolve_family_symbol(
+        doc, family_name, type_name,
+        allow_type_substitution=allow_type_substitution,
+    )
+    info = {
+        "requested_family": family_name,
+        "requested_type": type_name,
+        "available_types": available_types,
+    }
     if symbol is None:
-        return None
+        return None, status, info
+
     _activate_symbol(symbol)
     level = doc.GetElement(ElementId(int(level_id))) if level_id else None
     try:
@@ -783,7 +1033,7 @@ def _place_fixture(doc, led, anchor_world_pt, anchor_rotation_deg, level_id):
                 target_pt, symbol, StructuralType.NonStructural
             )
         except Exception:
-            return None
+            return None, "create_failed", info
     if inst is not None and abs(target_rot_deg) > geometry.Tolerances.ROTATION_DEG:
         try:
             from Autodesk.Revit.DB import ElementTransformUtils, Line
@@ -793,7 +1043,7 @@ def _place_fixture(doc, led, anchor_world_pt, anchor_rotation_deg, level_id):
             )
         except Exception:
             pass
-    return inst
+    return inst, status, info
 
 
 def _write_linker(elem, led, profile, target):
@@ -878,7 +1128,11 @@ def _element_facing(elem):
 
 
 def execute_placement(doc, matches, options=None):
-    """Place every non-skipped match. Caller manages the transaction."""
+    """Place every non-skipped match. Caller manages the transaction.
+
+    Failures and substitutions are reported as deduped warnings — one
+    line per (LED id, status) regardless of how many anchors hit it.
+    """
     if options is None:
         options = PlacementOptions()
     result = PlacementResult()
@@ -889,6 +1143,11 @@ def execute_placement(doc, matches, options=None):
     else:
         kept = [m for m in matches if not m.skip]
 
+    # (led_id, status) -> info dict from the first occurrence. Used to
+    # collapse "same LED, same problem, 27 anchors" into one warning.
+    failure_keys = {}
+    substitution_keys = {}
+
     for m in kept:
         anchor = m.target.world_pt
         anchor_rot = m.target.rotation_deg
@@ -898,18 +1157,84 @@ def execute_placement(doc, matches, options=None):
             for led in set_dict.get("linked_element_definitions") or []:
                 if not isinstance(led, dict):
                     continue
-                placed = _place_fixture(
-                    doc, led, anchor, anchor_rot, options.default_level_id
+                placed, status, info = _place_fixture(
+                    doc, led, anchor, anchor_rot, options.default_level_id,
+                    allow_type_substitution=options.allow_type_substitution,
                 )
+                led_id = led.get("id") or "?"
+                led_label = led.get("label") or "?"
                 if placed is None:
-                    result.warnings.append(
-                        "Could not place LED {} ({}) — family/group not loaded.".format(
-                            led.get("label") or "?", led.get("id") or "?"
-                        )
+                    failure_keys.setdefault(
+                        (led_id, status),
+                        {"label": led_label, "info": info},
                     )
                     continue
                 result.placed_fixture_count += 1
+                if status == "normalized":
+                    result.normalized_match_count += 1
+                elif status == "substituted":
+                    result.substituted_type_count += 1
+                    substitution_keys.setdefault(
+                        (led_id, status),
+                        {"label": led_label, "info": info},
+                    )
                 if _write_linker(placed, led, m.profile, m.target):
                     result.element_linker_writes += 1
 
+    for (led_id, status), entry in failure_keys.items():
+        result.warnings.append(_format_failure_warning(led_id, entry, status))
+    for (led_id, status), entry in substitution_keys.items():
+        info = entry["info"] or {}
+        avail = info.get("available_types") or []
+        result.warnings.append(
+            "LED {} ({}): type '{}' missing in family '{}'. Substituted "
+            "first available type: '{}'. Other types: {}.".format(
+                led_id,
+                entry["label"],
+                info.get("requested_type") or "",
+                info.get("requested_family") or "",
+                avail[0] if avail else "?",
+                ", ".join(t for t in avail[1:6]) or "(none)",
+            )
+        )
+
     return result
+
+
+def _format_failure_warning(led_id, entry, status):
+    label = entry["label"]
+    info = entry["info"] or {}
+    if status == "family_missing":
+        return (
+            "LED {} ({}): family '{}' is not loaded in the project — load it, "
+            "then re-run.".format(led_id, label, info.get("requested_family") or "")
+        )
+    if status == "type_missing":
+        avail = info.get("available_types") or []
+        avail_text = ", ".join(avail[:6]) if avail else "(none)"
+        if len(avail) > 6:
+            avail_text += ", ..."
+        return (
+            "LED {} ({}): family '{}' is loaded but type '{}' is not. "
+            "Available types: {}. Tip: enable 'Allow type substitution' to "
+            "place against the first available type.".format(
+                led_id, label,
+                info.get("requested_family") or "",
+                info.get("requested_type") or "",
+                avail_text,
+            )
+        )
+    if status == "group_missing":
+        return (
+            "LED {} ({}): group '{}' is not loaded in the project.".format(
+                led_id, label, info.get("requested_group") or ""
+            )
+        )
+    if status == "no_label":
+        return "LED {} ({}): no usable label.".format(led_id, label)
+    if status == "create_failed":
+        return (
+            "LED {} ({}): family/type resolved but Revit refused to create "
+            "the instance (likely a hosting / level issue).".format(led_id, label)
+        )
+    return "LED {} ({}): placement failed ({}).".format(led_id, label, status)

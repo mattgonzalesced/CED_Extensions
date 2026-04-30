@@ -16,6 +16,7 @@ caller is responsible for committing it back via
 ``active_yaml.save_active_payload``.
 """
 
+import copy
 import os
 
 import clr  # noqa: F401
@@ -31,6 +32,9 @@ from System.Windows.Controls import (  # noqa: E402
 
 import wpf as _wpf
 import profile_model
+import truth_groups
+import merge_workflow
+import wpf_dialogs
 
 
 _XAML_PATH = os.path.join(
@@ -69,12 +73,15 @@ def _coerce_float(text, default=0.0):
 class ManageProfilesController(object):
     """Modal editor. Pass the profile-document dict; mutations land in it."""
 
-    def __init__(self, profile_data):
+    def __init__(self, profile_data, doc=None):
         self.profile_data = profile_data
+        self.doc = doc  # active Revit doc; used by Change Type to enumerate FamilySymbols
         self.dirty = False
         # If the user clicks "Add LED..." we close the modal and signal
         # the caller to run the append workflow on this profile.
         self.requested_add_to_profile_id = None
+        # Cross-profile fixture clipboard (deep-copied LED dict).
+        self._fixture_clipboard = None
         self.window = _wpf.load_xaml(_XAML_PATH)
 
         self._profile_items = ObservableCollection[_NetObject]()
@@ -104,11 +111,19 @@ class ManageProfilesController(object):
         self.led_tree = f("LedTree")
         self.add_led_btn = f("AddLedButton")
         self.remove_led_btn = f("RemoveLedButton")
+        self.change_type_btn = f("ChangeTypeButton")
+        self.copy_fixture_btn = f("CopyFixtureButton")
+        self.paste_fixture_btn = f("PasteFixtureButton")
         self.relationship_box = f("RelationshipBox")
         self.profile_meta_grid = f("ProfileMetaGrid")
         self.add_profile_meta_btn = f("AddProfileMetaButton")
         self.remove_profile_meta_btn = f("RemoveProfileMetaButton")
         self.save_profile_meta_btn = f("SaveProfileMetaButton")
+        self.alias_list = f("AliasList")
+        self.alias_info_label = f("AliasInfoLabel")
+        self.add_alias_btn = f("AddAliasButton")
+        self.remove_alias_btn = f("RemoveAliasButton")
+        self.save_aliases_btn = f("SaveAliasesButton")
         self.parameter_grid = f("ParameterGrid")
         self.offset_x = f("OffsetXBox")
         self.offset_y = f("OffsetYBox")
@@ -126,12 +141,18 @@ class ManageProfilesController(object):
         self.delete_btn.Click += self._on_delete_profile
         self.add_led_btn.Click += self._on_add_led_clicked
         self.remove_led_btn.Click += self._on_remove_led
+        self.change_type_btn.Click += self._on_change_type
+        self.copy_fixture_btn.Click += self._on_copy_fixture
+        self.paste_fixture_btn.Click += self._on_paste_fixture
         self.led_tree.SelectedItemChanged += self._on_led_selected
         self.save_btn.Click += self._on_save
         self.save_selected_btn.Click += self._on_save_selected
         self.save_profile_meta_btn.Click += self._on_save_profile_metadata
         self.add_profile_meta_btn.Click += self._on_add_profile_metadata
         self.remove_profile_meta_btn.Click += self._on_remove_profile_metadata
+        self.add_alias_btn.Click += self._on_add_alias
+        self.remove_alias_btn.Click += self._on_remove_alias
+        self.save_aliases_btn.Click += self._on_save_aliases
         self.close_btn.Click += self._on_close
 
     # ---- list -------------------------------------------------------
@@ -140,9 +161,14 @@ class ManageProfilesController(object):
         self._profile_items.Clear()
         defs = self.profile_data.get("equipment_definitions") or []
         text = (filter_text or "").strip().lower()
-        for entry in defs:
-            if not isinstance(entry, dict):
-                continue
+        # Display alphabetically (case-insensitive) by profile name. The
+        # underlying ``equipment_definitions`` list order is not changed,
+        # so import / export order stays stable.
+        sorted_defs = sorted(
+            (e for e in defs if isinstance(e, dict)),
+            key=lambda e: (e.get("name") or "").lower(),
+        )
+        for entry in sorted_defs:
             if text and text not in (entry.get("name") or "").lower():
                 continue
             self._profile_items.Add(_ProfileItem(entry))
@@ -169,6 +195,7 @@ class ManageProfilesController(object):
             self.allow_unmatched.IsChecked = False
             self.prompt_mismatch.IsChecked = False
             self.profile_meta_grid.ItemsSource = ObservableCollection[_NetObject]()
+            self._populate_aliases(None)
             self.led_tree.Items.Clear()
             self._load_led(None)
             return
@@ -184,6 +211,7 @@ class ManageProfilesController(object):
         self.allow_unmatched.IsChecked = bool(wrapper.allow_unmatched_parents)
         self.prompt_mismatch.IsChecked = bool(wrapper.prompt_on_parent_mismatch)
         self._populate_profile_metadata(profile)
+        self._populate_aliases(profile)
         self._populate_led_tree(profile)
         self._load_led(None)
 
@@ -462,6 +490,259 @@ class ManageProfilesController(object):
         self._load_led(None)
         self._set_status("LED removed (unsaved)")
 
+    # ---- change type / copy / paste ---------------------------------
+
+    def _on_change_type(self, sender, e):
+        """Pick a new ``Family : Type`` from a dropdown of types loaded in
+        the active project, filtered to the same category as the
+        currently selected LED / annotation.
+
+        For text-note annotations the dropdown shows TextNoteType names
+        (no family).
+        """
+        if self.doc is None:
+            self._set_status(
+                "No active Revit document — cannot enumerate types. "
+                "Run Manage Profiles from the panel to enable this."
+            )
+            return
+
+        if self._current_ann is not None:
+            kind = self._current_ann.get("kind") or ""
+            if kind == "text_note":
+                options = self._enumerate_text_note_types()
+                if not options:
+                    self._set_status("No TextNoteType is loaded in the project.")
+                    return
+                chosen = wpf_dialogs.pick_from_list(
+                    options,
+                    title="Change Type",
+                    prompt="Pick a TextNoteType:",
+                )
+                if not chosen:
+                    return
+                self._current_ann["type_name"] = chosen
+                # text-note label is the text content, not Family:Type;
+                # leave label / family_name alone.
+            else:
+                options = self._enumerate_all_family_types()
+                if not options:
+                    self._set_status("No FamilySymbols loaded in the project.")
+                    return
+                chosen = wpf_dialogs.pick_from_list(
+                    options,
+                    title="Change Type",
+                    prompt="Pick a Family : Type for the annotation:",
+                )
+                if not chosen:
+                    return
+                if " : " in chosen:
+                    fam, typ = chosen.split(" : ", 1)
+                    self._current_ann["family_name"] = fam.strip()
+                    self._current_ann["type_name"] = typ.strip()
+                else:
+                    self._current_ann["family_name"] = chosen
+                    self._current_ann["type_name"] = ""
+                self._current_ann["label"] = chosen
+            self.dirty = True
+            if self._current_profile is not None:
+                self._populate_led_tree(self._current_profile)
+            self._set_status("Annotation type changed (unsaved)")
+            return
+
+        if self._current_led is not None:
+            options = self._enumerate_all_family_types()
+            if not options:
+                self._set_status("No FamilySymbols loaded in the project.")
+                return
+            chosen = wpf_dialogs.pick_from_list(
+                options,
+                title="Change Type",
+                prompt="Pick a Family : Type for the LED:",
+            )
+            if not chosen:
+                return
+            self._current_led["label"] = chosen
+            self.dirty = True
+            if self._current_profile is not None:
+                self._populate_led_tree(self._current_profile)
+            self._set_status("LED type changed (unsaved)")
+            return
+
+        self._set_status("Pick a LED or annotation first")
+
+    def _enumerate_all_family_types(self):
+        """Return a sorted list of every loaded FamilySymbol as a
+        ``"Family : Type"`` string. No category filter — the user
+        explicitly wants the full menu so cross-category re-typing
+        (e.g. swapping a fixture for a tag) is possible from one place.
+        """
+        if self.doc is None:
+            return []
+        from Autodesk.Revit.DB import FamilySymbol, FilteredElementCollector
+        out = set()
+        for sym in FilteredElementCollector(self.doc).OfClass(FamilySymbol):
+            family = getattr(sym, "Family", None)
+            if family is None:
+                continue
+            fam_name = getattr(family, "Name", "") or ""
+            type_name = getattr(sym, "Name", "") or ""
+            if not fam_name or not type_name:
+                continue
+            out.add("{} : {}".format(fam_name, type_name))
+        return sorted(out, key=lambda s: s.lower())
+
+    def _enumerate_text_note_types(self):
+        if self.doc is None:
+            return []
+        from Autodesk.Revit.DB import TextNoteType, FilteredElementCollector
+        out = set()
+        for t in FilteredElementCollector(self.doc).OfClass(TextNoteType):
+            name = getattr(t, "Name", "") or ""
+            if name:
+                out.add(name)
+        return sorted(out, key=lambda s: s.lower())
+
+    def _on_copy_fixture(self, sender, e):
+        if self._current_led is None:
+            self._set_status("Pick a fixture (LED) to copy")
+            return
+        # Persist any pending edits to the parameter grid / offsets first.
+        self._save_selected_to_data()
+        self._fixture_clipboard = copy.deepcopy(self._current_led)
+        label = self._fixture_clipboard.get("label") or "?"
+        n_anns = len(self._fixture_clipboard.get("annotations") or [])
+        self._set_status(
+            "Copied fixture {!r} (with {} annotation(s)). "
+            "Switch to the destination profile and click Paste fixture.".format(
+                label, n_anns
+            )
+        )
+
+    def _on_paste_fixture(self, sender, e):
+        if self._fixture_clipboard is None:
+            self._set_status("Nothing to paste — copy a fixture first")
+            return
+        if self._current_profile is None:
+            self._set_status("Pick a destination profile first")
+            return
+
+        sets = self._current_profile.get("linked_sets") or []
+        if not sets:
+            new_set = {
+                "id": self._next_set_id(),
+                "name": "Set",
+                "linked_element_definitions": [],
+            }
+            self._current_profile.setdefault("linked_sets", []).append(new_set)
+            target_set = new_set
+        elif len(sets) == 1:
+            target_set = sets[0]
+        else:
+            target_set = wpf_dialogs.pick_from_list(
+                sets,
+                title="Paste fixture",
+                prompt="Pick the destination linked_set:",
+                display_func=lambda s: "{}  ({})".format(
+                    s.get("name") or "set", s.get("id") or "?"
+                ),
+            )
+            if target_set is None:
+                return
+
+        new_led = copy.deepcopy(self._fixture_clipboard)
+
+        # Generate a unique LED id within the target set.
+        target_set_id = target_set.get("id") or "SET-???"
+        existing = {
+            (l.get("id") or "")
+            for l in target_set.get("linked_element_definitions") or []
+        }
+        idx = 1
+        while True:
+            led_id = "{}-LED-{:03d}".format(target_set_id, idx)
+            if led_id not in existing:
+                break
+            idx += 1
+        new_led["id"] = led_id
+
+        # Reset offsets to zero (paste at origin, no relative pose).
+        new_led["offsets"] = [{
+            "x_inches": 0.0,
+            "y_inches": 0.0,
+            "z_inches": 0.0,
+            "rotation_deg": 0.0,
+        }]
+
+        # Strip parent-relationship directives + stale parent / element
+        # references from the LED's parameters.
+        new_led["parameters"] = self._strip_parent_directives(
+            new_led.get("parameters") or {}
+        )
+
+        # Renumber annotations under the pasted LED.
+        new_anns = []
+        for i, ann in enumerate(new_led.get("annotations") or []):
+            if not isinstance(ann, dict):
+                continue
+            ann_copy = copy.deepcopy(ann)
+            ann_copy["id"] = "{}-ANN-{:03d}".format(led_id, i + 1)
+            new_anns.append(ann_copy)
+        new_led["annotations"] = new_anns
+
+        target_set.setdefault("linked_element_definitions", []).append(new_led)
+
+        self.dirty = True
+        self._populate_led_tree(self._current_profile)
+        self._set_status(
+            "Pasted fixture into set {!r} as {!r}".format(
+                target_set.get("id") or "?", led_id
+            )
+        )
+
+    @staticmethod
+    def _strip_parent_directives(params):
+        """Drop BYPARENT / BYSIBLING directive entries and stale
+        parent / element references from a parameter dict so the pasted
+        LED has no lingering link to its source profile's parent."""
+        _STALE_KEYS = (
+            "Parent ElementId", "Parent Element ID", "Parent ID",
+            "Parent Rotation (deg)", "Parent_location",
+            "Element_Linker Parameter",
+            "ElementId", "Element Id", "Element ID",
+            "Linked Element Definition ID",
+            "Set Definition ID",
+            "Location XYZ (ft)",
+            "FacingOrientation",
+            "LevelId",
+        )
+        out = {}
+        for k, v in params.items():
+            if isinstance(v, dict) and (
+                "parent_parameter" in v or "sibling_parameter" in v
+            ):
+                continue  # parent / sibling directive
+            if k in _STALE_KEYS:
+                continue  # stale Element_Linker-derived value
+            out[k] = v
+        return out
+
+    def _next_set_id(self):
+        """Lowest unused ``SET-NNN`` across the whole document."""
+        seen = set()
+        for p in self.profile_data.get("equipment_definitions") or []:
+            if not isinstance(p, dict):
+                continue
+            for s in p.get("linked_sets") or []:
+                if isinstance(s, dict) and s.get("id"):
+                    seen.add(s["id"])
+        n = 1
+        while True:
+            candidate = "SET-{:03d}".format(n)
+            if candidate not in seen:
+                return candidate
+            n += 1
+
     def _commit_grid_edits(self, grid=None):
         """WPF DataGrid edits aren't visible in the bound items until both
         the cell and the row are committed. CommitEdit() commits one
@@ -484,6 +765,40 @@ class ManageProfilesController(object):
         for k, v in meta_raw.items():
             rows.Add(_ParamRow(str(k), "" if v is None else str(v)))
         self.profile_meta_grid.ItemsSource = rows
+
+    def _populate_aliases(self, profile):
+        """Refresh the editable aliases ListBox + the legacy info label."""
+        if not hasattr(self, "alias_list") or self.alias_list is None:
+            return
+        self.alias_list.Items.Clear()
+        if profile is None:
+            self.alias_info_label.Text = ""
+            return
+        for alias in merge_workflow.aliases(profile):
+            self.alias_list.Items.Add(alias)
+
+        # Surface a hint if this profile has legacy ced_truth_source markers
+        # — they're inert under the new model but worth flagging until
+        # the user runs the migration via Merge Profiles.
+        info_bits = []
+        if truth_groups.is_group_member(profile):
+            info_bits.append(
+                "Note: this profile still carries a legacy "
+                "ced_truth_source_id pointing at {!r}. Run Merge Profiles "
+                "to migrate these.".format(
+                    truth_groups.truth_source_name(profile) or "?"
+                )
+            )
+        all_profiles = self.profile_data.get("equipment_definitions") or []
+        legacy_members = truth_groups.find_group_members(all_profiles, profile.get("id"))
+        if legacy_members:
+            info_bits.append(
+                "Note: {} legacy member(s) point at this profile via "
+                "ced_truth_source_id; run Merge Profiles to migrate.".format(
+                    len(legacy_members)
+                )
+            )
+        self.alias_info_label.Text = "  ".join(info_bits)
 
     def _read_profile_meta_grid(self):
         out = {}
@@ -568,6 +883,61 @@ class ManageProfilesController(object):
         else:
             self._set_status("Could not locate the selected row")
 
+    # ---- alias editing ---------------------------------------------
+
+    def _read_aliases_from_listbox(self):
+        return [str(item) for item in self.alias_list.Items if item]
+
+    def _save_aliases_to_data(self):
+        """Persist the listbox aliases back onto the current profile."""
+        if self._current_profile is None:
+            return False
+        new_aliases = self._read_aliases_from_listbox()
+        # Replace the list in-place (preserves dict identity).
+        self._current_profile[merge_workflow.MERGED_ALIASES_KEY] = new_aliases
+        return True
+
+    def _on_add_alias(self, sender, e):
+        if self._current_profile is None:
+            self._set_status("Pick a profile first")
+            return
+        text = wpf_dialogs.prompt_for_string(
+            "Add alias to {!r}:".format(self._current_profile.get("name") or "?"),
+            title="Add merged alias",
+            default="",
+        )
+        if not text:
+            return
+        clean = text.strip()
+        if not clean:
+            return
+        existing = {
+            str(item).strip().lower() for item in self.alias_list.Items
+        }
+        if clean.lower() in existing:
+            self._set_status("Alias already present (deduped)")
+            return
+        self.alias_list.Items.Add(clean)
+        self._set_status("Alias added — click 'Save aliases' to commit")
+
+    def _on_remove_alias(self, sender, e):
+        selected = self.alias_list.SelectedItem
+        if selected is None:
+            self._set_status("Pick an alias to remove first")
+            return
+        self.alias_list.Items.Remove(selected)
+        self._set_status("Alias removed — click 'Save aliases' to commit")
+
+    def _on_save_aliases(self, sender, e):
+        if self._current_profile is None:
+            self._set_status("Pick a profile first")
+            return
+        if not self._save_aliases_to_data():
+            self._set_status("Save failed — no current profile")
+            return
+        self.dirty = True
+        self._set_status("Saved aliases (in memory) — Save changes to commit")
+
     def _read_param_grid(self):
         """Read parameter rows from the grid into a fresh ``{name: value}`` dict."""
         out = {}
@@ -630,11 +1000,12 @@ class ManageProfilesController(object):
         profile["allow_unmatched_parents"] = bool(self.allow_unmatched.IsChecked)
         profile["prompt_on_parent_mismatch"] = bool(self.prompt_mismatch.IsChecked)
 
-        # Also persist the profile metadata grid + the currently selected
-        # LED / ANN before the global "Save changes" returns control to
-        # the caller (which writes the whole document back to
+        # Also persist the profile metadata grid + aliases + the currently
+        # selected LED / ANN before the global "Save changes" returns
+        # control to the caller (which writes the whole document back to
         # Extensible Storage).
         self._save_profile_metadata_to_data()
+        self._save_aliases_to_data()
         self._save_selected_to_data()
 
         self.dirty = True
@@ -654,5 +1025,5 @@ class ManageProfilesController(object):
         return self.dirty
 
 
-def show_modal(profile_data):
-    return ManageProfilesController(profile_data).show()
+def show_modal(profile_data, doc=None):
+    return ManageProfilesController(profile_data, doc=doc).show()

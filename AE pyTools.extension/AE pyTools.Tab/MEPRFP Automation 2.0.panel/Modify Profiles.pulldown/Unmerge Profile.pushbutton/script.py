@@ -1,6 +1,6 @@
 #! python3
 # -*- coding: utf-8 -*-
-"""MEPRFP Automation 2.0 :: Unmerge Profile"""
+"""MEPRFP Automation 2.0 :: Unmerge Profile (alias removal)"""
 
 import os
 import sys
@@ -20,30 +20,16 @@ import forms_compat as forms
 import wpf_dialogs
 import active_yaml
 import merge_workflow
-import truth_groups
 
 TITLE = "Unmerge Profile (MEPRFP 2.0)"
 
 
-def _member_label(profile_data):
-    profiles = profile_data.get("equipment_definitions") or []
-    by_id = {
-        p.get("id"): p for p in profiles
-        if isinstance(p, dict) and p.get("id")
-    }
-
-    def label(member):
-        mname = member.get("name") or "(unnamed)"
-        mid = member.get("id") or "?"
-        sid = truth_groups.truth_source_id(member) or "?"
-        source = by_id.get(sid)
-        if source is not None:
-            sname = source.get("name") or "(unnamed)"
-            return "{}  ({})    <-    {}  ({})".format(mname, mid, sname, sid)
-        sname = truth_groups.truth_source_name(member) or "<source missing>"
-        return "{}  ({})    <-    {}  ({})".format(mname, mid, sname, sid)
-
-    return label
+def _entry_label(source, alias):
+    return "{}  ({})    ->    {}".format(
+        source.get("name") or "(unnamed)",
+        source.get("id") or "?",
+        alias,
+    )
 
 
 def main():
@@ -55,52 +41,46 @@ def main():
         return
 
     profile_data = active_yaml.load_active_data(doc)
-    profiles = profile_data.get("equipment_definitions") or []
-    members = [p for p in profiles if isinstance(p, dict) and truth_groups.is_group_member(p)]
-    if not members:
+    entries = merge_workflow.all_alias_entries(profile_data)
+    if not entries:
         forms.alert(
-            "No merged profiles in the active store — nothing to unmerge.",
+            "No aliases in the active store — nothing to unmerge.",
             title=TITLE,
         )
         return
 
     chosen = wpf_dialogs.pick_from_list(
-        members,
+        entries,
         title=TITLE,
-        prompt="Pick a merged profile to detach (member <- source):",
-        display_func=_member_label(profile_data),
+        prompt="Pick an alias to remove (source -> alias):",
+        display_func=lambda pair: _entry_label(pair[0], pair[1]),
     )
     if chosen is None:
         return
+    source, alias = chosen
 
     if not forms.confirm(
-        "Detach\n"
-        "    {}  ({})\n"
-        "from group\n"
-        "    {}  ({})?\n\n"
-        "The profile's structural content stays as-is. Only the "
-        "ced_truth_source_id / ced_truth_source_name tags are cleared.".format(
-            chosen.get("name") or "?", chosen.get("id") or "?",
-            truth_groups.truth_source_name(chosen) or "?",
-            truth_groups.truth_source_id(chosen) or "?",
+        "Remove alias\n    {}\nfrom source\n    {}?".format(
+            alias,
+            "{}  ({})".format(source.get("name") or "?", source.get("id") or "?"),
         ),
         title=TITLE,
     ):
         return
 
-    try:
-        merge_workflow.unmerge(profile_data, chosen)
-    except merge_workflow.MergeError as exc:
-        forms.alert(str(exc), title=TITLE)
+    if not merge_workflow.remove_alias(source, alias):
+        forms.alert("Alias not found on the source — nothing changed.", title=TITLE)
         return
 
     with revit.Transaction("Unmerge Profile (MEPRFP 2.0)", doc=doc):
         active_yaml.save_active_data(doc, profile_data, action="Unmerge Profile")
 
     output.print_md(
-        "**Unmerged**\n\n"
-        "- Profile: `{}` (`{}`)\n".format(
-            chosen.get("name") or "?", chosen.get("id") or "?"
+        "**Alias removed**\n\n"
+        "- Source: `{}` (`{}`)\n"
+        "- Alias:  `{}`\n".format(
+            source.get("name") or "?", source.get("id") or "?",
+            alias,
         )
     )
 

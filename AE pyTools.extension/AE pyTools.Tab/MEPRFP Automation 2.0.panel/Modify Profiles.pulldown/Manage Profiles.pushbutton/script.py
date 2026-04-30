@@ -49,7 +49,7 @@ def main():
         )
         return
 
-    controller = manage_profiles_window.ManageProfilesController(profile_data)
+    controller = manage_profiles_window.ManageProfilesController(profile_data, doc=doc)
     controller.show()
 
     # Persist any in-memory edits the user made before clicking Add LED

@@ -1,0 +1,8 @@
+title: Update Vector
+tooltip: |
+  Recapture the offsets stored on a LED (or its annotations) from the
+  current pose of the selected elements. Use after manually moving a
+  placed child or annotation to bake the new position back into the
+  YAML so future placements / Follow-Parent runs use the corrected
+  offset. Last-moved wins when instances diverge.
+is_beta: false

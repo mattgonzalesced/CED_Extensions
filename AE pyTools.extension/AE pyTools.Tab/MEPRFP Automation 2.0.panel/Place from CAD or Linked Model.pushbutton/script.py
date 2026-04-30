@@ -64,10 +64,14 @@ def main():
             "- Fixtures placed: {}\n"
             "- Element_Linker writes: {}\n"
             "- Already-placed (skipped): {}\n"
+            "- Normalized-name matches: {}\n"
+            "- Type substitutions: {}\n"
             "- Warnings: {}\n".format(
                 result.placed_fixture_count,
                 result.element_linker_writes,
                 result.skipped_already_placed,
+                getattr(result, "normalized_match_count", 0),
+                getattr(result, "substituted_type_count", 0),
                 len(result.warnings),
             )
         )

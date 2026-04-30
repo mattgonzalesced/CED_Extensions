@@ -1,27 +1,26 @@
 # -*- coding: utf-8 -*-
 """
-Merge / unmerge engine.
+Alias-based merge engine.
 
-A *merge* declares one profile (the ``source``) as the truth and copies
-its structural content (parent_filter, linked_sets, equipment_properties,
-flags) into one or more *target* profiles. Targets keep their own ``id``
-and ``name`` and are tagged with ``ced_truth_source_id`` /
-``ced_truth_source_name`` so audits can trace lineage.
+The 2.0 merge model treats a "merge" as a pure name-resolution alias.
+A *source* profile carries a list under ``merged_aliases`` — alternate
+strings (typically ``Family : Type`` labels) that should also resolve
+to this source during placement matching. No structural data is ever
+copied between profiles.
 
-Linked-set / LED / annotation IDs are *renumbered* in the target so two
-different profiles never share the same ``SET-NNN-LED-NNN`` IDs. Without
-this, Element_Linker references on placed children become ambiguous.
-
-The pure-Python entry points here have no Revit-API dependency; the
-pushbutton scripts wrap them with WPF dialogs.
+Legacy data captured before this rewrite used a deep-copy model with
+``ced_truth_source_id`` / ``ced_truth_source_name`` on each member.
+``has_legacy_members`` + ``migrate_legacy_members`` convert that data
+into the new alias model on first run.
 """
 
-import copy
 import io
 import os
-import re
 
 import truth_groups
+
+
+MERGED_ALIASES_KEY = "merged_aliases"
 
 
 class MergeError(Exception):
@@ -29,234 +28,191 @@ class MergeError(Exception):
 
 
 # ---------------------------------------------------------------------
-# Eligibility
+# Alias list management
 # ---------------------------------------------------------------------
 
-def is_source_for_others(profile_data, profile):
-    """True if any other profile in the store points at ``profile`` as its truth source."""
-    pid = profile.get("id") if isinstance(profile, dict) else None
-    if not pid:
+def _normalise_alias(value):
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _alias_match_key(value):
+    """Case-insensitive, trimmed key for de-duplication."""
+    return _normalise_alias(value).lower()
+
+
+def aliases(profile):
+    """Return the alias list on ``profile`` (creating it if missing)."""
+    if not isinstance(profile, dict):
+        return []
+    raw = profile.get(MERGED_ALIASES_KEY)
+    if not isinstance(raw, list):
+        raw = []
+        profile[MERGED_ALIASES_KEY] = raw
+    return raw
+
+
+def add_alias(profile, alias):
+    """Append ``alias`` to the source profile's list (case-insensitively
+    deduped). Returns True if the alias was actually added, False if it
+    was already present or empty."""
+    if not isinstance(profile, dict):
+        raise MergeError("Invalid profile")
+    clean = _normalise_alias(alias)
+    if not clean:
         return False
-    for p in profile_data.get("equipment_definitions") or []:
-        if not isinstance(p, dict) or p is profile:
-            continue
-        if truth_groups.truth_source_id(p) == pid:
+    existing = aliases(profile)
+    existing_keys = {_alias_match_key(a) for a in existing}
+    if _alias_match_key(clean) in existing_keys:
+        return False
+    existing.append(clean)
+    return True
+
+
+def add_aliases(profile, alias_iterable):
+    """Bulk-add. Returns ``(added_count, skipped_duplicates)``."""
+    added = 0
+    skipped = 0
+    for a in alias_iterable or ():
+        if add_alias(profile, a):
+            added += 1
+        else:
+            skipped += 1
+    return added, skipped
+
+
+def remove_alias(profile, alias):
+    """Remove ``alias`` (case-insensitive match). Returns True if removed."""
+    if not isinstance(profile, dict):
+        return False
+    target_key = _alias_match_key(alias)
+    existing = aliases(profile)
+    for i, current in enumerate(existing):
+        if _alias_match_key(current) == target_key:
+            del existing[i]
             return True
     return False
 
 
-def can_be_target(profile_data, source_profile, candidate_profile):
-    """Returns ``(ok: bool, reason: str)``.
-
-    Forbids:
-        * candidate == source
-        * candidate is already a member of any group
-        * candidate is itself a source for other merged profiles
-    """
-    if candidate_profile is source_profile:
-        return False, "Cannot merge a profile into itself"
-    if not isinstance(candidate_profile, dict):
-        return False, "Invalid candidate"
-    if truth_groups.is_group_member(candidate_profile):
-        sid = truth_groups.truth_source_id(candidate_profile)
-        return False, "Already a member of group {}".format(sid or "?")
-    if is_source_for_others(profile_data, candidate_profile):
-        return False, "Already a source for other merged profiles — unmerge its members first"
-    return True, ""
+def has_aliases(profile):
+    return bool(aliases(profile))
 
 
-def can_be_source(profile_data, candidate_profile):
-    """A profile can be a source unless it's itself a member of another group.
-
-    (Members of groups can't lead their own groups — that's a chain we
-    refuse to build.)
-    """
-    if not isinstance(candidate_profile, dict):
-        return False, "Invalid candidate"
-    if truth_groups.is_group_member(candidate_profile):
-        sid = truth_groups.truth_source_id(candidate_profile)
-        return False, "Profile is itself a member of group {} — unmerge it first".format(sid or "?")
-    return True, ""
-
-
-def eligible_targets(profile_data, source_profile):
-    """All profiles that can currently be merged into ``source_profile``."""
-    out = []
-    for p in profile_data.get("equipment_definitions") or []:
-        ok, _ = can_be_target(profile_data, source_profile, p)
-        if ok:
-            out.append(p)
-    return out
-
-
-def eligible_sources(profile_data):
-    out = []
-    for p in profile_data.get("equipment_definitions") or []:
-        ok, _ = can_be_source(profile_data, p)
-        if ok:
-            out.append(p)
-    return out
-
-
-# ---------------------------------------------------------------------
-# Renumbering helpers (testable offline)
-# ---------------------------------------------------------------------
-
-_SUFFIX_RE = re.compile(r"(\d+)$")
-
-
-def _max_numeric_suffix(strings, prefix):
-    best = 0
-    for s in strings:
-        if not isinstance(s, str) or not s.startswith(prefix):
-            continue
-        rest = s[len(prefix):]
-        try:
-            n = int(rest)
-        except ValueError:
-            continue
-        if n > best:
-            best = n
-    return best
-
-
-def _collect_set_ids(profile_data):
-    out = set()
+def find_alias_owner(profile_data, alias):
+    """Return the profile that lists ``alias`` in its merged_aliases, or None."""
+    target_key = _alias_match_key(alias)
+    if not target_key:
+        return None
     for p in profile_data.get("equipment_definitions") or []:
         if not isinstance(p, dict):
             continue
-        for s in p.get("linked_sets") or []:
-            if isinstance(s, dict) and isinstance(s.get("id"), str):
-                out.add(s["id"])
+        for a in p.get(MERGED_ALIASES_KEY) or ():
+            if _alias_match_key(a) == target_key:
+                return p
+    return None
+
+
+def all_alias_entries(profile_data):
+    """Flat enumeration ``[(source_profile, alias_string), ...]``."""
+    out = []
+    for p in profile_data.get("equipment_definitions") or []:
+        if not isinstance(p, dict):
+            continue
+        for a in p.get(MERGED_ALIASES_KEY) or ():
+            out.append((p, a))
     return out
 
 
-def renumber_linked_sets(linked_sets, existing_set_ids):
-    """Replace every SET / LED / ANN id in ``linked_sets`` (mutates) with
-    fresh ids that don't collide with ``existing_set_ids``.
+# ---------------------------------------------------------------------
+# Legacy migration
+# ---------------------------------------------------------------------
 
-    ``existing_set_ids`` is a *mutable* set that this function adds to
-    so callers chaining multiple renumber passes share state.
-    """
-    next_n = _max_numeric_suffix(existing_set_ids, "SET-") + 1
-    for set_dict in linked_sets:
-        if not isinstance(set_dict, dict):
+def has_legacy_members(profile_data):
+    """True if any profile still has the legacy ``ced_truth_source_id``."""
+    for p in profile_data.get("equipment_definitions") or []:
+        if not isinstance(p, dict):
             continue
-        old_set_id = set_dict.get("id") or ""
-        new_set_id = "SET-{:03d}".format(next_n)
-        next_n += 1
-        existing_set_ids.add(new_set_id)
-        set_dict["id"] = new_set_id
-        for led in set_dict.get("linked_element_definitions") or []:
-            if not isinstance(led, dict):
-                continue
-            old_led_id = led.get("id") or ""
-            led["id"] = _swap_id_prefix(old_led_id, old_set_id, new_set_id)
-            new_led_id = led["id"]
-            for ann in led.get("annotations") or []:
-                if not isinstance(ann, dict):
-                    continue
-                old_ann_id = ann.get("id") or ""
-                ann["id"] = _swap_id_prefix(old_ann_id, old_led_id, new_led_id)
-    return linked_sets
+        if truth_groups.is_group_member(p):
+            return True
+    return False
 
 
-def _swap_id_prefix(old_id, old_prefix, new_prefix):
-    """If ``old_id`` starts with ``old_prefix + '-'``, replace that prefix
-    with ``new_prefix + '-'``. Otherwise return ``old_id`` unchanged
-    (defensive fallback for malformed ids — better than crashing)."""
-    if not old_id:
-        return old_id
-    needle = old_prefix + "-"
-    if old_id.startswith(needle):
-        return new_prefix + "-" + old_id[len(needle):]
-    return old_id
+def collect_legacy_members(profile_data):
+    """Return list of profiles with ``ced_truth_source_id`` set."""
+    return [
+        p for p in profile_data.get("equipment_definitions") or []
+        if isinstance(p, dict) and truth_groups.is_group_member(p)
+    ]
 
 
-# ---------------------------------------------------------------------
-# Merge / unmerge
-# ---------------------------------------------------------------------
-
-# Fields copied from source -> target on merge. ``id`` and ``name`` are
-# explicitly preserved on the target. ``ced_truth_source_*`` is set
-# explicitly after the copy.
-_COPY_FIELDS = (
-    "schema_version",
-    "parent_filter",
-    "linked_sets",
-    "equipment_properties",
-    "allow_parentless",
-    "allow_unmatched_parents",
-    "prompt_on_parent_mismatch",
-)
+class LegacyMigrationReport(object):
+    def __init__(self):
+        self.aliases_added = 0
+        self.members_cleared = 0
+        self.unresolved_members = []  # members whose source no longer exists
 
 
-def merge_into(profile_data, source_profile, target_profile):
-    """Apply one merge. Mutates ``profile_data`` in place. Raises ``MergeError``
-    on eligibility failure."""
-    ok, reason = can_be_source(profile_data, source_profile)
-    if not ok:
-        raise MergeError(reason)
-    ok, reason = can_be_target(profile_data, source_profile, target_profile)
-    if not ok:
-        raise MergeError(reason)
+def migrate_legacy_members(profile_data):
+    """Convert every legacy member into an alias on its source.
 
-    existing_set_ids = _collect_set_ids(profile_data)
-    # Remove the target's OWN set ids from the "existing" set so the
-    # renumbered ids of the copy don't collide with the target's about-
-    # to-be-replaced sets.
-    for s in target_profile.get("linked_sets") or []:
-        if isinstance(s, dict) and isinstance(s.get("id"), str):
-            existing_set_ids.discard(s["id"])
+    For each profile with ``ced_truth_source_id``:
+      * append the member's ``name`` to the source's ``merged_aliases``
+        (deduped)
+      * clear the member's ``ced_truth_source_id`` / ``ced_truth_source_name``
 
-    new_sets = renumber_linked_sets(
-        copy.deepcopy(source_profile.get("linked_sets") or []),
-        existing_set_ids,
-    )
+    The member profiles themselves are NOT deleted — that's a separate
+    optional confirm in the calling UI.
 
-    for field in _COPY_FIELDS:
-        if field == "linked_sets":
-            target_profile[field] = new_sets
-        elif field in source_profile:
-            target_profile[field] = copy.deepcopy(source_profile[field])
-
-    truth_groups.set_truth_source(
-        target_profile,
-        source_profile.get("id"),
-        source_profile.get("name"),
-    )
-
-
-def merge_many(profile_data, source_profile, target_profiles):
-    """Apply merges to many targets. Returns ``(succeeded, failed)`` lists.
-
-    Each ``failed`` entry is ``(target_profile, reason_str)``.
+    Returns a ``LegacyMigrationReport``.
     """
-    succeeded, failed = [], []
-    for t in target_profiles:
-        try:
-            merge_into(profile_data, source_profile, t)
-            succeeded.append(t)
-        except MergeError as exc:
-            failed.append((t, str(exc)))
-    return succeeded, failed
+    report = LegacyMigrationReport()
+    by_id = {
+        p.get("id"): p
+        for p in profile_data.get("equipment_definitions") or []
+        if isinstance(p, dict) and p.get("id")
+    }
+    for member in collect_legacy_members(profile_data):
+        sid = truth_groups.truth_source_id(member)
+        source = by_id.get(sid)
+        if source is None:
+            report.unresolved_members.append(member)
+            # Clear the dangling tag anyway.
+            truth_groups.clear_truth_source(member)
+            report.members_cleared += 1
+            continue
+        member_name = (member.get("name") or "").strip()
+        if member_name and add_alias(source, member_name):
+            report.aliases_added += 1
+        truth_groups.clear_truth_source(member)
+        report.members_cleared += 1
+    return report
 
 
-def unmerge(profile_data, member_profile):
-    """Detach ``member_profile`` from its truth-source group."""
-    if not isinstance(member_profile, dict):
-        raise MergeError("Invalid profile")
-    if not truth_groups.is_group_member(member_profile):
-        raise MergeError("Profile is not currently a group member")
-    truth_groups.clear_truth_source(member_profile)
+def delete_profiles_by_id(profile_data, profile_ids):
+    """Remove every profile whose ``id`` is in ``profile_ids``.
+    Returns the count actually removed."""
+    if not profile_ids:
+        return 0
+    target_ids = set(profile_ids)
+    defs = profile_data.get("equipment_definitions") or []
+    keep = []
+    removed = 0
+    for p in defs:
+        if isinstance(p, dict) and p.get("id") in target_ids:
+            removed += 1
+            continue
+        keep.append(p)
+    profile_data["equipment_definitions"] = keep
+    return removed
 
 
 # ---------------------------------------------------------------------
-# Bulk merge from CSV
+# Bulk add via CSV
 # ---------------------------------------------------------------------
 
 _BULK_HEADER_SOURCE = ("source", "source_id", "source_name")
-_BULK_HEADER_TARGET = ("target", "target_id", "target_name")
+_BULK_HEADER_TARGET = ("target", "target_id", "target_name", "alias")
 
 
 def _resolve_header(headers, candidates):
@@ -280,9 +236,8 @@ def _profile_lookup(profile_data):
 
 
 class BulkRowResult(object):
-    """One row's outcome from bulk-merge CSV processing."""
-
-    def __init__(self, row_number, ok, message, source_label="", target_label=""):
+    def __init__(self, row_number, ok, message,
+                 source_label="", target_label=""):
         self.row_number = row_number
         self.ok = ok
         self.message = message
@@ -290,16 +245,19 @@ class BulkRowResult(object):
         self.target_label = target_label
 
 
-def bulk_merge_from_csv(profile_data, csv_path):
-    """Read ``csv_path`` and apply each row as a merge.
+def bulk_add_aliases_from_csv(profile_data, csv_path):
+    """Read ``csv_path`` and for each row, append ``target`` as an alias
+    on ``source``.
 
-    The CSV must have a row of headers and at least two columns: a
-    source column (``source`` / ``source_id`` / ``source_name``) and a
-    target column (``target`` / ``target_id`` / ``target_name``).
-    Each value is matched against profile ids first, then names.
+    CSV must have headers: a source column (``source`` / ``source_id`` /
+    ``source_name``) and a target column (``target`` / ``target_id`` /
+    ``target_name`` / ``alias``).
 
-    Returns ``[BulkRowResult, ...]``. Mutations to ``profile_data`` are
-    cumulative — successful rows persist even if later rows fail.
+    The source value is matched against profile ids first, then names.
+    The target value is added verbatim as an alias string — it is NOT
+    matched against existing profiles, so external CAD-only names work.
+
+    Returns ``[BulkRowResult, ...]``.
     """
     if not csv_path or not os.path.isfile(csv_path):
         raise MergeError("CSV not found: {}".format(csv_path))
@@ -317,7 +275,7 @@ def bulk_merge_from_csv(profile_data, csv_path):
     if src_idx is None or tgt_idx is None:
         raise MergeError(
             "CSV must have 'source' / 'source_id' / 'source_name' AND "
-            "'target' / 'target_id' / 'target_name' columns. "
+            "'target' / 'target_id' / 'target_name' / 'alias' columns. "
             "Headers seen: {}".format(headers)
         )
 
@@ -327,37 +285,30 @@ def bulk_merge_from_csv(profile_data, csv_path):
         if not raw:
             continue
         src_key = (raw[src_idx] or "").strip() if src_idx < len(raw) else ""
-        tgt_key = (raw[tgt_idx] or "").strip() if tgt_idx < len(raw) else ""
-        if not src_key or not tgt_key:
+        tgt_value = (raw[tgt_idx] or "").strip() if tgt_idx < len(raw) else ""
+        if not src_key or not tgt_value:
             continue
         source = by_id.get(src_key) or by_name.get(src_key)
-        target = by_id.get(tgt_key) or by_name.get(tgt_key)
         if source is None:
             out.append(BulkRowResult(
                 ridx, False,
                 "Source {!r} not found in active store".format(src_key),
-                source_label=src_key, target_label=tgt_key,
+                source_label=src_key, target_label=tgt_value,
             ))
             continue
-        if target is None:
-            out.append(BulkRowResult(
-                ridx, False,
-                "Target {!r} not found in active store".format(tgt_key),
-                source_label=src_key, target_label=tgt_key,
-            ))
-            continue
-        try:
-            merge_into(profile_data, source, target)
+        added = add_alias(source, tgt_value)
+        if added:
             out.append(BulkRowResult(
                 ridx, True,
-                "merged",
+                "alias added",
                 source_label=source.get("name") or source.get("id") or "?",
-                target_label=target.get("name") or target.get("id") or "?",
+                target_label=tgt_value,
             ))
-        except MergeError as exc:
+        else:
             out.append(BulkRowResult(
-                ridx, False, str(exc),
+                ridx, False,
+                "Alias already present (deduped) or empty",
                 source_label=source.get("name") or source.get("id") or "?",
-                target_label=target.get("name") or target.get("id") or "?",
+                target_label=tgt_value,
             ))
     return out

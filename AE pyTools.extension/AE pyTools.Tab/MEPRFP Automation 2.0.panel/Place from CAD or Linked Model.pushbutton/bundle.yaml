@@ -1,4 +1,4 @@
-title: Place from CAD or Linked Model
+title: "Place from CAD\nor Linked\nModel"
 tooltip: |
   Bulk-place equipment profiles into the active document.
   Three sources: a linked Revit model, a CSV of rebased coordinates,

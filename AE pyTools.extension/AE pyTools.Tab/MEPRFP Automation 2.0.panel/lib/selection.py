@@ -95,16 +95,18 @@ def pick_parent(uidoc, prompt="Pick parent element", from_linked=False):
     return _resolve_reference(ref, uidoc.Document)
 
 
-def pick_children(uidoc, prompt="Pick child elements (Finish to commit)"):
-    """Prompt for any number of children in the host model.
+def pick_children(uidoc, prompt="Pick child elements (Finish to commit)",
+                  from_linked=False):
+    """Prompt for any number of children.
 
-    Children are restricted to the active document. Linked-doc children
-    can't have their Element_Linker parameter written (we don't own that
-    document), so the legacy pattern of mixing linked + host children
-    isn't worth supporting in stage 1.
+    Defaults to host-model picking. Pass ``from_linked=True`` to switch
+    the selector into linked-element mode. The two modes are mutually
+    exclusive in Revit's PickObjects API (same constraint as
+    ``pick_parent``).
     """
+    object_type = ObjectType.LinkedElement if from_linked else ObjectType.Element
     try:
-        refs = uidoc.Selection.PickObjects(ObjectType.Element, prompt)
+        refs = uidoc.Selection.PickObjects(object_type, prompt)
     except OperationCanceledException:
         raise SelectionCancelled("User cancelled child pick")
     if refs is None:

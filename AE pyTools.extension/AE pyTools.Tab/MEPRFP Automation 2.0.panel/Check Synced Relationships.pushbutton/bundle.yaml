@@ -1,4 +1,4 @@
-title: Check Synced Relationships
+title: "Check Synced\nRelationships"
 tooltip: |
   Audit BYPARENT / BYSIBLING parameter directives against actual model values.
   Conflicts are presented as Profile -> LED -> Conflict, with per-row resolution.

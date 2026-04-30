@@ -1,0 +1,8 @@
+title: Optimize
+tooltip: |
+  Snap placed children to host structural features. Configure a mode
+  per family:type (Wall projection, Ceiling above, Floor below, or
+  Door-relative re-parent), set a search radius, and the engine moves
+  each placed child to its optimized pose. Element_Linker is updated
+  after each move; door mode re-parents the child without moving it.
+is_beta: false

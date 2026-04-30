@@ -63,33 +63,65 @@
         </StackPanel>
       </Grid>
 
-      <!-- Profile metadata: free-form parameters stored on the profile itself -->
-      <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
-        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-            <Button x:Name="AddProfileMetaButton" Content="Add metadata"
-                    Padding="10,2" MinWidth="120" Margin="0,0,8,0"/>
-            <Button x:Name="RemoveProfileMetaButton" Content="Remove selected"
-                    Padding="10,2" MinWidth="130" Margin="0,0,8,0"/>
-            <Button x:Name="SaveProfileMetaButton" Content="Save profile metadata"
-                    Padding="10,2" MinWidth="160"/>
-          </StackPanel>
-          <TextBlock FontWeight="Bold" Text="Profile metadata"
-                     VerticalAlignment="Center"
-                     ToolTip="Free-form key/value pairs attached to the profile (separate from per-LED parameters)."/>
+      <!-- Profile metadata (left) + Merge relationship (right) -->
+      <Grid DockPanel.Dock="Top" Margin="0,0,0,8" Height="150">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- LEFT: Profile metadata -->
+        <DockPanel Grid.Column="0" Margin="0,0,4,0">
+          <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+              <Button x:Name="AddProfileMetaButton" Content="Add"
+                      Padding="8,2" MinWidth="60" Margin="0,0,4,0"/>
+              <Button x:Name="RemoveProfileMetaButton" Content="Remove"
+                      Padding="8,2" MinWidth="70" Margin="0,0,4,0"/>
+              <Button x:Name="SaveProfileMetaButton" Content="Save metadata"
+                      Padding="8,2" MinWidth="110"/>
+            </StackPanel>
+            <TextBlock FontWeight="Bold" Text="Profile metadata"
+                       VerticalAlignment="Center"
+                       ToolTip="Free-form key/value pairs attached to the profile (separate from per-LED parameters)."/>
+          </DockPanel>
+          <DataGrid x:Name="ProfileMetaGrid"
+                    AutoGenerateColumns="False"
+                    CanUserAddRows="False"
+                    CanUserDeleteRows="False"
+                    HeadersVisibility="Column"
+                    RowHeight="22">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+              <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="*"/>
+            </DataGrid.Columns>
+          </DataGrid>
         </DockPanel>
-        <DataGrid x:Name="ProfileMetaGrid" Height="110"
-                  AutoGenerateColumns="False"
-                  CanUserAddRows="False"
-                  CanUserDeleteRows="False"
-                  HeadersVisibility="Column"
-                  RowHeight="22">
-          <DataGrid.Columns>
-            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
-            <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="*"/>
-          </DataGrid.Columns>
-        </DataGrid>
-      </DockPanel>
+
+        <!-- RIGHT: Merge aliases (editable) -->
+        <DockPanel Grid.Column="1" Margin="4,0,0,0">
+          <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+              <Button x:Name="AddAliasButton" Content="Add"
+                      Padding="8,2" MinWidth="60" Margin="0,0,4,0"
+                      ToolTip="Type a new alias string."/>
+              <Button x:Name="RemoveAliasButton" Content="Remove"
+                      Padding="8,2" MinWidth="70" Margin="0,0,4,0"
+                      ToolTip="Remove the selected alias."/>
+              <Button x:Name="SaveAliasesButton" Content="Save aliases"
+                      Padding="8,2" MinWidth="100"
+                      ToolTip="Persist alias edits (in memory; click 'Save changes' to commit to project)."/>
+            </StackPanel>
+            <TextBlock FontWeight="Bold" Text="Merged aliases"
+                       VerticalAlignment="Center"
+                       ToolTip="Alternate names that resolve to this profile during placement (e.g., other Family : Type variants or CAD block names)."/>
+          </DockPanel>
+          <TextBlock DockPanel.Dock="Top" x:Name="AliasInfoLabel"
+                     Margin="0,0,0,4" Foreground="Gray" FontSize="10"
+                     Text=""/>
+          <ListBox x:Name="AliasList"/>
+        </DockPanel>
+      </Grid>
 
       <!-- Middle: linked sets / LEDs tree -->
       <TextBlock DockPanel.Dock="Top" FontWeight="Bold" Margin="0,0,0,6"
@@ -106,6 +138,15 @@
                   Margin="0,0,0,4"/>
           <Button x:Name="RemoveLedButton" Content="Remove selected"
                   ToolTip="Remove the selected LED or annotation from the profile."
+                  Margin="0,0,0,4"/>
+          <Button x:Name="ChangeTypeButton" Content="Change Type"
+                  ToolTip="Replace the Family : Type label of the currently selected LED or annotation."
+                  Margin="0,8,0,4"/>
+          <Button x:Name="CopyFixtureButton" Content="Copy fixture"
+                  ToolTip="Copy the selected LED (and its annotations + parameters) to a clipboard so it can be pasted into another profile."
+                  Margin="0,4,0,4"/>
+          <Button x:Name="PasteFixtureButton" Content="Paste fixture"
+                  ToolTip="Paste the clipboard fixture into the currently loaded profile at zero offset, with parent directives stripped."
                   Margin="0,0,0,4"/>
         </StackPanel>
       </Grid>

@@ -35,9 +35,13 @@ _LIB_MODULE_NAMES = frozenset({
     "directives_dialog",
     # lifecycle
     "merge_workflow",
+    # editor (Manage Profiles depends on alias data shape)
+    "manage_profiles_window",
     # placement
     "placement",
     "placement_window",
+    "annotation_placement",
+    "annotation_placement_window",
     "geometry",
     "hosted_annotations",
     "links",
@@ -46,8 +50,17 @@ _LIB_MODULE_NAMES = frozenset({
     # audit
     "sync_audit",
     "sync_audit_window",
-    # editor
-    "manage_profiles_window",
+    # misc ops (Stage 4)
+    "follow_parent_workflow",
+    "follow_parent_window",
+    "hide_profiles_workflow",
+    "hide_profiles_window",
+    "update_vector_workflow",
+    "update_vector_window",
+    "optimize_workflow",
+    "optimize_window",
+    "qaqc_workflow",
+    "qaqc_window",
     # ui infra
     "forms_compat",
     "wpf",

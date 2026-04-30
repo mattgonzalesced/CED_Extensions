@@ -52,17 +52,20 @@ _STRING_PROMPT_XAML = """\
 _LIST_PICKER_XAML = """\
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="" Width="520" Height="460"
+        Title="" Width="520" Height="500"
         WindowStartupLocation="CenterScreen">
   <Grid Margin="14">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
-    <TextBlock Grid.Row="0" x:Name="PromptText" Margin="0,0,0,8"/>
-    <ListBox   Grid.Row="1" x:Name="Options"/>
-    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+    <TextBlock Grid.Row="0" x:Name="PromptText" Margin="0,0,0,8" TextWrapping="Wrap"/>
+    <TextBox   Grid.Row="1" x:Name="SearchBox" Margin="0,0,0,8" Padding="2"
+               ToolTip="Filter the list (case-insensitive substring match)"/>
+    <ListBox   Grid.Row="2" x:Name="Options"/>
+    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
       <Button x:Name="OkButton" Content="OK" Width="80" Margin="0,0,8,0" IsDefault="True"/>
       <Button x:Name="CancelButton" Content="Cancel" Width="80" IsCancel="True"/>
     </StackPanel>
@@ -146,18 +149,44 @@ class _ListPickerDialog(object):
         self.window.Title = title or ""
         self.window.FindName("PromptText").Text = prompt or ""
         self._listbox = self.window.FindName("Options")
-        self._options = list(options or [])
-        for opt in self._options:
+        self._search = self.window.FindName("SearchBox")
+        # ``_pairs`` is the canonical list (label, option) sorted in
+        # caller-supplied order. ``_visible_options`` mirrors the labels
+        # currently shown in the listbox 1:1 so SelectedIndex maps back
+        # to the right object even after filtering.
+        self._pairs = []
+        for opt in (options or []):
             label = display_func(opt) if display_func else str(opt)
-            self._listbox.Items.Add(label)
+            self._pairs.append((label, opt))
+        self._visible_options = []
+        self._render("")
         self.window.FindName("OkButton").Click += self._on_ok
         self.window.FindName("CancelButton").Click += self._on_cancel
+        self._search.TextChanged += self._on_search_changed
+        # Focus the search box so the user can start typing immediately.
+        try:
+            self._search.Focus()
+        except Exception:
+            pass
         self._result = None
+
+    def _render(self, needle):
+        n = (needle or "").strip().lower()
+        self._listbox.Items.Clear()
+        self._visible_options = []
+        for label, opt in self._pairs:
+            if n and n not in label.lower():
+                continue
+            self._listbox.Items.Add(label)
+            self._visible_options.append(opt)
+
+    def _on_search_changed(self, sender, e):
+        self._render(self._search.Text)
 
     def _on_ok(self, sender, e):
         idx = self._listbox.SelectedIndex
-        if idx >= 0:
-            self._result = self._options[idx]
+        if 0 <= idx < len(self._visible_options):
+            self._result = self._visible_options[idx]
         self.window.Close()
 
     def _on_cancel(self, sender, e):

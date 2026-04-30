@@ -88,6 +88,9 @@ class PlacementController(object):
         self.matches = []
         self._match_rows = []
         self._csv_path = None
+        self._all_profile_labels = []        # alphabetically sorted, full list
+        self._selected_profile_labels = set()  # survives search-filtering
+        self._suppress_profile_selection = False
         self.committed = False
         self.window = _wpf.load_xaml(_XAML_PATH)
         self._lookup_controls()
@@ -109,7 +112,10 @@ class PlacementController(object):
         self.src_browse_btn = f("SrcBrowseButton")
         self.category_list = f("CategoryList")
         self.profile_list = f("ProfileList")
+        self.profile_search_box = f("ProfileSearchBox")
         self.skip_placed_check = f("SkipPlacedCheck")
+        self.one_profile_per_target_check = f("OneProfilePerTargetCheck")
+        self.allow_type_sub_check = f("AllowTypeSubCheck")
         self.match_btn = f("MatchButton")
         self.check_all_btn = f("CheckAllButton")
         self.uncheck_all_btn = f("UncheckAllButton")
@@ -177,6 +183,12 @@ class PlacementController(object):
         self.uncheck_all_btn.Click += self._h_uncheck_all
         self.place_btn.Click += self._h_place
         self.close_btn.Click += self._h_close
+
+        # Profile search + selection-survival wiring. pythonnet wraps
+        # the bound methods automatically; the bound-method instances are
+        # kept alive by the class itself.
+        self.profile_search_box.TextChanged += self._on_profile_search
+        self.profile_list.SelectionChanged += self._on_profile_selection
 
     # ---- source handling -------------------------------------------
 
@@ -247,36 +259,99 @@ class PlacementController(object):
     # ---- filter population -----------------------------------------
 
     def _populate_filters(self):
-        cats = sorted({
-            (p.get("parent_filter") or {}).get("category") or ""
-            for p in self.profiles
-            if isinstance(p, dict)
-        })
-        cats = [c for c in cats if c]
+        # Categories come from each LED's ``category`` field across every
+        # profile — i.e. the categories of the *fixture children*, not
+        # the profile's parent. Picking a category here keeps every
+        # profile that contains *any* LED of that category, and
+        # placement runs all of that profile's LEDs (not just the
+        # matching ones).
+        cats = set()
+        for p in self.profiles:
+            if not isinstance(p, dict):
+                continue
+            for s in p.get("linked_sets") or []:
+                if not isinstance(s, dict):
+                    continue
+                for led in s.get("linked_element_definitions") or []:
+                    if not isinstance(led, dict):
+                        continue
+                    c = (led.get("category") or "").strip()
+                    if c:
+                        cats.add(c)
         self.category_list.Items.Clear()
-        for c in cats:
+        for c in sorted(cats):
             self.category_list.Items.Add(c)
 
-        self.profile_list.Items.Clear()
+        labels = []
         for p in self.profiles:
-            label = "{}  ({})".format(
+            if not isinstance(p, dict):
+                continue
+            labels.append("{}  ({})".format(
                 p.get("name") or "(unnamed)", p.get("id") or "?"
-            )
-            self.profile_list.Items.Add(label)
+            ))
+        labels.sort(key=lambda s: s.lower())
+        self._all_profile_labels = labels
+        self._render_profile_list("")
+
+    def _render_profile_list(self, search_text):
+        needle = (search_text or "").strip().lower()
+        self._suppress_profile_selection = True
+        try:
+            self.profile_list.Items.Clear()
+            visible = []
+            for label in self._all_profile_labels:
+                if needle and needle not in label.lower():
+                    continue
+                self.profile_list.Items.Add(label)
+                visible.append(label)
+            for label in visible:
+                if label in self._selected_profile_labels:
+                    self.profile_list.SelectedItems.Add(label)
+        finally:
+            self._suppress_profile_selection = False
+
+    def _on_profile_search(self, sender, e):
+        try:
+            self._render_profile_list(self.profile_search_box.Text or "")
+        except Exception as exc:
+            self._set_status("[search] error: {}".format(exc))
+
+    def _on_profile_selection(self, sender, e):
+        if self._suppress_profile_selection:
+            return
+        try:
+            for item in e.AddedItems:
+                self._selected_profile_labels.add(str(item))
+            for item in e.RemovedItems:
+                self._selected_profile_labels.discard(str(item))
+        except Exception as exc:
+            self._set_status("[profile-select] error: {}".format(exc))
 
     def _filtered_profiles(self):
         selected_cats = {str(item) for item in self.category_list.SelectedItems}
         selected_names = {
-            str(item).split("  (", 1)[0]
-            for item in self.profile_list.SelectedItems
+            label.split("  (", 1)[0]
+            for label in self._selected_profile_labels
         }
         out = []
         for p in self.profiles:
             if not isinstance(p, dict):
                 continue
             if selected_cats:
-                cat = (p.get("parent_filter") or {}).get("category") or ""
-                if cat not in selected_cats:
+                # Keep the profile if ANY of its LEDs is in a selected
+                # category. Once kept, all of the profile's LEDs are
+                # placement candidates — we don't filter LEDs by category.
+                led_cats = set()
+                for s in p.get("linked_sets") or []:
+                    if not isinstance(s, dict):
+                        continue
+                    for led in s.get("linked_element_definitions") or []:
+                        if not isinstance(led, dict):
+                            continue
+                        c = (led.get("category") or "").strip()
+                        if c:
+                            led_cats.add(c)
+                if not (led_cats & selected_cats):
                     continue
             if selected_names:
                 if (p.get("name") or "") not in selected_names:
@@ -333,13 +408,24 @@ class PlacementController(object):
             self._render_matches([])
             return
 
-        self.matches = placement.match_targets(targets, profiles, mode)
+        raw_matches = placement.match_targets(targets, profiles, mode)
+        deduped_count = 0
+        if self.one_profile_per_target_check.IsChecked:
+            self.matches = placement.dedupe_matches_per_target(raw_matches)
+            deduped_count = len(raw_matches) - len(self.matches)
+        else:
+            self.matches = raw_matches
+        self.matches.sort(key=lambda m: (
+            (m.profile.get("name") or "").lower(),
+            (m.target.name or "").lower(),
+        ))
         self._render_matches(self.matches)
-        self.summary_label.Text = (
-            "{} target(s) -> {} match(es) across {} profile(s)".format(
-                len(targets), len(self.matches), len(profiles),
-            )
+        summary = "{} target(s) -> {} match(es) across {} profile(s)".format(
+            len(targets), len(self.matches), len(profiles),
         )
+        if deduped_count:
+            summary += "  ({} duplicate match(es) suppressed)".format(deduped_count)
+        self.summary_label.Text = summary
         self._set_status(
             "Review the list, uncheck rows to skip, then Place." if self.matches
             else "No matches. Try different filters or a different source."
@@ -430,6 +516,7 @@ class PlacementController(object):
 
         options = placement.PlacementOptions(
             skip_already_placed=bool(self.skip_placed_check.IsChecked),
+            allow_type_substitution=bool(self.allow_type_sub_check.IsChecked),
         )
         with revit.Transaction("Place from CAD or Linked Model (MEPRFP 2.0)", doc=self.doc):
             result = placement.execute_placement(self.doc, chosen, options)

@@ -1,7 +1,7 @@
 title: Unmerge Profile
 tooltip: |
-  Detach a merged profile from its truth-source group. The profile's
-  structural content stays as-is (it was copied from the source at merge
-  time); only the ced_truth_source_id / ced_truth_source_name fields are
-  cleared so the profile becomes free-standing again.
+  Remove an alias from a profile's merged_aliases list. The list shows
+  every alias across the active store as `source.name (id)  ->  alias`.
+  Pick one to detach it. The alias string itself is just removed from
+  the source's list — no other profile changes.
 is_beta: false

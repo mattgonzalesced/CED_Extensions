@@ -1,0 +1,57 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Optimize (MEPRFP 2.0)"
+        Width="1100" Height="680"
+        WindowStartupLocation="CenterScreen">
+  <Grid Margin="12">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <TextBlock Grid.Row="0" Margin="0,0,0,8" TextWrapping="Wrap">
+      Snap placed children to host structural features. Pick a mode per
+      family:type, set the search radius, then Match to preview the moves.
+      Door-relative re-parents the child to the nearest door without moving it.
+    </TextBlock>
+
+    <DockPanel Grid.Row="1" Margin="0,0,0,8">
+      <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+        <TextBlock Text="Search radius (ft):" VerticalAlignment="Center" Margin="0,0,6,0"/>
+        <TextBox x:Name="RadiusBox" Width="60" Text="5.0"/>
+      </StackPanel>
+      <TextBlock Text="Configure each family:type below." VerticalAlignment="Center" Foreground="Gray"/>
+    </DockPanel>
+
+    <GroupBox Grid.Row="2" Header="Mode by family:type" Padding="8">
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel x:Name="ModeRowsPanel"/>
+      </ScrollViewer>
+    </GroupBox>
+
+    <GroupBox Grid.Row="3" Header="Match preview" Padding="8" Margin="0,8,0,0">
+      <DockPanel>
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="MatchButton" Content="Match" Width="100" Margin="0,0,8,0"/>
+            <Button x:Name="UncheckAllButton" Content="Uncheck all" Width="100" Margin="0,0,8,0"/>
+            <Button x:Name="CheckAllButton" Content="Check all" Width="100"/>
+          </StackPanel>
+          <TextBlock x:Name="SummaryLabel" Foreground="Gray" VerticalAlignment="Center"/>
+        </DockPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel x:Name="MatchRowsPanel"/>
+        </ScrollViewer>
+      </DockPanel>
+    </GroupBox>
+
+    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+      <TextBlock x:Name="StatusLabel" VerticalAlignment="Center" Margin="0,0,16,0" Foreground="Gray"/>
+      <Button x:Name="OptimizeButton" Content="Optimize checked" Width="160" Margin="0,0,8,0" IsEnabled="False"/>
+      <Button x:Name="CloseButton" Content="Close" Width="100" IsCancel="True"/>
+    </StackPanel>
+  </Grid>
+</Window>

@@ -1,6 +1,6 @@
 #! python3
 # -*- coding: utf-8 -*-
-"""MEPRFP Automation 2.0 :: Bulk Merge Profiles"""
+"""MEPRFP Automation 2.0 :: Bulk Merge Profiles (bulk-add aliases)"""
 
 import os
 import sys
@@ -25,16 +25,15 @@ TITLE = "Bulk Merge Profiles (MEPRFP 2.0)"
 _HELP = (
     "CSV format:\n\n"
     "  - One header row with 'source' and 'target' columns.\n"
-    "    Aliases also accepted: source_id, source_name, target_id, target_name.\n"
-    "  - One merge per data row.\n"
-    "  - Each cell value is matched against profile ids first, then names.\n\n"
+    "    Aliases also accepted: source_id, source_name, target_id, target_name, alias.\n"
+    "  - One alias add per data row.\n"
+    "  - Source value is matched against profile ids first, then names.\n"
+    "  - Target value is added verbatim as an alias string.\n\n"
     "Example:\n\n"
     "  source,target\n"
-    "  EQ-001,EQ-002\n"
-    "  Foo Bar : Master,Foo Bar : V1\n"
-    "  Foo Bar : Master,Foo Bar : V2\n\n"
-    "Rows that fail eligibility checks (already merged, source-of-others, "
-    "self-merge) are skipped and reported, while remaining rows still apply."
+    "  EQ-001,Foo : Variant A\n"
+    "  Foo : Master,Foo : Variant B\n"
+    "  Foo : Master,Custom CAD Block Name\n"
 )
 
 
@@ -54,7 +53,7 @@ def main():
         )
         return
 
-    if not forms.confirm(_HELP + "\n\nProceed to pick the CSV?", title=TITLE):
+    if not forms.confirm(_HELP + "\nProceed to pick the CSV?", title=TITLE):
         return
 
     csv_path = forms.pick_file(
@@ -65,7 +64,7 @@ def main():
         return
 
     try:
-        results = merge_workflow.bulk_merge_from_csv(profile_data, csv_path)
+        results = merge_workflow.bulk_add_aliases_from_csv(profile_data, csv_path)
     except merge_workflow.MergeError as exc:
         forms.alert(str(exc), title=TITLE)
         return
@@ -78,26 +77,26 @@ def main():
             active_yaml.save_active_data(doc, profile_data, action="Bulk Merge Profiles")
 
     output.print_md(
-        "**Bulk merge complete**\n\n"
+        "**Bulk alias-add complete**\n\n"
         "- CSV: `{}`\n"
-        "- Rows merged: {}\n"
-        "- Rows failed:  {}\n".format(
+        "- Aliases added: {}\n"
+        "- Rows skipped:  {}\n".format(
             csv_path, len(succeeded), len(failed),
         )
     )
     if succeeded:
         output.print_md(
-            "\n**Merged:**\n"
+            "\n**Added:**\n"
             + "\n".join(
                 "- row {}: `{}` <- `{}`".format(
-                    r.row_number, r.target_label, r.source_label
+                    r.row_number, r.source_label, r.target_label
                 )
                 for r in succeeded
             )
         )
     if failed:
         output.print_md(
-            "\n**Failures:**\n"
+            "\n**Skipped / failed:**\n"
             + "\n".join(
                 "- row {}: {}".format(r.row_number, r.message)
                 for r in failed
