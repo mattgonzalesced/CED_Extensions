@@ -1,0 +1,29 @@
+Select YAML – Code Explained
+============================
+
+Purpose
+-------
+Seed the project with a specific YAML file by copying its contents into
+Extensible Storage on ProjectInformation, clearing previous entries, and
+remembering the chosen path for quick access.
+
+Step-by-Step
+------------
+1. **Path Setup** – Sets `LIB_ROOT` and imports `yaml_path_cache` plus the
+   `seed_active_yaml` helper from `ExtensibleStorage.yaml_store`.
+2. **Path Selection** – Uses `forms.pick_file` to let the user browse for a YAML
+   file.  It defaults to either the cached path or the library’s profile file.
+3. **Read Text** – Opens the file with UTF-8 encoding and reads the entire
+   string; no parsing occurs here.
+4. **Seed Storage** – Calls `seed_active_yaml(doc, path, raw_text)` which:
+   * Clears previous entries for the same normalized path
+   * Stores the base text compressed
+   * Updates metadata (`active_yaml`) so other tools know which file is active
+5. **Alerts** – Notifies the user that the YAML was loaded and that all tools
+   now operate against the in-model copy.
+
+Result
+------
+Every button references Extensible Storage rather than the disk file, enabling
+undo support, history tracking, QA/QC, and exports—all keyed to the path chosen
+via Select YAML.

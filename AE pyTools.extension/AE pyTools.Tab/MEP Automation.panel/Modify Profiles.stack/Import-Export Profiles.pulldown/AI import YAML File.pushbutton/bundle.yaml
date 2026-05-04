@@ -1,0 +1,7 @@
+title: Import YAML File
+tooltip: |
+  Import a YAML file into project Extensible Storage as the active automation dataset.
+  The command validates schema_version requirements before data is accepted.
+  It also sanitizes hash-style keys so parsing remains stable across mixed source files.
+  After import, all MEP Automation profile tools read and write this in-model copy.
+is_beta: false

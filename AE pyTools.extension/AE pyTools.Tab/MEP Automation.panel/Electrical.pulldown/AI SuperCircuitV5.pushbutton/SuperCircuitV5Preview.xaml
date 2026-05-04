@@ -1,0 +1,223 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SUPER CIRCUIT V5 Preview"
+        Width="1500"
+        Height="820"
+        WindowStartupLocation="CenterScreen">
+  <Grid Margin="10">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <TextBlock x:Name="HeaderText"
+               TextWrapping="Wrap"
+               Margin="0,0,0,6"/>
+
+    <StackPanel Grid.Row="1"
+                Orientation="Horizontal"
+                VerticalAlignment="Center"
+                Margin="0,0,0,8">
+      <TextBlock Text="Run Keyword:"
+                 FontWeight="Bold"
+                 VerticalAlignment="Center"
+                 Margin="0,0,8,0"/>
+      <ComboBox x:Name="RunKeywordCombo"
+                Width="260"
+                IsEditable="False"
+                SelectionChanged="OnKeywordFilterChanged"/>
+    </StackPanel>
+
+    <WrapPanel Grid.Row="2"
+               Margin="0,0,0,8"
+               VerticalAlignment="Center">
+      <TextBlock Text="Color Key: "
+                 FontWeight="Bold"
+                 VerticalAlignment="Center"
+                 Margin="0,0,6,0"/>
+
+      <Border Background="#FFFFFFFF" BorderBrush="#FFBDBDBD" BorderThickness="1" Padding="6,2" Margin="0,0,8,0">
+        <TextBlock Text="1 = No Color"/>
+      </Border>
+      <Border Background="#FF2E7D32" Padding="6,2" Margin="0,0,8,0">
+        <TextBlock Text="2 = Green" Foreground="White"/>
+      </Border>
+      <Border Background="#FF1565C0" Padding="6,2" Margin="0,0,8,0">
+        <TextBlock Text="3 = Blue" Foreground="White"/>
+      </Border>
+      <Border Background="#FF303F9F" Padding="6,2" Margin="0,0,8,0">
+        <TextBlock Text="4-7 = Indigo" Foreground="White"/>
+      </Border>
+      <Border Background="#FFC62828" Padding="6,2">
+        <TextBlock Text="8+ = Red" Foreground="White"/>
+      </Border>
+    </WrapPanel>
+
+    <TextBlock x:Name="SummaryText"
+               Grid.Row="3"
+               Margin="0,0,0,6"/>
+
+    <DataGrid x:Name="PreviewGrid"
+              Grid.Row="4"
+              AutoGenerateColumns="False"
+              CanUserAddRows="False"
+              IsReadOnly="False"
+              SelectionMode="Extended"
+              SelectionUnit="FullRow"
+              Margin="0,0,0,8">
+      <DataGrid.RowStyle>
+        <Style TargetType="DataGridRow">
+          <Setter Property="Background" Value="{Binding row_background}"/>
+          <Setter Property="Foreground" Value="{Binding row_foreground}"/>
+          <Style.Triggers>
+            <DataTrigger Binding="{Binding is_spacer}" Value="True">
+              <Setter Property="Background" Value="Transparent"/>
+              <Setter Property="Foreground" Value="Transparent"/>
+              <Setter Property="Height" Value="8"/>
+              <Setter Property="IsHitTestVisible" Value="False"/>
+              <Setter Property="Focusable" Value="False"/>
+            </DataTrigger>
+          </Style.Triggers>
+        </Style>
+      </DataGrid.RowStyle>
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Circuit Batch"
+                            Width="2.4*"
+                            IsReadOnly="True"
+                            Binding="{Binding group_label}"/>
+
+        <DataGridTemplateColumn Header="CKT_Panel_CEDT" Width="1.3*">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <ComboBox ItemsSource="{Binding panel_options}"
+                        SelectionChanged="OnInlineValueChanged"
+                        DropDownClosed="OnInlineValueChanged"
+                        SelectedItem="{Binding panel_name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        Text="{Binding panel_name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        IsEditable="True"
+                        StaysOpenOnEdit="True"
+                        BorderThickness="0"
+                        Background="White"
+                        Foreground="Black">
+                <ComboBox.Style>
+                  <Style TargetType="ComboBox">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding is_spacer}" Value="True">
+                        <Setter Property="IsEnabled" Value="False"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </ComboBox.Style>
+              </ComboBox>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+
+        <DataGridTemplateColumn Header="CKT_Circuit Number_CEDT" Width="1.4*">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <ComboBox ItemsSource="{Binding circuit_options}"
+                        SelectionChanged="OnInlineValueChanged"
+                        DropDownClosed="OnInlineValueChanged"
+                        SelectedItem="{Binding circuit_number, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        Text="{Binding circuit_number, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        IsEditable="True"
+                        StaysOpenOnEdit="True"
+                        BorderThickness="0"
+                        Background="White"
+                        Foreground="Black">
+                <ComboBox.Style>
+                  <Style TargetType="ComboBox">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding is_spacer}" Value="True">
+                        <Setter Property="IsEnabled" Value="False"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </ComboBox.Style>
+              </ComboBox>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+
+        <DataGridTemplateColumn Header="CKT_Load Name_CEDT" Width="1.5*">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <ComboBox ItemsSource="{Binding load_options}"
+                        SelectionChanged="OnInlineValueChanged"
+                        DropDownClosed="OnInlineValueChanged"
+                        SelectedItem="{Binding load_name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        Text="{Binding load_name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        IsEditable="True"
+                        StaysOpenOnEdit="True"
+                        BorderThickness="0"
+                        Background="White"
+                        Foreground="Black">
+                <ComboBox.Style>
+                  <Style TargetType="ComboBox">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding is_spacer}" Value="True">
+                        <Setter Property="IsEnabled" Value="False"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </ComboBox.Style>
+              </ComboBox>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+
+        <DataGridTextColumn Header="Family : Type"
+                            Width="2.0*"
+                            IsReadOnly="True"
+                            Binding="{Binding family_type}"/>
+        <DataGridTextColumn Header="Element ID"
+                            Width="0.9*"
+                            IsReadOnly="True"
+                            Binding="{Binding element_id}"/>
+
+        <DataGridTemplateColumn Header="Select" Width="0.7*">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <Button Content="Select"
+                      Click="OnSelectRowClicked"
+                      Padding="8,2"
+                      HorizontalAlignment="Center">
+                <Button.Style>
+                  <Style TargetType="Button">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding is_spacer}" Value="True">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Setter Property="IsEnabled" Value="False"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Button.Style>
+              </Button>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+      </DataGrid.Columns>
+    </DataGrid>
+
+    <StackPanel Grid.Row="5"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right">
+      <Button x:Name="EditSelectedButton"
+              Content="Edit Selected"
+              Width="140"
+              Margin="0,0,8,0"/>
+      <Button x:Name="RunButton"
+              Content="Run Circuits"
+              Width="140"
+              Margin="0,0,8,0"/>
+      <Button x:Name="CancelButton"
+              Content="Cancel"
+              Width="120"/>
+    </StackPanel>
+  </Grid>
+</Window>
