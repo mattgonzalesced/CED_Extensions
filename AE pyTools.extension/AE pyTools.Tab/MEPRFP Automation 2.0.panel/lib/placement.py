@@ -1186,41 +1186,61 @@ def _apply_static_parameters(elem, params_dict):
 
 
 def _set_param_value(param, value):
-    """Best-effort ``Set`` honouring the parameter's StorageType.
+    """Best-effort write that honours the parameter's StorageType **and**
+    its display units.
 
-    Falls through string -> int -> float so we recover when the YAML
-    has ``"20"`` for an integer parameter. Returns True on success.
+    For Double / Integer parameters we prefer ``SetValueString`` so a
+    YAML value like ``1800`` (VA) lands as 1800 VA on screen instead of
+    being interpreted as 1800 in Revit's *internal* unit (which for
+    apparent load is watts). ``SetValueString`` parses the input in the
+    parameter's display units and converts to internal storage on the
+    Revit side.
+
+    Falls back to ``Set(...)`` if ``SetValueString`` rejects the
+    string — e.g. unitless integer parameters or string params.
     """
     try:
         storage = param.StorageType.ToString()
     except Exception:
         storage = ""
-    raw = str(value).strip() if not isinstance(value, (int, float)) else value
-    try:
-        if storage == "String":
-            return bool(param.Set(str(value)))
-        if storage == "Integer":
-            try:
-                return bool(param.Set(int(float(raw))))
-            except (TypeError, ValueError):
-                return False
-        if storage == "Double":
-            try:
-                return bool(param.Set(float(raw)))
-            except (TypeError, ValueError):
-                return False
-        # ElementId or unknown — try as string fallback.
+
+    # Strings: never go through SetValueString (it'll try to parse).
+    if storage == "String":
         try:
             return bool(param.Set(str(value)))
         except Exception:
             return False
+
+    raw = value if isinstance(value, (int, float)) else str(value).strip()
+    raw_str = "" if raw is None else str(raw)
+    if not raw_str:
+        return False
+
+    if storage in ("Double", "Integer"):
+        # Try SetValueString first — handles unit conversion (VA, V,
+        # A, ft, deg, etc.) so the value displays exactly as it was
+        # captured in the YAML.
+        try:
+            if param.SetValueString(raw_str):
+                return True
+        except Exception:
+            pass
+        # Fallback: raw Set with the right CLR type. This path is
+        # right for unitless ints / doubles or when the param doesn't
+        # support SetValueString (rare).
+        try:
+            if storage == "Integer":
+                return bool(param.Set(int(float(raw))))
+            return bool(param.Set(float(raw)))
+        except (TypeError, ValueError):
+            return False
+        except Exception:
+            return False
+
+    # ElementId or unknown — last-resort string set.
+    try:
+        return bool(param.Set(str(value)))
     except Exception:
-        # Final fallback chain.
-        for caster in (str, int, float):
-            try:
-                return bool(param.Set(caster(value)))
-            except Exception:
-                continue
         return False
 
 

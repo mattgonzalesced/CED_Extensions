@@ -1,0 +1,8 @@
+title: "SuperCircuit\nV5"
+tooltip: |
+  Pre-run preview + create electrical systems for placed fixtures.
+  Pick a client (HEB / Planet Fitness), optionally scope to your
+  current selection, then edit panel / circuit / load per row before
+  clicking Run circuits. Modeless — keeps the dialog open while you
+  work in Revit.
+is_beta: false

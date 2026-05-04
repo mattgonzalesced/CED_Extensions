@@ -582,8 +582,18 @@ class AnnotationPlacementResult(object):
 
 
 def _apply_parameters(elem, params_dict):
+    """Stamp captured annotation parameters back onto a placed element.
+
+    Routes each parameter through ``placement._set_param_value`` so
+    unit-bearing values (VA, ft, deg, etc.) survive the round-trip:
+    ``SetValueString`` parses the YAML value in the parameter's
+    *display* units instead of treating it as raw internal units.
+    """
     if elem is None or not params_dict:
         return
+    # Lazy import so annotation_placement can still load if placement
+    # has a hot-reload issue.
+    import placement as _placement
     for name, value in params_dict.items():
         if name is None or value is None or value == "":
             continue
@@ -593,16 +603,7 @@ def _apply_parameters(elem, params_dict):
             continue
         if p is None or p.IsReadOnly:
             continue
-        try:
-            p.Set(str(value))
-        except Exception:
-            try:
-                p.Set(int(value))
-            except Exception:
-                try:
-                    p.Set(float(value))
-                except Exception:
-                    pass
+        _placement._set_param_value(p, value)
 
 
 def execute_placement(doc, view, candidates):

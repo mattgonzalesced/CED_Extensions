@@ -3,26 +3,32 @@
 QAQC — health-check the relationship between the YAML store and the
 elements actually placed in the model.
 
-Seven categories::
+Six categories::
 
     A  Orphan profile             Profile in YAML with zero placed
                                   instances anywhere in the doc.
-    B  Unplaced parent            Parent element matches a profile's
-                                  parent_filter but has no placed
-                                  children referencing it.
-    C  Missing parent             Placed child references a
+                                  Skips profiles that are merged into
+                                  another (legacy ced_truth_source_id
+                                  members or profiles whose name is in
+                                  another profile's merged_aliases).
+    B  Missing parent             Placed child references a
                                   parent_element_id that no longer
                                   exists in the host or linked docs.
-    D  Far from parent            Placed child sits more than
+    C  Far from parent            Placed child sits more than
                                   Tolerances.FAR_FROM_PARENT_FT from
                                   the pose its stored offset implies.
-    E  ID discrepancy             Element_Linker.element_id does not
+    D  ID discrepancy             Element_Linker.element_id does not
                                   match the live element's Id.Value.
                                   Usually a sign of a copy/paste.
-    F  Parent type change         Parent's family/type no longer
-                                  matches the profile's parent_filter.
-    G  Host-name mismatch         parent's current family name does
-                                  not match Element_Linker.host_name.
+    E  Parent type change         Parent's family/type doesn't match
+                                  the profile's parent_filter AND isn't
+                                  in the profile's merged_aliases —
+                                  i.e. a real parent reassignment, not
+                                  a known alias.
+    F  Host-name mismatch         parent's current family name does
+                                  not match Element_Linker.host_name,
+                                  ignoring trailing `` : Default`` /
+                                  `` : Default <n>`` decoration.
 
 Each finding carries a ``fix_kind`` describing what (if any) automated
 fix can be applied. The window dispatches on that, calling
@@ -30,6 +36,7 @@ fix can be applied. The window dispatches on that, calling
 """
 
 import math
+import re
 
 import clr  # noqa: F401
 
@@ -46,6 +53,7 @@ import element_linker_io as _el_io
 import follow_parent_workflow as _fp
 import geometry
 import links
+import truth_groups
 
 
 # ---------------------------------------------------------------------
@@ -58,19 +66,86 @@ CAT_C = "C"
 CAT_D = "D"
 CAT_E = "E"
 CAT_F = "F"
-CAT_G = "G"
 
-CAT_ALL = (CAT_A, CAT_B, CAT_C, CAT_D, CAT_E, CAT_F, CAT_G)
+CAT_ALL = (CAT_A, CAT_B, CAT_C, CAT_D, CAT_E, CAT_F)
 
 CAT_LABELS = {
     CAT_A: "A  Orphan profile",
-    CAT_B: "B  Unplaced parent",
-    CAT_C: "C  Missing parent",
-    CAT_D: "D  Far from parent",
-    CAT_E: "E  ID discrepancy",
-    CAT_F: "F  Parent type change",
-    CAT_G: "G  Host-name mismatch",
+    CAT_B: "B  Missing parent",
+    CAT_C: "C  Far from parent",
+    CAT_D: "D  ID discrepancy",
+    CAT_E: "E  Parent type change",
+    CAT_F: "F  Host-name mismatch",
 }
+
+
+# Trailing ``" : Default"`` or ``" : Default 2"`` etc. — Revit's
+# default-type decoration that should be ignored when comparing host_name
+# to a parent's family name.
+_DEFAULT_DECORATION_RE = re.compile(
+    r"\s*:\s*Default(?:\s+\d+)?\s*$", re.IGNORECASE,
+)
+
+
+def _strip_default_decoration(name):
+    if not name:
+        return ""
+    return _DEFAULT_DECORATION_RE.sub("", str(name).strip())
+
+
+def _profile_known_family_names(profile):
+    """Lower-cased set of family names the profile recognises — its own
+    ``parent_filter.family_name_pattern`` plus the family-half of every
+    ``merged_aliases`` entry. Used by the cat-E check so a known alias
+    isn't reported as a parent type change.
+    """
+    if not isinstance(profile, dict):
+        return set()
+    out = set()
+    pf = profile.get("parent_filter") or {}
+    fam = (pf.get("family_name_pattern") or "").strip().lower()
+    if fam:
+        out.add(fam)
+    for alias in profile.get("merged_aliases") or []:
+        if not isinstance(alias, str):
+            continue
+        text = alias.strip()
+        if " : " in text:
+            text = text.split(" : ", 1)[0]
+        text = text.strip().lower()
+        if text:
+            out.add(text)
+    return out
+
+
+def _is_merged_member(profile, profile_data):
+    """True if the profile is conceptually folded into another profile.
+
+    Two cases:
+      * Legacy: carries ``ced_truth_source_id`` (legacy merge model).
+      * Current: this profile's ``name`` appears as an entry in any
+        other profile's ``merged_aliases`` list.
+
+    Used by the cat-A check so genuinely-merged profiles aren't flagged
+    as orphans just because their data lives under a master.
+    """
+    if not isinstance(profile, dict):
+        return False
+    if truth_groups.is_group_member(profile):
+        # ced_truth_source_id pointing at a different profile id.
+        sid = truth_groups.truth_source_id(profile)
+        if sid and sid != (profile.get("id") or ""):
+            return True
+    name = (profile.get("name") or "").strip().lower()
+    if not name:
+        return False
+    for other in profile_data.get("equipment_definitions") or []:
+        if not isinstance(other, dict) or other is profile:
+            continue
+        for alias in other.get("merged_aliases") or []:
+            if isinstance(alias, str) and alias.strip().lower() == name:
+                return True
+    return False
 
 
 # Fix-kind dispatch keys.
@@ -227,14 +302,14 @@ def run_audit(doc, profile_data, categories=None):
             if linker.parent_element_id is not None:
                 referenced_parent_ids.add(int(linker.parent_element_id))
 
-            # Cat E: ID discrepancy.
-            if CAT_E in requested:
+            # Cat D: ID discrepancy.
+            if CAT_D in requested:
                 stored_eid = linker.element_id
                 if stored_eid is not None and elem_id_val is not None:
                     try:
                         if int(stored_eid) != int(elem_id_val):
                             result.add(QaqcFinding(
-                                category=CAT_E,
+                                category=CAT_D,
                                 element_id=elem_id_val,
                                 profile_id=profile_id,
                                 profile_name=profile_name,
@@ -275,9 +350,9 @@ def run_audit(doc, profile_data, categories=None):
                             break
 
             if parent is None:
-                if CAT_C in requested and linker.parent_element_id is not None:
+                if CAT_B in requested and linker.parent_element_id is not None:
                     result.add(QaqcFinding(
-                        category=CAT_C,
+                        category=CAT_B,
                         element_id=elem_id_val,
                         profile_id=profile_id,
                         profile_name=profile_name,
@@ -290,49 +365,62 @@ def run_audit(doc, profile_data, categories=None):
                     ))
                 continue
 
-            # Cat F: parent's family no longer matches profile's filter.
-            if CAT_F in requested:
+            # Cat E: parent's family no longer matches profile's filter
+            # AND isn't a known alias on the profile. The merged_aliases
+            # check keeps pre-merge family names (e.g. ``Stinger Cart_2``
+            # absorbed into ``Stinger Cart_1``) from being flagged as a
+            # type change when the placement against the absorbed family
+            # is still valid.
+            if CAT_E in requested:
                 expected_family = _profile_family_name(profile)
                 actual_family = _element_family_name(parent)
-                if expected_family and actual_family and \
-                        expected_family.lower() != actual_family.lower():
-                    result.add(QaqcFinding(
-                        category=CAT_F,
-                        element_id=elem_id_val,
-                        profile_id=profile_id,
-                        profile_name=profile_name,
-                        led_id=led_id,
-                        led_label=led_label,
-                        message="Parent family is '{}', profile expects '{}'".format(
-                            actual_family, expected_family
-                        ),
-                        fix_kind=FIX_NONE,
-                    ))
+                if expected_family and actual_family:
+                    actual_lower = actual_family.lower()
+                    known = _profile_known_family_names(profile)
+                    if actual_lower not in known and \
+                            expected_family.lower() != actual_lower:
+                        result.add(QaqcFinding(
+                            category=CAT_E,
+                            element_id=elem_id_val,
+                            profile_id=profile_id,
+                            profile_name=profile_name,
+                            led_id=led_id,
+                            led_label=led_label,
+                            message="Parent family is '{}', profile expects '{}'".format(
+                                actual_family, expected_family
+                            ),
+                            fix_kind=FIX_NONE,
+                        ))
 
-            # Cat G: host_name mismatch.
-            if CAT_G in requested:
+            # Cat F: host_name mismatch — ignoring trailing
+            # `` : Default`` / `` : Default <n>`` decoration that Revit
+            # auto-generates when a family has only its default type.
+            if CAT_F in requested:
                 stored_host = (linker.host_name or "").strip()
                 actual_family = _element_family_name(parent)
-                if stored_host and actual_family and \
-                        stored_host.lower() != actual_family.lower():
-                    result.add(QaqcFinding(
-                        category=CAT_G,
-                        element_id=elem_id_val,
-                        profile_id=profile_id,
-                        profile_name=profile_name,
-                        led_id=led_id,
-                        led_label=led_label,
-                        message="host_name='{}', actual parent family='{}'".format(
-                            stored_host, actual_family
-                        ),
-                        fix_kind=FIX_REFRESH_HOST_NAME,
-                        fix_payload={"new_host_name": actual_family},
-                    ))
+                if stored_host and actual_family:
+                    stored_norm = _strip_default_decoration(stored_host).lower()
+                    actual_norm = _strip_default_decoration(actual_family).lower()
+                    if stored_norm and actual_norm and stored_norm != actual_norm:
+                        result.add(QaqcFinding(
+                            category=CAT_F,
+                            element_id=elem_id_val,
+                            profile_id=profile_id,
+                            profile_name=profile_name,
+                            led_id=led_id,
+                            led_label=led_label,
+                            message="host_name='{}', actual parent family='{}'".format(
+                                stored_host, actual_family
+                            ),
+                            fix_kind=FIX_REFRESH_HOST_NAME,
+                            fix_payload={"new_host_name": actual_family},
+                        ))
 
-            # Cat D: far from parent.
-            if CAT_D in requested:
+            # Cat C: far from parent.
+            if CAT_C in requested:
                 parent_pt, parent_rot = _fp.find_parent_pose(
-                    doc, linker.parent_element_id
+                    doc, linker.parent_element_id,
+                    host_name=linker.host_name,
                 )
                 cur_pt, _cur_rot = _location_pt_rot(elem)
                 if parent_pt is not None and cur_pt is not None:
@@ -350,7 +438,7 @@ def run_audit(doc, profile_data, categories=None):
                     dist = math.sqrt(dx * dx + dy * dy + dz * dz)
                     if dist > geometry.Tolerances.FAR_FROM_PARENT_FT:
                         result.add(QaqcFinding(
-                            category=CAT_D,
+                            category=CAT_C,
                             element_id=elem_id_val,
                             profile_id=profile_id,
                             profile_name=profile_name,
@@ -362,71 +450,26 @@ def run_audit(doc, profile_data, categories=None):
                             fix_kind=FIX_FOLLOW_PARENT,
                         ))
 
-    # 2. Cat A: orphan profiles.
+    # 2. Cat A: orphan profiles. Skips profiles that are conceptually
+    # merged into another (legacy ced_truth_source_id members or
+    # profiles whose ``name`` lives in another profile's
+    # merged_aliases) — those are unused on purpose.
     if CAT_A in requested:
         for pid, p in profiles_by_id.items():
-            if profile_usage.get(pid, 0) == 0:
-                result.add(QaqcFinding(
-                    category=CAT_A,
-                    element_id=None,
-                    profile_id=pid,
-                    profile_name=p.get("name") or "",
-                    led_id="",
-                    led_label="",
-                    message="Profile has no placed instances anywhere",
-                    fix_kind=FIX_NONE,
-                ))
-
-    # 3. Cat B: unplaced parents.
-    if CAT_B in requested:
-        # Build {family_name_lower: [(profile, profile_id, profile_name)]}
-        family_to_profiles = {}
-        for p in profiles_by_id.values():
-            fam = _profile_family_name(p).lower()
-            if fam:
-                family_to_profiles.setdefault(fam, []).append(p)
-
-        if family_to_profiles:
-            # Walk host doc + linked docs for instances matching any
-            # profile's parent_filter family. Skip those already
-            # referenced by some placed child.
-            def _scan(scan_doc):
-                for klass in (FamilyInstance, Group):
-                    try:
-                        coll = (FilteredElementCollector(scan_doc)
-                                .OfClass(klass)
-                                .WhereElementIsNotElementType())
-                    except Exception:
-                        continue
-                    for elem in coll:
-                        fam_name = _element_family_name(elem).lower()
-                        if not fam_name:
-                            continue
-                        profiles = family_to_profiles.get(fam_name)
-                        if not profiles:
-                            continue
-                        eid = _id_value(elem)
-                        if eid is None:
-                            continue
-                        if eid in referenced_parent_ids:
-                            continue
-                        for p in profiles:
-                            result.add(QaqcFinding(
-                                category=CAT_B,
-                                element_id=eid,
-                                profile_id=p.get("id") or "",
-                                profile_name=p.get("name") or "",
-                                led_id="",
-                                led_label="",
-                                message="Parent (family '{}') has no placed children for profile".format(
-                                    _element_family_name(elem)
-                                ),
-                                fix_kind=FIX_NONE,
-                            ))
-
-            _scan(doc)
-            for link_doc, _t in links.iter_link_documents(doc):
-                _scan(link_doc)
+            if profile_usage.get(pid, 0) > 0:
+                continue
+            if _is_merged_member(p, profile_data):
+                continue
+            result.add(QaqcFinding(
+                category=CAT_A,
+                element_id=None,
+                profile_id=pid,
+                profile_name=p.get("name") or "",
+                led_id="",
+                led_label="",
+                message="Profile has no placed instances anywhere",
+                fix_kind=FIX_NONE,
+            ))
 
     return result
 
@@ -497,7 +540,9 @@ def execute_fix(doc, profile_data, finding):
         offset = offsets_list[0] if offsets_list else {
             "x_inches": 0.0, "y_inches": 0.0, "z_inches": 0.0, "rotation_deg": 0.0,
         }
-        parent_pt, parent_rot = _fp.find_parent_pose(doc, linker.parent_element_id)
+        parent_pt, parent_rot = _fp.find_parent_pose(
+            doc, linker.parent_element_id, host_name=linker.host_name
+        )
         if parent_pt is None:
             return False, "Parent pose unavailable."
         target_pt = geometry.target_point_from_offsets(parent_pt, parent_rot, offset)

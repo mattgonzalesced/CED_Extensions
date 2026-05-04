@@ -1,0 +1,41 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Audit Circuits (MEPRFP 2.0)"
+        Width="1100" Height="700"
+        WindowStartupLocation="CenterScreen">
+  <Grid Margin="12">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <TextBlock Grid.Row="0" Margin="0,0,0,8" TextWrapping="Wrap">
+      Circuit-side health audit. Five categories: missing data, drift
+      from YAML, phantom panels, orphan circuits, pole mismatches.
+      Per-row Select / Zoom / Fix. Refresh re-audits in place.
+    </TextBlock>
+
+    <DockPanel Grid.Row="1" Margin="0,0,0,8">
+      <StackPanel x:Name="CategoryFilterPanel" Orientation="Horizontal"
+                  DockPanel.Dock="Left"/>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+        <TextBlock x:Name="SummaryLabel" VerticalAlignment="Center"
+                   Foreground="Gray" Margin="0,0,12,0"/>
+        <Button x:Name="RefreshButton" Content="Refresh" Width="100"/>
+      </StackPanel>
+    </DockPanel>
+
+    <GroupBox Grid.Row="2" Header="Findings" Padding="8">
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel x:Name="FindingsPanel"/>
+      </ScrollViewer>
+    </GroupBox>
+
+    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+      <TextBlock x:Name="StatusLabel" VerticalAlignment="Center" Margin="0,0,16,0" Foreground="Gray"/>
+      <Button x:Name="CloseButton" Content="Close" Width="100" IsCancel="True"/>
+    </StackPanel>
+  </Grid>
+</Window>

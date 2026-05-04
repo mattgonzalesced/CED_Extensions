@@ -1,0 +1,97 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SuperCircuit V5 (MEPRFP 2.0)"
+        Width="1320" Height="780"
+        WindowStartupLocation="CenterScreen">
+  <Grid Margin="12">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- Top: client + scope summary -->
+    <DockPanel Grid.Row="0" Margin="0,0,0,8">
+      <TextBlock x:Name="HeaderLabel" FontWeight="Bold" VerticalAlignment="Center"/>
+      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+        <TextBlock Text="Filter by keyword:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+        <ComboBox x:Name="KeywordCombo" Width="200" IsEditable="False"/>
+        <Button x:Name="RefreshButton" Content="Refresh from doc" Width="140" Margin="12,0,0,0"/>
+      </StackPanel>
+    </DockPanel>
+
+    <!-- Counters -->
+    <TextBlock Grid.Row="1" x:Name="SummaryLabel" Foreground="Gray" Margin="0,0,0,6"/>
+
+    <!-- Preview grid -->
+    <DataGrid Grid.Row="2" x:Name="PreviewGrid"
+              AutoGenerateColumns="False"
+              CanUserAddRows="False"
+              CanUserDeleteRows="False"
+              HeadersVisibility="Column"
+              GridLinesVisibility="Horizontal"
+              SelectionMode="Extended"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch"
+              HorizontalScrollBarVisibility="Auto"
+              VerticalScrollBarVisibility="Auto"
+              ColumnWidth="*"
+              RowHeight="22">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Circuit Batch"
+                            Binding="{Binding GroupLabel}"
+                            IsReadOnly="True"
+                            MinWidth="240"
+                            Width="2.4*"/>
+        <DataGridTemplateColumn Header="CKT_Panel_CEDT" MinWidth="140" Width="1.2*">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <ComboBox IsEditable="True"
+                        Text="{Binding PanelName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                        ItemsSource="{Binding PanelOptions}"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTemplateColumn Header="CKT_Circuit Number_CEDT" MinWidth="160" Width="1.2*">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <ComboBox IsEditable="True"
+                        Text="{Binding CircuitNumber, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                        ItemsSource="{Binding CircuitOptions}"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTemplateColumn Header="CKT_Load Name_CEDT" MinWidth="180" Width="1.5*">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <ComboBox IsEditable="True"
+                        Text="{Binding LoadName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                        ItemsSource="{Binding LoadOptions}"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTextColumn Header="Family : Type"
+                            Binding="{Binding FamilyType}"
+                            IsReadOnly="True"
+                            MinWidth="220"
+                            Width="2.2*"/>
+        <DataGridTextColumn Header="Element ID"
+                            Binding="{Binding ElementIdText}"
+                            IsReadOnly="True"
+                            MinWidth="90"
+                            Width="0.9*"/>
+      </DataGrid.Columns>
+    </DataGrid>
+
+    <!-- Bottom: status + buttons -->
+    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+      <TextBlock x:Name="StatusLabel" VerticalAlignment="Center" Margin="0,0,16,0" Foreground="Gray"/>
+      <Button x:Name="ApplyEditsButton" Content="Apply edits" Width="140" Margin="0,0,8,0"
+              ToolTip="Push your panel / circuit / load edits into the run, regrouping and re-rendering."/>
+      <Button x:Name="RunButton" Content="Run circuits" Width="140" Margin="0,0,8,0"
+              ToolTip="Create Revit electrical systems for every non-review row. Runs on Revit's main thread via ExternalEvent."/>
+      <Button x:Name="CloseButton" Content="Close" Width="100" IsCancel="True"/>
+    </StackPanel>
+  </Grid>
+</Window>

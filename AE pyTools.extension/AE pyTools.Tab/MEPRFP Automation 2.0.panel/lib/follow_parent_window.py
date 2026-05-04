@@ -104,10 +104,13 @@ class FollowParentController(object):
         for c in cats:
             self.category_list.Items.Add(c)
         self.profile_list.Items.Clear()
-        for p in self.profiles:
-            self.profile_list.Items.Add(
-                "{}  ({})".format(p.get("name") or "(unnamed)", p.get("id") or "?")
-            )
+        labels = [
+            "{}  ({})".format(p.get("name") or "(unnamed)", p.get("id") or "?")
+            for p in self.profiles if isinstance(p, dict)
+        ]
+        labels.sort(key=lambda s: s.lower())
+        for label in labels:
+            self.profile_list.Items.Add(label)
 
     def _selected_profile_ids(self):
         ids = set()
@@ -126,9 +129,10 @@ class FollowParentController(object):
             profile_ids=self._selected_profile_ids(),
             categories=self._selected_categories(),
         )
+        stats = _fp.FollowParentScanStats()
         try:
             self.candidates = _fp.collect_candidates(
-                self.doc, self.profile_data, filters, refuse_linked=True
+                self.doc, self.profile_data, filters, refuse_linked=True, stats=stats
             )
         except ValueError as exc:
             self._set_status(str(exc))
@@ -140,13 +144,17 @@ class FollowParentController(object):
         self._render(self.candidates)
         n_total = len(self.candidates)
         n_aligned = sum(1 for c in self.candidates if c.skip)
-        self.summary_label.Text = "{} candidate(s); {} already aligned".format(
-            n_total, n_aligned
+        self.summary_label.Text = (
+            "{} candidate(s); {} already aligned   |   {}".format(
+                n_total, n_aligned, stats.summary_line()
+            )
         )
-        self._set_status(
-            "Review the list, uncheck to skip, then Follow." if n_total
-            else "No candidates matched the filters."
-        )
+        if n_total:
+            self._set_status("Review the list, uncheck to skip, then Follow.")
+        else:
+            # No candidates — surface the most likely cause inline.
+            reason = self._diagnose_zero_candidates(stats)
+            self._set_status(reason)
 
     def _render(self, candidates):
         self.match_rows_panel.Children.Clear()
@@ -207,13 +215,70 @@ class FollowParentController(object):
 
         return grid, cb
 
+    def _diagnose_zero_candidates(self, stats):
+        """Pick the most actionable explanation given the stats.
+        Drives the status-bar message when Match returns nothing."""
+        if stats.elements_scanned == 0:
+            return "No FamilyInstance / Group elements found in the active document."
+        if stats.no_element_linker == stats.elements_scanned:
+            return (
+                "{} element(s) scanned but none carry an Element_Linker — "
+                "place fixtures via the panel before Follow Parent.".format(
+                    stats.elements_scanned
+                )
+            )
+        if stats.led_not_in_yaml and stats.led_not_in_yaml > stats.candidates_built:
+            sample = ", ".join(stats.sample_orphan_led_ids[:5]) or "?"
+            return (
+                "{} placed fixture(s) reference led_ids that aren't in the "
+                "current YAML (e.g. {}). Re-import the YAML version that "
+                "matches when the fixtures were placed.".format(
+                    stats.led_not_in_yaml, sample
+                )
+            )
+        if stats.filtered_by_profile and not stats.candidates_built:
+            # Show the top profiles the placed fixtures actually map to.
+            top = sorted(
+                stats.profile_matches.items(),
+                key=lambda kv: -kv[1],
+            )[:5]
+            top_text = ", ".join(
+                "{} ({}x)".format(pid, n) for pid, n in top
+            ) or "(none)"
+            return (
+                "All {} fixtures with Element_Linker resolve to other "
+                "profiles. Top matches: {}. Pick the profile that owns "
+                "your placed fixtures, or uncheck the profile filter.".format(
+                    stats.filtered_by_profile, top_text
+                )
+            )
+        if stats.filtered_by_category and not stats.candidates_built:
+            return (
+                "All matched fixtures were excluded by the category filter."
+            )
+        if stats.parent_unresolved and not stats.candidates_built:
+            return (
+                "{} fixture(s) had Element_Linker but their parent element "
+                "couldn't be resolved (linked CAD unloaded? parent deleted? "
+                "host_name mismatch?).".format(stats.parent_unresolved)
+            )
+        return "No candidates matched the filters."
+
     def _on_check_all(self, sender, e):
+        if not self._match_rows:
+            self._set_status("No rows yet — click Match first")
+            return
         for r in self._match_rows:
             r.checkbox.IsChecked = True
+        self._set_status("Checked {} row(s)".format(len(self._match_rows)))
 
     def _on_uncheck_all(self, sender, e):
+        if not self._match_rows:
+            self._set_status("No rows yet — click Match first")
+            return
         for r in self._match_rows:
             r.checkbox.IsChecked = False
+        self._set_status("Unchecked {} row(s)".format(len(self._match_rows)))
 
     def _on_follow(self, sender, e):
         from pyrevit import revit

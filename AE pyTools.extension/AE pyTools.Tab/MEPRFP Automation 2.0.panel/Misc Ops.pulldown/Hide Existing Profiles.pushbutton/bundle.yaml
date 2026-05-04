@@ -5,4 +5,4 @@ tooltip: |
   named 'MEPRFP Hidden <view> (<timestamp>)' and the active view is
   switched to the duplicate. Close the duplicate (or switch back) to
   restore the original visibility.
-is_beta: false
+is_beta: true

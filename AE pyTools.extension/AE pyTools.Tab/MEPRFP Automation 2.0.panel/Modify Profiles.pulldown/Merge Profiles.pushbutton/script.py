@@ -44,6 +44,63 @@ def _source_label(profile_data):
     return label
 
 
+_ALL_FAMILIES_KEY = "__ALL__"
+
+
+def _collect_family_groups(profiles):
+    """Group profiles by ``parent_filter.family_name_pattern`` (case-fold).
+
+    Returns a list of dicts ``{name, profiles}`` sorted by name. Profiles
+    with no family pattern fall under ``(no parent_filter family)`` so
+    they're still pickable.
+    """
+    groups = {}
+    for p in profiles:
+        if not isinstance(p, dict):
+            continue
+        pf = p.get("parent_filter") or {}
+        fam = (pf.get("family_name_pattern") or "").strip()
+        key = fam.lower() or "__empty__"
+        display = fam or "(no parent_filter family)"
+        bucket = groups.setdefault(key, {"name": display, "profiles": []})
+        bucket["profiles"].append(p)
+    return sorted(groups.values(), key=lambda g: g["name"].lower())
+
+
+def _pick_family_group(profiles):
+    """Two-step disambiguation: pick a family group, then pick within it.
+
+    Returns the list of profiles to pick the master from, or None if
+    cancelled. Adds an "(All profiles)" escape hatch as the first row
+    so cross-family merges are still possible.
+    """
+    families = _collect_family_groups(profiles)
+    if not families:
+        return None
+    options = [
+        {"name": "(All profiles — show every profile)",
+         "profiles": list(profiles),
+         "key": _ALL_FAMILIES_KEY}
+    ] + families
+    chosen = wpf_dialogs.pick_from_list(
+        options,
+        title=TITLE,
+        prompt=(
+            "Pick the family group to merge within. Profiles sharing the "
+            "same parent_filter.family_name_pattern are bucketed together "
+            "so you can scope the master pick to (e.g.) just the stinger "
+            "carts or just the checkstands. Pick (All profiles) to merge "
+            "across families."
+        ),
+        display_func=lambda g: "{}  ({} profile(s))".format(
+            g["name"], len(g["profiles"])
+        ),
+    )
+    if chosen is None:
+        return None
+    return chosen["profiles"]
+
+
 def _maybe_run_legacy_migration(doc, profile_data, output):
     """First-run prompt: if any legacy ced_truth_source_id markers exist,
     offer to migrate them to the new alias model."""
@@ -136,19 +193,47 @@ def _refs_to_aliases(refs, source):
 def _add_aliases_via_existing_profiles(profile_data, source):
     """Multi-select existing profiles; each picked profile's name becomes
     an alias on the source. Picked profiles can optionally be deleted."""
-    candidates = [
+    # Default to siblings — profiles sharing the master's
+    # parent_filter.family_name_pattern. Falls back to "all profiles" if
+    # that yields nothing useful (e.g. master has no family pattern).
+    source_pf = (source.get("parent_filter") or {}) if isinstance(source, dict) else {}
+    source_fam_key = (source_pf.get("family_name_pattern") or "").strip().lower()
+
+    all_others = [
         p for p in profile_data.get("equipment_definitions") or []
         if isinstance(p, dict) and p is not source
     ]
-    if not candidates:
+    if not all_others:
         forms.alert("No other profiles to alias.", title=TITLE)
         return [], [], []
+
+    siblings = []
+    if source_fam_key:
+        for p in all_others:
+            pf = p.get("parent_filter") or {}
+            fam = (pf.get("family_name_pattern") or "").strip().lower()
+            if fam and fam == source_fam_key:
+                siblings.append(p)
+
+    if siblings:
+        candidates = siblings
+        prompt_extra = (
+            "\n\nShowing only profiles in family '{}'. Cancel and use a "
+            "different mode if you need to alias outside this family."
+        ).format(source_pf.get("family_name_pattern") or "?")
+    else:
+        candidates = all_others
+        prompt_extra = (
+            "\n\nNo siblings found in the master's family — showing every "
+            "other profile."
+        )
+
     chosen = wpf_dialogs.multi_select_from_list(
         candidates,
         title=TITLE,
-        prompt="Check profiles whose names should become aliases on:\n    {}".format(
-            _profile_label(source)
-        ),
+        prompt=(
+            "Check profiles whose names should become aliases on:\n    {}{}"
+        ).format(_profile_label(source), prompt_extra),
         display_func=_profile_label,
     )
     if not chosen:
@@ -201,13 +286,16 @@ def main():
     # First-run migration prompt.
     _maybe_run_legacy_migration(doc, profile_data, output)
 
-    # Pick source.
+    # Pick the family group first, then the master within it.
     profiles = profile_data.get("equipment_definitions") or []
     if not profiles:
         forms.alert("No profiles available after migration.", title=TITLE)
         return
+    family_profiles = _pick_family_group(profiles)
+    if not family_profiles:
+        return
     source = wpf_dialogs.pick_from_list(
-        profiles,
+        family_profiles,
         title=TITLE,
         prompt=(
             "Pick the MASTER profile (the one that survives the merge).\n\n"

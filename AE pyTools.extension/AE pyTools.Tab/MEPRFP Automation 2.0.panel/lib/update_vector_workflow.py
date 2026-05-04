@@ -190,7 +190,7 @@ def collect_candidates_from_selection(doc, profile_data, element_ids):
         if pose_pt is None:
             continue
         parent_pt, parent_rot = follow_parent_workflow.find_parent_pose(
-            doc, linker.parent_element_id
+            doc, linker.parent_element_id, host_name=linker.host_name
         )
         if parent_pt is None:
             continue

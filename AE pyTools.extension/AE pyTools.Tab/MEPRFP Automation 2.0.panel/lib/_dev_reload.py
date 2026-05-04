@@ -61,6 +61,20 @@ _LIB_MODULE_NAMES = frozenset({
     "optimize_window",
     "qaqc_workflow",
     "qaqc_window",
+    # circuiting (Stage 7) — note: ``circuit_apply`` is intentionally
+    # NOT purged. Re-importing it would re-execute the
+    # ``_ApplyExternalEventHandler`` class statement, which triggers
+    # pythonnet 3 to attempt a second .NET type registration with the
+    # same fully-qualified name and raises ``"Duplicate type name
+    # within an assembly"``. The module's gateway singleton survives
+    # across runs by design.
+    "circuit_clients",
+    "circuit_grouping",
+    "circuit_phasing",
+    "circuit_workflow",
+    "circuit_window",
+    "circuit_audit_workflow",
+    "circuit_audit_window",
     # ui infra
     "forms_compat",
     "wpf",

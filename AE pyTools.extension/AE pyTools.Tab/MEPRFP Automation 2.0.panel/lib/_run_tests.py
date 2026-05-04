@@ -23,6 +23,7 @@ import _test_directives
 import _test_capture_idgen
 import _test_placement_matching
 import _test_merge
+import _test_circuit_grouping
 
 
 def main():
@@ -37,6 +38,7 @@ def main():
         _test_capture_idgen,
         _test_placement_matching,
         _test_merge,
+        _test_circuit_grouping,
     ):
         name = module.__name__.replace("_test_", "")
         print("\n========= {} =========".format(name))

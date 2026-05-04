@@ -85,6 +85,58 @@ class FollowParentResult(object):
         self.warnings = []
 
 
+class FollowParentScanStats(object):
+    """Diagnostic counters emitted alongside ``collect_candidates``.
+
+    Tells the user which gate filtered each fixture out so they can
+    distinguish between data problems (placed fixtures with no
+    Element_Linker, dangling led_id, missing parent) and filter mistakes
+    (wrong profile / category checked).
+    """
+
+    __slots__ = (
+        "elements_scanned",
+        "no_element_linker",
+        "led_not_in_yaml",
+        "filtered_by_profile",
+        "filtered_by_category",
+        "parent_unresolved",
+        "no_location_point",
+        "candidates_built",
+        "sample_orphan_led_ids",
+        "profile_matches",  # {profile_id: count} — fixtures whose led_id mapped here
+    )
+
+    def __init__(self):
+        self.elements_scanned = 0
+        self.no_element_linker = 0
+        self.led_not_in_yaml = 0
+        self.filtered_by_profile = 0
+        self.filtered_by_category = 0
+        self.parent_unresolved = 0
+        self.no_location_point = 0
+        self.candidates_built = 0
+        self.sample_orphan_led_ids = []  # cap small — diagnostic only
+        self.profile_matches = {}
+
+    def summary_line(self):
+        bits = ["Scanned {}".format(self.elements_scanned)]
+        if self.no_element_linker:
+            bits.append("no Element_Linker: {}".format(self.no_element_linker))
+        if self.led_not_in_yaml:
+            bits.append("led_id not in YAML: {}".format(self.led_not_in_yaml))
+        if self.filtered_by_profile:
+            bits.append("excluded by profile filter: {}".format(self.filtered_by_profile))
+        if self.filtered_by_category:
+            bits.append("excluded by category filter: {}".format(self.filtered_by_category))
+        if self.parent_unresolved:
+            bits.append("parent unresolved: {}".format(self.parent_unresolved))
+        if self.no_location_point:
+            bits.append("no LocationPoint: {}".format(self.no_location_point))
+        bits.append("candidates: {}".format(self.candidates_built))
+        return ";  ".join(bits)
+
+
 # ---------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------
@@ -126,9 +178,37 @@ def _build_led_index(profile_data):
     return out
 
 
-def find_parent_pose(doc, parent_element_id):
+def _element_family_name(elem):
+    """Family name for FamilyInstance/Group; empty string otherwise."""
+    if elem is None:
+        return ""
+    try:
+        from Autodesk.Revit.DB import FamilyInstance, Group  # noqa: E402
+    except Exception:
+        return ""
+    if isinstance(elem, FamilyInstance):
+        sym = getattr(elem, "Symbol", None)
+        if sym is None:
+            return ""
+        family = getattr(sym, "Family", None)
+        return getattr(family, "Name", "") if family is not None else ""
+    if isinstance(elem, Group):
+        gtype = getattr(elem, "GroupType", None)
+        return getattr(gtype, "Name", "") if gtype is not None else ""
+    return ""
+
+
+def find_parent_pose(doc, parent_element_id, host_name=None):
     """Look up parent in host doc + every linked doc. Returns
-    ``(world_pt, world_rot_deg)`` or ``(None, None)`` if not found."""
+    ``(world_pt, world_rot_deg)`` or ``(None, None)`` if not found.
+
+    ElementIds aren't globally unique across documents — a linked CAD
+    parent with id 12345 and a host wall with id 12345 collide. When
+    ``host_name`` is supplied (Element_Linker carries the parent's
+    family name), we use it to validate the candidate lookup: a doc
+    only "wins" if it produces an element whose family name matches.
+    Without ``host_name`` we fall back to the legacy first-found rule.
+    """
     if parent_element_id is None:
         return None, None
     try:
@@ -136,42 +216,78 @@ def find_parent_pose(doc, parent_element_id):
     except Exception:
         return None, None
 
-    # Host doc.
-    parent = doc.GetElement(eid)
-    if parent is not None:
-        pt, rot = _location_pt_rot(parent)
-        if pt is not None:
-            return pt, rot
+    target_host = (host_name or "").strip().lower()
 
-    # Linked docs.
-    for link_doc, total_transform in links.iter_link_documents(doc):
-        try:
-            parent = link_doc.GetElement(eid)
-        except Exception:
-            continue
-        if parent is None:
-            continue
+    def _local_pose(parent):
         loc = getattr(parent, "Location", None)
         if not isinstance(loc, LocationPoint):
-            continue
+            return None
         try:
-            local_pt = loc.Point
+            return loc
         except Exception:
-            continue
-        try:
-            local_rad = loc.Rotation
-        except Exception:
-            local_rad = 0.0
-        world_pt = total_transform.OfPoint(local_pt)
-        local_x = XYZ(math.cos(local_rad), math.sin(local_rad), 0.0)
-        try:
-            world_x = total_transform.OfVector(local_x)
-            rot = geometry.normalize_angle(
-                math.degrees(math.atan2(world_x.Y, world_x.X))
-            )
-        except Exception:
-            rot = geometry.normalize_angle(math.degrees(local_rad))
-        return (world_pt.X, world_pt.Y, world_pt.Z), rot
+            return None
+
+    def _host_doc_pose():
+        parent = doc.GetElement(eid)
+        if parent is None:
+            return None, None, None
+        loc = _local_pose(parent)
+        if loc is None:
+            return None, None, parent
+        pt, rot = _location_pt_rot(parent)
+        if pt is None:
+            return None, None, parent
+        return pt, rot, parent
+
+    def _linked_doc_pose():
+        for link_doc, total_transform in links.iter_link_documents(doc):
+            try:
+                parent = link_doc.GetElement(eid)
+            except Exception:
+                continue
+            if parent is None:
+                continue
+            loc = getattr(parent, "Location", None)
+            if not isinstance(loc, LocationPoint):
+                continue
+            try:
+                local_pt = loc.Point
+            except Exception:
+                continue
+            try:
+                local_rad = loc.Rotation
+            except Exception:
+                local_rad = 0.0
+            world_pt = total_transform.OfPoint(local_pt)
+            local_x = XYZ(math.cos(local_rad), math.sin(local_rad), 0.0)
+            try:
+                world_x = total_transform.OfVector(local_x)
+                rot = geometry.normalize_angle(
+                    math.degrees(math.atan2(world_x.Y, world_x.X))
+                )
+            except Exception:
+                rot = geometry.normalize_angle(math.degrees(local_rad))
+            return (world_pt.X, world_pt.Y, world_pt.Z), rot, parent
+        return None, None, None
+
+    host_pt, host_rot, host_elem = _host_doc_pose()
+    link_pt, link_rot, link_elem = _linked_doc_pose()
+
+    if target_host:
+        # Prefer the doc whose element's family name matches host_name.
+        if host_elem is not None and _element_family_name(host_elem).strip().lower() == target_host:
+            if host_pt is not None:
+                return host_pt, host_rot
+        if link_elem is not None and _element_family_name(link_elem).strip().lower() == target_host:
+            if link_pt is not None:
+                return link_pt, link_rot
+
+    # Fallback: first-found wins (legacy behaviour). Linked-doc
+    # placements in particular rely on this when host_name is absent.
+    if host_pt is not None:
+        return host_pt, host_rot
+    if link_pt is not None:
+        return link_pt, link_rot
     return None, None
 
 
@@ -179,7 +295,7 @@ def find_parent_pose(doc, parent_element_id):
 # Collection
 # ---------------------------------------------------------------------
 
-def collect_candidates(doc, profile_data, filters, refuse_linked=True):
+def collect_candidates(doc, profile_data, filters, refuse_linked=True, stats=None):
     """Walk every host-doc + linked-doc element with an Element_Linker
     payload, compute its target pose from its parent's current state,
     and emit a candidate if the actual pose is out of alignment.
@@ -187,6 +303,11 @@ def collect_candidates(doc, profile_data, filters, refuse_linked=True):
     ``refuse_linked`` raises ``ValueError`` if any linked-doc child
     appears in the candidate set; if False, those candidates are
     skipped with a warning instead.
+
+    If ``stats`` is a ``FollowParentScanStats`` instance, per-gate
+    counters are populated so the caller can report why fixtures were
+    excluded (no Element_Linker, dangling led_id, filter mismatch,
+    parent unresolved, etc.).
     """
     led_index = _build_led_index(profile_data)
     out = []
@@ -194,9 +315,15 @@ def collect_candidates(doc, profile_data, filters, refuse_linked=True):
     # Host children.
     for klass in (FamilyInstance, Group):
         for elem in FilteredElementCollector(doc).OfClass(klass).WhereElementIsNotElementType():
-            cand = _build_candidate(doc, elem, led_index, filters, is_linked=False)
+            if stats is not None:
+                stats.elements_scanned += 1
+            cand = _build_candidate(
+                doc, elem, led_index, filters, is_linked=False, stats=stats
+            )
             if cand is not None:
                 out.append(cand)
+                if stats is not None:
+                    stats.candidates_built += 1
 
     # Linked children — refuse the run if any are picked under filters.
     if refuse_linked:
@@ -229,23 +356,40 @@ def collect_candidates(doc, profile_data, filters, refuse_linked=True):
     return out
 
 
-def _build_candidate(doc, elem, led_index, filters, is_linked=False):
+def _build_candidate(doc, elem, led_index, filters, is_linked=False, stats=None):
     linker = _el_io.read_from_element(elem)
     if linker is None or not linker.led_id:
+        if stats is not None:
+            stats.no_element_linker += 1
         return None
     entry = led_index.get(linker.led_id)
     if entry is None:
+        if stats is not None:
+            stats.led_not_in_yaml += 1
+            if len(stats.sample_orphan_led_ids) < 8:
+                stats.sample_orphan_led_ids.append(linker.led_id)
         return None
     profile, set_dict, led = entry
+    if stats is not None:
+        pid = profile.get("id") or "?"
+        stats.profile_matches[pid] = stats.profile_matches.get(pid, 0) + 1
     if filters.profile_ids and profile.get("id") not in filters.profile_ids:
+        if stats is not None:
+            stats.filtered_by_profile += 1
         return None
     if filters.categories:
         cat = (profile.get("parent_filter") or {}).get("category") or ""
         if cat not in filters.categories:
+            if stats is not None:
+                stats.filtered_by_category += 1
             return None
 
-    parent_pt, parent_rot = find_parent_pose(doc, linker.parent_element_id)
+    parent_pt, parent_rot = find_parent_pose(
+        doc, linker.parent_element_id, host_name=linker.host_name
+    )
     if parent_pt is None:
+        if stats is not None:
+            stats.parent_unresolved += 1
         return None  # no parent reference -> can't follow
 
     offsets_list = led.get("offsets") or []
@@ -257,6 +401,8 @@ def _build_candidate(doc, elem, led_index, filters, is_linked=False):
 
     current_pt, current_rot = _location_pt_rot(elem)
     if current_pt is None:
+        if stats is not None:
+            stats.no_location_point += 1
         return None
 
     return FollowParentCandidate(

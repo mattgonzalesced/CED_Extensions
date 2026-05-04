@@ -1,0 +1,6 @@
+title: "Audit\nCircuits"
+tooltip: |
+  Read-only health audit of the project's circuiting state. Five
+  categories: missing CKT data, drift from YAML, phantom panels,
+  orphan circuits, pole mismatches. Per-row Select / Zoom / Fix.
+is_beta: false
