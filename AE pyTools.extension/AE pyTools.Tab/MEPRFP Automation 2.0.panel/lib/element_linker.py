@@ -21,7 +21,20 @@ JSON schema (codec version 1)::
       "element_id": int | null,
       "facing": [x, y, z] | null,
       "host_name": str | null,
-      "parent_location_ft": [x, y, z] | null
+      "parent_location_ft": [x, y, z] | null,
+
+      // Stage 7 — written by SuperCircuit V5 on apply
+      "ckt_circuit_number": str | null,
+      "ckt_panel": str | null,
+
+      // Stage 6 — written by Place Space Elements (Spaces lineage).
+      // ``space_id`` is the parent Space's ElementId; its presence
+      // is the authoritative signal that the element is space-based.
+      // ``space_profile_id`` is the ``space_profiles[*].id`` of the
+      // template entry that produced this element, so audits can
+      // detect drift when a profile is later edited.
+      "space_id": int | null,
+      "space_profile_id": str | null
     }
 
 The Revit parameter name is fixed at ``"Element_Linker"``. The legacy
@@ -51,6 +64,11 @@ _FIELDS = (
     "parent_location_ft",
     "ckt_circuit_number",
     "ckt_panel",
+    # Stage 6 — Spaces lineage. Presence of ``space_id`` flags an
+    # element as space-based; ``space_profile_id`` records which
+    # space_profiles[*] template produced it.
+    "space_id",
+    "space_profile_id",
 )
 
 
@@ -75,7 +93,7 @@ _LEGACY_FIELD_MAP = {
 }
 
 _TUPLE_FIELDS = {"location_ft", "facing", "parent_location_ft"}
-_INT_FIELDS = {"parent_element_id", "level_id", "element_id"}
+_INT_FIELDS = {"parent_element_id", "level_id", "element_id", "space_id"}
 _FLOAT_FIELDS = {"rotation_deg", "parent_rotation_deg"}
 
 
@@ -211,6 +229,16 @@ class ElementLinker(object):
         return json.dumps(self.to_dict(), separators=(",", ":"), sort_keys=False)
 
     # --- conveniences -----------------------------------------------
+
+    @property
+    def is_space_based(self):
+        """True if this element was placed by the Spaces pipeline.
+
+        The presence of ``space_id`` is the authoritative signal —
+        ``space_profile_id`` may be None on legacy data even when
+        ``space_id`` is set.
+        """
+        return self.space_id is not None
 
     def __eq__(self, other):
         if not isinstance(other, ElementLinker):

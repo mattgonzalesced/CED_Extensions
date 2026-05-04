@@ -1,0 +1,8 @@
+title: "Manage\nSpace Profiles"
+tooltip: |
+  Create, rename, and delete space_profiles. Each profile owns a
+  bucket reference and a flat list of LEDs with placement rules
+  (center / wall edge / corner / door-relative). Per-LED parameters,
+  offsets, and annotations are not yet editable here — hand-edit the
+  YAML for those (round-trips through Import/Export Profiles).
+is_beta: false

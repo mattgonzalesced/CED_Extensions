@@ -21,6 +21,7 @@ import schema as _schema
 import schema_migrations as _migrations
 import yaml_io
 import storage
+import space_storage
 
 
 def _utc_now_iso():
@@ -130,6 +131,71 @@ def import_yaml_file(doc, source_path):
         "byte_count": len(canonical),
         "blank": is_blank,
     }
+
+
+# ---------------------------------------------------------------------
+# Spaces (Stage 6)
+#
+# Templates (``space_buckets`` and ``space_profiles``) live in the same
+# YAML payload as ``equipment_definitions``, so they round-trip through
+# the existing import/export. Per-project ``classifications`` live in a
+# separate Extensible Storage entity managed by ``space_storage`` so an
+# export of the YAML doesn't drag one project's space assignments into
+# another.
+# ---------------------------------------------------------------------
+
+def load_space_buckets(doc):
+    """Return ``data['space_buckets']`` as a list of dicts (never None)."""
+    data = load_active_data(doc)
+    raw = data.get("space_buckets") if isinstance(data, dict) else None
+    return list(raw or [])
+
+
+def save_space_buckets(doc, buckets, action="MEPRFP 2.0 edit space buckets"):
+    """Persist ``space_buckets`` into the active YAML payload.
+
+    Caller manages the Revit transaction.
+    """
+    data = load_active_data(doc) or {}
+    data["space_buckets"] = list(buckets or [])
+    data.setdefault("schema_version", _schema.INTERNAL_VERSION)
+    save_active_data(doc, data, action=action)
+
+
+def load_space_profiles(doc):
+    """Return ``data['space_profiles']`` as a list of dicts (never None)."""
+    data = load_active_data(doc)
+    raw = data.get("space_profiles") if isinstance(data, dict) else None
+    return list(raw or [])
+
+
+def save_space_profiles(doc, profiles, action="MEPRFP 2.0 edit space profiles"):
+    """Persist ``space_profiles`` into the active YAML payload.
+
+    Caller manages the Revit transaction.
+    """
+    data = load_active_data(doc) or {}
+    data["space_profiles"] = list(profiles or [])
+    data.setdefault("schema_version", _schema.INTERNAL_VERSION)
+    save_active_data(doc, data, action=action)
+
+
+def load_classifications(doc):
+    """Return per-project space classifications as a list of dicts."""
+    payload = space_storage.read_payload(doc)
+    if payload is None:
+        return []
+    return space_storage.decode(payload.get("json_text") or "")
+
+
+def save_classifications(doc, classifications):
+    """Persist per-project classifications. Caller manages txn."""
+    text = space_storage.encode(classifications)
+    space_storage.write_payload(
+        doc=doc,
+        json_text=text,
+        last_modified_utc=_utc_now_iso(),
+    )
 
 
 def export_yaml_file(doc, save_path):

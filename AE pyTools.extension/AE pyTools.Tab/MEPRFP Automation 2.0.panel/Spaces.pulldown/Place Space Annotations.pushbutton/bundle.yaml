@@ -1,0 +1,7 @@
+title: "Place\nSpace Annotations"
+tooltip: |
+  Place tags / keynotes / text notes against space-based fixtures in
+  the active view (those stamped with space_id by Place Space
+  Elements). Equipment fixtures are excluded — use Place Element
+  Annotations for those.
+is_beta: false

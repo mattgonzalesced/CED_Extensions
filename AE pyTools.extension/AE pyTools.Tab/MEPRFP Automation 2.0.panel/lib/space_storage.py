@@ -1,42 +1,31 @@
 # -*- coding: utf-8 -*-
 """
-Extensible Storage primitives for the MEPRFP 2.0 active YAML store.
+Extensible Storage primitives for per-project Space classifications.
 
-The schema is independent from the original MEP Automation panel. Tools
-in the 2.0 panel only ever read and write this schema, and the legacy
-panel never sees it.
+Space *templates* (``space_buckets`` and ``space_profiles``) live in the
+shared YAML payload alongside ``equipment_definitions`` — they are the
+exportable, reusable configuration. Per-project *classifications*
+(which Space element belongs to which bucket) are project state, not
+template, and therefore live in this separate Extensible Storage entity
+on ``ProjectInformation`` so an export of the YAML doesn't drag one
+project's space assignments into another.
 
-Layout (v4 — current). Four typed map fields keep the schema future-
-extensible without GUID changes; new keys land in the appropriate map
-without re-building the schema. ``IntMap`` is ``Int64`` on Revit 2024+
-and falls back to ``Int32`` on older builds; the read path tolerates
-both.
+Layout (v4 — current). Same 4-map shape as ``storage.py`` so both
+stores share machinery. The classification list is JSON-encoded into
+``StringMap['json_text']``; ``IntMap['store_version']`` carries the
+layout version. JSON is dependency-free here (no PyYAML in this hot
+path) and stays human-readable when poked with the Revit Lookup
+add-in.
 
-Keys consumed by the application::
-
-  StringMap[KEY_YAML_TEXT]            canonical v100 YAML
-  StringMap[KEY_SOURCE_PATH]          last imported file path
-  StringMap[KEY_LAST_MODIFIED_UTC]    ISO-8601 timestamp of last save
-  IntMap   [KEY_STORE_VERSION]        layout version (currently 1)
-  IntMap   [KEY_SCHEMA_VERSION]       internal MEPRFP schema version (100)
-
-The ``BoolMap`` and ``DoubleMap`` fields are declared but currently
-empty — they exist so future flags / numeric ratios don't require a
-schema bump.
-
-Reads fall back to the legacy v1 schema (simple-fields layout under
-GUID ``a7d4e2f1-…``) if the v4 entity is missing. Writes always go to
-v4; the legacy entity is left orphaned for older tooling that may
-still want to read it.
+Reads fall back to the legacy v1 schema (single ``JsonText`` simple
+field under GUID ``b5e8c1a2-…``) if the v4 entity is missing.
 """
 
 import clr  # noqa: F401  -- needed before importing Autodesk.Revit.DB
+import json
 
 from Autodesk.Revit.DB.ExtensibleStorage import (  # noqa: E402
-    Entity,
     Schema,
-    SchemaBuilder,
-    AccessLevel,
 )
 from System import Guid, Int32, String  # noqa: E402
 
@@ -48,22 +37,20 @@ import _es_v4  # noqa: E402
 # ---------------------------------------------------------------------
 
 # v4 (current) — 4-map layout.
-SCHEMA_GUID_STR = "e3f9b6a4-5d2c-4f81-9b3e-7c1a8f6d4e2b"
+SCHEMA_GUID_STR = "c1f5d4a8-6e3b-4d92-8a47-f1e9c2b5a8d6"
 SCHEMA_GUID = Guid(SCHEMA_GUID_STR)
-SCHEMA_NAME = "MEPRFP_Automation_2_YamlStore_v4"
+SCHEMA_NAME = "MEPRFP_Automation_2_SpaceClassifications_v4"
 SCHEMA_DOC = (
-    "MEPRFP Automation 2.0 active YAML storage. Four typed map fields "
-    "keyed by string; YAML text lives in StringMap['yaml_text']."
+    "MEPRFP Automation 2.0 per-project Space classifications. JSON list "
+    "lives in StringMap['json_text']."
 )
 
 # v1 (legacy in-2.0) — simple-fields layout. Read-only fallback.
-LEGACY_V1_SCHEMA_GUID_STR = "a7d4e2f1-9c3b-4e8a-b6d5-f3c1a8e9b2d4"
+LEGACY_V1_SCHEMA_GUID_STR = "b5e8c1a2-2d6f-4a17-9c3d-7e4b1f0a8d6e"
 LEGACY_V1_SCHEMA_GUID = Guid(LEGACY_V1_SCHEMA_GUID_STR)
-LEGACY_V1_SCHEMA_NAME = "MEPRFP_Automation_2_YamlStore"
+LEGACY_V1_SCHEMA_NAME = "MEPRFP_Automation_2_SpaceClassifications"
 LEGACY_V1_FIELD_STORE_VERSION = "StoreVersion"
-LEGACY_V1_FIELD_YAML_TEXT = "YamlText"
-LEGACY_V1_FIELD_SOURCE_PATH = "SourcePath"
-LEGACY_V1_FIELD_SCHEMA_VERSION = "SchemaVersion"
+LEGACY_V1_FIELD_JSON_TEXT = "JsonText"
 LEGACY_V1_FIELD_LAST_MODIFIED_UTC = "LastModifiedUtc"
 
 STORE_LAYOUT_VERSION = 1
@@ -73,18 +60,17 @@ STORE_LAYOUT_VERSION = 1
 # Map keys
 # ---------------------------------------------------------------------
 
-KEY_YAML_TEXT = "yaml_text"
-KEY_SOURCE_PATH = "source_path"
+KEY_JSON_TEXT = "json_text"
 KEY_LAST_MODIFIED_UTC = "last_modified_utc"
 KEY_STORE_VERSION = "store_version"
-KEY_SCHEMA_VERSION = "schema_version"
 
 
 # ---------------------------------------------------------------------
 # Errors
 # ---------------------------------------------------------------------
 
-StorageError = _es_v4.StorageError
+class SpaceStorageError(_es_v4.StorageError):
+    pass
 
 
 # ---------------------------------------------------------------------
@@ -92,13 +78,10 @@ StorageError = _es_v4.StorageError
 # ---------------------------------------------------------------------
 
 def get_or_create_schema():
-    """Build (or look up) the v4 schema."""
     return _es_v4.get_or_create_schema(SCHEMA_GUID, SCHEMA_NAME, SCHEMA_DOC)
 
 
 def _legacy_v1_schema():
-    """Look up the legacy v1 schema; return None if it doesn't exist
-    in this Revit session yet."""
     return Schema.Lookup(LEGACY_V1_SCHEMA_GUID)
 
 
@@ -109,16 +92,14 @@ def _legacy_v1_schema():
 def read_payload(doc):
     """Return the stored payload as a dict, or ``None`` if no entity exists.
 
-    Tries the v4 entity first; falls back to legacy v1 (simple fields)
-    if v4 is missing. The returned dict shape is the same regardless::
+    Tries the v4 entity first; falls back to legacy v1 if v4 is
+    missing. Returned shape::
 
         {
           "store_version": int,
-          "yaml_text": str,
-          "source_path": str,
-          "schema_version": int,
+          "json_text": str,
           "last_modified_utc": str,
-          "_legacy_v1": bool,    # True if data came from the v1 fallback
+          "_legacy_v1": bool,
         }
     """
     payload = _read_v4(doc)
@@ -146,9 +127,7 @@ def _read_v4(doc):
     im = maps["int_map"]
     return {
         "store_version": int(im.get(KEY_STORE_VERSION) or STORE_LAYOUT_VERSION),
-        "yaml_text": sm.get(KEY_YAML_TEXT) or "",
-        "source_path": sm.get(KEY_SOURCE_PATH) or "",
-        "schema_version": int(im.get(KEY_SCHEMA_VERSION) or 0),
+        "json_text": sm.get(KEY_JSON_TEXT) or "",
         "last_modified_utc": sm.get(KEY_LAST_MODIFIED_UTC) or "",
     }
 
@@ -163,11 +142,7 @@ def _read_legacy_v1(doc):
         return None
     return {
         "store_version": int(entity.Get[Int32](LEGACY_V1_FIELD_STORE_VERSION) or 0),
-        "yaml_text": entity.Get[String](LEGACY_V1_FIELD_YAML_TEXT) or "",
-        "source_path": entity.Get[String](LEGACY_V1_FIELD_SOURCE_PATH) or "",
-        "schema_version": int(
-            entity.Get[Int32](LEGACY_V1_FIELD_SCHEMA_VERSION) or 0
-        ),
+        "json_text": entity.Get[String](LEGACY_V1_FIELD_JSON_TEXT) or "",
         "last_modified_utc": entity.Get[String](LEGACY_V1_FIELD_LAST_MODIFIED_UTC) or "",
     }
 
@@ -176,42 +151,33 @@ def _read_legacy_v1(doc):
 # Write
 # ---------------------------------------------------------------------
 
-def write_payload(doc, yaml_text, source_path, schema_version, last_modified_utc):
-    """Persist the payload onto ProjectInformation in the v4 entity.
-
-    Always writes v4. If a legacy v1 entity exists on the project, it
-    is left in place — older 2.0 builds reading the same project will
-    see stale data, but no data is lost. Caller manages the Revit
-    transaction.
-    """
+def write_payload(doc, json_text, last_modified_utc):
+    """Persist a JSON-encoded classification list. Caller manages txn."""
     schema = get_or_create_schema()
     entity = _es_v4.build_entity(
         schema,
         string_map={
-            KEY_YAML_TEXT: yaml_text or "",
-            KEY_SOURCE_PATH: source_path or "",
+            KEY_JSON_TEXT: json_text or "",
             KEY_LAST_MODIFIED_UTC: last_modified_utc or "",
         },
         int_map={
             KEY_STORE_VERSION: STORE_LAYOUT_VERSION,
-            KEY_SCHEMA_VERSION: int(schema_version) if schema_version else 0,
         },
     )
     _es_v4.set_entity(doc, entity)
 
 
 def clear_payload(doc):
-    """Delete the v4 stored entity. Caller manages the transaction.
+    """Delete the v4 classifications entity. Caller manages the txn.
 
     The legacy v1 entity (if present) is left untouched. Use
-    ``clear_legacy_v1_payload`` if you want to remove it explicitly.
+    ``clear_legacy_v1_payload`` to remove it explicitly.
     """
     schema = get_or_create_schema()
     _es_v4.delete_entity(doc, schema)
 
 
 def clear_legacy_v1_payload(doc):
-    """Delete the legacy v1 entity if it exists. No-op otherwise."""
     schema = _legacy_v1_schema()
     if schema is None:
         return
@@ -220,6 +186,57 @@ def clear_legacy_v1_payload(doc):
         pi.DeleteEntity(schema)
     except Exception:
         pass
+
+
+# ---------------------------------------------------------------------
+# JSON codec  (unchanged across v1 -> v4)
+# ---------------------------------------------------------------------
+
+def encode(classifications):
+    """Encode a list of classification dicts to JSON text."""
+    safe = []
+    for entry in classifications or ():
+        if not isinstance(entry, dict):
+            continue
+        safe.append({
+            "space_element_id": _coerce_int(entry.get("space_element_id")),
+            "bucket_id": str(entry.get("bucket_id") or ""),
+            "space_name": str(entry.get("space_name") or ""),
+        })
+    return json.dumps(safe, indent=2, sort_keys=True)
+
+
+def decode(text):
+    """Parse the JSON text back into a list of classification dicts."""
+    if not text or not text.strip():
+        return []
+    try:
+        data = json.loads(text)
+    except (ValueError, TypeError) as exc:
+        raise SpaceStorageError(
+            "Failed to decode space classifications JSON: {}".format(exc)
+        )
+    if not isinstance(data, list):
+        return []
+    out = []
+    for entry in data:
+        if not isinstance(entry, dict):
+            continue
+        out.append({
+            "space_element_id": _coerce_int(entry.get("space_element_id")),
+            "bucket_id": str(entry.get("bucket_id") or ""),
+            "space_name": str(entry.get("space_name") or ""),
+        })
+    return out
+
+
+def _coerce_int(value):
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return None
 
 
 # ---------------------------------------------------------------------

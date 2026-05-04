@@ -1,0 +1,8 @@
+title: "Classify\nSpaces"
+tooltip: |
+  Walk every placed MEP Space, run the keyword-based classifier
+  against your space_buckets, and let the user override the assigned
+  buckets per row before saving. Multi-bucket rows stack their
+  assigned profiles on apply (a restroom can match RESTROOM and
+  WOMEN'S simultaneously). Saves to per-project Extensible Storage.
+is_beta: false

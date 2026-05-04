@@ -1,0 +1,7 @@
+title: "Manage\nSpace Buckets"
+tooltip: |
+  Define the keyword categories the auto-classifier matches Space
+  names against. Each bucket has a name, classification keywords
+  (case-insensitive substring match), and an optional client-key
+  restriction (empty = universal across clients).
+is_beta: false

@@ -1,0 +1,8 @@
+title: "Place\nSpace Elements"
+tooltip: |
+  Walk every classified Space, expand every assigned profile's LEDs
+  through the placement engine (anchor + offsets + rotation), and
+  preview the result. 'Place all' creates the family instances inside
+  one Revit transaction and stamps Element_Linker with the originating
+  space_id and space_profile_id for downstream audit.
+is_beta: false
