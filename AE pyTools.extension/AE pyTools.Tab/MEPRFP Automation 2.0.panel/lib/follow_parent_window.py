@@ -44,7 +44,7 @@ class _MatchRow(object):
 
 class FollowParentController(object):
 
-    def __init__(self, doc, profile_data):
+    def __init__(self, doc, profile_data, selection_element_ids=None):
         self.doc = doc
         self.profile_data = profile_data
         self.profiles = list(profile_data.get("equipment_definitions") or [])
@@ -52,10 +52,33 @@ class FollowParentController(object):
         self._match_rows = []
         self.committed = False
         self._last_result = None
+        # Selection captured by the calling script BEFORE the modal
+        # opened. Modal WPF dialogs can't read live Revit selection
+        # changes, so the script grabs the user's selection at start
+        # and hands it in here. Empty / None means no selection was
+        # made — the "Only selected" checkbox will be disabled in
+        # that case.
+        self.selection_element_ids = (
+            set(int(i) for i in selection_element_ids)
+            if selection_element_ids else set()
+        )
         self.window = _wpf.load_xaml(_XAML_PATH)
         self._lookup_controls()
         self._populate_filters()
         self._wire_events()
+        if self.selection_element_ids:
+            self.only_selected.IsEnabled = True
+            self.only_selected.Content = (
+                "Only act on the {} element(s) I had selected".format(
+                    len(self.selection_element_ids)
+                )
+            )
+        else:
+            self.only_selected.IsEnabled = False
+            self.only_selected.IsChecked = False
+            self.only_selected.Content = (
+                "Only act on the elements I had selected (no selection)"
+            )
         self._set_status("Tweak filters, then Match.")
 
     def _lookup_controls(self):
@@ -63,6 +86,7 @@ class FollowParentController(object):
         self.category_list = f("CategoryList")
         self.profile_list = f("ProfileList")
         self.skip_aligned = f("SkipAlignedCheck")
+        self.only_selected = f("OnlySelectedCheck")
         self.match_btn = f("MatchButton")
         self.check_all_btn = f("CheckAllButton")
         self.uncheck_all_btn = f("UncheckAllButton")
@@ -125,9 +149,14 @@ class FollowParentController(object):
         return out or None
 
     def _on_match(self, sender, e):
+        sel_ids = (
+            self.selection_element_ids
+            if self.only_selected.IsChecked else None
+        )
         filters = _fp.CollectFilters(
             profile_ids=self._selected_profile_ids(),
             categories=self._selected_categories(),
+            selection_element_ids=sel_ids,
         )
         stats = _fp.FollowParentScanStats()
         try:
@@ -220,6 +249,16 @@ class FollowParentController(object):
         Drives the status-bar message when Match returns nothing."""
         if stats.elements_scanned == 0:
             return "No FamilyInstance / Group elements found in the active document."
+        if (
+            getattr(stats, "filtered_by_selection", 0)
+            and stats.filtered_by_selection >= stats.elements_scanned
+        ):
+            return (
+                "All {} scanned element(s) were excluded by the 'Only "
+                "selected' filter. Either include some selected elements "
+                "with Element_Linker payloads, or uncheck "
+                "'Only selected'.".format(stats.elements_scanned)
+            )
         if stats.no_element_linker == stats.elements_scanned:
             return (
                 "{} element(s) scanned but none carry an Element_Linker — "
@@ -309,5 +348,7 @@ class FollowParentController(object):
         return self
 
 
-def show_modal(doc, profile_data):
-    return FollowParentController(doc, profile_data).show()
+def show_modal(doc, profile_data, selection_element_ids=None):
+    return FollowParentController(
+        doc, profile_data, selection_element_ids=selection_element_ids,
+    ).show()

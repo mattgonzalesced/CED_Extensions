@@ -71,9 +71,19 @@ class FollowParentCandidate(object):
 
 
 class CollectFilters(object):
-    def __init__(self, profile_ids=None, categories=None):
+    def __init__(self, profile_ids=None, categories=None,
+                 selection_element_ids=None):
         self.profile_ids = set(profile_ids) if profile_ids else None
         self.categories = set(categories) if categories else None
+        # ``selection_element_ids`` — when set, restrict candidates to
+        # the elements with these host-doc Element.Id.Value ints.
+        # ``None`` means "no selection filter, walk everything"; an
+        # empty set means "selection-only mode but selection is
+        # empty" (so zero candidates, by design).
+        self.selection_element_ids = (
+            set(int(i) for i in selection_element_ids)
+            if selection_element_ids is not None else None
+        )
 
 
 class FollowParentResult(object):
@@ -100,6 +110,7 @@ class FollowParentScanStats(object):
         "led_not_in_yaml",
         "filtered_by_profile",
         "filtered_by_category",
+        "filtered_by_selection",
         "parent_unresolved",
         "no_location_point",
         "candidates_built",
@@ -113,6 +124,7 @@ class FollowParentScanStats(object):
         self.led_not_in_yaml = 0
         self.filtered_by_profile = 0
         self.filtered_by_category = 0
+        self.filtered_by_selection = 0
         self.parent_unresolved = 0
         self.no_location_point = 0
         self.candidates_built = 0
@@ -357,6 +369,24 @@ def collect_candidates(doc, profile_data, filters, refuse_linked=True, stats=Non
 
 
 def _build_candidate(doc, elem, led_index, filters, is_linked=False, stats=None):
+    # Selection gate runs BEFORE the Element_Linker read. The user
+    # opted into selection-only mode; honour that strictly so the
+    # diagnostic counts reflect just the selection set, not the
+    # whole doc. Linked-doc elements never live in the host
+    # selection, so we never apply the filter to them — they're
+    # handled by the refuse_linked / linked-warning path elsewhere.
+    if (not is_linked
+            and filters.selection_element_ids is not None):
+        try:
+            elem_id_int = int(getattr(elem.Id, "Value", None)
+                              or getattr(elem.Id, "IntegerValue", None))
+        except Exception:
+            elem_id_int = None
+        if elem_id_int is None or elem_id_int not in filters.selection_element_ids:
+            if stats is not None:
+                stats.filtered_by_selection += 1
+            return None
+
     linker = _el_io.read_from_element(elem)
     if linker is None or not linker.led_id:
         if stats is not None:

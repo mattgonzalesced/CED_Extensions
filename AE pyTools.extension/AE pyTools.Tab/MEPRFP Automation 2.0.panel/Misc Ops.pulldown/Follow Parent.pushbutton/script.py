@@ -34,7 +34,32 @@ def main():
     if not profile_data.get("equipment_definitions"):
         forms.alert("No profiles in the active store.", title=TITLE)
         return
-    controller = follow_parent_window.show_modal(doc, profile_data)
+
+    # Capture the user's current Revit selection BEFORE the modal
+    # opens. WPF modals can't read live selection changes, so this
+    # is the only useful read. The dialog's "Only selected" checkbox
+    # consumes this set.
+    selection_ids = []
+    try:
+        uidoc = revit.uidoc
+        if uidoc is not None:
+            for eid in uidoc.Selection.GetElementIds():
+                value = (
+                    getattr(eid, "Value", None)
+                    or getattr(eid, "IntegerValue", None)
+                )
+                if value is None:
+                    continue
+                try:
+                    selection_ids.append(int(value))
+                except (TypeError, ValueError):
+                    continue
+    except Exception:
+        selection_ids = []
+
+    controller = follow_parent_window.show_modal(
+        doc, profile_data, selection_element_ids=selection_ids,
+    )
     result = getattr(controller, "_last_result", None)
     if controller.committed and result is not None:
         output.print_md(

@@ -54,9 +54,16 @@
     <GroupBox Grid.Row="1" Header="Match preview" Padding="8">
       <DockPanel>
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-          <CheckBox x:Name="SkipAlignedCheck" DockPanel.Dock="Left"
-                    Content="Skip children already aligned with their parent"
-                    IsChecked="True" VerticalAlignment="Center"/>
+          <StackPanel DockPanel.Dock="Left" Orientation="Vertical">
+            <CheckBox x:Name="SkipAlignedCheck"
+                      Content="Skip children already aligned with their parent"
+                      IsChecked="True" VerticalAlignment="Center"/>
+            <CheckBox x:Name="OnlySelectedCheck"
+                      Content="Only act on the elements I had selected"
+                      IsChecked="False" VerticalAlignment="Center"
+                      Margin="0,4,0,0"
+                      ToolTip="Restrict Match / Follow to the elements selected in Revit when this dialog opened. Selection is captured at script start; modal dialogs can't see live selection changes."/>
+          </StackPanel>
           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button x:Name="MatchButton" Content="Match" Width="100" Margin="0,0,8,0"/>
             <Button x:Name="UncheckAllButton" Content="Uncheck all" Width="100" Margin="0,0,8,0"/>
