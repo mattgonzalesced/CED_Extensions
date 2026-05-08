@@ -26,6 +26,7 @@ clr.AddReference("WindowsBase")
 
 from System import Object as _NetObject  # noqa: E402
 from System.Collections.ObjectModel import ObservableCollection  # noqa: E402
+from System.Windows import MessageBox, MessageBoxButton, MessageBoxImage  # noqa: E402
 from System.Windows.Controls import (  # noqa: E402
     TreeViewItem,
 )
@@ -36,6 +37,7 @@ import truth_groups
 import merge_workflow
 import wpf_dialogs
 import revit_symbol_index as _sym_index
+import directives_dialog as _directives_dialog
 
 
 _XAML_PATH = os.path.join(
@@ -212,6 +214,7 @@ class ManageProfilesController(object):
         self.offset_rot = f("OffsetRotBox")
         self.save_btn = f("SaveButton")
         self.save_selected_btn = f("SaveSelectedButton")
+        self.directives_btn = f("DirectivesButton")
         self.selected_header_label = f("SelectedHeaderLabel")
         self.close_btn = f("CloseButton")
         self.status = f("StatusLabel")
@@ -228,6 +231,7 @@ class ManageProfilesController(object):
         self.led_tree.SelectedItemChanged += self._on_led_selected
         self.save_btn.Click += self._on_save
         self.save_selected_btn.Click += self._on_save_selected
+        self.directives_btn.Click += self._on_directives
         self.save_profile_meta_btn.Click += self._on_save_profile_metadata
         self.add_profile_meta_btn.Click += self._on_add_profile_metadata
         self.remove_profile_meta_btn.Click += self._on_remove_profile_metadata
@@ -1079,6 +1083,76 @@ class ManageProfilesController(object):
         if self._current_profile is not None:
             self._populate_led_tree(self._current_profile)
         self._set_status(msg)
+
+    def _on_directives(self, sender, e):
+        """Open the directives dialog for the currently-selected LED.
+
+        Edits an existing LED in place: rebuild ``_current_led
+        ["parameters"]`` so any chosen BYPARENT / BYSIBLING directive
+        replaces the LED's stored parameter value with the directive
+        dict shape (``{"parent_parameter": ...}`` /
+        ``{"sibling_parameter": ...}``). Static rows are left
+        untouched. The user can revert a directive to a literal
+        value by typing a static value into the Parameters cell —
+        same behavior as the capture-time path.
+
+        Bails out with a clean error when the parent family isn't
+        loaded in the active doc; no free-text fallback.
+        """
+        if self._current_led is None:
+            self._set_status("Pick a LED first (annotations don't take directives)")
+            return
+        if self._current_profile is None:
+            self._set_status("No profile selected")
+            return
+        # Make sure any in-flight cell edits land in the LED's params
+        # before we read them — otherwise the dialog shows stale values.
+        self._save_selected_to_data()
+
+        rows, err = _directives_dialog.build_rows_from_profile(
+            self._current_led, self._current_profile, self.doc,
+        )
+        if err:
+            MessageBox.Show(
+                err, "Directives",
+                MessageBoxButton.OK, MessageBoxImage.Warning,
+            )
+            self._set_status("Directives: " + err.split(".")[0])
+            return
+        if not rows:
+            MessageBox.Show(
+                "This LED has no parameters to map directives onto. Add at "
+                "least one parameter row first.",
+                "Directives",
+                MessageBoxButton.OK, MessageBoxImage.Information,
+            )
+            return
+
+        chosen = _directives_dialog.show_dialog(rows)
+        if not chosen:
+            self._set_status("Directives unchanged.")
+            return
+        # Single-LED edit: result is keyed by child_index 0.
+        directives_for_led = chosen.get(0) or {}
+        if not directives_for_led:
+            self._set_status("Directives unchanged.")
+            return
+
+        params = self._current_led.setdefault("parameters", {})
+        if not isinstance(params, dict):
+            params = {}
+            self._current_led["parameters"] = params
+        for param_name, directive in directives_for_led.items():
+            params[param_name] = directive
+        self.dirty = True
+        # Refresh the param grid so the BYPARENT(...) / BYSIBLING(...)
+        # rendering shows up immediately.
+        self._populate_param_grid(params)
+        self._set_status(
+            "Updated {} directive(s) on this LED. Save changes to persist.".format(
+                len(directives_for_led),
+            )
+        )
 
     def _on_save(self, sender, e):
         profile = self._current_profile

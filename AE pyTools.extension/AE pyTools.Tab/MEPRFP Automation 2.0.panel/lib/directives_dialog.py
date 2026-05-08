@@ -259,3 +259,218 @@ def _format_child_label(child_ref):
     eid = getattr(elem, "Id", None)
     eid_val = getattr(eid, "Value", None) or getattr(eid, "IntegerValue", None)
     return "{} #{}".format(cat_name, eid_val)
+
+
+# ---------------------------------------------------------------------
+# YAML-driven row builder — for editing directives on an LED that's
+# already in a profile (no live Revit parent picked).
+# ---------------------------------------------------------------------
+
+def _format_captured_value(value):
+    """Render an LED parameter's stored value for the dialog's
+    captured-value column. Existing directive dicts get a
+    ``BYPARENT(...)`` / ``BYSIBLING(...)`` rendering so the user can
+    see what's already configured before changing it.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, dict):
+        if "parent_parameter" in value:
+            return "BYPARENT({})".format(value.get("parent_parameter") or "")
+        if "sibling_parameter" in value:
+            return "BYSIBLING({})".format(value.get("sibling_parameter") or "")
+        return str(value)
+    return str(value)
+
+
+def _walk_parameter_names(target, out, seen):
+    """Append parameter display names from ``target.Parameters`` into
+    ``out`` (deduped via ``seen``)."""
+    try:
+        iter_params = target.Parameters
+    except Exception:
+        return
+    for p in iter_params:
+        if p is None:
+            continue
+        try:
+            name = p.Definition.Name
+        except Exception:
+            continue
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        out.append(name)
+
+
+def _collect_parent_param_names_from_doc(family_name, doc):
+    """Enumerate parameter display names available on the parent
+    family in the active doc. Prefers a placed instance (gives both
+    instance and type parameters); falls back to a ``FamilySymbol``
+    of the family if no instance exists.
+
+    Returns ``[name, ...]`` — possibly empty if the family is loaded
+    but exposes no parameters (rare; usually a sign the symbol
+    couldn't be opened).
+    """
+    if not family_name or doc is None:
+        return []
+    try:
+        from Autodesk.Revit.DB import (
+            FamilyInstance,
+            FamilySymbol,
+            FilteredElementCollector,
+        )
+    except Exception:
+        return []
+    out, seen = [], set()
+    try:
+        for inst in FilteredElementCollector(doc).OfClass(FamilyInstance).WhereElementIsNotElementType():
+            sym = getattr(inst, "Symbol", None)
+            family = getattr(sym, "Family", None) if sym is not None else None
+            if family is None:
+                continue
+            try:
+                if family.Name != family_name:
+                    continue
+            except Exception:
+                continue
+            _walk_parameter_names(inst, out, seen)
+            if out:
+                return out
+    except Exception:
+        pass
+    try:
+        for sym in FilteredElementCollector(doc).OfClass(FamilySymbol):
+            family = getattr(sym, "Family", None)
+            if family is None:
+                continue
+            try:
+                if family.Name != family_name:
+                    continue
+            except Exception:
+                continue
+            _walk_parameter_names(sym, out, seen)
+            if out:
+                return out
+    except Exception:
+        pass
+    return out
+
+
+def _family_loaded_in_doc(family_name, doc):
+    """True iff at least one FamilySymbol with ``Family.Name ==
+    family_name`` exists in the active doc. Used to decide whether
+    we can author directives at all — without the family loaded the
+    parent-parameter dropdown has nothing to populate.
+    """
+    if not family_name or doc is None:
+        return False
+    try:
+        from Autodesk.Revit.DB import FamilySymbol, FilteredElementCollector
+    except Exception:
+        return False
+    try:
+        for sym in FilteredElementCollector(doc).OfClass(FamilySymbol):
+            family = getattr(sym, "Family", None)
+            if family is None:
+                continue
+            try:
+                if family.Name == family_name:
+                    return True
+            except Exception:
+                continue
+    except Exception:
+        return False
+    return False
+
+
+def _find_set_for_led(profile, led):
+    """Return the ``linked_set`` dict that owns ``led``, or ``None``."""
+    if not isinstance(profile, dict) or not isinstance(led, dict):
+        return None
+    led_id = led.get("id")
+    for s in profile.get("linked_sets") or []:
+        if not isinstance(s, dict):
+            continue
+        for entry in s.get("linked_element_definitions") or []:
+            if entry is led or (
+                isinstance(entry, dict) and led_id and entry.get("id") == led_id
+            ):
+                return s
+    return None
+
+
+def build_rows_from_profile(led, profile, doc):
+    """Build dialog rows for editing directives on ``led`` (already
+    inside ``profile``).
+
+    Parent-parameter options come from the active doc — we resolve
+    ``profile.parent_filter.family_name_pattern`` to a placed instance
+    (preferred) or a FamilySymbol of that family. Sibling options
+    come from the OTHER LEDs in the same ``linked_set``, formatted as
+    ``"<led_id> :: <param_name>"`` to match what the dialog's Apply
+    handler expects.
+
+    Returns ``(rows, error_message)``. When ``error_message`` is non-
+    empty, ``rows`` is empty and the caller should surface the
+    message instead of opening the dialog. Errors are user-facing
+    sentences — most commonly "parent family not loaded".
+    """
+    if not isinstance(led, dict):
+        return [], "No LED selected."
+    if not isinstance(profile, dict):
+        return [], "No profile selected."
+
+    pf = profile.get("parent_filter") or {}
+    family_name = (pf.get("family_name_pattern") or "").strip()
+    if not family_name:
+        return [], (
+            "This profile has no parent_filter.family_name_pattern set, "
+            "so there's no parent family to map directives against."
+        )
+    if not _family_loaded_in_doc(family_name, doc):
+        return [], (
+            "The parent family '{}' is not loaded in this project. "
+            "Load the family first (or open the project that hosts it) "
+            "and try again — directive authoring needs the parent's "
+            "parameter list, which is read from the live family.".format(
+                family_name,
+            )
+        )
+
+    parent_param_names = _collect_parent_param_names_from_doc(family_name, doc)
+
+    # Sibling options from the other LEDs in the same linked_set.
+    sibling_options = []
+    set_dict = _find_set_for_led(profile, led)
+    if set_dict is not None:
+        led_id = led.get("id")
+        for other in set_dict.get("linked_element_definitions") or []:
+            if not isinstance(other, dict):
+                continue
+            if other is led or other.get("id") == led_id:
+                continue
+            other_id = other.get("id")
+            if not other_id:
+                continue
+            for pname in (other.get("parameters") or {}):
+                if not pname:
+                    continue
+                sibling_options.append("{} :: {}".format(other_id, pname))
+    sibling_options.sort()
+
+    rows = []
+    led_label_text = "[1] {}".format(
+        led.get("label") or led.get("id") or "(unnamed LED)",
+    )
+    for param_name, value in (led.get("parameters") or {}).items():
+        if not param_name:
+            continue
+        rows.append(Row(
+            0, led_label_text, param_name,
+            _format_captured_value(value),
+            sorted(parent_param_names),
+            sibling_options,
+        ))
+    return rows, ""

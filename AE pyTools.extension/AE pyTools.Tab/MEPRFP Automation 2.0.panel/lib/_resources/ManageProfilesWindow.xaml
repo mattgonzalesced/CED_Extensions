@@ -156,6 +156,11 @@
         <Button x:Name="SaveSelectedButton" DockPanel.Dock="Right"
                 Content="Save selected LED / annotation"
                 Padding="10,2" MinWidth="200"/>
+        <Button x:Name="DirectivesButton" DockPanel.Dock="Right"
+                Content="Directives…"
+                Margin="0,0,8,0"
+                Padding="10,2" MinWidth="110"
+                ToolTip="Map LED parameters to BYPARENT / BYSIBLING directives. Requires the parent family to be loaded in this project."/>
         <TextBlock x:Name="SelectedHeaderLabel" FontWeight="Bold"
                    VerticalAlignment="Center"
                    Text="Selected LED / annotation"/>

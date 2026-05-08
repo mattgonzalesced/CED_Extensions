@@ -13,6 +13,8 @@ The detector is decoupled from any UI: ``detect_conflicts`` returns
 plain dicts, and ``apply_resolution`` does the parameter write.
 """
 
+import re
+
 import clr  # noqa: F401
 
 from Autodesk.Revit.DB import (  # noqa: E402
@@ -25,6 +27,18 @@ from Autodesk.Revit.DB import (  # noqa: E402
 import directives as _dir
 import element_linker_io as _el_io
 import profile_model
+
+
+_FIRST_NUMERIC_RE = re.compile(r"\d+")
+
+
+def _first_numeric_token(s):
+    """First run of digits in ``s``, e.g. ``"SET-323-LED-002" -> "323"``,
+    ``"EQ-464" -> "464"``. Returns ``None`` when nothing matches."""
+    if s is None:
+        return None
+    m = _FIRST_NUMERIC_RE.search(str(s))
+    return m.group(0) if m else None
 
 
 # ---------------------------------------------------------------------
@@ -170,12 +184,51 @@ def detect_conflicts(doc, profile_data):
     for (set_id, led_id), entries in placed.items():
         siblings_in_set.setdefault(set_id, []).extend(entries)
 
+    # ``(set_id, led_id) -> owning profile id``. A placed element's
+    # Element_Linker carries set_id + led_id but not profile_id, so we
+    # have to infer the owner by walking the YAML. In normal data the
+    # set_id is unique to a profile and there's exactly one match. In
+    # data with overlapping ids (duplicated / merged profiles that
+    # didn't get their LED ids re-stamped), multiple profiles can claim
+    # the same (set_id, led_id).
+    #
+    # Tiebreaker: prefer the profile whose ``id`` numeric token matches
+    # the set's numeric token (e.g. ``EQ-323`` wins over ``EQ-464`` for
+    # ``SET-323-LED-002``). Capture-time naming uses matching numeric
+    # tokens between profile and its captured sets, so this picks the
+    # original owner rather than a later duplicate. When no profile
+    # matches numerically (or set/profile ids don't carry numeric
+    # tokens), first-in-YAML wins, which is stable and matches the
+    # original capture order.
+    claimants_by_set_led = {}
+    for profile in pdoc.profiles:
+        for linked_set in profile.linked_sets:
+            for led in linked_set.leds:
+                key = (linked_set.id, led.id)
+                claimants_by_set_led.setdefault(key, []).append(profile.id)
+    owner_by_set_led = {}
+    for (set_id, led_id), claimants in claimants_by_set_led.items():
+        set_num = _first_numeric_token(set_id)
+        chosen = None
+        if set_num is not None:
+            for pid in claimants:
+                if _first_numeric_token(pid) == set_num:
+                    chosen = pid
+                    break
+        owner_by_set_led[(set_id, led_id)] = chosen if chosen is not None else claimants[0]
+
     for profile in pdoc.profiles:
         for linked_set in profile.linked_sets:
             sibling_lookup = _build_sibling_lookup(
                 siblings_in_set.get(linked_set.id, [])
             )
             for led in linked_set.leds:
+                # Skip non-owning profiles for shared (set_id, led_id)
+                # pairs — the placed element only belongs to one
+                # profile in the user's mental model, so emit the
+                # conflict against that one and not its duplicates.
+                if owner_by_set_led.get((linked_set.id, led.id)) != profile.id:
+                    continue
                 params = led.parameters or {}
                 placed_entries = placed.get((linked_set.id, led.id), [])
                 if not placed_entries:

@@ -3,7 +3,7 @@
 QAQC — health-check the relationship between the YAML store and the
 elements actually placed in the model.
 
-Six categories::
+Seven categories::
 
     A  Orphan profile             Profile in YAML with zero placed
                                   instances anywhere in the doc.
@@ -25,10 +25,17 @@ Six categories::
                                   in the profile's merged_aliases —
                                   i.e. a real parent reassignment, not
                                   a known alias.
-    F  Host-name mismatch         parent's current family name does
+    F  Host-name mismatch         Parent's current family name does
                                   not match Element_Linker.host_name,
                                   ignoring trailing `` : Default`` /
                                   `` : Default <n>`` decoration.
+    G  Missing children           A parent (host or linked) matches a
+                                  profile's parent_filter / aliases,
+                                  the profile has at least one LED, but
+                                  no placed child carries that profile's
+                                  led_id back to this parent. The
+                                  profile is configured but never
+                                  fired against this parent.
 
 Each finding carries a ``fix_kind`` describing what (if any) automated
 fix can be applied. The window dispatches on that, calling
@@ -46,6 +53,7 @@ from Autodesk.Revit.DB import (  # noqa: E402
     FilteredElementCollector,
     Group,
     LocationPoint,
+    RevitLinkInstance,
 )
 
 import element_linker as _el
@@ -53,6 +61,7 @@ import element_linker_io as _el_io
 import follow_parent_workflow as _fp
 import geometry
 import links
+import placement as _placement
 import truth_groups
 
 
@@ -66,8 +75,9 @@ CAT_C = "C"
 CAT_D = "D"
 CAT_E = "E"
 CAT_F = "F"
+CAT_G = "G"
 
-CAT_ALL = (CAT_A, CAT_B, CAT_C, CAT_D, CAT_E, CAT_F)
+CAT_ALL = (CAT_A, CAT_B, CAT_C, CAT_D, CAT_E, CAT_F, CAT_G)
 
 CAT_LABELS = {
     CAT_A: "A  Orphan profile",
@@ -76,6 +86,7 @@ CAT_LABELS = {
     CAT_D: "D  ID discrepancy",
     CAT_E: "E  Parent type change",
     CAT_F: "F  Host-name mismatch",
+    CAT_G: "G  Missing children",
 }
 
 
@@ -164,22 +175,36 @@ class QaqcFinding(object):
     __slots__ = (
         "category",
         "category_label",
-        "element_id",       # int — the host-doc element to select/zoom (None for cat A)
+        "element_id",          # int — the host-doc element to select/zoom (None for cat A).
+                               # For linked-parent findings (Cat G), this is the
+                               # RevitLinkInstance's id so legacy callers still
+                               # have a valid host id to fall back on.
+        "link_instance_id",    # int — id of the RevitLinkInstance in the host doc
+                               # when the finding's target element lives in a
+                               # linked doc; None for host-doc findings.
+        "linked_element_id",   # int — id of the element within the linked doc;
+                               # paired with ``link_instance_id`` so Select / Zoom
+                               # can build a host-coord Reference and highlight
+                               # the specific linked element instead of the
+                               # whole link.
         "profile_id",
         "profile_name",
         "led_id",
         "led_label",
         "message",
         "fix_kind",
-        "fix_payload",      # dict; varies by fix_kind
+        "fix_payload",         # dict; varies by fix_kind
     )
 
     def __init__(self, category, element_id, profile_id, profile_name,
                  led_id, led_label, message, fix_kind=FIX_NONE,
-                 fix_payload=None):
+                 fix_payload=None, link_instance_id=None,
+                 linked_element_id=None):
         self.category = category
         self.category_label = CAT_LABELS.get(category, category)
         self.element_id = element_id
+        self.link_instance_id = link_instance_id
+        self.linked_element_id = linked_element_id
         self.profile_id = profile_id
         self.profile_name = profile_name
         self.led_id = led_id
@@ -256,6 +281,67 @@ def _element_family_name(elem):
     return ""
 
 
+def _profile_has_leds(profile):
+    """True iff the profile declares at least one LED (linked-element
+    definition) anywhere in its ``linked_sets``. Profiles with no LEDs
+    can never have placed children, so we don't flag them under Cat G —
+    that'd be every empty-profile placeholder in the YAML.
+    """
+    if not isinstance(profile, dict):
+        return False
+    for s in profile.get("linked_sets") or []:
+        if not isinstance(s, dict):
+            continue
+        for led in s.get("linked_element_definitions") or []:
+            if isinstance(led, dict) and led.get("id"):
+                return True
+    return False
+
+
+def _profile_is_parented_in_practice(profile_id, profile_to_parent_ids):
+    """True iff the profile has at least one placed child whose
+    Element_Linker carries a non-null ``parent_element_id``.
+
+    The YAML schema's ``allow_parentless`` flag turned out to be
+    unreliable in real-world data (the HEB profile set has ``true``
+    on every entry regardless of whether the profile is actually
+    placed with a parent), so we infer parentedness from placement
+    behavior instead. If a profile has ever been placed against a
+    parent, we treat it as "needs a parent" for Cat G; truly
+    parentless profiles (receptacle-only, place-from-CSV, etc.) have
+    placed children with null parent_element_id and won't surface
+    here.
+    """
+    return bool(profile_to_parent_ids.get(profile_id))
+
+
+def _profiles_matching_parent_family(family_name, profiles):
+    """Return profiles whose ``parent_filter`` / ``merged_aliases`` /
+    own name matches ``family_name``. Same two-tier rule the placement
+    engine uses (``placement._match_one_linked_revit``): exact-name
+    match wins over the suffix-stripped fallback so the
+    ``Stinger Cart_1 / _2 / _3`` style aligns 1:1 with its profiles
+    instead of producing a cross-product.
+    """
+    name = (family_name or "").strip()
+    if not name:
+        return []
+    name_lower = name.lower()
+    name_norm = _placement.normalize_name(name)
+    if not name_norm:
+        return []
+    strict = [
+        p for p in profiles
+        if name_lower in _placement.profile_family_names_raw(p)
+    ]
+    if strict:
+        return strict
+    return [
+        p for p in profiles
+        if name_norm in _placement.profile_family_names(p)
+    ]
+
+
 # ---------------------------------------------------------------------
 # Audit
 # ---------------------------------------------------------------------
@@ -282,6 +368,23 @@ def run_audit(doc, profile_data, categories=None):
     # Track which parent element ids are referenced so we can emit cat B.
     referenced_parent_ids = set()
 
+    # parent_element_id -> {profile_id, profile_id, ...}
+    # Records which profiles have at least one placed child for each
+    # parent. Used by Cat G to detect parents that match a profile but
+    # never had its LEDs fired.
+    parent_to_placed_profile_ids = {}
+
+    # profile_id -> {normalized_host_name_family, ...}
+    # Secondary Cat G skip signal: when profiles get merged, children
+    # placed before the merge keep the OLD parent's family name in
+    # ``Element_Linker.host_name``. The new master profile's
+    # ``merged_aliases`` lists that old name, so the parent (still
+    # named the old name in the link) DOES correspond to placed
+    # children — we just can't see it via parent_element_id alone if
+    # the link was reloaded / the parent's id changed. Tracking the
+    # host_name family lets Cat G recognise that coverage.
+    placed_host_names_by_profile = {}
+
     # 1. Walk every placed child with an Element_Linker payload.
     for klass in (FamilyInstance, Group):
         for elem in FilteredElementCollector(doc).OfClass(klass).WhereElementIsNotElementType():
@@ -300,7 +403,22 @@ def run_audit(doc, profile_data, categories=None):
 
             profile_usage[profile_id] = profile_usage.get(profile_id, 0) + 1
             if linker.parent_element_id is not None:
-                referenced_parent_ids.add(int(linker.parent_element_id))
+                try:
+                    pid_int = int(linker.parent_element_id)
+                except (TypeError, ValueError):
+                    pid_int = None
+                if pid_int is not None:
+                    referenced_parent_ids.add(pid_int)
+                    parent_to_placed_profile_ids.setdefault(
+                        pid_int, set()
+                    ).add(profile_id)
+            host_family = _strip_default_decoration(linker.host_name or "")
+            if host_family:
+                norm_family = _placement.normalize_name(host_family)
+                if norm_family:
+                    placed_host_names_by_profile.setdefault(
+                        profile_id, set()
+                    ).add(norm_family)
 
             # Cat D: ID discrepancy.
             if CAT_D in requested:
@@ -470,6 +588,184 @@ def run_audit(doc, profile_data, categories=None):
                 message="Profile has no placed instances anywhere",
                 fix_kind=FIX_NONE,
             ))
+
+    # 3. Cat G: missing children. Walk every potential parent in the
+    # host doc + linked docs, find profiles that match its family
+    # (same matching rule the placement engine uses), and emit a
+    # finding when a matching profile has LEDs but no placed child
+    # carries any of those LED IDs back to this parent. Skips profiles
+    # with no LEDs (nothing to place) and profiles that are merged into
+    # another (their name acts as an alias for the master, not a
+    # standalone profile to place from).
+    if CAT_G in requested:
+        all_profiles = [
+            p for p in profile_data.get("equipment_definitions") or []
+            if isinstance(p, dict)
+        ]
+        # Build profile_id -> set(parent_element_ids the profile has
+        # actually placed children against). Inverted from
+        # parent_to_placed_profile_ids (collected during the placed-
+        # child walk above). A profile with a non-empty set here has
+        # been placed with a parent at least once; one with an empty
+        # set is either parentless or unused — either way, not a
+        # candidate for Cat G.
+        profile_to_parent_ids = {}
+        for parent_id, profile_ids in parent_to_placed_profile_ids.items():
+            for pid in profile_ids:
+                profile_to_parent_ids.setdefault(pid, set()).add(parent_id)
+
+        # Restrict to profiles that:
+        #   * Aren't conceptually merged into another (legacy
+        #     ced_truth_source_id members or alias-targets).
+        #   * Have at least one LED to place.
+        #   * Have actually been placed against a parent at least
+        #     once. The YAML ``allow_parentless`` flag is unreliable
+        #     in real data (every HEB profile is ``true``); placement
+        #     behavior is the source of truth.
+        active_profiles = [
+            p for p in all_profiles
+            if not _is_merged_member(p, profile_data)
+               and _profile_has_leds(p)
+               and _profile_is_parented_in_practice(
+                   p.get("id") or "", profile_to_parent_ids,
+               )
+        ]
+
+        # Yields (parent_elem, family_name, parent_id_int, link_inst,
+        # in_host). For host parents, link_inst is None and in_host is
+        # True. For linked parents, link_inst is the RevitLinkInstance
+        # in the host doc — its element id is what the row's Select /
+        # Zoom button targets, since the host UI can't drill into the
+        # linked doc to highlight the linked element directly.
+        # Elements that themselves carry an Element_Linker are skipped
+        # — those are placed children of some other profile and aren't
+        # parents in their own right.
+        def _iter_potential_parents():
+            for klass in (FamilyInstance, Group):
+                try:
+                    coll = (
+                        FilteredElementCollector(doc)
+                        .OfClass(klass)
+                        .WhereElementIsNotElementType()
+                    )
+                except Exception:
+                    continue
+                for elem in coll:
+                    try:
+                        if _el_io.read_from_element(elem) is not None:
+                            continue
+                    except Exception:
+                        pass
+                    yield (
+                        elem,
+                        _element_family_name(elem),
+                        _id_value(elem),
+                        None,
+                        True,
+                    )
+            try:
+                link_collector = FilteredElementCollector(doc).OfClass(
+                    RevitLinkInstance
+                )
+            except Exception:
+                link_collector = []
+            for link_inst in link_collector:
+                try:
+                    link_doc = link_inst.GetLinkDocument()
+                except Exception:
+                    link_doc = None
+                if link_doc is None:
+                    continue
+                for klass in (FamilyInstance, Group):
+                    try:
+                        coll = (
+                            FilteredElementCollector(link_doc)
+                            .OfClass(klass)
+                            .WhereElementIsNotElementType()
+                        )
+                    except Exception:
+                        continue
+                    for elem in coll:
+                        yield (
+                            elem,
+                            _element_family_name(elem),
+                            _id_value(elem),
+                            link_inst,
+                            False,
+                        )
+
+        # Dedupe so the same (parent_id, profile_id) pair fires once
+        # even if multiple aliasing paths matched it.
+        emitted = set()
+        for parent_elem, family_name, parent_id_int, link_inst, in_host in _iter_potential_parents():
+            if not family_name or parent_id_int is None:
+                continue
+            matches = _profiles_matching_parent_family(family_name, active_profiles)
+            if not matches:
+                continue
+            placed_pids = parent_to_placed_profile_ids.get(parent_id_int, set())
+            parent_family_norm = _placement.normalize_name(
+                _strip_default_decoration(family_name)
+            )
+            for profile in matches:
+                pid = profile.get("id") or ""
+                if not pid:
+                    continue
+                # Skip if any placed child for this profile points at
+                # this exact parent (id match — strong signal).
+                if pid in placed_pids:
+                    continue
+                # Skip if any placed child for this profile recorded
+                # this parent's family in its Element_Linker host_name
+                # (name match — covers merged-profile / reloaded-link
+                # cases where the parent_element_id no longer agrees
+                # with the actual parent in the linked model, but the
+                # family name on both sides still matches via
+                # ``merged_aliases``).
+                if parent_family_norm and parent_family_norm in (
+                    placed_host_names_by_profile.get(pid) or set()
+                ):
+                    continue
+                key = (parent_id_int, pid, in_host)
+                if key in emitted:
+                    continue
+                emitted.add(key)
+                # Wiring for the row's Select / Zoom buttons:
+                #   * Host parent — element_id is the parent's host-doc id.
+                #     link_instance_id / linked_element_id are None.
+                #   * Linked parent — element_id is the RevitLinkInstance's
+                #     id (host-doc fallback for any legacy code path that
+                #     just dispatches on element_id). The window's Select /
+                #     Zoom prefers (link_instance_id, linked_element_id)
+                #     when both are set, so the linked element itself gets
+                #     highlighted via ``Reference.CreateLinkReference``
+                #     instead of just the whole link being selected.
+                where = "host" if in_host else "linked"
+                if in_host:
+                    row_elem_id = parent_id_int
+                    fnd_link_inst_id = None
+                    fnd_linked_elem_id = None
+                else:
+                    fnd_link_inst_id = _id_value(link_inst)
+                    fnd_linked_elem_id = parent_id_int
+                    row_elem_id = fnd_link_inst_id
+                result.add(QaqcFinding(
+                    category=CAT_G,
+                    element_id=row_elem_id,
+                    link_instance_id=fnd_link_inst_id,
+                    linked_element_id=fnd_linked_elem_id,
+                    profile_id=pid,
+                    profile_name=profile.get("name") or "",
+                    led_id="",
+                    led_label="",
+                    message=(
+                        "Parent {!r} (id {}, {}) matches profile but no "
+                        "child carries any of its LED IDs.".format(
+                            family_name, parent_id_int, where,
+                        )
+                    ),
+                    fix_kind=FIX_NONE,
+                ))
 
     return result
 

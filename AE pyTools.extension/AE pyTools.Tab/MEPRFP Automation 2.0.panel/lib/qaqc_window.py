@@ -34,10 +34,152 @@ from System.Windows.Controls import (  # noqa: E402
 )
 from System.Windows.Media import Brushes  # noqa: E402
 
-from Autodesk.Revit.DB import ElementId  # noqa: E402
+from Autodesk.Revit.DB import ElementId, Reference, XYZ  # noqa: E402
 
 import qaqc_workflow as _qa
 import wpf as _wpf
+
+
+def _linked_element_host_bbox(doc, link_instance_id, linked_element_id):
+    """Return ``(min_xyz, max_xyz)`` in HOST coordinates for the
+    linked element, or ``None`` if any step fails.
+
+    The linked element's ``get_BoundingBox`` returns coordinates in
+    the linked doc's frame; we transform all 8 corners through the
+    RevitLinkInstance's total transform to lift them into the host
+    coordinate system, then take the axis-aligned union. That bbox
+    is what ``UIView.ZoomAndCenterRectangle`` needs to frame the
+    specific linked element regardless of how the link is rotated
+    or offset relative to the host.
+    """
+    if link_instance_id is None or linked_element_id is None:
+        return None
+    try:
+        link_inst = doc.GetElement(ElementId(int(link_instance_id)))
+    except Exception:
+        return None
+    if link_inst is None:
+        return None
+    try:
+        link_doc = link_inst.GetLinkDocument()
+    except Exception:
+        link_doc = None
+    if link_doc is None:
+        return None
+    try:
+        linked_elem = link_doc.GetElement(ElementId(int(linked_element_id)))
+    except Exception:
+        linked_elem = None
+    if linked_elem is None:
+        return None
+    try:
+        bbox = linked_elem.get_BoundingBox(None)
+    except Exception:
+        bbox = None
+    if bbox is None:
+        return None
+    try:
+        transform = link_inst.GetTotalTransform()
+    except Exception:
+        return None
+    corners_in_link = (
+        XYZ(bbox.Min.X, bbox.Min.Y, bbox.Min.Z),
+        XYZ(bbox.Min.X, bbox.Min.Y, bbox.Max.Z),
+        XYZ(bbox.Min.X, bbox.Max.Y, bbox.Min.Z),
+        XYZ(bbox.Min.X, bbox.Max.Y, bbox.Max.Z),
+        XYZ(bbox.Max.X, bbox.Min.Y, bbox.Min.Z),
+        XYZ(bbox.Max.X, bbox.Min.Y, bbox.Max.Z),
+        XYZ(bbox.Max.X, bbox.Max.Y, bbox.Min.Z),
+        XYZ(bbox.Max.X, bbox.Max.Y, bbox.Max.Z),
+    )
+    try:
+        host_corners = [transform.OfPoint(p) for p in corners_in_link]
+    except Exception:
+        return None
+    xs = [c.X for c in host_corners]
+    ys = [c.Y for c in host_corners]
+    zs = [c.Z for c in host_corners]
+    return XYZ(min(xs), min(ys), min(zs)), XYZ(max(xs), max(ys), max(zs))
+
+
+def _zoom_active_uiview_to_rect(uidoc, min_pt, max_pt, pad_ft=4.0):
+    """Zoom the *active* UIView to ``[min_pt..max_pt]`` (host coords),
+    padded by ``pad_ft`` so the element isn't flush against the edge.
+
+    Returns True on success. The caller should fall back to
+    ``ShowElements`` if this returns False (no active UIView, or the
+    view type doesn't support ``ZoomAndCenterRectangle``).
+    """
+    if uidoc is None or min_pt is None or max_pt is None:
+        return False
+    pad = float(pad_ft)
+    padded_min = XYZ(min_pt.X - pad, min_pt.Y - pad, min_pt.Z - pad)
+    padded_max = XYZ(max_pt.X + pad, max_pt.Y + pad, max_pt.Z + pad)
+    try:
+        active_view_id = uidoc.Document.ActiveView.Id
+    except Exception:
+        return False
+    try:
+        ui_views = uidoc.GetOpenUIViews()
+    except Exception:
+        return False
+    for uiview in ui_views:
+        try:
+            if uiview.ViewId != active_view_id:
+                continue
+        except Exception:
+            continue
+        try:
+            uiview.ZoomAndCenterRectangle(padded_min, padded_max)
+            return True
+        except Exception:
+            return False
+    return False
+
+
+def _linked_reference(doc, link_instance_id, linked_element_id):
+    """Build a host-doc ``Reference`` that points at a specific element
+    inside a linked document.
+
+    Two-step construction (matches Revit API requirement):
+      1. Resolve the RevitLinkInstance in the host doc, get its
+         linked Document.
+      2. Make a plain ``Reference(linked_elem)`` in the linked doc,
+         then call ``CreateLinkReference(link_instance)`` on it to
+         lift it into host coordinates.
+
+    Returns the resulting Reference, or ``None`` if any step fails
+    (the caller should fall back to selecting the link instance
+    instead).
+    """
+    if link_instance_id is None or linked_element_id is None:
+        return None
+    try:
+        link_inst = doc.GetElement(ElementId(int(link_instance_id)))
+    except Exception:
+        return None
+    if link_inst is None:
+        return None
+    try:
+        link_doc = link_inst.GetLinkDocument()
+    except Exception:
+        link_doc = None
+    if link_doc is None:
+        return None
+    try:
+        linked_elem = link_doc.GetElement(ElementId(int(linked_element_id)))
+    except Exception:
+        linked_elem = None
+    if linked_elem is None:
+        return None
+    try:
+        ref = Reference(linked_elem)
+    except Exception:
+        return None
+    try:
+        return ref.CreateLinkReference(link_inst)
+    except Exception:
+        return None
 
 
 _XAML_PATH = os.path.join(
@@ -236,26 +378,105 @@ class QaqcController(object):
     # Row actions
     # ----------------------------------------------------------------
 
+    def _select_finding(self, finding):
+        """Set the host doc's selection to the finding's target.
+
+        For host-doc targets this is just SetElementIds. For linked
+        targets we prefer the host-coord ``Reference`` produced by
+        ``Reference.CreateLinkReference`` so the specific linked
+        element gets highlighted, not the whole RevitLinkInstance.
+        Falls back to selecting the link instance if the reference
+        construction fails.
+
+        Returns ``True`` on success.
+        """
+        link_inst_id = getattr(finding, "link_instance_id", None)
+        linked_elem_id = getattr(finding, "linked_element_id", None)
+        if link_inst_id is not None and linked_elem_id is not None:
+            ref = _linked_reference(self.doc, link_inst_id, linked_elem_id)
+            if ref is not None:
+                refs = _NetList[Reference]()
+                refs.Add(ref)
+                self.uidoc.Selection.SetReferences(refs)
+                return True
+        if finding.element_id is None:
+            return False
+        ids = _NetList[ElementId]()
+        ids.Add(ElementId(int(finding.element_id)))
+        self.uidoc.Selection.SetElementIds(ids)
+        return True
+
     def _on_select(self, finding):
-        if self.uidoc is None or finding.element_id is None:
+        if self.uidoc is None or (
+            finding.element_id is None
+            and getattr(finding, "linked_element_id", None) is None
+        ):
             self._set_status("No active uidoc; cannot select.")
             return
         try:
-            ids = _NetList[ElementId]()
-            ids.Add(ElementId(int(finding.element_id)))
-            self.uidoc.Selection.SetElementIds(ids)
-            self._set_status("Selected element {}.".format(finding.element_id))
+            if not self._select_finding(finding):
+                self._set_status("Select failed: nothing to target.")
+                return
+            link_inst_id = getattr(finding, "link_instance_id", None)
+            if link_inst_id is not None:
+                self._set_status(
+                    "Selected linked element {} (in link {}).".format(
+                        getattr(finding, "linked_element_id", "?"),
+                        link_inst_id,
+                    )
+                )
+            else:
+                self._set_status("Selected element {}.".format(finding.element_id))
         except Exception as exc:
             self._set_status("Select failed: {}".format(exc))
 
     def _on_zoom(self, finding):
-        if self.uidoc is None or finding.element_id is None:
+        if self.uidoc is None or (
+            finding.element_id is None
+            and getattr(finding, "linked_element_id", None) is None
+        ):
             self._set_status("No active uidoc; cannot zoom.")
             return
         try:
+            if not self._select_finding(finding):
+                self._set_status("Zoom failed: nothing to target.")
+                return
+
+            link_inst_id = getattr(finding, "link_instance_id", None)
+            linked_elem_id = getattr(finding, "linked_element_id", None)
+
+            # Linked target — zoom to the linked element's
+            # host-coord bbox, NOT the link instance's overall
+            # extent. ``ShowElements`` only takes host-doc element
+            # ids and would frame the whole link, so we compute
+            # the linked element's transformed bbox and feed it to
+            # the active UIView's ``ZoomAndCenterRectangle``. Falls
+            # back to ShowElements(link_inst.Id) if the bbox
+            # computation or UIView lookup fails (e.g., view type
+            # doesn't support rectangle zoom).
+            if link_inst_id is not None and linked_elem_id is not None:
+                bbox = _linked_element_host_bbox(
+                    self.doc, link_inst_id, linked_elem_id,
+                )
+                zoomed = False
+                if bbox is not None:
+                    zoomed = _zoom_active_uiview_to_rect(
+                        self.uidoc, bbox[0], bbox[1],
+                    )
+                if not zoomed:
+                    ids = _NetList[ElementId]()
+                    ids.Add(ElementId(int(link_inst_id)))
+                    self.uidoc.ShowElements(ids)
+                self._set_status(
+                    "Zoomed to linked element {} (within link {}).".format(
+                        linked_elem_id, link_inst_id,
+                    )
+                )
+                return
+
+            # Host target — keep the existing ShowElements path.
             ids = _NetList[ElementId]()
             ids.Add(ElementId(int(finding.element_id)))
-            self.uidoc.Selection.SetElementIds(ids)
             self.uidoc.ShowElements(ids)
             self._set_status("Zoomed to element {}.".format(finding.element_id))
         except Exception as exc:
