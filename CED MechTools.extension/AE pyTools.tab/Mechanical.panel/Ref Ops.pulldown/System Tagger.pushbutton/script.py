@@ -2,6 +2,7 @@
 __title__ = "System Tagger"
 __doc__ = "Place system ID tags on refrigerated cases from a pasted SYS NO. list."
 
+import os
 import re
 import time
 
@@ -11,9 +12,17 @@ from Autodesk.Revit.UI.Selection import ObjectType
 from System import Guid, String, Int32
 from pyrevit import revit, DB, forms, script
 
+from Snippets import identity_mark as _id_mark
+
 logger = script.get_logger()
 doc = revit.doc
 uidoc = revit.uidoc
+
+_REFOPS_SP_FILE = os.path.normpath(
+    os.path.join(
+        os.path.dirname(__file__), "..", "_resources", "RefOps_SharedParams.txt"
+    )
+)
 
 ORANGE_RGB = (255, 128, 0)
 RESUME_SCHEMA_GUID = Guid("5f1a3c2e-9e4c-4e42-9f26-9c8f8f5c6f14")
@@ -393,9 +402,7 @@ def _apply_identity_mark(element_ids, labels):
         if not elem:
             continue
         try:
-            param = elem.LookupParameter("Identity Mark")
-            if not param:
-                param = elem.get_Parameter(DB.BuiltInParameter.ALL_MODEL_MARK)
+            param = _id_mark.lookup_identity_param(elem)
             if param and not param.IsReadOnly:
                 if param.StorageType == DB.StorageType.String:
                     param.Set(label)
@@ -443,6 +450,9 @@ def main():
     active_view = revit.active_view
     if active_view.IsTemplate:
         forms.alert("Active view is a template. Open a working view first.", exitscript=True)
+
+    if not _id_mark.ensure_bound(doc, forms, "System Tagger", _REFOPS_SP_FILE):
+        return
 
     tag_type = _pick_tag_type()
     if not tag_type:

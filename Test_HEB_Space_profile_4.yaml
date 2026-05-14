@@ -1,0 +1,1322 @@
+schema_version: 100
+space_buckets:
+- id: SBKT-73442F8A
+  name: Dining Area
+  client_keys:
+  - heb
+  classification_keywords:
+  - Dinning
+space_profiles:
+- id: SP-CAP-14974e0d
+  name: FOOD SERVICE DINNING 30A profile
+  bucket_id: SBKT-73442F8A
+  linked_sets:
+  - id: SP-SET-001
+    linked_element_definitions:
+    - id: SP-LED-001
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      category: Electrical Fixtures
+      family_name: EF-U_Receptacle_CED
+      type_name: Duplex Wall
+      placement_rule:
+        kind: wall_anchored
+        wall_role: opposite_door
+        position_along_wall: 0.7042486497503754
+        distance_from_wall_inches: -1.1474932800611555
+      offsets:
+      - x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 18.0
+        rotation_deg: 179.99999999999983
+      parameters:
+        Category: Electrical Fixtures
+        Panel: TXB2
+        Circuit Number: '33'
+        Electrical Data: 120 V/1-180 VA
+        Export to IFC: By Type
+        IfcGUID: 0mSDiHkQP5u83zHubJJPA_
+        Design Option: '-1'
+        Volume: 0.01 CF
+        Phase Demolished: None
+        Phase Created: New Construction
+        Host Id: '-1'
+        Level: Level 1 - Sheet View
+        Workset: CED ELECTRICAL
+        Family and Type: 'EF-U_Receptacle_CED: Duplex Wall'
+        Family: EF-U_Receptacle_CED
+        Type: Duplex Wall
+        Type Id: '2969615'
+        Offset from Host: 1' - 6"
+        Host: 'Level : Level 1 - Sheet View'
+        Elevation from Level: 1' - 6"
+        Mark: '24340200'
+        Conduit and Wire Size_CEDT: 3/4"C-(2#12 + 1#12G)
+        Conduit Size_CEDT: 3/4"C
+        Conduit Type_CEDT: EMT
+        Wire Material_CEDT: CU
+        Wire Insulation_CEDT: THWN
+        Wire Temparature Rating_CEDT: 75 C
+        Wire Size_CEDT: 2#12 + 1#12G
+        Wattage Input_CED: 0 W
+        FLA Input_CED: 0 A
+        Apparent Load Input_CED: 180 VA
+        Watts_CED: 180 W
+        FLA_CED: 2 A
+        Apparent Load_CED: 180 VA
+        Load Classification_CED: REC
+        Power Factor_CED: '1'
+        Phase_CED: '1'
+        Number of Poles_CED: '1'
+        Voltage_CED: 120 V
+        OCPD Rating_CED: 20 A
+        Ampacity Rating_CED: 20 A
+        Surface Mounted_CED: 'No'
+        Symbol Vertical Offset_CED: 0' - 0"
+        Symbol Horizontal Offset_CED: 0' - 0"
+        Motor Lookup Message_CEDT: Enter value in 'HP Input_CED' to calculate FLC
+          per NEC 430.
+        Motor FLC_CED: 0 A
+        HP Input_CED: '0'
+        Show Symbol Labels_CED: 'Yes'
+        Horizontal Mover Offset: 4' - 0"
+        Vertical Mover Offset: 4' - 0"
+        CKT_Load Name_CEDT: TTBBQ DINING CONV REC
+        CKT_Circuit Number_CEDT: '32'
+        CKT_Panel_CEDT: TXB2
+        CKT_Rating_CED: 20 A
+        CKT_Frame_CED: 400 A
+        CKT_Length_CED: 144' - 1 23/32"
+        Visible in Floor Plan: 'No'
+        Schedule Sort Order: '0'
+        ACA Orientation: 90.00°
+        ACA Z Rotation: 0.00°
+        ACA Y: 0' - 0"
+        ACA Z: 0' - 0"
+        Rotate Symbol Label_CED: 'No'
+        Mounting Message: Wall Mounted
+        CKT_Circuit Type_CEDT: BRANCH
+        Circuit Ampacity_CED: 25 A
+        Circuit Load Current_CED: 3 A
+        CKT_Number of Sets_CED: '1'
+        CKT_Number of Wires_CED: '2'
+        CKT_Wire Hot Quantity_CED: '1'
+        CKT_Wire Hot Size_CEDT: '#12'
+        CKT_Wire Neutral Quantity_CED: '1'
+        CKT_Wire Neutral Size_CEDT: '#12'
+        CKT_Wire Ground Quantity_CED: '1'
+        CKT_Wire Ground Size_CEDT: '#12'
+        CKT_Wire Isolated Ground Quantity_CED: '0'
+        Conduit Fill Percentage_CED: '0.07486'
+        Voltage Drop Percentage_CED: '0.014414'
+    - id: SP-LED-002
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      category: Electrical Fixtures
+      family_name: EF-U_Receptacle_CED
+      type_name: Duplex Wall
+      placement_rule:
+        kind: wall_anchored
+        wall_role: opposite_door
+        position_along_wall: 0.1471205059511134
+        distance_from_wall_inches: -0.647493280060587
+      offsets:
+      - x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 18.0
+        rotation_deg: 179.99999999999983
+      parameters:
+        Category: Electrical Fixtures
+        Panel: TXB2
+        Circuit Number: '33'
+        Electrical Data: 120 V/1-180 VA
+        Export to IFC: By Type
+        IfcGUID: 0mSDiHkQP5u83zHubJJPBd
+        Design Option: '-1'
+        Volume: 0.01 CF
+        Phase Demolished: None
+        Phase Created: New Construction
+        Host Id: '-1'
+        Level: Level 1 - Sheet View
+        Workset: CED ELECTRICAL
+        Family and Type: 'EF-U_Receptacle_CED: Duplex Wall'
+        Family: EF-U_Receptacle_CED
+        Type: Duplex Wall
+        Type Id: '2969615'
+        Offset from Host: 1' - 6"
+        Host: 'Level : Level 1 - Sheet View'
+        Elevation from Level: 1' - 6"
+        Mark: '24340201'
+        Conduit and Wire Size_CEDT: 3/4"C-(2#12 + 1#12G)
+        Conduit Size_CEDT: 3/4"C
+        Conduit Type_CEDT: EMT
+        Wire Material_CEDT: CU
+        Wire Insulation_CEDT: THWN
+        Wire Temparature Rating_CEDT: 75 C
+        Wire Size_CEDT: 2#12 + 1#12G
+        Wattage Input_CED: 0 W
+        FLA Input_CED: 0 A
+        Apparent Load Input_CED: 180 VA
+        Watts_CED: 180 W
+        FLA_CED: 2 A
+        Apparent Load_CED: 180 VA
+        Load Classification_CED: REC
+        Power Factor_CED: '1'
+        Phase_CED: '1'
+        Number of Poles_CED: '1'
+        Voltage_CED: 120 V
+        OCPD Rating_CED: 20 A
+        Ampacity Rating_CED: 20 A
+        Surface Mounted_CED: 'No'
+        Symbol Vertical Offset_CED: 0' - 0"
+        Symbol Horizontal Offset_CED: 0' - 0"
+        Motor Lookup Message_CEDT: Enter value in 'HP Input_CED' to calculate FLC
+          per NEC 430.
+        Motor FLC_CED: 0 A
+        HP Input_CED: '0'
+        Show Symbol Labels_CED: 'Yes'
+        Horizontal Mover Offset: 4' - 0"
+        Vertical Mover Offset: 4' - 0"
+        CKT_Load Name_CEDT: TTBBQ DINING CONV REC
+        CKT_Circuit Number_CEDT: '32'
+        CKT_Panel_CEDT: TXB2
+        CKT_Rating_CED: 20 A
+        CKT_Frame_CED: 400 A
+        CKT_Length_CED: 144' - 1 23/32"
+        Visible in Floor Plan: 'No'
+        Schedule Sort Order: '0'
+        ACA Orientation: 90.00°
+        ACA Z Rotation: 0.00°
+        ACA Y: 0' - 0"
+        ACA Z: 0' - 0"
+        Rotate Symbol Label_CED: 'No'
+        Mounting Message: Wall Mounted
+        CKT_Circuit Type_CEDT: BRANCH
+        Circuit Ampacity_CED: 25 A
+        Circuit Load Current_CED: 3 A
+        CKT_Number of Sets_CED: '1'
+        CKT_Number of Wires_CED: '2'
+        CKT_Wire Hot Quantity_CED: '1'
+        CKT_Wire Hot Size_CEDT: '#12'
+        CKT_Wire Neutral Quantity_CED: '1'
+        CKT_Wire Neutral Size_CEDT: '#12'
+        CKT_Wire Ground Quantity_CED: '1'
+        CKT_Wire Ground Size_CEDT: '#12'
+        CKT_Wire Isolated Ground Quantity_CED: '0'
+        Conduit Fill Percentage_CED: '0.07486'
+        Voltage Drop Percentage_CED: '0.014414'
+    - id: SP-LED-003
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      category: Electrical Fixtures
+      family_name: EF-U_Receptacle_CED
+      type_name: Duplex Wall
+      placement_rule:
+        kind: wall_anchored
+        wall_role: opposite_door
+        position_along_wall: 0.0342991490648332
+        distance_from_wall_inches: -0.6474932800610986
+      offsets:
+      - x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 120.0
+        rotation_deg: 179.99999999999983
+      parameters:
+        Category: Electrical Fixtures
+        Panel: TXB2
+        Circuit Number: '39'
+        Electrical Data: 120 V/1-180 VA
+        Export to IFC: By Type
+        IfcGUID: 0mSDiHkQP5u83zHubJJP1J
+        Design Option: '-1'
+        Volume: 0.01 CF
+        Phase Demolished: None
+        Phase Created: New Construction
+        Host Id: '-1'
+        Level: Level 1 - Sheet View
+        Workset: CED ELECTRICAL
+        Family and Type: 'EF-U_Receptacle_CED: Duplex Wall'
+        Family: EF-U_Receptacle_CED
+        Type: Duplex Wall
+        Type Id: '2969615'
+        Offset from Host: 10' - 0"
+        Host: 'Level : Level 1 - Sheet View'
+        Elevation from Level: 10' - 0"
+        Mark: '24340205'
+        Conduit and Wire Size_CEDT: 3/4"C-(2#12 + 1#12G)
+        Conduit Size_CEDT: 3/4"C
+        Conduit Type_CEDT: EMT
+        Wire Material_CEDT: CU
+        Wire Insulation_CEDT: THWN
+        Wire Temparature Rating_CEDT: 75 C
+        Wire Size_CEDT: 2#12 + 1#12G
+        Wattage Input_CED: 0 W
+        FLA Input_CED: 0 A
+        Apparent Load Input_CED: 180 VA
+        Watts_CED: 180 W
+        FLA_CED: 2 A
+        Apparent Load_CED: 180 VA
+        Load Classification_CED: REC
+        Power Factor_CED: '1'
+        Phase_CED: '1'
+        Number of Poles_CED: '1'
+        Voltage_CED: 120 V
+        OCPD Rating_CED: 20 A
+        Ampacity Rating_CED: 20 A
+        Surface Mounted_CED: 'No'
+        Symbol Vertical Offset_CED: 0' - 0"
+        Symbol Horizontal Offset_CED: 0' - 0"
+        Motor Lookup Message_CEDT: Enter value in 'HP Input_CED' to calculate FLC
+          per NEC 430.
+        Motor FLC_CED: 0 A
+        HP Input_CED: '0'
+        Show Symbol Labels_CED: 'Yes'
+        Horizontal Mover Offset: 4' - 0"
+        Vertical Mover Offset: 4' - 0"
+        CKT_Load Name_CEDT: TTBBQ DINING SIGNAGE
+        CKT_Circuit Number_CEDT: '34'
+        CKT_Panel_CEDT: TXB2
+        CKT_Rating_CED: 20 A
+        CKT_Frame_CED: 400 A
+        CKT_Length_CED: 146' - 0 23/32"
+        Visible in Floor Plan: 'No'
+        Schedule Sort Order: '0'
+        ACA Orientation: 90.00°
+        ACA Z Rotation: 0.00°
+        ACA Y: 0' - 0"
+        ACA Z: 0' - 0"
+        Rotate Symbol Label_CED: 'No'
+        Mounting Message: Wall Mounted
+        CKT_Circuit Type_CEDT: BRANCH
+        Circuit Ampacity_CED: 25 A
+        Circuit Load Current_CED: 4 A
+        CKT_Number of Sets_CED: '1'
+        CKT_Number of Wires_CED: '2'
+        CKT_Wire Hot Quantity_CED: '1'
+        CKT_Wire Hot Size_CEDT: '#12'
+        CKT_Wire Neutral Quantity_CED: '1'
+        CKT_Wire Neutral Size_CEDT: '#12'
+        CKT_Wire Ground Quantity_CED: '1'
+        CKT_Wire Ground Size_CEDT: '#12'
+        CKT_Wire Isolated Ground Quantity_CED: '0'
+        Conduit Fill Percentage_CED: '0.07486'
+        Voltage Drop Percentage_CED: '0.019475'
+    - id: SP-LED-004
+      label: 'EF-U_Junction Box_CED : Wall - No Stem'
+      category: Electrical Fixtures
+      family_name: EF-U_Junction Box_CED
+      type_name: Wall - No Stem
+      placement_rule:
+        kind: wall_anchored
+        wall_role: right_of_door
+        position_along_wall: 0.8551122424379961
+        distance_from_wall_inches: 13.624999999999545
+      offsets:
+      - x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 72.0
+        rotation_deg: 89.9999999999999
+      parameters:
+        Category: Electrical Fixtures
+        Panel: TXB2
+        Circuit Number: '39'
+        Electrical Data: 120 V/1-300 VA
+        Export to IFC: By Type
+        IfcGUID: 0mSDiHkQP5u83zHubJJP0k
+        Design Option: '-1'
+        Volume: 0.01 CF
+        Phase Demolished: None
+        Phase Created: New Construction
+        Host Id: '-1'
+        Level: Level 1 - Sheet View
+        Workset: CED ELECTRICAL
+        Family and Type: 'EF-U_Junction Box_CED: Wall - No Stem'
+        Family: EF-U_Junction Box_CED
+        Type: Wall - No Stem
+        Type Id: '1703009'
+        Offset from Host: 6' - 0"
+        Host: 'Level : Level 1 - Sheet View'
+        Elevation from Level: 6' - 0"
+        Mark: '24340203'
+        Conduit and Wire Size_CEDT: 3/4"C-(2#12 + 1#12G)
+        Conduit Size_CEDT: 3/4"C
+        Conduit Type_CEDT: EMT
+        Wire Material_CEDT: CU
+        Wire Insulation_CEDT: THWN
+        Wire Temparature Rating_CEDT: 75 C
+        Wire Size_CEDT: 2#12 + 1#12G
+        Wattage Input_CED: 0 W
+        FLA Input_CED: 0 A
+        Apparent Load Input_CED: 300 VA
+        Watts_CED: 300 W
+        FLA_CED: 3 A
+        Apparent Load_CED: 300 VA
+        Load Classification_CED: L
+        Power Factor_CED: '1'
+        Phase_CED: '1'
+        Number of Poles_CED: '1'
+        Voltage_CED: 120 V
+        OCPD Rating_CED: 0 A
+        Ampacity Rating_CED: 0 A
+        Surface Mounted_CED: 'No'
+        Symbol Vertical Offset_CED: 0' - 0"
+        Symbol Horizontal Offset_CED: 0' - 0"
+        Motor Lookup Message_CEDT: Enter value in 'HP Input_CED' to calculate FLC
+          per NEC 430.
+        Motor FLC_CED: 0 A
+        HP Input_CED: '0'
+        Surface Mounted Offset_CED: 0' - 2"
+        Horizontal Mover Offset: 4' - 0"
+        Vertical Mover Offset: 4' - 0"
+        Show Symbol Labels_CED: 'Yes'
+        CKT_Load Name_CEDT: TTBBQ DINING SIGNAGE
+        CKT_Circuit Number_CEDT: '34'
+        CKT_Panel_CEDT: TXB2
+        CKT_Rating_CED: 20 A
+        CKT_Frame_CED: 400 A
+        CKT_Length_CED: 146' - 0 23/32"
+        Visible in Floor Plan: 'No'
+        Schedule Sort Order: '0'
+        ACA Orientation: 90.00°
+        ACA Z Rotation: 0.00°
+        ACA Y: 0' - 0"
+        ACA Z: 0' - 0"
+        Rotate Symbol Label_CED: 'No'
+        Mounting Message: Wall Mounted
+        CKT_Circuit Type_CEDT: BRANCH
+        Circuit Ampacity_CED: 25 A
+        Circuit Load Current_CED: 4 A
+        CKT_Number of Sets_CED: '1'
+        CKT_Number of Wires_CED: '2'
+        CKT_Wire Hot Quantity_CED: '1'
+        CKT_Wire Hot Size_CEDT: '#12'
+        CKT_Wire Neutral Quantity_CED: '1'
+        CKT_Wire Neutral Size_CEDT: '#12'
+        CKT_Wire Ground Quantity_CED: '1'
+        CKT_Wire Ground Size_CEDT: '#12'
+        CKT_Wire Isolated Ground Quantity_CED: '0'
+        Conduit Fill Percentage_CED: '0.07486'
+        Voltage Drop Percentage_CED: '0.019475'
+    - id: SP-LED-005
+      label: 'GA_Keynote Symbol_CED : Standard - Electrical'
+      category: Generic Annotations
+      family_name: GA_Keynote Symbol_CED
+      type_name: Standard - Electrical
+      placement_rule:
+        kind: wall_anchored
+        wall_role: right_of_door
+        position_along_wall: 0.8298271136618115
+        distance_from_wall_inches: 20.634066943683024
+      offsets:
+      - x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 0.0
+        rotation_deg: 0.0
+      parameters:
+        Category: Generic Annotations
+        Design Option: '-1'
+        Area: 0 SF
+        Host Id: '-1'
+        Workset: 'View "Floor Plan: Power Callouts - L1"'
+        Family and Type: 'GA_Keynote Symbol_CED: Standard - Electrical'
+        Family: GA_Keynote Symbol_CED
+        Type: Standard - Electrical
+        Type Id: '8119134'
+        Keynote Category: E-3.1
+        Keynote Value: '12'
+        Keynote Description: COORDINATE WITH SIGNAGE PACKAGE FOR ADDITIONAL POWER
+          REQUIREMENTS.
+        Show Symbol Text: 'No'
+      is_keynote: true
+    - id: SP-LED-006
+      label: 'EF-U_Receptacle_CED : Duplex Wall - GFCI'
+      category: Electrical Fixtures
+      family_name: EF-U_Receptacle_CED
+      type_name: Duplex Wall - GFCI
+      placement_rule:
+        kind: wall_anchored
+        wall_role: right_of_door
+        position_along_wall: 0.09011582007005273
+        distance_from_wall_inches: 24.625000000000625
+      offsets:
+      - x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 54.0
+        rotation_deg: 89.99999999999957
+      parameters:
+        Category: Electrical Fixtures
+        Panel: TXB2
+        Circuit Number: '35'
+        Electrical Data: 120 V/1-180 VA
+        Export to IFC: By Type
+        IfcGUID: 0mSDiHkQP5u83zHubJJPER
+        Design Option: '-1'
+        Volume: 0.01 CF
+        Phase Demolished: None
+        Phase Created: New Construction
+        Host Id: '-1'
+        Level: Level 1 - Sheet View
+        Workset: CED ELECTRICAL
+        Family and Type: 'EF-U_Receptacle_CED: Duplex Wall - GFCI'
+        Family: EF-U_Receptacle_CED
+        Type: Duplex Wall - GFCI
+        Type Id: '2969621'
+        Offset from Host: 4' - 6"
+        Host: 'Level : Level 1 - Sheet View'
+        Elevation from Level: 4' - 6"
+        Mark: '24340202'
+        Conduit and Wire Size_CEDT: 3/4"C-(2#12 + 1#12G)
+        Conduit Size_CEDT: 3/4"C
+        Conduit Type_CEDT: EMT
+        Wire Material_CEDT: CU
+        Wire Insulation_CEDT: THWN
+        Wire Temparature Rating_CEDT: 75 C
+        Wire Size_CEDT: 2#12 + 1#12G
+        Wattage Input_CED: 0 W
+        FLA Input_CED: 0 A
+        Apparent Load Input_CED: 180 VA
+        Watts_CED: 180 W
+        FLA_CED: 2 A
+        Apparent Load_CED: 180 VA
+        Load Classification_CED: REC
+        Power Factor_CED: '1'
+        Phase_CED: '1'
+        Number of Poles_CED: '1'
+        Voltage_CED: 120 V
+        OCPD Rating_CED: 20 A
+        Ampacity Rating_CED: 20 A
+        Surface Mounted_CED: 'No'
+        Symbol Vertical Offset_CED: 0' - 0"
+        Symbol Horizontal Offset_CED: 0' - 0"
+        Motor Lookup Message_CEDT: Enter value in 'HP Input_CED' to calculate FLC
+          per NEC 430.
+        Motor FLC_CED: 0 A
+        HP Input_CED: '0'
+        Show Symbol Labels_CED: 'Yes'
+        Horizontal Mover Offset: 4' - 0"
+        Vertical Mover Offset: 4' - 0"
+        CKT_Load Name_CEDT: TTBBQ CONVNIENCE REC
+        CKT_Circuit Number_CEDT: '30'
+        CKT_Panel_CEDT: TXB2
+        CKT_Rating_CED: 20 A
+        CKT_Frame_CED: 400 A
+        CKT_Length_CED: 114' - 9 7/8"
+        Visible in Floor Plan: 'No'
+        Schedule Sort Order: '0'
+        ACA Orientation: 90.00°
+        ACA Z Rotation: 0.00°
+        ACA Y: 0' - 0"
+        ACA Z: 0' - 0"
+        Rotate Symbol Label_CED: 'No'
+        Mounting Message: Wall Mounted
+        CKT_Circuit Type_CEDT: BRANCH
+        Circuit Ampacity_CED: 25 A
+        Circuit Load Current_CED: 2 A
+        CKT_Number of Sets_CED: '1'
+        CKT_Number of Wires_CED: '2'
+        CKT_Wire Hot Quantity_CED: '1'
+        CKT_Wire Hot Size_CEDT: '#12'
+        CKT_Wire Neutral Quantity_CED: '1'
+        CKT_Wire Neutral Size_CEDT: '#12'
+        CKT_Wire Ground Quantity_CED: '1'
+        CKT_Wire Ground Size_CEDT: '#12'
+        CKT_Wire Isolated Ground Quantity_CED: '0'
+        Conduit Fill Percentage_CED: '0.07486'
+        Voltage Drop Percentage_CED: '0.005741'
+    - id: SP-LED-007
+      label: 'EF-U_Receptacle_CED : Duplex Wall - Isolated Ground'
+      category: Electrical Fixtures
+      family_name: EF-U_Receptacle_CED
+      type_name: Duplex Wall - Isolated Ground
+      placement_rule:
+        kind: wall_anchored
+        wall_role: behind_door
+        position_along_wall: 0.3410767892497237
+        distance_from_wall_inches: 0.5000000000017621
+      offsets:
+      - x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 84.0
+        rotation_deg: 0.0
+      parameters:
+        Category: Electrical Fixtures
+        Panel: TXB2
+        Circuit Number: '42'
+        Electrical Data: 120 V/1-180 VA
+        Export to IFC: By Type
+        IfcGUID: 0ArPGEfvX7RPsd8tJ9T9rz
+        Design Option: '-1'
+        Volume: 0.01 CF
+        Phase Demolished: None
+        Phase Created: New Construction
+        Host Id: '-1'
+        Level: Level 1 - Sheet View
+        Workset: CED ELECTRICAL
+        Family and Type: 'EF-U_Receptacle_CED: Duplex Wall - Isolated Ground'
+        Family: EF-U_Receptacle_CED
+        Type: Duplex Wall - Isolated Ground
+        Type Id: '2969623'
+        Offset from Host: 7' - 0"
+        Host: 'Level : Level 1 - Sheet View'
+        Elevation from Level: 7' - 0"
+        Mark: '24339955'
+        Conduit and Wire Size_CEDT: 3/4"C-(2#12 + 1#12G)
+        Conduit Size_CEDT: 3/4"C
+        Conduit Type_CEDT: EMT
+        Wire Material_CEDT: CU
+        Wire Insulation_CEDT: THWN
+        Wire Temparature Rating_CEDT: 75 C
+        Wire Size_CEDT: 2#12 + 1#12G
+        Wattage Input_CED: 0 W
+        FLA Input_CED: 0 A
+        Apparent Load Input_CED: 180 VA
+        Watts_CED: 180 W
+        FLA_CED: 2 A
+        Apparent Load_CED: 180 VA
+        Load Classification_CED: REC
+        Power Factor_CED: '1'
+        Phase_CED: '1'
+        Number of Poles_CED: '1'
+        Voltage_CED: 120 V
+        OCPD Rating_CED: 20 A
+        Ampacity Rating_CED: 20 A
+        Surface Mounted_CED: 'No'
+        Symbol Vertical Offset_CED: 0' - 0"
+        Symbol Horizontal Offset_CED: 0' - 0"
+        Motor Lookup Message_CEDT: Enter value in 'HP Input_CED' to calculate FLC
+          per NEC 430.
+        Motor FLC_CED: 0 A
+        HP Input_CED: '0'
+        Show Symbol Labels_CED: 'Yes'
+        Horizontal Mover Offset: 4' - 0"
+        Vertical Mover Offset: 4' - 0"
+        CKT_Load Name_CEDT: TTBBQ SELLING TVS
+        CKT_Circuit Number_CEDT: '62'
+        CKT_Panel_CEDT: TXB2
+        CKT_Rating_CED: 20 A
+        CKT_Frame_CED: 400 A
+        CKT_Schedule Notes_CEDT: G1
+        CKT_Length_CED: 92' - 4 19/32"
+        Visible in Floor Plan: 'No'
+        Visible in Callout: 'Yes'
+        Schedule Sort Order: '0'
+        ACA Orientation: 90.00°
+        ACA Z Rotation: 0.00°
+        ACA Y: 0' - 0"
+        ACA Z: 0' - 0"
+        Rotate Symbol Label_CED: 'No'
+        Mounting Message: Wall Mounted
+        CKT_Circuit Type_CEDT: BRANCH
+        Circuit Ampacity_CED: 25 A
+        Circuit Load Current_CED: 3 A
+        CKT_Number of Sets_CED: '1'
+        CKT_Number of Wires_CED: '2'
+        CKT_Wire Hot Quantity_CED: '1'
+        CKT_Wire Hot Size_CEDT: '#12'
+        CKT_Wire Neutral Quantity_CED: '1'
+        CKT_Wire Neutral Size_CEDT: '#12'
+        CKT_Wire Ground Quantity_CED: '1'
+        CKT_Wire Ground Size_CEDT: '#12'
+        CKT_Wire Isolated Ground Quantity_CED: '0'
+        Conduit Fill Percentage_CED: '0.07486'
+        Voltage Drop Percentage_CED: '0.009238'
+        Element_Linker: 'Linked Element Definition ID: SET-135-LED-001, Set Definition
+          ID: SET-135, Host Name: 011_TV_wMount_55_1035022 : Default, Parent_location:
+          -124.986067,-86.417958,7.000000, Location XYZ (ft): -126.010358,-86.574208,14.083333,
+          Rotation (deg): 0.000000, Parent Rotation (deg): 180.000000, Parent ElementId:
+          1951112, LevelId: 30, ElementId: 9353342, FacingOrientation: 0.000000,1.000000,0.000000'
+    - id: SP-LED-008
+      label: 'EF-U_Receptacle_CED : Duplex Wall - Isolated Ground'
+      category: Electrical Fixtures
+      family_name: EF-U_Receptacle_CED
+      type_name: Duplex Wall - Isolated Ground
+      placement_rule:
+        kind: wall_anchored
+        wall_role: behind_door
+        position_along_wall: 0.4248204768354168
+        distance_from_wall_inches: 0.5000000000019327
+      offsets:
+      - x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 84.0
+        rotation_deg: 0.0
+      parameters:
+        Category: Electrical Fixtures
+        Panel: TXB2
+        Circuit Number: '42'
+        Electrical Data: 120 V/1-180 VA
+        Export to IFC: By Type
+        IfcGUID: 0ArPGEfvX7RPsd8tJ9T9s3
+        Design Option: '-1'
+        Volume: 0.01 CF
+        Phase Demolished: None
+        Phase Created: New Construction
+        Host Id: '-1'
+        Level: Level 1 - Sheet View
+        Workset: CED ELECTRICAL
+        Family and Type: 'EF-U_Receptacle_CED: Duplex Wall - Isolated Ground'
+        Family: EF-U_Receptacle_CED
+        Type: Duplex Wall - Isolated Ground
+        Type Id: '2969623'
+        Offset from Host: 7' - 0"
+        Host: 'Level : Level 1 - Sheet View'
+        Elevation from Level: 7' - 0"
+        Mark: '24339956'
+        Conduit and Wire Size_CEDT: 3/4"C-(2#12 + 1#12G)
+        Conduit Size_CEDT: 3/4"C
+        Conduit Type_CEDT: EMT
+        Wire Material_CEDT: CU
+        Wire Insulation_CEDT: THWN
+        Wire Temparature Rating_CEDT: 75 C
+        Wire Size_CEDT: 2#12 + 1#12G
+        Wattage Input_CED: 0 W
+        FLA Input_CED: 0 A
+        Apparent Load Input_CED: 180 VA
+        Watts_CED: 180 W
+        FLA_CED: 2 A
+        Apparent Load_CED: 180 VA
+        Load Classification_CED: REC
+        Power Factor_CED: '1'
+        Phase_CED: '1'
+        Number of Poles_CED: '1'
+        Voltage_CED: 120 V
+        OCPD Rating_CED: 20 A
+        Ampacity Rating_CED: 20 A
+        Surface Mounted_CED: 'No'
+        Symbol Vertical Offset_CED: 0' - 0"
+        Symbol Horizontal Offset_CED: 0' - 0"
+        Motor Lookup Message_CEDT: Enter value in 'HP Input_CED' to calculate FLC
+          per NEC 430.
+        Motor FLC_CED: 0 A
+        HP Input_CED: '0'
+        Show Symbol Labels_CED: 'Yes'
+        Horizontal Mover Offset: 4' - 0"
+        Vertical Mover Offset: 4' - 0"
+        CKT_Load Name_CEDT: TTBBQ SELLING TVS
+        CKT_Circuit Number_CEDT: '62'
+        CKT_Panel_CEDT: TXB2
+        CKT_Rating_CED: 20 A
+        CKT_Frame_CED: 400 A
+        CKT_Schedule Notes_CEDT: G1
+        CKT_Length_CED: 92' - 4 19/32"
+        Visible in Floor Plan: 'No'
+        Visible in Callout: 'Yes'
+        Schedule Sort Order: '0'
+        ACA Orientation: 90.00°
+        ACA Z Rotation: 0.00°
+        ACA Y: 0' - 0"
+        ACA Z: 0' - 0"
+        Rotate Symbol Label_CED: 'No'
+        Mounting Message: Wall Mounted
+        CKT_Circuit Type_CEDT: BRANCH
+        Circuit Ampacity_CED: 25 A
+        Circuit Load Current_CED: 3 A
+        CKT_Number of Sets_CED: '1'
+        CKT_Number of Wires_CED: '2'
+        CKT_Wire Hot Quantity_CED: '1'
+        CKT_Wire Hot Size_CEDT: '#12'
+        CKT_Wire Neutral Quantity_CED: '1'
+        CKT_Wire Neutral Size_CEDT: '#12'
+        CKT_Wire Ground Quantity_CED: '1'
+        CKT_Wire Ground Size_CEDT: '#12'
+        CKT_Wire Isolated Ground Quantity_CED: '0'
+        Conduit Fill Percentage_CED: '0.07486'
+        Voltage Drop Percentage_CED: '0.009238'
+        Element_Linker: 'Linked Element Definition ID: SET-135-LED-001, Set Definition
+          ID: SET-135, Host Name: 011_TV_wMount_55_1035022 : Default, Parent_location:
+          -130.986067,-86.417958,7.000000, Location XYZ (ft): -132.010358,-86.574208,14.083333,
+          Rotation (deg): 0.000000, Parent Rotation (deg): 180.000000, Parent ElementId:
+          5020212, LevelId: 30, ElementId: 9353344, FacingOrientation: 0.000000,1.000000,0.000000'
+- id: SP-CAP-f3db7ca5
+  name: FOOD SERVICE DINNING 30A profile - 3
+  bucket_id: SBKT-73442F8A
+  linked_sets:
+  - id: SP-SET-001
+    linked_element_definitions:
+    - id: SP-LED-001
+      label: 'EF-U_Receptacle_CED : Duplex Wall - Isolated Ground'
+      category: Electrical Fixtures
+      family_name: EF-U_Receptacle_CED
+      type_name: Duplex Wall - Isolated Ground
+      placement_rule:
+        kind: space_anchored
+        x_fraction: 0.6589232107502763
+        y_fraction: 0.0011541280095240674
+        wall_role: behind_door
+        distance_from_wall_inches: 0.5000000000017621
+      offsets:
+      - x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 84.0
+        rotation_deg: -90.0
+      parameters:
+        Category: Electrical Fixtures
+        Panel: TXB2
+        Circuit Number: '42'
+        Electrical Data: 120 V/1-180 VA
+        Export to IFC: By Type
+        IfcGUID: 0ArPGEfvX7RPsd8tJ9T9rz
+        Design Option: '-1'
+        Volume: 0.01 CF
+        Phase Demolished: None
+        Phase Created: New Construction
+        Host Id: '-1'
+        Level: Level 1 - Sheet View
+        Workset: CED ELECTRICAL
+        Family and Type: 'EF-U_Receptacle_CED: Duplex Wall - Isolated Ground'
+        Family: EF-U_Receptacle_CED
+        Type: Duplex Wall - Isolated Ground
+        Type Id: '2969623'
+        Offset from Host: 7' - 0"
+        Host: 'Level : Level 1 - Sheet View'
+        Elevation from Level: 7' - 0"
+        Mark: '24339955'
+        Conduit and Wire Size_CEDT: 3/4"C-(2#12 + 1#12G)
+        Conduit Size_CEDT: 3/4"C
+        Conduit Type_CEDT: EMT
+        Wire Material_CEDT: CU
+        Wire Insulation_CEDT: THWN
+        Wire Temparature Rating_CEDT: 75 C
+        Wire Size_CEDT: 2#12 + 1#12G
+        Wattage Input_CED: 0 W
+        FLA Input_CED: 0 A
+        Apparent Load Input_CED: 180 VA
+        Watts_CED: 180 W
+        FLA_CED: 2 A
+        Apparent Load_CED: 180 VA
+        Load Classification_CED: REC
+        Power Factor_CED: '1'
+        Phase_CED: '1'
+        Number of Poles_CED: '1'
+        Voltage_CED: 120 V
+        OCPD Rating_CED: 20 A
+        Ampacity Rating_CED: 20 A
+        Surface Mounted_CED: 'No'
+        Symbol Vertical Offset_CED: 0' - 0"
+        Symbol Horizontal Offset_CED: 0' - 0"
+        Motor Lookup Message_CEDT: Enter value in 'HP Input_CED' to calculate FLC
+          per NEC 430.
+        Motor FLC_CED: 0 A
+        HP Input_CED: '0'
+        Show Symbol Labels_CED: 'Yes'
+        Horizontal Mover Offset: 4' - 0"
+        Vertical Mover Offset: 4' - 0"
+        CKT_Load Name_CEDT: TTBBQ SELLING TVS
+        CKT_Circuit Number_CEDT: '62'
+        CKT_Panel_CEDT: TXB2
+        CKT_Rating_CED: 20 A
+        CKT_Frame_CED: 400 A
+        CKT_Schedule Notes_CEDT: G1
+        CKT_Length_CED: 92' - 4 19/32"
+        Visible in Floor Plan: 'No'
+        Visible in Callout: 'Yes'
+        Schedule Sort Order: '0'
+        ACA Orientation: 90.00°
+        ACA Z Rotation: 0.00°
+        ACA Y: 0' - 0"
+        ACA Z: 0' - 0"
+        Rotate Symbol Label_CED: 'No'
+        Mounting Message: Wall Mounted
+        CKT_Circuit Type_CEDT: BRANCH
+        Circuit Ampacity_CED: 25 A
+        Circuit Load Current_CED: 3 A
+        CKT_Number of Sets_CED: '1'
+        CKT_Number of Wires_CED: '2'
+        CKT_Wire Hot Quantity_CED: '1'
+        CKT_Wire Hot Size_CEDT: '#12'
+        CKT_Wire Neutral Quantity_CED: '1'
+        CKT_Wire Neutral Size_CEDT: '#12'
+        CKT_Wire Ground Quantity_CED: '1'
+        CKT_Wire Ground Size_CEDT: '#12'
+        CKT_Wire Isolated Ground Quantity_CED: '0'
+        Conduit Fill Percentage_CED: '0.07486'
+        Voltage Drop Percentage_CED: '0.009238'
+        Element_Linker: 'Linked Element Definition ID: SET-135-LED-001, Set Definition
+          ID: SET-135, Host Name: 011_TV_wMount_55_1035022 : Default, Parent_location:
+          -124.986067,-86.417958,7.000000, Location XYZ (ft): -126.010358,-86.574208,14.083333,
+          Rotation (deg): 0.000000, Parent Rotation (deg): 180.000000, Parent ElementId:
+          1951112, LevelId: 30, ElementId: 9353342, FacingOrientation: 0.000000,1.000000,0.000000'
+    - id: SP-LED-002
+      label: 'EF-U_Receptacle_CED : Duplex Wall - Isolated Ground'
+      category: Electrical Fixtures
+      family_name: EF-U_Receptacle_CED
+      type_name: Duplex Wall - Isolated Ground
+      placement_rule:
+        kind: space_anchored
+        x_fraction: 0.5751795231645832
+        y_fraction: 0.001154128009524461
+        wall_role: behind_door
+        distance_from_wall_inches: 0.5000000000019327
+      offsets:
+      - x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 84.0
+        rotation_deg: -90.0
+      parameters:
+        Category: Electrical Fixtures
+        Panel: TXB2
+        Circuit Number: '42'
+        Electrical Data: 120 V/1-180 VA
+        Export to IFC: By Type
+        IfcGUID: 0ArPGEfvX7RPsd8tJ9T9s3
+        Design Option: '-1'
+        Volume: 0.01 CF
+        Phase Demolished: None
+        Phase Created: New Construction
+        Host Id: '-1'
+        Level: Level 1 - Sheet View
+        Workset: CED ELECTRICAL
+        Family and Type: 'EF-U_Receptacle_CED: Duplex Wall - Isolated Ground'
+        Family: EF-U_Receptacle_CED
+        Type: Duplex Wall - Isolated Ground
+        Type Id: '2969623'
+        Offset from Host: 7' - 0"
+        Host: 'Level : Level 1 - Sheet View'
+        Elevation from Level: 7' - 0"
+        Mark: '24339956'
+        Conduit and Wire Size_CEDT: 3/4"C-(2#12 + 1#12G)
+        Conduit Size_CEDT: 3/4"C
+        Conduit Type_CEDT: EMT
+        Wire Material_CEDT: CU
+        Wire Insulation_CEDT: THWN
+        Wire Temparature Rating_CEDT: 75 C
+        Wire Size_CEDT: 2#12 + 1#12G
+        Wattage Input_CED: 0 W
+        FLA Input_CED: 0 A
+        Apparent Load Input_CED: 180 VA
+        Watts_CED: 180 W
+        FLA_CED: 2 A
+        Apparent Load_CED: 180 VA
+        Load Classification_CED: REC
+        Power Factor_CED: '1'
+        Phase_CED: '1'
+        Number of Poles_CED: '1'
+        Voltage_CED: 120 V
+        OCPD Rating_CED: 20 A
+        Ampacity Rating_CED: 20 A
+        Surface Mounted_CED: 'No'
+        Symbol Vertical Offset_CED: 0' - 0"
+        Symbol Horizontal Offset_CED: 0' - 0"
+        Motor Lookup Message_CEDT: Enter value in 'HP Input_CED' to calculate FLC
+          per NEC 430.
+        Motor FLC_CED: 0 A
+        HP Input_CED: '0'
+        Show Symbol Labels_CED: 'Yes'
+        Horizontal Mover Offset: 4' - 0"
+        Vertical Mover Offset: 4' - 0"
+        CKT_Load Name_CEDT: TTBBQ SELLING TVS
+        CKT_Circuit Number_CEDT: '62'
+        CKT_Panel_CEDT: TXB2
+        CKT_Rating_CED: 20 A
+        CKT_Frame_CED: 400 A
+        CKT_Schedule Notes_CEDT: G1
+        CKT_Length_CED: 92' - 4 19/32"
+        Visible in Floor Plan: 'No'
+        Visible in Callout: 'Yes'
+        Schedule Sort Order: '0'
+        ACA Orientation: 90.00°
+        ACA Z Rotation: 0.00°
+        ACA Y: 0' - 0"
+        ACA Z: 0' - 0"
+        Rotate Symbol Label_CED: 'No'
+        Mounting Message: Wall Mounted
+        CKT_Circuit Type_CEDT: BRANCH
+        Circuit Ampacity_CED: 25 A
+        Circuit Load Current_CED: 3 A
+        CKT_Number of Sets_CED: '1'
+        CKT_Number of Wires_CED: '2'
+        CKT_Wire Hot Quantity_CED: '1'
+        CKT_Wire Hot Size_CEDT: '#12'
+        CKT_Wire Neutral Quantity_CED: '1'
+        CKT_Wire Neutral Size_CEDT: '#12'
+        CKT_Wire Ground Quantity_CED: '1'
+        CKT_Wire Ground Size_CEDT: '#12'
+        CKT_Wire Isolated Ground Quantity_CED: '0'
+        Conduit Fill Percentage_CED: '0.07486'
+        Voltage Drop Percentage_CED: '0.009238'
+        Element_Linker: 'Linked Element Definition ID: SET-135-LED-001, Set Definition
+          ID: SET-135, Host Name: 011_TV_wMount_55_1035022 : Default, Parent_location:
+          -130.986067,-86.417958,7.000000, Location XYZ (ft): -132.010358,-86.574208,14.083333,
+          Rotation (deg): 0.000000, Parent Rotation (deg): 180.000000, Parent ElementId:
+          5020212, LevelId: 30, ElementId: 9353344, FacingOrientation: 0.000000,1.000000,0.000000'
+    - id: SP-LED-003
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      category: Electrical Fixtures
+      family_name: EF-U_Receptacle_CED
+      type_name: Duplex Wall
+      placement_rule:
+        kind: space_anchored
+        x_fraction: 0.2957513502496246
+        y_fraction: 1.0
+        wall_role: opposite_door
+        distance_from_wall_inches: -1.1474932800611555
+      offsets:
+      - x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 18.0
+        rotation_deg: -90.00000000000017
+      parameters:
+        Category: Electrical Fixtures
+        Panel: TXB2
+        Circuit Number: '33'
+        Electrical Data: 120 V/1-180 VA
+        Export to IFC: By Type
+        IfcGUID: 0mSDiHkQP5u83zHubJJPA_
+        Design Option: '-1'
+        Volume: 0.01 CF
+        Phase Demolished: None
+        Phase Created: New Construction
+        Host Id: '-1'
+        Level: Level 1 - Sheet View
+        Workset: CED ELECTRICAL
+        Family and Type: 'EF-U_Receptacle_CED: Duplex Wall'
+        Family: EF-U_Receptacle_CED
+        Type: Duplex Wall
+        Type Id: '2969615'
+        Offset from Host: 1' - 6"
+        Host: 'Level : Level 1 - Sheet View'
+        Elevation from Level: 1' - 6"
+        Mark: '24340200'
+        Conduit and Wire Size_CEDT: 3/4"C-(2#12 + 1#12G)
+        Conduit Size_CEDT: 3/4"C
+        Conduit Type_CEDT: EMT
+        Wire Material_CEDT: CU
+        Wire Insulation_CEDT: THWN
+        Wire Temparature Rating_CEDT: 75 C
+        Wire Size_CEDT: 2#12 + 1#12G
+        Wattage Input_CED: 0 W
+        FLA Input_CED: 0 A
+        Apparent Load Input_CED: 180 VA
+        Watts_CED: 180 W
+        FLA_CED: 2 A
+        Apparent Load_CED: 180 VA
+        Load Classification_CED: REC
+        Power Factor_CED: '1'
+        Phase_CED: '1'
+        Number of Poles_CED: '1'
+        Voltage_CED: 120 V
+        OCPD Rating_CED: 20 A
+        Ampacity Rating_CED: 20 A
+        Surface Mounted_CED: 'No'
+        Symbol Vertical Offset_CED: 0' - 0"
+        Symbol Horizontal Offset_CED: 0' - 0"
+        Motor Lookup Message_CEDT: Enter value in 'HP Input_CED' to calculate FLC
+          per NEC 430.
+        Motor FLC_CED: 0 A
+        HP Input_CED: '0'
+        Show Symbol Labels_CED: 'Yes'
+        Horizontal Mover Offset: 4' - 0"
+        Vertical Mover Offset: 4' - 0"
+        CKT_Load Name_CEDT: TTBBQ DINING CONV REC
+        CKT_Circuit Number_CEDT: '32'
+        CKT_Panel_CEDT: TXB2
+        CKT_Rating_CED: 20 A
+        CKT_Frame_CED: 400 A
+        CKT_Length_CED: 144' - 1 23/32"
+        Visible in Floor Plan: 'No'
+        Schedule Sort Order: '0'
+        ACA Orientation: 90.00°
+        ACA Z Rotation: 0.00°
+        ACA Y: 0' - 0"
+        ACA Z: 0' - 0"
+        Rotate Symbol Label_CED: 'No'
+        Mounting Message: Wall Mounted
+        CKT_Circuit Type_CEDT: BRANCH
+        Circuit Ampacity_CED: 25 A
+        Circuit Load Current_CED: 3 A
+        CKT_Number of Sets_CED: '1'
+        CKT_Number of Wires_CED: '2'
+        CKT_Wire Hot Quantity_CED: '1'
+        CKT_Wire Hot Size_CEDT: '#12'
+        CKT_Wire Neutral Quantity_CED: '1'
+        CKT_Wire Neutral Size_CEDT: '#12'
+        CKT_Wire Ground Quantity_CED: '1'
+        CKT_Wire Ground Size_CEDT: '#12'
+        CKT_Wire Isolated Ground Quantity_CED: '0'
+        Conduit Fill Percentage_CED: '0.07486'
+        Voltage Drop Percentage_CED: '0.014414'
+    - id: SP-LED-004
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      category: Electrical Fixtures
+      family_name: EF-U_Receptacle_CED
+      type_name: Duplex Wall
+      placement_rule:
+        kind: space_anchored
+        x_fraction: 0.8528794940488866
+        y_fraction: 1.0
+        wall_role: opposite_door
+        distance_from_wall_inches: -0.647493280060587
+      offsets:
+      - x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 18.0
+        rotation_deg: -90.00000000000017
+      parameters:
+        Category: Electrical Fixtures
+        Panel: TXB2
+        Circuit Number: '33'
+        Electrical Data: 120 V/1-180 VA
+        Export to IFC: By Type
+        IfcGUID: 0mSDiHkQP5u83zHubJJPBd
+        Design Option: '-1'
+        Volume: 0.01 CF
+        Phase Demolished: None
+        Phase Created: New Construction
+        Host Id: '-1'
+        Level: Level 1 - Sheet View
+        Workset: CED ELECTRICAL
+        Family and Type: 'EF-U_Receptacle_CED: Duplex Wall'
+        Family: EF-U_Receptacle_CED
+        Type: Duplex Wall
+        Type Id: '2969615'
+        Offset from Host: 1' - 6"
+        Host: 'Level : Level 1 - Sheet View'
+        Elevation from Level: 1' - 6"
+        Mark: '24340201'
+        Conduit and Wire Size_CEDT: 3/4"C-(2#12 + 1#12G)
+        Conduit Size_CEDT: 3/4"C
+        Conduit Type_CEDT: EMT
+        Wire Material_CEDT: CU
+        Wire Insulation_CEDT: THWN
+        Wire Temparature Rating_CEDT: 75 C
+        Wire Size_CEDT: 2#12 + 1#12G
+        Wattage Input_CED: 0 W
+        FLA Input_CED: 0 A
+        Apparent Load Input_CED: 180 VA
+        Watts_CED: 180 W
+        FLA_CED: 2 A
+        Apparent Load_CED: 180 VA
+        Load Classification_CED: REC
+        Power Factor_CED: '1'
+        Phase_CED: '1'
+        Number of Poles_CED: '1'
+        Voltage_CED: 120 V
+        OCPD Rating_CED: 20 A
+        Ampacity Rating_CED: 20 A
+        Surface Mounted_CED: 'No'
+        Symbol Vertical Offset_CED: 0' - 0"
+        Symbol Horizontal Offset_CED: 0' - 0"
+        Motor Lookup Message_CEDT: Enter value in 'HP Input_CED' to calculate FLC
+          per NEC 430.
+        Motor FLC_CED: 0 A
+        HP Input_CED: '0'
+        Show Symbol Labels_CED: 'Yes'
+        Horizontal Mover Offset: 4' - 0"
+        Vertical Mover Offset: 4' - 0"
+        CKT_Load Name_CEDT: TTBBQ DINING CONV REC
+        CKT_Circuit Number_CEDT: '32'
+        CKT_Panel_CEDT: TXB2
+        CKT_Rating_CED: 20 A
+        CKT_Frame_CED: 400 A
+        CKT_Length_CED: 144' - 1 23/32"
+        Visible in Floor Plan: 'No'
+        Schedule Sort Order: '0'
+        ACA Orientation: 90.00°
+        ACA Z Rotation: 0.00°
+        ACA Y: 0' - 0"
+        ACA Z: 0' - 0"
+        Rotate Symbol Label_CED: 'No'
+        Mounting Message: Wall Mounted
+        CKT_Circuit Type_CEDT: BRANCH
+        Circuit Ampacity_CED: 25 A
+        Circuit Load Current_CED: 3 A
+        CKT_Number of Sets_CED: '1'
+        CKT_Number of Wires_CED: '2'
+        CKT_Wire Hot Quantity_CED: '1'
+        CKT_Wire Hot Size_CEDT: '#12'
+        CKT_Wire Neutral Quantity_CED: '1'
+        CKT_Wire Neutral Size_CEDT: '#12'
+        CKT_Wire Ground Quantity_CED: '1'
+        CKT_Wire Ground Size_CEDT: '#12'
+        CKT_Wire Isolated Ground Quantity_CED: '0'
+        Conduit Fill Percentage_CED: '0.07486'
+        Voltage Drop Percentage_CED: '0.014414'
+    - id: SP-LED-005
+      label: 'EF-U_Receptacle_CED : Duplex Wall - GFCI'
+      category: Electrical Fixtures
+      family_name: EF-U_Receptacle_CED
+      type_name: Duplex Wall - GFCI
+      placement_rule:
+        kind: space_anchored
+        x_fraction: 0.9713584957389203
+        y_fraction: 0.09011582007005271
+        wall_role: right_of_door
+        distance_from_wall_inches: 24.625000000000625
+      offsets:
+      - x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 54.0
+        rotation_deg: -90.00000000000045
+      parameters:
+        Category: Electrical Fixtures
+        Panel: TXB2
+        Circuit Number: '35'
+        Electrical Data: 120 V/1-180 VA
+        Export to IFC: By Type
+        IfcGUID: 0mSDiHkQP5u83zHubJJPER
+        Design Option: '-1'
+        Volume: 0.01 CF
+        Phase Demolished: None
+        Phase Created: New Construction
+        Host Id: '-1'
+        Level: Level 1 - Sheet View
+        Workset: CED ELECTRICAL
+        Family and Type: 'EF-U_Receptacle_CED: Duplex Wall - GFCI'
+        Family: EF-U_Receptacle_CED
+        Type: Duplex Wall - GFCI
+        Type Id: '2969621'
+        Offset from Host: 4' - 6"
+        Host: 'Level : Level 1 - Sheet View'
+        Elevation from Level: 4' - 6"
+        Mark: '24340202'
+        Conduit and Wire Size_CEDT: 3/4"C-(2#12 + 1#12G)
+        Conduit Size_CEDT: 3/4"C
+        Conduit Type_CEDT: EMT
+        Wire Material_CEDT: CU
+        Wire Insulation_CEDT: THWN
+        Wire Temparature Rating_CEDT: 75 C
+        Wire Size_CEDT: 2#12 + 1#12G
+        Wattage Input_CED: 0 W
+        FLA Input_CED: 0 A
+        Apparent Load Input_CED: 180 VA
+        Watts_CED: 180 W
+        FLA_CED: 2 A
+        Apparent Load_CED: 180 VA
+        Load Classification_CED: REC
+        Power Factor_CED: '1'
+        Phase_CED: '1'
+        Number of Poles_CED: '1'
+        Voltage_CED: 120 V
+        OCPD Rating_CED: 20 A
+        Ampacity Rating_CED: 20 A
+        Surface Mounted_CED: 'No'
+        Symbol Vertical Offset_CED: 0' - 0"
+        Symbol Horizontal Offset_CED: 0' - 0"
+        Motor Lookup Message_CEDT: Enter value in 'HP Input_CED' to calculate FLC
+          per NEC 430.
+        Motor FLC_CED: 0 A
+        HP Input_CED: '0'
+        Show Symbol Labels_CED: 'Yes'
+        Horizontal Mover Offset: 4' - 0"
+        Vertical Mover Offset: 4' - 0"
+        CKT_Load Name_CEDT: TTBBQ CONVNIENCE REC
+        CKT_Circuit Number_CEDT: '30'
+        CKT_Panel_CEDT: TXB2
+        CKT_Rating_CED: 20 A
+        CKT_Frame_CED: 400 A
+        CKT_Length_CED: 114' - 9 7/8"
+        Visible in Floor Plan: 'No'
+        Schedule Sort Order: '0'
+        ACA Orientation: 90.00°
+        ACA Z Rotation: 0.00°
+        ACA Y: 0' - 0"
+        ACA Z: 0' - 0"
+        Rotate Symbol Label_CED: 'No'
+        Mounting Message: Wall Mounted
+        CKT_Circuit Type_CEDT: BRANCH
+        Circuit Ampacity_CED: 25 A
+        Circuit Load Current_CED: 2 A
+        CKT_Number of Sets_CED: '1'
+        CKT_Number of Wires_CED: '2'
+        CKT_Wire Hot Quantity_CED: '1'
+        CKT_Wire Hot Size_CEDT: '#12'
+        CKT_Wire Neutral Quantity_CED: '1'
+        CKT_Wire Neutral Size_CEDT: '#12'
+        CKT_Wire Ground Quantity_CED: '1'
+        CKT_Wire Ground Size_CEDT: '#12'
+        CKT_Wire Isolated Ground Quantity_CED: '0'
+        Conduit Fill Percentage_CED: '0.07486'
+        Voltage Drop Percentage_CED: '0.005741'
+    - id: SP-LED-006
+      label: 'EF-U_Receptacle_CED : Duplex Wall'
+      category: Electrical Fixtures
+      family_name: EF-U_Receptacle_CED
+      type_name: Duplex Wall
+      placement_rule:
+        kind: space_anchored
+        x_fraction: 0.9657008509351668
+        y_fraction: 1.0
+        wall_role: opposite_door
+        distance_from_wall_inches: -0.6474932800610986
+      offsets:
+      - x_inches: 0.0
+        y_inches: 0.0
+        z_inches: 120.0
+        rotation_deg: -90.00000000000017
+      parameters:
+        Category: Electrical Fixtures
+        Panel: TXB2
+        Circuit Number: '39'
+        Electrical Data: 120 V/1-180 VA
+        Export to IFC: By Type
+        IfcGUID: 0mSDiHkQP5u83zHubJJP1J
+        Design Option: '-1'
+        Volume: 0.01 CF
+        Phase Demolished: None
+        Phase Created: New Construction
+        Host Id: '-1'
+        Level: Level 1 - Sheet View
+        Workset: CED ELECTRICAL
+        Family and Type: 'EF-U_Receptacle_CED: Duplex Wall'
+        Family: EF-U_Receptacle_CED
+        Type: Duplex Wall
+        Type Id: '2969615'
+        Offset from Host: 10' - 0"
+        Host: 'Level : Level 1 - Sheet View'
+        Elevation from Level: 10' - 0"
+        Mark: '24340205'
+        Conduit and Wire Size_CEDT: 3/4"C-(2#12 + 1#12G)
+        Conduit Size_CEDT: 3/4"C
+        Conduit Type_CEDT: EMT
+        Wire Material_CEDT: CU
+        Wire Insulation_CEDT: THWN
+        Wire Temparature Rating_CEDT: 75 C
+        Wire Size_CEDT: 2#12 + 1#12G
+        Wattage Input_CED: 0 W
+        FLA Input_CED: 0 A
+        Apparent Load Input_CED: 180 VA
+        Watts_CED: 180 W
+        FLA_CED: 2 A
+        Apparent Load_CED: 180 VA
+        Load Classification_CED: REC
+        Power Factor_CED: '1'
+        Phase_CED: '1'
+        Number of Poles_CED: '1'
+        Voltage_CED: 120 V
+        OCPD Rating_CED: 20 A
+        Ampacity Rating_CED: 20 A
+        Surface Mounted_CED: 'No'
+        Symbol Vertical Offset_CED: 0' - 0"
+        Symbol Horizontal Offset_CED: 0' - 0"
+        Motor Lookup Message_CEDT: Enter value in 'HP Input_CED' to calculate FLC
+          per NEC 430.
+        Motor FLC_CED: 0 A
+        HP Input_CED: '0'
+        Show Symbol Labels_CED: 'Yes'
+        Horizontal Mover Offset: 4' - 0"
+        Vertical Mover Offset: 4' - 0"
+        CKT_Load Name_CEDT: TTBBQ DINING SIGNAGE
+        CKT_Circuit Number_CEDT: '34'
+        CKT_Panel_CEDT: TXB2
+        CKT_Rating_CED: 20 A
+        CKT_Frame_CED: 400 A
+        CKT_Length_CED: 146' - 0 23/32"
+        Visible in Floor Plan: 'No'
+        Schedule Sort Order: '0'
+        ACA Orientation: 90.00°
+        ACA Z Rotation: 0.00°
+        ACA Y: 0' - 0"
+        ACA Z: 0' - 0"
+        Rotate Symbol Label_CED: 'No'
+        Mounting Message: Wall Mounted
+        CKT_Circuit Type_CEDT: BRANCH
+        Circuit Ampacity_CED: 25 A
+        Circuit Load Current_CED: 4 A
+        CKT_Number of Sets_CED: '1'
+        CKT_Number of Wires_CED: '2'
+        CKT_Wire Hot Quantity_CED: '1'
+        CKT_Wire Hot Size_CEDT: '#12'
+        CKT_Wire Neutral Quantity_CED: '1'
+        CKT_Wire Neutral Size_CEDT: '#12'
+        CKT_Wire Ground Quantity_CED: '1'
+        CKT_Wire Ground Size_CEDT: '#12'
+        CKT_Wire Isolated Ground Quantity_CED: '0'
+        Conduit Fill Percentage_CED: '0.07486'
+        Voltage Drop Percentage_CED: '0.019475'

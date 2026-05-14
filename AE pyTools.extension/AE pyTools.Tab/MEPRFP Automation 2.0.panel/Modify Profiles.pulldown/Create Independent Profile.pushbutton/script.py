@@ -35,18 +35,8 @@ def main():
         forms.alert("No active document.", title=TITLE)
         return
 
-    if not shared_params.is_element_linker_bound(doc):
-        if not forms.confirm(
-            "Bind the MEPRFP 2.0 Element_Linker shared parameter now?",
-            title=TITLE,
-        ):
-            return
-        try:
-            with revit.Transaction("Bind MEPRFP Element_Linker", doc=doc):
-                shared_params.ensure_element_linker_bound(doc)
-        except shared_params.SharedParamError as exc:
-            forms.alert("Failed to bind shared parameter:\n\n{}".format(exc), title=TITLE)
-            return
+    if not shared_params.prompt_and_bind(doc, forms, TITLE):
+        return
 
     profile_data = active_yaml.load_active_data(doc)
 

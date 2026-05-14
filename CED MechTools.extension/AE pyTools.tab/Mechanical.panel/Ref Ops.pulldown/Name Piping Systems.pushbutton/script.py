@@ -3,6 +3,7 @@ __title__ = "Name Piping Systems"
 __doc__ = "Place tags/text notes on pipes based on connected pipe traversal."
 
 import math
+import os
 
 import clr
 from Autodesk.Revit.UI.Selection import ObjectType, ISelectionFilter
@@ -27,10 +28,18 @@ from System.Windows.Forms import (
 from System.Drawing import Point, Size
 from pyrevit import revit, DB, forms, script
 
+from Snippets import identity_mark as _id_mark
+
 
 doc = revit.doc
 uidoc = revit.uidoc
 logger = script.get_logger()
+
+_REFOPS_SP_FILE = os.path.normpath(
+    os.path.join(
+        os.path.dirname(__file__), "..", "_resources", "RefOps_SharedParams.txt"
+    )
+)
 
 
 PIPE_CATEGORY_IDS = set()
@@ -1114,10 +1123,7 @@ def _choose_trunk(pipe, candidates):
 def _get_identity_mark(elem):
     if elem is None:
         return None
-    try:
-        param = elem.LookupParameter("Identity Mark")
-    except Exception:
-        param = None
+    param = _id_mark.lookup_identity_param(elem)
     if not param or not param.HasValue:
         return None
     try:
@@ -1508,10 +1514,7 @@ def _set_identity_marks(label_map, pipe_map, overwrite_existing=True):
             pipe = pipe_map.get(pid)
             if pipe is None:
                 continue
-            try:
-                param = pipe.LookupParameter("Identity Mark")
-            except Exception:
-                param = None
+            param = _id_mark.lookup_identity_param(pipe)
             if not param or param.IsReadOnly:
                 continue
             if not overwrite_existing and _get_identity_mark(pipe):
@@ -2336,6 +2339,9 @@ def main():
     active_view = revit.active_view
     if active_view.IsTemplate:
         forms.alert("Active view is a template. Open a working view first.", exitscript=True)
+
+    if not _id_mark.ensure_bound(doc, forms, "Name Piping Systems", _REFOPS_SP_FILE):
+        return
 
     options = _prompt_naming_options()
     if options is None:

@@ -63,6 +63,18 @@ def apply_plans(doc, plans, action="Place Space Elements (MEPRFP 2.0)"):
     if not plans:
         return result
 
+    # Drain any space_anchored anchor-resolution diagnostics that
+    # accumulated during the dry-run collect (the workflow calls
+    # ``expand_led_placements`` to compute world_pt for every plan).
+    # We pull them BEFORE the apply loop so we capture the values the
+    # placement is actually about to use, not anything the apply loop
+    # might add.
+    try:
+        for line in _placement.drain_space_anchored_diagnostics():
+            result.warnings.append(line)
+    except Exception:
+        pass
+
     with revit.Transaction(action, doc=doc):
         for plan in plans:
             try:
@@ -112,6 +124,77 @@ def _apply_one(doc, plan, result):
     target_pt = XYZ(plan.world_pt[0], plan.world_pt[1], plan.world_pt[2])
     level_id = _level_id_for_space(plan)
     level = doc.GetElement(ElementId(int(level_id))) if level_id else None
+
+    # ---------------------------------------------------------------
+    # Keynote / annotation branch — view-based placement.
+    #
+    # Keynote symbols (family ``GA_Keynote Symbol_CED``) are 2D
+    # annotations bound to a view, not 3D family instances. They MUST
+    # be created via the view-aware ``NewFamilyInstance(point, symbol,
+    # view)`` overload — the 3-arg overload below would place a
+    # phantom instance in model space at the level, which is invisible
+    # in plan views and shows up at the wrong Z in 3D. We route any
+    # LED flagged as ``is_keynote: true`` (set by the capture engine)
+    # or whose family matches the keynote family name through this
+    # path, using ``doc.ActiveView`` as the host view.
+    # ---------------------------------------------------------------
+    is_keynote_led = False
+    if plan.led is not None:
+        try:
+            is_keynote_led = bool(plan.led._data.get("is_keynote"))
+        except Exception:
+            is_keynote_led = False
+    if not is_keynote_led and family_name == "GA_Keynote Symbol_CED":
+        is_keynote_led = True
+
+    if is_keynote_led:
+        active_view = doc.ActiveView
+        # The view-aware overload needs a 2D-ish point on the view's
+        # plane. Snap target_pt.Z to the space's level elevation so
+        # the keynote lands on the right plan and not at an
+        # arbitrary world Z carried from the captured XY.
+        if level is not None:
+            try:
+                level_z = float(level.Elevation or 0.0)
+            except Exception:
+                level_z = target_pt.Z
+            kn_pt = XYZ(target_pt.X, target_pt.Y, level_z)
+        else:
+            kn_pt = XYZ(target_pt.X, target_pt.Y, 0.0)
+        try:
+            inst = doc.Create.NewFamilyInstance(kn_pt, symbol, active_view)
+        except Exception as exc:
+            result.failed.append(
+                (plan, "create_failed", {"message": str(exc), **info})
+            )
+            return
+        if inst is None:
+            result.failed.append((plan, "create_failed", info))
+            return
+        # Write captured params (Keynote Value, Keynote Description, etc.).
+        led_params = plan.led.parameters if plan.led is not None else None
+        if isinstance(led_params, dict) and led_params:
+            try:
+                _placement._apply_static_parameters(
+                    inst, led_params, warnings=result.warnings,
+                )
+            except Exception as exc:
+                result.warnings.append(
+                    "Parameter write failed for keynote ElementId {}: {}".format(
+                        inst.Id, exc
+                    )
+                )
+        # Stamp the Element_Linker for lineage.
+        try:
+            _stamp_linker(inst, plan)
+        except Exception as exc:
+            result.warnings.append(
+                "Element_Linker write failed for keynote ElementId {}: {}".format(
+                    inst.Id, exc
+                )
+            )
+        result.placed.append((plan, inst))
+        return
 
     # Match the equipment-side ``placement._place_fixture`` byte-for-
     # byte: 3-arg NewFamilyInstance, then rotate, then write the FULL

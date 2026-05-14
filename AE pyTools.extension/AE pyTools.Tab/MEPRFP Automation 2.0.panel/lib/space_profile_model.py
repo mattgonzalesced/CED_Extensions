@@ -76,6 +76,37 @@ KIND_WALL_RIGHT_OF_DOOR = "wall_right_of_door"
 KIND_WALL_LEFT_OF_DOOR = "wall_left_of_door"
 KIND_CORNER_FURTHEST_FROM_DOOR = "corner_furthest_from_door"
 KIND_CORNER_CLOSEST_TO_DOOR = "corner_closest_to_door"
+# ``wall_anchored`` (deprecated capture default) — stored a single
+# fraction along the closest wall. Kept for backward compatibility:
+# any existing data with this kind still resolves via the old
+# along-wall interpolation. New captures use ``space_anchored``
+# instead.
+KIND_WALL_ANCHORED = "wall_anchored"
+# ``space_anchored`` is the current capture-driven kind. Position is
+# stored as two fractions (``x_fraction``, ``y_fraction``) of the
+# space's bounding box: a fixture at the (7', 5') mark in a 21' x
+# 15' space stores (0.333, 0.333) and lands at (6', 5') in an 18' x
+# 15' space, or (4.5', 4') in a 13.5' x 12' space — scaling with
+# BOTH room dimensions, not just the wall length. ``wall_role`` is
+# preserved on the rule purely for ROTATION resolution (so a
+# captured wall-mounted fixture keeps facing into the room when
+# the target space's wall roles map onto different cardinal
+# directions). Door-dependent for the same reason.
+KIND_SPACE_ANCHORED = "space_anchored"
+
+# Wall-role tokens used inside ``placement_rule.wall_role`` for the
+# wall_anchored kind.
+WALL_ROLE_OPPOSITE_DOOR = "opposite_door"
+WALL_ROLE_RIGHT_OF_DOOR = "right_of_door"
+WALL_ROLE_LEFT_OF_DOOR = "left_of_door"
+WALL_ROLE_BEHIND_DOOR = "behind_door"
+
+WALL_ROLES = (
+    WALL_ROLE_OPPOSITE_DOOR,
+    WALL_ROLE_RIGHT_OF_DOOR,
+    WALL_ROLE_LEFT_OF_DOOR,
+    WALL_ROLE_BEHIND_DOOR,
+)
 
 PLACEMENT_KINDS = (
     KIND_CENTER,
@@ -85,6 +116,8 @@ PLACEMENT_KINDS = (
     KIND_WALL_LEFT_OF_DOOR,
     KIND_CORNER_FURTHEST_FROM_DOOR,
     KIND_CORNER_CLOSEST_TO_DOOR,
+    KIND_WALL_ANCHORED,
+    KIND_SPACE_ANCHORED,
 )
 
 # Every kind that needs a reference door to resolve. The placement
@@ -97,12 +130,16 @@ DOOR_DEPENDENT_KINDS = frozenset({
     KIND_WALL_LEFT_OF_DOOR,
     KIND_CORNER_FURTHEST_FROM_DOOR,
     KIND_CORNER_CLOSEST_TO_DOOR,
+    KIND_WALL_ANCHORED,
+    KIND_SPACE_ANCHORED,
 })
 
 WALL_KINDS = frozenset({
     KIND_WALL_OPPOSITE_DOOR,
     KIND_WALL_RIGHT_OF_DOOR,
     KIND_WALL_LEFT_OF_DOOR,
+    KIND_WALL_ANCHORED,
+    KIND_SPACE_ANCHORED,
 })
 
 CORNER_KINDS = frozenset({
@@ -184,6 +221,107 @@ class PlacementRule(_DictBacked):
     @door_offset_y_inches.setter
     def door_offset_y_inches(self, value):
         self.door_offset_inches["y"] = float(value or 0.0)
+
+    # ----- wall_anchored fields -----------------------------------
+    # Used only when ``kind == wall_anchored``. Stored on the rule
+    # so the placement engine can resolve "which wall" (wall_role)
+    # and "where along it" (position_along_wall, 0.0..1.0) without
+    # the LED needing per-instance offsets in absolute inches.
+
+    @property
+    def wall_role(self):
+        return _str_or_none(self._data.get("wall_role")) or WALL_ROLE_OPPOSITE_DOOR
+
+    @wall_role.setter
+    def wall_role(self, value):
+        text = _str_or_none(value) or WALL_ROLE_OPPOSITE_DOOR
+        self._data["wall_role"] = text
+
+    @property
+    def position_along_wall(self):
+        """Fraction along the chosen wall: 0.0 at the start, 1.0 at
+        the end. Stored as a fraction (not absolute inches) so a
+        captured 7'/21' position scales to 6'/18' in another project.
+        Defaults to 0.5 (midpoint) when missing."""
+        v = self._data.get("position_along_wall")
+        if v is None:
+            return 0.5
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return 0.5
+
+    @position_along_wall.setter
+    def position_along_wall(self, value):
+        try:
+            self._data["position_along_wall"] = float(value)
+        except (ValueError, TypeError):
+            self._data["position_along_wall"] = 0.5
+
+    @property
+    def distance_from_wall_inches(self):
+        """Perpendicular distance inward from the wall surface, in
+        inches. Used by wall-mounted fixtures that need a small
+        offset from the bbox edge (cover plate thickness, etc.)."""
+        v = self._data.get("distance_from_wall_inches")
+        if v is None:
+            return 0.0
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return 0.0
+
+    @distance_from_wall_inches.setter
+    def distance_from_wall_inches(self, value):
+        try:
+            self._data["distance_from_wall_inches"] = float(value)
+        except (ValueError, TypeError):
+            self._data["distance_from_wall_inches"] = 0.0
+
+    # ----- space_anchored fields ----------------------------------
+    # Used by ``kind == space_anchored``. Stored as two fractions
+    # of the space's bounding box (0..1 in each axis). At placement
+    # time:
+    #   target_x = bbox.xmin + x_fraction * (bbox.xmax - bbox.xmin)
+    #   target_y = bbox.ymin + y_fraction * (bbox.ymax - bbox.ymin)
+    # so a fixture at the (7', 5') mark of a 21' x 15' space
+    # (0.333, 0.333) lands at (6', 5') in an 18' x 15' space, and
+    # (4.5', 4') in a 13.5' x 12' space — scales with both room
+    # dimensions, not just one wall.
+
+    @property
+    def x_fraction(self):
+        v = self._data.get("x_fraction")
+        if v is None:
+            return 0.5
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return 0.5
+
+    @x_fraction.setter
+    def x_fraction(self, value):
+        try:
+            self._data["x_fraction"] = float(value)
+        except (ValueError, TypeError):
+            self._data["x_fraction"] = 0.5
+
+    @property
+    def y_fraction(self):
+        v = self._data.get("y_fraction")
+        if v is None:
+            return 0.5
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return 0.5
+
+    @y_fraction.setter
+    def y_fraction(self, value):
+        try:
+            self._data["y_fraction"] = float(value)
+        except (ValueError, TypeError):
+            self._data["y_fraction"] = 0.5
 
     def is_valid(self):
         return is_valid_placement_kind(self.kind)

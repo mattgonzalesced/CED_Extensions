@@ -86,13 +86,14 @@ _LIB_MODULE_NAMES = frozenset({
     "space_apply",
     "space_workflow",
     "space_annotation_workflow",
-    # ``space_door_picker`` is intentionally NOT purged for the same
-    # reason ``circuit_apply`` isn't: it defines an
-    # ``ISelectionFilter`` subclass with ``__namespace__`` set, which
-    # pythonnet 3 registers as a generated CLR type. Re-importing
-    # would re-run the class statement and raise
-    # ``"Duplicate type name within an assembly"``. The module's
-    # ``_DoorOnlyFilter`` survives across runs by design.
+    "space_capture_workflow",
+    # ``space_door_picker`` IS purged now — the ``ISelectionFilter``
+    # subclass that caused the "Duplicate type name within an
+    # assembly" error has been moved to ``space_door_filter``, which
+    # is intentionally NOT in this list so its CLR type stays
+    # registered across runs. Everything else in the picker can
+    # iterate freely.
+    "space_door_picker",
     "revit_symbol_index",
     "classify_spaces_window",
     "manage_space_buckets_window",

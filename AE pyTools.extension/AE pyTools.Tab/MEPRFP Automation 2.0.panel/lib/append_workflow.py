@@ -28,23 +28,7 @@ import shared_params
 
 
 def _ensure_param_bound(doc, forms, title):
-    if shared_params.is_element_linker_bound(doc):
-        return True
-    if not forms.confirm(
-        "Bind the MEPRFP 2.0 Element_Linker shared parameter now?",
-        title=title,
-    ):
-        return False
-    try:
-        with revit.Transaction("Bind MEPRFP Element_Linker", doc=doc):
-            shared_params.ensure_element_linker_bound(doc)
-    except shared_params.SharedParamError as exc:
-        forms.alert(
-            "Failed to bind shared parameter:\n\n{}".format(exc),
-            title=title,
-        )
-        return False
-    return True
+    return shared_params.prompt_and_bind(doc, forms, title)
 
 
 def _collect_parent_param_names(parent_ref):

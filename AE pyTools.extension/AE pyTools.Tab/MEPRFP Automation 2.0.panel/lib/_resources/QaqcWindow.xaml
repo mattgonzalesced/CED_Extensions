@@ -17,19 +17,51 @@
     </TextBlock>
 
     <DockPanel Grid.Row="1" Margin="0,0,0,8">
-      <StackPanel x:Name="CategoryFilterPanel" Orientation="Horizontal"
-                  DockPanel.Dock="Left"/>
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+      <StackPanel Orientation="Horizontal" DockPanel.Dock="Right"
+                  VerticalAlignment="Top">
         <TextBlock x:Name="SummaryLabel" VerticalAlignment="Center"
                    Foreground="Gray" Margin="0,0,12,0"/>
         <Button x:Name="RefreshButton" Content="Refresh" Width="100"/>
       </StackPanel>
+      <!-- WrapPanel instead of horizontal StackPanel so category
+           filter checkboxes flow onto a second row when the window
+           isn't wide enough to fit them all on one line. -->
+      <WrapPanel x:Name="CategoryFilterPanel" Orientation="Horizontal"/>
     </DockPanel>
 
     <GroupBox Grid.Row="2" Header="Findings" Padding="8">
-      <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel x:Name="FindingsPanel"/>
-      </ScrollViewer>
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,6">
+          <!-- Top row: header + add/clear buttons + live match count. -->
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Left" Text="Filters:"
+                       VerticalAlignment="Center" Margin="0,0,8,0"
+                       FontWeight="Bold"/>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+              <Button x:Name="AddFilterButton" Content="+ Add filter"
+                      Width="100" Margin="0,0,6,0"
+                      ToolTip="Add another filter rule. Multiple rules combine with AND."/>
+              <Button x:Name="ClearFiltersButton" Content="Clear all"
+                      Width="80"
+                      ToolTip="Remove every filter rule and show all findings."/>
+            </StackPanel>
+            <TextBlock x:Name="MatchCountLabel" VerticalAlignment="Center"
+                       Foreground="Gray"/>
+          </DockPanel>
+          <!-- Dynamic list of filter rule rows. Each row carries an
+               operator dropdown (Contains / Does not contain) + a
+               substring TextBox + a remove (×) button. -->
+          <StackPanel x:Name="FilterRulesPanel" Orientation="Vertical"
+                      Margin="0,4,0,0"/>
+        </StackPanel>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+          <StackPanel x:Name="FindingsPanel"/>
+        </ScrollViewer>
+      </Grid>
     </GroupBox>
 
     <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">

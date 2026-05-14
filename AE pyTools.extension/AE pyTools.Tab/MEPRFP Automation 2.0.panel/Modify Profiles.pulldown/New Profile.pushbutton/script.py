@@ -105,20 +105,12 @@ def main():
         forms.alert("No active document.", title=TITLE)
         return
 
-    # Shared parameter binding (one-time per project).
-    if not shared_params.is_element_linker_bound(doc):
-        if not forms.confirm(
-            "The MEPRFP 2.0 Element_Linker shared parameter is not bound in this project.\n"
-            "Bind it now? (required for capture to write back to elements)",
-            title=TITLE,
-        ):
-            return
-        try:
-            with revit.Transaction("Bind MEPRFP Element_Linker", doc=doc):
-                shared_params.ensure_element_linker_bound(doc)
-        except shared_params.SharedParamError as exc:
-            forms.alert("Failed to bind shared parameter:\n\n{}".format(exc), title=TITLE)
-            return
+    # Shared parameter binding (one-time per project; silent extends).
+    if not shared_params.prompt_and_bind(
+        doc, forms, TITLE,
+        reason="required for capture to write back to elements",
+    ):
+        return
 
     # Workflow overview before any picks.
     if not forms.confirm(

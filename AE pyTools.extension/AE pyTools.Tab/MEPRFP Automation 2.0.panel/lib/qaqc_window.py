@@ -29,13 +29,22 @@ from System.Windows.Controls import (  # noqa: E402
     Button,
     CheckBox,
     ColumnDefinition,
+    ComboBox,
+    ComboBoxItem,
     Grid,
     TextBlock,
+    TextBox,
 )
 from System.Windows.Media import Brushes  # noqa: E402
 
-from Autodesk.Revit.DB import ElementId, Reference, XYZ  # noqa: E402
+from Autodesk.Revit.DB import (  # noqa: E402
+    ElementId,
+    Reference,
+    Transform,
+    XYZ,
+)
 
+import placement as _placement
 import qaqc_workflow as _qa
 import wpf as _wpf
 
@@ -188,6 +197,22 @@ _XAML_PATH = os.path.join(
 )
 
 
+class _FilterRule(object):
+    """One row of the multi-filter UI.
+
+    ``operator`` is either ``"contains"`` or ``"does_not_contain"``.
+    ``text`` is the substring to match (case-insensitive). An empty
+    ``text`` makes the rule a no-op — the filter pass skips it rather
+    than treating it as "hide everything".
+    """
+
+    __slots__ = ("operator", "text")
+
+    def __init__(self, operator="contains", text=""):
+        self.operator = operator
+        self.text = text or ""
+
+
 class QaqcController(object):
 
     def __init__(self, doc, profile_data, uidoc=None):
@@ -196,9 +221,19 @@ class QaqcController(object):
         self.profile_data = profile_data
         self._cat_filter_checks = {}
         self._handlers = []  # retain refs against pythonnet GC
+        # Cache the last QaqcResult so the filter rules can re-render
+        # without re-running the audit.
+        self._last_result = None
+        # List of ``_FilterRule`` instances. Empty = no filtering.
+        # Multiple rules combine with AND: every "contains" rule must
+        # match, every "does_not_contain" must not match.
+        self._filter_rules = []
+        self._filter_row_handlers = []
         self.window = _wpf.load_xaml(_XAML_PATH)
         self._lookup_controls()
         self._populate_category_filters()
+        # Start with one empty filter row so the user sees the shape.
+        self._add_filter_rule()
         self._wire_events()
         self._set_status("Click Refresh to run the audit.")
 
@@ -214,6 +249,10 @@ class QaqcController(object):
         self.findings_panel = f("FindingsPanel")
         self.status_label = f("StatusLabel")
         self.close_btn = f("CloseButton")
+        self.filter_rules_panel = f("FilterRulesPanel")
+        self.add_filter_btn = f("AddFilterButton")
+        self.clear_filters_btn = f("ClearFiltersButton")
+        self.match_count_label = f("MatchCountLabel")
 
     def _populate_category_filters(self):
         self.cat_filter_panel.Children.Clear()
@@ -232,6 +271,21 @@ class QaqcController(object):
         self._h_close = self._delegate("close", lambda s, e: self.window.Close())
         self.refresh_btn.Click += self._h_refresh
         self.close_btn.Click += self._h_close
+        self._h_add_filter = self._delegate(
+            "add-filter", lambda s, e: self._on_add_filter(),
+        )
+        self._h_clear_filters = self._delegate(
+            "clear-filters", lambda s, e: self._on_clear_filters(),
+        )
+        self.add_filter_btn.Click += self._h_add_filter
+        self.clear_filters_btn.Click += self._h_clear_filters
+
+    def _safe(self, fn, label):
+        try:
+            fn()
+        except Exception as exc:
+            self._set_status("[{}] error: {}".format(label, exc))
+            raise
 
     def _delegate(self, label, fn):
         def wrapped(s, e):
@@ -255,9 +309,12 @@ class QaqcController(object):
             self._set_status("Select at least one category.")
             self.findings_panel.Children.Clear()
             self.summary_label.Text = ""
+            self.match_count_label.Text = ""
+            self._last_result = None
             return
         self._set_status("Auditing...")
         result = _qa.run_audit(self.doc, self.profile_data, categories=cats)
+        self._last_result = result
         self._render(result)
         parts = []
         for cat in _qa.CAT_ALL:
@@ -267,7 +324,8 @@ class QaqcController(object):
         if parts:
             self.summary_label.Text = "Findings: " + ", ".join(parts)
             self._set_status(
-                "{} finding(s). Use the row buttons to Select / Zoom / Fix.".format(
+                "{} finding(s). Use the row buttons to Select / Zoom / "
+                "Fix. Cat G rows have a Place button.".format(
                     len(result.findings)
                 )
             )
@@ -275,12 +333,201 @@ class QaqcController(object):
             self.summary_label.Text = "Clean — no findings."
             self._set_status("Audit complete; nothing to fix.")
 
+    # ----- filter rules ---------------------------------------------
+    #
+    # A filter rule is one ``(operator, text)`` pair. Operators are
+    # ``"contains"`` and ``"does_not_contain"`` — both substring
+    # matches (case-insensitive) against the row's searchable text
+    # fields. Empty text means the rule is ignored, so adding a row
+    # and leaving it blank doesn't accidentally hide everything.
+    #
+    # Multiple rules combine with AND. Examples:
+    #   * "Contains: HEB"               + "Does not contain: vendor"
+    #     → rows that mention HEB but not "vendor"
+    #   * "Contains: Soda_Merch"        + "Contains: id 92"
+    #     → rows that mention Soda_Merch AND an id starting with 92
+
+    def _on_add_filter(self):
+        self._add_filter_rule()
+        self._refilter("Added filter rule.")
+
+    def _on_clear_filters(self):
+        self._filter_rules = []
+        # Keep one blank row visible so the panel doesn't look broken.
+        self._add_filter_rule()
+        self._refilter("Cleared filter rules.")
+
+    def _add_filter_rule(self, operator="contains", text=""):
+        rule = _FilterRule(operator, text)
+        self._filter_rules.append(rule)
+        self._render_filter_rules()
+
+    def _remove_filter_rule(self, rule):
+        if rule in self._filter_rules:
+            self._filter_rules.remove(rule)
+        if not self._filter_rules:
+            # Always keep one row visible.
+            self._add_filter_rule()
+        else:
+            self._render_filter_rules()
+        self._refilter()
+
+    def _render_filter_rules(self):
+        """Rebuild the dynamic filter-rule rows from ``self._filter_rules``."""
+        self.filter_rules_panel.Children.Clear()
+        # Releasing prior row handlers lets pythonnet GC them.
+        self._filter_row_handlers = []
+        for rule in self._filter_rules:
+            self.filter_rules_panel.Children.Add(self._build_filter_row(rule))
+
+    def _build_filter_row(self, rule):
+        grid = Grid()
+        grid.Margin = Thickness(0, 2, 0, 2)
+        # 3 columns: operator combobox (140), text box (stretch),
+        # remove button (36).
+        col_widths = (
+            GridLength(140),
+            GridLength(1.0, GridUnitType.Star),
+            GridLength(36),
+        )
+        for w in col_widths:
+            col = ColumnDefinition()
+            col.Width = w
+            grid.ColumnDefinitions.Add(col)
+
+        combo = ComboBox()
+        combo.Margin = Thickness(0, 0, 6, 0)
+        item_contains = ComboBoxItem()
+        item_contains.Content = "Contains"
+        item_not = ComboBoxItem()
+        item_not.Content = "Does not contain"
+        combo.Items.Add(item_contains)
+        combo.Items.Add(item_not)
+        combo.SelectedIndex = 0 if rule.operator == "contains" else 1
+        combo.ToolTip = (
+            "Contains: row must match the text below.\n"
+            "Does not contain: row must NOT match the text below."
+        )
+        Grid.SetColumn(combo, 0)
+        grid.Children.Add(combo)
+
+        tb = TextBox()
+        tb.VerticalContentAlignment = VerticalAlignment.Center
+        tb.Margin = Thickness(0, 0, 6, 0)
+        tb.Text = rule.text or ""
+        tb.ToolTip = (
+            "Substring matched (case-insensitive) against the row's "
+            "profile name, profile id, LED label, LED id, message, "
+            "element id, and category."
+        )
+        Grid.SetColumn(tb, 1)
+        grid.Children.Add(tb)
+
+        remove_btn = Button()
+        remove_btn.Content = "✕"  # ×
+        remove_btn.Width = 28
+        remove_btn.ToolTip = "Remove this filter rule."
+        Grid.SetColumn(remove_btn, 2)
+        grid.Children.Add(remove_btn)
+
+        h_combo = (
+            lambda s, e, r=rule, c=combo:
+            self._safe(lambda: self._on_rule_combo(r, c), "filter-op")
+        )
+        h_text = (
+            lambda s, e, r=rule, t=tb:
+            self._safe(lambda: self._on_rule_text(r, t), "filter-text")
+        )
+        h_remove = RoutedEventHandler(
+            lambda s, e, r=rule: self._safe(
+                lambda: self._remove_filter_rule(r), "filter-remove",
+            )
+        )
+        combo.SelectionChanged += h_combo
+        tb.TextChanged += h_text
+        remove_btn.Click += h_remove
+        # Retain refs against pythonnet GC.
+        self._filter_row_handlers.extend([h_combo, h_text, h_remove])
+
+        return grid
+
+    def _on_rule_combo(self, rule, combo):
+        rule.operator = "contains" if combo.SelectedIndex == 0 else "does_not_contain"
+        self._refilter()
+
+    def _on_rule_text(self, rule, text_box):
+        try:
+            rule.text = text_box.Text or ""
+        except Exception:
+            rule.text = ""
+        self._refilter()
+
+    def _refilter(self, status_msg=None):
+        if self._last_result is not None:
+            self._render(self._last_result)
+        if status_msg:
+            self._set_status(status_msg)
+
+    # ----- finding match check --------------------------------------
+
+    def _finding_searchable_values(self, finding):
+        """Return the lower-cased text fields a filter rule tests
+        against. Concatenated only at the lookup site so each rule's
+        substring search is O(field) rather than O(joined-string)."""
+        return (
+            (finding.profile_name or "").lower(),
+            (finding.profile_id or "").lower(),
+            (finding.led_label or "").lower(),
+            (finding.led_id or "").lower(),
+            (finding.message or "").lower(),
+            (str(finding.element_id).lower()
+             if finding.element_id is not None else ""),
+            (finding.category or "").lower(),
+            (finding.category_label or "").lower(),
+        )
+
+    def _finding_matches_filter(self, finding):
+        """Apply every non-empty filter rule with AND combination.
+
+        Empty-text rules are skipped (treating "Add filter" + leave-
+        blank as a no-op rather than as "hide everything"). For each
+        active rule we check whether any searchable field contains
+        the rule's text. ``contains`` requires a hit; ``does_not_
+        contain`` requires no hit. Failing either condition rejects
+        the finding immediately — short-circuits on first miss.
+        """
+        active_rules = [
+            r for r in self._filter_rules
+            if (r.text or "").strip()
+        ]
+        if not active_rules:
+            return True
+        searchables = self._finding_searchable_values(finding)
+        for rule in active_rules:
+            needle = rule.text.strip().lower()
+            matched = any(needle in v for v in searchables)
+            if rule.operator == "contains":
+                if not matched:
+                    return False
+            else:  # does_not_contain
+                if matched:
+                    return False
+        return True
+
     def _render(self, result):
         self.findings_panel.Children.Clear()
+        # Drop stale row-button handlers — they captured findings from
+        # the prior render and prevent pythonnet from GCing the old
+        # rows otherwise.
+        self._handlers = []
         # Group by category for visual order.
         by_cat = {}
+        total_shown = 0
         for f in result.findings:
+            if not self._finding_matches_filter(f):
+                continue
             by_cat.setdefault(f.category, []).append(f)
+            total_shown += 1
         for cat in _qa.CAT_ALL:
             findings = by_cat.get(cat) or []
             if not findings:
@@ -290,6 +537,24 @@ class QaqcController(object):
             )
             for finding in findings:
                 self.findings_panel.Children.Add(self._row(finding))
+        active_n = sum(
+            1 for r in self._filter_rules if (r.text or "").strip()
+        )
+        if active_n:
+            self.match_count_label.Text = "{} of {} finding(s) match.".format(
+                total_shown, len(result.findings),
+            )
+        else:
+            self.match_count_label.Text = (
+                "{} finding(s).".format(len(result.findings))
+                if result.findings else ""
+            )
+        if active_n and total_shown == 0:
+            tb = TextBlock()
+            tb.Text = "No findings match the current filter rules."
+            tb.Margin = Thickness(0, 8, 0, 4)
+            tb.Foreground = Brushes.Gray
+            self.findings_panel.Children.Add(tb)
 
     def _section_header(self, cat, count):
         from System.Windows import FontWeights
@@ -303,10 +568,14 @@ class QaqcController(object):
 
     def _row(self, finding):
         grid = Grid()
-        for w in (0.0, 2.5, 4.0, 0.0, 0.0, 0.0):
+        # 7 columns total: 1 left spacer + 2 stretched text + 4 fixed
+        # buttons (Select, Zoom, Fix, Place). Place is only meaningful
+        # for Cat G findings; we render it on every row but enable it
+        # selectively to keep button alignment stable across categories.
+        for w in (0.0, 2.5, 4.0, 0.0, 0.0, 0.0, 0.0):
             col = ColumnDefinition()
             if w == 0.0:
-                col.Width = GridLength(80)  # button columns get fixed width
+                col.Width = GridLength(80)
             else:
                 col.Width = GridLength(w, GridUnitType.Star)
             grid.ColumnDefinitions.Add(col)
@@ -350,6 +619,26 @@ class QaqcController(object):
         Grid.SetColumn(fix_btn, 5)
         grid.Children.Add(fix_btn)
 
+        place_btn = self._small_button("Place")
+        # Only Cat G findings get a meaningful Place action — they
+        # carry the parent element id + the matching profile id, which
+        # is exactly what ``placement.execute_placement`` needs.
+        place_btn.IsEnabled = (
+            finding.category == _qa.CAT_G
+            and finding.profile_id is not None
+            and (
+                finding.element_id is not None
+                or getattr(finding, "linked_element_id", None) is not None
+            )
+        )
+        place_btn.ToolTip = (
+            "Place the matching profile against this parent element."
+            if place_btn.IsEnabled else
+            "Place is only available for Cat G findings."
+        )
+        Grid.SetColumn(place_btn, 6)
+        grid.Children.Add(place_btn)
+
         # Closure-captured handlers — retain refs so pythonnet doesn't GC them.
         h_select = RoutedEventHandler(
             lambda s, e, fnd=finding: self._on_select(fnd)
@@ -360,10 +649,14 @@ class QaqcController(object):
         h_fix = RoutedEventHandler(
             lambda s, e, fnd=finding, btn=fix_btn: self._on_fix(fnd, btn)
         )
+        h_place = RoutedEventHandler(
+            lambda s, e, fnd=finding, btn=place_btn: self._on_place_profile(fnd, btn)
+        )
         select_btn.Click += h_select
         zoom_btn.Click += h_zoom
         fix_btn.Click += h_fix
-        self._handlers.extend([h_select, h_zoom, h_fix])
+        place_btn.Click += h_place
+        self._handlers.extend([h_select, h_zoom, h_fix, h_place])
 
         return grid
 
@@ -500,6 +793,152 @@ class QaqcController(object):
             self._set_status("[{}] {}".format(finding.category, msg))
         else:
             self._set_status("[{}] fix failed: {}".format(finding.category, msg))
+
+    # ----------------------------------------------------------------
+    # Cat G: place the matching profile against the missing parent.
+    # The finding carries the parent's element id (host) or
+    # (link_instance_id, linked_element_id) pair (linked), plus the
+    # matched profile_id. We resolve the parent, lift its location +
+    # rotation into host coordinates, build a placement.Target /
+    # Match, and run execute_placement in its own transaction.
+    # ----------------------------------------------------------------
+
+    def _resolve_finding_parent(self, finding):
+        """Return ``(elem, transform_or_None, source, link_inst,
+        link_elem_id_int)`` for the parent referenced by a Cat G
+        finding, or ``None`` if anything along the way fails."""
+        link_inst_id = getattr(finding, "link_instance_id", None)
+        linked_elem_id = getattr(finding, "linked_element_id", None)
+        if link_inst_id is not None and linked_elem_id is not None:
+            try:
+                link_inst = self.doc.GetElement(ElementId(int(link_inst_id)))
+            except Exception:
+                return None
+            if link_inst is None:
+                return None
+            try:
+                link_doc = link_inst.GetLinkDocument()
+            except Exception:
+                link_doc = None
+            if link_doc is None:
+                return None
+            try:
+                elem = link_doc.GetElement(ElementId(int(linked_elem_id)))
+            except Exception:
+                elem = None
+            if elem is None:
+                return None
+            try:
+                transform = link_inst.GetTotalTransform()
+            except Exception:
+                transform = Transform.Identity
+            return (
+                elem, transform, _placement.SOURCE_LINKED_REVIT,
+                link_inst, int(linked_elem_id),
+            )
+        # Host-doc parent.
+        if finding.element_id is None:
+            return None
+        try:
+            elem = self.doc.GetElement(ElementId(int(finding.element_id)))
+        except Exception:
+            return None
+        if elem is None:
+            return None
+        return (
+            elem, Transform.Identity, _placement.SOURCE_HOST_MODEL,
+            None, int(finding.element_id),
+        )
+
+    def _find_profile_by_id(self, profile_id):
+        if not profile_id:
+            return None
+        for p in self.profile_data.get("equipment_definitions") or []:
+            if isinstance(p, dict) and p.get("id") == profile_id:
+                return p
+        return None
+
+    def _on_place_profile(self, finding, btn):
+        from pyrevit import revit
+        if finding.category != _qa.CAT_G:
+            self._set_status("Place is only available for Cat G findings.")
+            return
+        profile = self._find_profile_by_id(finding.profile_id)
+        if profile is None:
+            self._set_status(
+                "Place failed: profile {!r} not found in active YAML.".format(
+                    finding.profile_id
+                )
+            )
+            return
+        resolved = self._resolve_finding_parent(finding)
+        if resolved is None:
+            self._set_status(
+                "Place failed: could not resolve parent element {}.".format(
+                    finding.element_id
+                )
+            )
+            return
+        elem, transform, source, link_inst, link_elem_id_int = resolved
+        family_name = _placement._element_family_name(elem)
+        local_pt = _placement._element_location_point(elem)
+        if local_pt is None:
+            self._set_status(
+                "Place failed: parent has no resolvable location point."
+            )
+            return
+        try:
+            world_pt = transform.OfPoint(local_pt)
+        except Exception:
+            world_pt = local_pt
+        try:
+            rot_deg = _placement._element_rotation_deg(elem, transform)
+        except Exception:
+            rot_deg = 0.0
+        target = _placement.Target(
+            source=source,
+            name=family_name,
+            world_pt=(world_pt.X, world_pt.Y, world_pt.Z),
+            rotation_deg=rot_deg,
+            link_inst=link_inst,
+            link_elem_id=link_elem_id_int,
+        )
+        match = _placement.Match(target, profile)
+        options = _placement.PlacementOptions(
+            skip_already_placed=True,
+            transaction_action="QAQC Cat G place ({})".format(
+                finding.profile_name or "?"
+            ),
+        )
+        try:
+            with revit.Transaction(
+                "QAQC Cat G place ({})".format(finding.profile_name or "?"),
+                doc=self.doc,
+            ):
+                result = _placement.execute_placement(
+                    self.doc, [match], options,
+                )
+        except Exception as exc:
+            self._set_status("Place failed: {}".format(exc))
+            return
+        if result.placed_fixture_count == 0 and result.placed_annotation_count == 0:
+            self._set_status(
+                "[G] Nothing placed against parent {} — "
+                "see pyRevit output for any LED-level skips.".format(
+                    link_elem_id_int
+                )
+            )
+            return
+        btn.IsEnabled = False
+        btn.Content = "Placed"
+        self._set_status(
+            "[G] Placed {} fixture(s){} against parent {}.".format(
+                result.placed_fixture_count,
+                ", {} annotation(s)".format(result.placed_annotation_count)
+                if result.placed_annotation_count else "",
+                link_elem_id_int,
+            )
+        )
 
     # ----------------------------------------------------------------
     # Misc

@@ -45,8 +45,7 @@
               VerticalAlignment="Stretch"
               HorizontalScrollBarVisibility="Auto"
               VerticalScrollBarVisibility="Auto"
-              ColumnWidth="*"
-              RowHeight="22">
+              ColumnWidth="*">
       <DataGrid.Columns>
         <DataGridTemplateColumn Header="" MinWidth="40" Width="40">
           <DataGridTemplateColumn.CellTemplate>
@@ -97,10 +96,17 @@
                             Binding="{Binding Status}"
                             IsReadOnly="True"
                             MinWidth="120" Width="1.0*"/>
-        <DataGridTextColumn Header="Comments"
-                            Binding="{Binding Comment}"
-                            IsReadOnly="True"
-                            MinWidth="200" Width="2.0*"/>
+        <DataGridTemplateColumn Header="Comments"
+                                MinWidth="240" Width="3.0*">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding Comment}"
+                         TextWrapping="Wrap"
+                         VerticalAlignment="Center"
+                         ToolTip="{Binding Comment}"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
       </DataGrid.Columns>
     </DataGrid>
 

@@ -213,6 +213,22 @@ class SpacePlacementRun(object):
                         placements = _placement.expand_led_placements(
                             led, geom, door_anchor=chosen_door,
                         )
+                        # Drain any space_anchored anchor-resolution
+                        # diagnostics this LED's expand call emitted, so
+                        # we can stash them on every plan it produced —
+                        # the preview UI's Comments column then shows
+                        # exactly which bbox the engine used and which
+                        # fractions it read for each LED, without the
+                        # user having to apply first.
+                        try:
+                            led_diag_lines = (
+                                _placement.drain_space_anchored_diagnostics()
+                            )
+                        except Exception:
+                            led_diag_lines = []
+                        led_diag_text = (
+                            " | ".join(led_diag_lines) if led_diag_lines else ""
+                        )
                         if not placements:
                             # Empty result — make a comment-only plan
                             # so the user sees the LED in the preview
@@ -257,6 +273,7 @@ class SpacePlacementRun(object):
                                 set_id=set_id,
                                 world_pt=(x, y, z),
                                 rotation_deg=rot,
+                                comment=led_diag_text,
                             ))
 
         return self.plans

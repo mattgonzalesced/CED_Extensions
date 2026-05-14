@@ -18,6 +18,7 @@ from Autodesk.Revit.DB import (
     FamilyInstance,
     FilteredElementCollector,
     Group,
+    Reference,
     RevitLinkInstance,
     Transaction,
     XYZ,
@@ -33,10 +34,13 @@ LOG = script.get_logger()
 _MODELLESS_WINDOW = None
 _FOLLOW_PARENT_MODULE = None
 _OPTIMIZE_MODULE = None
+_PLACE_SINGLE_PROFILE_MODULE = None
 _ADJUST_HANDLER = None
 _ADJUST_EXTERNAL_EVENT = None
 _FIX_ID_HANDLER = None
 _FIX_ID_EXTERNAL_EVENT = None
+_PLACE_PROFILE_HANDLER = None
+_PLACE_PROFILE_EXTERNAL_EVENT = None
 
 LIB_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "CEDLib.lib")
@@ -60,6 +64,27 @@ INLINE_LINKER_PATTERN = re.compile(
 )
 
 FAR_FROM_PARENT_THRESHOLD_FT = 10.0
+
+
+# A profile is treated as a TRACKED equipment profile (eligible for
+# Tab 2) when its name starts with either ``HEB`` or exactly three
+# digits, followed by an obvious separator (``_``, ``-``, whitespace,
+# or ``:``). Anything else (e.g. "Business Center AHU", "Walk-in
+# Cooler") is an independent / annotation-only profile and is skipped
+# by Tab 2 — those profiles don't anchor to a parent the way the
+# numbered HEB equipment families do. ``allow_parentless`` in the YAML
+# is unreliable here (stamped ``true`` on every entry) so the name
+# convention is the source of truth.
+_TRACKED_PROFILE_PREFIX_RE = re.compile(
+    r"^(HEB[_\-\s]|\d{3}[_\-\s:])",
+    re.IGNORECASE,
+)
+
+
+def _is_tracked_equipment_profile_name(profile_name):
+    if not profile_name:
+        return False
+    return bool(_TRACKED_PROFILE_PREFIX_RE.match(str(profile_name).strip()))
 
 
 def _element_id_value(elem_id, default=None):
@@ -352,7 +377,19 @@ def _combine_transform(parent_transform, child_transform):
         return None
 
 
-def _walk_link_documents(doc, parent_transform, doc_chain):
+def _walk_link_documents(doc, parent_transform, doc_chain, top_link_inst=None):
+    """Yield ``(link_doc, transform, top_link_inst)`` for every linked
+    doc reachable from ``doc``.
+
+    ``top_link_inst`` is the host-doc-resident ``RevitLinkInstance``
+    that the linked content lives inside. For top-level links it's
+    the link instance itself; for nested links it's propagated from
+    the outer call so callers always get a reference they can resolve
+    against the host doc (e.g. to build a host-coord
+    ``Reference.CreateLinkReference``). Nested links can't be deep-
+    selected through the host UI, but the top-level instance at
+    least lets ``Snap`` highlight SOMETHING relevant.
+    """
     if doc is None:
         return
     key = _doc_key(doc)
@@ -366,14 +403,15 @@ def _walk_link_documents(doc, parent_transform, doc_chain):
         if link_doc is None:
             continue
         transform = _combine_transform(parent_transform, _get_link_transform(link_inst))
-        yield link_doc, transform
-        for nested in _walk_link_documents(link_doc, transform, next_chain):
+        outer = top_link_inst if top_link_inst is not None else link_inst
+        yield link_doc, transform, outer
+        for nested in _walk_link_documents(link_doc, transform, next_chain, outer):
             yield nested
 
 
 def _iter_link_documents(doc):
-    for link_doc, transform in _walk_link_documents(doc, None, set()):
-        yield link_doc, transform
+    for link_doc, transform, link_inst in _walk_link_documents(doc, None, set()):
+        yield link_doc, transform, link_inst
 
 
 def _collect_family_and_group_instances(doc):
@@ -546,6 +584,41 @@ def _build_yaml_maps(data):
     norm_to_profiles = {}
     group_to_profiles = {}
     profile_to_group = {}
+    # Profiles rolled up under another via legacy ``ced_truth_source_id``
+    # or via being listed in another profile's ``merged_aliases``. Used
+    # by Tab 1 to skip them.
+    merged_member_profiles = set()
+    # Profiles whose name doesn't start with the tracked-equipment
+    # prefix (``HEB...`` or three-digit ``NNN...``). These are
+    # annotation / independent profiles and shouldn't be flagged by
+    # Tab 2 for missing children — see _is_tracked_equipment_profile_name.
+    independent_profiles = set()
+    profile_id_to_name = {}
+
+    def _register_alias(profile_name, alias_value):
+        # Adds alias_value (and, if it's a "Family : Type" pair, the
+        # family-half) into ``norm_to_profiles`` under the master
+        # profile. Used for ``parent_filter.family_name_pattern`` and
+        # every entry in ``merged_aliases`` so parents whose Revit
+        # family name differs from the profile's display name still
+        # match. Independent profiles (per the name prefix) still get
+        # their aliases registered so other tabs (e.g. Tab 4 "parent
+        # type changed") see them as valid matches — only Tab 2 skips
+        # them.
+        if not alias_value:
+            return
+        alias_text = str(alias_value).strip()
+        if not alias_text:
+            return
+        candidates = {alias_text}
+        if " : " in alias_text:
+            family_half = alias_text.split(" : ", 1)[0].strip()
+            if family_half:
+                candidates.add(family_half)
+        for candidate in candidates:
+            alias_norm = _normalize_name(candidate)
+            if alias_norm:
+                norm_to_profiles.setdefault(alias_norm, []).append(profile_name)
 
     eq_defs = data.get("equipment_definitions") or []
     for eq in eq_defs:
@@ -560,9 +633,57 @@ def _build_yaml_maps(data):
         if norm:
             norm_to_profiles.setdefault(norm, []).append(profile_name)
 
+        # Register parent_filter.family_name_pattern (if present) so
+        # profiles whose name differs from the parent's Revit family
+        # name still match against that family. Needed for the Ishida
+        # scales and similar profiles whose display name carries a
+        # ``: Default`` suffix but whose ``family_name_pattern`` is the
+        # clean family name in the model.
+        parent_filter = eq.get("parent_filter")
+        if isinstance(parent_filter, dict):
+            _register_alias(profile_name, parent_filter.get("family_name_pattern"))
+
+        # Register merged_aliases entries so absorbed family names still
+        # resolve to the master profile. Also track member names so
+        # Tab 1 doesn't false-positive them as "no matching parent".
+        merged_aliases = eq.get("merged_aliases") or []
+        if isinstance(merged_aliases, (list, tuple)):
+            for alias_entry in merged_aliases:
+                _register_alias(profile_name, alias_entry)
+                if not alias_entry:
+                    continue
+                alias_text = str(alias_entry).strip()
+                if not alias_text:
+                    continue
+                member_name = alias_text
+                if " : " in alias_text:
+                    family_half = alias_text.split(" : ", 1)[0].strip()
+                    if family_half:
+                        member_name = family_half
+                if member_name and member_name != profile_name:
+                    merged_member_profiles.add(member_name)
+
+        # Classify by name prefix. Tracked equipment profiles start with
+        # ``HEB...`` or ``NNN...`` (3 digits) followed by a separator;
+        # everything else is independent and excluded from Tab 2.
+        if not _is_tracked_equipment_profile_name(profile_name):
+            independent_profiles.add(profile_name)
+
+        profile_id = (eq.get("id") or "").strip()
+        if profile_id:
+            profile_id_to_name[profile_id] = profile_name
+
         group_key = (eq.get(TRUTH_SOURCE_ID_KEY) or "").strip()
         if not group_key:
             group_key = (eq.get("id") or profile_name).strip()
+        else:
+            # Legacy merge model: a non-empty ced_truth_source_id that
+            # differs from this profile's own id means this entry is
+            # rolled up under another profile — flag it as a merged
+            # member so Tab 1 doesn't false-positive it.
+            own_id = (eq.get("id") or "").strip()
+            if own_id and group_key != own_id:
+                merged_member_profiles.add(profile_name)
         profile_to_group[profile_name] = group_key
         group_to_profiles.setdefault(group_key, []).append(profile_name)
 
@@ -589,6 +710,8 @@ def _build_yaml_maps(data):
         "led_to_profile": led_to_profile,
         "group_to_profiles": group_to_profiles,
         "profile_to_group": profile_to_group,
+        "merged_member_profiles": merged_member_profiles,
+        "independent_profiles": independent_profiles,
     }
 
 
@@ -621,7 +744,7 @@ def _collect_parent_candidates(doc, yaml_maps):
     host_parent_elements = {}
     profile_to_candidates = {}
 
-    def _add_candidate(elem, point, is_linked):
+    def _add_candidate(elem, point, is_linked, link_inst=None):
         variants = _name_variants(elem)
         matched_profiles = set()
         for variant in variants:
@@ -637,6 +760,13 @@ def _collect_parent_candidates(doc, yaml_maps):
         parent_id = _element_id_value(getattr(elem, "Id", None))
         if parent_id is None:
             return
+        # ``link_instance_id`` is the host-doc-resident RevitLinkInstance
+        # that this linked element lives inside — needed so Snap can
+        # build a host-coord Reference and highlight the linked element.
+        # Host candidates leave it None.
+        link_inst_id = None
+        if link_inst is not None:
+            link_inst_id = _element_id_value(getattr(link_inst, "Id", None))
         candidate = {
             "parent_id": parent_id,
             "display_label": _element_label(elem),
@@ -645,6 +775,7 @@ def _collect_parent_candidates(doc, yaml_maps):
             "name_variants": sorted(variants, key=lambda value: value.lower()),
             "matched_profiles": sorted(matched_profiles, key=lambda value: value.lower()),
             "linker_profile": linker_profile,
+            "link_instance_id": link_inst_id,
         }
         candidates.append(candidate)
         by_parent_id.setdefault(parent_id, []).append(candidate)
@@ -656,10 +787,10 @@ def _collect_parent_candidates(doc, yaml_maps):
     for elem in _collect_family_and_group_instances(doc):
         _add_candidate(elem, _get_element_point(elem), is_linked=False)
 
-    for link_doc, transform in _iter_link_documents(doc):
+    for link_doc, transform, link_inst in _iter_link_documents(doc):
         for elem in _collect_family_and_group_instances(link_doc):
             point = _transform_point(transform, _get_element_point(elem))
-            _add_candidate(elem, point, is_linked=True)
+            _add_candidate(elem, point, is_linked=True, link_inst=link_inst)
 
     return {
         "all": candidates,
@@ -727,6 +858,9 @@ def _build_row(
     snap_point=None,
     adjust_enabled=False,
     fix_id_enabled=False,
+    link_instance_id=None,
+    linked_element_id=None,
+    snap_select_id=None,
 ):
     return {
         "profile": profile or "",
@@ -738,6 +872,16 @@ def _build_row(
         "snap_point": snap_point,
         "adjust_enabled": bool(adjust_enabled),
         "fix_id_enabled": bool(fix_id_enabled),
+        # When the row's primary snap target is a linked element these
+        # together let Snap build a host-coord Reference and highlight
+        # the linked element. Host-only snap targets leave both None.
+        "link_instance_id": link_instance_id,
+        "linked_element_id": linked_element_id,
+        # The host-doc element id that Snap should highlight (e.g. the
+        # parent for type-change tabs, the child for far-from-parent
+        # tabs). Only used when link_instance_id is not set. Falls back
+        # to child_id then parent_id in ``_on_snap`` if not specified.
+        "snap_select_id": snap_select_id,
     }
 
 
@@ -766,9 +910,19 @@ def _build_issue_tabs(doc, data):
 
     placed_by_profile_parent = {}
     placed_by_group_parent = {}
+    # Parent-level coverage set: every parent_element_id that has at
+    # least one placed child, regardless of which profile/group that
+    # child's led_id / set_id / host_name resolved to. Used by Tab 2
+    # to skip parents that already host SOMETHING — catches cases
+    # where the child's profile resolves to a different group than
+    # the parent's family matched (merged profile, re-keyed YAML,
+    # cross-profile placement).
+    parents_with_any_placed_child = set()
     for record in placed_records:
         profile_name = record.get("profile_name")
         parent_id = record.get("parent_element_id")
+        if parent_id is not None:
+            parents_with_any_placed_child.add(parent_id)
         if profile_name and parent_id is not None:
             placed_by_profile_parent.setdefault(profile_name, set()).add(parent_id)
             group_key = profile_to_group.get(profile_name) or profile_name
@@ -782,7 +936,14 @@ def _build_issue_tabs(doc, data):
     tab6_rows = []
     tab7_rows = []
 
+    merged_member_profiles = yaml_maps.get("merged_member_profiles") or set()
     for profile_name in profiles:
+        # Skip profiles that are rolled up under another profile (via
+        # ced_truth_source_id or merged_aliases) — those are unused on
+        # purpose and would otherwise produce false "no matching parent"
+        # rows.
+        if profile_name in merged_member_profiles:
+            continue
         group_key = profile_to_group.get(profile_name) or profile_name
         if not group_to_candidate_ids.get(group_key):
             tab1_rows.append(
@@ -792,8 +953,19 @@ def _build_issue_tabs(doc, data):
                 )
             )
 
-    seen_missing_child = set()
+    # Tab 2 — "matching parent found, no placed children". Deduped by
+    # parent: each linked element appears at most once, with matching
+    # profile names listed. Independent profiles (name doesn't start
+    # with ``HEB...`` or three digits) are excluded — they're
+    # annotation-only profiles, not tracked equipment.
+    independent_profiles = yaml_maps.get("independent_profiles") or set()
+    # (parent_id, is_linked) -> {"candidate": ..., "profiles": [names...]}
+    tab2_by_parent = {}
     for profile_name in profiles:
+        if profile_name in independent_profiles:
+            continue
+        if profile_name in merged_member_profiles:
+            continue
         group_key = profile_to_group.get(profile_name) or profile_name
         candidate_ids = group_to_candidate_ids.get(group_key) or set()
         if not candidate_ids:
@@ -805,20 +977,58 @@ def _build_issue_tabs(doc, data):
             parent_id = candidate.get("parent_id")
             if parent_id is None or parent_id in placed_parent_ids:
                 continue
-            unique_key = (profile_name, parent_id, bool(candidate.get("is_linked")))
-            if unique_key in seen_missing_child:
+            # Cross-profile coverage: if THIS parent already has any
+            # placed child (resolved via any profile/group), treat it
+            # as covered. Stops Tab 2 from false-flagging a parent
+            # whose hosted child's led_id maps to a sibling/merged
+            # profile in a different group.
+            if parent_id in parents_with_any_placed_child:
                 continue
-            seen_missing_child.add(unique_key)
-            selectable_parent_id = parent_id if parent_id in host_parent_elements else None
-            tab2_rows.append(
-                _build_row(
-                    profile=profile_name,
-                    description="Matching parent found, but no placed child instances are currently tracked for this profile-parent.",
-                    parent_text=_candidate_text(candidate),
-                    parent_id=selectable_parent_id,
-                    snap_point=candidate.get("point"),
-                )
+            key = (parent_id, bool(candidate.get("is_linked")))
+            slot = tab2_by_parent.get(key)
+            if slot is None:
+                slot = {"candidate": candidate, "profiles": []}
+                tab2_by_parent[key] = slot
+            if profile_name not in slot["profiles"]:
+                slot["profiles"].append(profile_name)
+
+    for (parent_id, _is_linked), info in tab2_by_parent.items():
+        candidate = info["candidate"]
+        profile_list = info["profiles"]
+        if not profile_list:
+            continue
+        # Display: actual profile names — comma-separated when there's
+        # more than one. No "N profiles" placeholder.
+        profile_display = ", ".join(profile_list)
+        if len(profile_list) == 1:
+            description = (
+                "Matching parent found, but no placed children. "
+                "Matching profile: {}."
+            ).format(profile_list[0])
+        else:
+            description = (
+                "Matching parent found, but no placed children. "
+                "Matching profiles: {}."
+            ).format(profile_display)
+        selectable_parent_id = parent_id if parent_id in host_parent_elements else None
+        # Snap should highlight the parent: linked element via Reference
+        # if the candidate lives in a link, else the host parent id.
+        link_inst_id = (
+            candidate.get("link_instance_id") if candidate.get("is_linked") else None
+        )
+        linked_elem_id = parent_id if candidate.get("is_linked") else None
+        tab2_rows.append(
+            _build_row(
+                profile=profile_display,
+                description=description,
+                parent_text=_candidate_text(candidate),
+                parent_id=selectable_parent_id,
+                snap_point=candidate.get("point"),
+                link_instance_id=link_inst_id,
+                linked_element_id=linked_elem_id,
+                snap_select_id=selectable_parent_id,
             )
+        )
 
     for record in placed_records:
         child_id = record.get("child_id")
@@ -836,6 +1046,7 @@ def _build_issue_tabs(doc, data):
                 child_text=record.get("child_label") or "",
                 child_id=child_id,
                 snap_point=record.get("child_point") or record.get("payload_location"),
+                snap_select_id=child_id,
             )
         )
 
@@ -878,6 +1089,13 @@ def _build_issue_tabs(doc, data):
             and stored_host_norm not in current_parent_name_variants
             and stored_host_no_default not in current_parent_name_variants_no_default
         )
+        # Snap target on Tab 4 / Tab 5 is the parent (we zoom to its
+        # location). Highlight the linked parent if applicable, else
+        # the host parent id.
+        chosen_link_inst_id = (
+            (chosen or {}).get("link_instance_id") if (chosen or {}).get("is_linked") else None
+        )
+        chosen_linked_elem_id = parent_id if (chosen or {}).get("is_linked") else None
         if current_profiles:
             new_profile = sorted(current_profiles, key=lambda value: value.lower())[0]
             tab4_rows.append(
@@ -891,6 +1109,9 @@ def _build_issue_tabs(doc, data):
                     child_id=child_id,
                     parent_id=selectable_parent_id,
                     snap_point=snap_point,
+                    link_instance_id=chosen_link_inst_id,
+                    linked_element_id=chosen_linked_elem_id,
+                    snap_select_id=selectable_parent_id,
                 )
             )
         else:
@@ -908,6 +1129,9 @@ def _build_issue_tabs(doc, data):
                     child_id=child_id,
                     parent_id=selectable_parent_id,
                     snap_point=snap_point,
+                    link_instance_id=chosen_link_inst_id,
+                    linked_element_id=chosen_linked_elem_id,
+                    snap_select_id=selectable_parent_id,
                 )
             )
 
@@ -927,38 +1151,56 @@ def _build_issue_tabs(doc, data):
         stored_parent_point = record.get("payload_parent_location")
         if child_point is None or current_parent_point is None:
             continue
-        if stored_child_point is None or stored_parent_point is None:
-            continue
+        # NOTE: do NOT skip when stored points are missing — actual_xy
+        # alone is the gate. Stored-offset diagnostics are best-effort
+        # below.
 
         actual_xy = _xy_distance(child_point, current_parent_point)
-        stored_xy = _xy_distance(stored_child_point, stored_parent_point)
-        if actual_xy is None or stored_xy is None:
+        if stored_child_point is not None and stored_parent_point is not None:
+            stored_xy = _xy_distance(stored_child_point, stored_parent_point)
+        else:
+            stored_xy = None
+        # Reliability fix: flag whenever the child currently sits more
+        # than the threshold from its parent. The old predicate
+        # additionally required stored_xy <= threshold so only "drifted
+        # from a known-good offset" cases fired — that silently missed
+        # children placed with legitimately-long stored offsets that
+        # now sit even farther away. User spec: ANY current XY > 10 ft.
+        if actual_xy is None:
             continue
         if actual_xy <= FAR_FROM_PARENT_THRESHOLD_FT:
             continue
-        if stored_xy > FAR_FROM_PARENT_THRESHOLD_FT:
-            continue
+
+        if stored_xy is None:
+            description = (
+                "Current child-parent XY distance is {:.2f} ft (threshold > {:.0f} ft). Stored XY offset is unavailable."
+            ).format(actual_xy, FAR_FROM_PARENT_THRESHOLD_FT)
+        else:
+            description = (
+                "Current child-parent XY distance is {:.2f} ft (threshold > {:.0f} ft). Stored XY offset is {:.2f} ft."
+            ).format(actual_xy, FAR_FROM_PARENT_THRESHOLD_FT, stored_xy)
 
         profile_name = record.get("profile_name") or (record.get("host_name") or "<unknown profile>")
         selectable_parent_id = parent_id if parent_id in host_parent_elements else None
         tab6_rows.append(
             _build_row(
                 profile=profile_name,
-                description=(
-                    "Current child-parent XY distance is {:.2f} ft, but stored XY offset is {:.2f} ft (<= {:.0f} ft)."
-                ).format(actual_xy, stored_xy, FAR_FROM_PARENT_THRESHOLD_FT),
+                description=description,
                 parent_text=_candidate_text(chosen) or "Parent Id: {}".format(parent_id),
                 child_text=record.get("child_label") or "",
                 child_id=child_id,
                 parent_id=selectable_parent_id,
                 snap_point=child_point,
                 adjust_enabled=True,
+                snap_select_id=child_id,
             )
         )
 
+    # Tab 7a — child's own element_id discrepancy.
+    # Dropped the fixture-only restriction so this fires across every
+    # element with an Element_Linker, not just fixtures. The user's
+    # spec calls for reliable ID-drift detection regardless of category.
     for record in placed_records:
-        if not bool(record.get("is_fixture")):
-            continue
         child_id = record.get("child_id")
         linker_element_id = record.get("linker_element_id")
         if child_id is None or linker_element_id is None:
@@ -987,6 +1229,65 @@ def _build_issue_tabs(doc, data):
                 parent_id=selectable_parent_id,
                 snap_point=record.get("child_point") or record.get("payload_location"),
                 fix_id_enabled=True,
+                snap_select_id=child_id,
+            )
+        )
+
+    # Tab 7b — parent-id discrepancy.
+    # The stored ``parent_element_id`` resolves to a real element in
+    # the host or linked docs, but THAT element's family/type doesn't
+    # match the child's stored ``host_name``. Indicates the linker's
+    # parent_element_id is pointing at the wrong element — most often
+    # a copy/paste of the parent that left the child's linker
+    # referencing the original id. Diagnostic only for now (no
+    # automated fix wired up).
+    for record in placed_records:
+        child_id = record.get("child_id")
+        parent_id = record.get("parent_element_id")
+        if parent_id is None:
+            continue
+        parent_candidates = by_parent_id.get(parent_id) or []
+        if not parent_candidates:
+            # parent_element_id doesn't resolve at all — that's Tab 3's
+            # job, not ours.
+            continue
+        stored_host = record.get("host_name")
+        stored_host_no_default = _normalize_name_ignoring_default_suffix(stored_host)
+        if not stored_host_no_default:
+            continue
+        chosen_parent = _pick_candidate(parent_candidates)
+        parent_name_variants_no_default = set()
+        actual_family_display = ""
+        for candidate in parent_candidates:
+            for variant in candidate.get("name_variants") or []:
+                if variant:
+                    parent_name_variants_no_default.add(
+                        _normalize_name_ignoring_default_suffix(variant)
+                    )
+                    if not actual_family_display:
+                        actual_family_display = variant
+        if not parent_name_variants_no_default:
+            continue
+        if stored_host_no_default in parent_name_variants_no_default:
+            continue
+
+        profile_name = record.get("profile_name") or (stored_host or "<unknown profile>")
+        selectable_parent_id = parent_id if parent_id in host_parent_elements else None
+        parent_text = _candidate_text(chosen_parent) or "Parent Id: {}".format(parent_id)
+        tab7_rows.append(
+            _build_row(
+                profile=profile_name,
+                description=(
+                    "Element_Linker parent_element_id is {}, but that element's family "
+                    "('{}') doesn't match stored host_name ('{}')."
+                ).format(int(parent_id), actual_family_display or "<unknown>", stored_host or ""),
+                parent_text=parent_text,
+                child_text=record.get("child_label") or "",
+                child_id=child_id,
+                parent_id=selectable_parent_id,
+                snap_point=record.get("child_point") or record.get("payload_location"),
+                fix_id_enabled=False,
+                snap_select_id=child_id,
             )
         )
 
@@ -1031,6 +1332,58 @@ def _select_element(elem_id):
     except Exception:
         pass
     return True
+
+
+def _select_linked_element(link_inst_id, linked_elem_id):
+    """Set the host doc's selection to the given linked element by
+    building a host-coord ``Reference`` via
+    ``Reference.CreateLinkReference``. Returns True on success.
+
+    Used by Snap to highlight linked parents (instead of just zooming
+    to them) so the user can see the specific linked element rather
+    than scanning the linked model's overall footprint.
+    """
+    if link_inst_id in (None, "") or linked_elem_id in (None, ""):
+        return False
+    uidoc = getattr(revit, "uidoc", None)
+    doc = getattr(revit, "doc", None)
+    if uidoc is None or doc is None:
+        return False
+    try:
+        link_inst = doc.GetElement(ElementId(int(link_inst_id)))
+    except Exception:
+        return False
+    if link_inst is None:
+        return False
+    try:
+        link_doc = link_inst.GetLinkDocument()
+    except Exception:
+        link_doc = None
+    if link_doc is None:
+        return False
+    try:
+        linked_elem = link_doc.GetElement(ElementId(int(linked_elem_id)))
+    except Exception:
+        linked_elem = None
+    if linked_elem is None:
+        return False
+    try:
+        ref = Reference(linked_elem)
+    except Exception:
+        return False
+    try:
+        host_ref = ref.CreateLinkReference(link_inst)
+    except Exception:
+        host_ref = None
+    if host_ref is None:
+        return False
+    refs = List[Reference]()
+    refs.Add(host_ref)
+    try:
+        uidoc.Selection.SetReferences(refs)
+        return True
+    except Exception:
+        return False
 
 
 def _zoom_to_point(point, radius_feet=12.0):
@@ -1208,6 +1561,243 @@ def _load_optimize_module():
     return _OPTIMIZE_MODULE
 
 
+def _load_place_single_profile_module():
+    """Lazy-load the Place Single Profile pushbutton's panel module so
+    we can borrow its helpers (_cleaned_profiles_from_raw,
+    _build_repository_from_profiles, _gather_child_requests) for the
+    Place button on Tab 2 rows. We DO NOT instantiate the dockable
+    panel — only the placement engine wiring is used.
+    """
+    global _PLACE_SINGLE_PROFILE_MODULE
+    if _PLACE_SINGLE_PROFILE_MODULE is not None:
+        return _PLACE_SINGLE_PROFILE_MODULE
+    module_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "Place Single Profile.pushbutton",
+            "PlaceSingleProfilePanel.py",
+        )
+    )
+    if not os.path.exists(module_path):
+        return None
+    try:
+        _PLACE_SINGLE_PROFILE_MODULE = imp.load_source(
+            "ced_place_single_profile_runtime", module_path,
+        )
+    except Exception as exc:
+        LOG.warning("Failed to load PlaceSingleProfilePanel module: %s", exc)
+        _PLACE_SINGLE_PROFILE_MODULE = None
+    return _PLACE_SINGLE_PROFILE_MODULE
+
+
+def _resolve_parent_for_placement(doc, row):
+    """Resolve a Tab 2 row's parent into ``(point, rotation)`` in host
+    coordinates.
+
+    Tab 2 rows store ``parent_id`` only for host parents (linked
+    parents leave it None) and ``snap_point`` always — already
+    transformed into host coords for linked candidates. Returns
+    ``(point, rotation_rad)`` or ``(None, 0.0)`` if neither is usable.
+
+    Rotation is read from the host parent's FamilyInstance.Location.
+    For linked parents we don't have a cheap way to recover the
+    rotation without re-walking the link transforms, so we fall back
+    to 0.0 — children land at the offsets the YAML specifies, just
+    not rotated to follow a tilted linked parent. "Follow Parent" on
+    the placed child fixes that secondarily if needed.
+    """
+    if not isinstance(row, dict):
+        return None, 0.0
+    rotation_rad = 0.0
+    parent_id = row.get("parent_id")
+    point = None
+    if parent_id not in (None, ""):
+        try:
+            elem = doc.GetElement(ElementId(int(parent_id)))
+        except Exception:
+            elem = None
+        if elem is not None:
+            point = _get_element_point(elem)
+            try:
+                loc = elem.Location
+                rot = getattr(loc, "Rotation", None)
+                if rot is not None:
+                    rotation_rad = float(rot)
+            except Exception:
+                rotation_rad = 0.0
+    if point is None:
+        point = row.get("snap_point")
+    return point, rotation_rad
+
+
+def _do_place_profile_for_row(doc, raw_data, row):
+    """Direct placement-engine call for a Tab 2 row.
+
+    Resolves the row's first matching profile + parent location and
+    calls ``PlaceElementsEngine.place_from_csv`` with the parent + its
+    LED child requests. No dockable pane involved — runs inside the
+    external event so it has a Revit API context for the transaction.
+
+    Returns ``(ok: bool, message: str)``.
+    """
+    if doc is None:
+        return False, "No active document available for placement."
+    if not isinstance(row, dict):
+        return False, "Invalid row payload."
+
+    # Tab 2 may list multiple matching profiles comma-separated. Place
+    # the FIRST one — the user can re-click for the others, or refine
+    # with the filter and re-trigger.
+    profile_field = (row.get("profile") or "").strip()
+    if not profile_field:
+        return False, "Row has no profile name."
+    cad_choice = profile_field.split(",", 1)[0].strip()
+    if not cad_choice:
+        return False, "Could not parse a profile name from row."
+
+    parent_point, parent_rotation = _resolve_parent_for_placement(doc, row)
+    if parent_point is None:
+        return False, "Could not resolve a parent location for placement."
+
+    helper = _load_place_single_profile_module()
+    if helper is None:
+        return False, "PlaceSingleProfilePanel module not found."
+
+    try:
+        from LogicClasses.placement_engine import PlaceElementsEngine
+        from LogicClasses.linked_equipment import find_equipment_by_name
+    except Exception as exc:
+        return False, "Placement engine unavailable: {}".format(exc)
+
+    if not raw_data:
+        return False, "Active YAML data is not available for placement."
+
+    try:
+        cleaned = helper._cleaned_profiles_from_raw(raw_data)
+        repo = helper._build_repository_from_profiles(cleaned)
+    except Exception as exc:
+        return False, "Failed to build profile repository: {}".format(exc)
+
+    try:
+        labels = repo.labels_for_cad(cad_choice)
+    except Exception:
+        labels = None
+    if not labels:
+        return False, "Profile '{}' has no linked types to place.".format(cad_choice)
+
+    parent_def = find_equipment_by_name(raw_data, cad_choice)
+    if not parent_def:
+        return False, "Profile '{}' not found in active YAML.".format(cad_choice)
+
+    # Build the CSV-style rows the engine expects. The first row is the
+    # parent's location; subsequent rows are LED children produced by
+    # _gather_child_requests at parent + offset.
+    selection_map = {cad_choice: labels}
+    csv_rows = [{
+        "Name": cad_choice,
+        "Count": "1",
+        "Position X": str(parent_point.X * 12.0),
+        "Position Y": str(parent_point.Y * 12.0),
+        "Position Z": str(parent_point.Z * 12.0),
+        "Rotation": str(parent_rotation or 0.0),
+    }]
+    try:
+        child_requests = helper._gather_child_requests(
+            parent_def, parent_point, parent_rotation or 0.0, repo, raw_data,
+        )
+    except Exception as exc:
+        return False, "Failed to gather LED requests: {}".format(exc)
+    for request in child_requests or []:
+        name = request.get("name")
+        req_labels = request.get("labels")
+        point = request.get("target_point")
+        rotation = request.get("rotation")
+        if not name or not req_labels or point is None:
+            continue
+        selection_map[name] = req_labels
+        csv_rows.append({
+            "Name": name,
+            "Count": "1",
+            "Position X": str(point.X * 12.0),
+            "Position Y": str(point.Y * 12.0),
+            "Position Z": str(point.Z * 12.0),
+            "Rotation": str(rotation or 0.0),
+        })
+
+    try:
+        engine = PlaceElementsEngine(
+            doc, repo, allow_tags=False,
+            transaction_name="QAQC Place Profile ({})".format(cad_choice),
+        )
+        results = engine.place_from_csv(csv_rows, selection_map)
+    except Exception as exc:
+        return False, "Placement engine error: {}".format(exc)
+
+    placed = (results or {}).get("placed", 0)
+    return True, "Placed {} element(s) for profile '{}'.".format(placed, cad_choice)
+
+
+class _PlaceProfileExternalEventHandler(IExternalEventHandler):
+    def __init__(self):
+        self._payload = None
+
+    def GetName(self):  # noqa: N802
+        return "QAQC Place Profile External Event"
+
+    def request(self, raw_data, row):
+        self._payload = {"raw_data": raw_data, "row": row}
+
+    def Execute(self, uiapp):  # noqa: N802
+        payload = self._payload
+        self._payload = None
+        if not payload:
+            return
+        uidoc = getattr(uiapp, "ActiveUIDocument", None)
+        doc = getattr(uidoc, "Document", None) if uidoc else None
+        ok, message = _do_place_profile_for_row(
+            doc, payload.get("raw_data"), payload.get("row"),
+        )
+        try:
+            forms.alert(message, title="{} - Place Profile".format(TITLE))
+        except Exception:
+            LOG.warning("[QAQC Place Profile] %s", message)
+        if ok and uidoc is not None:
+            # Selecting the parent helps the user see where placement
+            # landed (the children are tagged with Element_Linker but
+            # there may be several of them — keep the focus on the
+            # known parent reference).
+            row = payload.get("row") or {}
+            parent_id = row.get("parent_id")
+            if parent_id not in (None, ""):
+                try:
+                    ids = List[ElementId]()
+                    ids.Add(ElementId(int(parent_id)))
+                    uidoc.Selection.SetElementIds(ids)
+                    uidoc.ShowElements(ids)
+                except Exception:
+                    pass
+
+
+def _ensure_place_profile_external_event():
+    global _PLACE_PROFILE_HANDLER, _PLACE_PROFILE_EXTERNAL_EVENT
+    if (
+        _PLACE_PROFILE_HANDLER is not None
+        and _PLACE_PROFILE_EXTERNAL_EVENT is not None
+    ):
+        return True
+    try:
+        _PLACE_PROFILE_HANDLER = _PlaceProfileExternalEventHandler()
+        _PLACE_PROFILE_EXTERNAL_EVENT = ExternalEvent.Create(_PLACE_PROFILE_HANDLER)
+        return True
+    except Exception as exc:
+        _PLACE_PROFILE_HANDLER = None
+        _PLACE_PROFILE_EXTERNAL_EVENT = None
+        LOG.warning("Failed to create QAQC place-profile external event: %s", exc)
+        return False
+
+
 def _get_optimize_mode_for_element(elem):
     label = (_family_type_label(elem) or "").lower()
     if "wall" in label:
@@ -1383,6 +1973,7 @@ def _adjust_element(doc, child_id):
 
 def main():
     global _MODELLESS_WINDOW, _ADJUST_HANDLER, _ADJUST_EXTERNAL_EVENT, _FIX_ID_HANDLER, _FIX_ID_EXTERNAL_EVENT
+    global _PLACE_PROFILE_HANDLER, _PLACE_PROFILE_EXTERNAL_EVENT
     doc = getattr(revit, "doc", None)
     if doc is None:
         forms.alert("No active document detected.", title=TITLE)
@@ -1398,6 +1989,11 @@ def main():
     if not _ensure_fix_id_external_event():
         forms.alert(
             "Could not initialize modeless ElementId-fix event. Fix ID actions will be unavailable.",
+            title=TITLE,
+        )
+    if not _ensure_place_profile_external_event():
+        forms.alert(
+            "Could not initialize modeless place-profile event. Place actions will fall back to inline placement.",
             title=TITLE,
         )
 
@@ -1458,6 +2054,31 @@ def main():
             forms.alert("Could not select parent element.\n(Linked parents are not directly selectable.)", title=TITLE)
 
     def _on_snap(row):
+        # Highlight first, zoom second. Priority order:
+        #   1. Linked element (Tab 2/4/5 with a linked parent) — built
+        #      via Reference.CreateLinkReference so the specific linked
+        #      element gets selected, not the whole RevitLinkInstance.
+        #   2. snap_select_id — the row's explicit host-doc target
+        #      (parent_id for type-change tabs, child_id for far-from-
+        #      parent / ID-discrepancy tabs).
+        #   3. Fall back to child_id, then parent_id, so older rows
+        #      that didn't populate snap_select_id still highlight
+        #      something sensible.
+        if row:
+            link_inst_id = row.get("link_instance_id")
+            linked_elem_id = row.get("linked_element_id")
+            selected = False
+            if link_inst_id is not None and linked_elem_id is not None:
+                selected = _select_linked_element(link_inst_id, linked_elem_id)
+            if not selected:
+                host_id = row.get("snap_select_id")
+                if host_id in (None, ""):
+                    host_id = row.get("child_id")
+                if host_id in (None, ""):
+                    host_id = row.get("parent_id")
+                if host_id not in (None, ""):
+                    _select_element(host_id)
+
         point = (row or {}).get("snap_point")
         if point is None and (row or {}).get("child_id") is not None:
             try:
@@ -1502,6 +2123,31 @@ def main():
         except Exception as exc:
             forms.alert("Failed to queue ElementId fix request:\n\n{}".format(exc), title="{} - Fix ID".format(TITLE))
 
+    def _on_place(row):
+        # Tab 2 "Place" button — runs the placement engine directly
+        # against the row's parent (no dockable pane). Wrapped in the
+        # external event so the engine has Revit's API context for its
+        # transaction. Falls back to a direct call if the event can't
+        # be created (e.g., running outside a UI context).
+        if not isinstance(row, dict):
+            return
+        if not (row.get("profile") or "").strip():
+            forms.alert("Row has no profile name to place.",
+                        title="{} - Place Profile".format(TITLE))
+            return
+        if _PLACE_PROFILE_HANDLER is None or _PLACE_PROFILE_EXTERNAL_EVENT is None:
+            ok, message = _do_place_profile_for_row(doc, data, row)
+            forms.alert(message, title="{} - Place Profile".format(TITLE))
+            return
+        try:
+            _PLACE_PROFILE_HANDLER.request(data, row)
+            _PLACE_PROFILE_EXTERNAL_EVENT.Raise()
+        except Exception as exc:
+            forms.alert(
+                "Failed to queue placement request:\n\n{}".format(exc),
+                title="{} - Place Profile".format(TITLE),
+            )
+
     window = ui_module.QAQCReportWindow(
         xaml_path=xaml_path,
         tab_rows=tabs,
@@ -1511,6 +2157,7 @@ def main():
         snap_callback=_on_snap,
         adjust_callback=_on_adjust,
         fix_id_callback=_on_fix_id,
+        place_callback=_on_place,
     )
     # Keep a module-level reference so the modeless window stays alive.
     if _MODELLESS_WINDOW is not None:

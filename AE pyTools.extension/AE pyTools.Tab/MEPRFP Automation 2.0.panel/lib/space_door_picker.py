@@ -48,66 +48,14 @@ from Autodesk.Revit.Exceptions import (  # noqa: E402
 import space_placement as _placement
 import space_placement_workflow as _spw
 import space_profile_model as _profile_model
+import space_door_filter as _door_filter
 
 
-# ---------------------------------------------------------------------
-# ISelectionFilter — only accept Door-category elements
-# ---------------------------------------------------------------------
-
-class _DoorOnlyFilter(ISelectionFilter):
-    """Picks only Doors; works for both host and linked elements.
-
-    The trick for linked picks: when ``PickObject(ObjectType.LinkedElement,
-    ...)`` is in play, ``AllowElement`` is called with the **RevitLinkInstance**
-    (whose Category is "RVT Links"), NOT with the door inside the link.
-    A naive door-category check in ``AllowElement`` therefore rejects
-    every link instance and the user can't click any linked door — which
-    is exactly the bug we're fixing here. So we allow RevitLinkInstance
-    in ``AllowElement`` and do the actual Door-category check in
-    ``AllowReference``, where we have the linked element id and can
-    resolve it through the link document.
-    """
-
-    # Required by pythonnet 3 so the filter registers as a proper CLR
-    # type. Without this, PickObject errors out with
-    # "object does not implement ISelectionFilter".
-    __namespace__ = "MEPRFP.Automation.SpaceDoorPicker"
-
-    def __init__(self, doc):
-        self._doc = doc
-
-    def AllowElement(self, element):
-        # Always permit link instances — the per-reference check below
-        # will reject anything inside the link that isn't a door.
-        if isinstance(element, RevitLinkInstance):
-            return True
-        # Host-doc element path: only allow doors.
-        return _is_door(element)
-
-    def AllowReference(self, reference, position):
-        # Host element pick: ``LinkedElementId`` is invalid — element
-        # filtering happened in ``AllowElement``, accept here.
-        try:
-            linked_id = reference.LinkedElementId
-        except Exception:
-            return True
-        if linked_id is None or linked_id == ElementId.InvalidElementId:
-            return True
-
-        # Linked element pick: resolve through the link document and
-        # confirm we're hovering over a door.
-        try:
-            host_id = reference.ElementId
-        except Exception:
-            return False
-        link_inst = self._doc.GetElement(host_id)
-        if not isinstance(link_inst, RevitLinkInstance):
-            return False
-        link_doc = link_inst.GetLinkDocument()
-        if link_doc is None:
-            return False
-        elem = link_doc.GetElement(linked_id)
-        return _is_door(elem)
+# ``_DoorOnlyFilter`` lives in ``space_door_filter`` (the only module
+# in this subsystem that's excluded from ``_dev_reload.purge()``), so
+# this module can be edited and hot-reloaded without re-registering
+# the ISelectionFilter CLR type.
+_DoorOnlyFilter = _door_filter.DoorOnlyFilter
 
 
 def _is_door(elem):
@@ -183,6 +131,14 @@ def pre_pick_doors(uidoc, doc, profile_data, output=None, **_unused):
     if not needs_pick:
         return {}
 
+    # Stable ordering by space label so the prompts appear in a
+    # predictable sequence rather than collection order.
+    def _space_sort_key(entry):
+        s, _doors = entry
+        return ((s.number or "").lower(), (s.name or "").lower(),
+                s.element_id or 0)
+    needs_pick.sort(key=_space_sort_key)
+
     # Up-front explainer — the architectural model is usually linked,
     # and the user has to have "Select Links" enabled (the lock icon
     # at the bottom-right of the Revit window) for PickObject to let
@@ -199,11 +155,21 @@ def pre_pick_doors(uidoc, doc, profile_data, output=None, **_unused):
         space_label = "{} {}".format(
             space.number or "", space.name or "",
         ).strip() or "(unnamed)"
-        prompt = (
-            "[{}/{}] Click the reference DOOR in the model for space "
-            "'{}' (Select Links must be ON for linked architecture). "
-            "Press Esc to use the first door automatically."
-        ).format(idx, len(needs_pick), space_label)
+        prompt = "[{}/{}] Pick the door for the {} space".format(
+            idx, len(needs_pick), space_label,
+        )
+
+        # Show a modal alert that names the target space, so the user
+        # is told WHICH space they're picking for before the status-
+        # bar prompt fires. Pick = proceed with PickObject. Skip =
+        # auto-pick the space's first door. Cancel = abort the whole
+        # picking sequence (uses first-door fallback for the rest).
+        choice = _show_per_space_alert(idx, len(needs_pick), space_label,
+                                       len(doors))
+        if choice == "cancel":
+            break
+        if choice == "skip":
+            continue
 
         # Try linked-element pick first — typical MEP setup. If the
         # user has Select Links off OR clicks a host-doc door, fall
@@ -216,6 +182,53 @@ def pre_pick_doors(uidoc, doc, profile_data, output=None, **_unused):
         if anchor is not None:
             choices[space.element_id] = anchor
     return choices
+
+
+def _show_per_space_alert(idx, total, space_label, n_doors):
+    """Modal TaskDialog announcing which space the next pick is for.
+
+    Returns one of:
+      * ``"pick"``   — user clicked OK; caller fires PickObject.
+      * ``"skip"``   — user clicked the "Skip this space" button; the
+                       caller falls back to the first-door default
+                       for this space and moves to the next prompt.
+      * ``"cancel"`` — user closed the dialog; caller aborts the
+                       remaining picks and uses first-door defaults
+                       for every remaining space.
+    """
+    td = TaskDialog("Pick a door — {}/{}".format(idx, total))
+    td.MainInstruction = "Pick the door for the {} space".format(space_label)
+    td.MainContent = (
+        "This space has {} detected door(s). After you click 'Pick door', "
+        "click the reference door in the model. The chosen door anchors "
+        "every door-relative LED in this space.\n\n"
+        "Select Links must be ON to click a door inside a linked "
+        "architectural model.".format(n_doors)
+    )
+    # CommandLinks would be nicer (Pick / Skip / Cancel as big
+    # tappable buttons) but the API surface for those is fiddly
+    # under pythonnet; the basic Yes/No/Cancel set is reliable and
+    # carries the same three intents.
+    td.CommonButtons = (
+        TaskDialogCommonButtons.Yes
+        | TaskDialogCommonButtons.No
+        | TaskDialogCommonButtons.Cancel
+    )
+    td.DefaultButton = TaskDialogResult.Yes
+    # Rename the button captions via verification text / footer so the
+    # user knows what each does. The CommonButtons captions themselves
+    # are locale-fixed ("Yes" / "No" / "Cancel"), so we explain them
+    # inline in MainContent for clarity.
+    td.FooterText = (
+        "Yes = Pick door  •  No = Skip (use first door)  •  Cancel = "
+        "Stop picking and use defaults for the rest"
+    )
+    result = td.Show()
+    if result == TaskDialogResult.Yes:
+        return "pick"
+    if result == TaskDialogResult.No:
+        return "skip"
+    return "cancel"
 
 
 def _show_intro_dialog(needs_pick):
@@ -241,11 +254,12 @@ def _show_intro_dialog(needs_pick):
         "door-relative LED. Pick a reference door for each."
     ).format(n)
     td.MainContent = (
-        "You'll be prompted to click a door in the active view, "
-        "one space at a time. The chosen door is used as the "
-        "reference for every door-relative anchor in that space "
-        "(opposite / right / left wall, closest / furthest corner, "
-        "and door_relative).\n\n"
+        "After you click OK, you'll be prompted to pick a door in "
+        "the active view, one space at a time. Each prompt names the "
+        "space — e.g. 'Pick the door for the 10 Dairy Cooler space'. "
+        "The chosen door is used as the reference for every "
+        "door-relative anchor in that space (opposite / right / left "
+        "wall, closest / furthest corner, and door_relative).\n\n"
         "Spaces requiring a pick:\n{}\n\n"
         "**Important:** if your architecture is in a linked model, "
         "you MUST have 'Select Links' enabled in Revit — that's "

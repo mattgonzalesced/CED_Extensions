@@ -1,0 +1,9 @@
+title: "Capture\nSpace Profile"
+tooltip: |
+  Build a new space_profile by picking a Space and the child elements
+  inside it (fixtures, individual keynote symbols). Offsets are stored
+  as proportional positions along door-relative walls
+  (opposite_door / right_of_door / left_of_door / behind_door), so a
+  capture made on a 21' wall scales to a 6' / 12' layout on an 18'
+  wall in another project. Each captured keynote becomes its own LED.
+is_beta: false

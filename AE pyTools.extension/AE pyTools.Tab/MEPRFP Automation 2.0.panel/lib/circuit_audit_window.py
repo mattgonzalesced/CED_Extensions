@@ -147,7 +147,10 @@ class CircuitAuditController(object):
 
     def _row(self, finding):
         grid = Grid()
-        for w in (0.0, 1.5, 4.0, 0.0, 0.0, 0.0):
+        # Bumped target column from 1.5 to 2.5 stars to make room for
+        # the additional profile / family:type lines without crowding
+        # the message column.
+        for w in (0.0, 2.5, 3.5, 0.0, 0.0, 0.0):
             col = ColumnDefinition()
             if w == 0.0:
                 col.Width = GridLength(80)
@@ -158,12 +161,27 @@ class CircuitAuditController(object):
         target_tb = TextBlock()
         target_tb.Margin = Thickness(0, 4, 8, 4)
         target_tb.VerticalAlignment = VerticalAlignment.Center
+        target_tb.TextWrapping = self._text_wrap_wrap()
         bits = []
         if finding.element_id is not None:
             bits.append("elem id {}".format(finding.element_id))
         if finding.system_id is not None:
             bits.append("system id {}".format(finding.system_id))
-        target_tb.Text = "  |  ".join(bits) or "(no id)"
+        lines = ["  |  ".join(bits)] if bits else []
+        # Profile (name + id) — surfaced so the user can see WHICH
+        # equipment definition this finding belongs to without having
+        # to Select / Zoom + cross-reference Manage Profiles.
+        prof_name = getattr(finding, "profile_name", None)
+        prof_id = getattr(finding, "profile_id", None)
+        if prof_name or prof_id:
+            lines.append("{} ({})".format(prof_name or "?", prof_id or "?"))
+        # Family : Type — read live off the placed instance at audit
+        # time, so renames / type swaps show up here even when the
+        # YAML still carries the old label.
+        ft_label = getattr(finding, "family_type_label", None)
+        if ft_label:
+            lines.append(ft_label)
+        target_tb.Text = "\n".join(lines) if lines else "(no id)"
         Grid.SetColumn(target_tb, 1)
         grid.Children.Add(target_tb)
 
@@ -212,6 +230,12 @@ class CircuitAuditController(object):
         btn.Margin = Thickness(2, 2, 2, 2)
         btn.MinWidth = 70
         return btn
+
+    def _text_wrap_wrap(self):
+        # Lazy-import the TextWrapping enum so a stale module reload
+        # doesn't leave the window class with a dangling reference.
+        from System.Windows import TextWrapping
+        return TextWrapping.Wrap
 
     # ----- row actions --------------------------------------------
 

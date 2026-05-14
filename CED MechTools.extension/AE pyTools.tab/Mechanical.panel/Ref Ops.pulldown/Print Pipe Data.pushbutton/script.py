@@ -24,11 +24,18 @@ from LogicClasses import (
     SumHorizontalPipeLengthPerID,
     SumVerticalPipeLengthPerID,
 )
+from Snippets import identity_mark as _id_mark
 
 
 logger = script.get_logger()
 output = script.get_output()
 doc = revit.doc
+
+_REFOPS_SP_FILE = os.path.normpath(
+    os.path.join(
+        os.path.dirname(__file__), "..", "_resources", "RefOps_SharedParams.txt"
+    )
+)
 
 try:
     if sys.getrecursionlimit() < 20000:
@@ -44,7 +51,8 @@ _PIPE_CATEGORY_NAMES = (
 )
 
 _IDENTITY_PARAM_NAMES = (
-    "Identity Mark",
+    "Identity Mark_CEDT",   # canonical CED shared parameter
+    "Identity Mark",        # legacy project-data fallback
     "Mark",
     "System ID",
     "SystemID",
@@ -1210,6 +1218,9 @@ def main():
         forms.alert("No active Revit document.", title=__title__, exitscript=True)
     if doc.IsFamilyDocument:
         forms.alert("This tool requires a project document.", title=__title__, exitscript=True)
+
+    if not _id_mark.ensure_bound(doc, forms, __title__, _REFOPS_SP_FILE):
+        return
 
     all_pipe_elements = _collect_all_pipes()
     if not all_pipe_elements:

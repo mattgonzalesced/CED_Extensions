@@ -90,10 +90,17 @@ class CircuitAuditFinding(object):
         "message",
         "fix_kind",
         "fix_payload",
+        # Context fields surfaced on the row so the user can identify
+        # which equipment a finding belongs to without having to Select
+        # / Zoom first.
+        "profile_id",
+        "profile_name",
+        "family_type_label",
     )
 
     def __init__(self, category, element_id=None, system_id=None,
-                 message="", fix_kind=FIX_NONE, fix_payload=None):
+                 message="", fix_kind=FIX_NONE, fix_payload=None,
+                 profile_id=None, profile_name=None, family_type_label=None):
         self.category = category
         self.category_label = CAT_LABELS.get(category, category)
         self.element_id = element_id
@@ -101,6 +108,9 @@ class CircuitAuditFinding(object):
         self.message = message
         self.fix_kind = fix_kind
         self.fix_payload = dict(fix_payload or {})
+        self.profile_id = profile_id or None
+        self.profile_name = profile_name or None
+        self.family_type_label = family_type_label or None
 
 
 class CircuitAuditResult(object):
@@ -162,17 +172,93 @@ def _read_param_int(elem, name):
 
 
 def _yaml_expected_for_led(led):
-    """Pull the captured CKT data from the LED's parameters dict."""
+    """Pull the captured CKT data from the LED's parameters dict.
+
+    Values are coerced through ``str(...)`` before stripping because
+    the LED's params dict can carry non-string types — circuit numbers
+    are sometimes stored as ints, and parent / sibling directives are
+    stored as dicts. ``int.strip()`` / ``dict.strip()`` would crash
+    refresh; the directive case is intentionally rendered as its repr
+    here (audit time can't resolve them — that's the placement
+    engine's job — so leaving them as text is the cleanest "no
+    expected value" outcome).
+    """
     if not isinstance(led, dict):
         return {}
     params = led.get("parameters") or {}
     if not isinstance(params, dict):
         return {}
+
+    def _as_text(value):
+        if value is None:
+            return ""
+        if isinstance(value, dict):
+            # Directive (BYPARENT/BYSIBLING) — leave empty so the diff
+            # below treats it as "no expected value" and the row
+            # doesn't drift-flag against the live element.
+            return ""
+        return str(value).strip()
+
     return {
-        "panel": (params.get("CKT_Panel_CEDT") or "").strip(),
-        "circuit": (params.get("CKT_Circuit Number_CEDT") or "").strip(),
-        "load": (params.get("CKT_Load Name_CEDT") or "").strip(),
+        "panel": _as_text(params.get("CKT_Panel_CEDT")),
+        "circuit": _as_text(params.get("CKT_Circuit Number_CEDT")),
+        "load": _as_text(params.get("CKT_Load Name_CEDT")),
     }
+
+
+def _element_family_type_label(elem):
+    """``"Family : Type"`` for a placed FamilyInstance / Group, or ``""``
+    when the symbol can't be resolved. Surfaced on findings so the user
+    can identify the equipment without selecting it first."""
+    if elem is None:
+        return ""
+    try:
+        sym = getattr(elem, "Symbol", None)
+        if sym is not None:
+            family = getattr(sym, "Family", None)
+            family_name = getattr(family, "Name", "") if family is not None else ""
+            type_name = getattr(sym, "Name", "") or ""
+            if family_name and type_name:
+                return "{} : {}".format(family_name, type_name)
+            if family_name:
+                return family_name
+            if type_name:
+                return type_name
+    except Exception:
+        pass
+    try:
+        gtype = getattr(elem, "GroupType", None)
+        if gtype is not None:
+            name = getattr(gtype, "Name", "") or ""
+            if name:
+                return name
+    except Exception:
+        pass
+    return ""
+
+
+def _profile_context_for_elem(elem, led_index):
+    """Return ``(profile_id, profile_name, family_type_label)`` for a
+    placed element. Looks up the element's Element_Linker, resolves
+    its ``led_id`` against the profile data, and falls back to empty
+    strings when any step fails (e.g. no Element_Linker stamped, LED
+    deleted from YAML). The caller stamps these onto the finding so
+    every row carries equipment-identifying context.
+    """
+    family_type_label = _element_family_type_label(elem)
+    profile_id = ""
+    profile_name = ""
+    try:
+        linker = _el_io.read_from_element(elem)
+    except Exception:
+        linker = None
+    if linker is not None and linker.led_id:
+        entry = led_index.get(linker.led_id)
+        if entry is not None:
+            profile, _set_dict, _led = entry
+            profile_id = profile.get("id") or ""
+            profile_name = profile.get("name") or ""
+    return profile_id, profile_name, family_type_label
 
 
 def _build_led_index(profile_data):
@@ -217,6 +303,12 @@ def run_audit(doc, profile_data=None, categories=None):
             load_str = _read_param_string(elem, "CKT_Load Name_CEDT")
             poles_elem = _read_param_int(elem, "Number of Poles_CED")
 
+            # Resolve per-element context once so every finding from
+            # this element carries the same profile / family:type tag.
+            ctx_pid, ctx_pname, ctx_label = _profile_context_for_elem(
+                elem, led_index,
+            )
+
             # Cat A — missing
             if CAT_A in requested:
                 if not panel_str:
@@ -225,6 +317,9 @@ def run_audit(doc, profile_data=None, categories=None):
                         element_id=elem_id,
                         message="CKT_Panel_CEDT is empty",
                         fix_kind=FIX_RUN_SUPERCIRCUIT,
+                        profile_id=ctx_pid,
+                        profile_name=ctx_pname,
+                        family_type_label=ctx_label,
                     ))
                 if not circuit_str:
                     result.add(CircuitAuditFinding(
@@ -232,6 +327,9 @@ def run_audit(doc, profile_data=None, categories=None):
                         element_id=elem_id,
                         message="CKT_Circuit Number_CEDT is empty",
                         fix_kind=FIX_RUN_SUPERCIRCUIT,
+                        profile_id=ctx_pid,
+                        profile_name=ctx_pname,
+                        family_type_label=ctx_label,
                     ))
 
             # Cat C — phantom panel
@@ -248,6 +346,9 @@ def run_audit(doc, profile_data=None, categories=None):
                         element_id=elem_id,
                         message="Panel '{}' is not loaded in the project".format(panel_str),
                         fix_kind=FIX_CLEAR_PANEL_REF,
+                        profile_id=ctx_pid,
+                        profile_name=ctx_pname,
+                        family_type_label=ctx_label,
                     ))
 
             # Cat B — drift from YAML
@@ -270,6 +371,9 @@ def run_audit(doc, profile_data=None, categories=None):
                                 message="Drift from YAML: {}".format("; ".join(drift)),
                                 fix_kind=FIX_REWRITE_CKT_FROM_YAML,
                                 fix_payload={"led_id": linker.led_id},
+                                profile_id=ctx_pid,
+                                profile_name=ctx_pname,
+                                family_type_label=ctx_label,
                             ))
 
             # Cat E — pole mismatch (deferred to the system-walk pass)
@@ -303,6 +407,9 @@ def run_audit(doc, profile_data=None, categories=None):
                         continue
                     member_poles = _read_param_int(m, "Number of Poles_CED")
                     if member_poles and sys_poles and member_poles > sys_poles:
+                        ctx_pid, ctx_pname, ctx_label = _profile_context_for_elem(
+                            m, led_index,
+                        )
                         result.add(CircuitAuditFinding(
                             category=CAT_E,
                             element_id=_id_value(m),
@@ -311,6 +418,9 @@ def run_audit(doc, profile_data=None, categories=None):
                                 "Element wants {} pole(s) but circuit is {} pole(s)"
                             ).format(member_poles, sys_poles),
                             fix_kind=FIX_NONE,
+                            profile_id=ctx_pid,
+                            profile_name=ctx_pname,
+                            family_type_label=ctx_label,
                         ))
 
     return result
@@ -371,12 +481,20 @@ def _system_poles(system):
 def _diff_ckt(expected, actual_panel, actual_circuit, actual_load):
     """Return a list of diff descriptions where YAML expected differs
     from actual element parameters. Empty list = no drift."""
+    def _norm(value):
+        if value is None:
+            return ""
+        return str(value).strip().lower()
+
     out = []
-    if expected.get("panel") and expected["panel"].strip().lower() != (actual_panel or "").strip().lower():
+    exp_panel = _norm(expected.get("panel"))
+    exp_circuit = _norm(expected.get("circuit"))
+    exp_load = _norm(expected.get("load"))
+    if exp_panel and exp_panel != _norm(actual_panel):
         out.append("panel '{}' vs YAML '{}'".format(actual_panel, expected["panel"]))
-    if expected.get("circuit") and expected["circuit"].strip().lower() != (actual_circuit or "").strip().lower():
+    if exp_circuit and exp_circuit != _norm(actual_circuit):
         out.append("circuit '{}' vs YAML '{}'".format(actual_circuit, expected["circuit"]))
-    if expected.get("load") and expected["load"].strip().lower() != (actual_load or "").strip().lower():
+    if exp_load and exp_load != _norm(actual_load):
         out.append("load '{}' vs YAML '{}'".format(actual_load, expected["load"]))
     return out
 

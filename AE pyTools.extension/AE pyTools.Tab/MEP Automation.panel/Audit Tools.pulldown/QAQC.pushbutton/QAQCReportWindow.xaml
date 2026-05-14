@@ -1,7 +1,7 @@
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="QA/QC Relationship Audit"
-        Height="760"
+        Height="780"
         Width="1700"
         WindowStartupLocation="CenterScreen">
   <Grid Margin="12">
@@ -18,52 +18,143 @@
     <TabControl Grid.Row="1"
                 Name="ReportTabs">
       <TabItem Name="Tab1Item" Header="1. No Matching Parents">
-        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto">
-          <Grid Name="Tab1Grid" Margin="0,4,0,0"/>
-        </ScrollViewer>
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          <StackPanel Name="Tab1FilterRules" Orientation="Vertical" Margin="0,4,0,2"/>
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,2,0,6">
+            <Button Name="Tab1AddFilter" Content="+ Add filter" Width="100"/>
+            <Button Name="Tab1ClearFilters" Content="Clear all" Width="80" Margin="6,0,12,0"/>
+            <TextBlock Name="Tab1MatchCount" VerticalAlignment="Center" Foreground="Gray"/>
+          </StackPanel>
+          <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Auto">
+            <Grid Name="Tab1Grid" Margin="0,4,0,0"/>
+          </ScrollViewer>
+        </Grid>
       </TabItem>
 
       <TabItem Name="Tab2Item" Header="2. Parents Found, Children Missing">
-        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto">
-          <Grid Name="Tab2Grid" Margin="0,4,0,0"/>
-        </ScrollViewer>
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          <StackPanel Name="Tab2FilterRules" Orientation="Vertical" Margin="0,4,0,2"/>
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,2,0,6">
+            <Button Name="Tab2AddFilter" Content="+ Add filter" Width="100"/>
+            <Button Name="Tab2ClearFilters" Content="Clear all" Width="80" Margin="6,0,12,0"/>
+            <TextBlock Name="Tab2MatchCount" VerticalAlignment="Center" Foreground="Gray"/>
+          </StackPanel>
+          <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Auto">
+            <Grid Name="Tab2Grid" Margin="0,4,0,0"/>
+          </ScrollViewer>
+        </Grid>
       </TabItem>
 
       <TabItem Name="Tab3Item" Header="3. Original Parent Missing">
-        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto">
-          <Grid Name="Tab3Grid" Margin="0,4,0,0"/>
-        </ScrollViewer>
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          <StackPanel Name="Tab3FilterRules" Orientation="Vertical" Margin="0,4,0,2"/>
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,2,0,6">
+            <Button Name="Tab3AddFilter" Content="+ Add filter" Width="100"/>
+            <Button Name="Tab3ClearFilters" Content="Clear all" Width="80" Margin="6,0,12,0"/>
+            <TextBlock Name="Tab3MatchCount" VerticalAlignment="Center" Foreground="Gray"/>
+          </StackPanel>
+          <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Auto">
+            <Grid Name="Tab3Grid" Margin="0,4,0,0"/>
+          </ScrollViewer>
+        </Grid>
       </TabItem>
 
       <TabItem Name="Tab4Item" Header="4. Parent Type Changed (Profile Exists)">
-        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto">
-          <Grid Name="Tab4Grid" Margin="0,4,0,0"/>
-        </ScrollViewer>
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          <StackPanel Name="Tab4FilterRules" Orientation="Vertical" Margin="0,4,0,2"/>
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,2,0,6">
+            <Button Name="Tab4AddFilter" Content="+ Add filter" Width="100"/>
+            <Button Name="Tab4ClearFilters" Content="Clear all" Width="80" Margin="6,0,12,0"/>
+            <TextBlock Name="Tab4MatchCount" VerticalAlignment="Center" Foreground="Gray"/>
+          </StackPanel>
+          <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Auto">
+            <Grid Name="Tab4Grid" Margin="0,4,0,0"/>
+          </ScrollViewer>
+        </Grid>
       </TabItem>
 
       <TabItem Name="Tab5Item" Header="5. Parent Type Changed (No Profile)">
-        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto">
-          <Grid Name="Tab5Grid" Margin="0,4,0,0"/>
-        </ScrollViewer>
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          <StackPanel Name="Tab5FilterRules" Orientation="Vertical" Margin="0,4,0,2"/>
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,2,0,6">
+            <Button Name="Tab5AddFilter" Content="+ Add filter" Width="100"/>
+            <Button Name="Tab5ClearFilters" Content="Clear all" Width="80" Margin="6,0,12,0"/>
+            <TextBlock Name="Tab5MatchCount" VerticalAlignment="Center" Foreground="Gray"/>
+          </StackPanel>
+          <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Auto">
+            <Grid Name="Tab5Grid" Margin="0,4,0,0"/>
+          </ScrollViewer>
+        </Grid>
       </TabItem>
 
       <TabItem Name="Tab6Item" Header="6. Far from Parent">
-        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto">
-          <Grid Name="Tab6Grid" Margin="0,4,0,0"/>
-        </ScrollViewer>
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          <StackPanel Name="Tab6FilterRules" Orientation="Vertical" Margin="0,4,0,2"/>
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,2,0,6">
+            <Button Name="Tab6AddFilter" Content="+ Add filter" Width="100"/>
+            <Button Name="Tab6ClearFilters" Content="Clear all" Width="80" Margin="6,0,12,0"/>
+            <TextBlock Name="Tab6MatchCount" VerticalAlignment="Center" Foreground="Gray"/>
+          </StackPanel>
+          <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Auto">
+            <Grid Name="Tab6Grid" Margin="0,4,0,0"/>
+          </ScrollViewer>
+        </Grid>
       </TabItem>
 
       <TabItem Name="Tab7Item" Header="7. ID Discrepancies">
-        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto">
-          <Grid Name="Tab7Grid" Margin="0,4,0,0"/>
-        </ScrollViewer>
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          <StackPanel Name="Tab7FilterRules" Orientation="Vertical" Margin="0,4,0,2"/>
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,2,0,6">
+            <Button Name="Tab7AddFilter" Content="+ Add filter" Width="100"/>
+            <Button Name="Tab7ClearFilters" Content="Clear all" Width="80" Margin="6,0,12,0"/>
+            <TextBlock Name="Tab7MatchCount" VerticalAlignment="Center" Foreground="Gray"/>
+          </StackPanel>
+          <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Auto">
+            <Grid Name="Tab7Grid" Margin="0,4,0,0"/>
+          </ScrollViewer>
+        </Grid>
       </TabItem>
     </TabControl>
 
