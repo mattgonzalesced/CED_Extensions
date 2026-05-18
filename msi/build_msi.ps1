@@ -63,7 +63,7 @@ try {
     Write-Host "`n[4/4] Linking .wixobj -> .msi..." -ForegroundColor Yellow
     $OutputMsi = Join-Path $OutputDir "Updater_pyrevit.msi"
     & light.exe -nologo -ext WixUtilExtension -ext WixUIExtension `
-        -sw1076 -sice:ICE38 -sice:ICE43 -sice:ICE57 -sice:ICE61 -sice:ICE64 -sice:ICE91 `
+        -sw1050 -sw1076 -sice:ICE20 -sice:ICE38 -sice:ICE43 -sice:ICE57 -sice:ICE61 -sice:ICE64 -sice:ICE82 -sice:ICE91 `
         -cultures:en-us `
         -out $OutputMsi `
         "Product.wixobj" "Extensions.wixobj"

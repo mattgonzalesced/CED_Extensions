@@ -99,18 +99,128 @@
     </Property>
 
     <SetProperty Id="WIXUI_EXITDIALOGOPTIONALTEXT"
-                 Value="{\WarningFont}WARNING: CED Content Collection folder NOT FOUND at C:\ACC\ACCDocs\CoolSys\CED Content Collection. Please link the CED Content Collection to your Autodesk Docs before using the extensions."
+                 Value="{\WarningFont}WARNING: CED Content Collection folder NOT FOUND at C:\ACC\ACCDocs\CoolSys\CED Content Collection.&#10;&#10;To link it:&#10;Step 1: Expand the system tray and click the Autodesk Docs icon.&#10;Step 2: In the Autodesk Docs panel, click 'Select Projects'.&#10;Step 3: Check 'CED Content Collection' and click 'Save'."
                  After="AppSearch">
       NOT CONTENTCOLLECTIONFOUND
     </SetProperty>
 
-    <!-- ===== Installer UI (minimal wizard: Welcome+License -> Progress -> Finish) ===== -->
-    <UI>
-      <!-- Custom text style for the inline Content Collection warning on the Finish dialog -->
-      <TextStyle Id="WarningFont" FaceName="Tahoma" Size="8" Bold="yes" Red="192" Green="0" Blue="0" />
-    </UI>
-    <UIRef Id="WixUI_Minimal" />
+    <!-- Embedded "how to fix" composite image (3 stacked steps with captions) -->
+    <Binary Id="StepsImg" SourceFile="dialog_steps.png" />
+
+    <!-- Re-check VBScript for the Check Again button -->
+    <Binary Id="RecheckBin" SourceFile="RecheckContent.vbs" />
+    <CustomAction Id="RecheckContent"
+                  BinaryKey="RecheckBin"
+                  VBScriptCall="ReCheckContent"
+                  Execute="immediate"
+                  Return="ignore" />
+
+    <!-- ===== Installer UI =====
+         Inlined version of WixUI_Minimal that omits the stock ExitDialog so we
+         can define our own. WixUI_Common brings in the common dialogs and
+         infrastructure (CancelDlg, WelcomeEulaDlg, etc.). -->
+    <UIRef Id="WixUI_Common" />
     <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+
+    <UI>
+      <TextStyle Id="WixUI_Font_Normal"   FaceName="Tahoma" Size="8" />
+      <TextStyle Id="WixUI_Font_Bigger"   FaceName="Tahoma" Size="12" />
+      <TextStyle Id="WixUI_Font_Title"    FaceName="Tahoma" Size="9" Bold="yes" />
+      <TextStyle Id="WarningFont"         FaceName="Tahoma" Size="8" Bold="yes" Red="192" Green="0" Blue="0" />
+
+      <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
+
+      <DialogRef Id="ErrorDlg" />
+      <DialogRef Id="FatalError" />
+      <DialogRef Id="FilesInUse" />
+      <DialogRef Id="MsiRMFilesInUse" />
+      <DialogRef Id="PrepareDlg" />
+      <DialogRef Id="ProgressDlg" />
+      <DialogRef Id="ResumeDlg" />
+      <DialogRef Id="UserExit" />
+      <DialogRef Id="WelcomeEulaDlg" />
+
+      <Publish Dialog="WelcomeEulaDlg" Control="Install" Event="EndDialog" Value="Return" Order="999">NOT Installed</Publish>
+      <!-- WelcomeEulaDlg's Cancel button already publishes SpawnDialog CancelDlg internally -->
+
+
+      <InstallUISequence>
+        <Show Dialog="WelcomeEulaDlg" Before="ProgressDlg">NOT Installed</Show>
+        <!-- Single post-install dialog. Its controls show/hide based on
+             CONTENTCOLLECTIONFOUND. CEDExitDialogOK is still reachable via
+             NewDialog from the Check Again button after a successful recheck. -->
+        <Show Dialog="CEDExitDialog" OnExit="success" />
+      </InstallUISequence>
+
+      <!-- Custom ExitDialog: wide enough for a side-by-side how-to-fix guide +
+           Check Again button + disabled Finish when Content Collection missing.
+           Composite is 1489x668 px. With FixedSize="yes", MSI renders the
+           bitmap at native pixel size; we just need the control's bounding box
+           to be at least as large as the image. -->
+      <Dialog Id="CEDExitDialog" Width="1030" Height="660" Title="Setup Wizard">
+        <!-- Always-visible header. Width sized to the text rather than the
+             full dialog width so the title doesn't appear adrift in whitespace. -->
+        <Control Id="Title" Type="Text" X="20" Y="15" Width="500" Height="30" Transparent="yes" NoPrefix="yes"
+                 Text="{\WixUI_Font_Title}!(loc.ExitDialogTitle)" />
+        <Control Id="Description" Type="Text" X="20" Y="48" Width="500" Height="22" Transparent="yes" NoPrefix="yes"
+                 Text="!(loc.ExitDialogDescription)" />
+
+        <!-- Bold red warning text with inline step instructions (multi-line) -->
+        <Control Id="OptionalText" Type="Text" X="20" Y="75" Width="990" Height="110" Hidden="yes" NoPrefix="yes"
+                 Text="[WIXUI_EXITDIALOGOPTIONALTEXT]">
+          <Condition Action="show">WIXUI_EXITDIALOGOPTIONALTEXT AND (NOT CONTENTCOLLECTIONFOUND)</Condition>
+          <Condition Action="hide">CONTENTCOLLECTIONFOUND</Condition>
+        </Control>
+
+        <!-- "How to fix" composite (1489x628 px, no captions in image).
+             FixedSize="yes" forces native pixel rendering with no stretching. -->
+        <Control Id="StepsImage" Type="Bitmap" X="15" Y="190" Width="1000" Height="420" Hidden="yes"
+                 FixedSize="yes" Text="StepsImg">
+          <Condition Action="show">NOT CONTENTCOLLECTIONFOUND</Condition>
+          <Condition Action="hide">CONTENTCOLLECTIONFOUND</Condition>
+        </Control>
+
+        <!-- Check Again button (visible only when missing). Re-runs the VBScript
+             check; MSI re-evaluates control conditions when CONTENTCOLLECTIONFOUND
+             changes, so image/warning hide and Finish enables automatically. -->
+        <Control Id="CheckAgain" Type="PushButton" X="805" Y="625" Width="80" Height="17" Hidden="yes"
+                 Text="Check &amp;Again">
+          <Condition Action="show">NOT CONTENTCOLLECTIONFOUND</Condition>
+          <Condition Action="hide">CONTENTCOLLECTIONFOUND</Condition>
+          <Publish Event="DoAction" Value="RecheckContent" Order="1">1</Publish>
+          <!-- If the recheck succeeds, transition to the compact "Setup complete"
+               dialog (with a real Finish button) instead of leaving the user on
+               the now-stale action-required dialog. -->
+          <Publish Event="NewDialog" Value="CEDExitDialogOK" Order="2">CONTENTCOLLECTIONFOUND</Publish>
+        </Control>
+
+        <!-- Finish button: disabled until CONTENTCOLLECTIONFOUND is set -->
+        <Control Id="Finish" Type="PushButton" X="892" Y="625" Width="56" Height="17" Default="yes" Cancel="yes"
+                 Text="!(loc.WixUIFinish)">
+          <Publish Event="EndDialog" Value="Return">1</Publish>
+          <Condition Action="disable">NOT CONTENTCOLLECTIONFOUND</Condition>
+          <Condition Action="enable">CONTENTCOLLECTIONFOUND</Condition>
+        </Control>
+
+        <!-- Standard disabled buttons (kept for ExitDialog signature compatibility) -->
+        <Control Id="Cancel" Type="PushButton" X="954" Y="625" Width="56" Height="17" Disabled="yes" Text="!(loc.WixUICancel)" />
+        <Control Id="Back" Type="PushButton" X="743" Y="625" Width="56" Height="17" Disabled="yes" Text="!(loc.WixUIBack)" />
+      </Dialog>
+
+      <!-- Compact happy-path dialog: shown when Content Collection is already linked. -->
+      <Dialog Id="CEDExitDialogOK" Width="370" Height="270" Title="Setup Wizard">
+        <Control Id="Title" Type="Text" X="135" Y="20" Width="220" Height="60" Transparent="yes" NoPrefix="yes"
+                 Text="{\WixUI_Font_Title}!(loc.ExitDialogTitle)" />
+        <Control Id="Description" Type="Text" X="135" Y="70" Width="220" Height="40" Transparent="yes" NoPrefix="yes"
+                 Text="!(loc.ExitDialogDescription)" />
+        <Control Id="Finish" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Cancel="yes"
+                 Text="!(loc.WixUIFinish)">
+          <Publish Event="EndDialog" Value="Return">1</Publish>
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Disabled="yes" Text="!(loc.WixUICancel)" />
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Disabled="yes" Text="!(loc.WixUIBack)" />
+      </Dialog>
+    </UI>
 
   </Product>
 </Wix>
