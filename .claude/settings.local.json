@@ -7,7 +7,10 @@
       "Read(//c/Users/m.gonzales/OneDrive - CoolSys Inc/Desktop/python/Cutsheet Scraping - H-E-B/Project Mates.pushbutton/**)",
       "Read(//c/Users/m.gonzales/OneDrive - CoolSys Inc/Desktop/REVIT/MG_tools/MG pyTools.extension/MG_Tools.tab/MG_Panel.panel/MG_pulldown.pulldown/ExtractLightingFixtures.pushbutton/**)",
       "Bash(dir \"c:\\CED_Extensions\\AE pyTools.extension\\AE pyTools.Tab\\MEP Automation.panel\\Misc Operations.pulldown\" /b)",
-      "Bash(claude mcp:*)"
+      "Bash(claude mcp:*)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "mcp__revit"
     ],
     "deny": [],
     "ask": []
