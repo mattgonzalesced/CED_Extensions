@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+
+  <Product Id="*"
+           Name="CED pyRevit Extensions"
+           Language="1033"
+           Version="$(var.ProductVersion)"
+           Manufacturer="CoolSys / CED"
+           UpgradeCode="7C3E5B4A-9F2D-4E81-A6B2-1D8C9F0E3A7B">
+
+    <Package InstallerVersion="500"
+             Compressed="yes"
+             InstallScope="perUser"
+             Description="CED pyRevit Extensions Installer"
+             Manufacturer="CoolSys / CED" />
+
+    <!-- Per-user install -->
+    <Property Id="ALLUSERS" Value="" />
+    <Property Id="MSIINSTALLPERUSER" Value="1" />
+
+    <MajorUpgrade
+        AllowSameVersionUpgrades="yes"
+        DowngradeErrorMessage="A newer version of CED pyRevit Extensions is already installed." />
+
+    <Media Id="1" Cabinet="extensions.cab" EmbedCab="yes" />
+
+    <!-- AppDataFolder = %APPDATA% at install time, resolves per-user -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="AppDataFolder">
+        <Directory Id="APPDATAPYREVIT" Name="pyRevit">
+          <Directory Id="APPDATAPYREVITEXT" Name="Extensions" />
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <Feature Id="MainFeature" Title="CED pyRevit Extensions" Level="1">
+      <ComponentGroupRef Id="ExtensionsGroup" />
+      <ComponentRef Id="TelemetryConfig" />
+      <ComponentRef Id="LegacyCleanup" />
+    </Feature>
+
+    <!-- ===== Telemetry config (.ini edits) ===== -->
+    <DirectoryRef Id="APPDATAPYREVIT">
+      <Component Id="TelemetryConfig" Guid="2A8F1B6C-4D9E-4731-B5C8-7E0F2D3A4B9C">
+        <RegistryValue Root="HKCU"
+                       Key="Software\CED\pyRevitUpdater"
+                       Name="TelemetryConfigured"
+                       Type="integer" Value="1" KeyPath="yes" />
+
+        <IniFile Id="TelActive"    Action="addLine" Name="pyRevit_config.ini"
+                 Directory="APPDATAPYREVIT" Section="telemetry"
+                 Key="active" Value="true" />
+        <IniFile Id="TelUtc"       Action="addLine" Name="pyRevit_config.ini"
+                 Directory="APPDATAPYREVIT" Section="telemetry"
+                 Key="utc_timestamps" Value="true" />
+        <IniFile Id="TelFileDir"   Action="addLine" Name="pyRevit_config.ini"
+                 Directory="APPDATAPYREVIT" Section="telemetry"
+                 Key="telemetry_file_dir"
+                 Value="[AppDataFolder]pyRevit\Extensions\CED_pyTelemetry" />
+        <IniFile Id="TelServer"    Action="addLine" Name="pyRevit_config.ini"
+                 Directory="APPDATAPYREVIT" Section="telemetry"
+                 Key="telemetry_server_url" Value="" />
+        <IniFile Id="TelHooks"     Action="addLine" Name="pyRevit_config.ini"
+                 Directory="APPDATAPYREVIT" Section="telemetry"
+                 Key="include_hooks" Value="true" />
+        <IniFile Id="TelActiveApp" Action="addLine" Name="pyRevit_config.ini"
+                 Directory="APPDATAPYREVIT" Section="telemetry"
+                 Key="active_app" Value="false" />
+        <IniFile Id="TelAppSrv"    Action="addLine" Name="pyRevit_config.ini"
+                 Directory="APPDATAPYREVIT" Section="telemetry"
+                 Key="apptelemetry_server_url" Value="" />
+        <IniFile Id="TelAppFlags"  Action="addLine" Name="pyRevit_config.ini"
+                 Directory="APPDATAPYREVIT" Section="telemetry"
+                 Key="apptelemetry_event_flags" Value="0x0" />
+      </Component>
+    </DirectoryRef>
+
+    <!-- ===== Legacy folder cleanup ===== -->
+    <DirectoryRef Id="APPDATAPYREVITEXT">
+      <Component Id="LegacyCleanup" Guid="8E1D4A9B-3C7F-4258-9A0B-6F5D2E1C7B8A">
+        <RegistryValue Root="HKCU"
+                       Key="Software\CED\pyRevitUpdater"
+                       Name="LegacyCleaned"
+                       Type="integer" Value="1" KeyPath="yes" />
+        <util:RemoveFolderEx On="install" Property="LEGACYHEB" />
+      </Component>
+    </DirectoryRef>
+
+    <SetProperty Id="LEGACYHEB"
+                 Value="[AppDataFolder]pyRevit\Extensions\H-E-B Tools.extension"
+                 Before="CostFinalize"
+                 Sequence="execute" />
+
+    <!-- ===== CED Content Collection warning ===== -->
+    <Binary Id="ContentCheckBin" SourceFile="ContentCheck.vbs" />
+
+    <CustomAction Id="WarnIfNoContent"
+                  BinaryKey="ContentCheckBin"
+                  VBScriptCall="CheckContent"
+                  Execute="immediate"
+                  Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="WarnIfNoContent" After="InstallFinalize">
+        NOT REMOVE
+      </Custom>
+    </InstallExecuteSequence>
+
+  </Product>
+</Wix>
