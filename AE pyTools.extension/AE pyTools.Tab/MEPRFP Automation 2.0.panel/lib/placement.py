@@ -50,6 +50,7 @@ from Autodesk.Revit.DB import (  # noqa: E402
 )
 from Autodesk.Revit.DB.Structure import StructuralType  # noqa: E402
 
+import directives as _dir
 import element_linker as _el
 import element_linker_io as _el_io
 import geometry
@@ -842,6 +843,7 @@ class PlacementResult(object):
         self.placed_annotation_count = 0
         self.element_linker_writes = 0
         self.static_param_writes = 0
+        self.parent_directive_writes = 0
         self.warnings = []
         self.errors = []
         self.skipped_already_placed = 0
@@ -1378,6 +1380,178 @@ def _apply_static_parameters(elem, params_dict, warnings=None):
     return written, skipped
 
 
+def _resolve_target_parent_element(doc, target):
+    """Return the live Revit parent element a ``Target`` was matched
+    against, or ``None`` when the target has no resolvable parent.
+
+    * ``SOURCE_HOST_MODEL`` — the parent lives in the active doc;
+      ``target.link_elem_id`` is its host-doc ElementId value.
+    * ``SOURCE_LINKED_REVIT`` — the parent lives inside a linked
+      doc; resolve it through the RevitLinkInstance's link document.
+    * ``SOURCE_CSV`` / ``SOURCE_DWG_LINK`` / ``SOURCE_PICKED_POINT``
+      — no Revit parent element exists (a spreadsheet row, a CAD
+      block, or a bare clicked point), so parent directives have
+      nothing to read from. Returns ``None``.
+    """
+    if doc is None or target is None:
+        return None
+    try:
+        if target.source == SOURCE_HOST_MODEL and target.link_elem_id is not None:
+            return doc.GetElement(ElementId(int(target.link_elem_id)))
+        if (
+            target.source == SOURCE_LINKED_REVIT
+            and target.link_inst is not None
+            and target.link_elem_id is not None
+        ):
+            link_doc = target.link_inst.GetLinkDocument()
+            if link_doc is None:
+                return None
+            return link_doc.GetElement(ElementId(int(target.link_elem_id)))
+    except Exception:
+        return None
+    return None
+
+
+def _read_parent_param_for_directive(parent_elem, param_name):
+    """Read ``param_name`` off the parent element for a BYPARENT
+    directive, preferring the **unit-bearing display string**.
+
+    The user-facing contract is: a child that inherits the parent's
+    "Amps" should land ``"50 A"`` (value + units), not the bare
+    internal double. ``AsValueString()`` renders exactly what the
+    Properties palette shows — "50 A", "120 V", "1800 VA", a
+    feet-inches string, etc. — and ``_set_param_value`` on the child
+    side feeds that straight back through ``SetValueString``, so the
+    units round-trip correctly regardless of the child parameter's
+    internal storage unit.
+
+    Fallback order when ``AsValueString`` is empty/unsupported:
+    String → raw ``AsString``; Integer → int; Double → float;
+    ElementId → id value. Returns ``None`` when the parameter is
+    absent or has no value.
+    """
+    if parent_elem is None or not param_name:
+        return None
+    param = _find_parameter(parent_elem, param_name)
+    if param is None:
+        return None
+    try:
+        if not param.HasValue:
+            return None
+    except Exception:
+        pass
+    # Unit-bearing display string first — this is the whole point of
+    # the feature ("50" on the parent → "50 A" on the child).
+    try:
+        vs = param.AsValueString()
+        if vs is not None and str(vs).strip() != "":
+            return vs
+    except Exception:
+        pass
+    try:
+        storage = param.StorageType.ToString()
+    except Exception:
+        storage = ""
+    try:
+        if storage == "String":
+            return param.AsString()
+        if storage == "Integer":
+            return param.AsInteger()
+        if storage == "Double":
+            return param.AsDouble()
+        if storage == "ElementId":
+            eid = param.AsElementId()
+            return getattr(eid, "Value", None) or getattr(eid, "IntegerValue", None)
+        return param.AsString()
+    except Exception:
+        return None
+
+
+def _apply_parent_directives(child, parent_elem, params_dict, warnings=None):
+    """Resolve every BYPARENT directive in ``params_dict`` against the
+    live ``parent_elem`` and write the result onto ``child``.
+
+    Counterpart to ``_apply_static_parameters`` (which deliberately
+    skips directive dicts). Sibling directives are left untouched
+    here — they reference another LED in the same set, which is a
+    separate placement and resolves at audit time, not from the
+    parent element.
+
+    ``warnings`` (optional) collects a line per directive that can't
+    be resolved or written so the caller can surface why an inherited
+    value didn't land.
+
+    Returns ``(written, skipped)``.
+    """
+    if child is None or not params_dict:
+        return 0, 0
+    written = 0
+    skipped = 0
+    for name, value in params_dict.items():
+        if not name or name in _STAMP_ONLY_PARAM_KEYS:
+            continue
+        if not _dir.is_parent_directive(value):
+            # static values + sibling directives are handled elsewhere
+            continue
+        src_name = _dir.parent_param_name(value)
+        if not src_name:
+            skipped += 1
+            continue
+        if parent_elem is None:
+            skipped += 1
+            if warnings is not None:
+                warnings.append(
+                    "Directive '{}' <- parent '{}' skipped: this target "
+                    "has no resolvable Revit parent element (CSV / CAD / "
+                    "picked-point source).".format(name, src_name)
+                )
+            continue
+        parent_value = _read_parent_param_for_directive(parent_elem, src_name)
+        if parent_value is None or parent_value == "":
+            skipped += 1
+            if warnings is not None:
+                warnings.append(
+                    "Directive '{}' <- parent '{}' skipped: parent has no "
+                    "value for '{}'.".format(name, src_name, src_name)
+                )
+            continue
+        param = _find_parameter(child, name)
+        if param is None:
+            skipped += 1
+            if warnings is not None:
+                warnings.append(
+                    "Directive target '{}' not found on placed child — "
+                    "inherited value {!r} skipped.".format(name, parent_value)
+                )
+            continue
+        try:
+            if param.IsReadOnly:
+                skipped += 1
+                if warnings is not None:
+                    warnings.append(
+                        "Directive target '{}' is read-only on child — "
+                        "inherited value {!r} skipped.".format(
+                            name, parent_value,
+                        )
+                    )
+                continue
+        except Exception:
+            skipped += 1
+            continue
+        if _set_param_value(param, parent_value):
+            written += 1
+        else:
+            skipped += 1
+            if warnings is not None:
+                warnings.append(
+                    "Failed to write inherited value {!r} into child "
+                    "parameter '{}' (from parent '{}').".format(
+                        parent_value, name, src_name,
+                    )
+                )
+    return written, skipped
+
+
 def _parse_feet_inches(text):
     """Parse a feet-inches display string (``3' - 8"``, ``1'-6"``,
     ``0' - 4 1/2"``, ``8"``, ``3'``, ``1.5``) into a float in feet,
@@ -1615,6 +1789,12 @@ def execute_placement(doc, matches, options=None):
     for m in kept:
         anchor = m.target.world_pt
         anchor_rot = m.target.rotation_deg
+        # Resolve the live Revit parent ONCE per target — every LED in
+        # this profile inherits BYPARENT directive values from the same
+        # parent element. ``None`` for CSV / CAD / picked-point sources
+        # (no Revit parent to read), in which case parent directives
+        # are reported as skipped per-LED.
+        parent_elem = _resolve_target_parent_element(doc, m.target)
         for set_dict in m.profile.get("linked_sets") or []:
             if not isinstance(set_dict, dict):
                 continue
@@ -1653,6 +1833,17 @@ def execute_placement(doc, matches, options=None):
                     placed, led.get("parameters")
                 )
                 result.static_param_writes += written
+                # Resolve BYPARENT directives against the live parent
+                # and write the inherited (unit-bearing) values onto
+                # the child. Runs AFTER static params so an inherited
+                # value always wins over any stale captured static for
+                # the same parameter, and BEFORE _write_linker so the
+                # linker's CKT_* snapshot reflects inherited circuiting.
+                dir_written, _dir_skipped = _apply_parent_directives(
+                    placed, parent_elem, led.get("parameters"),
+                    warnings=result.warnings,
+                )
+                result.parent_directive_writes += dir_written
                 if _write_linker(placed, led, m.profile, m.target):
                     result.element_linker_writes += 1
 
