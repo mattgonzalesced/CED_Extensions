@@ -54,7 +54,7 @@ if ($LASTEXITCODE -ne 0) { throw "heat.exe failed (exit $LASTEXITCODE)" }
 Push-Location $ScriptDir
 try {
     Write-Host "`n[3/4] Compiling .wxs -> .wixobj..." -ForegroundColor Yellow
-    & candle.exe -nologo -ext WixUtilExtension `
+    & candle.exe -nologo -ext WixUtilExtension -ext WixUIExtension `
         -dStagingDir="$StagingDir" `
         -dProductVersion="$Version" `
         "Product.wxs" "Extensions.wxs"
@@ -62,8 +62,9 @@ try {
 
     Write-Host "`n[4/4] Linking .wixobj -> .msi..." -ForegroundColor Yellow
     $OutputMsi = Join-Path $OutputDir "Updater_pyrevit.msi"
-    & light.exe -nologo -ext WixUtilExtension `
+    & light.exe -nologo -ext WixUtilExtension -ext WixUIExtension `
         -sw1076 -sice:ICE38 -sice:ICE43 -sice:ICE57 -sice:ICE61 -sice:ICE64 -sice:ICE91 `
+        -cultures:en-us `
         -out $OutputMsi `
         "Product.wixobj" "Extensions.wixobj"
     if ($LASTEXITCODE -ne 0) { throw "light.exe failed (exit $LASTEXITCODE)" }

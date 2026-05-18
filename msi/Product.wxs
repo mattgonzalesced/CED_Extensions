@@ -92,20 +92,21 @@
                  Before="CostFinalize"
                  Sequence="execute" />
 
-    <!-- ===== CED Content Collection warning ===== -->
-    <Binary Id="ContentCheckBin" SourceFile="ContentCheck.vbs" />
+    <!-- ===== CED Content Collection check (inline warning on Finish dialog if missing) ===== -->
+    <Property Id="CONTENTCOLLECTIONFOUND" Secure="yes">
+      <DirectorySearch Id="ContentCollectionDirSearch"
+                       Path="C:\ACC\ACCDocs\CoolSys\CED Content Collection" />
+    </Property>
 
-    <CustomAction Id="WarnIfNoContent"
-                  BinaryKey="ContentCheckBin"
-                  VBScriptCall="CheckContent"
-                  Execute="immediate"
-                  Return="ignore" />
+    <SetProperty Id="WIXUI_EXITDIALOGOPTIONALTEXT"
+                 Value="WARNING: CED Content Collection folder NOT FOUND at C:\ACC\ACCDocs\CoolSys\CED Content Collection. Please link the CED Content Collection to your Autodesk Docs before using the extensions."
+                 After="AppSearch">
+      NOT CONTENTCOLLECTIONFOUND
+    </SetProperty>
 
-    <InstallExecuteSequence>
-      <Custom Action="WarnIfNoContent" After="InstallFinalize">
-        NOT REMOVE
-      </Custom>
-    </InstallExecuteSequence>
+    <!-- ===== Installer UI (minimal wizard: Welcome+License -> Progress -> Finish) ===== -->
+    <UIRef Id="WixUI_Minimal" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
 
   </Product>
 </Wix>
