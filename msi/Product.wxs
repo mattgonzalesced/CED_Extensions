@@ -15,8 +15,7 @@
              Description="CED pyRevit Extensions Installer"
              Manufacturer="CoolSys / CED" />
 
-    <!-- Per-user install -->
-    <Property Id="ALLUSERS" Value="" />
+    <!-- Per-user install. ALLUSERS="" is set automatically by InstallScope="perUser". -->
     <Property Id="MSIINSTALLPERUSER" Value="1" />
 
     <MajorUpgrade
@@ -58,9 +57,10 @@
                  Directory="APPDATAPYREVIT" Section="telemetry"
                  Key="telemetry_file_dir"
                  Value="[AppDataFolder]pyRevit\Extensions\CED_pyTelemetry" />
+        <!-- WiX forbids empty Value strings; single space writes `key= ` which pyRevit parses as empty/disabled -->
         <IniFile Id="TelServer"    Action="addLine" Name="pyRevit_config.ini"
                  Directory="APPDATAPYREVIT" Section="telemetry"
-                 Key="telemetry_server_url" Value="" />
+                 Key="telemetry_server_url" Value=" " />
         <IniFile Id="TelHooks"     Action="addLine" Name="pyRevit_config.ini"
                  Directory="APPDATAPYREVIT" Section="telemetry"
                  Key="include_hooks" Value="true" />
@@ -69,7 +69,7 @@
                  Key="active_app" Value="false" />
         <IniFile Id="TelAppSrv"    Action="addLine" Name="pyRevit_config.ini"
                  Directory="APPDATAPYREVIT" Section="telemetry"
-                 Key="apptelemetry_server_url" Value="" />
+                 Key="apptelemetry_server_url" Value=" " />
         <IniFile Id="TelAppFlags"  Action="addLine" Name="pyRevit_config.ini"
                  Directory="APPDATAPYREVIT" Section="telemetry"
                  Key="apptelemetry_event_flags" Value="0x0" />
