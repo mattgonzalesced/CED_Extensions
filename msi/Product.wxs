@@ -99,12 +99,16 @@
     </Property>
 
     <SetProperty Id="WIXUI_EXITDIALOGOPTIONALTEXT"
-                 Value="WARNING: CED Content Collection folder NOT FOUND at C:\ACC\ACCDocs\CoolSys\CED Content Collection. Please link the CED Content Collection to your Autodesk Docs before using the extensions."
+                 Value="{\WarningFont}WARNING: CED Content Collection folder NOT FOUND at C:\ACC\ACCDocs\CoolSys\CED Content Collection. Please link the CED Content Collection to your Autodesk Docs before using the extensions."
                  After="AppSearch">
       NOT CONTENTCOLLECTIONFOUND
     </SetProperty>
 
     <!-- ===== Installer UI (minimal wizard: Welcome+License -> Progress -> Finish) ===== -->
+    <UI>
+      <!-- Custom text style for the inline Content Collection warning on the Finish dialog -->
+      <TextStyle Id="WarningFont" FaceName="Tahoma" Size="8" Bold="yes" Red="192" Green="0" Blue="0" />
+    </UI>
     <UIRef Id="WixUI_Minimal" />
     <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
 
